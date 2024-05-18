@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+CWD="$PWD"
+CDPATH='' cd -- "$(dirname -- "$0")"
+SCRIPT_DIRECTORY="$(pwd -P)"
+cd "$CWD"
+exec "$(dirname "$SCRIPT_DIRECTORY")/build/dist/bin/jsonschema" "$@"

@@ -1,0 +1,54 @@
+@PACKAGE_INIT@
+
+# Support both casing styles
+list(APPEND JSONTOOLKIT_COMPONENTS ${JSONToolkit_FIND_COMPONENTS})
+list(APPEND JSONTOOLKIT_COMPONENTS ${jsontoolkit_FIND_COMPONENTS})
+if(NOT JSONTOOLKIT_COMPONENTS)
+  list(APPEND JSONTOOLKIT_COMPONENTS uri)
+  list(APPEND JSONTOOLKIT_COMPONENTS json)
+  list(APPEND JSONTOOLKIT_COMPONENTS jsonl)
+  list(APPEND JSONTOOLKIT_COMPONENTS jsonpointer)
+  list(APPEND JSONTOOLKIT_COMPONENTS jsonschema)
+endif()
+
+foreach(component ${JSONTOOLKIT_COMPONENTS})
+  # TODO: Get rid of this branch once we get rid of uriparser
+  if(component STREQUAL "uri" OR component STREQUAL "jsonpointer" OR component STREQUAL "jsonschema")
+    # Locate a vendored uriparser
+    if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/../uriparser/uriparser.cmake")
+      include("${CMAKE_CURRENT_LIST_DIR}/../uriparser/uriparser.cmake")
+    endif()
+  endif()
+
+  if(component STREQUAL "uri")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_uri.cmake")
+  elseif(component STREQUAL "json")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_json.cmake")
+  elseif(component STREQUAL "jsonl")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_json.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_jsonl.cmake")
+  elseif(component STREQUAL "jsonpointer")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_uri.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_json.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_jsonpointer.cmake")
+  elseif(component STREQUAL "jsonschema")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_uri.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_json.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_jsonpointer.cmake")
+
+    # GCC does not allow the use of std::promise, std::future
+    # without compiling with pthreads support.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+      set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+      include(CMakeFindDependencyMacro)
+      find_dependency(Threads)
+    endif()
+
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsontoolkit_jsonschema.cmake")
+  else()
+    message(FATAL_ERROR "Unknown JSON Toolkit component: ${component}")
+  endif()
+endforeach()
+
+check_required_components("@PROJECT_NAME@")
