@@ -7,6 +7,7 @@
 #include "command.h"
 #include "utils.h"
 
+// TODO: Add a flag to first validate schema against its metaschema
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
