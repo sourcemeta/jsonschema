@@ -10,7 +10,7 @@
 auto intelligence::jsonschema::cli::bundle(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
-  CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input")
+  CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input");
   auto schema{sourcemeta::jsontoolkit::from_file(options.at("").front())};
   sourcemeta::jsontoolkit::bundle(
       schema, sourcemeta::jsontoolkit::default_schema_walker, resolver(options))

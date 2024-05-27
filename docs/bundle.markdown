@@ -15,10 +15,8 @@ The JSON Schema CLI supports this functionality through the `bundle` command.
 Examples
 --------
 
-<!-- TODO: Actually exemplify real remote bundling -->
-
-### Bundle a JSON Schema
+### Bundle a JSON Schema preloading another one
 
 ```sh
-jsonschema bundle path/to/my/schema.json
+jsonschema bundle path/to/my/schema.json --resolve path/to/external.json
 ```

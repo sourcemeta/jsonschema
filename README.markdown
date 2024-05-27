@@ -58,6 +58,7 @@ without passing a command will print convenient reference documentation:
 The following global options apply to all commands:
 
 - `--verbose / -v`: Enable verbose output
+- `--resolve / -r`: Import the given JSON Schema into the resolution context
 
 Coming Soon
 -----------
