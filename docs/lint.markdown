@@ -2,7 +2,7 @@ Linting
 =======
 
 ```sh
-jsonschema lint <schemas-or-directories...> [--fix|-f]
+jsonschema lint [schemas-or-directories...] [--fix|-f]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional

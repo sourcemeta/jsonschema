@@ -2,7 +2,7 @@ Testing
 =======
 
 ```sh
-jsonschema help <schemas-or-directories...>
+jsonschema test [schemas-or-directories...]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
