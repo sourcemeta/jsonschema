@@ -41,6 +41,24 @@ cmake --install ./build --prefix <prefix> \
 Where `<prefix>` can be any destination prefix of your choosing, such as `/opt`
 or `/usr/local`.
 
+Validating
+----------
+
+```sh
+jsonschema validate <path/to/schema.json> <path/to/instance.json>
+```
+
+The most popular use case of JSON Schema is to validate JSON documents. The
+JSON Schema CLI offers a `validate` command to do exactly that.
+
+### Examples
+
+#### Validate a JSON instance
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json
+```
+
 Formatting
 ----------
 
@@ -213,7 +231,7 @@ the oven. In the mean-time, star the project to show your support!
 |-----------------------|------------------------------------------------------------------------------------|-------------|
 | Bundling              | Inline remote references to other schemas using JSON Schema Bundling               | Not started |
 | Testing               | A test runner for JSON Schema                                                      | Not started |
-| Validating            | Validate a JSON instance against a JSON Schema, with annotation extraction support | Not started |
+| Annotating            | Validate a JSON instance against a JSON Schema with annotation extraction support  | Not started |
 | Debugging             | Validate a JSON instance against a JSON Schema step by step, like LLDB and GDB     | Not started |
 | Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect                                | Not started |
 

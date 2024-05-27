@@ -7,18 +7,20 @@
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 COMMANDS
 
-   version                           Print version information and quit
+   version                                   Print version information and quit
 
-   help                              Print this help information and quit
+   help                                      Print this help information and quit
 
-   fmt <path/to/schema.json>         Format JSON Schema in-place
+   validate <schema.json> <instance.json>    Validate an instance against a schema
 
-   lint <path/to/schema.json>        Lint JSON Schema
+   fmt <path/to/schema.json>                 Format JSON Schema in-place
 
-   frame <path/to/schema.json>       Frame a JSON Schema in-place
+   lint <path/to/schema.json>                Lint JSON Schema
 
-   compile <path/to/schema.json>     Compile a JSON Schema for efficient evaluation
-                                     and print the result to standard output
+   frame <path/to/schema.json>               Frame a JSON Schema in-place
+
+   compile <path/to/schema.json>             Compile a JSON Schema for efficient evaluation
+                                             and print the result to standard output
 
 )EOF"};
 
