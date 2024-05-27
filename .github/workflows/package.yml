@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -48,10 +52,18 @@ jobs:
       - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
 
       - run: cpack --config build/CPackConfig.cmake -B build/out -C Release
-      - run: rm -rf build/out/_CPack_Packages
 
+      # TODO: Do this from another job in the workflow so we can collect from multiple platforms
       # TODO: Create a proper release if there is a tag instead
       - run: gh config set prompt disabled
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: gh release delete continuous --cleanup-tag --yes || true
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA"
-      - run: gh release upload --clobber continuous build/out/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: gh release upload --clobber continuous build/out/*.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
