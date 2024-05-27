@@ -9,9 +9,7 @@
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
-  if (command == "version") {
-    return intelligence::jsonschema::cli::version();
-  } else if (command == "fmt") {
+  if (command == "fmt") {
     return intelligence::jsonschema::cli::fmt(arguments);
   } else if (command == "frame") {
     return intelligence::jsonschema::cli::frame(arguments);

@@ -6,7 +6,6 @@ macro(add_jsonschema_test_unix name)
   endif()
 endmacro()
 
-add_jsonschema_test_unix(version)
 add_jsonschema_test_unix(help)
 add_jsonschema_test_unix(format_single)
 add_jsonschema_test_unix(format_invalid_path)
