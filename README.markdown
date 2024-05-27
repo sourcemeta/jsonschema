@@ -44,6 +44,10 @@ or `/usr/local`.
 Usage
 -----
 
+The JSON Schema CLI supports a growing amount of commands. The following pages
+describe each command in details. Additionally, running the JSON Schema CLI
+without passing a command will print convenient reference documentation:
+
 - [Validating](./docs/validate.markdown)
 - [Formatting](./docs/format.markdown)
 - [Linting](./docs/lint.markdown)
