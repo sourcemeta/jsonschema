@@ -11,6 +11,10 @@
 #include "configure.h"
 
 constexpr std::string_view USAGE_DETAILS{R"EOF(
+Global Options:
+
+   --verbose, -v    Enable verbose output
+
 Commands:
 
    validate <schema.json> <instance.json>

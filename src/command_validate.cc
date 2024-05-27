@@ -33,7 +33,7 @@ auto intelligence::jsonschema::cli::validate(
       pretty_evaluate_callback)};
 
   if (result) {
-    std::cerr << "Valid\n";
+    log_verbose(options) << "Valid\n";
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;

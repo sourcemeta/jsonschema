@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <cassert>  // assert
+#include <fstream>  // std::ofstream
 #include <iostream> // std::cerr
 #include <optional> // std::optional, std::nullopt
 #include <sstream>  // std::ostringstream
@@ -119,6 +120,16 @@ auto pretty_evaluate_callback(
 auto resolver(const std::map<std::string, std::vector<std::string>> &)
     -> sourcemeta::jsontoolkit::SchemaResolver {
   return sourcemeta::jsontoolkit::official_resolver;
+}
+
+auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
+    -> std::ostream & {
+  if (options.contains("verbose") || options.contains("v")) {
+    return std::cerr;
+  }
+
+  static std::ofstream null_stream;
+  return null_stream;
 }
 
 } // namespace intelligence::jsonschema::cli

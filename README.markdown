@@ -55,6 +55,10 @@ without passing a command will print convenient reference documentation:
 - [Bundling](./docs/bundle.markdown)
 - [Framing](./docs/frame.markdown)
 
+The following global options apply to all commands:
+
+- `--verbose / -v`: Enable verbose output
+
 Coming Soon
 -----------
 

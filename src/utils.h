@@ -6,6 +6,7 @@
 
 #include <filesystem> // std::filesystem
 #include <map>        // std::map
+#include <ostream>    // std::ostream
 #include <set>        // std::set
 #include <span>       // std::span
 #include <string>     // std::string
@@ -34,6 +35,9 @@ auto pretty_evaluate_callback(
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options)
     -> sourcemeta::jsontoolkit::SchemaResolver;
+
+auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
+    -> std::ostream &;
 
 } // namespace intelligence::jsonschema::cli
 
