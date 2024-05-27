@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <cassert>  // assert
+#include <iostream> // std::cerr
 #include <optional> // std::optional, std::nullopt
 #include <sstream>  // std::ostringstream
 
@@ -94,6 +95,24 @@ auto parse_options(const std::span<const std::string> &arguments,
   }
 
   return options;
+}
+
+auto pretty_evaluate_callback(
+    bool result,
+    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
+    const sourcemeta::jsontoolkit::Pointer &evaluate_path,
+    const sourcemeta::jsontoolkit::Pointer &instance_location,
+    const sourcemeta::jsontoolkit::JSON &) -> void {
+  if (result) {
+    return;
+  }
+
+  // TODO: Improve this pretty terrible output
+  std::cerr << "✗ \"";
+  sourcemeta::jsontoolkit::stringify(instance_location, std::cerr);
+  std::cerr << "\" at evaluate path (\"";
+  sourcemeta::jsontoolkit::stringify(evaluate_path, std::cerr);
+  std::cerr << "\")\n";
 }
 
 } // namespace intelligence::jsonschema::cli

@@ -1,29 +1,11 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <cstdlib>  // EXIT_SUCCESS
-#include <iostream> // std::cerr, std::cout, std::endl
+#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
+#include <iostream> // std::cerr
 
 #include "command.h"
 #include "utils.h"
-
-static auto
-callback(bool result,
-         const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
-         const sourcemeta::jsontoolkit::Pointer &evaluate_path,
-         const sourcemeta::jsontoolkit::Pointer &instance_location,
-         const sourcemeta::jsontoolkit::JSON &) -> void {
-  if (result) {
-    return;
-  }
-
-  // TODO: Improve this pretty terrible output
-  std::cerr << "✗ \"";
-  sourcemeta::jsontoolkit::stringify(instance_location, std::cerr);
-  std::cerr << "\" at evaluate path (\"";
-  sourcemeta::jsontoolkit::stringify(evaluate_path, std::cerr);
-  std::cerr << "\")\n";
-}
 
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
@@ -48,7 +30,8 @@ auto intelligence::jsonschema::cli::validate(
 
   const auto result{sourcemeta::jsontoolkit::evaluate(
       schema_template, instance,
-      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast, callback)};
+      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+      pretty_evaluate_callback)};
 
   if (result) {
     std::cerr << "Valid\n";

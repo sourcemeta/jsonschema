@@ -2,6 +2,7 @@
 #define INTELLIGENCE_JSONSCHEMA_CLI_UTILS_H_
 
 #include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <filesystem> // std::filesystem
 #include <map>        // std::map
@@ -23,6 +24,13 @@ auto parse_options(const std::span<const std::string> &arguments,
 auto for_each_schema(const std::vector<std::string> &arguments)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
+
+auto pretty_evaluate_callback(
+    bool result,
+    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
+    const sourcemeta::jsontoolkit::Pointer &evaluate_path,
+    const sourcemeta::jsontoolkit::Pointer &instance_location,
+    const sourcemeta::jsontoolkit::JSON &) -> void;
 
 } // namespace intelligence::jsonschema::cli
 
