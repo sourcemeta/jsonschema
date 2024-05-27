@@ -49,6 +49,7 @@ describe each command in details. Additionally, running the JSON Schema CLI
 without passing a command will print convenient reference documentation:
 
 - [Validating](./docs/validate.markdown)
+- [Testing](./docs/test.markdown)
 - [Formatting](./docs/format.markdown)
 - [Linting](./docs/lint.markdown)
 - [Bundling](./docs/bundle.markdown)
@@ -62,7 +63,6 @@ the oven. In the mean-time, star the project to show your support!
 
 | Feature               | Description                                                                        | Status      |
 |-----------------------|------------------------------------------------------------------------------------|-------------|
-| Testing               | A test runner for JSON Schema                                                      | Not started |
 | Annotating            | Validate a JSON instance against a JSON Schema with annotation extraction support  | Not started |
 | Debugging             | Validate a JSON instance against a JSON Schema step by step, like LLDB and GDB     | Not started |
 | Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect                                | Not started |

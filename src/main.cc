@@ -18,6 +18,13 @@ Commands:
        Validate an instance against a schema, printing error information, if
        any, in a human-readable manner.
 
+   test [schema.json...]
+
+       A schema test runner inspired by the official JSON Schema test suite.
+       Passing directories as input will run every `.json` file in such
+       directory (recursively) as a test. If no argument is passed, run every
+       `.json` file in the current working directory (recursively) as a test.
+
    fmt [schema.json...] [--check/-c]
 
        Format the input schemas in-place. Passing directories as input means
