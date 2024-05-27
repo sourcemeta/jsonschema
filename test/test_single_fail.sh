@@ -4,6 +4,7 @@ set -o errexit
 set -o nounset
 
 TMP="$(mktemp -d)"
+# shellcheck disable=SC2317
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 

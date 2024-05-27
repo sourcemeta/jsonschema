@@ -13,6 +13,12 @@
 #include <utility>    // std::pair
 #include <vector>     // std::vector
 
+#define CLI_ENSURE(condition, message)                                         \
+  if (!(condition)) {                                                          \
+    std::cerr << message << "\n";                                              \
+    return EXIT_FAILURE;                                                       \
+  }
+
 namespace intelligence::jsonschema::cli {
 
 // TODO: Tweak this function to take:

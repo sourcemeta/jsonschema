@@ -2,7 +2,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream> // std::cerr, std::cout, std::endl
+#include <iostream> // std::cout, std::endl
 
 #include "command.h"
 #include "utils.h"
@@ -10,12 +10,7 @@
 auto intelligence::jsonschema::cli::frame(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
-
-  if (options.at("").empty()) {
-    std::cerr << "You must pass a JSON Schema as input\n";
-    return EXIT_FAILURE;
-  }
-
+  CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input")
   const sourcemeta::jsontoolkit::JSON schema{
       sourcemeta::jsontoolkit::from_file(options.at("").front())};
 

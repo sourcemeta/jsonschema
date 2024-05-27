@@ -7,12 +7,6 @@
 #include "command.h"
 #include "utils.h"
 
-#define EXPECT_JSON(condition, message)                                        \
-  if (!condition) {                                                            \
-    std::cerr << message << "\n";                                              \
-    return EXIT_FAILURE;                                                       \
-  }
-
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
@@ -22,21 +16,19 @@ auto intelligence::jsonschema::cli::test(
   for (const auto &entry : for_each_json(options.at(""))) {
     const sourcemeta::jsontoolkit::JSON test{
         sourcemeta::jsontoolkit::from_file(entry.first)};
-    EXPECT_JSON(test.is_object(), "The test document must be an object")
-
-    EXPECT_JSON(test.defines("description"),
-                "The test document must contain a `description` property")
-    EXPECT_JSON(test.defines("schema"),
-                "The test document must contain a `schema` property")
-    EXPECT_JSON(test.defines("tests"),
-                "The test document must contain a `tests` property")
-
-    EXPECT_JSON(test.at("description").is_string(),
-                "The test document `description` property must be a string")
-    EXPECT_JSON(test.at("schema").is_string(),
-                "The test document `schema` property must be a URI")
-    EXPECT_JSON(test.at("tests").is_array(),
-                "The test document `tests` property must be an array")
+    CLI_ENSURE(test.is_object(), "The test document must be an object")
+    CLI_ENSURE(test.defines("description"),
+               "The test document must contain a `description` property")
+    CLI_ENSURE(test.defines("schema"),
+               "The test document must contain a `schema` property")
+    CLI_ENSURE(test.defines("tests"),
+               "The test document must contain a `tests` property")
+    CLI_ENSURE(test.at("description").is_string(),
+               "The test document `description` property must be a string")
+    CLI_ENSURE(test.at("schema").is_string(),
+               "The test document `schema` property must be a URI")
+    CLI_ENSURE(test.at("tests").is_array(),
+               "The test document `tests` property must be an array")
 
     std::cout << entry.first.string() << "\n";
 
@@ -52,20 +44,18 @@ auto intelligence::jsonschema::cli::test(
         test_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
 
     for (const auto &test_case : test.at("tests").as_array()) {
-      EXPECT_JSON(test_case.is_object(), "Test case documents must be objects")
-
-      EXPECT_JSON(test_case.defines("description"),
-                  "Test case documents must contain a `description` property")
-      EXPECT_JSON(test_case.defines("data"),
-                  "Test case documents must contain a `data` property")
-      EXPECT_JSON(test_case.defines("valid"),
-                  "Test case documents must contain a `valid` property")
-
-      EXPECT_JSON(
+      CLI_ENSURE(test_case.is_object(), "Test case documents must be objects")
+      CLI_ENSURE(test_case.defines("description"),
+                 "Test case documents must contain a `description` property")
+      CLI_ENSURE(test_case.defines("data"),
+                 "Test case documents must contain a `data` property")
+      CLI_ENSURE(test_case.defines("valid"),
+                 "Test case documents must contain a `valid` property")
+      CLI_ENSURE(
           test_case.at("description").is_string(),
           "The test case document `description` property must be a string")
-      EXPECT_JSON(test_case.at("valid").is_boolean(),
-                  "The test case document `tests` property must be a boolean")
+      CLI_ENSURE(test_case.at("valid").is_boolean(),
+                 "The test case document `tests` property must be a boolean")
 
       std::cout << "    " << test.at("description").to_string() << " - "
                 << test_case.at("description").to_string() << "\n";
