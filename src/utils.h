@@ -32,6 +32,9 @@ auto pretty_evaluate_callback(
     const sourcemeta::jsontoolkit::Pointer &instance_location,
     const sourcemeta::jsontoolkit::JSON &) -> void;
 
+auto resolver(const std::map<std::string, std::vector<std::string>> &options)
+    -> sourcemeta::jsontoolkit::SchemaResolver;
+
 } // namespace intelligence::jsonschema::cli
 
 #endif

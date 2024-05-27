@@ -23,7 +23,7 @@ auto intelligence::jsonschema::cli::frame(
   sourcemeta::jsontoolkit::ReferenceMap references;
   sourcemeta::jsontoolkit::frame(schema, frame, references,
                                  sourcemeta::jsontoolkit::default_schema_walker,
-                                 sourcemeta::jsontoolkit::official_resolver)
+                                 resolver(options))
       .wait();
 
   for (const auto &[key, entry] : frame) {

@@ -21,7 +21,7 @@ auto intelligence::jsonschema::cli::lint(
   for (const auto &entry : for_each_schema(options.at(""))) {
     const bool subresult = bundle.check(
         entry.second, sourcemeta::jsontoolkit::default_schema_walker,
-        sourcemeta::jsontoolkit::official_resolver,
+        resolver(options),
         [&entry](const auto &pointer, const auto &name, const auto &message) {
           std::cout << entry.first.string() << "\n";
           std::cout << "    ";

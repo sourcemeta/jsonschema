@@ -22,8 +22,7 @@ auto intelligence::jsonschema::cli::validate(
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
 
   const auto schema_template{sourcemeta::jsontoolkit::compile(
-      schema, sourcemeta::jsontoolkit::default_schema_walker,
-      sourcemeta::jsontoolkit::official_resolver,
+      schema, sourcemeta::jsontoolkit::default_schema_walker, resolver(options),
       sourcemeta::jsontoolkit::default_schema_compiler)};
 
   const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};

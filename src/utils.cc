@@ -115,4 +115,10 @@ auto pretty_evaluate_callback(
   std::cerr << "\")\n";
 }
 
+// TODO: Use input options to get a custom-made resolver
+auto resolver(const std::map<std::string, std::vector<std::string>> &)
+    -> sourcemeta::jsontoolkit::SchemaResolver {
+  return sourcemeta::jsontoolkit::official_resolver;
+}
+
 } // namespace intelligence::jsonschema::cli
