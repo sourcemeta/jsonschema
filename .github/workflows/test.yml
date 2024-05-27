@@ -1,0 +1,52 @@
+name: JSON Schema
+
+on:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            cc: clang
+            cxx: clang++
+            shell: sh
+          - os: ubuntu-latest
+            cc: gcc
+            cxx: g++
+            shell: sh
+
+    defaults:
+      run:
+        shell: ${{ matrix.platform.shell }}
+
+    runs-on: ${{ matrix.platform.os }}
+    env:
+      CC: ${{ matrix.platform.cc }}
+      CXX: ${{ matrix.platform.cxx }}
+    steps:
+      - name: Install ClangFormat
+        run: pip install clang-format==18.1.5
+
+      - uses: actions/checkout@v3
+      - run: cmake --version
+      - name: Configure JSON Schema
+        run: >
+          cmake -S . -B ./build
+          -DCMAKE_BUILD_TYPE:STRING=Release
+          -DJSONSCHEMA_TESTS:BOOL=ON
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+          -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
+      - run: cmake --build ./build --config Release --target clang_format_test
+      - run: cmake --build ./build --config Release --target shellcheck
+      - run: cmake --build ./build --config Release --parallel 4
+      - run: >
+          cmake --install ./build --prefix ./build/dist --config Release --verbose
+          --component intelligence_jsonschema
+
+      # Not every CTest version supports the --test-dir option. If such option
+      # is not recognized, `ctest` will successfully exit finding no tests.
+      # Better to be sure and `cd` all the time here.
+      - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
