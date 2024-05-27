@@ -21,7 +21,7 @@ auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>>;
 
-auto for_each_schema(const std::vector<std::string> &arguments)
+auto for_each_json(const std::vector<std::string> &arguments)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 

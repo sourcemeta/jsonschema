@@ -7,7 +7,7 @@
 
 namespace {
 
-auto handle_schema_entry(
+auto handle_json_entry(
     const std::filesystem::path &entry_path,
     std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
         &result) -> void {
@@ -36,17 +36,17 @@ auto handle_schema_entry(
 
 namespace intelligence::jsonschema::cli {
 
-auto for_each_schema(const std::vector<std::string> &arguments)
+auto for_each_json(const std::vector<std::string> &arguments)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>> {
   std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
       result;
 
   if (arguments.empty()) {
-    handle_schema_entry(std::filesystem::current_path(), result);
+    handle_json_entry(std::filesystem::current_path(), result);
   } else {
     for (const auto &entry : arguments) {
-      handle_schema_entry(entry, result);
+      handle_json_entry(entry, result);
     }
   }
 

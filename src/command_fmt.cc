@@ -12,7 +12,7 @@
 auto intelligence::jsonschema::cli::fmt(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
-  for (const auto &entry : for_each_schema(options.at(""))) {
+  for (const auto &entry : for_each_json(options.at(""))) {
     std::cerr << "Formatting: " << entry.first.string() << "\n";
     std::ofstream output{entry.first};
     sourcemeta::jsontoolkit::prettify(

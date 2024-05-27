@@ -18,7 +18,7 @@ auto intelligence::jsonschema::cli::lint(
   bundle.add<EnumWithType>();
   bool result{true};
 
-  for (const auto &entry : for_each_schema(options.at(""))) {
+  for (const auto &entry : for_each_json(options.at(""))) {
     const bool subresult = bundle.check(
         entry.second, sourcemeta::jsontoolkit::default_schema_walker,
         resolver(options),
