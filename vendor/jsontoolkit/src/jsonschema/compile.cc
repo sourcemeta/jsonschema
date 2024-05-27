@@ -73,9 +73,12 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
       .wait();
 
   const std::string base{
-      sourcemeta::jsontoolkit::id(schema, resolver, default_dialect)
-          .get()
-          .value_or("")};
+      URI{sourcemeta::jsontoolkit::id(schema, resolver, default_dialect)
+              .get()
+              .value_or("")}
+          .canonicalize()
+          .recompose()};
+
   assert(frame.contains({ReferenceType::Static, base}));
   const auto root_frame_entry{frame.at({ReferenceType::Static, base})};
 

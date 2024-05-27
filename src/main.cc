@@ -60,6 +60,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {
     return intelligence::jsonschema::cli::validate(arguments);
+  } else if (command == "test") {
+    return intelligence::jsonschema::cli::test(arguments);
   } else {
     std::cout << "JSON Schema CLI - v"
               << intelligence::jsonschema::cli::PROJECT_VERSION << "\n";

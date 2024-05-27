@@ -411,18 +411,23 @@ evaluate(const SchemaCompilerTemplate &steps, const JSON &instance) -> bool;
 ///     sourcemeta::jsontoolkit::official_resolver,
 ///     sourcemeta::jsontoolkit::default_schema_compiler)};
 ///
-/// static auto callback(bool result,
-///   const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step)
-///   -> void {
-///   if (result) {
-///     std::cout << "Success: ";
-///   } else {
-///     std::cout << "Failure: ";
-///   }
-///
-///   sourcemeta::jsontoolkit::prettify(
-///     sourcemeta::jsontoolkit::to_json({step}), std::cout);
-///     std::cout << "\n";
+/// static auto callback(
+///     bool result,
+///     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step,
+///     const sourcemeta::jsontoolkit::Pointer &evaluate_path,
+///     const sourcemeta::jsontoolkit::Pointer &instance_location,
+///     const sourcemeta::jsontoolkit::JSON &annotation) -> void {
+///   std::cout << "TYPE: " << (result ? "Success" : "Failure") << "\n";
+///   std::cout << "STEP:\n";
+///   sourcemeta::jsontoolkit::prettify(sourcemeta::jsontoolkit::to_json({step}),
+///                                     std::cout);
+///   std::cout << "\nEVALUATE PATH:";
+///   sourcemeta::jsontoolkit::stringify(evaluate_path, std::cout);
+///   std::cout << "\nINSTANCE LOCATION:";
+///   sourcemeta::jsontoolkit::stringify(instance_location, std::cout);
+///   std::cout << "\nANNOTATION:\n";
+///   sourcemeta::jsontoolkit::prettify(annotation, std::cout);
+///   std::cout << "\n";
 /// }
 ///
 /// const sourcemeta::jsontoolkit::JSON instance{"foo bar"};
