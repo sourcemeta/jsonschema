@@ -62,7 +62,7 @@ jobs:
       - run: gh release delete continuous --cleanup-tag --yes || true
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA"
+      - run: gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
       - run: gh release upload --clobber continuous build/out/*.zip
