@@ -34,6 +34,13 @@ Commands:
        (recursively). The `--fix/-f` option will attempt to automatically
        fix the linter errors.
 
+   bundle <schema.json>
+
+       Perform JSON Schema Bundling on a schema to inline remote references,
+       printing the result to standard output. Read
+       https://json-schema.org/blog/posts/bundling-json-schema-compound-documents
+       to learn more.
+
    frame <schema.json>
 
        Frame a schema in-place, displaying schema locations and references
@@ -47,6 +54,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::fmt(arguments);
   } else if (command == "frame") {
     return intelligence::jsonschema::cli::frame(arguments);
+  } else if (command == "bundle") {
+    return intelligence::jsonschema::cli::bundle(arguments);
   } else if (command == "lint") {
     return intelligence::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {

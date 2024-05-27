@@ -3,6 +3,7 @@ add_executable(jsonschema_cli
   utils.h utils.cc
   command_fmt.cc
   command_frame.cc
+  command_bundle.cc
   command_lint.cc
   command_validate.cc
   lint/enum_with_type.h)
