@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   package:
     strategy:
@@ -45,3 +48,10 @@ jobs:
       - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
 
       - run: cpack --config build/CPackConfig.cmake -B build/out -C Release
+      - run: rm -rf build/out/_CPack_Packages
+
+      # TODO: Create a proper release if there is a tag instead
+      - run: gh config set prompt disabled
+      - run: gh release delete continuous --cleanup-tag --yes || true
+      - run: gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA"
+      - run: gh release upload --clobber continuous build/out/*
