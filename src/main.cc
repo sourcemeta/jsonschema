@@ -17,6 +17,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::frame(arguments);
   } else if (command == "lint") {
     return intelligence::jsonschema::cli::lint(arguments);
+  } else if (command == "validate") {
+    return intelligence::jsonschema::cli::validate(arguments);
   } else {
     return intelligence::jsonschema::cli::help(program);
   }
