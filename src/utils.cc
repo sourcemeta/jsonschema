@@ -119,41 +119,24 @@ auto pretty_evaluate_callback(
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options)
     -> sourcemeta::jsontoolkit::SchemaResolver {
-  if (!options.contains("resolve") && !options.contains("r")) {
-    return sourcemeta::jsontoolkit::official_resolver;
+  sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
+      sourcemeta::jsontoolkit::official_resolver};
+
+  if (options.contains("resolve")) {
+    for (const auto &schema_path : options.at("resolve")) {
+      log_verbose(options) << "Loading schema: " << schema_path << "\n";
+      dynamic_resolver.add(sourcemeta::jsontoolkit::from_file(schema_path));
+    }
   }
 
-  std::map<std::string, sourcemeta::jsontoolkit::JSON> schemas;
-  const std::string option{options.contains("resolve") ? "resolve" : "r"};
-  for (const auto &schema_path : options.at(option)) {
-    const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
-    // TODO: Use the current resolver as its building up
-    const auto id{sourcemeta::jsontoolkit::id(
-                      schema, sourcemeta::jsontoolkit::official_resolver)
-                      .get()};
-    if (!id.has_value()) {
-      std::ostringstream error;
-      error << "Cannot determine the identifier of the schema: " << schema_path;
-      throw std::runtime_error(error.str());
+  if (options.contains("r")) {
+    for (const auto &schema_path : options.at("r")) {
+      log_verbose(options) << "Loading schema: " << schema_path << "\n";
+      dynamic_resolver.add(sourcemeta::jsontoolkit::from_file(schema_path));
     }
-
-    // TODO: Throw if we are overriding with a duplicate id
-    // TODO: We need to frame to add subschemas too?
-    schemas.insert({id.value(), schema});
-    log_verbose(options) << "Loading schema: " << schema_path << "\n";
   }
 
-  return [schemas](std::string_view identifier)
-             -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
-    const std::string string_identifier{identifier};
-    if (schemas.contains(string_identifier)) {
-      std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
-      promise.set_value(schemas.at(string_identifier));
-      return promise.get_future();
-    }
-
-    return sourcemeta::jsontoolkit::official_resolver(identifier);
-  };
+  return dynamic_resolver;
 }
 
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
