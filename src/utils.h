@@ -2,6 +2,7 @@
 #define INTELLIGENCE_JSONSCHEMA_CLI_UTILS_H_
 
 #include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <filesystem> // std::filesystem
@@ -37,6 +38,7 @@ auto pretty_evaluate_callback(
     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
     const sourcemeta::jsontoolkit::Pointer &evaluate_path,
     const sourcemeta::jsontoolkit::Pointer &instance_location,
+    const sourcemeta::jsontoolkit::JSON &,
     const sourcemeta::jsontoolkit::JSON &) -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options)

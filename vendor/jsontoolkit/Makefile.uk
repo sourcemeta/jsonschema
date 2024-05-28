@@ -57,6 +57,7 @@ LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/resolver.cc
 LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/compile.cc
 LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/compile_evaluate.cc
 LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/compile_json.cc
+LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/compile_describe.cc
 LIBJSONTOOLKIT_SRCS-y += $(LIBJSONTOOLKIT_SRC)/jsonschema/default_compiler.cc
 
 # TODO: Can we do this with standard POSIX tools?

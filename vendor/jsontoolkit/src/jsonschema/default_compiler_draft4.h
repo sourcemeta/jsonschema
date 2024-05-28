@@ -6,50 +6,10 @@
 
 #include <cassert> // assert
 #include <regex>   // std::regex
+#include <set>     // std::set
 #include <utility> // std::move
 
 #include "compile_helpers.h"
-
-namespace {
-
-auto type_string_to_assertion(
-    const sourcemeta::jsontoolkit::SchemaCompilerContext &context,
-    const std::string &type)
-    -> sourcemeta::jsontoolkit::SchemaCompilerTemplate {
-  using namespace sourcemeta::jsontoolkit;
-  if (type == "null") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::Null, {}, SchemaCompilerTargetType::Instance)};
-  } else if (type == "boolean") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::Boolean, {}, SchemaCompilerTargetType::Instance)};
-  } else if (type == "object") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::Object, {}, SchemaCompilerTargetType::Instance)};
-  } else if (type == "array") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)};
-  } else if (type == "number") {
-    const auto subcontext{applicate(context)};
-    return {make<SchemaCompilerLogicalOr>(
-        context, SchemaCompilerValueNone{},
-        {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Real, {},
-                                           SchemaCompilerTargetType::Instance),
-         make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Integer, {},
-                                           SchemaCompilerTargetType::Instance)},
-        SchemaCompilerTemplate{})};
-  } else if (type == "integer") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::Integer, {}, SchemaCompilerTargetType::Instance)};
-  } else if (type == "string") {
-    return {make<SchemaCompilerAssertionType>(
-        context, JSON::Type::String, {}, SchemaCompilerTargetType::Instance)};
-  } else {
-    return {};
-  }
-}
-
-} // namespace
 
 namespace internal {
 using namespace sourcemeta::jsontoolkit;
@@ -90,23 +50,90 @@ auto compiler_draft4_core_ref(const SchemaCompilerContext &context)
 auto compiler_draft4_validation_type(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
   if (context.value.is_string()) {
-    return type_string_to_assertion(context, context.value.to_string());
+    const auto &type{context.value.to_string()};
+    if (type == "null") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Null, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "boolean") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Boolean, {},
+          SchemaCompilerTargetType::Instance)};
+    } else if (type == "object") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Object, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "array") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "number") {
+      return {make<SchemaCompilerAssertionTypeAny>(
+          context, std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer},
+          {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "integer") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Integer, {},
+          SchemaCompilerTargetType::Instance)};
+    } else if (type == "string") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::String, {}, SchemaCompilerTargetType::Instance)};
+    } else {
+      return {};
+    }
+  } else if (context.value.is_array() && context.value.size() == 1 &&
+             context.value.front().is_string()) {
+    const auto &type{context.value.front().to_string()};
+    if (type == "null") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Null, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "boolean") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Boolean, {},
+          SchemaCompilerTargetType::Instance)};
+    } else if (type == "object") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Object, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "array") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "number") {
+      return {make<SchemaCompilerAssertionTypeAny>(
+          context, std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer},
+          {}, SchemaCompilerTargetType::Instance)};
+    } else if (type == "integer") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::Integer, {},
+          SchemaCompilerTargetType::Instance)};
+    } else if (type == "string") {
+      return {make<SchemaCompilerAssertionType>(
+          context, JSON::Type::String, {}, SchemaCompilerTargetType::Instance)};
+    } else {
+      return {};
+    }
   } else if (context.value.is_array()) {
-    assert(!context.value.empty());
-    SchemaCompilerTemplate disjunctors;
-    const auto subcontext{applicate(context)};
+    std::set<JSON::Type> types;
     for (const auto &type : context.value.as_array()) {
       assert(type.is_string());
-      SchemaCompilerTemplate disjunctor{
-          type_string_to_assertion(subcontext, type.to_string())};
-      assert(disjunctor.size() == 1);
-      disjunctors.push_back(std::move(disjunctor).front());
+      const auto &type_string{type.to_string()};
+      if (type_string == "null") {
+        types.emplace(JSON::Type::Null);
+      } else if (type_string == "boolean") {
+        types.emplace(JSON::Type::Boolean);
+      } else if (type_string == "object") {
+        types.emplace(JSON::Type::Object);
+      } else if (type_string == "array") {
+        types.emplace(JSON::Type::Array);
+      } else if (type_string == "number") {
+        types.emplace(JSON::Type::Integer);
+        types.emplace(JSON::Type::Real);
+      } else if (type_string == "integer") {
+        types.emplace(JSON::Type::Integer);
+      } else if (type_string == "string") {
+        types.emplace(JSON::Type::String);
+      }
     }
 
-    assert(disjunctors.size() == context.value.size());
-    return {make<SchemaCompilerLogicalOr>(context, SchemaCompilerValueNone{},
-                                          std::move(disjunctors),
-                                          SchemaCompilerTemplate{})};
+    assert(types.size() >= context.value.size());
+    return {make<SchemaCompilerAssertionTypeAny>(
+        context, std::move(types), {}, SchemaCompilerTargetType::Instance)};
   }
 
   return {};
@@ -496,6 +523,7 @@ auto compiler_draft4_validation_enum(const SchemaCompilerContext &context)
                                            SchemaCompilerTargetType::Instance)};
   }
 
+  // TODO: Create a higher level "contains" step
   SchemaCompilerTemplate children;
   const auto subcontext{applicate(context)};
   for (const auto &choice : context.value.as_array()) {

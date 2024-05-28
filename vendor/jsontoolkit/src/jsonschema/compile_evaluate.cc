@@ -124,9 +124,9 @@ public:
   }
 
   template <typename T>
-  auto
-  resolve_value(const sourcemeta::jsontoolkit::SchemaCompilerValue<T> &value,
-                const JSON &instance) -> T {
+  auto resolve_value(
+      const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T> &value,
+      const JSON &instance) -> T {
     using namespace sourcemeta::jsontoolkit;
     // We only define target resolution for JSON documents, at least for now
     if constexpr (std::is_same_v<SchemaCompilerValueJSON, T>) {
@@ -166,6 +166,7 @@ auto callback_noop(
     bool, const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
     const sourcemeta::jsontoolkit::Pointer &,
     const sourcemeta::jsontoolkit::Pointer &,
+    const sourcemeta::jsontoolkit::JSON &,
     const sourcemeta::jsontoolkit::JSON &) noexcept -> void {}
 
 auto evaluate_step(
@@ -207,6 +208,14 @@ auto evaluate_step(
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target.type() == value;
+  } else if (std::holds_alternative<SchemaCompilerAssertionTypeAny>(step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionTypeAny>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<JSON>(assertion.target, instance)};
+    result = value.contains(target.type());
   } else if (std::holds_alternative<SchemaCompilerAssertionRegex>(step)) {
     const auto &assertion{std::get<SchemaCompilerAssertionRegex>(step)};
     context.push(assertion);
@@ -450,7 +459,7 @@ auto evaluate_step(
     // Otherwise we risk confusing consumers
     if (value.second) {
       callback(result, step, context.evaluate_path(), current_instance_location,
-               value.first);
+               instance, value.first);
     }
 
     context.pop();
@@ -472,7 +481,7 @@ auto evaluate_step(
       // While this is a private annotation, we still emit it on the callback
       // for implementing debugging-related tools, etc
       callback(result, step, context.evaluate_path(), current_instance_location,
-               value.first);
+               instance, value.first);
     }
 
     context.pop();
@@ -543,7 +552,7 @@ auto evaluate_step(
 #undef EVALUATE_CONDITION_GUARD
 evaluate_step_end:
   callback(result, step, context.evaluate_path(), context.instance_location(),
-           context.value(nullptr));
+           instance, context.value(nullptr));
   context.pop();
   return result;
 }
