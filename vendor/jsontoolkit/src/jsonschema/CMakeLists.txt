@@ -6,7 +6,7 @@ noa_library(NAMESPACE sourcemeta PROJECT jsontoolkit NAME jsonschema
   FOLDER "JSON Toolkit/JSON Schema"
   PRIVATE_HEADERS anchor.h bundle.h resolver.h walker.h reference.h
     error.h transformer.h transform_rule.h transform_bundle.h compile.h
-  SOURCES jsonschema.cc default_walker.cc reference.cc anchor.cc
+  SOURCES jsonschema.cc default_walker.cc reference.cc anchor.cc resolver.cc
     walker.cc bundle.cc transformer.cc transform_rule.cc transform_bundle.cc
     compile.cc compile_evaluate.cc compile_json.cc
     compile_helpers.h default_compiler.cc

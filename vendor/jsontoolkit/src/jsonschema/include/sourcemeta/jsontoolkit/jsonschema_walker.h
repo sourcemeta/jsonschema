@@ -23,7 +23,7 @@ namespace sourcemeta::jsontoolkit {
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
-// For some strang reason, GCC on Debian 11 believes that a member of
+// For some strange reason, GCC on Debian 11 believes that a member of
 // an enum class (which is namespaced by definition), can shadow an
 // alias defined even on a different namespace.
 #pragma GCC diagnostic ignored "-Wshadow"

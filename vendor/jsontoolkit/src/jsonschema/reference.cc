@@ -91,6 +91,7 @@ static auto fragment_string(const sourcemeta::jsontoolkit::URI uri)
 
 static auto store(sourcemeta::jsontoolkit::ReferenceFrame &frame,
                   const sourcemeta::jsontoolkit::ReferenceType type,
+                  const sourcemeta::jsontoolkit::ReferenceEntryType entry_type,
                   const std::string &uri,
                   const std::optional<std::string> &root_id,
                   const std::string &base_id,
@@ -101,8 +102,8 @@ static auto store(sourcemeta::jsontoolkit::ReferenceFrame &frame,
       sourcemeta::jsontoolkit::URI{uri}.canonicalize().recompose()};
   if (!frame
            .insert({{type, canonical},
-                    {root_id, base_id, pointer_from_root, pointer_from_base,
-                     dialect}})
+                    {entry_type, root_id, base_id, pointer_from_root,
+                     pointer_from_base, dialect}})
            .second) {
     std::ostringstream error;
     error << "Schema identifier already exists: " << uri;
@@ -150,8 +151,9 @@ auto sourcemeta::jsontoolkit::frame(
                                        default_id.has_value() &&
                                        root_id.value() != default_id.value()};
   if (has_explicit_different_id) {
-    store(frame, ReferenceType::Static, default_id.value(), root_id.value(),
-          root_id.value(), sourcemeta::jsontoolkit::empty_pointer,
+    store(frame, ReferenceType::Static, ReferenceEntryType::Resource,
+          default_id.value(), root_id.value(), root_id.value(),
+          sourcemeta::jsontoolkit::empty_pointer,
           sourcemeta::jsontoolkit::empty_pointer, root_dialect.value());
     base_uris.insert(
         {sourcemeta::jsontoolkit::empty_pointer, {default_id.value()}});
@@ -211,8 +213,9 @@ auto sourcemeta::jsontoolkit::frame(
 
           if (!maybe_relative_is_absolute ||
               !frame.contains({ReferenceType::Static, new_id})) {
-            store(frame, ReferenceType::Static, new_id, root_id, new_id,
-                  entry.common.pointer, sourcemeta::jsontoolkit::empty_pointer,
+            store(frame, ReferenceType::Static, ReferenceEntryType::Resource,
+                  new_id, root_id, new_id, entry.common.pointer,
+                  sourcemeta::jsontoolkit::empty_pointer,
                   entry.common.dialect.value());
           }
 
@@ -239,16 +242,16 @@ auto sourcemeta::jsontoolkit::frame(
 
         if (type == sourcemeta::jsontoolkit::AnchorType::Static ||
             type == sourcemeta::jsontoolkit::AnchorType::All) {
-          store(frame, ReferenceType::Static, relative_anchor_uri, root_id, "",
-                entry.common.pointer,
+          store(frame, ReferenceType::Static, ReferenceEntryType::Anchor,
+                relative_anchor_uri, root_id, "", entry.common.pointer,
                 entry.common.pointer.resolve_from(bases.second),
                 entry.common.dialect.value());
         }
 
         if (type == sourcemeta::jsontoolkit::AnchorType::Dynamic ||
             type == sourcemeta::jsontoolkit::AnchorType::All) {
-          store(frame, ReferenceType::Dynamic, relative_anchor_uri, root_id, "",
-                entry.common.pointer,
+          store(frame, ReferenceType::Dynamic, ReferenceEntryType::Anchor,
+                relative_anchor_uri, root_id, "", entry.common.pointer,
                 entry.common.pointer.resolve_from(bases.second),
                 entry.common.dialect.value());
         }
@@ -268,8 +271,8 @@ auto sourcemeta::jsontoolkit::frame(
           if (type == sourcemeta::jsontoolkit::AnchorType::Static ||
               type == sourcemeta::jsontoolkit::AnchorType::All) {
             store(frame, sourcemeta::jsontoolkit::ReferenceType::Static,
-                  absolute_anchor_uri, root_id, base_string,
-                  entry.common.pointer,
+                  ReferenceEntryType::Anchor, absolute_anchor_uri, root_id,
+                  base_string, entry.common.pointer,
                   entry.common.pointer.resolve_from(bases.second),
                   entry.common.dialect.value());
           }
@@ -277,8 +280,8 @@ auto sourcemeta::jsontoolkit::frame(
           if (type == sourcemeta::jsontoolkit::AnchorType::Dynamic ||
               type == sourcemeta::jsontoolkit::AnchorType::All) {
             store(frame, sourcemeta::jsontoolkit::ReferenceType::Dynamic,
-                  absolute_anchor_uri, root_id, base_string,
-                  entry.common.pointer,
+                  ReferenceEntryType::Anchor, absolute_anchor_uri, root_id,
+                  base_string, entry.common.pointer,
                   entry.common.pointer.resolve_from(bases.second),
                   entry.common.dialect.value());
           }
@@ -309,8 +312,8 @@ auto sourcemeta::jsontoolkit::frame(
         const auto nearest_bases{
             find_nearest_bases(base_uris, pointer, base.first)};
         assert(!nearest_bases.first.empty());
-        store(frame, ReferenceType::Static, result, root_id,
-              nearest_bases.first.front(), pointer,
+        store(frame, ReferenceType::Static, ReferenceEntryType::Pointer, result,
+              root_id, nearest_bases.first.front(), pointer,
               pointer.resolve_from(nearest_bases.second),
               dialects.first.front());
       }
