@@ -65,6 +65,10 @@ using SchemaCompilerValueString = JSON::String;
 using SchemaCompilerValueType = JSON::Type;
 
 /// @ingroup jsonschema
+/// Represents a compiler step JSON types value
+using SchemaCompilerValueTypes = std::set<JSON::Type>;
+
+/// @ingroup jsonschema
 /// Represents a compiler step ECMA regular expression value. We store both the
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
@@ -82,7 +86,7 @@ enum class SchemaCompilerValueStringType { URI };
 /// @ingroup jsonschema
 /// Represents a value in a compiler step
 template <typename T>
-using SchemaCompilerValue = std::variant<T, SchemaCompilerTarget>;
+using SchemaCompilerStepValue = std::variant<T, SchemaCompilerTarget>;
 
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that always fails
@@ -97,6 +101,11 @@ struct SchemaCompilerAssertionDefines;
 /// Represents a compiler assertion step that checks if a document is of the
 /// given type
 struct SchemaCompilerAssertionType;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks if a document is of any of
+/// the given types
+struct SchemaCompilerAssertionTypeAny;
 
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks a string against an ECMA
@@ -206,15 +215,15 @@ struct SchemaCompilerControlJump;
 /// Represents a schema compilation step that can be evaluated
 using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionFail, SchemaCompilerAssertionDefines,
-    SchemaCompilerAssertionType, SchemaCompilerAssertionRegex,
-    SchemaCompilerAssertionNotContains, SchemaCompilerAssertionSizeGreater,
-    SchemaCompilerAssertionSizeLess, SchemaCompilerAssertionEqual,
-    SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
-    SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
-    SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
-    SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
-    SchemaCompilerAnnotationPrivate, SchemaCompilerLogicalOr,
-    SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
+    SchemaCompilerAssertionType, SchemaCompilerAssertionTypeAny,
+    SchemaCompilerAssertionRegex, SchemaCompilerAssertionNotContains,
+    SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
+    SchemaCompilerAssertionEqual, SchemaCompilerAssertionGreaterEqual,
+    SchemaCompilerAssertionLessEqual, SchemaCompilerAssertionGreater,
+    SchemaCompilerAssertionLess, SchemaCompilerAssertionUnique,
+    SchemaCompilerAssertionDivisible, SchemaCompilerAssertionStringType,
+    SchemaCompilerAnnotationPublic, SchemaCompilerAnnotationPrivate,
+    SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalNot, SchemaCompilerLoopProperties,
     SchemaCompilerLoopItems, SchemaCompilerControlLabel,
     SchemaCompilerControlJump>>;
@@ -226,7 +235,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
-    const SchemaCompilerValue<type> value;                                     \
+    const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
   };
 
@@ -236,7 +245,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
-    const SchemaCompilerValue<type> value;                                     \
+    const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate children;                                     \
     const SchemaCompilerTemplate condition;                                    \
   };
@@ -253,6 +262,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
 DEFINE_STEP_WITH_VALUE(Assertion, Fail, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Defines, SchemaCompilerValueString)
 DEFINE_STEP_WITH_VALUE(Assertion, Type, SchemaCompilerValueType)
+DEFINE_STEP_WITH_VALUE(Assertion, TypeAny, SchemaCompilerValueTypes)
 DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
 DEFINE_STEP_WITH_VALUE(Assertion, NotContains, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeGreater,
@@ -350,12 +360,20 @@ enum class SchemaCompilerEvaluationMode {
 /// - The step that was just evaluated
 /// - The evaluation path
 /// - The instance location
+/// - The instance document
 /// - The annotation result, if any (otherwise null)
 ///
 /// You can use this callback mechanism to implement arbitrary output formats.
-using SchemaCompilerEvaluationCallback =
-    std::function<void(bool, const SchemaCompilerTemplate::value_type &,
-                       const Pointer &, const Pointer &, const JSON &)>;
+using SchemaCompilerEvaluationCallback = std::function<void(
+    bool, const SchemaCompilerTemplate::value_type &, const Pointer &,
+    const Pointer &, const JSON &, const JSON &)>;
+
+/// @ingroup jsonschema
+///
+/// This function translates a step execution into a human-readable string.
+/// Useful as the building block for producing user-friendly evaluation results.
+auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
+describe(const SchemaCompilerTemplate::value_type &step) -> std::string;
 
 // TODO: Support standard output formats. Maybe through pre-made evaluation
 // callbacks?
@@ -416,6 +434,7 @@ evaluate(const SchemaCompilerTemplate &steps, const JSON &instance) -> bool;
 ///     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step,
 ///     const sourcemeta::jsontoolkit::Pointer &evaluate_path,
 ///     const sourcemeta::jsontoolkit::Pointer &instance_location,
+///     const sourcemeta::jsontoolkit::JSON &document,
 ///     const sourcemeta::jsontoolkit::JSON &annotation) -> void {
 ///   std::cout << "TYPE: " << (result ? "Success" : "Failure") << "\n";
 ///   std::cout << "STEP:\n";

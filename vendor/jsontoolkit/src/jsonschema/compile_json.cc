@@ -35,8 +35,8 @@ auto target_to_json(const sourcemeta::jsontoolkit::SchemaCompilerTarget &target)
 }
 
 template <typename T>
-auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerValue<T> &value)
-    -> sourcemeta::jsontoolkit::JSON {
+auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
+                       &value) -> sourcemeta::jsontoolkit::JSON {
   using namespace sourcemeta::jsontoolkit;
   if (std::holds_alternative<SchemaCompilerTarget>(value)) {
     return target_to_json(std::get<SchemaCompilerTarget>(value));
@@ -58,6 +58,17 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerValue<T> &value)
     std::ostringstream type_string;
     type_string << std::get<T>(value);
     result.assign("value", JSON{type_string.str()});
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueTypes, T>) {
+    result.assign("type", JSON{"types"});
+    JSON types{JSON::make_array()};
+    for (const auto type : std::get<T>(value)) {
+      std::ostringstream type_string;
+      type_string << type;
+      types.push_back(JSON{type_string.str()});
+    }
+
+    result.assign("value", std::move(types));
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueString, T>) {
     result.assign("type", JSON{"string"});
@@ -145,6 +156,7 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "fail", SchemaCompilerAssertionFail)
   HANDLE_STEP("assertion", "defines", SchemaCompilerAssertionDefines)
   HANDLE_STEP("assertion", "type", SchemaCompilerAssertionType)
+  HANDLE_STEP("assertion", "type-any", SchemaCompilerAssertionTypeAny)
   HANDLE_STEP("assertion", "regex", SchemaCompilerAssertionRegex)
   HANDLE_STEP("assertion", "not-contains", SchemaCompilerAssertionNotContains)
   HANDLE_STEP("assertion", "size-greater", SchemaCompilerAssertionSizeGreater)

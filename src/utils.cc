@@ -101,20 +101,23 @@ auto parse_options(const std::span<const std::string> &arguments,
 
 auto pretty_evaluate_callback(
     bool result,
-    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
+    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step,
     const sourcemeta::jsontoolkit::Pointer &evaluate_path,
     const sourcemeta::jsontoolkit::Pointer &instance_location,
+    const sourcemeta::jsontoolkit::JSON &,
     const sourcemeta::jsontoolkit::JSON &) -> void {
   if (result) {
     return;
   }
 
-  // TODO: Improve this pretty terrible output
-  std::cerr << "✗ \"";
+  std::cerr << "error: " << sourcemeta::jsontoolkit::describe(step) << "\n";
+  std::cerr << "    at instance location \"";
   sourcemeta::jsontoolkit::stringify(instance_location, std::cerr);
-  std::cerr << "\" at evaluate path (\"";
+  std::cerr << "\"\n";
+
+  std::cerr << "    at evaluate path \"";
   sourcemeta::jsontoolkit::stringify(evaluate_path, std::cerr);
-  std::cerr << "\")\n";
+  std::cerr << "\"\n";
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options)
