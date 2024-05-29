@@ -10,8 +10,10 @@ add_executable(jsonschema_cli
   lint/enum_with_type.h)
 intelligence_jsonschema_add_compile_options(jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::uri)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::json)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonschema)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::hydra::httpclient)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
