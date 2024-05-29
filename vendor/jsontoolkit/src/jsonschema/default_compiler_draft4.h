@@ -30,11 +30,6 @@ auto compiler_draft4_core_ref(const SchemaCompilerContext &context)
     return {make<SchemaCompilerControlJump>(context, label, {})};
   }
 
-  // TODO: Only create a wrapper "label" step if there is indeed recursion
-  // going on, which we can probably confirm through the framing results.
-  // Otherwise, if no recursion would actually happen, then fully unrolling
-  // the references would be more efficient.
-
   // The idea to handle recursion is to expand the reference once, and when
   // doing so, create a "checkpoint" that we can jump back to in a subsequent
   // recursive reference. While unrolling the reference once may initially
@@ -145,18 +140,16 @@ auto compiler_draft4_validation_required(const SchemaCompilerContext &context)
   assert(!context.value.empty());
 
   if (context.value.size() > 1) {
-    SchemaCompilerTemplate children;
-    const auto subcontext{applicate(context)};
+    std::set<JSON::String> properties;
     for (const auto &property : context.value.as_array()) {
       assert(property.is_string());
-      children.push_back(make<SchemaCompilerAssertionDefines>(
-          subcontext, property.to_string(), {},
-          SchemaCompilerTargetType::Instance));
+      properties.emplace(property.to_string());
     }
 
-    return {make<SchemaCompilerLogicalAnd>(
-        context, SchemaCompilerValueNone{}, std::move(children),
-        type_condition(context, JSON::Type::Object))};
+    return {make<SchemaCompilerAssertionDefinesAll>(
+        context, std::move(properties),
+        type_condition(context, JSON::Type::Object),
+        SchemaCompilerTargetType::Instance)};
   } else {
     assert(context.value.front().is_string());
     return {make<SchemaCompilerAssertionDefines>(
@@ -171,15 +164,17 @@ auto compiler_draft4_applicator_allof(const SchemaCompilerContext &context)
   assert(context.value.is_array());
   assert(!context.value.empty());
 
-  SchemaCompilerTemplate result;
+  SchemaCompilerTemplate children;
   for (std::uint64_t index = 0; index < context.value.size(); index++) {
-    for (auto &&step :
-         compile(context, {static_cast<Pointer::Token::Index>(index)})) {
-      result.push_back(std::move(step));
+    for (auto &&step : compile(applicate(context),
+                               {static_cast<Pointer::Token::Index>(index)})) {
+      children.push_back(std::move(step));
     }
   }
 
-  return result;
+  return {make<SchemaCompilerLogicalAnd>(context, SchemaCompilerValueNone{},
+                                         std::move(children),
+                                         SchemaCompilerTemplate{})};
 }
 
 auto compiler_draft4_applicator_anyof(const SchemaCompilerContext &context)
@@ -190,7 +185,7 @@ auto compiler_draft4_applicator_anyof(const SchemaCompilerContext &context)
   const auto subcontext{applicate(context)};
   SchemaCompilerTemplate disjunctors;
   for (std::uint64_t index = 0; index < context.value.size(); index++) {
-    disjunctors.push_back(make<SchemaCompilerLogicalAnd>(
+    disjunctors.push_back(make<SchemaCompilerInternalContainer>(
         subcontext, SchemaCompilerValueNone{},
         compile(subcontext, {static_cast<Pointer::Token::Index>(index)}),
         SchemaCompilerTemplate{}));
@@ -209,7 +204,7 @@ auto compiler_draft4_applicator_oneof(const SchemaCompilerContext &context)
   const auto subcontext{applicate(context)};
   SchemaCompilerTemplate disjunctors;
   for (std::uint64_t index = 0; index < context.value.size(); index++) {
-    disjunctors.push_back(make<SchemaCompilerLogicalAnd>(
+    disjunctors.push_back(make<SchemaCompilerInternalContainer>(
         subcontext, SchemaCompilerValueNone{},
         compile(subcontext, {static_cast<Pointer::Token::Index>(index)}),
         SchemaCompilerTemplate{}));
@@ -236,7 +231,7 @@ auto compiler_draft4_applicator_properties(const SchemaCompilerContext &context)
     // as such don't exist in Draft 4, so emit a private annotation instead
     substeps.push_back(make<SchemaCompilerAnnotationPrivate>(
         subcontext, JSON{key}, {}, SchemaCompilerTargetType::Instance));
-    children.push_back(make<SchemaCompilerLogicalAnd>(
+    children.push_back(make<SchemaCompilerInternalContainer>(
         subcontext, SchemaCompilerValueNone{}, std::move(substeps),
         // TODO: As an optimization, avoid this condition if the subschema
         // declares `required` and includes the given key
@@ -284,10 +279,12 @@ auto compiler_draft4_applicator_patternproperties(
 
     // Loop over the instance properties
     children.push_back(make<SchemaCompilerLoopProperties>(
-        subcontext, SchemaCompilerValueNone{},
-        {make<SchemaCompilerLogicalAnd>(subcontext, SchemaCompilerValueNone{},
-                                        std::move(substeps),
-                                        std::move(loop_condition))},
+        subcontext,
+        // Treat this as an internal step
+        false,
+        {make<SchemaCompilerInternalContainer>(
+            subcontext, SchemaCompilerValueNone{}, std::move(substeps),
+            std::move(loop_condition))},
         SchemaCompilerTemplate{}));
   }
 
@@ -312,7 +309,7 @@ auto compiler_draft4_applicator_additionalproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema does
       // not declare `properties`
-      make<SchemaCompilerAssertionNotContains>(
+      make<SchemaCompilerInternalNoAnnotation>(
           subcontext,
           SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                                empty_pointer},
@@ -321,7 +318,7 @@ auto compiler_draft4_applicator_additionalproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema does
       // not declare `patternProperties`
-      make<SchemaCompilerAssertionNotContains>(
+      make<SchemaCompilerInternalNoAnnotation>(
           subcontext,
           SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                                empty_pointer},
@@ -329,7 +326,7 @@ auto compiler_draft4_applicator_additionalproperties(
           Pointer{"patternProperties"}),
   };
 
-  SchemaCompilerTemplate wrapper{make<SchemaCompilerLogicalAnd>(
+  SchemaCompilerTemplate wrapper{make<SchemaCompilerInternalContainer>(
       subcontext, SchemaCompilerValueNone{},
       compile(subcontext, empty_pointer, empty_pointer),
       {make<SchemaCompilerLogicalAnd>(subcontext, SchemaCompilerValueNone{},
@@ -337,7 +334,7 @@ auto compiler_draft4_applicator_additionalproperties(
                                       SchemaCompilerTemplate{})})};
 
   return {make<SchemaCompilerLoopProperties>(
-      context, SchemaCompilerValueNone{}, {std::move(wrapper)},
+      context, true, {std::move(wrapper)},
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `object` already
@@ -427,7 +424,7 @@ auto compiler_draft4_applicator_items(const SchemaCompilerContext &context)
   for (auto iterator{array.cbegin()}; iterator != array.cend(); ++iterator) {
     const auto index{
         static_cast<std::size_t>(std::distance(array.cbegin(), iterator))};
-    children.push_back(make<SchemaCompilerLogicalAnd>(
+    children.push_back(make<SchemaCompilerInternalContainer>(
         subcontext, SchemaCompilerValueNone{},
         compile(subcontext, {index}, {index}),
 
@@ -479,7 +476,7 @@ auto compiler_draft4_applicator_dependencies(
 
   for (const auto &entry : context.value.as_object()) {
     if (entry.second.is_object()) {
-      children.push_back(make<SchemaCompilerLogicalAnd>(
+      children.push_back(make<SchemaCompilerInternalContainer>(
           subcontext, SchemaCompilerValueNone{},
           compile(subcontext, {entry.first}, empty_pointer),
 
@@ -489,22 +486,19 @@ auto compiler_draft4_applicator_dependencies(
               subcontext, entry.first, {},
               SchemaCompilerTargetType::Instance)}));
     } else if (entry.second.is_array()) {
-      SchemaCompilerTemplate substeps;
-      for (const auto &key : entry.second.as_array()) {
-        assert(key.is_string());
-        substeps.push_back(make<SchemaCompilerAssertionDefines>(
-            subcontext, key.to_string(), {},
-            SchemaCompilerTargetType::Instance));
+      std::set<JSON::String> properties;
+      for (const auto &property : entry.second.as_array()) {
+        assert(property.is_string());
+        properties.emplace(property.to_string());
       }
 
-      children.push_back(make<SchemaCompilerLogicalAnd>(
-          subcontext, SchemaCompilerValueNone{}, std::move(substeps),
-
+      children.push_back(make<SchemaCompilerInternalDefinesAll>(
+          subcontext, std::move(properties),
           // TODO: As an optimization, avoid this condition if the subschema
           // declares `required` and includes the given key
           {make<SchemaCompilerAssertionDefines>(
-              subcontext, entry.first, {},
-              SchemaCompilerTargetType::Instance)}));
+              subcontext, entry.first, {}, SchemaCompilerTargetType::Instance)},
+          SchemaCompilerTargetType::Instance));
     }
   }
 
@@ -523,17 +517,14 @@ auto compiler_draft4_validation_enum(const SchemaCompilerContext &context)
                                            SchemaCompilerTargetType::Instance)};
   }
 
-  // TODO: Create a higher level "contains" step
-  SchemaCompilerTemplate children;
-  const auto subcontext{applicate(context)};
-  for (const auto &choice : context.value.as_array()) {
-    children.push_back(make<SchemaCompilerAssertionEqual>(
-        subcontext, choice, {}, SchemaCompilerTargetType::Instance));
+  std::set<JSON> options;
+  for (const auto &option : context.value.as_array()) {
+    options.insert(option);
   }
 
-  return {make<SchemaCompilerLogicalOr>(context, SchemaCompilerValueNone{},
-                                        std::move(children),
-                                        SchemaCompilerTemplate{})};
+  return {make<SchemaCompilerAssertionEqualsAny>(
+      context, std::move(options), SchemaCompilerTemplate{},
+      SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_uniqueitems(

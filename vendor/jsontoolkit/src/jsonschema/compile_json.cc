@@ -49,6 +49,10 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     result.assign("type", JSON{"json"});
     result.assign("value", JSON{std::get<T>(value)});
     return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueBoolean, T>) {
+    result.assign("type", JSON{"boolean"});
+    result.assign("value", JSON{std::get<T>(value)});
+    return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueRegex, T>) {
     result.assign("type", JSON{"regex"});
     result.assign("value", JSON{std::get<T>(value).second});
@@ -73,6 +77,24 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
   } else if constexpr (std::is_same_v<SchemaCompilerValueString, T>) {
     result.assign("type", JSON{"string"});
     result.assign("value", JSON{std::get<T>(value)});
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueStrings, T>) {
+    result.assign("type", JSON{"strings"});
+    JSON items{JSON::make_array()};
+    for (const auto &item : std::get<T>(value)) {
+      items.push_back(JSON{item});
+    }
+
+    result.assign("value", std::move(items));
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueArray, T>) {
+    result.assign("type", JSON{"array"});
+    JSON items{JSON::make_array()};
+    for (const auto &item : std::get<T>(value)) {
+      items.push_back(item);
+    }
+
+    result.assign("value", std::move(items));
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueUnsignedInteger, T>) {
     result.assign("type", JSON{"unsigned-integer"});
@@ -155,10 +177,10 @@ struct StepVisitor {
 
   HANDLE_STEP("assertion", "fail", SchemaCompilerAssertionFail)
   HANDLE_STEP("assertion", "defines", SchemaCompilerAssertionDefines)
+  HANDLE_STEP("assertion", "defines-all", SchemaCompilerAssertionDefinesAll)
   HANDLE_STEP("assertion", "type", SchemaCompilerAssertionType)
   HANDLE_STEP("assertion", "type-any", SchemaCompilerAssertionTypeAny)
   HANDLE_STEP("assertion", "regex", SchemaCompilerAssertionRegex)
-  HANDLE_STEP("assertion", "not-contains", SchemaCompilerAssertionNotContains)
   HANDLE_STEP("assertion", "size-greater", SchemaCompilerAssertionSizeGreater)
   HANDLE_STEP("assertion", "size-less", SchemaCompilerAssertionSizeLess)
   HANDLE_STEP("assertion", "equal", SchemaCompilerAssertionEqual)
@@ -169,12 +191,16 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "unique", SchemaCompilerAssertionUnique)
   HANDLE_STEP("assertion", "divisible", SchemaCompilerAssertionDivisible)
   HANDLE_STEP("assertion", "string-type", SchemaCompilerAssertionStringType)
+  HANDLE_STEP("assertion", "equals-any", SchemaCompilerAssertionEqualsAny)
   HANDLE_STEP("annotation", "public", SchemaCompilerAnnotationPublic)
   HANDLE_STEP("annotation", "private", SchemaCompilerAnnotationPrivate)
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
+  HANDLE_STEP("internal", "no-annotation", SchemaCompilerInternalNoAnnotation)
+  HANDLE_STEP("internal", "container", SchemaCompilerInternalContainer)
+  HANDLE_STEP("internal", "defines-all", SchemaCompilerInternalDefinesAll)
   HANDLE_STEP("loop", "properties", SchemaCompilerLoopProperties)
   HANDLE_STEP("loop", "items", SchemaCompilerLoopItems)
   HANDLE_STEP("control", "label", SchemaCompilerControlLabel)
