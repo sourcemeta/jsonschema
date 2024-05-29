@@ -9,6 +9,7 @@ option(JSONSCHEMA_TESTS "Build the JSON Schema CLI tests" OFF)
 option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 
 find_package(JSONToolkit REQUIRED)
+find_package(Hydra REQUIRED)
 add_subdirectory(src)
 
 noa_target_clang_format(SOURCES
