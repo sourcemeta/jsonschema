@@ -1,3 +1,6 @@
+#include <sourcemeta/hydra/httpclient.h>
+#include <sourcemeta/jsontoolkit/uri.h>
+
 #include "utils.h"
 
 #include <cassert>   // assert
@@ -130,8 +133,31 @@ static auto fallback_resolver(std::string_view identifier)
     return promise.get_future();
   }
 
+  // If the URI is not an HTTP URL, then abort
+  const sourcemeta::jsontoolkit::URI uri{std::string{identifier}};
+  const auto maybe_scheme{uri.scheme()};
+  if (uri.is_urn() || !maybe_scheme.has_value() ||
+      (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
+    std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
+    promise.set_value(std::nullopt);
+    return promise.get_future();
+  }
+
+  // TODO: Only print in verbose mode
+  std::cerr << "-- Attempting to fetch over HTTP: " << identifier << "\n";
+
+  sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
+  request.method(sourcemeta::hydra::http::Method::GET);
+  sourcemeta::hydra::http::ClientResponse response{request.send().get()};
+  if (response.status() != sourcemeta::hydra::http::Status::OK) {
+    std::ostringstream error;
+    error << "Failed to fetch " << identifier
+          << " over HTTP. Got status code: " << response.status();
+    throw std::runtime_error(error.str());
+  }
+
   std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
-  promise.set_value(std::nullopt);
+  promise.set_value(sourcemeta::jsontoolkit::parse(response.body()));
   return promise.get_future();
 }
 
