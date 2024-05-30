@@ -120,10 +120,25 @@ auto pretty_evaluate_callback(
   std::cerr << "\"\n";
 }
 
+static auto fallback_resolver(std::string_view identifier)
+    -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
+  auto official_result{
+      sourcemeta::jsontoolkit::official_resolver(identifier).get()};
+  if (official_result.has_value()) {
+    std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
+    promise.set_value(std::move(official_result));
+    return promise.get_future();
+  }
+
+  std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
+  promise.set_value(std::nullopt);
+  return promise.get_future();
+}
+
 auto resolver(const std::map<std::string, std::vector<std::string>> &options)
     -> sourcemeta::jsontoolkit::SchemaResolver {
   sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
-      sourcemeta::jsontoolkit::official_resolver};
+      fallback_resolver};
 
   if (options.contains("resolve")) {
     for (const auto &schema_path : options.at("resolve")) {
