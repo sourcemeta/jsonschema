@@ -3,11 +3,15 @@
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
+#include <set>      // std::set
+#include <string>   // std::string
 
 #include "command.h"
 #include "utils.h"
 
 // TODO: Add a flag to first validate schema against its metaschema
+// TODO: Add a flag to emit output using the standard JSON Schema output format
+// TODO: Add a flag to prevent the use of HTTP resolution
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
