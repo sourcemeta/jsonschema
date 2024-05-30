@@ -1,16 +1,32 @@
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
+#include <sourcemeta/jsontoolkit/jsonschema_error.h>
 
-#include "default_compiler_2020_12.h"
 #include "default_compiler_draft4.h"
 #include "default_compiler_draft6.h"
 
 #include <cassert> // assert
+#include <set>     // std::set
+#include <sstream> // std::ostringstream
+#include <string>  // std::string
 
 // TODO: Support every keyword
 auto sourcemeta::jsontoolkit::default_schema_compiler(
     const sourcemeta::jsontoolkit::SchemaCompilerContext &context)
     -> sourcemeta::jsontoolkit::SchemaCompilerTemplate {
   assert(!context.keyword.empty());
+
+  static std::set<std::string> SUPPORTED_VOCABULARIES{
+      "http://json-schema.org/draft-06/schema#",
+      "http://json-schema.org/draft-04/schema#"};
+  for (const auto &vocabulary : context.vocabularies) {
+    if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
+        vocabulary.second) {
+      std::ostringstream error;
+      error << "Cannot compile unsupported vocabulary: " << vocabulary.first;
+      throw SchemaError(error.str());
+    }
+  }
+
   using namespace sourcemeta::jsontoolkit;
 
 #define COMPILE(vocabulary, _keyword, handler)                                 \
@@ -24,13 +40,6 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
       context.schema.is_object() && context.schema.defines(_keyword)) {        \
     return {};                                                                 \
   }
-
-  // ********************************************
-  // 2020-12
-  // ********************************************
-
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "type",
-          compiler_2020_12_validation_type);
 
   // ********************************************
   // DRAFT 6
