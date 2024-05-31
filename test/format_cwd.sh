@@ -40,22 +40,5 @@ cat << 'EOF' > "$TMP/expected_2.json"
 }
 EOF
 
-if ! cmp -s "$TMP/schema_1.json" "$TMP/expected_1.json"
-then
-  echo "GOT:" 1>&2
-  cat "$TMP/schema_1.json" 1>&2
-  echo "EXPECTED:" 1>&2
-  cat "$TMP/expected_1.json" 1>&2
-  echo "FAIL" 1>&2
-  exit 1
-fi
-
-if ! cmp -s "$TMP/schema_2.json" "$TMP/expected_2.json"
-then
-  echo "GOT:" 1>&2
-  cat "$TMP/schema_2.json" 1>&2
-  echo "EXPECTED:" 1>&2
-  cat "$TMP/expected_2.json" 1>&2
-  echo "FAIL" 1>&2
-  exit 1
-fi
+diff "$TMP/schema_1.json" "$TMP/expected_1.json"
+diff "$TMP/schema_2.json" "$TMP/expected_2.json"
