@@ -20,20 +20,23 @@ Global Options:
 
 Commands:
 
-   validate <schema.json> <instance.json> [--http/-h]
+   validate <schema.json> <instance.json> [--http/-h] [--metaschema/-m]
 
        Validate an instance against a schema, printing error information, if
        any, in a human-readable manner. The `--http/-h` option enables resolving
-       remote schemas over the HTTP protocol.
+       remote schemas over the HTTP protocol. The `--metaschema/-m` option
+       checks that the given schema is valid with respects to its dialect
+       metaschema.
 
-   test [schema.json...] [--http/-h]
+   test [schema.json...] [--http/-h] [--metaschema/-m]
 
        A schema test runner inspired by the official JSON Schema test suite.
        Passing directories as input will run every `.json` file in such
        directory (recursively) as a test. If no argument is passed, run every
        `.json` file in the current working directory (recursively) as a test.
       The `--http/-h` option enables resolving remote schemas over the HTTP
-      protocol.
+      protocol. The `--metaschema/-m` option checks that the given schema is
+      valid with respects to its dialect metaschema.
 
    fmt [schema.json...] [--check/-c]
 

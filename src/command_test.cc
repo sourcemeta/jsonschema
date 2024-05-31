@@ -7,10 +7,10 @@
 #include "command.h"
 #include "utils.h"
 
-// TODO: Add a flag to first validate schema against its metaschema
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http"})};
+  const auto options{
+      parse_options(arguments, {"h", "http", "m", "metaschema"})};
   bool result{true};
   const auto test_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
@@ -39,6 +39,19 @@ auto intelligence::jsonschema::cli::test(
       std::cerr << "Could not resolve schema " << test.at("schema").to_string()
                 << " at " << entry.first.string() << "\n";
       return EXIT_FAILURE;
+    }
+
+    if (options.contains("m") || options.contains("metaschema")) {
+      const auto metaschema_result{
+          validate_against_metaschema(schema.value(), test_resolver)};
+      if (metaschema_result) {
+        log_verbose(options)
+            << "The schema is valid with respect to its metaschema\n";
+        ;
+      } else {
+        std::cerr << "The schema is NOT valid with respect to its metaschema\n";
+        return EXIT_FAILURE;
+      }
     }
 
     const auto schema_template{sourcemeta::jsontoolkit::compile(
