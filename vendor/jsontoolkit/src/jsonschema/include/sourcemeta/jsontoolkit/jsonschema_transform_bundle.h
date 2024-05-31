@@ -104,6 +104,18 @@ public:
     this->rules.emplace(rule->name(), std::move(rule));
   }
 
+  /// The category of a built-in transformation rule
+  enum class Category {
+    /// Rules that make use of newer features within the same dialect
+    Modernize,
+
+    /// Rules that detect common anti-patterns
+    AntiPattern
+  };
+
+  /// Add a set of built-in rules given a category
+  auto add(const Category category) -> void;
+
   /// Apply the bundle of rules to a schema
   auto apply(JSON &schema, const SchemaWalker &walker,
              const SchemaResolver &resolver,

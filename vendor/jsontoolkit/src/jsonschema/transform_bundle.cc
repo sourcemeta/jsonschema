@@ -4,6 +4,41 @@
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::runtime_error
 
+// For built-in rules
+#include <algorithm> // std::any_of
+#include <iterator>  // std::cbegin, std::cend
+namespace sourcemeta::jsontoolkit {
+template <typename T>
+auto contains_any(const T &container, const T &values) -> bool {
+  return std::any_of(
+      std::cbegin(container), std::cend(container),
+      [&values](const auto &element) { return values.contains(element); });
+}
+
+// Modernize
+#include "rules/const_with_type.h"
+#include "rules/enum_to_const.h"
+#include "rules/enum_with_type.h"
+} // namespace sourcemeta::jsontoolkit
+
+auto sourcemeta::jsontoolkit::SchemaTransformBundle::add(
+    const sourcemeta::jsontoolkit::SchemaTransformBundle::Category category)
+    -> void {
+  switch (category) {
+    case sourcemeta::jsontoolkit::SchemaTransformBundle::Category::Modernize:
+      this->template add<EnumToConst>();
+      break;
+    case sourcemeta::jsontoolkit::SchemaTransformBundle::Category::AntiPattern:
+      this->template add<EnumWithType>();
+      this->template add<ConstWithType>();
+      break;
+    default:
+      // We should never get here
+      assert(false);
+      break;
+  }
+}
+
 auto sourcemeta::jsontoolkit::SchemaTransformBundle::apply(
     sourcemeta::jsontoolkit::JSON &schema,
     const sourcemeta::jsontoolkit::SchemaWalker &walker,

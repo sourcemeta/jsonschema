@@ -6,8 +6,7 @@ add_executable(jsonschema_cli
   command_bundle.cc
   command_test.cc
   command_lint.cc
-  command_validate.cc
-  lint/enum_with_type.h)
+  command_validate.cc)
 intelligence_jsonschema_add_compile_options(jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::uri)
