@@ -2,15 +2,15 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS
+#include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout, std::endl
 
 #include "command.h"
 #include "utils.h"
 
-// TODO: Implement a --fix flag
 auto intelligence::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
+  const auto options{parse_options(arguments, {"f", "fix"})};
 
   sourcemeta::jsontoolkit::SchemaTransformBundle bundle;
   bundle.add(
@@ -19,19 +19,33 @@ auto intelligence::jsonschema::cli::lint(
       sourcemeta::jsontoolkit::SchemaTransformBundle::Category::AntiPattern);
 
   bool result{true};
-  for (const auto &entry : for_each_json(options.at(""))) {
-    const bool subresult = bundle.check(
-        entry.second, sourcemeta::jsontoolkit::default_schema_walker,
-        resolver(options),
-        [&entry](const auto &pointer, const auto &name, const auto &message) {
-          std::cout << entry.first.string() << "\n";
-          std::cout << "    ";
-          sourcemeta::jsontoolkit::stringify(pointer, std::cout);
-          std::cout << " " << message << " (" << name << ")\n";
-        });
 
-    if (!subresult) {
-      result = false;
+  if (options.contains("f") || options.contains("fix")) {
+    for (const auto &entry : for_each_json(options.at(""))) {
+      log_verbose(options) << "Linting: " << entry.first.string() << "\n";
+      auto copy = entry.second;
+      bundle.apply(copy, sourcemeta::jsontoolkit::default_schema_walker,
+                   resolver(options));
+      std::ofstream output{entry.first};
+      sourcemeta::jsontoolkit::prettify(
+          copy, output, sourcemeta::jsontoolkit::schema_format_compare);
+      output << std::endl;
+    }
+  } else {
+    for (const auto &entry : for_each_json(options.at(""))) {
+      const bool subresult = bundle.check(
+          entry.second, sourcemeta::jsontoolkit::default_schema_walker,
+          resolver(options),
+          [&entry](const auto &pointer, const auto &name, const auto &message) {
+            std::cout << entry.first.string() << "\n";
+            std::cout << "    ";
+            sourcemeta::jsontoolkit::stringify(pointer, std::cout);
+            std::cout << " " << message << " (" << name << ")\n";
+          });
+
+      if (!subresult) {
+        result = false;
+      }
     }
   }
 
