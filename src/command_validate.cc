@@ -15,17 +15,13 @@ auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
       parse_options(arguments, {"h", "http", "m", "metaschema"})};
-  CLI_ENSURE(options.at("").size() >= 2,
-             "You must pass a schema followed by an instance")
+  CLI_ENSURE(options.at("").size() >= 1, "You must pass a schema")
   const auto &schema_path{options.at("").at(0)};
-  const auto &instance_path{options.at("").at(1)};
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
 
-  // TODO: If not instance is passed, just validate the schema against its
-  // metaschema?
   if (options.contains("m") || options.contains("metaschema")) {
     const auto metaschema_template{sourcemeta::jsontoolkit::compile(
         sourcemeta::jsontoolkit::metaschema(schema, custom_resolver),
@@ -43,19 +39,23 @@ auto intelligence::jsonschema::cli::validate(
     }
   }
 
-  const auto schema_template{sourcemeta::jsontoolkit::compile(
-      schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-      sourcemeta::jsontoolkit::default_schema_compiler)};
+  bool result{true};
+  if (options.at("").size() >= 2) {
+    const auto &instance_path{options.at("").at(1)};
+    const auto schema_template{sourcemeta::jsontoolkit::compile(
+        schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
+        sourcemeta::jsontoolkit::default_schema_compiler)};
 
-  const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+    const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
 
-  const auto result{sourcemeta::jsontoolkit::evaluate(
-      schema_template, instance,
-      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-      pretty_evaluate_callback)};
+    result = sourcemeta::jsontoolkit::evaluate(
+        schema_template, instance,
+        sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+        pretty_evaluate_callback);
 
-  if (result) {
-    log_verbose(options) << "Valid\n";
+    if (result) {
+      log_verbose(options) << "Valid\n";
+    }
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;
