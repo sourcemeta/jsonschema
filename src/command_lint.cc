@@ -7,17 +7,18 @@
 #include "command.h"
 #include "utils.h"
 
-#include "lint/enum_with_type.h"
-
 // TODO: Implement a --fix flag
 auto intelligence::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
 
   sourcemeta::jsontoolkit::SchemaTransformBundle bundle;
-  bundle.add<EnumWithType>();
-  bool result{true};
+  bundle.add(
+      sourcemeta::jsontoolkit::SchemaTransformBundle::Category::Modernize);
+  bundle.add(
+      sourcemeta::jsontoolkit::SchemaTransformBundle::Category::AntiPattern);
 
+  bool result{true};
   for (const auto &entry : for_each_json(options.at(""))) {
     const bool subresult = bundle.check(
         entry.second, sourcemeta::jsontoolkit::default_schema_walker,
@@ -29,7 +30,9 @@ auto intelligence::jsonschema::cli::lint(
           std::cout << " " << message << " (" << name << ")\n";
         });
 
-    result = result || subresult;
+    if (!subresult) {
+      result = false;
+    }
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;
