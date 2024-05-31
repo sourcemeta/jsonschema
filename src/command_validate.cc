@@ -11,10 +11,9 @@
 
 // TODO: Add a flag to first validate schema against its metaschema
 // TODO: Add a flag to emit output using the standard JSON Schema output format
-// TODO: Add a flag to prevent the use of HTTP resolution
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
+  const auto options{parse_options(arguments, {"h", "http"})};
   CLI_ENSURE(options.at("").size() >= 2,
              "You must pass a schema followed by an instance")
   const auto &schema_path{options.at("").at(0)};
@@ -23,7 +22,8 @@ auto intelligence::jsonschema::cli::validate(
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
 
   const auto schema_template{sourcemeta::jsontoolkit::compile(
-      schema, sourcemeta::jsontoolkit::default_schema_walker, resolver(options),
+      schema, sourcemeta::jsontoolkit::default_schema_walker,
+      resolver(options, options.contains("h") || options.contains("http")),
       sourcemeta::jsontoolkit::default_schema_compiler)};
 
   const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};

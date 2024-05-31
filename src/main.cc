@@ -1,3 +1,5 @@
+#include <sourcemeta/jsontoolkit/jsonschema.h>
+
 #include <algorithm>   // std::min
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
@@ -18,17 +20,20 @@ Global Options:
 
 Commands:
 
-   validate <schema.json> <instance.json>
+   validate <schema.json> <instance.json> [--http/-h]
 
        Validate an instance against a schema, printing error information, if
-       any, in a human-readable manner.
+       any, in a human-readable manner. The `--http/-h` option enables resolving
+       remote schemas over the HTTP protocol.
 
-   test [schema.json...]
+   test [schema.json...] [--http/-h]
 
        A schema test runner inspired by the official JSON Schema test suite.
        Passing directories as input will run every `.json` file in such
        directory (recursively) as a test. If no argument is passed, run every
        `.json` file in the current working directory (recursively) as a test.
+      The `--http/-h` option enables resolving remote schemas over the HTTP
+      protocol.
 
    fmt [schema.json...] [--check/-c]
 
@@ -46,12 +51,13 @@ Commands:
        (recursively). The `--fix/-f` option will attempt to automatically
        fix the linter errors.
 
-   bundle <schema.json>
+   bundle <schema.json> [--http/-h]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output. Read
        https://json-schema.org/blog/posts/bundling-json-schema-compound-documents
-       to learn more.
+       to learn more. The `--http/-h` option enables resolving remote schemas
+       over the HTTP protocol.
 
    frame <schema.json>
 
@@ -91,6 +97,9 @@ auto main(int argc, char *argv[]) noexcept -> int {
     const std::vector<std::string> arguments{argv + std::min(2, argc),
                                              argv + argc};
     return jsonschema_main(program, command, arguments);
+  } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
+    std::cerr << error.what() << ": " << error.id() << "\n";
+    return EXIT_FAILURE;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << "\n";
     return EXIT_FAILURE;

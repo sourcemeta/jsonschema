@@ -41,7 +41,8 @@ auto pretty_evaluate_callback(
     const sourcemeta::jsontoolkit::JSON &,
     const sourcemeta::jsontoolkit::JSON &) -> void;
 
-auto resolver(const std::map<std::string, std::vector<std::string>> &options)
+auto resolver(const std::map<std::string, std::vector<std::string>> &options,
+              const bool remote = false)
     -> sourcemeta::jsontoolkit::SchemaResolver;
 
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)

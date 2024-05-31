@@ -165,10 +165,10 @@ static auto fallback_resolver(std::string_view identifier)
   return promise.get_future();
 }
 
-auto resolver(const std::map<std::string, std::vector<std::string>> &options)
-    -> sourcemeta::jsontoolkit::SchemaResolver {
+auto resolver(const std::map<std::string, std::vector<std::string>> &options,
+              const bool remote) -> sourcemeta::jsontoolkit::SchemaResolver {
   sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
-      fallback_resolver};
+      remote ? fallback_resolver : sourcemeta::jsontoolkit::official_resolver};
 
   if (options.contains("resolve")) {
     for (const auto &schema_path : options.at("resolve")) {

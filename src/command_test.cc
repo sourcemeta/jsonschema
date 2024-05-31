@@ -8,12 +8,12 @@
 #include "utils.h"
 
 // TODO: Add a flag to first validate schema against its metaschema
-// TODO: Add a flag to prevent the use of HTTP resolution
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
+  const auto options{parse_options(arguments, {"h", "http"})};
   bool result{true};
-  const auto test_resolver{resolver(options)};
+  const auto test_resolver{
+      resolver(options, options.contains("h") || options.contains("http"))};
 
   for (const auto &entry : for_each_json(options.at(""))) {
     const sourcemeta::jsontoolkit::JSON test{
