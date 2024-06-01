@@ -14,12 +14,17 @@ add_jsonschema_test_unix(format_cwd)
 add_jsonschema_test_unix(frame)
 add_jsonschema_test_unix(validate_pass)
 add_jsonschema_test_unix(validate_fail)
+add_jsonschema_test_unix(validate_fail_remote_no_http)
 add_jsonschema_test_unix(validate_non_supported)
 add_jsonschema_test_unix(bundle_non_remote)
 add_jsonschema_test_unix(bundle_remote_single_schema)
+add_jsonschema_test_unix(bundle_remote_no_http)
 add_jsonschema_test_unix(test_single_pass)
 add_jsonschema_test_unix(test_single_fail)
 add_jsonschema_test_unix(test_single_unsupported)
 add_jsonschema_test_unix(lint_pass)
 add_jsonschema_test_unix(lint_fail)
 add_jsonschema_test_unix(lint_fix)
+
+# TODO: Enable certain tests (if a given CMake option
+# is set) that perform outbound HTTP requests
