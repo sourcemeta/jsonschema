@@ -22,9 +22,6 @@
 
 namespace intelligence::jsonschema::cli {
 
-// TODO: Tweak this function to take:
-// - The options that take values
-// - The options that are aliases to other options
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>>;
