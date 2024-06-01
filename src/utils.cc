@@ -127,7 +127,9 @@ auto pretty_evaluate_callback(
   std::cerr << "\"\n";
 }
 
-static auto fallback_resolver(std::string_view identifier)
+static auto fallback_resolver(
+    const std::map<std::string, std::vector<std::string>> &options,
+    std::string_view identifier)
     -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
   auto official_result{
       sourcemeta::jsontoolkit::official_resolver(identifier).get()};
@@ -147,9 +149,8 @@ static auto fallback_resolver(std::string_view identifier)
     return promise.get_future();
   }
 
-  // TODO: Only print in verbose mode
-  std::cerr << "-- Attempting to fetch over HTTP: " << identifier << "\n";
-
+  log_verbose(options) << "Attempting to fetch over HTTP: " << identifier
+                       << "\n";
   sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
   request.method(sourcemeta::hydra::http::Method::GET);
   sourcemeta::hydra::http::ClientResponse response{request.send().get()};
@@ -168,7 +169,13 @@ static auto fallback_resolver(std::string_view identifier)
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote) -> sourcemeta::jsontoolkit::SchemaResolver {
   sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
-      remote ? fallback_resolver : sourcemeta::jsontoolkit::official_resolver};
+      [&remote, &options](std::string_view identifier) {
+        if (remote) {
+          return fallback_resolver(options, identifier);
+        } else {
+          return sourcemeta::jsontoolkit::official_resolver(identifier);
+        }
+      }};
 
   if (options.contains("resolve")) {
     for (const auto &schema_path : options.at("resolve")) {
