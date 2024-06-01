@@ -10,6 +10,7 @@
 #include "utils.h"
 
 // TODO: Add a flag to emit output using the standard JSON Schema output format
+// TODO: Add a flag to collect annotations
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
