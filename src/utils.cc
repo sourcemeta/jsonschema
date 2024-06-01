@@ -62,6 +62,10 @@ auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>> {
   std::map<std::string, std::vector<std::string>> options;
+  std::set<std::string> effective_flags{flags};
+  effective_flags.insert("v");
+  effective_flags.insert("verbose");
+
   options.insert({"", {}});
   std::optional<std::string> current_option;
   for (const auto &argument : arguments) {
@@ -72,7 +76,7 @@ auto parse_options(const std::span<const std::string> &arguments,
       assert(!current_option.value().empty());
       options.insert({current_option.value(), {}});
       assert(options.contains(current_option.value()));
-      if (flags.contains(current_option.value())) {
+      if (effective_flags.contains(current_option.value())) {
         current_option = std::nullopt;
       }
 
@@ -83,7 +87,7 @@ auto parse_options(const std::span<const std::string> &arguments,
       assert(current_option.value().size() == 1);
       options.insert({current_option.value(), {}});
       assert(options.contains(current_option.value()));
-      if (flags.contains(current_option.value())) {
+      if (effective_flags.contains(current_option.value())) {
         current_option = std::nullopt;
       }
 
