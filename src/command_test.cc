@@ -42,9 +42,14 @@ auto intelligence::jsonschema::cli::test(
     }
 
     if (options.contains("m") || options.contains("metaschema")) {
-      const auto metaschema_result{
-          validate_against_metaschema(schema.value(), test_resolver)};
-      if (metaschema_result) {
+      const auto metaschema_template{sourcemeta::jsontoolkit::compile(
+          sourcemeta::jsontoolkit::metaschema(schema.value(), test_resolver),
+          sourcemeta::jsontoolkit::default_schema_walker, test_resolver,
+          sourcemeta::jsontoolkit::default_schema_compiler)};
+      if (sourcemeta::jsontoolkit::evaluate(
+              metaschema_template, schema.value(),
+              sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+              pretty_evaluate_callback)) {
         log_verbose(options)
             << "The schema is valid with respect to its metaschema\n";
       } else {

@@ -27,9 +27,14 @@ auto intelligence::jsonschema::cli::validate(
   // TODO: If not instance is passed, just validate the schema against its
   // metaschema?
   if (options.contains("m") || options.contains("metaschema")) {
-    const auto metaschema_result{
-        validate_against_metaschema(schema, custom_resolver)};
-    if (metaschema_result) {
+    const auto metaschema_template{sourcemeta::jsontoolkit::compile(
+        sourcemeta::jsontoolkit::metaschema(schema, custom_resolver),
+        sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
+        sourcemeta::jsontoolkit::default_schema_compiler)};
+    if (sourcemeta::jsontoolkit::evaluate(
+            metaschema_template, schema,
+            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+            pretty_evaluate_callback)) {
       log_verbose(options)
           << "The schema is valid with respect to its metaschema\n";
     } else {
