@@ -134,6 +134,35 @@ auto dialect(const JSON &schema,
 
 /// @ingroup jsonschema
 ///
+/// Get the metaschema document that describes the given schema. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <iostream>
+///
+/// const sourcemeta::jsontoolkit::JSON document =
+///   sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "type": "object"
+/// })JSON");
+///
+/// const sourcemeta::jsontoolkit::JSON metaschema{
+///   sourcemeta::jsontoolkit::metaschema(
+///     document, sourcemeta::jsontoolkit::official_resolver)};
+///
+/// sourcemeta::jsontoolkit::prettify(metaschema, std::cout);
+/// std::cout << std::endl;
+/// ```
+///
+/// This function will throw if the metaschema cannot be determined or resolved.
+SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
+auto metaschema(
+    const JSON &schema, const SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect = std::nullopt) -> JSON;
+
+/// @ingroup jsonschema
+///
 /// Get the URI of the base dialect that applies to the given schema. If you set
 /// a default dialect URI, this will be used if the given schema does not
 /// declare the `$schema` keyword. The result of this function is unset

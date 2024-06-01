@@ -86,6 +86,27 @@ auto sourcemeta::jsontoolkit::dialect(
   return dialect.to_string();
 }
 
+auto sourcemeta::jsontoolkit::metaschema(
+    const sourcemeta::jsontoolkit::JSON &schema,
+    const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect) -> JSON {
+  const auto maybe_dialect{
+      sourcemeta::jsontoolkit::dialect(schema, default_dialect)};
+  if (!maybe_dialect.has_value()) {
+    throw sourcemeta::jsontoolkit::SchemaError(
+        "Could not determine dialect of the schema");
+  }
+
+  const auto maybe_metaschema{resolver(maybe_dialect.value()).get()};
+  if (!maybe_metaschema.has_value()) {
+    throw sourcemeta::jsontoolkit::SchemaResolutionError(
+        maybe_dialect.value(),
+        "Could not resolve the metaschema of the schema");
+  }
+
+  return maybe_metaschema.value();
+}
+
 auto sourcemeta::jsontoolkit::base_dialect(
     const sourcemeta::jsontoolkit::JSON &schema,
     const sourcemeta::jsontoolkit::SchemaResolver &resolver,

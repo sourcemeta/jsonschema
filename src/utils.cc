@@ -206,29 +206,4 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
   return null_stream;
 }
 
-auto validate_against_metaschema(
-    const sourcemeta::jsontoolkit::JSON &schema,
-    const sourcemeta::jsontoolkit::SchemaResolver &resolver) -> bool {
-  const std::optional<std::string> dialect{
-      sourcemeta::jsontoolkit::dialect(schema)};
-  if (!dialect.has_value()) {
-    throw std::runtime_error(
-        "Cannot determine the dialect of the input schema");
-  }
-
-  const auto metaschema{resolver(dialect.value()).get()};
-  if (!metaschema.has_value()) {
-    throw sourcemeta::jsontoolkit::SchemaResolutionError(
-        dialect.value(), "Could not resolve metaschema");
-  }
-
-  const auto metaschema_template{sourcemeta::jsontoolkit::compile(
-      metaschema.value(), sourcemeta::jsontoolkit::default_schema_walker,
-      resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
-  return sourcemeta::jsontoolkit::evaluate(
-      metaschema_template, schema,
-      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-      pretty_evaluate_callback);
-}
-
 } // namespace intelligence::jsonschema::cli
