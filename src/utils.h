@@ -45,6 +45,10 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;
 
+auto validate_against_metaschema(
+    const sourcemeta::jsontoolkit::JSON &schema,
+    const sourcemeta::jsontoolkit::SchemaResolver &resolver) -> bool;
+
 } // namespace intelligence::jsonschema::cli
 
 #endif
