@@ -31,7 +31,6 @@ auto intelligence::jsonschema::cli::validate(
     if (metaschema_result) {
       log_verbose(options)
           << "The schema is valid with respect to its metaschema\n";
-      ;
     } else {
       std::cerr << "The schema is NOT valid with respect to its metaschema\n";
       return EXIT_FAILURE;
