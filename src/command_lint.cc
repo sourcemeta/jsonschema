@@ -33,6 +33,7 @@ auto intelligence::jsonschema::cli::lint(
     }
   } else {
     for (const auto &entry : for_each_json(options.at(""))) {
+      log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       const bool subresult = bundle.check(
           entry.second, sourcemeta::jsontoolkit::default_schema_walker,
           resolver(options),
@@ -43,7 +44,9 @@ auto intelligence::jsonschema::cli::lint(
             std::cout << " " << message << " (" << name << ")\n";
           });
 
-      if (!subresult) {
+      if (subresult) {
+        log_verbose(options) << "PASS: " << entry.first.string() << "\n";
+      } else {
         result = false;
       }
     }
