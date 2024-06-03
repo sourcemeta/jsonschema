@@ -330,31 +330,33 @@ if(NOT BearSSL_FOUND)
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME bearssl)
 
-  include(GNUInstallDirs)
-  install(TARGETS bearssl
-    EXPORT bearssl
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev
-    PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-      COMPONENT sourcemeta_hydra
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-      COMPONENT sourcemeta_hydra
-      NAMELINK_COMPONENT sourcemeta_hydra_dev
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  if(HYDRA_INSTALL)
+    include(GNUInstallDirs)
+    install(TARGETS bearssl
+      EXPORT bearssl
+      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        COMPONENT sourcemeta_hydra_dev
+      PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        COMPONENT sourcemeta_hydra_dev
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT sourcemeta_hydra
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT sourcemeta_hydra
+        NAMELINK_COMPONENT sourcemeta_hydra_dev
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT sourcemeta_hydra_dev)
+    install(EXPORT bearssl
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/bearssl"
       COMPONENT sourcemeta_hydra_dev)
-  install(EXPORT bearssl
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/bearssl"
-    COMPONENT sourcemeta_hydra_dev)
 
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/bearssl-config.cmake
-    "include(\"\${CMAKE_CURRENT_LIST_DIR}/bearssl.cmake\")\n"
-    "check_required_components(\"bearssl\")\n")
-  install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/bearssl-config.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/bearssl"
-    COMPONENT sourcemeta_hydra_dev)
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/bearssl-config.cmake
+      "include(\"\${CMAKE_CURRENT_LIST_DIR}/bearssl.cmake\")\n"
+      "check_required_components(\"bearssl\")\n")
+    install(FILES
+      "${CMAKE_CURRENT_BINARY_DIR}/bearssl-config.cmake"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/bearssl"
+      COMPONENT sourcemeta_hydra_dev)
+  endif()
 
   set(BearSSL_FOUND ON)
 endif()
