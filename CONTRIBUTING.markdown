@@ -18,6 +18,19 @@ The default target will build the project and run the test suite. You will also
 find the CLI binary under `build/`. The specific location varies depending on
 your CMake default generator.
 
+Releasing
+---------
+
+```sh
+git checkout main
+# Update the VERSION in CMakeLists.txt
+vim CMakeLists.txt
+git add CMakeLists.txt
+git commit -m "vX.Y.Z"
+git tag -a "vX.Y.Z" -m "vX.Y.Z"
+git push
+```
+
 Grant of Rights
 ---------------
 
