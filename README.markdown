@@ -52,18 +52,19 @@ Where `X.Y.Z` is replaced with the desired version. For example:
 - run: jsonschema fmt path/to/schemas --check
 ```
 
-### Using the install script helper
-
-```sh
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
-```
-
 ### From GitHub Releases
 
 We publish precompiled binaries for every supported platforms to [GitHub
 Releases](https://github.com/Intelligence-AI/jsonschema/releases), including a
 [continuous](https://github.com/Intelligence-AI/jsonschema/releases/tag/continuous)
 that is updated on every commit from the main branch.
+
+For convenience, we also provide a POSIX shell script capable of installing the
+latest pre-built binaries, which you can run as follows:
+
+```sh
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
+```
 
 ### Building from source
 
