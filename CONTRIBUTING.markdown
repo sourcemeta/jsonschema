@@ -31,6 +31,8 @@ git tag -a "vX.Y.Z" -m "vX.Y.Z"
 git push
 ```
 
+Then update https://github.com/Intelligence-AI/homebrew-apps.
+
 Grant of Rights
 ---------------
 

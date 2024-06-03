@@ -32,6 +32,12 @@ The JSON Schema CLI is written using C++ and [CMake](https://cmake.org/), and
 supports macOS, Windows, and GNU/Linux. Under the hood, it relies on the
 powerful [JSON Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
 
+### From Homebrew
+
+```sh
+brew install intelligence-ai/apps/jsonschema
+```
+
 ### From GitHub Releases
 
 We publish precompiled binaries for every supported platforms to [GitHub
