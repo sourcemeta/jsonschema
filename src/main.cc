@@ -29,7 +29,7 @@ Commands:
        is valid with respects to its dialect metaschema even if an instance
        was passed.
 
-   test [schema.json...] [--http/-h] [--metaschema/-m]
+   test [schemas-or-directories...] [--http/-h] [--metaschema/-m]
 
        A schema test runner inspired by the official JSON Schema test suite.
        Passing directories as input will run every `.json` file in such
@@ -39,7 +39,7 @@ Commands:
       protocol. The `--metaschema/-m` option checks that the given schema is
       valid with respects to its dialect metaschema.
 
-   fmt [schema.json...] [--check/-c]
+   fmt [schemas-or-directories...] [--check/-c]
 
        Format the input schemas in-place. Passing directories as input means
        to format every `.json` file in such directory (recursively). If no
@@ -47,7 +47,7 @@ Commands:
        directory (recursively). The `--check/-c` option will check if the given
        schemas adhere to the desired formatting without modifying them.
 
-   lint [schema.json...] [--fix/-f]
+   lint [schemas-or-directories...] [--fix/-f]
 
        Lint the input schemas. Passing directories as input means to lint
        every `.json` file in such directory (recursively). If no argument is
@@ -68,6 +68,7 @@ Commands:
        Frame a schema in-place, displaying schema locations and references
        in a human-readable manner.
 
+For more documentation, visit https://github.com/Intelligence-AI/jsonschema
 )EOF"};
 
 auto jsonschema_main(const std::string &program, const std::string &command,
