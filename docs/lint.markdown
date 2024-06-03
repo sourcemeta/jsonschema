@@ -43,7 +43,7 @@ schema.json
 Furthermore, running the `lint` command with the `--fix / -f` option will
 result in the JSON Schema CLI *automatically* fixing the warning for you.
 
-### Lint JSON Schemas in-place
+### Lint multiple schemas in-place
 
 ```sh
 jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
