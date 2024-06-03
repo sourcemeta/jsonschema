@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+UNAME="$(uname)"
+
+if [ "$UNAME" = "Darwin" ]
+then
+  echo "---- Attempting to install the JSON Schema CLI using Homebrew" 1>&2
+  brew install intelligence-ai/apps/jsonschema
+  exit 0
+fi
+
+echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
+echo "Open an issue here: https://github.com/Intelligence-AI/jsonschema/issues" 1>&2
+exit 1

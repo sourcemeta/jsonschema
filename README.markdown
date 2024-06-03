@@ -38,6 +38,12 @@ powerful [JSON Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
 brew install intelligence-ai/apps/jsonschema
 ```
 
+### Using the install script helper
+
+```sh
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
+```
+
 ### From GitHub Releases
 
 We publish precompiled binaries for every supported platforms to [GitHub
