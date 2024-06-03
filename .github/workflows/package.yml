@@ -32,7 +32,7 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: cmake --version
       - name: Configure JSON Schema
         run: >
@@ -62,8 +62,10 @@ jobs:
           retention-days: 1
 
   publish:
+    needs: package
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
 
       # TODO: Create a proper release if there is a tag instead
