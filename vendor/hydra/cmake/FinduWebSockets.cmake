@@ -62,31 +62,33 @@ if(NOT uWebSockets_FOUND)
       PRIVATE_HEADER "${UWEBSOCKETS_PRIVATE_HEADERS}"
       EXPORT_NAME uwebsockets)
 
-  include(GNUInstallDirs)
-  install(TARGETS uwebsockets
-    EXPORT uwebsockets
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/uwebsockets/src"
-      COMPONENT sourcemeta_hydra_dev
-    PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/uwebsockets/src"
-      COMPONENT sourcemeta_hydra_dev
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-      COMPONENT sourcemeta_hydra
-    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-      COMPONENT sourcemeta_hydra
-      NAMELINK_COMPONENT sourcemeta_hydra_dev
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  if(HYDRA_INSTALL)
+    include(GNUInstallDirs)
+    install(TARGETS uwebsockets
+      EXPORT uwebsockets
+      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/uwebsockets/src"
+        COMPONENT sourcemeta_hydra_dev
+      PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/uwebsockets/src"
+        COMPONENT sourcemeta_hydra_dev
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        COMPONENT sourcemeta_hydra
+      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT sourcemeta_hydra
+        NAMELINK_COMPONENT sourcemeta_hydra_dev
+      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        COMPONENT sourcemeta_hydra_dev)
+    install(EXPORT uwebsockets
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uwebsockets"
       COMPONENT sourcemeta_hydra_dev)
-  install(EXPORT uwebsockets
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uwebsockets"
-    COMPONENT sourcemeta_hydra_dev)
 
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/uwebsockets-config.cmake
-    "include(\"\${CMAKE_CURRENT_LIST_DIR}/uwebsockets.cmake\")\n"
-    "check_required_components(\"uwebsockets\")\n")
-  install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/uwebsockets-config.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uwebsockets"
-    COMPONENT sourcemeta_hydra_dev)
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/uwebsockets-config.cmake
+      "include(\"\${CMAKE_CURRENT_LIST_DIR}/uwebsockets.cmake\")\n"
+      "check_required_components(\"uwebsockets\")\n")
+    install(FILES
+      "${CMAKE_CURRENT_BINARY_DIR}/uwebsockets-config.cmake"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uwebsockets"
+      COMPONENT sourcemeta_hydra_dev)
+  endif()
 
   set(uWebSockets_FOUND ON)
 endif()
