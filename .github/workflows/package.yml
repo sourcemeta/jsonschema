@@ -120,7 +120,7 @@ jobs:
 
       - name: Perform Tag Release
         run: |
-          gh release create ${{ github.ref_name }} --prerelease --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
+          gh release create ${{ github.ref_name }} --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
           gh release upload --clobber ${{ github.ref_name }} build/out/*.zip
         if: github.ref_type == 'tag'
         env:
