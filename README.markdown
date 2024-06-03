@@ -38,6 +38,20 @@ powerful [JSON Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
 brew install intelligence-ai/apps/jsonschema
 ```
 
+### From GitHub Actions
+
+```yaml
+- uses: intelligence-ai/jsonschema@vX.Y.Z
+```
+
+Where `X.Y.Z` is replaced with the desired version. For example:
+
+```yaml
+- uses: intelligence-ai/jsonschema@v0.1.1
+# Then use as usual
+- run: jsonschema fmt path/to/schemas --check
+```
+
 ### Using the install script helper
 
 ```sh

@@ -1,0 +1,10 @@
+name: JSON Schema CLI
+description: Install the JSON Schema CLI
+runs:
+  using: composite
+  steps:
+    # TODO: Install from the latest tag at or before the current commit sha
+    - name: Install the JSON Schema CLI (latest)
+      shell: bash
+      run: |
+        /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H 'Cache-Control: no-cache, no-store, must-revalidate')"
