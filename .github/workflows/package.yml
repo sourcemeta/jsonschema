@@ -67,7 +67,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        path: build/out/
+        with:
+          path: build/out/
+          merge-multiple: true
       - run: tree build
 
       # TODO: Create a proper release if there is a tag instead
