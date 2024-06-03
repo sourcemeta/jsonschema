@@ -2,17 +2,46 @@ Linting
 =======
 
 ```sh
-jsonschema lint [schemas-or-directories...] [--fix|-f]
+jsonschema lint [schemas-or-directories...] [--fix|-f] [--verbose/-v]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
-programming languages, writing efficient and maintainable schemas take
-experience, and there are lots of ways of doing it wrong. To help with this,
-the JSON Schema CLI provides a `lint` command that can check your schemas
-against various common anti-patterns and automatically fix many of them.
+programming languages, writing efficient and maintainable schemas takes
+experience, and there are lots of common pitfalls. Just like popular linters
+like [ESLint](https://eslint.org),
+[ClangTidy](https://clang.llvm.org/extra/clang-tidy/), and
+[PyLint](https://www.pylint.org), the JSON Schema CLI provides a `lint` command
+that can check your schemas against various common anti-patterns and
+automatically fix many of them.
 
 Examples
 --------
+
+For example, consider the following schema that asserts that the JSON instance
+is the string `foo`:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [ "foo" ]
+}
+```
+
+While this schema is technically correct, the JSON Schema 2020-12 dialect has a
+[`const`](https://www.learnjsonschema.com/2020-12/validation/const/) keyword
+that better expresses the intention of matching a single possible value.
+
+Running the JSON Schema CLI linter against the previous schema will produce the
+following output:
+
+```sh
+$ jsonschema lint schema.json
+schema.json
+     An `enum` of a single value can be expressed as `const` (enum_to_const)
+```
+
+Furthermore, running the `lint` command with the `--fix / -f` option will
+result in the JSON Schema CLI *automatically* fixing the warning for you.
 
 ### Lint JSON Schemas in-place
 

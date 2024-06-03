@@ -67,11 +67,6 @@ documentation:
 - [Bundling](./docs/bundle.markdown)
 - [Framing](./docs/frame.markdown)
 
-The following global options apply to all commands:
-
-- `--verbose / -v`: Enable verbose output
-- `--resolve / -r`: Import the given JSON Schema into the resolution context
-
 Coming Soon
 -----------
 

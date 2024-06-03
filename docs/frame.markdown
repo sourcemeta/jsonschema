@@ -2,7 +2,7 @@ Framing
 =======
 
 ```sh
-jsonschema frame <path/to/schema.json>
+jsonschema frame <schema.json> [--verbose/-v]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the
@@ -16,7 +16,7 @@ is often useful for debugging purposes.
 Examples
 --------
 
-For example, consider the following schema with a local reference:
+For example, consider the following schema that includes a local reference:
 
 ```json
 {

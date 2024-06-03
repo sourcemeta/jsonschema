@@ -2,7 +2,7 @@ Formatting
 ==========
 
 ```sh
-jsonschema fmt [schemas-or-directories...] [--check|-c]
+jsonschema fmt [schemas-or-directories...] [--check|-c] [--verbose/-v]
 ```
 
 Schemas are code. As such, they are expected follow consistent stylistic

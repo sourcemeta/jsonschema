@@ -14,7 +14,9 @@ make
 nmake
 ```
 
-The default target will build the project and run the test suite.
+The default target will build the project and run the test suite. You will also
+find the CLI binary under `build/`. The specific location varies depending on
+your CMake default generator.
 
 Grant of Rights
 ---------------
