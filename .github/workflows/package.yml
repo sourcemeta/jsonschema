@@ -55,7 +55,17 @@ jobs:
 
       - run: cpack --config build/CPackConfig.cmake -B build/out -C Release
 
-      # TODO: Do this from another job in the workflow so we can collect from multiple platforms
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: build/out/*.zip
+          retention-days: 1
+
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+
       # TODO: Create a proper release if there is a tag instead
       - run: gh config set prompt disabled
         env:
