@@ -26,6 +26,14 @@ if(JSONSCHEMA_TESTS)
   add_subdirectory(test)
 endif()
 
+# As a sanity check
+file(READ "${PROJECT_SOURCE_DIR}/action.yml" ACTION_YML)
+string(FIND "${ACTION_YML}" "${PROJECT_VERSION}" ACTION_YML_HAS_VERSION)
+if(${ACTION_YML_HAS_VERSION} EQUAL -1)
+  message(FATAL_ERROR
+    "The GitHub Action definition must set the correct version: ${PROJECT_VERSION}")
+endif ()
+
 # Packaging
 find_program(GIT_BIN NAMES git)
 if(GIT_BIN AND JSONSCHEMA_CONTINUOUS)

@@ -10,5 +10,5 @@ runs:
           --output "${GITHUB_WORKSPACE}/install.sh" \
           "https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install"
         chmod +x "${GITHUB_WORKSPACE}/install.sh"
-        "${GITHUB_WORKSPACE}/install.sh" "${GITHUB_REF#refs/tags/v}"
+        "${GITHUB_WORKSPACE}/install.sh" 0.1.3
         rm "${GITHUB_WORKSPACE}/install.sh"
