@@ -23,9 +23,13 @@ Releasing
 
 ```sh
 git checkout main
+
 # Update the VERSION in CMakeLists.txt
 vim CMakeLists.txt
-git add CMakeLists.txt
+# Update the version in action.yml
+vim action.yml
+
+git add CMakeLists.txt action.yml
 git commit -m "vX.Y.Z"
 git tag -a "vX.Y.Z" -m "vX.Y.Z"
 git push
