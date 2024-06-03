@@ -18,7 +18,7 @@ noa_target_clang_format(SOURCES
 noa_target_clang_tidy(SOURCES
   src/*.h src/*.cc)
 noa_target_shellcheck(SOURCES
-  test/*.sh)
+  test/*.sh install)
 
 # Testing
 if(JSONSCHEMA_TESTS)
