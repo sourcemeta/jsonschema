@@ -11,19 +11,27 @@ then
   echo "---- Fetching the pre-built JSON Schema CLI binary from GitHub Releases" 1>&2
   OWNER="intelligence-ai"
   REPOSITORY="jsonschema"
-  LATEST_TAG="$(curl --silent "https://api.github.com/repos/$OWNER/$REPOSITORY/releases/latest" \
-    | grep '"tag_name"' | cut -d ':' -f 2 | tr -d 'v" ,')"
-  PACKAGE_BASE_URL="https://github.com/$OWNER/$REPOSITORY/releases/download/v$LATEST_TAG"
+
+  if [ $# -lt 1 ]
+  then
+    VERSION="$(curl --retry 5 --silent "https://api.github.com/repos/$OWNER/$REPOSITORY/releases/latest" \
+      | grep '"tag_name"' | cut -d ':' -f 2 | tr -d 'v" ,')"
+  else
+    VERSION="$1"
+  fi
+
+  PACKAGE_BASE_URL="https://github.com/$OWNER/$REPOSITORY/releases/download/v$VERSION"
   PACKAGE_PLATFORM_NAME="$(echo "$UNAME" | tr '[:upper:]' '[:lower:]')"
-  PACKAGE_URL="$PACKAGE_BASE_URL/jsonschema-$LATEST_TAG-$PACKAGE_PLATFORM_NAME-$ARCH.zip"
+  PACKAGE_URL="$PACKAGE_BASE_URL/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH.zip"
+  echo "---- Fetching version v$VERSION from $PACKAGE_URL" 1>&2
   OUTPUT="/usr/local"
   TMP="$(mktemp -d)"
   clean() { rm -rf "$TMP"; }
   trap clean EXIT
-  curl --location --output "$TMP/artifact.zip" "$PACKAGE_URL"
+  curl --retry 5 --location --output "$TMP/artifact.zip" "$PACKAGE_URL"
   unzip "$TMP/artifact.zip" -d "$TMP/out"
   mkdir -p "$OUTPUT/bin"
-  install -v -m 0755 "$TMP/out/jsonschema-$LATEST_TAG-$PACKAGE_PLATFORM_NAME-$ARCH/bin/jsonschema" "$OUTPUT/bin"
+  install -v -m 0755 "$TMP/out/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH/bin/jsonschema" "$OUTPUT/bin"
 else
   echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
   echo "Open an issue here: https://github.com/Intelligence-AI/jsonschema/issues" 1>&2
