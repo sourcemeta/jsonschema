@@ -67,6 +67,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        path: build/out/
+      - run: tree build
 
       # TODO: Create a proper release if there is a tag instead
       - run: gh config set prompt disabled
