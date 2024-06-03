@@ -6,6 +6,14 @@ macro(add_jsonschema_test_unix name)
   endif()
 endmacro()
 
+macro(add_jsonschema_test_unix_ci name)
+  if(JSONSCHEMA_TESTS_CI AND UNIX)
+    add_test(NAME JSONSchema.ci.${name} COMMAND
+      "${CMAKE_CURRENT_SOURCE_DIR}/ci/${name}.sh"
+      "$<TARGET_FILE:jsonschema_cli>")
+  endif()
+endmacro()
+
 add_jsonschema_test_unix(help)
 add_jsonschema_test_unix(format_single)
 add_jsonschema_test_unix(format_invalid_path)
@@ -31,5 +39,5 @@ add_jsonschema_test_unix(lint_pass)
 add_jsonschema_test_unix(lint_fail)
 add_jsonschema_test_unix(lint_fix)
 
-# TODO: Enable certain tests (if a given CMake option
-# is set) that perform outbound HTTP requests
+# CI specific tests
+add_jsonschema_test_unix_ci(bundle_remote_http)
