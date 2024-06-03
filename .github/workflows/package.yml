@@ -89,16 +89,23 @@ jobs:
           merge-multiple: true
       - run: tree build
 
-      # TODO: Create a proper release if there is a tag instead
       - run: gh config set prompt disabled
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: gh release delete continuous --cleanup-tag --yes || true
+
+      - name: Perform Continuous Release
+        run: |
+          gh release delete continuous --cleanup-tag --yes || true
+          gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA" --generate-notes
+          gh release upload --clobber continuous build/out/*.zip
+        if: github.ref_type == 'branch'
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA" --generate-notes
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - run: gh release upload --clobber continuous build/out/*.zip
+
+      - name: Perform Tag Release
+        run: |
+          gh release create ${{ github.ref_name }} --prerelease --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
+          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
