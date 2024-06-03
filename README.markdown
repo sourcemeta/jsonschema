@@ -3,9 +3,9 @@
 The command-line tool for working with [JSON Schema](https://json-schema.org),
 the world most popular schema language. It is designed to solve the most common
 pain points JSON Schema developers face when maintaining **repositories of
-schemas**, both during local development and when integrating with CI/CD
-pipelines.
+schemas**, both during local development and when running on CI/CD pipelines.
 
+> [!TIP]
 > Do you want to level up your JSON Schema skills? Check out
 > [learnjsonschema.com](https://www.learnjsonschema.com), our growing JSON
 > Schema documentation website, and our O'Reilly book [Unifying Business, Data,
@@ -14,21 +14,25 @@ pipelines.
 
 ***
 
-**This project is under heavy development. Some features are partly available
-and may contain bugs. Please [share
-feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give us
-a star show your support!**
-
-***
+> [!WARNING]
+> This project is under heavy development. Some features are partly available
+> and may contain bugs. Please [share
+> feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give
+> us a star show your support!
+>
+> **Current Limitations:**
+>
+> - The `validate` and `test` commands only support JSON Schema Draft 4
+> - It is not possible to collect annotations with the `validate` command
 
 Installation
 ------------
 
-The JSON Schema CLI is written using C++ and [CMake](https://cmake.org/), and supports macOS, Windows,
-and GNU/Linux. Under the hood, it relies on the powerful [JSON
-Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
+The JSON Schema CLI is written using C++ and [CMake](https://cmake.org/), and
+supports macOS, Windows, and GNU/Linux. Under the hood, it relies on the
+powerful [JSON Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
 
-### GitHub Releases
+### From GitHub Releases
 
 We publish precompiled binaries for every supported platforms to [GitHub
 Releases](https://github.com/Intelligence-AI/jsonschema/releases), including a
@@ -51,9 +55,10 @@ or `/usr/local`.
 Usage
 -----
 
-The JSON Schema CLI supports a growing amount of commands. The following pages
-describe each command in details. Additionally, running the JSON Schema CLI
-without passing a command will print convenient reference documentation:
+The functionality provided by the JSON Schema CLI is divided into commands. The
+following pages describe each command in detail. Additionally, running the JSON
+Schema CLI without passing a command will print convenient reference
+documentation:
 
 - [Validating](./docs/validate.markdown)
 - [Testing](./docs/test.markdown)
@@ -75,7 +80,6 @@ the oven. In the mean-time, star the project to show your support!
 
 | Feature               | Description                                                                        | Status      |
 |-----------------------|------------------------------------------------------------------------------------|-------------|
-| Annotating            | Validate a JSON instance against a JSON Schema with annotation extraction support  | Not started |
 | Debugging             | Validate a JSON instance against a JSON Schema step by step, like LLDB and GDB     | Not started |
 | Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect                                | Not started |
 
