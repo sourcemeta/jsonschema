@@ -26,6 +26,8 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
+          - os: windows-latest
+            shell: pwsh
 
     defaults:
       run:
@@ -43,6 +45,10 @@ jobs:
         env:
           HOMEBREW_NO_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
+      - name: Install dependencies (Windows)
+        if: runner.os == 'windows'
+        run: choco install shellcheck
+
       - run: cmake --version
       - name: Configure JSON Schema
         run: >
