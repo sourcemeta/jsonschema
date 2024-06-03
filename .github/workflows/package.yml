@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*.*.*"
 
 concurrency:
   group: ${{ github.workflow }}
@@ -50,7 +52,9 @@ jobs:
         run: choco install shellcheck
 
       - run: cmake --version
-      - name: Configure JSON Schema
+
+      - name: Configure JSON Schema (Continuous)
+        if: github.ref_type == 'branch'
         run: >
           cmake -S . -B ./build
           -DCMAKE_BUILD_TYPE:STRING=Release
@@ -59,6 +63,18 @@ jobs:
           -DJSONSCHEMA_CONTINUOUS:BOOL=ON
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
+
+      - name: Configure JSON Schema (Release)
+        if: github.ref_type == 'tag'
+        run: >
+          cmake -S . -B ./build
+          -DCMAKE_BUILD_TYPE:STRING=Release
+          -DJSONSCHEMA_TESTS:BOOL=ON
+          -DJSONSCHEMA_TESTS_CI:BOOL=ON
+          -DJSONSCHEMA_CONTINUOUS:BOOL=OFF
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+          -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
+
       - run: cmake --build ./build --config Release --parallel 4
       - run: >
           cmake --install ./build --prefix ./build/dist --config Release --verbose
