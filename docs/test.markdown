@@ -7,8 +7,8 @@ Testing
 
 ```sh
 jsonschema test [schemas-or-directories...]
-  [--http/-h] [--metaschema/-m] [--verbose/-v] [--resolve/-r <schema.json> ...]
-  [--extension/-e <extension>]
+  [--http/-h] [--metaschema/-m] [--verbose/-v]
+  [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -90,4 +90,10 @@ jsonschema test path/to/test.json --http
 
 ```sh
 jsonschema test path/to/test.json --resolve path/to/external.json
+```
+
+### Run a single test definition importing a directory of `.schema.json` schemas
+
+```sh
+jsonschema test path/to/test.json --resolve path/to/schemas --extension schema.json
 ```
