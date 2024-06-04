@@ -6,7 +6,8 @@ Validating
 > to support *every* dialect of JSON Schema from Draft 0 to Draft 2020-12 soon.
 
 ```sh
-jsonschema validate <schema.json> [instance.json] [--http/-h] [--metaschema/-m] [--verbose/-v] [--resolve/-r <schema.json> ...]
+jsonschema validate <schema.json>
+  [instance.json] [--http/-h] [--metaschema/-m] [--verbose/-v] [--resolve/-r <schema.json> ...]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -53,7 +54,7 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json
 ### Validate a JSON Schema against it meta-schema
 
 ```sh
-jsonschema validate path/to/my/schema.json 
+jsonschema validate path/to/my/schema.json
 ```
 
 ### Validate a JSON instance against a schema plus the schema against its meta-schema

@@ -15,7 +15,8 @@ auto intelligence::jsonschema::cli::test(
   const auto test_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
-  for (const auto &entry : for_each_json(options.at(""))) {
+  for (const auto &entry :
+       for_each_json(options.at(""), parse_extensions(options))) {
     const sourcemeta::jsontoolkit::JSON test{
         sourcemeta::jsontoolkit::from_file(entry.first)};
     CLI_ENSURE(test.is_object(), "The test document must be an object")

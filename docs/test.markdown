@@ -6,7 +6,9 @@ Testing
 > to support *every* dialect of JSON Schema from Draft 0 to Draft 2020-12 soon.
 
 ```sh
-jsonschema test [schemas-or-directories...] [--http/-h] [--metaschema/-m] [--verbose/-v] [--resolve/-r <schema.json> ...]
+jsonschema test [schemas-or-directories...]
+  [--http/-h] [--metaschema/-m] [--verbose/-v] [--resolve/-r <schema.json> ...]
+  [--extension/-e <extension>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -64,6 +66,12 @@ jsonschema test path/to/tests/
 
 ```sh
 jsonschema test
+```
+
+### Run every `.test.json` test definition in the current directory (recursively)
+
+```sh
+jsonschema test --extension .test.json
 ```
 
 ### Run a single test definition validating the schemas against their metaschemas

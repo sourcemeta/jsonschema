@@ -2,7 +2,8 @@ Bundling
 ========
 
 ```sh
-jsonschema bundle <schema.json> [--http/-h] [--verbose/-v] [--resolve/-r <schema.json> ...]
+jsonschema bundle <schema.json>
+  [--http/-h] [--verbose/-v] [--resolve/-r <schema.json> ...]
 ```
 
 A schema may contain references to remote schemas outside the scope of the

@@ -21,7 +21,8 @@ auto intelligence::jsonschema::cli::lint(
   bool result{true};
 
   if (options.contains("f") || options.contains("fix")) {
-    for (const auto &entry : for_each_json(options.at(""))) {
+    for (const auto &entry :
+         for_each_json(options.at(""), parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       auto copy = entry.second;
       bundle.apply(copy, sourcemeta::jsontoolkit::default_schema_walker,
@@ -32,7 +33,8 @@ auto intelligence::jsonschema::cli::lint(
       output << std::endl;
     }
   } else {
-    for (const auto &entry : for_each_json(options.at(""))) {
+    for (const auto &entry :
+         for_each_json(options.at(""), parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       const bool subresult = bundle.check(
           entry.second, sourcemeta::jsontoolkit::default_schema_walker,

@@ -2,7 +2,8 @@ Formatting
 ==========
 
 ```sh
-jsonschema fmt [schemas-or-directories...] [--check|-c] [--verbose/-v]
+jsonschema fmt [schemas-or-directories...]
+  [--check/-c] [--verbose/-v] [--extension/-e <extension>]
 ```
 
 Schemas are code. As such, they are expected follow consistent stylistic
@@ -54,6 +55,12 @@ jsonschema fmt path/to/schemas/
 
 ```sh
 jsonschema fmt
+```
+
+### Format every `.schema.json` file in the current directory (recursively)
+
+```sh
+jsonschema fmt --extension .schema.json
 ```
 
 ### Check that a single JSON Schema is properly formatted

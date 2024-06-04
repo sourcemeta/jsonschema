@@ -5,10 +5,12 @@
 
 #include "utils.h"
 
+#include <algorithm> // std::any_of
 #include <cassert>   // assert
 #include <fstream>   // std::ofstream
 #include <iostream>  // std::cerr
 #include <optional>  // std::optional, std::nullopt
+#include <set>       // std::set
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::runtime_error
 
@@ -16,13 +18,17 @@ namespace {
 
 auto handle_json_entry(
     const std::filesystem::path &entry_path,
+    const std::set<std::string> &extensions,
     std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
         &result) -> void {
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
       if (!std::filesystem::is_directory(entry) &&
-          entry.path().extension() == ".json") {
+          std::any_of(extensions.cbegin(), extensions.cend(),
+                      [&entry](const auto &extension) {
+                        return entry.path().string().ends_with(extension);
+                      })) {
         result.emplace_back(entry.path(),
                             sourcemeta::jsontoolkit::from_file(entry.path()));
       }
@@ -34,26 +40,42 @@ auto handle_json_entry(
       throw std::runtime_error(error.str());
     }
 
-    result.emplace_back(entry_path,
-                        sourcemeta::jsontoolkit::from_file(entry_path));
+    if (std::any_of(extensions.cbegin(), extensions.cend(),
+                    [&entry_path](const auto &extension) {
+                      return entry_path.string().ends_with(extension);
+                    })) {
+      result.emplace_back(entry_path,
+                          sourcemeta::jsontoolkit::from_file(entry_path));
+    }
   }
+}
+
+auto normalize_extension(const std::string &extension) -> std::string {
+  if (extension.starts_with('.')) {
+    return extension;
+  }
+
+  std::ostringstream result;
+  result << '.' << extension;
+  return result.str();
 }
 
 } // namespace
 
 namespace intelligence::jsonschema::cli {
 
-auto for_each_json(const std::vector<std::string> &arguments)
+auto for_each_json(const std::vector<std::string> &arguments,
+                   const std::set<std::string> &extensions)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>> {
   std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
       result;
 
   if (arguments.empty()) {
-    handle_json_entry(std::filesystem::current_path(), result);
+    handle_json_entry(std::filesystem::current_path(), extensions, result);
   } else {
     for (const auto &entry : arguments) {
-      handle_json_entry(entry, result);
+      handle_json_entry(entry, extensions, result);
     }
   }
 
@@ -204,6 +226,31 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
 
   static std::ofstream null_stream;
   return null_stream;
+}
+
+auto parse_extensions(const std::map<std::string, std::vector<std::string>>
+                          &options) -> std::set<std::string> {
+  std::set<std::string> result;
+
+  if (options.contains("extension")) {
+    for (const auto &extension : options.at("extension")) {
+      log_verbose(options) << "Using extension: " << extension << "\n";
+      result.insert(normalize_extension(extension));
+    }
+  }
+
+  if (options.contains("e")) {
+    for (const auto &extension : options.at("e")) {
+      log_verbose(options) << "Using extension: " << extension << "\n";
+      result.insert(normalize_extension(extension));
+    }
+  }
+
+  if (result.empty()) {
+    result.insert({".json"});
+  }
+
+  return result;
 }
 
 } // namespace intelligence::jsonschema::cli

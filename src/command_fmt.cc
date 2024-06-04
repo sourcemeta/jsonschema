@@ -13,7 +13,8 @@ auto intelligence::jsonschema::cli::fmt(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"c", "check"})};
 
-  for (const auto &entry : for_each_json(options.at(""))) {
+  for (const auto &entry :
+       for_each_json(options.at(""), parse_extensions(options))) {
     if (options.contains("c") || options.contains("check")) {
       log_verbose(options) << "Checking: " << entry.first.string() << "\n";
       std::ifstream input{entry.first};
