@@ -30,30 +30,37 @@ Commands:
        was passed.
 
    test [schemas-or-directories...] [--http/-h] [--metaschema/-m]
+        [--extension/-e <extension>]
 
        A schema test runner inspired by the official JSON Schema test suite.
        Passing directories as input will run every `.json` file in such
        directory (recursively) as a test. If no argument is passed, run every
        `.json` file in the current working directory (recursively) as a test.
-      The `--http/-h` option enables resolving remote schemas over the HTTP
-      protocol. The `--metaschema/-m` option checks that the given schema is
-      valid with respects to its dialect metaschema.
+       The `--http/-h` option enables resolving remote schemas over the HTTP
+       protocol. The `--metaschema/-m` option checks that the given schema is
+       valid with respects to its dialect metaschema. When scanning
+       directories, the `--extension/-e` option is used to prefer a file
+       extension other than `.json`. This option can be set multiple times.
 
-   fmt [schemas-or-directories...] [--check/-c]
+   fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
 
        Format the input schemas in-place. Passing directories as input means
        to format every `.json` file in such directory (recursively). If no
        argument is passed, format every `.json` file in the current working
        directory (recursively). The `--check/-c` option will check if the given
-       schemas adhere to the desired formatting without modifying them.
+       schemas adhere to the desired formatting without modifying them. When
+       scanning directories, the `--extension/-e` option is used to prefer a
+       file extension other than `.json`. This option can be set multiple times.
 
-   lint [schemas-or-directories...] [--fix/-f]
+   lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
 
        Lint the input schemas. Passing directories as input means to lint
        every `.json` file in such directory (recursively). If no argument is
        passed, lint every `.json` file in the current working directory
        (recursively). The `--fix/-f` option will attempt to automatically
-       fix the linter errors.
+       fix the linter errors. When scanning directories, the `--extension/-e`
+       option is used to prefer a file extension other than `.json`. This option
+       can be set multiple times.
 
    bundle <schema.json> [--http/-h]
 

@@ -2,7 +2,8 @@ Linting
 =======
 
 ```sh
-jsonschema lint [schemas-or-directories...] [--fix|-f] [--verbose/-v]
+jsonschema lint [schemas-or-directories...]
+  [--fix/-f] [--verbose/-v] [--extension/-e <extension>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -59,6 +60,12 @@ jsonschema lint path/to/schemas/
 
 ```sh
 jsonschema lint
+```
+
+### Lint every `.schema.json` file in the current directory (recursively)
+
+```sh
+jsonschema lint --extension .schema.json
 ```
 
 ### Fix lint warnings on a single schema
