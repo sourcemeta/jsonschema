@@ -16,7 +16,8 @@ constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
    --verbose, -v    Enable verbose output
-   --resolve, -r    Import the given JSON Schema into the resolution context
+   --resolve, -r    Import the given JSON Schema (or directory of schemas)
+                    into the resolution context
 
 Commands:
 

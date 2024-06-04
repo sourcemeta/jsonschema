@@ -202,16 +202,18 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
       }};
 
   if (options.contains("resolve")) {
-    for (const auto &schema_path : options.at("resolve")) {
-      log_verbose(options) << "Loading schema: " << schema_path << "\n";
-      dynamic_resolver.add(sourcemeta::jsontoolkit::from_file(schema_path));
+    for (const auto &entry :
+         for_each_json(options.at("resolve"), parse_extensions(options))) {
+      log_verbose(options) << "Loading schema: " << entry.first << "\n";
+      dynamic_resolver.add(entry.second);
     }
   }
 
   if (options.contains("r")) {
-    for (const auto &schema_path : options.at("r")) {
-      log_verbose(options) << "Loading schema: " << schema_path << "\n";
-      dynamic_resolver.add(sourcemeta::jsontoolkit::from_file(schema_path));
+    for (const auto &entry :
+         for_each_json(options.at("r"), parse_extensions(options))) {
+      log_verbose(options) << "Loading schema: " << entry.first << "\n";
+      dynamic_resolver.add(entry.second);
     }
   }
 
