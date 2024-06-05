@@ -18,7 +18,7 @@ noa_target_clang_format(SOURCES
 noa_target_clang_tidy(SOURCES
   src/*.h src/*.cc)
 noa_target_shellcheck(SOURCES
-  test/*.sh install)
+  test/*.sh install *.sh)
 
 # Testing
 if(JSONSCHEMA_TESTS)
@@ -32,7 +32,7 @@ string(FIND "${ACTION_YML}" "${PROJECT_VERSION}" ACTION_YML_HAS_VERSION)
 if(${ACTION_YML_HAS_VERSION} EQUAL -1)
   message(FATAL_ERROR
     "The GitHub Action definition must set the correct version: ${PROJECT_VERSION}")
-endif ()
+endif()
 
 # Packaging
 find_program(GIT_BIN NAMES git)

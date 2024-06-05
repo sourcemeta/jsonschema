@@ -52,6 +52,12 @@ Where `X.Y.Z` is replaced with the desired version. For example:
 - run: jsonschema fmt path/to/schemas --check
 ```
 
+### From NPM
+
+```sh
+npm install --global @intelligence-ai/jsonschema
+```
+
 ### From GitHub Releases
 
 We publish precompiled binaries for every supported platforms to [GitHub
