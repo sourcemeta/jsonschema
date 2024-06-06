@@ -98,7 +98,7 @@ documentation:
 - [Testing](./docs/test.markdown)
 - [Formatting](./docs/format.markdown)
 - [Linting](./docs/lint.markdown)
-- [Bundling](./docs/bundle.markdown)
+- [Bundling](./docs/bundle.markdown) (for inlining remote references in a schema)
 - [Framing](./docs/frame.markdown)
 
 Coming Soon
