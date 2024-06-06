@@ -76,6 +76,7 @@ latest pre-built binaries, which you can run as follows:
 
 ```sh
 git clone https://github.com/intelligence-ai/jsonschema
+cd jsonschema
 cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=Release
 cmake --build ./build --config Release --parallel 4
 cmake --install ./build --prefix <prefix> \
