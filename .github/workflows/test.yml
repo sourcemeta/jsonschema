@@ -67,3 +67,10 @@ jobs:
       # is not recognized, `ctest` will successfully exit finding no tests.
       # Better to be sure and `cd` all the time here.
       - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag jsonschema .
+      - run: docker run --interactive --volume "$PWD:/schema" jsonschema
