@@ -228,6 +228,28 @@ auto evaluate_step(
         break;
       }
     }
+  } else if (std::holds_alternative<SchemaCompilerAssertionType>(step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionType>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<JSON>(assertion.target, instance)};
+    // In non-strict mode, we consider a real number that represents an
+    // integer to be an integer
+    result = target.type() == value ||
+             (value == JSON::Type::Integer && target.is_integer_real());
+  } else if (std::holds_alternative<SchemaCompilerAssertionTypeAny>(step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionTypeAny>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<JSON>(assertion.target, instance)};
+    // In non-strict mode, we consider a real number that represents an
+    // integer to be an integer
+    result = value.contains(target.type()) ||
+             (value.contains(JSON::Type::Integer) && target.is_integer_real());
   } else if (std::holds_alternative<SchemaCompilerAssertionTypeStrict>(step)) {
     const auto &assertion{std::get<SchemaCompilerAssertionTypeStrict>(step)};
     context.push(assertion);

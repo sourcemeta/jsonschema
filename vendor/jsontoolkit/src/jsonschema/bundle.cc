@@ -75,7 +75,7 @@ auto upsert_id(sourcemeta::jsontoolkit::JSON &target,
 
 auto embed_schema(sourcemeta::jsontoolkit::JSON &definitions,
                   const std::string &identifier,
-                  sourcemeta::jsontoolkit::JSON &&target) -> void {
+                  const sourcemeta::jsontoolkit::JSON &target) -> void {
   std::ostringstream key;
   key << identifier;
   // Ensure we get a definitions entry that does not exist
@@ -83,7 +83,7 @@ auto embed_schema(sourcemeta::jsontoolkit::JSON &definitions,
     key << "/x";
   }
 
-  definitions.assign(key.str(), std::move(target));
+  definitions.assign(key.str(), target);
 }
 
 auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
@@ -110,21 +110,20 @@ auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
                            sourcemeta::jsontoolkit::JSON::make_object());
 
     assert(reference.base.has_value());
-    const auto remote{resolver(reference.base.value()).get()};
+    const auto identifier{reference.base.value()};
+    const auto remote{resolver(identifier).get()};
     if (!remote.has_value()) {
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
           reference.base.value(), "Could not resolve schema");
     }
-
-    const auto identifier{reference.base.value()};
 
     // Otherwise, if the target schema does not declare an inline identifier,
     // references to that identifier from the outer schema won't resolve.
     sourcemeta::jsontoolkit::JSON copy{remote.value()};
     upsert_id(copy, identifier, resolver, default_dialect);
 
-    embed_schema(root.at(container), identifier, std::move(copy));
-    bundle_schema(root, container, remote.value(), frame, walker, resolver,
+    embed_schema(root.at(container), identifier, copy);
+    bundle_schema(root, container, copy, frame, walker, resolver,
                   default_dialect);
   }
 }

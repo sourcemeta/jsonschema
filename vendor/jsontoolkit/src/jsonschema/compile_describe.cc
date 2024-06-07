@@ -70,6 +70,12 @@ struct DescribeVisitor {
     return "The target object is expected to define all of the given "
            "properties";
   }
+  auto operator()(const SchemaCompilerAssertionType &) const -> std::string {
+    return "The target document is expected to be of the given type";
+  }
+  auto operator()(const SchemaCompilerAssertionTypeAny &) const -> std::string {
+    return "The target document is expected to be of one of the given types";
+  }
   auto
   operator()(const SchemaCompilerAssertionTypeStrict &) const -> std::string {
     return "The target document is expected to be of the given type";
