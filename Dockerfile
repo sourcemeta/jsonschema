@@ -9,7 +9,12 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tz
 # Tools to compile:
 RUN apt install -y build-essential cmake clang-format shellcheck curl
 
-COPY . /compile
+COPY cmake /compile/cmake
+COPY src /compile/src
+COPY test /compile/test
+COPY vendor /compile/vendor
+COPY CMakeLists.txt /compile/CMakeLists.txt
+COPY Makefile /compile/Makefile
 WORKDIR /compile
 
 RUN make configure
