@@ -50,6 +50,8 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
   STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-06/schema#", "$ref");
 
   // Any
+  COMPILE("http://json-schema.org/draft-06/schema#", "type",
+          compiler_draft6_validation_type);
   COMPILE("http://json-schema.org/draft-06/schema#", "const",
           compiler_draft6_validation_const);
 
@@ -69,8 +71,6 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
 
   // Same as Draft 4
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "type",
-          compiler_draft4_validation_type);
   COMPILE("http://json-schema.org/draft-06/schema#", "allOf",
           compiler_draft4_applicator_allof);
   COMPILE("http://json-schema.org/draft-06/schema#", "anyOf",

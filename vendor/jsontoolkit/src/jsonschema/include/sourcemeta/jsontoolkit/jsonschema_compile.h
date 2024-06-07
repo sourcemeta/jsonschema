@@ -117,11 +117,21 @@ struct SchemaCompilerAssertionDefinesAll;
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks if a document is of the
 /// given type
-struct SchemaCompilerAssertionTypeStrict;
+struct SchemaCompilerAssertionType;
 
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks if a document is of any of
 /// the given types
+struct SchemaCompilerAssertionTypeAny;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks if a document is of the
+/// given type (strict version)
+struct SchemaCompilerAssertionTypeStrict;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks if a document is of any of
+/// the given types (strict version)
 struct SchemaCompilerAssertionTypeStrictAny;
 
 /// @ingroup jsonschema
@@ -254,7 +264,8 @@ struct SchemaCompilerControlJump;
 /// Represents a schema compilation step that can be evaluated
 using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionFail, SchemaCompilerAssertionDefines,
-    SchemaCompilerAssertionDefinesAll, SchemaCompilerAssertionTypeStrict,
+    SchemaCompilerAssertionDefinesAll, SchemaCompilerAssertionType,
+    SchemaCompilerAssertionTypeAny, SchemaCompilerAssertionTypeStrict,
     SchemaCompilerAssertionTypeStrictAny, SchemaCompilerAssertionRegex,
     SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
     SchemaCompilerAssertionEqual, SchemaCompilerAssertionEqualsAny,
@@ -304,6 +315,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
 DEFINE_STEP_WITH_VALUE(Assertion, Fail, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Defines, SchemaCompilerValueString)
 DEFINE_STEP_WITH_VALUE(Assertion, DefinesAll, SchemaCompilerValueStrings)
+DEFINE_STEP_WITH_VALUE(Assertion, Type, SchemaCompilerValueType)
+DEFINE_STEP_WITH_VALUE(Assertion, TypeAny, SchemaCompilerValueTypes)
 DEFINE_STEP_WITH_VALUE(Assertion, TypeStrict, SchemaCompilerValueType)
 DEFINE_STEP_WITH_VALUE(Assertion, TypeStrictAny, SchemaCompilerValueTypes)
 DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
