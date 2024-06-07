@@ -126,6 +126,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          registry-url: 'https://registry.npmjs.org'
       - name: Publish to NPM
         run: ./npm-deploy.sh ${{ github.ref_name }}
         if: github.ref_type == 'tag'
