@@ -25,6 +25,15 @@ schemas**, both during local development and when running on CI/CD pipelines.
 > - The `validate` and `test` commands only support JSON Schema Draft 4
 > - It is not possible to collect annotations with the `validate` command
 
+What our users are saying
+-------------------------
+
+> Amazing product. Very useful for formatting and bundling my schemas, plus it
+> surfaced various referencing issues. 10 out of 10!
+
+[@alombarte](https://github.com/alombarte), co-founder of the
+[KrakenD](https://www.krakend.io) API Gateway.
+
 Installation
 ------------
 
