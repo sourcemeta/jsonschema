@@ -22,7 +22,7 @@ schemas**, both during local development and when running on CI/CD pipelines.
 >
 > **Current Limitations:**
 >
-> - The `validate` and `test` commands only support JSON Schema Draft 4
+> - The `validate` and `test` commands only support JSON Schema Draft 4 and Draft 6
 > - It is not possible to collect annotations with the `validate` command
 
 What our users are saying
