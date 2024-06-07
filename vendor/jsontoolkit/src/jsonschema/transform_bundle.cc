@@ -16,9 +16,25 @@ auto contains_any(const T &container, const T &values) -> bool {
 }
 
 // Modernize
-#include "rules/const_with_type.h"
 #include "rules/enum_to_const.h"
+// AntiPattern
+#include "rules/const_with_type.h"
 #include "rules/enum_with_type.h"
+// Simplify
+#include "rules/single_type_array.h"
+// Redundant
+#include "rules/additional_properties_default.h"
+#include "rules/content_media_type_without_encoding.h"
+#include "rules/content_schema_default.h"
+#include "rules/content_schema_without_media_type.h"
+#include "rules/else_without_if.h"
+#include "rules/items_array_default.h"
+#include "rules/items_schema_default.h"
+#include "rules/max_contains_without_contains.h"
+#include "rules/min_contains_without_contains.h"
+#include "rules/then_without_if.h"
+#include "rules/unevaluated_items_default.h"
+#include "rules/unevaluated_properties_default.h"
 } // namespace sourcemeta::jsontoolkit
 
 auto sourcemeta::jsontoolkit::SchemaTransformBundle::add(
@@ -31,6 +47,23 @@ auto sourcemeta::jsontoolkit::SchemaTransformBundle::add(
     case sourcemeta::jsontoolkit::SchemaTransformBundle::Category::AntiPattern:
       this->template add<EnumWithType>();
       this->template add<ConstWithType>();
+      break;
+    case sourcemeta::jsontoolkit::SchemaTransformBundle::Category::Simplify:
+      this->template add<SingleTypeArray>();
+      break;
+    case sourcemeta::jsontoolkit::SchemaTransformBundle::Category::Redundant:
+      this->template add<AdditionalPropertiesDefault>();
+      this->template add<ContentMediaTypeWithoutEncoding>();
+      this->template add<ContentSchemaDefault>();
+      this->template add<ContentSchemaWithoutMediaType>();
+      this->template add<ElseWithoutIf>();
+      this->template add<ItemsArrayDefault>();
+      this->template add<ItemsSchemaDefault>();
+      this->template add<MaxContainsWithoutContains>();
+      this->template add<MinContainsWithoutContains>();
+      this->template add<ThenWithoutIf>();
+      this->template add<UnevaluatedItemsDefault>();
+      this->template add<UnevaluatedPropertiesDefault>();
       break;
     default:
       // We should never get here

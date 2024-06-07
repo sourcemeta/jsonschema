@@ -19,6 +19,7 @@ public:
   using JSON = sourcemeta::jsontoolkit::JSON;
   using Annotations = std::set<JSON>;
   using Template = sourcemeta::jsontoolkit::SchemaCompilerTemplate;
+  enum class TargetType { Value, Key };
 
   template <typename T> auto value(T &&document) -> const JSON & {
     return *(this->values.emplace(std::forward<T>(document)).first);
@@ -93,6 +94,10 @@ public:
     return this->instance_location(step.target);
   }
 
+  auto target_type(const TargetType type) -> void { this->target_type_ = type; }
+
+  auto target_type() const -> TargetType { return this->target_type_; }
+
   template <typename T>
   auto
   resolve_target(const sourcemeta::jsontoolkit::SchemaCompilerTarget &target,
@@ -111,7 +116,14 @@ public:
       static_assert(std::is_same_v<JSON, T>);
       switch (target.first) {
         case SchemaCompilerTargetType::Instance:
-        case SchemaCompilerTargetType::InstanceParent:
+          if (this->target_type() == TargetType::Key) {
+            assert(!this->instance_location(target).empty());
+            assert(this->instance_location(target).back().is_property());
+            return this->value(
+                JSON{this->instance_location(target).back().to_property()});
+          }
+
+          assert(this->target_type() == TargetType::Value);
           return get(instance, this->instance_location(target));
         case SchemaCompilerTargetType::InstanceBasename:
           return this->value(this->instance_location(target).back().to_json());
@@ -160,6 +172,7 @@ private:
   // efficiency when resolving keywords like `unevaluatedProperties`
   std::map<Pointer, std::map<Pointer, Annotations>> annotations_;
   std::map<std::size_t, const std::reference_wrapper<const Template>> labels;
+  TargetType target_type_ = TargetType::Value;
 };
 
 auto callback_noop(
@@ -215,16 +228,17 @@ auto evaluate_step(
         break;
       }
     }
-  } else if (std::holds_alternative<SchemaCompilerAssertionType>(step)) {
-    const auto &assertion{std::get<SchemaCompilerAssertionType>(step)};
+  } else if (std::holds_alternative<SchemaCompilerAssertionTypeStrict>(step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionTypeStrict>(step)};
     context.push(assertion);
     EVALUATE_CONDITION_GUARD(assertion.condition, instance);
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target.type() == value;
-  } else if (std::holds_alternative<SchemaCompilerAssertionTypeAny>(step)) {
-    const auto &assertion{std::get<SchemaCompilerAssertionTypeAny>(step)};
+  } else if (std::holds_alternative<SchemaCompilerAssertionTypeStrictAny>(
+                 step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionTypeStrictAny>(step)};
     context.push(assertion);
     EVALUATE_CONDITION_GUARD(assertion.condition, instance);
     const auto &value{context.resolve_value(assertion.value, instance)};
@@ -582,6 +596,34 @@ auto evaluate_step(
       context.pop();
       return result;
     }
+  } else if (std::holds_alternative<SchemaCompilerLoopKeys>(step)) {
+    const auto &loop{std::get<SchemaCompilerLoopKeys>(step)};
+    context.push(loop);
+    EVALUATE_CONDITION_GUARD(loop.condition, instance);
+    assert(std::holds_alternative<SchemaCompilerValueNone>(loop.value));
+    const auto &target{context.resolve_target<JSON>(loop.target, instance)};
+    assert(target.is_object());
+    result = true;
+    context.target_type(EvaluationContext::TargetType::Key);
+    for (const auto &entry : target.as_object()) {
+      context.push(empty_pointer, {entry.first});
+      for (const auto &child : loop.children) {
+        if (!evaluate_step(child, instance, mode, callback, context)) {
+          result = false;
+          if (mode == SchemaCompilerEvaluationMode::Fast) {
+            context.pop();
+            goto evaluate_loop_keys_end;
+          } else {
+            break;
+          }
+        }
+      }
+
+      context.pop();
+    }
+
+  evaluate_loop_keys_end:
+    context.target_type(EvaluationContext::TargetType::Value);
   } else if (std::holds_alternative<SchemaCompilerLoopItems>(step)) {
     const auto &loop{std::get<SchemaCompilerLoopItems>(step)};
     context.push(loop);
@@ -617,6 +659,35 @@ auto evaluate_step(
       }
 
       context.pop();
+    }
+  } else if (std::holds_alternative<SchemaCompilerLoopContains>(step)) {
+    const auto &loop{std::get<SchemaCompilerLoopContains>(step)};
+    context.push(loop);
+    EVALUATE_CONDITION_GUARD(loop.condition, instance);
+    // TODO: Later on, extend to take a min, max pair
+    // to support `minContains` and `maxContains`
+    assert(std::holds_alternative<SchemaCompilerValueNone>(loop.value));
+    const auto &target{context.resolve_target<JSON>(loop.target, instance)};
+    assert(target.is_array());
+    const auto &array{target.as_array()};
+    for (auto iterator = array.cbegin(); iterator != array.cend(); ++iterator) {
+      const auto index{std::distance(array.cbegin(), iterator)};
+      context.push(empty_pointer, {static_cast<Pointer::Token::Index>(index)});
+      bool subresult{true};
+      for (const auto &child : loop.children) {
+        if (!evaluate_step(child, instance, mode, callback, context)) {
+          subresult = false;
+          break;
+        }
+      }
+
+      context.pop();
+      if (subresult) {
+        result = subresult;
+        if (mode == SchemaCompilerEvaluationMode::Fast) {
+          break;
+        }
+      }
     }
   }
 

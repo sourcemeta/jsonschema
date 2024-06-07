@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.16)
 project(hydra VERSION 0.0.1 LANGUAGES C CXX
   DESCRIPTION "A convenience networking library for modern C++")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")

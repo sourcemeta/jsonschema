@@ -114,7 +114,7 @@ inline auto type_condition(const SchemaCompilerContext &context,
     }
   }
 
-  return {make<SchemaCompilerAssertionType>(
+  return {make<SchemaCompilerAssertionTypeStrict>(
       applicate(context), type, {}, SchemaCompilerTargetType::Instance)};
 }
 

@@ -110,7 +110,13 @@ public:
     Modernize,
 
     /// Rules that detect common anti-patterns
-    AntiPattern
+    AntiPattern,
+
+    /// Rules that simplify the given schema
+    Simplify,
+
+    /// Rules that remove schema redundancies
+    Redundant
   };
 
   /// Add a set of built-in rules given a category

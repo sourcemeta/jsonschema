@@ -50,8 +50,14 @@ struct DescribeVisitor {
   auto operator()(const SchemaCompilerLoopProperties &) const -> std::string {
     return "Loop over the properties of the target object";
   }
+  auto operator()(const SchemaCompilerLoopKeys &) const -> std::string {
+    return "Loop over the property keys of the target object";
+  }
   auto operator()(const SchemaCompilerLoopItems &) const -> std::string {
     return "Loop over the items of the target array";
+  }
+  auto operator()(const SchemaCompilerLoopContains &) const -> std::string {
+    return "A certain number of array items must satisfy the given constraints";
   }
   auto operator()(const SchemaCompilerAssertionFail &) const -> std::string {
     return "Abort evaluation on failure";
@@ -64,10 +70,12 @@ struct DescribeVisitor {
     return "The target object is expected to define all of the given "
            "properties";
   }
-  auto operator()(const SchemaCompilerAssertionType &) const -> std::string {
+  auto
+  operator()(const SchemaCompilerAssertionTypeStrict &) const -> std::string {
     return "The target document is expected to be of the given type";
   }
-  auto operator()(const SchemaCompilerAssertionTypeAny &) const -> std::string {
+  auto operator()(const SchemaCompilerAssertionTypeStrictAny &) const
+      -> std::string {
     return "The target document is expected to be of one of the given types";
   }
   auto operator()(const SchemaCompilerAssertionRegex &) const -> std::string {

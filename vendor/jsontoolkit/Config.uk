@@ -1,9 +1,0 @@
-menuconfig LIBJSONTOOLKIT
-	bool "libjsontoolkit - a swiss-army knife library for expressive JSON programming in modern C++"
-	select LIBCXXABI
-	select LIBCXX
-	select CXX_THREADS
-	select LIBUNWIND
-	select LIBCOMPILER_RT
-	select LIBMUSL
-	default n
