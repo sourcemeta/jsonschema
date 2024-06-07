@@ -2,7 +2,7 @@
 
 #include <algorithm> // std::find, std::sort, std::unique
 #include <cassert>   // assert
-#include <cmath>     // std::isinf, std::isnan, std::modf
+#include <cmath>     // std::isinf, std::isnan, std::modf, std::trunc
 #include <numeric>   // std::transform
 #include <stdexcept> // std::invalid_argument
 #include <string>    // std::to_string
@@ -174,6 +174,19 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   return std::holds_alternative<Real>(this->data);
 }
 
+[[nodiscard]] auto JSON::is_integer_real() const noexcept -> bool {
+  if (this->is_integer()) {
+    return false;
+  } else if (this->is_real()) {
+    const auto value{this->to_real()};
+    Real integral;
+    return !std::isinf(value) && !std::isnan(value) &&
+           std::modf(value, &integral) == 0.0;
+  } else {
+    return false;
+  }
+}
+
 [[nodiscard]] auto JSON::is_number() const noexcept -> bool {
   return this->is_integer() || this->is_real();
 }
@@ -260,6 +273,15 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   assert(this->is_number());
   return this->is_real() ? this->to_real()
                          : static_cast<Real>(this->to_integer());
+}
+
+[[nodiscard]] auto JSON::as_integer() const noexcept -> Integer {
+  assert(this->is_number());
+  if (this->is_integer()) {
+    return this->to_integer();
+  } else {
+    return static_cast<Integer>(std::trunc(this->to_real()));
+  }
 }
 
 [[nodiscard]] auto

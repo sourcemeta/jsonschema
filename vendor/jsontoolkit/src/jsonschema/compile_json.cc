@@ -178,8 +178,9 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "fail", SchemaCompilerAssertionFail)
   HANDLE_STEP("assertion", "defines", SchemaCompilerAssertionDefines)
   HANDLE_STEP("assertion", "defines-all", SchemaCompilerAssertionDefinesAll)
-  HANDLE_STEP("assertion", "type", SchemaCompilerAssertionType)
-  HANDLE_STEP("assertion", "type-any", SchemaCompilerAssertionTypeAny)
+  HANDLE_STEP("assertion", "type-strict", SchemaCompilerAssertionTypeStrict)
+  HANDLE_STEP("assertion", "type-strict-any",
+              SchemaCompilerAssertionTypeStrictAny)
   HANDLE_STEP("assertion", "regex", SchemaCompilerAssertionRegex)
   HANDLE_STEP("assertion", "size-greater", SchemaCompilerAssertionSizeGreater)
   HANDLE_STEP("assertion", "size-less", SchemaCompilerAssertionSizeLess)
@@ -202,7 +203,9 @@ struct StepVisitor {
   HANDLE_STEP("internal", "container", SchemaCompilerInternalContainer)
   HANDLE_STEP("internal", "defines-all", SchemaCompilerInternalDefinesAll)
   HANDLE_STEP("loop", "properties", SchemaCompilerLoopProperties)
+  HANDLE_STEP("loop", "keys", SchemaCompilerLoopKeys)
   HANDLE_STEP("loop", "items", SchemaCompilerLoopItems)
+  HANDLE_STEP("loop", "contains", SchemaCompilerLoopContains)
   HANDLE_STEP("control", "label", SchemaCompilerControlLabel)
   HANDLE_STEP("control", "jump", SchemaCompilerControlJump)
 

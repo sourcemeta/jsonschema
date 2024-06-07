@@ -342,6 +342,18 @@ public:
   /// ```
   [[nodiscard]] auto is_real() const noexcept -> bool;
 
+  /// Check if the input JSON document is a real number that represents an
+  /// integer. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document{5.0};
+  /// assert(document.is_integer_real());
+  /// ```
+  [[nodiscard]] auto is_integer_real() const noexcept -> bool;
+
   /// Check if the input JSON document is either an integer or a real type. For
   /// example:
   ///
@@ -606,6 +618,19 @@ public:
   /// assert(document.as_real() == 5.0);
   /// ```
   [[nodiscard]] auto as_real() const noexcept -> Real;
+
+  /// Get the JSON numeric document as an integer number if it is not one
+  /// already. If the number is a real number, truncation will take place. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document{5.3};
+  /// assert(document.as_integer() == 5);
+  /// ```
+  [[nodiscard]] auto as_integer() const noexcept -> Integer;
 
   /*
    * Getters

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.16)
 project(jsontoolkit VERSION 2.0.0 LANGUAGES CXX
   DESCRIPTION "The swiss-army knife for JSON programming in C++"
   HOMEPAGE_URL "https://jsontoolkit.sourcemeta.com")

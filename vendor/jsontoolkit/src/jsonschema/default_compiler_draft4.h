@@ -47,28 +47,28 @@ auto compiler_draft4_validation_type(const SchemaCompilerContext &context)
   if (context.value.is_string()) {
     const auto &type{context.value.to_string()};
     if (type == "null") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Null, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "boolean") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Boolean, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "object") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Object, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "array") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "number") {
-      return {make<SchemaCompilerAssertionTypeAny>(
+      return {make<SchemaCompilerAssertionTypeStrictAny>(
           context, std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer},
           {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "integer") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Integer, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "string") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::String, {}, SchemaCompilerTargetType::Instance)};
     } else {
       return {};
@@ -77,28 +77,28 @@ auto compiler_draft4_validation_type(const SchemaCompilerContext &context)
              context.value.front().is_string()) {
     const auto &type{context.value.front().to_string()};
     if (type == "null") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Null, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "boolean") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Boolean, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "object") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Object, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "array") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "number") {
-      return {make<SchemaCompilerAssertionTypeAny>(
+      return {make<SchemaCompilerAssertionTypeStrictAny>(
           context, std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer},
           {}, SchemaCompilerTargetType::Instance)};
     } else if (type == "integer") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::Integer, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "string") {
-      return {make<SchemaCompilerAssertionType>(
+      return {make<SchemaCompilerAssertionTypeStrict>(
           context, JSON::Type::String, {}, SchemaCompilerTargetType::Instance)};
     } else {
       return {};
@@ -127,7 +127,7 @@ auto compiler_draft4_validation_type(const SchemaCompilerContext &context)
     }
 
     assert(types.size() >= context.value.size());
-    return {make<SchemaCompilerAssertionTypeAny>(
+    return {make<SchemaCompilerAssertionTypeStrictAny>(
         context, std::move(types), {}, SchemaCompilerTargetType::Instance)};
   }
 
@@ -137,9 +137,10 @@ auto compiler_draft4_validation_type(const SchemaCompilerContext &context)
 auto compiler_draft4_validation_required(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
   assert(context.value.is_array());
-  assert(!context.value.empty());
 
-  if (context.value.size() > 1) {
+  if (context.value.empty()) {
+    return {};
+  } else if (context.value.size() > 1) {
     std::set<JSON::String> properties;
     for (const auto &property : context.value.as_array()) {
       assert(property.is_string());
@@ -294,8 +295,9 @@ auto compiler_draft4_applicator_patternproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `object` already
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Object, {},
-                                         SchemaCompilerTargetType::Instance)})};
+      {make<SchemaCompilerAssertionTypeStrict>(
+          subcontext, JSON::Type::Object, {},
+          SchemaCompilerTargetType::Instance)})};
 }
 
 auto compiler_draft4_applicator_additionalproperties(
@@ -338,8 +340,9 @@ auto compiler_draft4_applicator_additionalproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `object` already
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Object, {},
-                                         SchemaCompilerTargetType::Instance)})};
+      {make<SchemaCompilerAssertionTypeStrict>(
+          subcontext, JSON::Type::Object, {},
+          SchemaCompilerTargetType::Instance)})};
 }
 
 auto compiler_draft4_validation_pattern(const SchemaCompilerContext &context)
@@ -405,14 +408,14 @@ auto compiler_draft4_applicator_not(const SchemaCompilerContext &context)
 auto compiler_draft4_applicator_items(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
   const auto subcontext{applicate(context)};
-  if (context.value.is_object()) {
+  if (is_schema(context.value)) {
     return {make<SchemaCompilerLoopItems>(
         context, SchemaCompilerValueUnsignedInteger{0},
         compile(subcontext, empty_pointer, empty_pointer),
 
         // TODO: As an optimization, avoid this condition if the subschema
         // declares `type` to `array` already
-        {make<SchemaCompilerAssertionType>(
+        {make<SchemaCompilerAssertionTypeStrict>(
             subcontext, JSON::Type::Array, {},
             SchemaCompilerTargetType::Instance)})};
   }
@@ -439,8 +442,9 @@ auto compiler_draft4_applicator_items(const SchemaCompilerContext &context)
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `array` already
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Array, {},
-                                         SchemaCompilerTargetType::Instance)})};
+      {make<SchemaCompilerAssertionTypeStrict>(
+          subcontext, JSON::Type::Array, {},
+          SchemaCompilerTargetType::Instance)})};
 }
 
 auto compiler_draft4_applicator_additionalitems(
@@ -464,8 +468,9 @@ auto compiler_draft4_applicator_additionalitems(
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `array` already
-      {make<SchemaCompilerAssertionType>(context, JSON::Type::Array, {},
-                                         SchemaCompilerTargetType::Instance)})};
+      {make<SchemaCompilerAssertionTypeStrict>(
+          context, JSON::Type::Array, {},
+          SchemaCompilerTargetType::Instance)})};
 }
 
 auto compiler_draft4_applicator_dependencies(
@@ -475,16 +480,18 @@ auto compiler_draft4_applicator_dependencies(
   const auto subcontext{applicate(context)};
 
   for (const auto &entry : context.value.as_object()) {
-    if (entry.second.is_object()) {
-      children.push_back(make<SchemaCompilerInternalContainer>(
-          subcontext, SchemaCompilerValueNone{},
-          compile(subcontext, {entry.first}, empty_pointer),
+    if (is_schema(entry.second)) {
+      if (!entry.second.is_boolean() || !entry.second.to_boolean()) {
+        children.push_back(make<SchemaCompilerInternalContainer>(
+            subcontext, SchemaCompilerValueNone{},
+            compile(subcontext, {entry.first}, empty_pointer),
 
-          // TODO: As an optimization, avoid this condition if the subschema
-          // declares `required` and includes the given key
-          {make<SchemaCompilerAssertionDefines>(
-              subcontext, entry.first, {},
-              SchemaCompilerTargetType::Instance)}));
+            // TODO: As an optimization, avoid this condition if the subschema
+            // declares `required` and includes the given key
+            {make<SchemaCompilerAssertionDefines>(
+                subcontext, entry.first, {},
+                SchemaCompilerTargetType::Instance)}));
+      }
     } else if (entry.second.is_array()) {
       std::set<JSON::String> properties;
       for (const auto &property : entry.second.as_array()) {
@@ -541,7 +548,7 @@ auto compiler_draft4_validation_uniqueitems(
 
 auto compiler_draft4_validation_maxlength(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `minLength` is set to the same number, do
@@ -549,14 +556,14 @@ auto compiler_draft4_validation_maxlength(const SchemaCompilerContext &context)
   return {make<SchemaCompilerAssertionSizeLess>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) + 1},
+          static_cast<unsigned long>(context.value.as_integer()) + 1},
       type_condition(context, JSON::Type::String),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_minlength(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `maxLength` is set to the same number, do
@@ -564,14 +571,14 @@ auto compiler_draft4_validation_minlength(const SchemaCompilerContext &context)
   return {make<SchemaCompilerAssertionSizeGreater>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) - 1},
+          static_cast<unsigned long>(context.value.as_integer()) - 1},
       type_condition(context, JSON::Type::String),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_maxitems(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `minItems` is set to the same number, do
@@ -579,14 +586,14 @@ auto compiler_draft4_validation_maxitems(const SchemaCompilerContext &context)
   return {make<SchemaCompilerAssertionSizeLess>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) + 1},
+          static_cast<unsigned long>(context.value.as_integer()) + 1},
       type_condition(context, JSON::Type::Array),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_minitems(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `maxItems` is set to the same number, do
@@ -594,14 +601,14 @@ auto compiler_draft4_validation_minitems(const SchemaCompilerContext &context)
   return {make<SchemaCompilerAssertionSizeGreater>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) - 1},
+          static_cast<unsigned long>(context.value.as_integer()) - 1},
       type_condition(context, JSON::Type::Array),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_maxproperties(
     const SchemaCompilerContext &context) -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `minProperties` is set to the same number, do
@@ -609,14 +616,14 @@ auto compiler_draft4_validation_maxproperties(
   return {make<SchemaCompilerAssertionSizeLess>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) + 1},
+          static_cast<unsigned long>(context.value.as_integer()) + 1},
       type_condition(context, JSON::Type::Object),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft4_validation_minproperties(
     const SchemaCompilerContext &context) -> SchemaCompilerTemplate {
-  assert(context.value.is_integer());
+  assert(context.value.is_integer() || context.value.is_integer_real());
   assert(context.value.is_positive());
 
   // TODO: As an optimization, if `maxProperties` is set to the same number, do
@@ -624,7 +631,7 @@ auto compiler_draft4_validation_minproperties(
   return {make<SchemaCompilerAssertionSizeGreater>(
       context,
       SchemaCompilerValueUnsignedInteger{
-          static_cast<unsigned long>(context.value.to_integer()) - 1},
+          static_cast<unsigned long>(context.value.as_integer()) - 1},
       type_condition(context, JSON::Type::Object),
       SchemaCompilerTargetType::Instance)};
 }
@@ -636,13 +643,15 @@ auto compiler_draft4_validation_maximum(const SchemaCompilerContext &context)
 
   // TODO: As an optimization, avoid this condition if the subschema
   // declares `type` to `number` or `integer` already
-  SchemaCompilerTemplate condition{make<SchemaCompilerLogicalOr>(
-      subcontext, SchemaCompilerValueNone{},
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Real, {},
+  SchemaCompilerTemplate condition{
+      make<SchemaCompilerLogicalOr>(subcontext, SchemaCompilerValueNone{},
+                                    {make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Real, {},
                                          SchemaCompilerTargetType::Instance),
-       make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Integer, {},
+                                     make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Integer, {},
                                          SchemaCompilerTargetType::Instance)},
-      SchemaCompilerTemplate{})};
+                                    SchemaCompilerTemplate{})};
 
   // TODO: As an optimization, if `minimum` is set to the same number, do
   // a single equality assertion
@@ -668,13 +677,15 @@ auto compiler_draft4_validation_minimum(const SchemaCompilerContext &context)
 
   // TODO: As an optimization, avoid this condition if the subschema
   // declares `type` to `number` or `integer` already
-  SchemaCompilerTemplate condition{make<SchemaCompilerLogicalOr>(
-      subcontext, SchemaCompilerValueNone{},
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Real, {},
+  SchemaCompilerTemplate condition{
+      make<SchemaCompilerLogicalOr>(subcontext, SchemaCompilerValueNone{},
+                                    {make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Real, {},
                                          SchemaCompilerTargetType::Instance),
-       make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Integer, {},
+                                     make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Integer, {},
                                          SchemaCompilerTargetType::Instance)},
-      SchemaCompilerTemplate{})};
+                                    SchemaCompilerTemplate{})};
 
   // TODO: As an optimization, if `maximum` is set to the same number, do
   // a single equality assertion
@@ -701,13 +712,15 @@ auto compiler_draft4_validation_multipleof(const SchemaCompilerContext &context)
   // TODO: As an optimization, avoid this condition if the subschema
   // declares `type` to `number` or `integer` already
   const auto subcontext{applicate(context)};
-  SchemaCompilerTemplate condition{make<SchemaCompilerLogicalOr>(
-      subcontext, SchemaCompilerValueNone{},
-      {make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Real, {},
+  SchemaCompilerTemplate condition{
+      make<SchemaCompilerLogicalOr>(subcontext, SchemaCompilerValueNone{},
+                                    {make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Real, {},
                                          SchemaCompilerTargetType::Instance),
-       make<SchemaCompilerAssertionType>(subcontext, JSON::Type::Integer, {},
+                                     make<SchemaCompilerAssertionTypeStrict>(
+                                         subcontext, JSON::Type::Integer, {},
                                          SchemaCompilerTargetType::Instance)},
-      SchemaCompilerTemplate{})};
+                                    SchemaCompilerTemplate{})};
 
   return {make<SchemaCompilerAssertionDivisible>(
       context, context.value, std::move(condition),

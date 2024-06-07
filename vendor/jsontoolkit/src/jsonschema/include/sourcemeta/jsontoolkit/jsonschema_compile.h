@@ -117,12 +117,12 @@ struct SchemaCompilerAssertionDefinesAll;
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks if a document is of the
 /// given type
-struct SchemaCompilerAssertionType;
+struct SchemaCompilerAssertionTypeStrict;
 
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks if a document is of any of
 /// the given types
-struct SchemaCompilerAssertionTypeAny;
+struct SchemaCompilerAssertionTypeStrictAny;
 
 /// @ingroup jsonschema
 /// Represents a compiler assertion step that checks a string against an ECMA
@@ -229,9 +229,17 @@ struct SchemaCompilerInternalDefinesAll;
 struct SchemaCompilerLoopProperties;
 
 /// @ingroup jsonschema
+/// Represents a compiler step that loops over object property keys
+struct SchemaCompilerLoopKeys;
+
+/// @ingroup jsonschema
 /// Represents a compiler step that loops over array items starting from a given
 /// index
 struct SchemaCompilerLoopItems;
+
+/// @ingroup jsonschema
+/// Represents a compiler step that checks array items match a given criteria
+struct SchemaCompilerLoopContains;
 
 /// @ingroup jsonschema
 /// Represents a compiler step that consists of a mark to jump to
@@ -246,8 +254,8 @@ struct SchemaCompilerControlJump;
 /// Represents a schema compilation step that can be evaluated
 using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionFail, SchemaCompilerAssertionDefines,
-    SchemaCompilerAssertionDefinesAll, SchemaCompilerAssertionType,
-    SchemaCompilerAssertionTypeAny, SchemaCompilerAssertionRegex,
+    SchemaCompilerAssertionDefinesAll, SchemaCompilerAssertionTypeStrict,
+    SchemaCompilerAssertionTypeStrictAny, SchemaCompilerAssertionRegex,
     SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
     SchemaCompilerAssertionEqual, SchemaCompilerAssertionEqualsAny,
     SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
@@ -258,7 +266,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalNot, SchemaCompilerInternalNoAnnotation,
     SchemaCompilerInternalContainer, SchemaCompilerInternalDefinesAll,
-    SchemaCompilerLoopProperties, SchemaCompilerLoopItems,
+    SchemaCompilerLoopProperties, SchemaCompilerLoopKeys,
+    SchemaCompilerLoopItems, SchemaCompilerLoopContains,
     SchemaCompilerControlLabel, SchemaCompilerControlJump>>;
 
 #if !defined(DOXYGEN)
@@ -295,8 +304,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
 DEFINE_STEP_WITH_VALUE(Assertion, Fail, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Defines, SchemaCompilerValueString)
 DEFINE_STEP_WITH_VALUE(Assertion, DefinesAll, SchemaCompilerValueStrings)
-DEFINE_STEP_WITH_VALUE(Assertion, Type, SchemaCompilerValueType)
-DEFINE_STEP_WITH_VALUE(Assertion, TypeAny, SchemaCompilerValueTypes)
+DEFINE_STEP_WITH_VALUE(Assertion, TypeStrict, SchemaCompilerValueType)
+DEFINE_STEP_WITH_VALUE(Assertion, TypeStrictAny, SchemaCompilerValueTypes)
 DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeGreater,
                        SchemaCompilerValueUnsignedInteger)
@@ -320,7 +329,9 @@ DEFINE_STEP_WITH_VALUE(Internal, NoAnnotation, SchemaCompilerValueJSON)
 DEFINE_STEP_APPLICATOR(Internal, Container, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)
 DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueBoolean)
+DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
+DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueNone)
 DEFINE_CONTROL(Label)
 DEFINE_CONTROL(Jump)
 
