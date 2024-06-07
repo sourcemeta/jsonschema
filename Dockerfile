@@ -7,20 +7,19 @@ RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
 
 # Tools to compile:
-RUN apt install -y build-essential cmake clang-format shellcheck curl
+RUN apt install -y build-essential cmake
 
 COPY cmake /compile/cmake
 COPY src /compile/src
-COPY test /compile/test
 COPY vendor /compile/vendor
 COPY CMakeLists.txt /compile/CMakeLists.txt
-COPY Makefile /compile/Makefile
 WORKDIR /compile
 
-RUN make configure
-RUN make compile
+RUN cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS:BOOL=OFF
+RUN cmake --build ./build --config Release --parallel 4
+RUN cmake --install ./build --prefix /usr/local --config Release --verbose --component intelligence_jsonschema
 
 FROM ubuntu
-COPY --from=compiler /compile/build/dist/bin/jsonschema /usr/local/bin/jsonschema
+COPY --from=compiler /usr/local/bin/jsonschema /usr/local/bin/jsonschema
 WORKDIR /schema
 ENTRYPOINT ["/usr/local/bin/jsonschema"]
