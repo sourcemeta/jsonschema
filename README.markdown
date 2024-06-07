@@ -74,18 +74,21 @@ latest pre-built binaries, which you can run as follows:
 
 ### From Dockerfile
 
-You can compile the software inside a container and run it with Docker:
+You can compile the JSON Schema CLI inside a container and run it with Docker
+as follows:
 
 ```sh
 docker build -t jsonschema .
 ```
 
-Then you can validate files by mounting them in the `/schema` folder:
+Then, you run the JSON Schema CLI by mounting the desired directory as
+`/workspace` as follows:
 
 ```sh
-docker run -it -v "$PWD:/schema" jsonschema lint --verbose myschema.json
-# Optionally add to your .alias (or similar) file:
-# alias jsonschema="docker run -it -v \"$PWD:/schema\" jsonschema"
+docker run -it -v "$PWD:/workspace" jsonschema lint --verbose myschema.json
+
+# You can optionally add this to your .alias (or similar) file:
+# alias jsonschema="docker run -it -v \"$PWD:/workspace\" jsonschema"
 ```
 
 ### Building from source

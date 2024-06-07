@@ -1,25 +1,17 @@
-FROM ubuntu as compiler
+FROM debian:bookworm as builder
+RUN apt-get --yes update && apt-get install --yes --no-install-recommends \
+  build-essential cmake && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN apt update
+COPY cmake /source/cmake
+COPY src /source/src
+COPY vendor /source/vendor
+COPY CMakeLists.txt /source/CMakeLists.txt
 
-# Install tzdata without being interactive
-RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
+RUN cmake -S /source -B ./build -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS:BOOL=OFF
+RUN cmake --build /build --config Release --parallel 4
+RUN cmake --install /build --prefix /usr/local --config Release --verbose --component intelligence_jsonschema
 
-# Tools to compile:
-RUN apt install -y build-essential cmake
-
-COPY cmake /compile/cmake
-COPY src /compile/src
-COPY vendor /compile/vendor
-COPY CMakeLists.txt /compile/CMakeLists.txt
-WORKDIR /compile
-
-RUN cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS:BOOL=OFF
-RUN cmake --build ./build --config Release --parallel 4
-RUN cmake --install ./build --prefix /usr/local --config Release --verbose --component intelligence_jsonschema
-
-FROM ubuntu
-COPY --from=compiler /usr/local/bin/jsonschema /usr/local/bin/jsonschema
-WORKDIR /schema
-ENTRYPOINT ["/usr/local/bin/jsonschema"]
+FROM debian:bookworm-slim
+COPY --from=builder /usr/local/bin/jsonschema /usr/local/bin/jsonschema
+WORKDIR /workspace
+ENTRYPOINT [ "/usr/local/bin/jsonschema" ]
