@@ -72,6 +72,22 @@ latest pre-built binaries, which you can run as follows:
 /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
 ```
 
+### From Dockerfile
+
+You can compile the software inside a container and run it with Docker:
+
+```sh
+docker build -t jsonschema .
+```
+
+Then you can validate files by mounting them in the `/schema` folder:
+
+```sh
+docker run -it -v "$PWD:/schema" jsonschema lint --verbose myschema.json
+# Optionally add to your .alias (or similar) file:
+# alias jsonschema="docker run -it -v \"$PWD:/schema\" jsonschema"
+```
+
 ### Building from source
 
 ```sh
