@@ -17,7 +17,11 @@ jobs:
             cc: gcc
             cxx: g++
             shell: sh
-          - os: macos-latest
+          - os: macos-13
+            cc: clang
+            cxx: clang++
+            shell: sh
+          - os: macos-14
             cc: clang
             cxx: clang++
             shell: sh
@@ -67,6 +71,8 @@ jobs:
       # is not recognized, `ctest` will successfully exit finding no tests.
       # Better to be sure and `cd` all the time here.
       - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
+
+      - run: cpack --config build/CPackConfig.cmake -B build/out -C Release
 
   docker:
     runs-on: ubuntu-latest

@@ -24,7 +24,11 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
-          - os: macos-latest
+          - os: macos-13
+            cc: clang
+            cxx: clang++
+            shell: sh
+          - os: macos-14
             cc: clang
             cxx: clang++
             shell: sh
