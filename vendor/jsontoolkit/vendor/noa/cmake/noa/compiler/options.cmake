@@ -1,7 +1,7 @@
-function(sourcemeta_jsontoolkit_add_compile_options target)
+function(noa_add_default_options visibility target)
   if(NOA_COMPILER_MSVC)
     # See https://learn.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-by-category
-    target_compile_options("${target}" PRIVATE
+    target_compile_options("${target}" ${visibility}
       /options:strict
       /permissive-
       /W4
@@ -9,7 +9,7 @@ function(sourcemeta_jsontoolkit_add_compile_options target)
       /MP
       /sdl)
   else()
-    target_compile_options("${target}" PRIVATE
+    target_compile_options("${target}" ${visibility}
       -Wall
       -Wextra
       -Wpedantic
@@ -39,11 +39,17 @@ function(sourcemeta_jsontoolkit_add_compile_options target)
       -Wunknown-pragmas
       -Wnon-virtual-dtor
       -Woverloaded-virtual
-      -Winvalid-offsetof)
+      -Winvalid-offsetof
+
+      # Assume that signed arithmetic overflow of addition, subtraction and
+      # multiplication wraps around using twos-complement representation
+      # See https://users.cs.utah.edu/~regehr/papers/overflow12.pdf
+      # See https://www.postgresql.org/message-id/1689.1134422394@sss.pgh.pa.us
+      -fwrapv)
   endif()
 
   if(NOA_COMPILER_LLVM)
-    target_compile_options("${target}" PRIVATE
+    target_compile_options("${target}" ${visibility}
       -Wbool-conversion
       -Wint-conversion
       -Wpointer-sign
@@ -60,6 +66,7 @@ function(sourcemeta_jsontoolkit_add_compile_options target)
       -Wdocumentation
       -Wmove
       -Wc++11-extensions
+      -Wcomma
       -Wno-exit-time-destructors
       -Wrange-loop-analysis)
   endif()

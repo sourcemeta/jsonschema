@@ -12,9 +12,9 @@ public:
     return contains_any(vocabularies,
                         {"https://json-schema.org/draft/2020-12/vocab/content",
                          "https://json-schema.org/draft/2019-09/vocab/content",
-                         "http://json-schema.org/draft-07/schema#"}),
+                         "http://json-schema.org/draft-07/schema#"}) &&
            schema.is_object() && schema.defines("contentMediaType") &&
-               !schema.defines("contentEncoding");
+           !schema.defines("contentEncoding");
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

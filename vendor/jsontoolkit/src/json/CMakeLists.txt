@@ -6,5 +6,3 @@ noa_library(NAMESPACE sourcemeta PROJECT jsontoolkit NAME json
 if(JSONTOOLKIT_INSTALL)
   noa_library_install(NAMESPACE sourcemeta PROJECT jsontoolkit NAME json)
 endif()
-
-sourcemeta_jsontoolkit_add_compile_options(sourcemeta_jsontoolkit_json)

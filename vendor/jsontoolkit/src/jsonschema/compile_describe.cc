@@ -17,12 +17,19 @@ struct DescribeVisitor {
     return "The target is expected to match one and only one of the given "
            "assertions";
   }
+  auto operator()(const SchemaCompilerLogicalTry &) const -> std::string {
+    return "The target might match all of the given assertions";
+  }
   auto operator()(const SchemaCompilerLogicalNot &) const -> std::string {
     return "The given schema is expected to not validate successfully";
   }
   auto
   operator()(const SchemaCompilerInternalContainer &) const -> std::string {
     return "Internal";
+  }
+  auto
+  operator()(const SchemaCompilerInternalAnnotation &) const -> std::string {
+    return "The target was annotated with the given value";
   }
   auto
   operator()(const SchemaCompilerInternalNoAnnotation &) const -> std::string {
@@ -98,7 +105,7 @@ struct DescribeVisitor {
   }
 
   auto operator()(const SchemaCompilerAssertionEqual &) const -> std::string {
-    return "The target size is expected to be equal to the given number";
+    return "The target is expected to be equal to the given value";
   }
   auto operator()(const SchemaCompilerAssertionGreaterEqual &) const {
     return "The target number is expected to be greater than or equal to the "

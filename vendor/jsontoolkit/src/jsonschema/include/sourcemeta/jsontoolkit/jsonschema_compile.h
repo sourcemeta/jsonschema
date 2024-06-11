@@ -39,6 +39,10 @@ enum class SchemaCompilerTargetType {
   /// The penultimate path (i.e. property or index) of the instance location
   InstanceParent,
 
+  /// The annotations produced at the same base evaluation path for the
+  /// current instance location
+  AdjacentAnnotations,
+
   /// The annotations produced at the same base evaluation path for the parent
   /// of the current instance location
   ParentAdjacentAnnotations
@@ -217,8 +221,18 @@ struct SchemaCompilerLogicalAnd;
 struct SchemaCompilerLogicalXor;
 
 /// @ingroup jsonschema
+/// Represents a compiler logical step that represents a conjunction that always
+/// reports success
+struct SchemaCompilerLogicalTry;
+
+/// @ingroup jsonschema
 /// Represents a compiler logical step that represents a negation
 struct SchemaCompilerLogicalNot;
+
+/// @ingroup jsonschema
+/// Represents a hidden compiler assertion step that checks a certain
+/// annotation was produced
+struct SchemaCompilerInternalAnnotation;
 
 /// @ingroup jsonschema
 /// Represents a hidden compiler assertion step that checks a certain
@@ -275,7 +289,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
     SchemaCompilerAnnotationPrivate, SchemaCompilerLogicalOr,
     SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
-    SchemaCompilerLogicalNot, SchemaCompilerInternalNoAnnotation,
+    SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
+    SchemaCompilerInternalAnnotation, SchemaCompilerInternalNoAnnotation,
     SchemaCompilerInternalContainer, SchemaCompilerInternalDefinesAll,
     SchemaCompilerLoopProperties, SchemaCompilerLoopKeys,
     SchemaCompilerLoopItems, SchemaCompilerLoopContains,
@@ -337,7 +352,9 @@ DEFINE_STEP_WITH_VALUE(Annotation, Private, SchemaCompilerValueJSON)
 DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
+DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Not, SchemaCompilerValueNone)
+DEFINE_STEP_WITH_VALUE(Internal, Annotation, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Internal, NoAnnotation, SchemaCompilerValueJSON)
 DEFINE_STEP_APPLICATOR(Internal, Container, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)

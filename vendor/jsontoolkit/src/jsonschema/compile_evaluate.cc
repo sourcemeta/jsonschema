@@ -106,12 +106,14 @@ public:
 
     // An optimization for efficiently accessing annotations
     if constexpr (std::is_same_v<Annotations, T>) {
-      assert(target.first ==
-             SchemaCompilerTargetType::ParentAdjacentAnnotations);
       const auto schema_location{
           this->evaluate_path().initial().concat(target.second)};
-      return this->annotations(this->instance_location().initial(),
-                               schema_location);
+      if (target.first == SchemaCompilerTargetType::ParentAdjacentAnnotations) {
+        return this->annotations(this->instance_location().initial(),
+                                 schema_location);
+      } else {
+        return this->annotations(this->instance_location(), schema_location);
+      }
     } else {
       static_assert(std::is_same_v<JSON, T>);
       switch (target.first) {
@@ -449,6 +451,17 @@ auto evaluate_step(
         break;
       }
     }
+  } else if (std::holds_alternative<SchemaCompilerLogicalTry>(step)) {
+    const auto &logical{std::get<SchemaCompilerLogicalTry>(step)};
+    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD(logical.condition, instance);
+    result = true;
+    for (const auto &child : logical.children) {
+      if (!evaluate_step(child, instance, mode, callback, context)) {
+        break;
+      }
+    }
   } else if (std::holds_alternative<SchemaCompilerLogicalNot>(step)) {
     const auto &logical{std::get<SchemaCompilerLogicalNot>(step)};
     assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
@@ -463,6 +476,18 @@ auto evaluate_step(
         }
       }
     }
+  } else if (std::holds_alternative<SchemaCompilerInternalAnnotation>(step)) {
+    const auto &assertion{std::get<SchemaCompilerInternalAnnotation>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<std::set<JSON>>(assertion.target, instance)};
+    result = target.contains(value);
+
+    // We treat this step as transparent to the consumer
+    context.pop();
+    return result;
   } else if (std::holds_alternative<SchemaCompilerInternalNoAnnotation>(step)) {
     const auto &assertion{std::get<SchemaCompilerInternalNoAnnotation>(step)};
     context.push(assertion);

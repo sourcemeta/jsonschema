@@ -18,9 +18,9 @@ public:
                 "http://json-schema.org/draft-04/schema#",
                 "http://json-schema.org/draft-03/schema#",
                 "http://json-schema.org/draft-02/hyper-schema#",
-                "http://json-schema.org/draft-01/hyper-schema#"}),
+                "http://json-schema.org/draft-01/hyper-schema#"}) &&
            schema.is_object() && schema.defines("type") &&
-               schema.defines("enum");
+           schema.defines("enum");
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

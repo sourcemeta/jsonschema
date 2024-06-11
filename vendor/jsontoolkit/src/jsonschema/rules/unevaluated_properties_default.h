@@ -12,12 +12,12 @@ public:
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/unevaluated",
-                "https://json-schema.org/draft/2019-09/vocab/applicator"}),
+                "https://json-schema.org/draft/2019-09/vocab/applicator"}) &&
            schema.is_object() && schema.defines("unevaluatedProperties") &&
-               ((schema.at("unevaluatedProperties").is_boolean() &&
-                 schema.at("unevaluatedProperties").to_boolean()) ||
-                (schema.at("unevaluatedProperties").is_object() &&
-                 schema.at("unevaluatedProperties").empty()));
+           ((schema.at("unevaluatedProperties").is_boolean() &&
+             schema.at("unevaluatedProperties").to_boolean()) ||
+            (schema.at("unevaluatedProperties").is_object() &&
+             schema.at("unevaluatedProperties").empty()));
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

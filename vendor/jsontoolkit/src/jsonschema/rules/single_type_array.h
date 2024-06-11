@@ -18,10 +18,10 @@ public:
                 "http://json-schema.org/draft-03/schema#",
                 "http://json-schema.org/draft-02/hyper-schema#",
                 "http://json-schema.org/draft-01/hyper-schema#",
-                "http://json-schema.org/draft-00/hyper-schema#"}),
+                "http://json-schema.org/draft-00/hyper-schema#"}) &&
            schema.is_object() && schema.defines("type") &&
-               schema.at("type").is_array() && schema.at("type").size() == 1 &&
-               schema.at("type").front().is_string();
+           schema.at("type").is_array() && schema.at("type").size() == 1 &&
+           schema.at("type").front().is_string();
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {
