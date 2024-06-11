@@ -161,7 +161,7 @@ auto compiler_draft6_applicator_contains(const SchemaCompilerContext &context)
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `array` already
       {make<SchemaCompilerAssertionTypeStrict>(
-          context, JSON::Type::Array, {},
+          applicate(context), JSON::Type::Array, {},
           SchemaCompilerTargetType::Instance)})};
 }
 
@@ -175,7 +175,7 @@ auto compiler_draft6_validation_propertynames(
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `object` already
       {make<SchemaCompilerAssertionTypeStrict>(
-          context, JSON::Type::Object, {},
+          applicate(context), JSON::Type::Object, {},
           SchemaCompilerTargetType::Instance)})};
 }
 
