@@ -11,5 +11,3 @@ target_link_libraries(sourcemeta_jsontoolkit_jsonpointer PUBLIC
   sourcemeta::jsontoolkit::uri)
 target_link_libraries(sourcemeta_jsontoolkit_jsonpointer PUBLIC
   sourcemeta::jsontoolkit::json)
-
-sourcemeta_jsontoolkit_add_compile_options(sourcemeta_jsontoolkit_jsonpointer)

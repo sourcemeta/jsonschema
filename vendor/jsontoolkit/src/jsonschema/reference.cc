@@ -44,7 +44,9 @@ static auto find_every_base(const std::map<sourcemeta::jsontoolkit::Pointer,
     }
   }
 
-  if (result.empty()) {
+  if (result.empty() ||
+      // This means the top-level schema is anonymous
+      result.back().second != sourcemeta::jsontoolkit::empty_pointer) {
     result.push_back({"", sourcemeta::jsontoolkit::empty_pointer});
   }
 

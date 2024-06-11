@@ -9,5 +9,3 @@ endif()
 
 target_link_libraries(sourcemeta_jsontoolkit_uri
   PRIVATE uriparser::uriparser)
-
-sourcemeta_jsontoolkit_add_compile_options(sourcemeta_jsontoolkit_uri)

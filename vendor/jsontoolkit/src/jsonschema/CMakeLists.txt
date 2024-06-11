@@ -10,6 +10,7 @@ noa_library(NAMESPACE sourcemeta PROJECT jsontoolkit NAME jsonschema
     walker.cc bundle.cc transformer.cc transform_rule.cc transform_bundle.cc
     compile.cc compile_evaluate.cc compile_json.cc compile_describe.cc
     compile_helpers.h default_compiler.cc
+    default_compiler_draft7.h
     default_compiler_draft6.h
     default_compiler_draft4.h
 
@@ -42,8 +43,6 @@ target_link_libraries(sourcemeta_jsontoolkit_jsonschema PUBLIC
   sourcemeta::jsontoolkit::jsonpointer)
 target_link_libraries(sourcemeta_jsontoolkit_jsonschema PRIVATE
   sourcemeta::jsontoolkit::uri)
-
-sourcemeta_jsontoolkit_add_compile_options(sourcemeta_jsontoolkit_jsonschema)
 
 # GCC does not allow the use of std::promise, std::future
 # without compiling with pthreads support.

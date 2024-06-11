@@ -17,11 +17,11 @@ public:
                 "http://json-schema.org/draft-04/schema#",
                 "http://json-schema.org/draft-03/schema#",
                 "http://json-schema.org/draft-02/hyper-schema#",
-                "http://json-schema.org/draft-01/hyper-schema#"}),
+                "http://json-schema.org/draft-01/hyper-schema#"}) &&
            schema.is_object() && schema.defines("items") &&
-               ((schema.at("items").is_boolean() &&
-                 schema.at("items").to_boolean()) ||
-                (schema.at("items").is_object() && schema.at("items").empty()));
+           ((schema.at("items").is_boolean() &&
+             schema.at("items").to_boolean()) ||
+            (schema.at("items").is_object() && schema.at("items").empty()));
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

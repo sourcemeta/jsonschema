@@ -13,10 +13,10 @@ public:
                {"https://json-schema.org/draft/2020-12/vocab/validation",
                 "https://json-schema.org/draft/2019-09/vocab/validation",
                 "http://json-schema.org/draft-07/schema#",
-                "http://json-schema.org/draft-06/schema#"}),
+                "http://json-schema.org/draft-06/schema#"}) &&
            schema.is_object() && !schema.defines("const") &&
-               schema.defines("enum") && schema.at("enum").is_array() &&
-               schema.at("enum").size() == 1;
+           schema.defines("enum") && schema.at("enum").is_array() &&
+           schema.at("enum").size() == 1;
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

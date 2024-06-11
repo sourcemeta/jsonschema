@@ -24,6 +24,9 @@ auto target_to_json(const sourcemeta::jsontoolkit::SchemaCompilerTarget &target)
     case SchemaCompilerTargetType::InstanceParent:
       result.assign("type", JSON{"instance-parent"});
       return result;
+    case SchemaCompilerTargetType::AdjacentAnnotations:
+      result.assign("type", JSON{"adjacent-annotations"});
+      return result;
     case SchemaCompilerTargetType::ParentAdjacentAnnotations:
       result.assign("type", JSON{"parent-adjacent-annotations"});
       return result;
@@ -200,7 +203,9 @@ struct StepVisitor {
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)
+  HANDLE_STEP("logical", "try", SchemaCompilerLogicalTry)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
+  HANDLE_STEP("internal", "annotation", SchemaCompilerInternalAnnotation)
   HANDLE_STEP("internal", "no-annotation", SchemaCompilerInternalNoAnnotation)
   HANDLE_STEP("internal", "container", SchemaCompilerInternalContainer)
   HANDLE_STEP("internal", "defines-all", SchemaCompilerInternalDefinesAll)

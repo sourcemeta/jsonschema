@@ -18,12 +18,12 @@ public:
                 "http://json-schema.org/draft-04/schema#",
                 "http://json-schema.org/draft-03/schema#",
                 "http://json-schema.org/draft-02/hyper-schema#",
-                "http://json-schema.org/draft-01/hyper-schema#"}),
+                "http://json-schema.org/draft-01/hyper-schema#"}) &&
            schema.is_object() && schema.defines("additionalProperties") &&
-               ((schema.at("additionalProperties").is_boolean() &&
-                 schema.at("additionalProperties").to_boolean()) ||
-                (schema.at("additionalProperties").is_object() &&
-                 schema.at("additionalProperties").empty()));
+           ((schema.at("additionalProperties").is_boolean() &&
+             schema.at("additionalProperties").to_boolean()) ||
+            (schema.at("additionalProperties").is_object() &&
+             schema.at("additionalProperties").empty()));
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {

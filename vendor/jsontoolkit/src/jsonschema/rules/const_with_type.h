@@ -14,9 +14,9 @@ public:
                {"https://json-schema.org/draft/2020-12/vocab/validation",
                 "https://json-schema.org/draft/2019-09/vocab/validation",
                 "http://json-schema.org/draft-07/schema#",
-                "http://json-schema.org/draft-06/schema#"}),
+                "http://json-schema.org/draft-06/schema#"}) &&
            schema.is_object() && schema.defines("type") &&
-               schema.defines("const");
+           schema.defines("const");
   }
 
   auto transform(SchemaTransformer &transformer) const -> void override {
