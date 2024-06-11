@@ -37,6 +37,7 @@ install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-linux-x86_64/bin/json
   "$OUTPUT/npm/staging/jsonschema-linux-x86_64"
 install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-windows-x86_64/bin/jsonschema.exe" \
   "$OUTPUT/npm/staging/jsonschema-windows-x86_64.exe"
+install -m 0644 "$(pwd)/README.markdown" "$OUTPUT/npm/staging/README.md"
 
 cat << EOF > "$OUTPUT/npm/staging/package.json"
 {
