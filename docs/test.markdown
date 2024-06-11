@@ -2,8 +2,9 @@ Testing
 =======
 
 > [!WARNING]
-> Only JSON Schema Draft 4 is supported at this point in time. We have plans
-> to support *every* dialect of JSON Schema from Draft 0 to Draft 2020-12 soon.
+> Only JSON Schema Draft 4, Draft 6, and Draft 7 are supported at this point in
+> time. We have plans to support *every* dialect of JSON Schema from Draft 0 to
+> Draft 2020-12 soon.
 
 ```sh
 jsonschema test [schemas-or-directories...]
