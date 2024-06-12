@@ -42,6 +42,17 @@ public:
   /// ```
   URI(std::string input);
 
+  /// This constructor creates a URI from a C++ input stream. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <sstream>
+  ///
+  /// std::istringstream input{"https://www.sourcemeta.com"};
+  /// const sourcemeta::jsontoolkit::URI uri{input};
+  /// ```
+  URI(std::istream &input);
+
   /// Destructor
   ~URI();
 

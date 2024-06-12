@@ -110,6 +110,12 @@ auto main(int argc, char *argv[]) noexcept -> int {
     const std::vector<std::string> arguments{argv + std::min(2, argc),
                                              argv + argc};
     return jsonschema_main(program, command, arguments);
+  } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
+    std::cerr << error.what() << ": " << error.id() << "\n";
+    std::cerr << "    at schema location \"";
+    sourcemeta::jsontoolkit::stringify(error.location(), std::cerr);
+    std::cerr << "\"\n";
+    return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
     std::cerr << error.what() << ": " << error.id() << "\n";
     return EXIT_FAILURE;

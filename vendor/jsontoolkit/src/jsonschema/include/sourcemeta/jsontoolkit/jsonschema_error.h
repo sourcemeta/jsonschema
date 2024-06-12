@@ -7,6 +7,8 @@
 #include "jsonschema_export.h"
 #endif
 
+#include <sourcemeta/jsontoolkit/jsonpointer.h>
+
 #include <exception> // std::exception
 #include <string>    // std::string
 #include <utility>   // std::move
@@ -51,6 +53,33 @@ public:
 
 private:
   std::string identifier_;
+  std::string message_;
+};
+
+/// @ingroup jsonschema
+/// An error that represents a schema resolution failure event
+class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaReferenceError
+    : public std::exception {
+public:
+  SchemaReferenceError(std::string identifier, const Pointer &schema_location,
+                       std::string message)
+      : identifier_{std::move(identifier)}, schema_location_{schema_location},
+        message_{std::move(message)} {}
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+  [[nodiscard]] auto id() const noexcept -> std::string_view {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept -> const Pointer & {
+    return this->schema_location_;
+  }
+
+private:
+  std::string identifier_;
+  Pointer schema_location_;
   std::string message_;
 };
 
