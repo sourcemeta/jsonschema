@@ -43,6 +43,10 @@ auto intelligence::jsonschema::cli::test(
     }
 
     if (options.contains("m") || options.contains("metaschema")) {
+      std::cout << "    Metaschema - "
+                << sourcemeta::jsontoolkit::dialect(schema.value())
+                       .value_or("<unknown>")
+                << "\n";
       const auto metaschema_template{sourcemeta::jsontoolkit::compile(
           sourcemeta::jsontoolkit::metaschema(schema.value(), test_resolver),
           sourcemeta::jsontoolkit::default_schema_walker, test_resolver,
@@ -52,12 +56,10 @@ auto intelligence::jsonschema::cli::test(
               metaschema_template, schema.value(),
               sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
               pretty_evaluate_callback(error))) {
-        log_verbose(options)
-            << "The schema is valid with respect to its metaschema\n";
+        std::cout << "        PASS\n";
       } else {
-        std::cerr << error.str();
-        std::cerr << "The schema is NOT valid with respect to its metaschema\n";
-        return EXIT_FAILURE;
+        std::cout << "        FAIL\n";
+        result = false;
       }
     }
 
