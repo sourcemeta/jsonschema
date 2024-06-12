@@ -28,14 +28,18 @@ auto intelligence::jsonschema::cli::validate(
         sourcemeta::jsontoolkit::metaschema(schema, custom_resolver),
         sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
         sourcemeta::jsontoolkit::default_schema_compiler)};
+    std::ostringstream error;
     if (sourcemeta::jsontoolkit::evaluate(
             metaschema_template, schema,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback)) {
+            pretty_evaluate_callback(error))) {
       log_verbose(options)
-          << "The schema is valid with respect to its metaschema\n";
+          << schema_path
+          << ": The schema is valid with respect to its metaschema\n";
     } else {
-      std::cerr << "The schema is NOT valid with respect to its metaschema\n";
+      std::cerr << error.str();
+      std::cerr << schema_path
+                << ": The schema is NOT valid with respect to its metaschema\n";
       return EXIT_FAILURE;
     }
   }
@@ -49,13 +53,16 @@ auto intelligence::jsonschema::cli::validate(
 
     const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
 
+    std::ostringstream error;
     result = sourcemeta::jsontoolkit::evaluate(
         schema_template, instance,
         sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-        pretty_evaluate_callback);
+        pretty_evaluate_callback(error));
 
     if (result) {
       log_verbose(options) << "Valid\n";
+    } else {
+      std::cerr << error.str();
     }
   }
 

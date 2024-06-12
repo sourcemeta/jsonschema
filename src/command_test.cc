@@ -47,13 +47,15 @@ auto intelligence::jsonschema::cli::test(
           sourcemeta::jsontoolkit::metaschema(schema.value(), test_resolver),
           sourcemeta::jsontoolkit::default_schema_walker, test_resolver,
           sourcemeta::jsontoolkit::default_schema_compiler)};
+      std::ostringstream error;
       if (sourcemeta::jsontoolkit::evaluate(
               metaschema_template, schema.value(),
               sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-              pretty_evaluate_callback)) {
+              pretty_evaluate_callback(error))) {
         log_verbose(options)
             << "The schema is valid with respect to its metaschema\n";
       } else {
+        std::cerr << error.str();
         std::cerr << "The schema is NOT valid with respect to its metaschema\n";
         return EXIT_FAILURE;
       }

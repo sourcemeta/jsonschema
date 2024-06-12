@@ -10,6 +10,7 @@
 #include <ostream>    // std::ostream
 #include <set>        // std::set
 #include <span>       // std::span
+#include <sstream>    // std::ostringstream
 #include <string>     // std::string
 #include <utility>    // std::pair
 #include <vector>     // std::vector
@@ -31,13 +32,8 @@ auto for_each_json(const std::vector<std::string> &arguments,
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 
-auto pretty_evaluate_callback(
-    bool result,
-    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
-    const sourcemeta::jsontoolkit::Pointer &evaluate_path,
-    const sourcemeta::jsontoolkit::Pointer &instance_location,
-    const sourcemeta::jsontoolkit::JSON &,
-    const sourcemeta::jsontoolkit::JSON &) -> void;
+auto pretty_evaluate_callback(std::ostringstream &)
+    -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote = false)

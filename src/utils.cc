@@ -130,25 +130,29 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto pretty_evaluate_callback(
-    bool result,
-    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step,
-    const sourcemeta::jsontoolkit::Pointer &evaluate_path,
-    const sourcemeta::jsontoolkit::Pointer &instance_location,
-    const sourcemeta::jsontoolkit::JSON &,
-    const sourcemeta::jsontoolkit::JSON &) -> void {
-  if (result) {
-    return;
-  }
+auto pretty_evaluate_callback(std::ostringstream &output)
+    -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback {
+  return [&output](
+             bool result,
+             const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type
+                 &step,
+             const sourcemeta::jsontoolkit::Pointer &evaluate_path,
+             const sourcemeta::jsontoolkit::Pointer &instance_location,
+             const sourcemeta::jsontoolkit::JSON &,
+             const sourcemeta::jsontoolkit::JSON &) -> void {
+    if (result) {
+      return;
+    }
 
-  std::cerr << "error: " << sourcemeta::jsontoolkit::describe(step) << "\n";
-  std::cerr << "    at instance location \"";
-  sourcemeta::jsontoolkit::stringify(instance_location, std::cerr);
-  std::cerr << "\"\n";
+    output << "error: " << sourcemeta::jsontoolkit::describe(step) << "\n";
+    output << "    at instance location \"";
+    sourcemeta::jsontoolkit::stringify(instance_location, output);
+    output << "\"\n";
 
-  std::cerr << "    at evaluate path \"";
-  sourcemeta::jsontoolkit::stringify(evaluate_path, std::cerr);
-  std::cerr << "\"\n";
+    output << "    at evaluate path \"";
+    sourcemeta::jsontoolkit::stringify(evaluate_path, output);
+    output << "\"\n";
+  };
 }
 
 static auto fallback_resolver(
