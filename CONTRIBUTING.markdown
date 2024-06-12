@@ -28,6 +28,8 @@ git checkout main
 vim CMakeLists.txt
 # Update the version in action.yml
 vim action.yml
+# Update the version in the GitHub Actions example
+vim README.markdown
 
 git add CMakeLists.txt action.yml
 git commit -m "vX.Y.Z"
