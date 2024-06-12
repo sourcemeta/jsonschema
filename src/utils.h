@@ -28,6 +28,7 @@ auto parse_options(const std::span<const std::string> &arguments,
     -> std::map<std::string, std::vector<std::string>>;
 
 auto for_each_json(const std::vector<std::string> &arguments,
+                   const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
@@ -44,6 +45,9 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
 
 auto parse_extensions(const std::map<std::string, std::vector<std::string>>
                           &options) -> std::set<std::string>;
+
+auto parse_ignore(const std::map<std::string, std::vector<std::string>>
+                      &options) -> std::set<std::filesystem::path>;
 
 } // namespace intelligence::jsonschema::cli
 

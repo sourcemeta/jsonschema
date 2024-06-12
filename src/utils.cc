@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#include <algorithm> // std::any_of
+#include <algorithm> // std::any_of, std::none_of
 #include <cassert>   // assert
 #include <fstream>   // std::ofstream
 #include <iostream>  // std::cerr
@@ -16,36 +16,66 @@
 
 namespace {
 
+bool path_starts_with(const std::filesystem::path &path,
+                      const std::filesystem::path &prefix) {
+  auto path_iterator = path.begin();
+  auto prefix_iterator = prefix.begin();
+
+  while (prefix_iterator != prefix.end()) {
+    if (path_iterator == path.end() || *path_iterator != *prefix_iterator) {
+      return false;
+    }
+
+    ++path_iterator;
+    ++prefix_iterator;
+  }
+
+  return true;
+}
+
 auto handle_json_entry(
     const std::filesystem::path &entry_path,
+    const std::set<std::filesystem::path> &blacklist,
     const std::set<std::string> &extensions,
     std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
         &result) -> void {
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
+      const auto canonical{std::filesystem::canonical(entry.path())};
       if (!std::filesystem::is_directory(entry) &&
           std::any_of(extensions.cbegin(), extensions.cend(),
-                      [&entry](const auto &extension) {
-                        return entry.path().string().ends_with(extension);
-                      })) {
-        result.emplace_back(entry.path(),
-                            sourcemeta::jsontoolkit::from_file(entry.path()));
+                      [&canonical](const auto &extension) {
+                        return canonical.string().ends_with(extension);
+                      }) &&
+          std::none_of(blacklist.cbegin(), blacklist.cend(),
+                       [&canonical](const auto &prefix) {
+                         return prefix == canonical ||
+                                path_starts_with(canonical, prefix);
+                       })) {
+        result.emplace_back(canonical,
+                            sourcemeta::jsontoolkit::from_file(canonical));
       }
     }
   } else {
-    if (!std::filesystem::exists(entry_path)) {
+    const auto canonical{std::filesystem::canonical(entry_path)};
+    if (!std::filesystem::exists(canonical)) {
       std::ostringstream error;
-      error << "No such file or directory: " << entry_path.string();
+      error << "No such file or directory: " << canonical.string();
       throw std::runtime_error(error.str());
     }
 
     if (std::any_of(extensions.cbegin(), extensions.cend(),
-                    [&entry_path](const auto &extension) {
-                      return entry_path.string().ends_with(extension);
-                    })) {
-      result.emplace_back(entry_path,
-                          sourcemeta::jsontoolkit::from_file(entry_path));
+                    [&canonical](const auto &extension) {
+                      return canonical.string().ends_with(extension);
+                    }) &&
+        std::none_of(blacklist.cbegin(), blacklist.cend(),
+                     [&canonical](const auto &prefix) {
+                       return prefix == canonical ||
+                              path_starts_with(canonical, prefix);
+                     })) {
+      result.emplace_back(canonical,
+                          sourcemeta::jsontoolkit::from_file(canonical));
     }
   }
 }
@@ -65,6 +95,7 @@ auto normalize_extension(const std::string &extension) -> std::string {
 namespace intelligence::jsonschema::cli {
 
 auto for_each_json(const std::vector<std::string> &arguments,
+                   const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>> {
@@ -72,10 +103,11 @@ auto for_each_json(const std::vector<std::string> &arguments,
       result;
 
   if (arguments.empty()) {
-    handle_json_entry(std::filesystem::current_path(), extensions, result);
+    handle_json_entry(std::filesystem::current_path(), blacklist, extensions,
+                      result);
   } else {
     for (const auto &entry : arguments) {
-      handle_json_entry(entry, extensions, result);
+      handle_json_entry(entry, blacklist, extensions, result);
     }
   }
 
@@ -207,7 +239,8 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 
   if (options.contains("resolve")) {
     for (const auto &entry :
-         for_each_json(options.at("resolve"), parse_extensions(options))) {
+         for_each_json(options.at("resolve"), parse_ignore(options),
+                       parse_extensions(options))) {
       log_verbose(options) << "Loading schema: " << entry.first << "\n";
       dynamic_resolver.add(entry.second);
     }
@@ -215,7 +248,8 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 
   if (options.contains("r")) {
     for (const auto &entry :
-         for_each_json(options.at("r"), parse_extensions(options))) {
+         for_each_json(options.at("r"), parse_ignore(options),
+                       parse_extensions(options))) {
       log_verbose(options) << "Loading schema: " << entry.first << "\n";
       dynamic_resolver.add(entry.second);
     }
@@ -254,6 +288,29 @@ auto parse_extensions(const std::map<std::string, std::vector<std::string>>
 
   if (result.empty()) {
     result.insert({".json"});
+  }
+
+  return result;
+}
+
+auto parse_ignore(const std::map<std::string, std::vector<std::string>>
+                      &options) -> std::set<std::filesystem::path> {
+  std::set<std::filesystem::path> result;
+
+  if (options.contains("ignore")) {
+    for (const auto &ignore : options.at("ignore")) {
+      const auto canonical{std::filesystem::weakly_canonical(ignore)};
+      log_verbose(options) << "Ignoring path: " << canonical << "\n";
+      result.insert(canonical);
+    }
+  }
+
+  if (options.contains("i")) {
+    for (const auto &ignore : options.at("e")) {
+      const auto canonical{std::filesystem::weakly_canonical(ignore)};
+      log_verbose(options) << "Ignoring path: " << canonical << "\n";
+      result.insert(canonical);
+    }
   }
 
   return result;

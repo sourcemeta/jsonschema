@@ -29,7 +29,7 @@ EOF
 "$1" test "$TMP/test.json" --metaschema > "$TMP/out.txt"
 
 cat << EOF > "$TMP/expected.txt"
-$TMP/test.json
+$(realpath "$TMP/test.json")
     Metaschema - http://json-schema.org/draft-04/schema#
         PASS
     My sample suite - First test
