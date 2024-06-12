@@ -22,7 +22,8 @@ auto intelligence::jsonschema::cli::validate(
 
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
 
-  if (options.contains("m") || options.contains("metaschema")) {
+  if (options.contains("m") || options.contains("metaschema") ||
+      options.at("").size() < 2) {
     const auto metaschema_template{sourcemeta::jsontoolkit::compile(
         sourcemeta::jsontoolkit::metaschema(schema, custom_resolver),
         sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
