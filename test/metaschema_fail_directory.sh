@@ -7,21 +7,23 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' > "$TMP/schema.json"
+mkdir "$TMP/schemas"
+
+cat << 'EOF' > "$TMP/schemas/schema_1.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "properties": {
-    "foo": true,
-    "bar": 1
-  }
+  "type": "string"
 }
 EOF
 
-cat << 'EOF' > "$TMP/instance.json"
-{ "foo": "bar" }
+cat << 'EOF' > "$TMP/schemas/schema_2.json"
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": 1
+}
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" --metaschema && CODE="$?" || CODE="$?"
+"$1" metaschema schemas && CODE="$?" || CODE="$?"
 
 if [ "$CODE" = "0" ]
 then

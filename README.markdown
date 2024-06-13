@@ -123,6 +123,7 @@ Schema CLI without passing a command will print convenient reference
 documentation:
 
 - [Validating](./docs/validate.markdown)
+- [Metaschema](./docs/metaschema.markdown) (ensure a schema is valid)
 - [Testing](./docs/test.markdown)
 - [Formatting](./docs/format.markdown)
 - [Linting](./docs/lint.markdown)

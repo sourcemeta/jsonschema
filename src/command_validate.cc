@@ -13,36 +13,14 @@
 // TODO: Add a flag to collect annotations
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "m", "metaschema"})};
+  const auto options{parse_options(arguments, {"h", "http"})};
   CLI_ENSURE(options.at("").size() >= 1, "You must pass a schema")
+  CLI_ENSURE(options.at("").size() >= 2, "You must pass an instance")
   const auto &schema_path{options.at("").at(0)};
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
-
-  if (options.contains("m") || options.contains("metaschema") ||
-      options.at("").size() < 2) {
-    const auto metaschema_template{sourcemeta::jsontoolkit::compile(
-        sourcemeta::jsontoolkit::metaschema(schema, custom_resolver),
-        sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-        sourcemeta::jsontoolkit::default_schema_compiler)};
-    std::ostringstream error;
-    if (sourcemeta::jsontoolkit::evaluate(
-            metaschema_template, schema,
-            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error))) {
-      log_verbose(options)
-          << schema_path
-          << ": The schema is valid with respect to its metaschema\n";
-    } else {
-      std::cerr << error.str();
-      std::cerr << schema_path
-                << ": The schema is NOT valid with respect to its metaschema\n";
-      return EXIT_FAILURE;
-    }
-  }
 
   bool result{true};
   if (options.at("").size() >= 2) {

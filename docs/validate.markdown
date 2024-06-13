@@ -7,8 +7,7 @@ Validating
 > Draft 2020-12 soon.
 
 ```sh
-jsonschema validate <schema.json>
-  [instance.json] [--http/-h] [--metaschema/-m] [--verbose/-v]
+jsonschema validate <schema.json> [instance.json] [--http/-h] [--verbose/-v]
   [--resolve/-r <schemas-or-directories> ...]
 ```
 
@@ -16,6 +15,9 @@ The most popular use case of JSON Schema is to validate JSON documents. The
 JSON Schema CLI offers a `validate` command to evaluate a JSON instance against
 a JSON Schema or a JSON Schema against its meta-schema, presenting
 human-friendly information on unsuccessful validation.
+
+**If you want to validate that a schema adheres to its metaschema, use the
+[`metaschema`](./metaschema.markdown) command instead.**
 
 Examples
 --------
@@ -57,12 +59,6 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json
 
 ```sh
 jsonschema validate path/to/my/schema.json
-```
-
-### Validate a JSON instance against a schema plus the schema against its meta-schema
-
-```sh
-jsonschema validate path/to/my/schema.json path/to/my/instance.json --metaschema
 ```
 
 ### Validate a JSON instance enabling HTTP resolution
