@@ -129,6 +129,14 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
     std::cerr << error.what() << ": " << error.id() << "\n";
     return EXIT_FAILURE;
+  } catch (const sourcemeta::jsontoolkit::FileParseError &error) {
+    std::cerr << error.path().string() << "\n  " << error.what() << " at line "
+              << error.line() << " and column " << error.column() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsontoolkit::ParseError &error) {
+    std::cerr << error.what() << " at line " << error.line() << " and column "
+              << error.column() << "\n";
+    return EXIT_FAILURE;
   } catch (const std::exception &error) {
     std::cerr << "Error: " << error.what() << "\n";
     return EXIT_FAILURE;

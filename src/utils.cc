@@ -53,6 +53,7 @@ auto handle_json_entry(
                          return prefix == canonical ||
                                 path_starts_with(canonical, prefix);
                        })) {
+        // TODO: Print a verbose message for what is getting parsed
         result.emplace_back(canonical,
                             sourcemeta::jsontoolkit::from_file(canonical));
       }
@@ -74,6 +75,7 @@ auto handle_json_entry(
                        return prefix == canonical ||
                               path_starts_with(canonical, prefix);
                      })) {
+      // TODO: Print a verbose message for what is getting parsed
       result.emplace_back(canonical,
                           sourcemeta::jsontoolkit::from_file(canonical));
     }

@@ -319,4 +319,8 @@ auto URI::resolve_from_if_absolute(const URI &base) -> URI & {
   }
 }
 
+auto URI::userinfo() const -> std::optional<std::string_view> {
+  return uri_text_range(&this->internal->uri.userInfo);
+}
+
 } // namespace sourcemeta::jsontoolkit
