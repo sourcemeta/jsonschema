@@ -35,7 +35,13 @@ auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input)
 auto from_file(const std::filesystem::path &path) -> JSON {
   std::ifstream stream{path};
   stream.exceptions(std::ios_base::badbit);
-  return parse(stream);
+
+  try {
+    return parse(stream);
+  } catch (const ParseError &error) {
+    // For producing better error messages
+    throw FileParseError(path, error.line(), error.column());
+  }
 }
 
 auto stringify(const JSON &document,

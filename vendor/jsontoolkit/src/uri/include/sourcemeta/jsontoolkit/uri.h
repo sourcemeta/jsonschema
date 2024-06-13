@@ -288,7 +288,24 @@ public:
   /// const sourcemeta::jsontoolkit::URI uri{
   ///   sourcemeta::jsontoolkit::URI::from_fragment("foo")};
   /// assert(uri.recompose() == "#foo");
+  /// ```
   static auto from_fragment(std::string_view fragment) -> URI;
+
+  /// Get the user information part of the URI, if any. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::URI uri{"https://user:@host"};
+  /// assert(uri.userinfo().has_value());
+  /// assert(uri.userinfo().value() == "user:);
+  /// ```
+  ///
+  /// As mentioned in RFC 3986, the format "user:password" is deprecated.
+  /// Applications should not render as clear text any data after the first
+  /// colon. See https://tools.ietf.org/html/rfc3986#section-3.2.1
+  [[nodiscard]] auto userinfo() const -> std::optional<std::string_view>;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered
