@@ -8,9 +8,8 @@ Testing
 
 ```sh
 jsonschema test [schemas-or-directories...]
-  [--http/-h] [--metaschema/-m] [--verbose/-v]
-  [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>]
+  [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -19,6 +18,9 @@ against them. Just like popular test frameworks like [Jest](https://jestjs.io),
 [PyTest](https://docs.pytest.org), the JSON Schema CLI provides a
 schema-oriented test runner inspired by the [official JSON Schema test
 suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
+
+**If you want to validate that a schema adheres to its metaschema, use the
+[`metaschema`](./metaschema.markdown) command instead.**
 
 Examples
 --------
@@ -80,12 +82,6 @@ jsonschema test --ignore dist
 
 ```sh
 jsonschema test --extension .test.json
-```
-
-### Run a single test definition validating the schemas against their metaschemas
-
-```sh
-jsonschema test path/to/test.json --metaschema
 ```
 
 ### Run a single test definition enabling HTTP resolution

@@ -9,8 +9,7 @@
 
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "m", "metaschema"})};
+  const auto options{parse_options(arguments, {"h", "http"})};
   bool result{true};
   const auto test_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
@@ -40,27 +39,6 @@ auto intelligence::jsonschema::cli::test(
       std::cerr << "Could not resolve schema " << test.at("schema").to_string()
                 << " at " << entry.first.string() << "\n";
       return EXIT_FAILURE;
-    }
-
-    if (options.contains("m") || options.contains("metaschema")) {
-      std::cout << "    Metaschema - "
-                << sourcemeta::jsontoolkit::dialect(schema.value())
-                       .value_or("<unknown>")
-                << "\n";
-      const auto metaschema_template{sourcemeta::jsontoolkit::compile(
-          sourcemeta::jsontoolkit::metaschema(schema.value(), test_resolver),
-          sourcemeta::jsontoolkit::default_schema_walker, test_resolver,
-          sourcemeta::jsontoolkit::default_schema_compiler)};
-      std::ostringstream error;
-      if (sourcemeta::jsontoolkit::evaluate(
-              metaschema_template, schema.value(),
-              sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-              pretty_evaluate_callback(error))) {
-        std::cout << "        PASS\n";
-      } else {
-        std::cout << "        FAIL\n";
-        result = false;
-      }
     }
 
     const auto schema_template{sourcemeta::jsontoolkit::compile(

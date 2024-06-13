@@ -12,6 +12,8 @@
 #include "command.h"
 #include "configure.h"
 
+// TODO: Stop duplicating most of the docs here. Provide very brief
+// info here and link to the docs on GitHub instead
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
@@ -21,17 +23,28 @@ Global Options:
 
 Commands:
 
-   validate <schema.json> [instance.json] [--http/-h] [--metaschema/-m]
+   validate <schema.json> [instance.json] [--http/-h]
 
        If an instance is passed, validate it against the given schema.
        Otherwise, validate the schema against its dialect metaschema. The
        `--http/-h` option enables resolving remote schemas over the HTTP
-       protocol. The `--metaschema/-m` option checks that the given schema
-       is valid with respects to its dialect metaschema even if an instance
-       was passed.
+       protocol.
 
-   test [schemas-or-directories...] [--http/-h] [--metaschema/-m]
-        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+   metaschema [schemas-or-directories...] [--http/-h]
+              [--extension/-e <extension>]
+              [--ignore/-i <schemas-or-directories>]
+
+       Validate that a schema or a set of schemas are valid with respect
+       to their metaschemas. If no argument is passed, validate every
+       `.json` file in the current working directory (recursively). The
+       `--ignore/-i` option can be set to files or directories to ignore.
+       The `--http/-h` option enables resolving remote schemas over the HTTP
+       protocol. When scanning directories, the `--extension/-e` option is
+       used to prefer a file extension other than `.json`. This option can
+       be set multiple times.
+
+   test [schemas-or-directories...] [--http/-h] [--extension/-e <extension>]
+        [--ignore/-i <schemas-or-directories>]
 
        A schema test runner inspired by the official JSON Schema test suite.
        Passing directories as input will run every `.json` file in such
@@ -40,10 +53,9 @@ Commands:
        The `--ignore/-i` option can be set to files or directories to ignore.
 
        The `--http/-h` option enables resolving remote schemas over the HTTP
-       protocol. The `--metaschema/-m` option checks that the given schema is
-       valid with respects to its dialect metaschema. When scanning
-       directories, the `--extension/-e` option is used to prefer a file
-       extension other than `.json`. This option can be set multiple times.
+       protocol. When scanning directories, the `--extension/-e` option is
+       used to prefer a file extension other than `.json`. This option can be
+       set multiple times.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>]
@@ -101,6 +113,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {
     return intelligence::jsonschema::cli::validate(arguments);
+  } else if (command == "metaschema") {
+    return intelligence::jsonschema::cli::metaschema(arguments);
   } else if (command == "test") {
     return intelligence::jsonschema::cli::test(arguments);
   } else {

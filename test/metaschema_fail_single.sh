@@ -10,15 +10,11 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "properties": {
-    "foo": {
-      "type": 1
-    }
-  }
+  "type": 1
 }
 EOF
 
-"$1" validate "$TMP/schema.json" --metaschema && CODE="$?" || CODE="$?"
+"$1" metaschema "$TMP/schema.json" && CODE="$?" || CODE="$?"
 
 if [ "$CODE" = "0" ]
 then

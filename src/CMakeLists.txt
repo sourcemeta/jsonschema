@@ -6,6 +6,7 @@ add_executable(jsonschema_cli
   command_bundle.cc
   command_test.cc
   command_lint.cc
+  command_metaschema.cc
   command_validate.cc)
 
 noa_add_default_options(PRIVATE jsonschema_cli)
