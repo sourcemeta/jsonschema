@@ -109,12 +109,27 @@ auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
     root.assign_if_missing(container,
                            sourcemeta::jsontoolkit::JSON::make_object());
 
+    if (!reference.base.has_value()) {
+      throw sourcemeta::jsontoolkit::SchemaReferenceError(
+          reference.destination, key.second,
+          "Could not resolve schema reference");
+    }
+
     assert(reference.base.has_value());
     const auto identifier{reference.base.value()};
     const auto remote{resolver(identifier).get()};
     if (!remote.has_value()) {
+      if (frame.contains(
+              {sourcemeta::jsontoolkit::ReferenceType::Static, identifier}) ||
+          frame.contains(
+              {sourcemeta::jsontoolkit::ReferenceType::Dynamic, identifier})) {
+        throw sourcemeta::jsontoolkit::SchemaReferenceError(
+            reference.destination, key.second,
+            "Could not resolve schema reference");
+      }
+
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
-          reference.base.value(), "Could not resolve schema");
+          identifier, "Could not resolve schema");
     }
 
     // Otherwise, if the target schema does not declare an inline identifier,
@@ -134,8 +149,14 @@ namespace sourcemeta::jsontoolkit {
 
 auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
+#ifdef NDEBUG
+            const BundleOptions,
+#else
+            const BundleOptions options,
+#endif
             const std::optional<std::string> &default_dialect)
     -> std::future<void> {
+  assert(options == BundleOptions::Default);
   const auto vocabularies{
       sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)
           .get()};
@@ -147,10 +168,11 @@ auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
 
 auto bundle(const sourcemeta::jsontoolkit::JSON &schema,
             const SchemaWalker &walker, const SchemaResolver &resolver,
+            const BundleOptions options,
             const std::optional<std::string> &default_dialect)
     -> std::future<sourcemeta::jsontoolkit::JSON> {
   sourcemeta::jsontoolkit::JSON copy = schema;
-  bundle(copy, walker, resolver, default_dialect).wait();
+  bundle(copy, walker, resolver, options, default_dialect).wait();
   std::promise<sourcemeta::jsontoolkit::JSON> promise;
   promise.set_value(std::move(copy));
   return promise.get_future();

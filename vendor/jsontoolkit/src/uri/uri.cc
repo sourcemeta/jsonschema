@@ -3,6 +3,7 @@
 
 #include <cassert>   // assert
 #include <cstdint>   // std::uint32_t
+#include <istream>   // std::istream
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::length_error, std::runtime_error
 #include <string>    // std::stoul, std::string, std::tolower
@@ -69,6 +70,13 @@ struct URI::Internal {
 };
 
 URI::URI(std::string input) : data{std::move(input)}, internal{new Internal} {
+  uri_parse(this->data, &this->internal->uri);
+}
+
+URI::URI(std::istream &input) : internal{new Internal} {
+  std::ostringstream output;
+  output << input.rdbuf();
+  this->data = output.str();
   uri_parse(this->data, &this->internal->uri);
 }
 
