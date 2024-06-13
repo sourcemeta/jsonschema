@@ -10,6 +10,7 @@ Testing
 jsonschema test [schemas-or-directories...]
   [--http/-h] [--metaschema/-m] [--verbose/-v]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
+  [--ignore/-i <schemas-or-directories>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -67,6 +68,12 @@ jsonschema test path/to/tests/
 
 ```sh
 jsonschema test
+```
+
+### Run every `.json` test definition in the current directory while ignoring another
+
+```sh
+jsonschema test --ignore dist
 ```
 
 ### Run every `.test.json` test definition in the current directory (recursively)

@@ -4,6 +4,7 @@ Linting
 ```sh
 jsonschema lint [schemas-or-directories...]
   [--fix/-f] [--verbose/-v] [--extension/-e <extension>]
+  [--ignore/-i <schemas-or-directories>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -54,6 +55,12 @@ jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
 
 ```sh
 jsonschema lint path/to/schemas/
+```
+
+### Lint every `.json` file in a given directory while ignoring another
+
+```sh
+jsonschema lint path/to/schemas/ --ignore path/to/schemas/nested
 ```
 
 ### Lint every `.json` file in the current directory (recursively)

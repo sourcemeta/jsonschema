@@ -4,6 +4,7 @@ Bundling
 ```sh
 jsonschema bundle <schema.json>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--ignore/-i <schemas-or-directories>]
 ```
 
 A schema may contain references to remote schemas outside the scope of the
@@ -82,6 +83,13 @@ jsonschema bundle path/to/my/schema.json \
 ```sh
 jsonschema bundle path/to/my/schema.json \
   --resolve path/to/schemas --extension schema.json
+```
+
+### Bundle a JSON Schema importing a directory of schemas while ignoring another
+
+```sh
+jsonschema bundle path/to/my/schema.json \
+  --resolve path/to/schemas --ignore path/to/schemas/nested
 ```
 
 ### Bundle a JSON Schema while enabling HTTP resolution
