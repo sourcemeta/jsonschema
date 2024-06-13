@@ -160,6 +160,10 @@ auto remove_identifiers(sourcemeta::jsontoolkit::JSON &schema,
   for (const auto &entry : sourcemeta::jsontoolkit::SchemaIterator{
            schema, walker, resolver, default_dialect}) {
     auto &subschema{sourcemeta::jsontoolkit::get(schema, entry.pointer)};
+    if (subschema.is_boolean()) {
+      continue;
+    }
+
     subschema.erase(id_keyword(entry.vocabularies));
 
     if (entry.vocabularies.contains(

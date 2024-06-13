@@ -43,11 +43,12 @@ Commands:
        Format the input schemas in-place or check they are formatted.
 
    lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
-       [--ignore/-i <schemas-or-directories>]
+        [--ignore/-i <schemas-or-directories>]
 
        Lint the input schemas and potentially fix the reported issues.
 
-   bundle <schema.json> [--http/-h]
+   bundle <schema.json> [--http/-h] [--extension/-e <extension>]
+          [--ignore/-i <schemas-or-directories>] [--without-id/-w]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
