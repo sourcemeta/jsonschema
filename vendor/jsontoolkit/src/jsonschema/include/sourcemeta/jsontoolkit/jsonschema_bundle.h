@@ -23,7 +23,14 @@ namespace sourcemeta::jsontoolkit {
 /// A set of options that modify the behavior of bundling
 enum class BundleOptions {
   /// Perform standard JSON Schema bundling
-  Default
+  Default,
+
+  /// Perform standard JSON Schema bundling but without making
+  /// use of identifiers. This is helpful for delivering
+  /// schemas to some non-compliant implementations that do not
+  /// recognize identifiers (like Visua Studio Code at the time
+  /// of this writing)
+  WithoutIdentifiers
 };
 
 /// @ingroup jsonschema
