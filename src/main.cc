@@ -23,12 +23,10 @@ Global Options:
 
 Commands:
 
-   validate <schema.json> [instance.json] [--http/-h]
+   validate <schema.json> <instance.json> [--http/-h]
 
-       If an instance is passed, validate it against the given schema.
-       Otherwise, validate the schema against its dialect metaschema. The
-       `--http/-h` option enables resolving remote schemas over the HTTP
-       protocol.
+       Validate an instance against the given schema. The `--http/-h` option
+       enables resolving remote schemas over the HTTP protocol.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
