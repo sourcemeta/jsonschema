@@ -3,6 +3,7 @@
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
+#include <map>      // std::map
 #include <set>      // std::set
 #include <string>   // std::string
 
@@ -17,6 +18,8 @@ auto intelligence::jsonschema::cli::metaschema(
       resolver(options, options.contains("h") || options.contains("http"))};
   bool result{true};
 
+  std::map<std::string, sourcemeta::jsontoolkit::SchemaCompilerTemplate> cache;
+
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
     if (!sourcemeta::jsontoolkit::is_schema(entry.second)) {
@@ -24,15 +27,21 @@ auto intelligence::jsonschema::cli::metaschema(
       return EXIT_FAILURE;
     }
 
-    // TODO: Cache this somehow for performance reasons?
-    const auto metaschema_template{sourcemeta::jsontoolkit::compile(
-        sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver),
-        sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-        sourcemeta::jsontoolkit::default_schema_compiler)};
+    const auto dialect{sourcemeta::jsontoolkit::dialect(entry.second)};
+    assert(dialect.has_value());
+
+    if (!cache.contains(dialect.value())) {
+      const auto metaschema{
+          sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver)};
+      const auto metaschema_template{sourcemeta::jsontoolkit::compile(
+          metaschema, sourcemeta::jsontoolkit::default_schema_walker,
+          custom_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
+      cache.insert({dialect.value(), metaschema_template});
+    }
 
     std::ostringstream error;
     if (sourcemeta::jsontoolkit::evaluate(
-            metaschema_template, entry.second,
+            cache.at(dialect.value()), entry.second,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
             pretty_evaluate_callback(error))) {
       log_verbose(options)
