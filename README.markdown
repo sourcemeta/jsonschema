@@ -1,9 +1,19 @@
 ![JSON Schema](./assets/banner.png)
 
 The command-line tool for working with [JSON Schema](https://json-schema.org),
-the world most popular schema language. It is designed to solve the most common
-pain points JSON Schema developers face when maintaining **repositories of
-schemas**, both during local development and when running on CI/CD pipelines.
+the world most popular schema language. It is a comprehensive solution for
+maintaining **repositories of schemas** and ensuring their quality, both during
+local development and when running on CI/CD pipelines. For example:
+
+- Ensure your schemas are valid
+- Unit test your schemas against valid and invalid instances
+- Enforce consistent indentation and keyword ordering in your schema files
+- Detect and fix common JSON Schema anti-patterns
+- Inline external references for conveniently distributing your schemas
+
+[**Check out the documentation to learn more**](#usage)
+
+***
 
 > [!TIP]
 > Do you want to level up your JSON Schema skills? Check out
