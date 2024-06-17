@@ -12,8 +12,6 @@
 #include "command.h"
 #include "configure.h"
 
-// TODO: Stop duplicating most of the docs here. Provide very brief
-// info here and link to the docs on GitHub instead
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
@@ -25,71 +23,34 @@ Commands:
 
    validate <schema.json> <instance.json> [--http/-h]
 
-       Validate an instance against the given schema. The `--http/-h` option
-       enables resolving remote schemas over the HTTP protocol.
+       Validate an instance against the given schema.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>]
 
        Validate that a schema or a set of schemas are valid with respect
-       to their metaschemas. If no argument is passed, validate every
-       `.json` file in the current working directory (recursively). The
-       `--ignore/-i` option can be set to files or directories to ignore.
-       The `--http/-h` option enables resolving remote schemas over the HTTP
-       protocol. When scanning directories, the `--extension/-e` option is
-       used to prefer a file extension other than `.json`. This option can
-       be set multiple times.
+       to their metaschemas.
 
    test [schemas-or-directories...] [--http/-h] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
 
-       A schema test runner inspired by the official JSON Schema test suite.
-       Passing directories as input will run every `.json` file in such
-       directory (recursively) as a test. If no argument is passed, run every
-       `.json` file in the current working directory (recursively) as a test.
-       The `--ignore/-i` option can be set to files or directories to ignore.
-
-       The `--http/-h` option enables resolving remote schemas over the HTTP
-       protocol. When scanning directories, the `--extension/-e` option is
-       used to prefer a file extension other than `.json`. This option can be
-       set multiple times.
+       Run a set of unit tests against a schema.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>]
 
-       Format the input schemas in-place. Passing directories as input means
-       to format every `.json` file in such directory (recursively). If no
-       argument is passed, format every `.json` file in the current working
-       directory (recursively). The `--ignore/-i` option can be set to files
-       or directories to ignore.
-
-       The `--check/-c` option will check if the given
-       schemas adhere to the desired formatting without modifying them. When
-       scanning directories, the `--extension/-e` option is used to prefer a
-       file extension other than `.json`. This option can be set multiple times.
+       Format the input schemas in-place or check they are formatted.
 
    lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>]
 
-       Lint the input schemas. Passing directories as input means to lint
-       every `.json` file in such directory (recursively). If no argument is
-       passed, lint every `.json` file in the current working directory
-       (recursively). The `--ignore/-i` option can be set to files or
-       directories to ignore.
-
-       The `--fix/-f` option will attempt to automatically
-       fix the linter errors. When scanning directories, the `--extension/-e`
-       option is used to prefer a file extension other than `.json`. This option
-       can be set multiple times.
+       Lint the input schemas and potentially fix the reported issues.
 
    bundle <schema.json> [--http/-h]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
-       printing the result to standard output. Read
-       https://json-schema.org/blog/posts/bundling-json-schema-compound-documents
-       to learn more. The `--http/-h` option enables resolving remote schemas
-       over the HTTP protocol.
+       printing the result to standard output.
 
    frame <schema.json>
 
