@@ -187,11 +187,11 @@ auto pretty_evaluate_callback(std::ostringstream &output)
     }
 
     output << "error: " << sourcemeta::jsontoolkit::describe(step) << "\n";
-    output << "    at instance location \"";
+    output << "  at instance location \"";
     sourcemeta::jsontoolkit::stringify(instance_location, output);
     output << "\"\n";
 
-    output << "    at evaluate path \"";
+    output << "  at evaluate path \"";
     sourcemeta::jsontoolkit::stringify(evaluate_path, output);
     output << "\"\n";
   };
@@ -219,15 +219,13 @@ static auto fallback_resolver(
     return promise.get_future();
   }
 
-  log_verbose(options) << "Attempting to fetch over HTTP: " << identifier
-                       << "\n";
+  log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
   sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
   request.method(sourcemeta::hydra::http::Method::GET);
   sourcemeta::hydra::http::ClientResponse response{request.send().get()};
   if (response.status() != sourcemeta::hydra::http::Status::OK) {
     std::ostringstream error;
-    error << "Failed to fetch " << identifier
-          << " over HTTP. Got status code: " << response.status();
+    error << response.status() << "\n  at " << identifier;
     throw std::runtime_error(error.str());
   }
 
@@ -251,7 +249,8 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
     for (const auto &entry :
          for_each_json(options.at("resolve"), parse_ignore(options),
                        parse_extensions(options))) {
-      log_verbose(options) << "Loading schema: " << entry.first << "\n";
+      log_verbose(options) << "Importing schema into the resolution context: "
+                           << entry.first.string() << "\n";
       dynamic_resolver.add(entry.second);
     }
   }
@@ -260,7 +259,8 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
     for (const auto &entry :
          for_each_json(options.at("r"), parse_ignore(options),
                        parse_extensions(options))) {
-      log_verbose(options) << "Loading schema: " << entry.first << "\n";
+      log_verbose(options) << "Importing schema into the resolution context: "
+                           << entry.first.string() << "\n";
       dynamic_resolver.add(entry.second);
     }
   }

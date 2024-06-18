@@ -3,9 +3,9 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cassert> // assert
-#include <fstream> // std::ifstream
-#include <ios>     // std::ios_base
+#include <cassert>      // assert
+#include <fstream>      // std::ifstream
+#include <system_error> // std::make_error_code, std::errc
 
 namespace sourcemeta::jsontoolkit {
 
@@ -33,14 +33,22 @@ auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input)
 }
 
 auto from_file(const std::filesystem::path &path) -> JSON {
-  std::ifstream stream{path};
-  stream.exceptions(std::ios_base::badbit);
+  if (std::filesystem::is_directory(path)) {
+    throw std::filesystem::filesystem_error(
+        "Cannot parse a directory as JSON", path,
+        std::make_error_code(std::errc::is_a_directory));
+  }
+
+  std::ifstream stream{std::filesystem::canonical(path)};
+  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  assert(!stream.fail());
+  assert(stream.is_open());
 
   try {
     return parse(stream);
   } catch (const ParseError &error) {
     // For producing better error messages
-    throw FileParseError(path, error.line(), error.column());
+    throw FileParseError(path, error);
   }
 }
 

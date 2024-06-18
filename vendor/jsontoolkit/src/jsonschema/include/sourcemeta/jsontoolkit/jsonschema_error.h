@@ -57,6 +57,26 @@ private:
 };
 
 /// @ingroup jsonschema
+/// An error that represents a schema vocabulary error
+class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaVocabularyError
+    : public std::exception {
+public:
+  SchemaVocabularyError(std::string uri, std::string message)
+      : uri_{std::move(uri)}, message_{std::move(message)} {}
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> std::string_view {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
+  std::string message_;
+};
+
+/// @ingroup jsonschema
 /// An error that represents a schema resolution failure event
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaReferenceError
     : public std::exception {

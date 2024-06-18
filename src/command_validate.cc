@@ -32,33 +32,40 @@ auto intelligence::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  CLI_ENSURE(options.at("").size() >= 2, "You must pass an instance")
   const auto &schema_path{options.at("").at(0)};
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
   const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
 
+  if (!sourcemeta::jsontoolkit::is_schema(schema)) {
+    std::cerr << "error: The schema file you provided does not represent a "
+                 "valid JSON Schema\n  "
+              << std::filesystem::canonical(schema_path).string() << "\n";
+    return EXIT_FAILURE;
+  }
+
   bool result{true};
-  if (options.at("").size() >= 2) {
-    const auto &instance_path{options.at("").at(1)};
-    const auto schema_template{sourcemeta::jsontoolkit::compile(
-        schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-        sourcemeta::jsontoolkit::default_schema_compiler)};
+  const auto &instance_path{options.at("").at(1)};
+  const auto schema_template{sourcemeta::jsontoolkit::compile(
+      schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
+      sourcemeta::jsontoolkit::default_schema_compiler)};
 
-    const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+  const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
 
-    std::ostringstream error;
-    result = sourcemeta::jsontoolkit::evaluate(
-        schema_template, instance,
-        sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-        pretty_evaluate_callback(error));
+  std::ostringstream error;
+  result = sourcemeta::jsontoolkit::evaluate(
+      schema_template, instance,
+      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+      pretty_evaluate_callback(error));
 
-    if (result) {
-      log_verbose(options) << "Valid\n";
-    } else {
-      std::cerr << error.str();
-    }
+  if (result) {
+    log_verbose(options)
+        << "ok: " << std::filesystem::weakly_canonical(instance_path).string()
+        << "\n  matches "
+        << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+  } else {
+    std::cerr << error.str();
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;

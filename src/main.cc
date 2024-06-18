@@ -95,24 +95,52 @@ auto main(int argc, char *argv[]) noexcept -> int {
                                              argv + argc};
     return jsonschema_main(program, command, arguments);
   } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
-    std::cerr << error.what() << ": " << error.id() << "\n";
-    std::cerr << "    at schema location \"";
+    std::cerr << "error: " << error.what() << "\n  " << error.id()
+              << "\n    at schema location \"";
     sourcemeta::jsontoolkit::stringify(error.location(), std::cerr);
     std::cerr << "\"\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
-    std::cerr << error.what() << ": " << error.id() << "\n";
+    std::cerr << "error: " << error.what() << "\n  at " << error.id() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
+    std::cerr << "error: " << error.what() << "\n  " << error.uri()
+              << "\n\nTo request support for it, please open an issue "
+                 "at\nhttps://github.com/intelligence-ai/jsonschema\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::FileParseError &error) {
-    std::cerr << error.path().string() << "\n  " << error.what() << " at line "
-              << error.line() << " and column " << error.column() << "\n";
+    std::cerr << "error: " << error.what() << " at line " << error.line()
+              << " and column " << error.column() << "\n  "
+              << std::filesystem::weakly_canonical(error.path()).string()
+              << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::ParseError &error) {
-    std::cerr << error.what() << " at line " << error.line() << " and column "
-              << error.column() << "\n";
+    std::cerr << "error: " << error.what() << " at line " << error.line()
+              << " and column " << error.column() << "\n";
+    return EXIT_FAILURE;
+  } catch (const std::filesystem::filesystem_error &error) {
+    // See https://en.cppreference.com/w/cpp/error/errc
+    if (error.code() == std::errc::no_such_file_or_directory) {
+      std::cerr << "error: " << error.code().message() << "\n  "
+                << std::filesystem::weakly_canonical(error.path1()).string()
+                << "\n";
+    } else if (error.code() == std::errc::is_a_directory) {
+      std::cerr << "error: The input was supposed to be a file but it is a "
+                   "directory\n  "
+                << std::filesystem::weakly_canonical(error.path1()).string()
+                << "\n";
+    } else {
+      std::cerr << "error: " << error.what() << "\n";
+    }
+
+    return EXIT_FAILURE;
+  } catch (const std::runtime_error &error) {
+    std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
   } catch (const std::exception &error) {
-    std::cerr << "Error: " << error.what() << "\n";
+    std::cerr << "unexpected error: " << error.what()
+              << "\nPlease report it at "
+              << "https://github.com/intelligence-ai/jsonschema\n";
     return EXIT_FAILURE;
   }
 }

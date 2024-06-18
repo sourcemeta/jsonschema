@@ -14,14 +14,8 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" validate "$TMP/schema.json" 2>"$TMP/stderr.txt" \
-  && CODE="$?" || CODE="$?"
-
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-fi
+"$1" validate "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: In addition to the schema, you must also pass a argument
@@ -31,4 +25,3 @@ that represents the instance to validate against. For example:
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
-echo "PASS" 1>&2

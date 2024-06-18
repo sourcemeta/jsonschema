@@ -54,8 +54,17 @@ auto upsert_id(sourcemeta::jsontoolkit::JSON &target,
                const std::string &identifier,
                const sourcemeta::jsontoolkit::SchemaResolver &resolver,
                const std::optional<std::string> &default_dialect) -> void {
+  if (!sourcemeta::jsontoolkit::is_schema(target)) {
+    throw sourcemeta::jsontoolkit::SchemaResolutionError(
+        identifier, "The JSON document is not a valid JSON Schema");
+  }
+
   const auto dialect{sourcemeta::jsontoolkit::dialect(target, default_dialect)};
-  assert(dialect.has_value());
+  if (!dialect.has_value()) {
+    throw sourcemeta::jsontoolkit::SchemaResolutionError(
+        identifier, "The JSON document is not a valid JSON Schema");
+  }
+
   const auto base_dialect{
       sourcemeta::jsontoolkit::base_dialect(target, resolver, dialect).get()};
   const auto vocabularies{sourcemeta::jsontoolkit::vocabularies(
@@ -130,7 +139,7 @@ auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
       }
 
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
-          identifier, "Could not resolve schema");
+          identifier, "Could not resolve the requested schema");
     }
 
     // Otherwise, if the target schema does not declare an inline identifier,

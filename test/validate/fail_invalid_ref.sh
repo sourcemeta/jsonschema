@@ -24,17 +24,12 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" 2>"$TMP/stderr.txt" \
   && CODE="$?" || CODE="$?"
-
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-fi
+test "$CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-Could not resolve schema reference: #/definitions/i-dont-exist
+error: Could not resolve schema reference
+  #/definitions/i-dont-exist
     at schema location "/properties/foo/$ref"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
-echo "PASS" 1>&2
