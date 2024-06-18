@@ -14,7 +14,24 @@
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http"})};
-  CLI_ENSURE(options.at("").size() >= 1, "You must pass a schema")
+
+  if (options.at("").size() < 1) {
+    std::cerr
+        << "error: This command expects to pass a path to a schema and a\n"
+        << "path to an instance to validate against the schema. For "
+           "example:\n\n"
+        << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
+    return EXIT_FAILURE;
+  }
+
+  if (options.at("").size() < 2) {
+    std::cerr
+        << "error: In addition to the schema, you must also pass a argument\n"
+        << "that represents the instance to validate against. For example:\n\n"
+        << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
+    return EXIT_FAILURE;
+  }
+
   CLI_ENSURE(options.at("").size() >= 2, "You must pass an instance")
   const auto &schema_path{options.at("").at(0)};
   const auto custom_resolver{
