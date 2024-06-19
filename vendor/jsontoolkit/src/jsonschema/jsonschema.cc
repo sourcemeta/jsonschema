@@ -172,7 +172,7 @@ auto sourcemeta::jsontoolkit::base_dialect(
       resolver(effective_dialect).get()};
   if (!metaschema.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaResolutionError(
-        effective_dialect, "Could not resolve schema");
+        effective_dialect, "Could not resolve the requested schema");
   }
 
   return base_dialect(metaschema.value(), resolver, effective_dialect);
@@ -284,7 +284,7 @@ auto sourcemeta::jsontoolkit::vocabularies(
       resolver(dialect).get()};
   if (!maybe_schema_dialect.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaResolutionError(
-        dialect, "Could not resolve schema");
+        dialect, "Could not resolve the requested schema");
   }
   const sourcemeta::jsontoolkit::JSON &schema_dialect{
       maybe_schema_dialect.value()};

@@ -509,9 +509,7 @@ auto evaluate_step(
     for (const auto &child : container.children) {
       if (!evaluate_step(child, instance, mode, callback, context)) {
         result = false;
-        if (mode == SchemaCompilerEvaluationMode::Fast) {
-          break;
-        }
+        break;
       }
     }
 

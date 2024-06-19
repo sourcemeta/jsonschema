@@ -216,6 +216,7 @@ auto compiler_draft4_applicator_oneof(const SchemaCompilerContext &context)
                                          SchemaCompilerTemplate{})};
 }
 
+template <typename AnnotationType>
 auto compiler_draft4_applicator_properties(const SchemaCompilerContext &context)
     -> SchemaCompilerTemplate {
   assert(context.value.is_object());
@@ -228,9 +229,8 @@ auto compiler_draft4_applicator_properties(const SchemaCompilerContext &context)
   for (auto &[key, subschema] : context.value.as_object()) {
     auto substeps{compile(subcontext, {key}, {key})};
     // TODO: As an optimization, only emit an annotation if
-    // `additionalProperties` is also declared in the same subschema Annotations
-    // as such don't exist in Draft 4, so emit a private annotation instead
-    substeps.push_back(make<SchemaCompilerAnnotationPrivate>(
+    // `additionalProperties` is also declared in the same subschema
+    substeps.push_back(make<AnnotationType>(
         subcontext, JSON{key}, {}, SchemaCompilerTargetType::Instance));
     children.push_back(make<SchemaCompilerInternalContainer>(
         subcontext, SchemaCompilerValueNone{}, std::move(substeps),
@@ -245,6 +245,7 @@ auto compiler_draft4_applicator_properties(const SchemaCompilerContext &context)
       type_condition(context, JSON::Type::Object))};
 }
 
+template <typename AnnotationType>
 auto compiler_draft4_applicator_patternproperties(
     const SchemaCompilerContext &context) -> SchemaCompilerTemplate {
   assert(context.value.is_object());
@@ -260,12 +261,12 @@ auto compiler_draft4_applicator_patternproperties(
     auto substeps{compile(subcontext, {entry.first}, {})};
 
     // TODO: As an optimization, only emit an annotation if
-    // `additionalProperties` is also declared in the same subschema Annotations
-    // as such don't exist in Draft 4, so emit a private annotation instead The
-    // evaluator will make sure the same annotation is not reported twice. For
-    // example, if the same property matches more than one subschema in
+    // `additionalProperties` is also declared in the same subschema
+
+    // The evaluator will make sure the same annotation is not reported twice.
+    // For example, if the same property matches more than one subschema in
     // `patternProperties`
-    substeps.push_back(make<SchemaCompilerAnnotationPrivate>(
+    substeps.push_back(make<AnnotationType>(
         subcontext,
         SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                              empty_pointer},

@@ -10,7 +10,6 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "object",
   "properties": {
     "foo": {
       "type": "string"
@@ -20,15 +19,14 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cat << 'EOF' > "$TMP/instance.json"
-{ "foo": 1 }
+{ "foo": "bar" }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" && CODE="$?" || CODE="$?"
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" --verbose 2> "$TMP/stderr.txt"
 
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-else
-  echo "PASS" 1>&2
-fi
+cat << EOF > "$TMP/expected.txt"
+ok: $(realpath "$TMP")/instance.json
+  matches $(realpath "$TMP")/schema.json
+EOF
+
+diff "$TMP/stderr.txt" "$TMP/expected.txt"

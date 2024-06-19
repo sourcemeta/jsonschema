@@ -54,6 +54,10 @@ public:
                  const std::uint64_t column)
       : ParseError{line, column}, path_{path} {}
 
+  /// Create a file parsing error from a parse error
+  FileParseError(const std::filesystem::path &path, const ParseError &parent)
+      : ParseError{parent.line(), parent.column()}, path_{path} {}
+
   /// Get the fiel path of the error
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path {
     return path_;

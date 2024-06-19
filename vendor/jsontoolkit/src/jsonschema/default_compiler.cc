@@ -7,7 +7,6 @@
 
 #include <cassert> // assert
 #include <set>     // std::set
-#include <sstream> // std::ostringstream
 #include <string>  // std::string
 
 // TODO: Support every keyword
@@ -23,9 +22,8 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
   for (const auto &vocabulary : context.vocabularies) {
     if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
         vocabulary.second) {
-      std::ostringstream error;
-      error << "Cannot compile unsupported vocabulary: " << vocabulary.first;
-      throw SchemaError(error.str());
+      throw SchemaVocabularyError(vocabulary.first,
+                                  "Cannot compile unsupported vocabulary");
     }
   }
 
@@ -104,10 +102,12 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_validation_maxproperties);
   COMPILE("http://json-schema.org/draft-07/schema#", "minProperties",
           compiler_draft4_validation_minproperties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "properties",
-          compiler_draft4_applicator_properties);
+  COMPILE(
+      "http://json-schema.org/draft-07/schema#", "properties",
+      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-07/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
+          compiler_draft4_applicator_patternproperties<
+              SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-07/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-07/schema#", "dependencies",
@@ -185,10 +185,12 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_validation_maxproperties);
   COMPILE("http://json-schema.org/draft-06/schema#", "minProperties",
           compiler_draft4_validation_minproperties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "properties",
-          compiler_draft4_applicator_properties);
+  COMPILE(
+      "http://json-schema.org/draft-06/schema#", "properties",
+      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-06/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
+          compiler_draft4_applicator_patternproperties<
+              SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-06/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-06/schema#", "dependencies",
@@ -225,10 +227,12 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_applicator_oneof);
   COMPILE("http://json-schema.org/draft-04/schema#", "not",
           compiler_draft4_applicator_not);
-  COMPILE("http://json-schema.org/draft-04/schema#", "properties",
-          compiler_draft4_applicator_properties);
+  COMPILE(
+      "http://json-schema.org/draft-04/schema#", "properties",
+      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-04/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
+          compiler_draft4_applicator_patternproperties<
+              SchemaCompilerAnnotationPrivate>);
   COMPILE("http://json-schema.org/draft-04/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-04/schema#", "items",
