@@ -26,7 +26,7 @@ auto intelligence::jsonschema::cli::validate(
 
   if (options.at("").size() < 2) {
     std::cerr
-        << "error: In addition to the schema, you must also pass a argument\n"
+        << "error: In addition to the schema, you must also pass an argument\n"
         << "that represents the instance to validate against. For example:\n\n"
         << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
     return EXIT_FAILURE;
