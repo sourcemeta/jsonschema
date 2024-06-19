@@ -34,3 +34,6 @@ cat << 'EOF' > "$TMP/expected.json"
 EOF
 
 diff "$TMP/result.json" "$TMP/expected.json"
+
+# Must come out formatted
+"$1" fmt "$TMP/result.json" --check
