@@ -11,15 +11,17 @@
 
 // TODO: Support every keyword
 auto sourcemeta::jsontoolkit::default_schema_compiler(
-    const sourcemeta::jsontoolkit::SchemaCompilerContext &context)
-    -> sourcemeta::jsontoolkit::SchemaCompilerTemplate {
-  assert(!context.keyword.empty());
+    const sourcemeta::jsontoolkit::SchemaCompilerContext &context,
+    const sourcemeta::jsontoolkit::SchemaCompilerSchemaContext &schema_context,
+    const sourcemeta::jsontoolkit::SchemaCompilerDynamicContext
+        &dynamic_context) -> sourcemeta::jsontoolkit::SchemaCompilerTemplate {
+  assert(!dynamic_context.keyword.empty());
 
   static std::set<std::string> SUPPORTED_VOCABULARIES{
       "http://json-schema.org/draft-07/schema#",
       "http://json-schema.org/draft-06/schema#",
       "http://json-schema.org/draft-04/schema#"};
-  for (const auto &vocabulary : context.vocabularies) {
+  for (const auto &vocabulary : schema_context.vocabularies) {
     if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
         vocabulary.second) {
       throw SchemaVocabularyError(vocabulary.first,
@@ -30,14 +32,15 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
   using namespace sourcemeta::jsontoolkit;
 
 #define COMPILE(vocabulary, _keyword, handler)                                 \
-  if (context.vocabularies.contains(vocabulary) &&                             \
-      context.keyword == (_keyword)) {                                         \
-    return internal::handler(context);                                         \
+  if (schema_context.vocabularies.contains(vocabulary) &&                      \
+      dynamic_context.keyword == (_keyword)) {                                 \
+    return internal::handler(context, schema_context, dynamic_context);        \
   }
 
 #define STOP_IF_SIBLING_KEYWORD(vocabulary, _keyword)                          \
-  if (context.vocabularies.contains(vocabulary) &&                             \
-      context.schema.is_object() && context.schema.defines(_keyword)) {        \
+  if (schema_context.vocabularies.contains(vocabulary) &&                      \
+      schema_context.schema.is_object() &&                                     \
+      schema_context.schema.defines(_keyword)) {                               \
     return {};                                                                 \
   }
 

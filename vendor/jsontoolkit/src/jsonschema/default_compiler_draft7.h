@@ -9,56 +9,66 @@
 namespace internal {
 using namespace sourcemeta::jsontoolkit;
 
-auto compiler_draft7_applicator_if(const SchemaCompilerContext &context)
+auto compiler_draft7_applicator_if(
+    const SchemaCompilerContext &context,
+    const SchemaCompilerSchemaContext &schema_context,
+    const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  const auto subcontext{applicate(context)};
-  SchemaCompilerTemplate children{
-      compile(subcontext, empty_pointer, empty_pointer)};
+  SchemaCompilerTemplate children{compile(context, schema_context,
+                                          relative_dynamic_context,
+                                          empty_pointer, empty_pointer)};
   children.push_back(make<SchemaCompilerAnnotationPrivate>(
-      subcontext, JSON{true}, {}, SchemaCompilerTargetType::Instance));
-  return {make<SchemaCompilerLogicalTry>(context, SchemaCompilerValueNone{},
-                                         std::move(children),
-                                         SchemaCompilerTemplate{})};
+      schema_context, relative_dynamic_context, JSON{true}, {},
+      SchemaCompilerTargetType::Instance));
+  return {make<SchemaCompilerLogicalTry>(
+      schema_context, dynamic_context, SchemaCompilerValueNone{},
+      std::move(children), SchemaCompilerTemplate{})};
 }
 
-auto compiler_draft7_applicator_then(const SchemaCompilerContext &context)
+auto compiler_draft7_applicator_then(
+    const SchemaCompilerContext &context,
+    const SchemaCompilerSchemaContext &schema_context,
+    const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  assert(context.schema.is_object());
+  assert(schema_context.schema.is_object());
 
   // Nothing to do here
-  if (!context.schema.defines("if")) {
+  if (!schema_context.schema.defines("if")) {
     return {};
   }
 
-  const auto subcontext{applicate(context)};
-  SchemaCompilerTemplate children{
-      compile(subcontext, empty_pointer, empty_pointer)};
+  SchemaCompilerTemplate children{compile(context, schema_context,
+                                          relative_dynamic_context,
+                                          empty_pointer, empty_pointer)};
   SchemaCompilerTemplate condition{make<SchemaCompilerInternalAnnotation>(
-      subcontext, JSON{true}, {}, SchemaCompilerTargetType::AdjacentAnnotations,
-      Pointer{"if"})};
-  return {make<SchemaCompilerLogicalAnd>(context, SchemaCompilerValueNone{},
-                                         std::move(children),
-                                         std::move(condition))};
+      schema_context, relative_dynamic_context, JSON{true}, {},
+      SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
+  return {make<SchemaCompilerLogicalAnd>(
+      schema_context, dynamic_context, SchemaCompilerValueNone{},
+      std::move(children), std::move(condition))};
 }
 
-auto compiler_draft7_applicator_else(const SchemaCompilerContext &context)
+auto compiler_draft7_applicator_else(
+    const SchemaCompilerContext &context,
+    const SchemaCompilerSchemaContext &schema_context,
+    const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  assert(context.schema.is_object());
+  assert(schema_context.schema.is_object());
 
   // Nothing to do here
-  if (!context.schema.defines("if")) {
+  if (!schema_context.schema.defines("if")) {
     return {};
   }
 
-  const auto subcontext{applicate(context)};
-  SchemaCompilerTemplate children{
-      compile(subcontext, empty_pointer, empty_pointer)};
+  SchemaCompilerTemplate children{compile(context, schema_context,
+                                          relative_dynamic_context,
+                                          empty_pointer, empty_pointer)};
   SchemaCompilerTemplate condition{make<SchemaCompilerInternalNoAnnotation>(
-      subcontext, JSON{true}, {}, SchemaCompilerTargetType::AdjacentAnnotations,
-      Pointer{"if"})};
-  return {make<SchemaCompilerLogicalAnd>(context, SchemaCompilerValueNone{},
-                                         std::move(children),
-                                         std::move(condition))};
+      schema_context, relative_dynamic_context, JSON{true}, {},
+      SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
+  return {make<SchemaCompilerLogicalAnd>(
+      schema_context, dynamic_context, SchemaCompilerValueNone{},
+      std::move(children), std::move(condition))};
 }
 
 } // namespace internal
