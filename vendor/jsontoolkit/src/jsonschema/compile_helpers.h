@@ -5,48 +5,19 @@
 
 #include <utility> // std::declval, std::move
 
-namespace {
-
-template <typename T>
-auto concat_set(const std::set<T> &current, const T value) -> std::set<T> {
-  auto result{current};
-  result.insert(value);
-  return result;
-}
-
-} // namespace
-
 namespace sourcemeta::jsontoolkit {
 
-inline auto applicate(const SchemaCompilerContext &context,
-                      const std::optional<std::size_t> &label = std::nullopt)
-    -> SchemaCompilerContext {
-  return {"",
-          context.schema,
-          context.vocabularies,
-          context.value,
-          context.root,
-          context.base,
-          context.relative_pointer,
-          empty_pointer,
-          empty_pointer,
-          label.has_value() ? concat_set(context.labels, label.value())
-                            : context.labels,
-          context.frame,
-          context.references,
-          context.walker,
-          context.resolver,
-          context.compiler,
-          context.default_dialect};
+static const SchemaCompilerDynamicContext relative_dynamic_context{
+    "", empty_pointer, empty_pointer};
+
+inline auto keyword_location(const SchemaCompilerSchemaContext &schema_context)
+    -> std::string {
+  return to_uri(schema_context.relative_pointer, schema_context.base)
+      .recompose();
 }
 
-inline auto
-keyword_location(const SchemaCompilerContext &context) -> std::string {
-  return to_uri(context.relative_pointer, context.base).recompose();
-}
-
-inline auto
-relative_schema_location(const SchemaCompilerContext &context) -> Pointer {
+inline auto relative_schema_location(
+    const SchemaCompilerDynamicContext &context) -> Pointer {
   return context.keyword.empty()
              ? context.base_schema_location
              : context.base_schema_location.concat({context.keyword});
@@ -54,7 +25,8 @@ relative_schema_location(const SchemaCompilerContext &context) -> Pointer {
 
 // Instantiate a value-oriented step
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const SchemaCompilerSchemaContext &schema_context,
+          const SchemaCompilerDynamicContext &context,
           // Take the value type from the "type" property of the step struct
           decltype(std::declval<Step>().value) &&value,
           SchemaCompilerTemplate &&condition,
@@ -64,14 +36,15 @@ auto make(const SchemaCompilerContext &context,
   return {{target_type, target_location.value_or(empty_pointer)},
           relative_schema_location(context),
           context.base_instance_location,
-          keyword_location(context),
+          keyword_location(schema_context),
           std::move(value),
           std::move(condition)};
 }
 
 // Instantiate an applicator step
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const SchemaCompilerSchemaContext &schema_context,
+          const SchemaCompilerDynamicContext &context,
           // Take the value type from the "type" property of the step struct
           decltype(std::declval<Step>().value) &&value,
           SchemaCompilerTemplate &&children,
@@ -79,7 +52,7 @@ auto make(const SchemaCompilerContext &context,
   return {{SchemaCompilerTargetType::Instance, empty_pointer},
           relative_schema_location(context),
           context.base_instance_location,
-          keyword_location(context),
+          keyword_location(schema_context),
           std::move(value),
           std::move(children),
           std::move(condition)};
@@ -87,18 +60,20 @@ auto make(const SchemaCompilerContext &context,
 
 // Instantiate a control step
 template <typename Step>
-auto make(const SchemaCompilerContext &context, const std::size_t id,
+auto make(const SchemaCompilerSchemaContext &schema_context,
+          const SchemaCompilerDynamicContext &context, const std::size_t id,
           SchemaCompilerTemplate &&children) -> Step {
   return {relative_schema_location(context), context.base_instance_location,
-          keyword_location(context), id, std::move(children)};
+          keyword_location(schema_context), id, std::move(children)};
 }
 
-inline auto type_condition(const SchemaCompilerContext &context,
+inline auto type_condition(const SchemaCompilerSchemaContext &schema_context,
                            const JSON::Type type) -> SchemaCompilerTemplate {
   // As an optimization
-  if (context.schema.is_object() && context.schema.defines("type") &&
-      context.schema.at("type").is_string()) {
-    const auto &type_string{context.schema.at("type").to_string()};
+  if (schema_context.schema.is_object() &&
+      schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string()) {
+    const auto &type_string{schema_context.schema.at("type").to_string()};
     if (type == JSON::Type::Null && type_string == "null") {
       return {};
     } else if (type == JSON::Type::Boolean && type_string == "boolean") {
@@ -115,7 +90,8 @@ inline auto type_condition(const SchemaCompilerContext &context,
   }
 
   return {make<SchemaCompilerAssertionTypeStrict>(
-      applicate(context), type, {}, SchemaCompilerTargetType::Instance)};
+      schema_context, relative_dynamic_context, type, {},
+      SchemaCompilerTargetType::Instance)};
 }
 
 } // namespace sourcemeta::jsontoolkit
