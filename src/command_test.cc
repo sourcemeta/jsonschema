@@ -62,12 +62,21 @@ auto intelligence::jsonschema::cli::test(
       std::cout << "    " << test.at("description").to_string() << " - "
                 << test_case.at("description").to_string() << "\n";
 
+      std::ostringstream error;
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
-          schema_template, test_case.at("data"))};
+          schema_template, test_case.at("data"),
+          sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+          pretty_evaluate_callback(error))};
+
       if (test_case.at("valid").to_boolean() == case_result) {
         std::cout << "        PASS\n";
+      } else if (!test_case.at("valid").to_boolean() && case_result) {
+        std::cout
+            << "        FAIL (expected validation to fail but it succeeded)\n";
+        result = false;
       } else {
-        std::cout << "        FAIL\n";
+        std::cout << "        FAIL\n\n";
+        std::cerr << error.str();
         result = false;
       }
     }
