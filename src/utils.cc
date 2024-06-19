@@ -239,7 +239,7 @@ static auto fallback_resolver(
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote) -> sourcemeta::jsontoolkit::SchemaResolver {
   sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
-      [&remote, &options](std::string_view identifier) {
+      [remote, &options](std::string_view identifier) {
         if (remote) {
           return fallback_resolver(options, identifier);
         } else {
