@@ -69,6 +69,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::frame(arguments);
   } else if (command == "bundle") {
     return intelligence::jsonschema::cli::bundle(arguments);
+  } else if (command == "compile") {
+    return intelligence::jsonschema::cli::compile(arguments);
   } else if (command == "lint") {
     return intelligence::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {

@@ -370,53 +370,63 @@ DEFINE_CONTROL(Jump)
 #undef DEFINE_CONTROL
 #endif
 
+/// @ingroup jsonschema
+/// The schema compiler context is the current subschema information you have at
+/// your disposal to implement a keyword
+struct SchemaCompilerSchemaContext {
+  /// The schema location relative to the base URI
+  const Pointer &relative_pointer;
+  /// The current subschema
+  const JSON &schema;
+  /// The schema vocabularies in use
+  const std::map<std::string, bool> &vocabularies;
+  /// The schema base URI
+  const URI &base;
+  /// The set of labels registered so far
+  std::set<std::size_t> labels;
+};
+
+/// @ingroup jsonschema
+/// The dynamic compiler context is the read-write information you have at your
+/// disposal to implement a keyword
+struct SchemaCompilerDynamicContext {
+  /// The schema keyword
+  const std::string &keyword;
+  /// The schema base keyword path
+  const Pointer &base_schema_location;
+  /// The base instance location that the keyword must be evaluated to
+  const Pointer &base_instance_location;
+};
+
 #if !defined(DOXYGEN)
 struct SchemaCompilerContext;
 #endif
 
 /// @ingroup jsonschema
-/// A compiler is represented as a function that maps a keyword compiler context
-/// into a compiler template. You can provide your own to implement your own
-/// keywords
-using SchemaCompiler =
-    std::function<SchemaCompilerTemplate(const SchemaCompilerContext &)>;
+/// A compiler is represented as a function that maps a keyword compiler
+/// contexts into a compiler template. You can provide your own to implement
+/// your own keywords
+using SchemaCompiler = std::function<SchemaCompilerTemplate(
+    const SchemaCompilerContext &, const SchemaCompilerSchemaContext &,
+    const SchemaCompilerDynamicContext &)>;
 
 /// @ingroup jsonschema
-/// The compiler context is the information you have at your disposal to
-/// implement a keyword
+/// The static compiler context is the information you have at your
+/// disposal to implement a keyword that will never change throughout
+/// the compilation process
 struct SchemaCompilerContext {
-  /// The schema keyword
-  const std::string keyword;
-  /// The current subschema
-  const JSON &schema;
-  /// The schema vocabularies in use
-  const std::map<std::string, bool> &vocabularies;
-  /// The value of the keyword
-  const JSON &value;
   /// The root schema resource
   const JSON &root;
-  /// The schema base URI
-  const URI base;
-  /// The schema location relative to the base URI
-  const Pointer relative_pointer;
-  /// The schema base keyword path
-  const Pointer base_schema_location;
-  /// The base instance location that the keyword must be evaluated to
-  const Pointer base_instance_location;
-  /// The set of labels registered so far
-  const std::set<std::size_t> labels;
   /// The reference frame of the entire schema
   const ReferenceFrame &frame;
   /// The references of the entire schema
   const ReferenceMap &references;
   /// The schema walker in use
-  const SchemaWalker walker;
+  const SchemaWalker &walker;
   /// The schema resolver in use
-  const SchemaResolver resolver;
+  const SchemaResolver &resolver;
   /// The schema compiler in use
-  const SchemaCompiler compiler;
-  /// The default dialect of the schema
-  const std::optional<std::string> &default_dialect;
+  const SchemaCompiler &compiler;
 };
 
 /// @ingroup jsonschema
@@ -544,7 +554,8 @@ evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
 /// A default compiler that aims to implement every keyword for official JSON
 /// Schema dialects.
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT default_schema_compiler(
-    const SchemaCompilerContext &) -> SchemaCompilerTemplate;
+    const SchemaCompilerContext &, const SchemaCompilerSchemaContext &,
+    const SchemaCompilerDynamicContext &) -> SchemaCompilerTemplate;
 
 /// @ingroup jsonschema
 ///
@@ -583,7 +594,10 @@ compile(const JSON &schema, const SchemaWalker &walker,
 /// directly, but instead as a building block for supporting applicators on
 /// compiler functions.
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-compile(const SchemaCompilerContext &context, const Pointer &schema_suffix,
+compile(const SchemaCompilerContext &context,
+        const SchemaCompilerSchemaContext &schema_context,
+        const SchemaCompilerDynamicContext &dynamic_context,
+        const Pointer &schema_suffix,
         const Pointer &instance_suffix = empty_pointer,
         const std::optional<std::string> &uri = std::nullopt)
     -> SchemaCompilerTemplate;
