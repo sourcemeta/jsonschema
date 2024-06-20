@@ -112,9 +112,10 @@ docker run --interactive --volume "$PWD:/workspace" jsonschema lint --verbose my
 
 > [!WARNING]
 > Make sure to NOT allocate a pseudo-TTY when running the CLI through Docker
-> (i.e. the `--tty`/`-t` option) as this might result in line ending
-> incompatibilities between the container and host. Plus a TTY is not required
-> for running a tool like this JSON Schema CLI.
+> (i.e. the `--tty`/`-t` option) as it might result in line ending
+> incompatibilities between the container and host, which will affect
+> formatting. Plus a TTY is not required for running a tool like the JSON
+> Schema CLI.
 
 ### Building from source
 
