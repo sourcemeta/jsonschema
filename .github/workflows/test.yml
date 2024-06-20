@@ -80,3 +80,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build --tag jsonschema .
       - run: docker run --interactive --volume "$PWD:/schema" jsonschema
+      - run: ./test/docker/help.sh
+      - run: ./test/docker/bundle_fmt.sh
