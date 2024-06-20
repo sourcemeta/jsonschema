@@ -13,54 +13,145 @@ auto intelligence::jsonschema::cli::test(
   bool result{true};
   const auto test_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
+  const auto verbose{options.contains("verbose") || options.contains("v")};
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
     const sourcemeta::jsontoolkit::JSON test{
         sourcemeta::jsontoolkit::from_file(entry.first)};
-    CLI_ENSURE(test.is_object(), "The test document must be an object")
-    CLI_ENSURE(test.defines("description"),
-               "The test document must contain a `description` property")
-    CLI_ENSURE(test.defines("schema"),
-               "The test document must contain a `schema` property")
-    CLI_ENSURE(test.defines("tests"),
-               "The test document must contain a `tests` property")
-    CLI_ENSURE(test.at("description").is_string(),
-               "The test document `description` property must be a string")
-    CLI_ENSURE(test.at("schema").is_string(),
-               "The test document `schema` property must be a URI")
-    CLI_ENSURE(test.at("tests").is_array(),
-               "The test document `tests` property must be an array")
+    std::cout << entry.first.string() << ":";
 
-    std::cout << entry.first.string() << "\n";
-
-    const auto schema{test_resolver(test.at("schema").to_string()).get()};
-    if (!schema.has_value()) {
-      std::cerr << "Could not resolve schema " << test.at("schema").to_string()
-                << " at " << entry.first.string() << "\n";
+    if (!test.is_object()) {
+      std::cout << "\nerror: The test document must be an object\n\n";
+      std::cout << "Learn more here: "
+                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
 
-    const auto schema_template{sourcemeta::jsontoolkit::compile(
-        schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
-        test_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
+    if (!test.defines("schema")) {
+      std::cout
+          << "\nerror: The test document must contain a `schema` property\n\n";
+      std::cout << "Learn more here: "
+                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "docs/test.markdown\n";
+      return EXIT_FAILURE;
+    }
+
+    if (!test.at("schema").is_string()) {
+      std::cout
+          << "\nerror: The test document `schema` property must be a URI\n\n";
+      std::cout << "Learn more here: "
+                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "docs/test.markdown\n";
+      return EXIT_FAILURE;
+    }
+
+    if (!test.defines("tests")) {
+      std::cout
+          << "\nerror: The test document must contain a `tests` property\n\n";
+      std::cout << "Learn more here: "
+                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "docs/test.markdown\n";
+      return EXIT_FAILURE;
+    }
+
+    if (!test.at("tests").is_array()) {
+      std::cout
+          << "\nerror: The test document `tests` property must be an array\n\n";
+      std::cout << "Learn more here: "
+                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "docs/test.markdown\n";
+      return EXIT_FAILURE;
+    }
+
+    const auto schema{test_resolver(test.at("schema").to_string()).get()};
+    if (!schema.has_value()) {
+      if (verbose) {
+        std::cout << "\n";
+      }
+
+      throw sourcemeta::jsontoolkit::SchemaResolutionError(
+          test.at("schema").to_string(), "Could not resolve schema under test");
+    }
+
+    unsigned int pass_count{0};
+    unsigned int index{0};
+    const auto total{test.at("tests").size()};
+
+    if (test.at("tests").empty()) {
+      std::cout << " NO TESTS\n";
+      continue;
+    }
+
+    sourcemeta::jsontoolkit::SchemaCompilerTemplate schema_template;
+
+    try {
+      schema_template = sourcemeta::jsontoolkit::compile(
+          schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
+          test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
+    } catch (...) {
+      std::cout << "\n";
+      throw;
+    }
+
+    if (verbose) {
+      std::cout << "\n";
+    }
 
     for (const auto &test_case : test.at("tests").as_array()) {
-      CLI_ENSURE(test_case.is_object(), "Test case documents must be objects")
-      CLI_ENSURE(test_case.defines("description"),
-                 "Test case documents must contain a `description` property")
-      CLI_ENSURE(test_case.defines("data"),
-                 "Test case documents must contain a `data` property")
-      CLI_ENSURE(test_case.defines("valid"),
-                 "Test case documents must contain a `valid` property")
-      CLI_ENSURE(
-          test_case.at("description").is_string(),
-          "The test case document `description` property must be a string")
-      CLI_ENSURE(test_case.at("valid").is_boolean(),
-                 "The test case document `tests` property must be a boolean")
+      index += 1;
 
-      std::cout << "    " << test.at("description").to_string() << " - "
-                << test_case.at("description").to_string() << "\n";
+      if (!test_case.is_object()) {
+        std::cout
+            << "\nerror: Test case documents must be objects\n  at test case #"
+            << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (!test_case.defines("data")) {
+        std::cout << "\nerror: Test case documents must contain a `data` "
+                     "property\n  at test case #"
+                  << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (test_case.defines("description") &&
+          !test_case.at("description").is_string()) {
+        std::cout << "\nerror: If you set a test case description, it must be "
+                     "a string\n  at test case #"
+                  << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (!test_case.defines("valid")) {
+        std::cout << "\nerror: Test case documents must contain a `valid` "
+                     "property\n  at test case #"
+                  << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (!test_case.at("valid").is_boolean()) {
+        std::cout << "\nerror: The test case document `valid` property must be "
+                     "a boolean\n  at test case #"
+                  << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
 
       std::ostringstream error;
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
@@ -68,17 +159,52 @@ auto intelligence::jsonschema::cli::test(
           sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
           pretty_evaluate_callback(error))};
 
+      std::ostringstream test_case_description;
+      if (test_case.defines("description")) {
+        test_case_description << test_case.at("description").to_string();
+      } else {
+        test_case_description << "<no description>";
+      }
+
       if (test_case.at("valid").to_boolean() == case_result) {
-        std::cout << "        PASS\n";
+        pass_count += 1;
+        if (verbose) {
+          std::cout << "  " << index << "/" << total << " PASS "
+                    << test_case_description.str() << "\n";
+        }
       } else if (!test_case.at("valid").to_boolean() && case_result) {
-        std::cout
-            << "        FAIL (expected validation to fail but it succeeded)\n";
+        if (!verbose) {
+          std::cout << "\n";
+        }
+
+        std::cout << "  " << index << "/" << total << " FAIL "
+                  << test_case_description.str() << "\n\n"
+                  << "error: passed but was expected to fail\n";
+
+        if (index != total && verbose) {
+          std::cout << "\n";
+        }
+
         result = false;
       } else {
-        std::cout << "        FAIL\n\n";
-        std::cerr << error.str();
+        if (!verbose) {
+          std::cout << "\n";
+        }
+
+        std::cout << "  " << index << "/" << total << " FAIL "
+                  << test_case_description.str() << "\n\n";
+        std::cout << error.str();
+
+        if (index != total && verbose) {
+          std::cout << "\n";
+        }
+
         result = false;
       }
+    }
+
+    if (!verbose && result) {
+      std::cout << " PASS " << pass_count << "/" << total << "\n";
     }
   }
 

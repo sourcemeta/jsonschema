@@ -29,7 +29,6 @@ To create a test definition, you must write JSON documents that look like this:
 
 ```json
 {
-  "description": "The Draft 4 metaschema",
   "schema": "http://json-schema.org/draft-04/schema#",
   "tests": [
     {
