@@ -79,7 +79,7 @@ npm install --global @intelligence-ai/jsonschema
 
 ### From GitHub Releases
 
-We publish precompiled binaries for every supported platforms to [GitHub
+We publish precompiled binaries for every supported platform to [GitHub
 Releases](https://github.com/Intelligence-AI/jsonschema/releases), including a
 [continuous](https://github.com/Intelligence-AI/jsonschema/releases/tag/continuous)
 that is updated on every commit from the main branch.
