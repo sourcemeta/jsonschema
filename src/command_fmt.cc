@@ -3,7 +3,7 @@
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
-#include <iostream> // std::cerr, std::endl
+#include <iostream> // std::cerr
 #include <sstream>  // std::ostringstream
 
 #include "command.h"
@@ -40,7 +40,7 @@ auto intelligence::jsonschema::cli::fmt(
       std::ofstream output{entry.first};
       sourcemeta::jsontoolkit::prettify(
           entry.second, output, sourcemeta::jsontoolkit::schema_format_compare);
-      output << std::endl;
+      output << "\n";
     }
   }
 
