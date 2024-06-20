@@ -3,7 +3,7 @@
 
 #include <cstdlib>  // EXIT_SUCCESS
 #include <fstream>  // std::ofstream
-#include <iostream> // std::cerr, std::cout, std::endl
+#include <iostream> // std::cerr, std::cout
 
 #include "command.h"
 #include "utils.h"
@@ -31,7 +31,7 @@ auto intelligence::jsonschema::cli::lint(
       std::ofstream output{entry.first};
       sourcemeta::jsontoolkit::prettify(
           copy, output, sourcemeta::jsontoolkit::schema_format_compare);
-      output << std::endl;
+      output << "\n";
     }
   } else {
     for (const auto &entry :

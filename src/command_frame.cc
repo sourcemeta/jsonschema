@@ -2,7 +2,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream> // std::cout, std::endl
+#include <iostream> // std::cout
 
 #include "command.h"
 #include "utils.h"

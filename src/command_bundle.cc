@@ -2,7 +2,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS
-#include <iostream> // std::cout, std::endl
+#include <iostream> // std::cout
 
 #include "command.h"
 #include "utils.h"
@@ -31,6 +31,6 @@ auto intelligence::jsonschema::cli::bundle(
 
   sourcemeta::jsontoolkit::prettify(
       schema, std::cout, sourcemeta::jsontoolkit::schema_format_compare);
-  std::cout << std::endl;
+  std::cout << "\n";
   return EXIT_SUCCESS;
 }
