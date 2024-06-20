@@ -29,7 +29,7 @@ To create a test definition, you must write JSON documents that look like this:
 
 ```json
 {
-  "schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "http://json-schema.org/draft-04/schema#",
   "tests": [
     {
       "description": "The empty object is valid",

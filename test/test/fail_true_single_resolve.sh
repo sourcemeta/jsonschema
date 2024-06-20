@@ -17,7 +17,7 @@ EOF
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "schema": "https://example.com",
+  "$schema": "https://example.com",
   "tests": [
     {
       "description": "First test",
