@@ -139,13 +139,13 @@ following pages describe each command in detail. Additionally, running the JSON
 Schema CLI without passing a command will print convenient reference
 documentation:
 
-- [Validating](./docs/validate.markdown)
-- [Metaschema](./docs/metaschema.markdown) (ensure a schema is valid)
-- [Testing](./docs/test.markdown)
-- [Formatting](./docs/format.markdown)
-- [Linting](./docs/lint.markdown)
-- [Bundling](./docs/bundle.markdown) (for inlining remote references in a schema)
-- [Framing](./docs/frame.markdown)
+- [`jsonschema validate`](./docs/validate.markdown)
+- [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
+- [`jsonschema test`](./docs/test.markdown) (write unit tests for your schemas)
+- [`jsonschema fmt`](./docs/format.markdown)
+- [`jsonschema lint`](./docs/lint.markdown)
+- [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
+- [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
 
 Coming Soon
 -----------
