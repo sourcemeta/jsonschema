@@ -180,7 +180,7 @@ auto intelligence::jsonschema::cli::test(
 
         std::cout << "  " << index << "/" << total << " FAIL "
                   << test_case_description.str() << "\n\n"
-                  << "error: passed but was expected to fail\n";
+                  << "error: Passed but was expected to fail\n";
 
         if (index != total && verbose) {
           std::cout << "\n";
