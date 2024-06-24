@@ -28,12 +28,13 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The target document is expected to be of the given type
-  at instance location "/foo"
-  at evaluate path "/properties/foo/type"
-error: The target is expected to match all of the given assertions
-  at instance location ""
-  at evaluate path "/properties"
+error: Schema validation failure
+  The target document is expected to be of the given type
+    at instance location "/foo"
+    at evaluate path "/properties/foo/type"
+  The target is expected to match all of the given assertions
+    at instance location ""
+    at evaluate path "/properties"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

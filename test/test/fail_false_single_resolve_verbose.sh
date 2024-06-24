@@ -48,7 +48,7 @@ $(realpath "$TMP")/test.json:
   1/3 PASS First test
   2/3 FAIL Unexpected
 
-error: passed but was expected to fail
+error: Passed but was expected to fail
 
   3/3 PASS Invalid type
 EOF
