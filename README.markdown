@@ -28,7 +28,8 @@ local development and when running on CI/CD pipelines. For example:
 > This project is under heavy development. Some features are partly available
 > and may contain bugs. Please [share
 > feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give
-> us a star show your support!
+> us a star show your support! To see what else we are up to,
+> [check out out website](https://jsonschema.intelligence.ai).
 >
 > **Current Limitations:**
 >
