@@ -29,7 +29,7 @@ local development and when running on CI/CD pipelines. For example:
 > and may contain bugs. Please [share
 > feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give
 > us a star show your support! To see what else we are up to,
-> [check out out website](https://jsonschema.intelligence.ai).
+> [check out our website](https://jsonschema.intelligence.ai).
 >
 > **Current Limitations:**
 >
