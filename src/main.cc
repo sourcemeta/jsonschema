@@ -53,7 +53,7 @@ Commands:
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
-   frame <schema.json>
+   frame <schema.json> [--json/-j]
 
        Frame a schema in-place, displaying schema locations and references
        in a human-readable manner.
