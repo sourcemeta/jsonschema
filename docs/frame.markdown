@@ -59,7 +59,7 @@ reference:
 jsonschema frame path/to/my/schema.json
 ```
 
-### Frame a JSON Schema with JSON output for all frames
+### Frame a JSON Schema with output in the form of JSON
 
 ```sh
 jsonschema frame path/to/my/schema.json --json
