@@ -19,6 +19,15 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::hydra::httpclient)
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
+# Enable whole program optimization on MSVC
+# See https://learn.microsoft.com/en-us/cpp/build/reference/gl-whole-program-optimization?view=msvc-170
+# See https://learn.microsoft.com/en-us/cpp/build/reference/ltcg-link-time-code-generation?view=msvc-170
+# TODO: Elevate this as a default in Noa
+if(MSVC)
+  target_compile_options(jsonschema_cli PRIVATE "$<$<CONFIG:Release>:/GL>")
+  target_link_options(jsonschema_cli PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+endif()
+
 include(GNUInstallDirs)
 install(TARGETS jsonschema_cli
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
