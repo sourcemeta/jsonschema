@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#include <algorithm> // std::any_of, std::none_of
+#include <algorithm> // std::any_of, std::none_of, std::sort
 #include <cassert>   // assert
 #include <fstream>   // std::ofstream
 #include <iostream>  // std::cerr
@@ -120,6 +120,9 @@ auto for_each_json(const std::vector<std::string> &arguments,
       handle_json_entry(entry, blacklist, extensions, result);
     }
   }
+
+  std::sort(result.begin(), result.end(),
+            [](const auto &left, const auto &right) { return left < right; });
 
   return result;
 }
