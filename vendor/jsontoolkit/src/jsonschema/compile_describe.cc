@@ -50,10 +50,6 @@ struct DescribeVisitor {
   auto operator()(const SchemaCompilerAnnotationPublic &) const -> std::string {
     return "Emit an annotation";
   }
-  auto
-  operator()(const SchemaCompilerAnnotationPrivate &) const -> std::string {
-    return "Emit an internal annotation";
-  }
   auto operator()(const SchemaCompilerLoopProperties &) const -> std::string {
     return "Loop over the properties of the target object";
   }

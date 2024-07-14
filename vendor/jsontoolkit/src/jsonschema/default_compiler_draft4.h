@@ -267,7 +267,6 @@ auto compiler_draft4_applicator_oneof(
       std::move(disjunctors), SchemaCompilerTemplate{})};
 }
 
-template <typename AnnotationType>
 auto compiler_draft4_applicator_properties(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
@@ -285,7 +284,7 @@ auto compiler_draft4_applicator_properties(
                           {key}, {key})};
     // TODO: As an optimization, only emit an annotation if
     // `additionalProperties` is also declared in the same subschema
-    substeps.push_back(make<AnnotationType>(
+    substeps.push_back(make<SchemaCompilerAnnotationPublic>(
         schema_context, relative_dynamic_context, JSON{key}, {},
         SchemaCompilerTargetType::Instance));
     children.push_back(make<SchemaCompilerInternalContainer>(
@@ -303,7 +302,6 @@ auto compiler_draft4_applicator_properties(
       std::move(children), type_condition(schema_context, JSON::Type::Object))};
 }
 
-template <typename AnnotationType>
 auto compiler_draft4_applicator_patternproperties(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
@@ -328,7 +326,7 @@ auto compiler_draft4_applicator_patternproperties(
     // The evaluator will make sure the same annotation is not reported twice.
     // For example, if the same property matches more than one subschema in
     // `patternProperties`
-    substeps.push_back(make<AnnotationType>(
+    substeps.push_back(make<SchemaCompilerAnnotationPublic>(
         schema_context, relative_dynamic_context,
         SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                              empty_pointer},

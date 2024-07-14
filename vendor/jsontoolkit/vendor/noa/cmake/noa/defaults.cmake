@@ -69,3 +69,26 @@ if(WIN32)
   # For DLL files
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" CACHE STRING "")
 endif()
+
+# Enable IPO/LTO to help the compiler optimize across modules.
+# Only do so in release, given these optimizations can significantly
+# increase build times.
+# See: https://cmake.org/cmake/help/latest/module/CheckIPOSupported.html
+if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT BUILD_SHARED_LIBS)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_supported_error)
+  if(ipo_supported)
+    # TODO: Make IPO/LTO work on Linux + LLVM
+    if(APPLE OR NOT NOA_COMPILER_LLVM)
+      message(STATUS "Enabling IPO")
+      cmake_policy(SET CMP0069 NEW)
+      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    else()
+      message(WARNING "Avoiding IPO on this configuration")
+    endif()
+  else()
+    message(WARNING "IPO not supported: ${ipo_supported_error}")
+  endif()
+  unset(ipo_supported)
+  unset(ipo_supported_error)
+endif()

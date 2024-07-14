@@ -68,6 +68,10 @@ cat << 'EOF' > "$TMP/expected.txt"
     Destination      : https://example.com#/$defs/string
     - (w/o fragment) : https://example.com
     - (fragment)     : /$defs/string
+(REFERENCE) URI: /$schema
+    Type             : Static
+    Destination      : https://json-schema.org/draft/2020-12/schema
+    - (w/o fragment) : https://json-schema.org/draft/2020-12/schema
 EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"
