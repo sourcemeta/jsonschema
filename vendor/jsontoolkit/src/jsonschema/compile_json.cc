@@ -199,7 +199,6 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "string-type", SchemaCompilerAssertionStringType)
   HANDLE_STEP("assertion", "equals-any", SchemaCompilerAssertionEqualsAny)
   HANDLE_STEP("annotation", "public", SchemaCompilerAnnotationPublic)
-  HANDLE_STEP("annotation", "private", SchemaCompilerAnnotationPrivate)
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)

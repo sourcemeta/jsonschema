@@ -179,7 +179,8 @@ auto pretty_evaluate_callback(std::ostringstream &output)
     -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback {
   output << "error: Schema validation failure\n";
   return [&output](
-             bool result,
+             const sourcemeta::jsontoolkit::SchemaCompilerEvaluationType,
+             const bool result,
              const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type
                  &step,
              const sourcemeta::jsontoolkit::Pointer &evaluate_path,

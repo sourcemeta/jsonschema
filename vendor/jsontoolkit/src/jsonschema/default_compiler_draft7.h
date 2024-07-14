@@ -17,7 +17,7 @@ auto compiler_draft7_applicator_if(
   SchemaCompilerTemplate children{compile(context, schema_context,
                                           relative_dynamic_context,
                                           empty_pointer, empty_pointer)};
-  children.push_back(make<SchemaCompilerAnnotationPrivate>(
+  children.push_back(make<SchemaCompilerAnnotationPublic>(
       schema_context, relative_dynamic_context, JSON{true}, {},
       SchemaCompilerTargetType::Instance));
   return {make<SchemaCompilerLogicalTry>(

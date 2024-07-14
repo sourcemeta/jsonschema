@@ -41,7 +41,7 @@ namespace sourcemeta::jsontoolkit {
 ///                                const std::set<std::string> &vocabularies,
 ///                                const sourcemeta::jsontoolkit::Pointer
 ///                                  &pointer) const
-///       -> bool override
+///       -> bool override {
 ///     return schema.defines("foo");
 ///   }
 ///

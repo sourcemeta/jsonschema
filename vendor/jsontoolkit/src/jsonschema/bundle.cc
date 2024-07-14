@@ -96,6 +96,16 @@ auto embed_schema(sourcemeta::jsontoolkit::JSON &definitions,
   definitions.assign(key.str(), target);
 }
 
+auto is_official_metaschema_reference(
+    const sourcemeta::jsontoolkit::Pointer &pointer,
+    const std::string &destination) -> bool {
+  return !pointer.empty() && pointer.back().is_property() &&
+         pointer.back().to_property() == "$schema" &&
+         sourcemeta::jsontoolkit::official_resolver(destination)
+             .get()
+             .has_value();
+}
+
 auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
                    const std::string &container,
                    const sourcemeta::jsontoolkit::JSON &subschema,
@@ -112,7 +122,11 @@ auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
     if (frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
                         reference.destination}) ||
         frame.contains({sourcemeta::jsontoolkit::ReferenceType::Dynamic,
-                        reference.destination})) {
+                        reference.destination}) ||
+
+        // We don't want to bundle official schemas, as we can expect
+        // virtually all implementations to understand them out of the box
+        is_official_metaschema_reference(key.second, reference.destination)) {
       continue;
     }
 
@@ -190,6 +204,12 @@ auto remove_identifiers(sourcemeta::jsontoolkit::JSON &schema,
 
   // (3) Fix-up reference based on pointers from the root
   for (const auto &[key, reference] : references) {
+    // We don't want to bundle official schemas, as we can expect
+    // virtually all implementations to understand them out of the box
+    if (is_official_metaschema_reference(key.second, reference.destination)) {
+      continue;
+    }
+
     assert(frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
                            reference.destination}) ||
            frame.contains({sourcemeta::jsontoolkit::ReferenceType::Dynamic,
