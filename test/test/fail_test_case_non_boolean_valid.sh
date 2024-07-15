@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "target": "http://json-schema.org/draft-04/schema#",
   "tests": [
     {
       "data": {},

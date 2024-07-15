@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": 1,
+  "target": 1,
   "tests": [
     {
       "valid": true,
@@ -29,7 +29,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: The test document \`\$schema\` property must be a URI
+error: The test document \`target\` property must be a URI
 
 Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
 EOF

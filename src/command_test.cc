@@ -29,18 +29,18 @@ auto intelligence::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    if (!test.defines("$schema")) {
+    if (!test.defines("target")) {
       std::cout
-          << "\nerror: The test document must contain a `$schema` property\n\n";
+          << "\nerror: The test document must contain a `target` property\n\n";
       std::cout << "Learn more here: "
                    "https://github.com/Intelligence-AI/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
 
-    if (!test.at("$schema").is_string()) {
+    if (!test.at("target").is_string()) {
       std::cout
-          << "\nerror: The test document `$schema` property must be a URI\n\n";
+          << "\nerror: The test document `target` property must be a URI\n\n";
       std::cout << "Learn more here: "
                    "https://github.com/Intelligence-AI/jsonschema/blob/main/"
                    "docs/test.markdown\n";
@@ -65,15 +65,14 @@ auto intelligence::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    const auto schema{test_resolver(test.at("$schema").to_string()).get()};
+    const auto schema{test_resolver(test.at("target").to_string()).get()};
     if (!schema.has_value()) {
       if (verbose) {
         std::cout << "\n";
       }
 
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
-          test.at("$schema").to_string(),
-          "Could not resolve schema under test");
+          test.at("target").to_string(), "Could not resolve schema under test");
     }
 
     unsigned int pass_count{0};
