@@ -1,11 +1,37 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/jsontoolkit/uri.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr, std::cout
 
 #include "command.h"
 #include "utils.h"
+
+static auto
+get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
+                  const sourcemeta::jsontoolkit::SchemaResolver &resolver)
+    -> std::optional<sourcemeta::jsontoolkit::JSON> {
+  const auto schema{resolver(identifier.recompose()).get()};
+  if (schema.has_value()) {
+    return schema;
+  }
+
+  // Resolving a schema identifier that contains a fragment (i.e. a JSON Pointer
+  // one) can be tricky, as we might end up re-inventing JSON Schema referencing
+  // all over again. To make it work without much hassle, we do exactly that:
+  // create an artificial schema wrapper that uses `$ref`.
+  if (identifier.fragment().has_value()) {
+    auto result{sourcemeta::jsontoolkit::JSON::make_object()};
+    result.assign("$schema", sourcemeta::jsontoolkit::JSON{
+                                 "http://json-schema.org/draft-07/schema#"});
+    result.assign("$ref",
+                  sourcemeta::jsontoolkit::JSON{identifier.recompose()});
+    return result;
+  }
+
+  return std::nullopt;
+}
 
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
@@ -65,12 +91,11 @@ auto intelligence::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    const auto schema{test_resolver(test.at("target").to_string()).get()};
+    sourcemeta::jsontoolkit::URI schema_uri{test.at("target").to_string()};
+    schema_uri.canonicalize();
+    const auto schema{get_schema_object(schema_uri, test_resolver)};
     if (!schema.has_value()) {
-      if (verbose) {
-        std::cout << "\n";
-      }
-
+      std::cout << "\n";
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
           test.at("target").to_string(), "Could not resolve schema under test");
     }
@@ -90,6 +115,15 @@ auto intelligence::jsonschema::cli::test(
       schema_template = sourcemeta::jsontoolkit::compile(
           schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
           test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
+    } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
+      if (error.location().empty() && error.id() == schema_uri.recompose()) {
+        std::cout << "\n";
+        throw sourcemeta::jsontoolkit::SchemaResolutionError(
+            test.at("target").to_string(),
+            "Could not resolve schema under test");
+      }
+
+      throw;
     } catch (...) {
       std::cout << "\n";
       throw;
@@ -157,7 +191,7 @@ auto intelligence::jsonschema::cli::test(
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
           schema_template, test_case.at("data"),
           sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-          pretty_evaluate_callback(error))};
+          pretty_evaluate_callback(error, {"$ref"}))};
 
       std::ostringstream test_case_description;
       if (test_case.defines("description")) {

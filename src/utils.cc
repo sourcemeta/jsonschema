@@ -175,10 +175,11 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto pretty_evaluate_callback(std::ostringstream &output)
+auto pretty_evaluate_callback(std::ostringstream &output,
+                              const sourcemeta::jsontoolkit::Pointer &base)
     -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback {
   output << "error: Schema validation failure\n";
-  return [&output](
+  return [&output, &base](
              const sourcemeta::jsontoolkit::SchemaCompilerEvaluationType,
              const bool result,
              const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type
@@ -197,7 +198,8 @@ auto pretty_evaluate_callback(std::ostringstream &output)
     output << "\"\n";
 
     output << "    at evaluate path \"";
-    sourcemeta::jsontoolkit::stringify(evaluate_path, output);
+    sourcemeta::jsontoolkit::stringify(evaluate_path.resolve_from(base),
+                                       output);
     output << "\"\n";
   };
 }
