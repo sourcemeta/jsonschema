@@ -25,7 +25,6 @@ add_jsonschema_test_unix(format_check_single_pass)
 add_jsonschema_test_unix(format_directory_ignore_directory)
 add_jsonschema_test_unix(format_directory_ignore_file)
 add_jsonschema_test_unix(format_check_single_invalid)
-add_jsonschema_test_unix(frame)
 add_jsonschema_test_unix(lint_pass)
 add_jsonschema_test_unix(lint_fail)
 add_jsonschema_test_unix(lint_fix)
@@ -118,6 +117,12 @@ add_jsonschema_test_unix(bundle/fail_resolve_duplicate)
 add_jsonschema_test_unix(bundle/fail_resolve_invalid_json)
 add_jsonschema_test_unix(bundle/fail_schema_invalid_json)
 add_jsonschema_test_unix(bundle/fail_unknown_metaschema)
+
+# Frame
+add_jsonschema_test_unix(frame/pass)
+add_jsonschema_test_unix(frame/fail_no_schema)
+add_jsonschema_test_unix(frame/fail_schema_invalid_json)
+add_jsonschema_test_unix(frame/fail_unknown_metaschema)
 
 # CI specific tests
 add_jsonschema_test_unix_ci(pass_bundle_http)

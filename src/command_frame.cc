@@ -10,7 +10,13 @@
 auto intelligence::jsonschema::cli::frame(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
-  CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input")
+  if (options.at("").size() < 1) {
+    std::cerr
+        << "error: This command expects a path to a schema. For example:\n\n"
+        << "  jsonschema frame path/to/schema.json\n";
+    return EXIT_FAILURE;
+  }
+
   const sourcemeta::jsontoolkit::JSON schema{
       sourcemeta::jsontoolkit::from_file(options.at("").front())};
 
@@ -24,7 +30,7 @@ auto intelligence::jsonschema::cli::frame(
   for (const auto &[key, entry] : frame) {
     std::cout << "(LOCATION) URI: ";
     std::cout << key.second << "\n";
-    std::cout << "    Schema           : " << entry.root.value_or("<ANONYMOUS>")
+    std::cout << "    Root             : " << entry.root.value_or("<ANONYMOUS>")
               << "\n";
     std::cout << "    Pointer          :";
     if (!entry.pointer.empty()) {
@@ -33,7 +39,7 @@ auto intelligence::jsonschema::cli::frame(
 
     sourcemeta::jsontoolkit::stringify(entry.pointer, std::cout);
     std::cout << "\n";
-    std::cout << "    Base URI         : " << entry.base << "\n";
+    std::cout << "    Base             : " << entry.base << "\n";
     std::cout << "    Relative Pointer :";
     if (!entry.relative_pointer.empty()) {
       std::cout << " ";
