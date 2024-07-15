@@ -17,9 +17,8 @@ auto intelligence::jsonschema::cli::validate(
 
   if (options.at("").size() < 1) {
     std::cerr
-        << "error: This command expects to pass a path to a schema and a\n"
-        << "path to an instance to validate against the schema. For "
-           "example:\n\n"
+        << "error: This command expects a path to a schema and a path to an\n"
+        << "instance to validate against the schema. For example:\n\n"
         << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
     return EXIT_FAILURE;
   }

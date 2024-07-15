@@ -103,6 +103,9 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  at " << error.id() << "\n";
     return EXIT_FAILURE;
+  } catch (const sourcemeta::jsontoolkit::SchemaError &error) {
+    std::cerr << "error: " << error.what() << "\n";
+    return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
