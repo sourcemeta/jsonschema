@@ -6,6 +6,7 @@
 #include <cassert>     // assert
 #include <functional>  // std::reference_wrapper
 #include <iterator>    // std::distance, std::advance
+#include <limits>      // std::numeric_limits
 #include <map>         // std::map
 #include <set>         // std::set
 #include <type_traits> // std::is_same_v
@@ -724,12 +725,14 @@ auto evaluate_step(
     context.push(loop);
     EVALUATE_CONDITION_GUARD(loop.condition, instance);
     CALLBACK_PRE(context.instance_location());
-    // TODO: Later on, extend to take a min, max pair
-    // to support `minContains` and `maxContains`
-    assert(std::holds_alternative<SchemaCompilerValueNone>(loop.value));
+    const auto &value{context.resolve_value(loop.value, instance)};
+    const auto minimum{value.first};
+    const auto &maximum{value.second};
+    assert(!maximum.has_value() || maximum.value() >= minimum);
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_array());
     const auto &array{target.as_array()};
+    auto match_count{std::numeric_limits<decltype(minimum)>::min()};
     for (auto iterator = array.cbegin(); iterator != array.cend(); ++iterator) {
       const auto index{std::distance(array.cbegin(), iterator)};
       context.push(empty_pointer, {static_cast<Pointer::Token::Index>(index)});
@@ -742,10 +745,24 @@ auto evaluate_step(
       }
 
       context.pop();
+
       if (subresult) {
-        result = subresult;
-        if (mode == SchemaCompilerEvaluationMode::Fast) {
+        match_count += 1;
+
+        // Exceeding the upper bound is definitely a failure
+        if (maximum.has_value() && match_count > maximum.value()) {
+          result = false;
           break;
+        }
+
+        if (match_count > minimum) {
+          result = true;
+
+          // Exceeding the lower bound when there is no upper bound
+          // is definitely a success
+          if (!maximum.has_value()) {
+            break;
+          }
         }
       }
     }

@@ -189,7 +189,8 @@ auto compiler_draft6_applicator_contains(
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   return {make<SchemaCompilerLoopContains>(
-      schema_context, dynamic_context, SchemaCompilerValueNone{},
+      schema_context, dynamic_context,
+      SchemaCompilerValueRange{0, std::nullopt},
       compile(context, schema_context, relative_dynamic_context, empty_pointer,
               empty_pointer),
 

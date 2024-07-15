@@ -124,6 +124,12 @@ add_jsonschema_test_unix(frame/fail_no_schema)
 add_jsonschema_test_unix(frame/fail_schema_invalid_json)
 add_jsonschema_test_unix(frame/fail_unknown_metaschema)
 
+# Compile
+add_jsonschema_test_unix(compile/pass)
+add_jsonschema_test_unix(compile/fail_no_schema)
+add_jsonschema_test_unix(compile/fail_schema_invalid_json)
+add_jsonschema_test_unix(compile/fail_unknown_metaschema)
+
 # CI specific tests
 add_jsonschema_test_unix_ci(pass_bundle_http)
 add_jsonschema_test_unix_ci(fail_bundle_http_non_200)
