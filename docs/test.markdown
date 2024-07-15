@@ -48,6 +48,11 @@ To create a test definition, you must write JSON documents that look like this:
 }
 ```
 
+> [!TIP]
+> You can test different portions of a large schema by passing a schema URI
+> that contains a JSON Pointer in the `target` property. For example:
+> `https://example.com/my-big-schema#/definitions/foo`.
+
 Assuming this file is saved as `test/draft4.json`, you can run it as follows:
 
 ```sh

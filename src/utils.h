@@ -33,7 +33,8 @@ auto for_each_json(const std::vector<std::string> &arguments,
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 
-auto pretty_evaluate_callback(std::ostringstream &)
+auto pretty_evaluate_callback(std::ostringstream &,
+                              const sourcemeta::jsontoolkit::Pointer &)
     -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,

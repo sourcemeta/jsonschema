@@ -56,7 +56,7 @@ auto intelligence::jsonschema::cli::validate(
   result = sourcemeta::jsontoolkit::evaluate(
       schema_template, instance,
       sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-      pretty_evaluate_callback(error));
+      pretty_evaluate_callback(error, sourcemeta::jsontoolkit::empty_pointer));
 
   if (result) {
     log_verbose(options)
