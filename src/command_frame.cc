@@ -1,29 +1,27 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream> // std::cout
-#include <sstream>  // std::ostringstream
+#include <cstdlib>   // EXIT_SUCCESS, EXIT_FAILURE
+#include <iostream>  // std::cout
+#include <sstream>   // std::ostringstream
 
 #include "command.h"
 #include "utils.h"
 
-static auto enum_to_string(const sourcemeta::jsontoolkit::ReferenceEntryType type)
-    -> std::string {
+static auto enum_to_string(const sourcemeta::jsontoolkit::ReferenceEntryType type) -> std::string {
   switch (type) {
-  case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
-    return "resource";
-  case sourcemeta::jsontoolkit::ReferenceEntryType::Anchor:
-    return "anchor";
-  case sourcemeta::jsontoolkit::ReferenceEntryType::Pointer:
-    return "pointer";
-  default:
-    return "unknown";
+    case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
+      return "resource";
+    case sourcemeta::jsontoolkit::ReferenceEntryType::Anchor:
+      return "anchor";
+    case sourcemeta::jsontoolkit::ReferenceEntryType::Pointer:
+      return "pointer";
+    default:
+      return "unknown";
   }
 }
 
-auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &arguments)
-    -> int {
+auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"json", "j"})};
   CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input")
   const sourcemeta::jsontoolkit::JSON schema{
@@ -32,8 +30,7 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
   sourcemeta::jsontoolkit::ReferenceFrame frame;
   sourcemeta::jsontoolkit::ReferenceMap references;
   sourcemeta::jsontoolkit::frame(schema, frame, references,
-                                 sourcemeta::jsontoolkit::default_schema_walker,
-                                 resolver(options))
+                                 sourcemeta::jsontoolkit::default_schema_walker, resolver(options))
       .wait();
 
   const auto output_json = options.contains("json") || options.contains("j");
@@ -44,18 +41,15 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
 
     for (const auto &[key, entry] : frame) {
       auto frame_entry = sourcemeta::jsontoolkit::JSON::make_object();
-      frame_entry.assign("root",
-                         sourcemeta::jsontoolkit::JSON{entry.root.value_or(nullptr)});
+      frame_entry.assign("root", sourcemeta::jsontoolkit::JSON{entry.root.value_or(nullptr)});
       std::ostringstream pointer_stream;
       sourcemeta::jsontoolkit::stringify(entry.pointer, pointer_stream);
-      frame_entry.assign("pointer",
-                         sourcemeta::jsontoolkit::JSON{pointer_stream.str()});
+      frame_entry.assign("pointer", sourcemeta::jsontoolkit::JSON{pointer_stream.str()});
       frame_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base});
       frame_entry.assign("type", sourcemeta::jsontoolkit::JSON{enum_to_string(entry.type)});
       std::ostringstream reference_stream;
       sourcemeta::jsontoolkit::stringify(entry.relative_pointer, reference_stream);
-      frame_entry.assign("relativePointer",
-                         sourcemeta::jsontoolkit::JSON{reference_stream.str()});
+      frame_entry.assign("relativePointer", sourcemeta::jsontoolkit::JSON{reference_stream.str()});
       frame_entry.assign("dialect", sourcemeta::jsontoolkit::JSON{entry.dialect});
       frame_json.assign(key.second, sourcemeta::jsontoolkit::JSON{frame_entry});
     }
@@ -63,27 +57,26 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
 
     for (const auto &[pointer, entry] : references) {
       auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
-      ref_entry.assign("type", sourcemeta::jsontoolkit::JSON{
-                                   pointer.first ==
-                                           sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                                       ? "Dynamic"
-                                       : "Static"});
-      ref_entry.assign("destination",
-                       sourcemeta::jsontoolkit::JSON{entry.destination});
+      ref_entry.assign(
+          "type", sourcemeta::jsontoolkit::JSON{
+                      pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic ? "Dynamic"
+                                                                                       : "Static"});
+      ref_entry.assign("destination", sourcemeta::jsontoolkit::JSON{entry.destination});
       if (entry.base.has_value()) {
         ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base.value()});
+      } else {
+        ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{nullptr});
       }
       if (entry.fragment.has_value()) {
-        ref_entry.assign("fragment",
-                         sourcemeta::jsontoolkit::JSON{entry.fragment.value()});
+        ref_entry.assign("fragment", sourcemeta::jsontoolkit::JSON{entry.fragment.value()});
+      } else {
+        ref_entry.assign("fragment", sourcemeta::jsontoolkit::JSON{nullptr});
       }
       std::ostringstream ref_entry_stream;
       sourcemeta::jsontoolkit::stringify(pointer.second, ref_entry_stream);
-      references_json.assign(ref_entry_stream.str(),
-                             sourcemeta::jsontoolkit::JSON{ref_entry});
+      references_json.assign(ref_entry_stream.str(), sourcemeta::jsontoolkit::JSON{ref_entry});
     }
-    output_json_object.assign("references",
-                              sourcemeta::jsontoolkit::JSON{references_json});
+    output_json_object.assign("references", sourcemeta::jsontoolkit::JSON{references_json});
 
     std::ostringstream print_stream;
     sourcemeta::jsontoolkit::prettify(output_json_object, print_stream);
@@ -113,9 +106,8 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
       sourcemeta::jsontoolkit::stringify(pointer.second, std::cout);
       std::cout << "\n";
       std::cout << "    Type             : "
-                << (pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                        ? "Dynamic"
-                        : "Static")
+                << (pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic ? "Dynamic"
+                                                                                     : "Static")
                 << "\n";
       std::cout << "    Destination      : " << entry.destination << "\n";
 
