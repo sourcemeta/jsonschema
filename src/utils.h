@@ -15,12 +15,6 @@
 #include <utility>    // std::pair
 #include <vector>     // std::vector
 
-#define CLI_ENSURE(condition, message)                                         \
-  if (!(condition)) {                                                          \
-    std::cerr << message << "\n";                                              \
-    return EXIT_FAILURE;                                                       \
-  }
-
 namespace intelligence::jsonschema::cli {
 
 auto parse_options(const std::span<const std::string> &arguments,

@@ -22,45 +22,45 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
 (LOCATION) URI: https://example.com
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          :
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer :
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$defs
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$defs
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$defs
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$defs/string
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$defs/string
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$defs/string
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$defs/string/type
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$defs/string/type
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$defs/string/type
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$id
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$id
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$id
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$ref
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$ref
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$ref
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (LOCATION) URI: https://example.com#/$schema
-    Schema           : https://example.com
+    Root             : https://example.com
     Pointer          : /$schema
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$schema
     Dialect          : https://json-schema.org/draft/2020-12/schema
 (REFERENCE) URI: /$ref
