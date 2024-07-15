@@ -13,14 +13,8 @@ cat << 'EOF' > "$TMP/test.json"
   "tests": [
     {
       "valid": true,
-      "data": {}
-    },
-    {
-      "valid": true,
-      "data": {}
-    },
-    {
-      "valid": true
+      "data": {},
+      "dataPath": "./foo.json"
     }
   ]
 }
@@ -32,8 +26,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: Test case documents must contain a \`data\` or \`dataPath\` property
-  at test case #3
+error: Test case documents must contain either a \`data\` or \`dataPath\` property, but not both
+  at test case #1
 
 Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
 EOF
