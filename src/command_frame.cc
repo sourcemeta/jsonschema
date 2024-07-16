@@ -41,7 +41,11 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
 
     for (const auto &[key, entry] : frame) {
       auto frame_entry = sourcemeta::jsontoolkit::JSON::make_object();
-      frame_entry.assign("root", sourcemeta::jsontoolkit::JSON{entry.root.value_or(nullptr)});
+      if (entry.root.has_value()) {
+        frame_entry.assign("root", sourcemeta::jsontoolkit::JSON{entry.root.value()});
+      } else {
+        frame_entry.assign("root", sourcemeta::jsontoolkit::JSON{nullptr});
+      }
       std::ostringstream pointer_stream;
       sourcemeta::jsontoolkit::stringify(entry.pointer, pointer_stream);
       frame_entry.assign("pointer", sourcemeta::jsontoolkit::JSON{pointer_stream.str()});
