@@ -1,6 +1,8 @@
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 
 #include <cassert>     // assert
+#include <functional>  // std::less
+#include <map>         // std::map
 #include <sstream>     // std::ostringstream
 #include <string_view> // std::string_view
 #include <type_traits> // std::is_same_v
@@ -102,6 +104,15 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
   } else if constexpr (std::is_same_v<SchemaCompilerValueUnsignedInteger, T>) {
     result.assign("type", JSON{"unsigned-integer"});
     result.assign("value", JSON{std::get<T>(value)});
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueRange, T>) {
+    result.assign("type", JSON{"range"});
+    JSON values{JSON::make_array()};
+    const auto &range{std::get<T>(value)};
+    values.push_back(JSON{range.first});
+    values.push_back(range.second.has_value() ? JSON{range.second.value()}
+                                              : JSON{nullptr});
+    result.assign("value", std::move(values));
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueStringType, T>) {
     result.assign("type", JSON{"string-type"});
@@ -229,6 +240,30 @@ auto to_json(const SchemaCompilerTemplate &steps) -> JSON {
   }
 
   return result;
+}
+
+auto compiler_template_format_compare(const JSON::String &left,
+                                      const JSON::String &right) -> bool {
+  using Rank =
+      std::map<JSON::String, std::uint64_t, std::less<JSON::String>,
+               JSON::Allocator<std::pair<const JSON::String, std::uint64_t>>>;
+  static Rank rank{{"category", 0},
+                   {"type", 1},
+                   {"value", 2},
+                   {"absoluteKeywordLocation", 3},
+                   {"relativeSchemaLocation", 4},
+                   {"relativeInstanceLocation", 5},
+                   {"target", 6},
+                   {"location", 7},
+                   {"condition", 8},
+                   {"children", 9}};
+
+  // We define and control all of these keywords, so if we are missing
+  // some here, then we did something wrong?
+  assert(rank.contains(left));
+  assert(rank.contains(right));
+
+  return rank.at(left) < rank.at(right);
 }
 
 } // namespace sourcemeta::jsontoolkit

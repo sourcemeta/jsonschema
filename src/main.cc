@@ -58,6 +58,11 @@ Commands:
        Frame a schema in-place, displaying schema locations and references
        in a human-readable manner.
 
+   compile <schema.json>
+
+       Pre-process a JSON Schema into JSON Toolkit's low-level JSON-based
+       compiled form for faster evaluation.
+
 For more documentation, visit https://github.com/Intelligence-AI/jsonschema
 )EOF"};
 
@@ -69,6 +74,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::frame(arguments);
   } else if (command == "bundle") {
     return intelligence::jsonschema::cli::bundle(arguments);
+  } else if (command == "compile") {
+    return intelligence::jsonschema::cli::compile(arguments);
   } else if (command == "lint") {
     return intelligence::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {

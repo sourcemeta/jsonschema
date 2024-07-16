@@ -282,8 +282,6 @@ auto compiler_draft4_applicator_properties(
        schema_context.schema.at(dynamic_context.keyword).as_object()) {
     auto substeps{compile(context, schema_context, relative_dynamic_context,
                           {key}, {key})};
-    // TODO: As an optimization, only emit an annotation if
-    // `additionalProperties` is also declared in the same subschema
     substeps.push_back(make<SchemaCompilerAnnotationPublic>(
         schema_context, relative_dynamic_context, JSON{key}, {},
         SchemaCompilerTargetType::Instance));

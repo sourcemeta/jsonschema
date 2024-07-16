@@ -4,6 +4,7 @@ add_executable(jsonschema_cli
   command_fmt.cc
   command_frame.cc
   command_bundle.cc
+  command_compile.cc
   command_test.cc
   command_lint.cc
   command_metaschema.cc

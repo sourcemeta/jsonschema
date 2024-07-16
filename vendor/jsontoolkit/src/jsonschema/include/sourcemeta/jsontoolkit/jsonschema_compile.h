@@ -92,6 +92,11 @@ using SchemaCompilerValueRegex = std::pair<std::regex, std::string>;
 using SchemaCompilerValueUnsignedInteger = std::size_t;
 
 /// @ingroup jsonschema
+/// Represents a compiler step range value
+using SchemaCompilerValueRange =
+    std::pair<std::size_t, std::optional<std::size_t>>;
+
+/// @ingroup jsonschema
 /// Represents a compiler step boolean value
 using SchemaCompilerValueBoolean = bool;
 
@@ -355,7 +360,7 @@ DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)
 DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueBoolean)
 DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueNone)
+DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueRange)
 DEFINE_CONTROL(Label)
 DEFINE_CONTROL(Jump)
 
@@ -632,6 +637,37 @@ compile(const SchemaCompilerContext &context,
 /// ```
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 to_json(const SchemaCompilerTemplate &steps) -> JSON;
+
+/// @ingroup jsonschema
+///
+/// An opinionated key comparison for printing JSON Schema compiler templates
+/// with sourcemeta::jsontoolkit::prettify or
+/// sourcemeta::jsontoolkit::stringify. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <iostream>
+///
+/// const sourcemeta::jsontoolkit::JSON schema =
+///     sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "type": "string"
+/// })JSON");
+///
+/// const auto schema_template{sourcemeta::jsontoolkit::compile(
+///     schema, sourcemeta::jsontoolkit::default_schema_walker,
+///     sourcemeta::jsontoolkit::official_resolver,
+///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///
+/// const sourcemeta::jsontoolkit::JSON result{
+///     sourcemeta::jsontoolkit::to_json(schema_template)};
+///
+/// sourcemeta::jsontoolkit::prettify(result, std::cout,
+/// compiler_template_format_compare); std::cout << "\n";
+/// ```
+auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT compiler_template_format_compare(
+    const JSON::String &left, const JSON::String &right) -> bool;
 
 } // namespace sourcemeta::jsontoolkit
 
