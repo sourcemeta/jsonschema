@@ -1,9 +1,9 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream> // std::cout
-#include <sstream>  // std::ostringstream
+#include <cstdlib>   // EXIT_SUCCESS, EXIT_FAILURE
+#include <iostream>  // std::cout
+#include <sstream>   // std::ostringstream
 
 #include "command.h"
 #include "utils.h"
@@ -35,8 +35,7 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
   sourcemeta::jsontoolkit::ReferenceFrame frame;
   sourcemeta::jsontoolkit::ReferenceMap references;
   sourcemeta::jsontoolkit::frame(schema, frame, references,
-                                 sourcemeta::jsontoolkit::default_schema_walker,
-                                 resolver(options))
+                                 sourcemeta::jsontoolkit::default_schema_walker, resolver(options))
       .wait();
 
   const auto output_json = options.contains("json") || options.contains("j");
@@ -59,8 +58,7 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
       frame_entry.assign("type", sourcemeta::jsontoolkit::JSON{enum_to_string(entry.type)});
       std::ostringstream reference_stream;
       sourcemeta::jsontoolkit::stringify(entry.relative_pointer, reference_stream);
-      frame_entry.assign("relativePointer",
-                         sourcemeta::jsontoolkit::JSON{reference_stream.str()});
+      frame_entry.assign("relativePointer", sourcemeta::jsontoolkit::JSON{reference_stream.str()});
       frame_entry.assign("dialect", sourcemeta::jsontoolkit::JSON{entry.dialect});
       frame_json.assign(key.second, sourcemeta::jsontoolkit::JSON{frame_entry});
     }
@@ -68,11 +66,10 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
 
     for (const auto &[pointer, entry] : references) {
       auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
-      ref_entry.assign("type",
-                       sourcemeta::jsontoolkit::JSON{
-                           pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                               ? "Dynamic"
-                               : "Static"});
+      ref_entry.assign(
+          "type", sourcemeta::jsontoolkit::JSON{
+                      pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic ? "Dynamic"
+                                                                                       : "Static"});
       ref_entry.assign("destination", sourcemeta::jsontoolkit::JSON{entry.destination});
       if (entry.base.has_value()) {
         ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base.value()});
