@@ -21,13 +21,11 @@ static auto enum_to_string(const sourcemeta::jsontoolkit::ReferenceEntryType typ
   }
 }
 
-auto intelligence::jsonschema::cli::frame(
-    const std::span<const std::string> &arguments) -> int {
+auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
   if (options.at("").size() < 1) {
-    std::cerr
-        << "error: This command expects a path to a schema. For example:\n\n"
-        << "  jsonschema frame path/to/schema.json\n";
+    std::cerr << "error: This command expects a path to a schema. For example:\n\n"
+              << "  jsonschema frame path/to/schema.json\n";
     return EXIT_FAILURE;
   }
 
@@ -37,7 +35,8 @@ auto intelligence::jsonschema::cli::frame(
   sourcemeta::jsontoolkit::ReferenceFrame frame;
   sourcemeta::jsontoolkit::ReferenceMap references;
   sourcemeta::jsontoolkit::frame(schema, frame, references,
-                                 sourcemeta::jsontoolkit::default_schema_walker, resolver(options))
+                                 sourcemeta::jsontoolkit::default_schema_walker,
+                                 resolver(options))
       .wait();
 
   const auto output_json = options.contains("json") || options.contains("j");
@@ -60,7 +59,8 @@ auto intelligence::jsonschema::cli::frame(
       frame_entry.assign("type", sourcemeta::jsontoolkit::JSON{enum_to_string(entry.type)});
       std::ostringstream reference_stream;
       sourcemeta::jsontoolkit::stringify(entry.relative_pointer, reference_stream);
-      frame_entry.assign("relativePointer", sourcemeta::jsontoolkit::JSON{reference_stream.str()});
+      frame_entry.assign("relativePointer",
+                         sourcemeta::jsontoolkit::JSON{reference_stream.str()});
       frame_entry.assign("dialect", sourcemeta::jsontoolkit::JSON{entry.dialect});
       frame_json.assign(key.second, sourcemeta::jsontoolkit::JSON{frame_entry});
     }
@@ -69,9 +69,10 @@ auto intelligence::jsonschema::cli::frame(
     for (const auto &[pointer, entry] : references) {
       auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
       ref_entry.assign(
-          "type", sourcemeta::jsontoolkit::JSON{
-                      pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic ? "Dynamic"
-                                                                                       : "Static"});
+          "type",
+          sourcemeta::jsontoolkit::JSON{pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
+                                            ? "Dynamic"
+                                            : "Static"});
       ref_entry.assign("destination", sourcemeta::jsontoolkit::JSON{entry.destination});
       if (entry.base.has_value()) {
         ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base.value()});
