@@ -1,9 +1,9 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <cstdlib>   // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream>  // std::cout
-#include <sstream>   // std::ostringstream
+#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
+#include <iostream> // std::cout
+#include <sstream>  // std::ostringstream
 
 #include "command.h"
 #include "utils.h"
@@ -68,11 +68,11 @@ auto intelligence::jsonschema::cli::frame(const std::span<const std::string> &ar
 
     for (const auto &[pointer, entry] : references) {
       auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
-      ref_entry.assign(
-          "type",
-          sourcemeta::jsontoolkit::JSON{pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                                            ? "Dynamic"
-                                            : "Static"});
+      ref_entry.assign("type",
+                       sourcemeta::jsontoolkit::JSON{
+                           pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
+                               ? "Dynamic"
+                               : "Static"});
       ref_entry.assign("destination", sourcemeta::jsontoolkit::JSON{entry.destination});
       if (entry.base.has_value()) {
         ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base.value()});
