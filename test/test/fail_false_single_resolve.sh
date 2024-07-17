@@ -17,7 +17,7 @@ EOF
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": "https://example.com",
+  "target": "https://example.com",
   "tests": [
     {
       "description": "First test",
@@ -46,7 +46,7 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
   2/3 FAIL Unexpected
 
-error: passed but was expected to fail
+error: Passed but was expected to fail
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

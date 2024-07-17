@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-#include <algorithm> // std::any_of, std::none_of
+#include <algorithm> // std::any_of, std::none_of, std::sort
 #include <cassert>   // assert
 #include <fstream>   // std::ofstream
 #include <iostream>  // std::cerr
@@ -121,6 +121,9 @@ auto for_each_json(const std::vector<std::string> &arguments,
     }
   }
 
+  std::sort(result.begin(), result.end(),
+            [](const auto &left, const auto &right) { return left < right; });
+
   return result;
 }
 
@@ -172,10 +175,13 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto pretty_evaluate_callback(std::ostringstream &output)
+auto pretty_evaluate_callback(std::ostringstream &output,
+                              const sourcemeta::jsontoolkit::Pointer &base)
     -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback {
-  return [&output](
-             bool result,
+  output << "error: Schema validation failure\n";
+  return [&output, &base](
+             const sourcemeta::jsontoolkit::SchemaCompilerEvaluationType,
+             const bool result,
              const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type
                  &step,
              const sourcemeta::jsontoolkit::Pointer &evaluate_path,
@@ -186,13 +192,14 @@ auto pretty_evaluate_callback(std::ostringstream &output)
       return;
     }
 
-    output << "error: " << sourcemeta::jsontoolkit::describe(step) << "\n";
-    output << "  at instance location \"";
+    output << "  " << sourcemeta::jsontoolkit::describe(step) << "\n";
+    output << "    at instance location \"";
     sourcemeta::jsontoolkit::stringify(instance_location, output);
     output << "\"\n";
 
-    output << "  at evaluate path \"";
-    sourcemeta::jsontoolkit::stringify(evaluate_path, output);
+    output << "    at evaluate path \"";
+    sourcemeta::jsontoolkit::stringify(evaluate_path.resolve_from(base),
+                                       output);
     output << "\"\n";
   };
 }

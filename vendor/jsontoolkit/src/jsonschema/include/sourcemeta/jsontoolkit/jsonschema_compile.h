@@ -92,6 +92,11 @@ using SchemaCompilerValueRegex = std::pair<std::regex, std::string>;
 using SchemaCompilerValueUnsignedInteger = std::size_t;
 
 /// @ingroup jsonschema
+/// Represents a compiler step range value
+using SchemaCompilerValueRange =
+    std::pair<std::size_t, std::optional<std::size_t>>;
+
+/// @ingroup jsonschema
 /// Represents a compiler step boolean value
 using SchemaCompilerValueBoolean = bool;
 
@@ -201,12 +206,8 @@ struct SchemaCompilerAssertionDivisible;
 struct SchemaCompilerAssertionStringType;
 
 /// @ingroup jsonschema
-/// Represents a compiler step that emits a public annotation
+/// Represents a compiler step that emits an annotation
 struct SchemaCompilerAnnotationPublic;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that emits a private annotation
-struct SchemaCompilerAnnotationPrivate;
 
 /// @ingroup jsonschema
 /// Represents a compiler logical step that represents a disjunction
@@ -287,8 +288,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
     SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
     SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
-    SchemaCompilerAnnotationPrivate, SchemaCompilerLogicalOr,
-    SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
+    SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
     SchemaCompilerInternalAnnotation, SchemaCompilerInternalNoAnnotation,
     SchemaCompilerInternalContainer, SchemaCompilerInternalDefinesAll,
@@ -348,7 +348,6 @@ DEFINE_STEP_WITH_VALUE(Assertion, Unique, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Divisible, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, StringType, SchemaCompilerValueStringType)
 DEFINE_STEP_WITH_VALUE(Annotation, Public, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE(Annotation, Private, SchemaCompilerValueJSON)
 DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
@@ -361,7 +360,7 @@ DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)
 DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueBoolean)
 DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueNone)
+DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueRange)
 DEFINE_CONTROL(Label)
 DEFINE_CONTROL(Jump)
 
@@ -441,10 +440,16 @@ enum class SchemaCompilerEvaluationMode {
 };
 
 /// @ingroup jsonschema
+/// Represents the state of a step evaluation
+enum class SchemaCompilerEvaluationType { Pre, Post };
+
+/// @ingroup jsonschema
 /// A callback of this type is invoked after evaluating any keyword. The
 /// arguments go as follows:
 ///
-/// - Whether the evaluation was successful or not
+/// - The stage at which the step in question is
+/// - Whether the evaluation was successful or not (always true before
+/// evaluation)
 /// - The step that was just evaluated
 /// - The evaluation path
 /// - The instance location
@@ -453,7 +458,8 @@ enum class SchemaCompilerEvaluationMode {
 ///
 /// You can use this callback mechanism to implement arbitrary output formats.
 using SchemaCompilerEvaluationCallback = std::function<void(
-    bool, const SchemaCompilerTemplate::value_type &, const Pointer &,
+    const SchemaCompilerEvaluationType, bool,
+    const SchemaCompilerTemplate::value_type &, const Pointer &,
     const Pointer &, const JSON &, const JSON &)>;
 
 /// @ingroup jsonschema
@@ -631,6 +637,37 @@ compile(const SchemaCompilerContext &context,
 /// ```
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 to_json(const SchemaCompilerTemplate &steps) -> JSON;
+
+/// @ingroup jsonschema
+///
+/// An opinionated key comparison for printing JSON Schema compiler templates
+/// with sourcemeta::jsontoolkit::prettify or
+/// sourcemeta::jsontoolkit::stringify. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <iostream>
+///
+/// const sourcemeta::jsontoolkit::JSON schema =
+///     sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "type": "string"
+/// })JSON");
+///
+/// const auto schema_template{sourcemeta::jsontoolkit::compile(
+///     schema, sourcemeta::jsontoolkit::default_schema_walker,
+///     sourcemeta::jsontoolkit::official_resolver,
+///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///
+/// const sourcemeta::jsontoolkit::JSON result{
+///     sourcemeta::jsontoolkit::to_json(schema_template)};
+///
+/// sourcemeta::jsontoolkit::prettify(result, std::cout,
+/// compiler_template_format_compare); std::cout << "\n";
+/// ```
+auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT compiler_template_format_compare(
+    const JSON::String &left, const JSON::String &right) -> bool;
 
 } // namespace sourcemeta::jsontoolkit
 

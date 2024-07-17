@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": "https://example.com/unknown",
+  "target": "https://example.com/unknown",
   "tests": [
     {
       "valid": true,

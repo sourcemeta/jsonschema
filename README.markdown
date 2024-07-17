@@ -28,7 +28,8 @@ local development and when running on CI/CD pipelines. For example:
 > This project is under heavy development. Some features are partly available
 > and may contain bugs. Please [share
 > feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give
-> us a star show your support!
+> us a star show your support! To see what else we are up to,
+> [check out our website](https://jsonschema.intelligence.ai).
 >
 > **Current Limitations:**
 >
@@ -66,7 +67,7 @@ brew install intelligence-ai/apps/jsonschema
 Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```yaml
-- uses: intelligence-ai/jsonschema@v1.1.2
+- uses: intelligence-ai/jsonschema@v2.2.0
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
 ```
@@ -139,13 +140,14 @@ following pages describe each command in detail. Additionally, running the JSON
 Schema CLI without passing a command will print convenient reference
 documentation:
 
-- [Validating](./docs/validate.markdown)
-- [Metaschema](./docs/metaschema.markdown) (ensure a schema is valid)
-- [Testing](./docs/test.markdown)
-- [Formatting](./docs/format.markdown)
-- [Linting](./docs/lint.markdown)
-- [Bundling](./docs/bundle.markdown) (for inlining remote references in a schema)
-- [Framing](./docs/frame.markdown)
+- [`jsonschema validate`](./docs/validate.markdown)
+- [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
+- [`jsonschema test`](./docs/test.markdown) (write unit tests for your schemas)
+- [`jsonschema fmt`](./docs/format.markdown)
+- [`jsonschema lint`](./docs/lint.markdown)
+- [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
+- [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
+- [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
 
 Coming Soon
 -----------

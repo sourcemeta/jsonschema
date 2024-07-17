@@ -1,6 +1,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 #include <sourcemeta/jsontoolkit/jsonschema_error.h>
 
+#include "default_compiler_2019_09.h"
 #include "default_compiler_draft4.h"
 #include "default_compiler_draft6.h"
 #include "default_compiler_draft7.h"
@@ -18,6 +19,12 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
   assert(!dynamic_context.keyword.empty());
 
   static std::set<std::string> SUPPORTED_VOCABULARIES{
+      "https://json-schema.org/draft/2019-09/vocab/core",
+      "https://json-schema.org/draft/2019-09/vocab/applicator",
+      "https://json-schema.org/draft/2019-09/vocab/validation",
+      "https://json-schema.org/draft/2019-09/vocab/meta-data",
+      "https://json-schema.org/draft/2019-09/vocab/format",
+      "https://json-schema.org/draft/2019-09/vocab/content",
       "http://json-schema.org/draft-07/schema#",
       "http://json-schema.org/draft-06/schema#",
       "http://json-schema.org/draft-04/schema#"};
@@ -43,6 +50,99 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
       schema_context.schema.defines(_keyword)) {                               \
     return {};                                                                 \
   }
+
+  // ********************************************
+  // 2019-09
+  // ********************************************
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/core", "$recursiveRef",
+          compiler_2019_09_core_recursiveref);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "dependentRequired", compiler_2019_09_validation_dependentrequired);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "dependentSchemas", compiler_2019_09_applicator_dependentschemas);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "contains",
+          compiler_2019_09_applicator_contains);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "unevaluatedItems", compiler_2019_09_applicator_unevaluateditems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "unevaluatedProperties",
+          compiler_2019_09_applicator_unevaluatedproperties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "items",
+          compiler_2019_09_applicator_items);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "additionalItems", compiler_2019_09_applicator_additionalitems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "additionalProperties",
+          compiler_2019_09_applicator_additionalproperties);
+
+  // Same as Draft 7
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "if",
+          compiler_draft7_applicator_if);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "then",
+          compiler_draft7_applicator_then);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "else",
+          compiler_draft7_applicator_else);
+
+  // Same as Draft 6
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "propertyNames", compiler_draft6_validation_propertynames);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "type",
+          compiler_draft6_validation_type);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "const",
+          compiler_draft6_validation_const);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
+
+  // Same as Draft 4
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/core", "$ref",
+          compiler_draft4_core_ref);
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "allOf",
+          compiler_draft4_applicator_allof);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "anyOf",
+          compiler_draft4_applicator_anyof);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "oneOf",
+          compiler_draft4_applicator_oneof);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "not",
+          compiler_draft4_applicator_not);
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "properties", compiler_draft4_applicator_properties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "patternProperties", compiler_draft4_applicator_patternproperties);
+
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "enum",
+          compiler_draft4_validation_enum);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "uniqueItems", compiler_draft4_validation_uniqueitems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maxItems",
+          compiler_draft4_validation_maxitems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minItems",
+          compiler_draft4_validation_minitems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "required",
+          compiler_draft4_validation_required);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "maxProperties", compiler_draft4_validation_maxproperties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "minProperties", compiler_draft4_validation_minproperties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maximum",
+          compiler_draft4_validation_maximum);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minimum",
+          compiler_draft4_validation_minimum);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
+          "multipleOf", compiler_draft4_validation_multipleof);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maxLength",
+          compiler_draft4_validation_maxlength);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minLength",
+          compiler_draft4_validation_minlength);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "pattern",
+          compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 7
@@ -105,12 +205,10 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_validation_maxproperties);
   COMPILE("http://json-schema.org/draft-07/schema#", "minProperties",
           compiler_draft4_validation_minproperties);
-  COMPILE(
-      "http://json-schema.org/draft-07/schema#", "properties",
-      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
+  COMPILE("http://json-schema.org/draft-07/schema#", "properties",
+          compiler_draft4_applicator_properties);
   COMPILE("http://json-schema.org/draft-07/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties<
-              SchemaCompilerAnnotationPrivate>);
+          compiler_draft4_applicator_patternproperties);
   COMPILE("http://json-schema.org/draft-07/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-07/schema#", "dependencies",
@@ -188,12 +286,10 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_validation_maxproperties);
   COMPILE("http://json-schema.org/draft-06/schema#", "minProperties",
           compiler_draft4_validation_minproperties);
-  COMPILE(
-      "http://json-schema.org/draft-06/schema#", "properties",
-      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
+  COMPILE("http://json-schema.org/draft-06/schema#", "properties",
+          compiler_draft4_applicator_properties);
   COMPILE("http://json-schema.org/draft-06/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties<
-              SchemaCompilerAnnotationPrivate>);
+          compiler_draft4_applicator_patternproperties);
   COMPILE("http://json-schema.org/draft-06/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-06/schema#", "dependencies",
@@ -230,12 +326,10 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_applicator_oneof);
   COMPILE("http://json-schema.org/draft-04/schema#", "not",
           compiler_draft4_applicator_not);
-  COMPILE(
-      "http://json-schema.org/draft-04/schema#", "properties",
-      compiler_draft4_applicator_properties<SchemaCompilerAnnotationPrivate>);
+  COMPILE("http://json-schema.org/draft-04/schema#", "properties",
+          compiler_draft4_applicator_properties);
   COMPILE("http://json-schema.org/draft-04/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties<
-              SchemaCompilerAnnotationPrivate>);
+          compiler_draft4_applicator_patternproperties);
   COMPILE("http://json-schema.org/draft-04/schema#", "additionalProperties",
           compiler_draft4_applicator_additionalproperties);
   COMPILE("http://json-schema.org/draft-04/schema#", "items",
@@ -288,6 +382,13 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
 #undef COMPILE
 #undef STOP_IF_SIBLING_KEYWORD
 
-  // TODO: Collect unknown keywords as annotations starting in 2019-09
+  if (schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/core") ||
+      schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2019-09/vocab/core")) {
+    return internal::compiler_2019_09_core_annotation(context, schema_context,
+                                                      dynamic_context);
+  }
+
   return {};
 }

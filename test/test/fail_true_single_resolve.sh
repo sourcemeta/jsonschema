@@ -17,7 +17,7 @@ EOF
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": "https://example.com",
+  "target": "https://example.com",
   "tests": [
     {
       "description": "First test",
@@ -46,9 +46,10 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
   2/3 FAIL Unexpected
 
-error: The target document is expected to be of the given type
-  at instance location ""
-  at evaluate path "/type"
+error: Schema validation failure
+  The target document is expected to be of the given type
+    at instance location ""
+    at evaluate path "/type"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

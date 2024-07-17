@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "target": "http://json-schema.org/draft-04/schema#",
   "tests": [
     {
       "valid": true,
@@ -32,7 +32,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: Test case documents must contain a \`data\` property
+error: Test case documents must contain a \`data\` or \`dataPath\` property
   at test case #3
 
 Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown

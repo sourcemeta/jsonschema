@@ -1,11 +1,65 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/jsontoolkit/uri.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
-#include <iostream> // std::cerr, std::cout
+#include <cstdlib>    // EXIT_SUCCESS, EXIT_FAILURE
+#include <filesystem> // std::filesystem
+#include <iostream>   // std::cerr, std::cout
 
 #include "command.h"
 #include "utils.h"
+
+static auto
+get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
+                  const sourcemeta::jsontoolkit::SchemaResolver &resolver)
+    -> std::optional<sourcemeta::jsontoolkit::JSON> {
+  const auto schema{resolver(identifier.recompose()).get()};
+  if (schema.has_value()) {
+    return schema;
+  }
+
+  // Resolving a schema identifier that contains a fragment (i.e. a JSON Pointer
+  // one) can be tricky, as we might end up re-inventing JSON Schema referencing
+  // all over again. To make it work without much hassle, we do exactly that:
+  // create an artificial schema wrapper that uses `$ref`.
+  if (identifier.fragment().has_value()) {
+    auto result{sourcemeta::jsontoolkit::JSON::make_object()};
+    result.assign("$schema", sourcemeta::jsontoolkit::JSON{
+                                 "http://json-schema.org/draft-07/schema#"});
+    result.assign("$ref",
+                  sourcemeta::jsontoolkit::JSON{identifier.recompose()});
+    return result;
+  }
+
+  return std::nullopt;
+}
+
+static auto get_data(const sourcemeta::jsontoolkit::JSON &test_case,
+                     const std::filesystem::path &base,
+                     const bool verbose) -> sourcemeta::jsontoolkit::JSON {
+  assert(base.is_absolute());
+  assert(test_case.is_object());
+  assert(test_case.defines("data") || test_case.defines("dataPath"));
+  if (test_case.defines("data")) {
+    return test_case.at("data");
+  }
+
+  assert(test_case.defines("dataPath"));
+  assert(test_case.at("dataPath").is_string());
+
+  const std::filesystem::path data_path{std::filesystem::weakly_canonical(
+      base / test_case.at("dataPath").to_string())};
+  if (verbose) {
+    std::cerr << "Reading test instance file: " << data_path.string() << "\n";
+  }
+
+  try {
+    return sourcemeta::jsontoolkit::from_file(data_path);
+  } catch (...) {
+    std::cout << "\n";
+    throw;
+  }
+}
 
 auto intelligence::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
@@ -29,18 +83,18 @@ auto intelligence::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    if (!test.defines("$schema")) {
+    if (!test.defines("target")) {
       std::cout
-          << "\nerror: The test document must contain a `$schema` property\n\n";
+          << "\nerror: The test document must contain a `target` property\n\n";
       std::cout << "Learn more here: "
                    "https://github.com/Intelligence-AI/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
 
-    if (!test.at("$schema").is_string()) {
+    if (!test.at("target").is_string()) {
       std::cout
-          << "\nerror: The test document `$schema` property must be a URI\n\n";
+          << "\nerror: The test document `target` property must be a URI\n\n";
       std::cout << "Learn more here: "
                    "https://github.com/Intelligence-AI/jsonschema/blob/main/"
                    "docs/test.markdown\n";
@@ -65,15 +119,13 @@ auto intelligence::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    const auto schema{test_resolver(test.at("$schema").to_string()).get()};
+    sourcemeta::jsontoolkit::URI schema_uri{test.at("target").to_string()};
+    schema_uri.canonicalize();
+    const auto schema{get_schema_object(schema_uri, test_resolver)};
     if (!schema.has_value()) {
-      if (verbose) {
-        std::cout << "\n";
-      }
-
+      std::cout << "\n";
       throw sourcemeta::jsontoolkit::SchemaResolutionError(
-          test.at("$schema").to_string(),
-          "Could not resolve schema under test");
+          test.at("target").to_string(), "Could not resolve schema under test");
     }
 
     unsigned int pass_count{0};
@@ -91,6 +143,15 @@ auto intelligence::jsonschema::cli::test(
       schema_template = sourcemeta::jsontoolkit::compile(
           schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
           test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
+    } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
+      if (error.location().empty() && error.id() == schema_uri.recompose()) {
+        std::cout << "\n";
+        throw sourcemeta::jsontoolkit::SchemaResolutionError(
+            test.at("target").to_string(),
+            "Could not resolve schema under test");
+      }
+
+      throw;
     } catch (...) {
       std::cout << "\n";
       throw;
@@ -113,9 +174,31 @@ auto intelligence::jsonschema::cli::test(
         return EXIT_FAILURE;
       }
 
-      if (!test_case.defines("data")) {
-        std::cout << "\nerror: Test case documents must contain a `data` "
-                     "property\n  at test case #"
+      if (!test_case.defines("data") && !test_case.defines("dataPath")) {
+        std::cout << "\nerror: Test case documents must contain a `data` or "
+                     "`dataPath` property\n  at test case #"
+                  << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (test_case.defines("data") && test_case.defines("dataPath")) {
+        std::cout
+            << "\nerror: Test case documents must contain either a `data` or "
+               "`dataPath` property, but not both\n  at test case #"
+            << index << "\n\n";
+        std::cout << "Learn more here: "
+                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "docs/test.markdown\n";
+        return EXIT_FAILURE;
+      }
+
+      if (test_case.defines("dataPath") &&
+          !test_case.at("dataPath").is_string()) {
+        std::cout << "\nerror: Test case documents must set the `dataPath` "
+                     "property to a string\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
                      "https://github.com/Intelligence-AI/jsonschema/blob/main/"
@@ -156,9 +239,10 @@ auto intelligence::jsonschema::cli::test(
 
       std::ostringstream error;
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
-          schema_template, test_case.at("data"),
+          schema_template,
+          get_data(test_case, entry.first.parent_path(), verbose),
           sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-          pretty_evaluate_callback(error))};
+          pretty_evaluate_callback(error, {"$ref"}))};
 
       std::ostringstream test_case_description;
       if (test_case.defines("description")) {
@@ -180,7 +264,7 @@ auto intelligence::jsonschema::cli::test(
 
         std::cout << "  " << index << "/" << total << " FAIL "
                   << test_case_description.str() << "\n\n"
-                  << "error: passed but was expected to fail\n";
+                  << "error: Passed but was expected to fail\n";
 
         if (index != total && verbose) {
           std::cout << "\n";

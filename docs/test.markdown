@@ -29,7 +29,8 @@ To create a test definition, you must write JSON documents that look like this:
 
 ```json
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "target": "http://json-schema.org/draft-04/schema#",
+  "$comment": "An arbitrary comment! Put whatever you want here",
   "tests": [
     {
       "description": "The empty object is valid",
@@ -42,10 +43,20 @@ To create a test definition, you must write JSON documents that look like this:
       "data": {
         "type": 1
       }
-    }
+    },
+    {
+      "description": "Load from an external file, relative to the test",
+      "valid": true,
+      "dataPath": "../my-data.json"
+    },
   ]
 }
 ```
+
+> [!TIP]
+> You can test different portions of a large schema by passing a schema URI
+> that contains a JSON Pointer in the `target` property. For example:
+> `https://example.com/my-big-schema#/definitions/foo`.
 
 Assuming this file is saved as `test/draft4.json`, you can run it as follows:
 

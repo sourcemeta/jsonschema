@@ -10,6 +10,8 @@ noa_library(NAMESPACE sourcemeta PROJECT jsontoolkit NAME jsonschema
     walker.cc bundle.cc transformer.cc transform_rule.cc transform_bundle.cc
     compile.cc compile_evaluate.cc compile_json.cc compile_describe.cc
     compile_helpers.h default_compiler.cc
+
+    default_compiler_2019_09.h
     default_compiler_draft7.h
     default_compiler_draft6.h
     default_compiler_draft4.h

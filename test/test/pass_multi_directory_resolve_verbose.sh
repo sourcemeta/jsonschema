@@ -29,7 +29,7 @@ mkdir "$TMP/tests"
 
 cat << 'EOF' > "$TMP/tests/1.json"
 {
-  "$schema": "https://example.com/1",
+  "target": "https://example.com/1",
   "tests": [
     {
       "description": "First test",
@@ -47,7 +47,7 @@ EOF
 
 cat << 'EOF' > "$TMP/tests/2.json"
 {
-  "$schema": "https://example.com/2",
+  "target": "https://example.com/2",
   "tests": [
     {
       "description": "First test",

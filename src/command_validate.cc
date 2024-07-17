@@ -11,15 +11,15 @@
 
 // TODO: Add a flag to emit output using the standard JSON Schema output format
 // TODO: Add a flag to collect annotations
+// TODO: Add a flag to take a pre-compiled schema as input
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http"})};
 
   if (options.at("").size() < 1) {
     std::cerr
-        << "error: This command expects to pass a path to a schema and a\n"
-        << "path to an instance to validate against the schema. For "
-           "example:\n\n"
+        << "error: This command expects a path to a schema and a path to an\n"
+        << "instance to validate against the schema. For example:\n\n"
         << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
     return EXIT_FAILURE;
   }
@@ -57,7 +57,7 @@ auto intelligence::jsonschema::cli::validate(
   result = sourcemeta::jsontoolkit::evaluate(
       schema_template, instance,
       sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-      pretty_evaluate_callback(error));
+      pretty_evaluate_callback(error, sourcemeta::jsontoolkit::empty_pointer));
 
   if (result) {
     log_verbose(options)

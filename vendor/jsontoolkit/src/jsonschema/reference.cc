@@ -230,6 +230,26 @@ auto sourcemeta::jsontoolkit::frame(
       }
     }
 
+    // Handle metaschema references
+    const auto maybe_metaschema{
+        sourcemeta::jsontoolkit::dialect(entry.common.value)};
+    if (maybe_metaschema.has_value()) {
+      sourcemeta::jsontoolkit::URI metaschema{maybe_metaschema.value()};
+      const auto nearest_bases{
+          find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
+      if (!nearest_bases.first.empty()) {
+        metaschema.resolve_from(nearest_bases.first.front());
+      }
+
+      metaschema.canonicalize();
+      const std::string destination{metaschema.recompose()};
+      assert(entry.common.value.defines("$schema"));
+      references.insert(
+          {{ReferenceType::Static, entry.common.pointer.concat({"$schema"})},
+           {destination, metaschema.recompose_without_fragment(),
+            fragment_string(metaschema)}});
+    }
+
     // Handle schema anchors
     // TODO: Support $recursiveAnchor
     for (const auto &[name, type] : sourcemeta::jsontoolkit::anchors(

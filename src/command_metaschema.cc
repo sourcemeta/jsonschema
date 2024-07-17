@@ -43,7 +43,8 @@ auto intelligence::jsonschema::cli::metaschema(
     if (sourcemeta::jsontoolkit::evaluate(
             cache.at(dialect.value()), entry.second,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error))) {
+            pretty_evaluate_callback(error,
+                                     sourcemeta::jsontoolkit::empty_pointer))) {
       log_verbose(options)
           << entry.first.string()
           << ": The schema is valid with respect to its metaschema\n";

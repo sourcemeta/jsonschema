@@ -28,7 +28,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: The test document must contain a \`\$schema\` property
+error: The test document must contain a \`target\` property
 
 Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
 EOF

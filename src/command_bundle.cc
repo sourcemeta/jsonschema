@@ -11,7 +11,14 @@ auto intelligence::jsonschema::cli::bundle(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
       parse_options(arguments, {"h", "http", "w", "without-id"})};
-  CLI_ENSURE(!options.at("").empty(), "You must pass a JSON Schema as input");
+
+  if (options.at("").size() < 1) {
+    std::cerr
+        << "error: This command expects a path to a schema. For example:\n\n"
+        << "  jsonschema bundle path/to/schema.json\n";
+    return EXIT_FAILURE;
+  }
+
   auto schema{sourcemeta::jsontoolkit::from_file(options.at("").front())};
 
   if (options.contains("w") || options.contains("without-id")) {
