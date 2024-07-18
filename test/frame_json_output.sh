@@ -87,6 +87,12 @@ cat << 'EOF' > "$TMP/expected_json.txt"
       "destination": "https://example.com#/$defs/string",
       "fragment": "/$defs/string",
       "type": "Static"
+    },
+    "/$schema": {
+      "base": "https://json-schema.org/draft/2020-12/schema",
+      "destination": "https://json-schema.org/draft/2020-12/schema",
+      "fragment": null,
+      "type": "Static"
     }
   }
 }
