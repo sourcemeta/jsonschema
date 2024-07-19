@@ -28,8 +28,34 @@ auto intelligence::jsonschema::cli::frame(
       .wait();
 
   for (const auto &[key, entry] : frame) {
-    std::cout << "(LOCATION) URI: ";
+    switch (entry.type) {
+      case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
+        std::cout << "(LOCATION)";
+        break;
+      case sourcemeta::jsontoolkit::ReferenceEntryType::Anchor:
+        std::cout << "(ANCHOR)";
+        break;
+      case sourcemeta::jsontoolkit::ReferenceEntryType::Pointer:
+        std::cout << "(POINTER)";
+        break;
+      default:
+        // We should never get here
+        assert(false);
+        std::cout << "(UNKNOWN)";
+        break;
+    }
+
+    std::cout << " URI: ";
     std::cout << key.second << "\n";
+
+    std::cout << "    Type             : ";
+    if (key.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
+      std::cout << "Dynamic";
+    } else {
+      std::cout << "Static";
+    }
+    std::cout << "\n";
+
     std::cout << "    Root             : " << entry.root.value_or("<ANONYMOUS>")
               << "\n";
     std::cout << "    Pointer          :";
