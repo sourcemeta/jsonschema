@@ -22,42 +22,49 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
 (LOCATION) URI: https://example.com
+    Type             : Static
     Schema           : https://example.com
     Pointer          :
     Base URI         : https://example.com
     Relative Pointer :
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$defs
+(POINTER) URI: https://example.com#/$defs
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$defs
     Base URI         : https://example.com
     Relative Pointer : /$defs
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$defs/string
+(POINTER) URI: https://example.com#/$defs/string
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$defs/string
     Base URI         : https://example.com
     Relative Pointer : /$defs/string
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$defs/string/type
+(POINTER) URI: https://example.com#/$defs/string/type
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$defs/string/type
     Base URI         : https://example.com
     Relative Pointer : /$defs/string/type
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$id
+(POINTER) URI: https://example.com#/$id
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$id
     Base URI         : https://example.com
     Relative Pointer : /$id
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$ref
+(POINTER) URI: https://example.com#/$ref
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$ref
     Base URI         : https://example.com
     Relative Pointer : /$ref
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(LOCATION) URI: https://example.com#/$schema
+(POINTER) URI: https://example.com#/$schema
+    Type             : Static
     Schema           : https://example.com
     Pointer          : /$schema
     Base URI         : https://example.com
