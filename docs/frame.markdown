@@ -32,17 +32,19 @@ reference:
 
 ```
 ...
-(LOCATION) URI: https://example.com#/$defs/string/type
-    Schema           : https://example.com
+(POINTER) URI: https://example.com#/$defs/string/type
+    Type             : Static
+    Root             : https://example.com
     Pointer          : /$defs/string/type
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$defs/string/type
     Dialect          : https://json-schema.org/draft/2020-12/schema
 ...
-(LOCATION) URI: https://example.com#/$ref
-    Schema           : https://example.com
+(POINTER) URI: https://example.com#/$ref
+    Type             : Static
+    Root             : https://example.com
     Pointer          : /$ref
-    Base URI         : https://example.com
+    Base             : https://example.com
     Relative Pointer : /$ref
     Dialect          : https://json-schema.org/draft/2020-12/schema
 ...
