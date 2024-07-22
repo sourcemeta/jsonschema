@@ -32,7 +32,8 @@ auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input)
   return parse(input, line, column);
 }
 
-auto from_file(const std::filesystem::path &path) -> JSON {
+auto read_file(const std::filesystem::path &path)
+    -> std::basic_ifstream<JSON::Char, JSON::CharTraits> {
   if (std::filesystem::is_directory(path)) {
     throw std::filesystem::filesystem_error(
         "Cannot parse a directory as JSON", path,
@@ -43,7 +44,11 @@ auto from_file(const std::filesystem::path &path) -> JSON {
   stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   assert(!stream.fail());
   assert(stream.is_open());
+  return stream;
+}
 
+auto from_file(const std::filesystem::path &path) -> JSON {
+  auto stream{read_file(path)};
   try {
     return parse(stream);
   } catch (const ParseError &error) {

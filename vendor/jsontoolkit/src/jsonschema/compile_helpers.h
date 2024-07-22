@@ -41,6 +41,27 @@ auto make(const SchemaCompilerSchemaContext &schema_context,
           std::move(condition)};
 }
 
+// Instantiate a value-oriented step with data
+template <typename Step>
+auto make(const SchemaCompilerSchemaContext &schema_context,
+          const SchemaCompilerDynamicContext &context,
+          // Take the value type from the "type" property of the step struct
+          decltype(std::declval<Step>().value) &&value,
+          SchemaCompilerTemplate &&condition,
+          const SchemaCompilerTargetType target_type,
+          // Take the value type from the "data" property of the step struct
+          decltype(std::declval<Step>().data) &&data,
+          const std::optional<Pointer> &target_location = std::nullopt)
+    -> Step {
+  return {{target_type, target_location.value_or(empty_pointer)},
+          relative_schema_location(context),
+          context.base_instance_location,
+          keyword_location(schema_context),
+          std::move(value),
+          std::move(condition),
+          std::move(data)};
+}
+
 // Instantiate an applicator step
 template <typename Step>
 auto make(const SchemaCompilerSchemaContext &schema_context,

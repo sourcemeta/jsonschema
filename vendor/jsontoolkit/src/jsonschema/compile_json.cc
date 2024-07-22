@@ -32,6 +32,12 @@ auto target_to_json(const sourcemeta::jsontoolkit::SchemaCompilerTarget &target)
     case SchemaCompilerTargetType::ParentAdjacentAnnotations:
       result.assign("type", JSON{"parent-adjacent-annotations"});
       return result;
+    case SchemaCompilerTargetType::ParentAnnotations:
+      result.assign("type", JSON{"parent-annotations"});
+      return result;
+    case SchemaCompilerTargetType::Annotations:
+      result.assign("type", JSON{"annotations"});
+      return result;
     default:
       // We should never get here
       assert(false);
@@ -132,6 +138,27 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
   }
 }
 
+template <typename T>
+auto data_to_json(const T &data) -> sourcemeta::jsontoolkit::JSON {
+  using namespace sourcemeta::jsontoolkit;
+  JSON result{JSON::make_object()};
+  result.assign("category", JSON{"data"});
+  if constexpr (std::is_same_v<SchemaCompilerValueStrings, T>) {
+    result.assign("type", JSON{"strings"});
+    JSON items{JSON::make_array()};
+    for (const auto &item : data) {
+      items.push_back(JSON{item});
+    }
+
+    result.assign("value", std::move(items));
+    return result;
+  } else {
+    // We should never get here
+    assert(false);
+    return JSON{nullptr};
+  }
+}
+
 template <typename V>
 auto step_to_json(
     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step)
@@ -163,6 +190,10 @@ auto encode_step(const std::string_view category, const std::string_view type,
 
   if constexpr (requires { step.value; }) {
     result.assign("value", value_to_json(step.value));
+  }
+
+  if constexpr (requires { step.data; }) {
+    result.assign("data", data_to_json(step.data));
   }
 
   if constexpr (requires { step.condition; }) {
@@ -200,6 +231,7 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "regex", SchemaCompilerAssertionRegex)
   HANDLE_STEP("assertion", "size-greater", SchemaCompilerAssertionSizeGreater)
   HANDLE_STEP("assertion", "size-less", SchemaCompilerAssertionSizeLess)
+  HANDLE_STEP("assertion", "size-equal", SchemaCompilerAssertionSizeEqual)
   HANDLE_STEP("assertion", "equal", SchemaCompilerAssertionEqual)
   HANDLE_STEP("assertion", "greater-equal", SchemaCompilerAssertionGreaterEqual)
   HANDLE_STEP("assertion", "less-equal", SchemaCompilerAssertionLessEqual)
@@ -216,12 +248,16 @@ struct StepVisitor {
   HANDLE_STEP("logical", "try", SchemaCompilerLogicalTry)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
   HANDLE_STEP("internal", "annotation", SchemaCompilerInternalAnnotation)
+  HANDLE_STEP("internal", "no-adjacent-annotation",
+              SchemaCompilerInternalNoAdjacentAnnotation)
   HANDLE_STEP("internal", "no-annotation", SchemaCompilerInternalNoAnnotation)
   HANDLE_STEP("internal", "container", SchemaCompilerInternalContainer)
   HANDLE_STEP("internal", "defines-all", SchemaCompilerInternalDefinesAll)
   HANDLE_STEP("loop", "properties", SchemaCompilerLoopProperties)
   HANDLE_STEP("loop", "keys", SchemaCompilerLoopKeys)
   HANDLE_STEP("loop", "items", SchemaCompilerLoopItems)
+  HANDLE_STEP("loop", "items-from-annotation-index",
+              SchemaCompilerLoopItemsFromAnnotationIndex)
   HANDLE_STEP("loop", "contains", SchemaCompilerLoopContains)
   HANDLE_STEP("control", "label", SchemaCompilerControlLabel)
   HANDLE_STEP("control", "jump", SchemaCompilerControlJump)

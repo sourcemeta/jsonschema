@@ -31,6 +31,11 @@ struct DescribeVisitor {
   operator()(const SchemaCompilerInternalAnnotation &) const -> std::string {
     return "The target was annotated with the given value";
   }
+  auto operator()(const SchemaCompilerInternalNoAdjacentAnnotation &) const
+      -> std::string {
+    return "The target was not annotated with the given value at the same "
+           "schema location";
+  }
   auto
   operator()(const SchemaCompilerInternalNoAnnotation &) const -> std::string {
     return "The target was not annotated with the given value";
@@ -58,6 +63,11 @@ struct DescribeVisitor {
   }
   auto operator()(const SchemaCompilerLoopItems &) const -> std::string {
     return "Loop over the items of the target array";
+  }
+  auto operator()(const SchemaCompilerLoopItemsFromAnnotationIndex &) const
+      -> std::string {
+    return "Loop over the items of the target array potentially bound by an "
+           "annotation result";
   }
   auto operator()(const SchemaCompilerLoopContains &) const -> std::string {
     return "A certain number of array items must satisfy the given constraints";
@@ -98,6 +108,10 @@ struct DescribeVisitor {
   auto
   operator()(const SchemaCompilerAssertionSizeLess &) const -> std::string {
     return "The target size is expected to be less than the given number";
+  }
+  auto
+  operator()(const SchemaCompilerAssertionSizeEqual &) const -> std::string {
+    return "The target size is expected to be equal to the given number";
   }
 
   auto operator()(const SchemaCompilerAssertionEqual &) const -> std::string {
