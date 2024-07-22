@@ -14,6 +14,7 @@ noa_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::uri)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::json)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonl)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::hydra::httpclient)
 

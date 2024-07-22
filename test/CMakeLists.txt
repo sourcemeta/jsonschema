@@ -61,6 +61,13 @@ add_jsonschema_test_unix(validate/pass_draft7)
 add_jsonschema_test_unix(validate/fail_draft4)
 add_jsonschema_test_unix(validate/fail_draft6)
 add_jsonschema_test_unix(validate/fail_draft7)
+add_jsonschema_test_unix(validate/pass_jsonl)
+add_jsonschema_test_unix(validate/pass_jsonl_verbose)
+add_jsonschema_test_unix(validate/fail_jsonl_invalid_entry)
+add_jsonschema_test_unix(validate/fail_jsonl_one)
+add_jsonschema_test_unix(validate/fail_jsonl_one_verbose)
+add_jsonschema_test_unix(validate/fail_jsonl_all)
+add_jsonschema_test_unix(validate/fail_jsonl_all_verbose)
 
 # Test
 add_jsonschema_test_unix(test/fail_true_single_resolve)
