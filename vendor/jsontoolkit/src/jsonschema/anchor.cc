@@ -48,10 +48,24 @@ auto anchors(const JSON &schema,
   if (schema.is_object() &&
       vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/core")) {
+    if (schema.defines("$recursiveAnchor")) {
+      const auto &anchor{schema.at("$recursiveAnchor")};
+      assert(anchor.is_boolean());
+      if (anchor.to_boolean()) {
+        // We store a 2019-09 recursive anchor as an empty anchor
+        result.insert({"", AnchorType::Dynamic});
+      }
+    }
+
     if (schema.defines("$anchor")) {
       const auto &anchor{schema.at("$anchor")};
       assert(anchor.is_string());
-      result.insert({anchor.to_string(), AnchorType::Static});
+      const auto anchor_string{anchor.to_string()};
+      const auto success = result.insert({anchor_string, AnchorType::Static});
+      assert(success.second || result.contains(anchor_string));
+      if (!success.second) {
+        result[anchor_string] = AnchorType::All;
+      }
     }
   }
 

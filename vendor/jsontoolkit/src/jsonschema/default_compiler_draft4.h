@@ -373,7 +373,7 @@ auto compiler_draft4_applicator_additionalproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema does
       // not declare `properties`
-      make<SchemaCompilerInternalNoAnnotation>(
+      make<SchemaCompilerInternalNoAdjacentAnnotation>(
           schema_context, relative_dynamic_context,
           SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                                empty_pointer},
@@ -382,7 +382,7 @@ auto compiler_draft4_applicator_additionalproperties(
 
       // TODO: As an optimization, avoid this condition if the subschema does
       // not declare `patternProperties`
-      make<SchemaCompilerInternalNoAnnotation>(
+      make<SchemaCompilerInternalNoAdjacentAnnotation>(
           schema_context, relative_dynamic_context,
           SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
                                empty_pointer},
@@ -500,23 +500,56 @@ auto compiler_draft4_applicator_items(
   }
 
   assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  const auto items_size{
+      schema_context.schema.at(dynamic_context.keyword).size()};
+  if (items_size == 0) {
+    return {};
+  }
+
+  // The idea here is to precompile all possibilities depending on the size
+  // of the instance array up to the size of the `items` keyword array.
+  // For example, if `items` is set to `[ {}, {}, {} ]`, we create 3
+  // conjunctions:
+  // - [ {}, {}, {} ] if the instance array size is >= 3
+  // - [ {}, {} ] if the instance array size is == 2
+  // - [ {} ] if the instance array size is == 1
+
+  // Precompile subschemas
+  std::vector<SchemaCompilerTemplate> subschemas;
+  subschemas.reserve(items_size);
   const auto &array{
       schema_context.schema.at(dynamic_context.keyword).as_array()};
+  for (auto iterator{array.cbegin()}; iterator != array.cend(); ++iterator) {
+    subschemas.push_back(compile(context, schema_context,
+                                 relative_dynamic_context, {subschemas.size()},
+                                 {subschemas.size()}));
+  }
 
   SchemaCompilerTemplate children;
-  for (auto iterator{array.cbegin()}; iterator != array.cend(); ++iterator) {
-    const auto index{
-        static_cast<std::size_t>(std::distance(array.cbegin(), iterator))};
-    children.push_back(make<SchemaCompilerInternalContainer>(
-        schema_context, relative_dynamic_context, SchemaCompilerValueNone{},
-        compile(context, schema_context, relative_dynamic_context, {index},
-                {index}),
+  for (std::size_t cursor = items_size; cursor > 0; cursor--) {
+    SchemaCompilerTemplate subchildren;
+    for (std::size_t index = 0; index < cursor; index++) {
+      for (const auto &substep : subschemas.at(index)) {
+        subchildren.push_back(substep);
+      }
+    }
 
-        // TODO: As an optimization, avoid this condition if the subschema
-        // declares a corresponding `minItems`
-        {make<SchemaCompilerAssertionSizeGreater>(
-            schema_context, relative_dynamic_context, index, {},
-            SchemaCompilerTargetType::Instance)}));
+    // The first entry
+    if (cursor == items_size) {
+      children.push_back(make<SchemaCompilerInternalContainer>(
+          schema_context, relative_dynamic_context, SchemaCompilerValueNone{},
+          std::move(subchildren),
+          {make<SchemaCompilerAssertionSizeGreater>(
+              schema_context, relative_dynamic_context, cursor - 1, {},
+              SchemaCompilerTargetType::Instance)}));
+    } else {
+      children.push_back(make<SchemaCompilerInternalContainer>(
+          schema_context, relative_dynamic_context, SchemaCompilerValueNone{},
+          std::move(subchildren),
+          {make<SchemaCompilerAssertionSizeEqual>(
+              schema_context, relative_dynamic_context, cursor, {},
+              SchemaCompilerTargetType::Instance)}));
+    }
   }
 
   return {make<SchemaCompilerLogicalAnd>(
@@ -548,17 +581,19 @@ auto compiler_draft4_applicator_additionalitems(
                         ? schema_context.schema.at("items").size()
                         : 0};
 
+  SchemaCompilerTemplate condition{make<SchemaCompilerAssertionTypeStrict>(
+      schema_context, dynamic_context, JSON::Type::Array, {},
+      SchemaCompilerTargetType::Instance)};
+  condition.push_back(make<SchemaCompilerAssertionSizeGreater>(
+      schema_context, dynamic_context, cursor, {},
+      SchemaCompilerTargetType::Instance));
+
   return {make<SchemaCompilerLoopItems>(
       schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{cursor},
       compile(context, schema_context, relative_dynamic_context, empty_pointer,
               empty_pointer),
-
-      // TODO: As an optimization, avoid this condition if the subschema
-      // declares `type` to `array` already
-      {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Array, {},
-          SchemaCompilerTargetType::Instance)})};
+      std::move(condition))};
 }
 
 auto compiler_draft4_applicator_dependencies(

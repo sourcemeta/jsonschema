@@ -12,6 +12,7 @@
 
 #include <cstdint>    // std::uint64_t
 #include <filesystem> // std::filesystem
+#include <fstream>    // std::basic_ifstream
 #include <istream>    // std::basic_istream
 #include <ostream>    // std::basic_ostream
 #include <string>     // std::basic_string
@@ -103,6 +104,26 @@ auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 SOURCEMETA_JSONTOOLKIT_JSON_EXPORT
 auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
            std::uint64_t &line, std::uint64_t &column) -> JSON;
+
+/// @ingroup json
+///
+/// A convenience function to read a document from a file. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <cassert>
+/// #include <iostream>
+///
+/// auto stream = sourcemeta::jsontoolkit::read_file("/tmp/foo.json");
+/// const auto document = sourcemeta::jsontoolkit::parse(stream);
+/// sourcemeta::jsontoolkit::stringify(document, std::cout);
+/// std::cout << std::endl;
+/// ```
+///
+/// If parsing fails, sourcemeta::jsontoolkit::ParseError will be thrown.
+SOURCEMETA_JSONTOOLKIT_JSON_EXPORT
+auto read_file(const std::filesystem::path &path)
+    -> std::basic_ifstream<JSON::Char, JSON::CharTraits>;
 
 /// @ingroup json
 ///

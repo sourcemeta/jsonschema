@@ -45,7 +45,13 @@ enum class SchemaCompilerTargetType {
 
   /// The annotations produced at the same base evaluation path for the parent
   /// of the current instance location
-  ParentAdjacentAnnotations
+  ParentAdjacentAnnotations,
+
+  /// The annotations produced for the parent of the current instance location
+  ParentAnnotations,
+
+  /// The annotations produced for current instance location
+  Annotations
 };
 
 /// @ingroup jsonschema
@@ -161,6 +167,12 @@ struct SchemaCompilerAssertionSizeGreater;
 struct SchemaCompilerAssertionSizeLess;
 
 /// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a given array, object, or
+/// string has a certain number of items, properties, or characters,
+/// respectively
+struct SchemaCompilerAssertionSizeEqual;
+
+/// @ingroup jsonschema
 /// Represents a compiler assertion step that checks the instance equals a given
 /// JSON document
 struct SchemaCompilerAssertionEqual;
@@ -237,7 +249,12 @@ struct SchemaCompilerInternalAnnotation;
 
 /// @ingroup jsonschema
 /// Represents a hidden compiler assertion step that checks a certain
-/// annotation was not produced
+/// annotation was not produced at an adjacent location
+struct SchemaCompilerInternalNoAdjacentAnnotation;
+
+/// @ingroup jsonschema
+/// Represents a hidden compiler assertion step that checks a certain
+/// annotation was not produced independently of the schema location
 struct SchemaCompilerInternalNoAnnotation;
 
 /// @ingroup jsonschema
@@ -263,6 +280,11 @@ struct SchemaCompilerLoopKeys;
 struct SchemaCompilerLoopItems;
 
 /// @ingroup jsonschema
+/// Represents a compiler step that loops over array items, potentially starting
+/// from a given index that was previously collected as an annotation
+struct SchemaCompilerLoopItemsFromAnnotationIndex;
+
+/// @ingroup jsonschema
 /// Represents a compiler step that checks array items match a given criteria
 struct SchemaCompilerLoopContains;
 
@@ -283,17 +305,20 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionTypeAny, SchemaCompilerAssertionTypeStrict,
     SchemaCompilerAssertionTypeStrictAny, SchemaCompilerAssertionRegex,
     SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
-    SchemaCompilerAssertionEqual, SchemaCompilerAssertionEqualsAny,
-    SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
-    SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
-    SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
-    SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
-    SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
+    SchemaCompilerAssertionSizeEqual, SchemaCompilerAssertionEqual,
+    SchemaCompilerAssertionEqualsAny, SchemaCompilerAssertionGreaterEqual,
+    SchemaCompilerAssertionLessEqual, SchemaCompilerAssertionGreater,
+    SchemaCompilerAssertionLess, SchemaCompilerAssertionUnique,
+    SchemaCompilerAssertionDivisible, SchemaCompilerAssertionStringType,
+    SchemaCompilerAnnotationPublic, SchemaCompilerLogicalOr,
+    SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
-    SchemaCompilerInternalAnnotation, SchemaCompilerInternalNoAnnotation,
-    SchemaCompilerInternalContainer, SchemaCompilerInternalDefinesAll,
-    SchemaCompilerLoopProperties, SchemaCompilerLoopKeys,
-    SchemaCompilerLoopItems, SchemaCompilerLoopContains,
+    SchemaCompilerInternalAnnotation,
+    SchemaCompilerInternalNoAdjacentAnnotation,
+    SchemaCompilerInternalNoAnnotation, SchemaCompilerInternalContainer,
+    SchemaCompilerInternalDefinesAll, SchemaCompilerLoopProperties,
+    SchemaCompilerLoopKeys, SchemaCompilerLoopItems,
+    SchemaCompilerLoopItemsFromAnnotationIndex, SchemaCompilerLoopContains,
     SchemaCompilerControlLabel, SchemaCompilerControlJump>>;
 
 #if !defined(DOXYGEN)
@@ -305,6 +330,17 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const std::string keyword_location;                                        \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
+  };
+
+#define DEFINE_STEP_WITH_VALUE_AND_DATA(category, name, type, data_type)       \
+  struct SchemaCompiler##category##name {                                      \
+    const SchemaCompilerTarget target;                                         \
+    const Pointer relative_schema_location;                                    \
+    const Pointer relative_instance_location;                                  \
+    const std::string keyword_location;                                        \
+    const SchemaCompilerStepValue<type> value;                                 \
+    const SchemaCompilerTemplate condition;                                    \
+    const data_type data;                                                      \
   };
 
 #define DEFINE_STEP_APPLICATOR(category, name, type)                           \
@@ -338,6 +374,7 @@ DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeGreater,
                        SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeLess, SchemaCompilerValueUnsignedInteger)
+DEFINE_STEP_WITH_VALUE(Assertion, SizeEqual, SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_WITH_VALUE(Assertion, Equal, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, EqualsAny, SchemaCompilerValueArray)
 DEFINE_STEP_WITH_VALUE(Assertion, GreaterEqual, SchemaCompilerValueJSON)
@@ -354,17 +391,22 @@ DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Not, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Internal, Annotation, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE(Internal, NoAnnotation, SchemaCompilerValueJSON)
+DEFINE_STEP_WITH_VALUE(Internal, NoAdjacentAnnotation, SchemaCompilerValueJSON)
+DEFINE_STEP_WITH_VALUE_AND_DATA(Internal, NoAnnotation, SchemaCompilerValueJSON,
+                                SchemaCompilerValueStrings)
 DEFINE_STEP_APPLICATOR(Internal, Container, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)
 DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueBoolean)
 DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
+DEFINE_STEP_APPLICATOR(Loop, ItemsFromAnnotationIndex,
+                       SchemaCompilerValueString)
 DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueRange)
 DEFINE_CONTROL(Label)
 DEFINE_CONTROL(Jump)
 
 #undef DEFINE_STEP_WITH_VALUE
+#undef DEFINE_STEP_WITH_VALUE_AND_DATA
 #undef DEFINE_STEP_APPLICATOR
 #undef DEFINE_CONTROL
 #endif

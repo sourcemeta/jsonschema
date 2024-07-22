@@ -19,6 +19,7 @@ public:
   using Pointer = sourcemeta::jsontoolkit::Pointer;
   using JSON = sourcemeta::jsontoolkit::JSON;
   using Annotations = std::set<JSON>;
+  using InstanceAnnotations = std::map<Pointer, Annotations>;
   using Template = sourcemeta::jsontoolkit::SchemaCompilerTemplate;
   enum class TargetType { Value, Key };
 
@@ -53,6 +54,20 @@ public:
     }
 
     return schema_location_result->second;
+  }
+
+  auto annotations(const Pointer &current_instance_location) const
+      -> const InstanceAnnotations & {
+    static const InstanceAnnotations placeholder;
+    // Use `.find()` instead of `.contains()` and `.at()` for performance
+    // reasons
+    const auto instance_location_result{
+        this->annotations_.find(current_instance_location)};
+    if (instance_location_result == this->annotations_.end()) {
+      return placeholder;
+    }
+
+    return instance_location_result->second;
   }
 
   auto push(const Pointer &relative_evaluate_path,
@@ -109,11 +124,19 @@ public:
     if constexpr (std::is_same_v<Annotations, T>) {
       const auto schema_location{
           this->evaluate_path().initial().concat(target.second)};
+      assert(target.first != SchemaCompilerTargetType::ParentAnnotations);
       if (target.first == SchemaCompilerTargetType::ParentAdjacentAnnotations) {
         return this->annotations(this->instance_location().initial(),
                                  schema_location);
       } else {
         return this->annotations(this->instance_location(), schema_location);
+      }
+    } else if constexpr (std::is_same_v<InstanceAnnotations, T>) {
+      if (target.first == SchemaCompilerTargetType::ParentAnnotations) {
+        return this->annotations(this->instance_location().initial());
+      } else {
+        assert(target.first == SchemaCompilerTargetType::Annotations);
+        return this->annotations(this->instance_location());
       }
     } else {
       static_assert(std::is_same_v<JSON, T>);
@@ -147,7 +170,7 @@ public:
     if constexpr (std::is_same_v<SchemaCompilerValueJSON, T>) {
       if (std::holds_alternative<SchemaCompilerTarget>(value)) {
         const auto &target{std::get<SchemaCompilerTarget>(value)};
-        return this->resolve_target<JSON>(target, instance);
+        return this->resolve_target<T>(target, instance);
       }
     }
 
@@ -173,7 +196,7 @@ private:
   std::set<JSON> values;
   // We don't use a pair for holding the two pointers for runtime
   // efficiency when resolving keywords like `unevaluatedProperties`
-  std::map<Pointer, std::map<Pointer, Annotations>> annotations_;
+  std::map<Pointer, InstanceAnnotations> annotations_;
   std::map<std::size_t, const std::reference_wrapper<const Template>> labels;
   TargetType target_type_ = TargetType::Value;
 };
@@ -313,6 +336,16 @@ auto evaluate_step(
         context.resolve_target<JSON>(assertion.target, instance)};
     result = (target.is_array() || target.is_object() || target.is_string()) &&
              (target.size() < value);
+  } else if (std::holds_alternative<SchemaCompilerAssertionSizeEqual>(step)) {
+    const auto &assertion{std::get<SchemaCompilerAssertionSizeEqual>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    CALLBACK_PRE(context.instance_location());
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<JSON>(assertion.target, instance)};
+    result = (target.is_array() || target.is_object() || target.is_string()) &&
+             (target.size() == value);
   } else if (std::holds_alternative<SchemaCompilerAssertionEqual>(step)) {
     const auto &assertion{std::get<SchemaCompilerAssertionEqual>(step)};
     context.push(assertion);
@@ -519,14 +552,42 @@ auto evaluate_step(
     // We treat this step as transparent to the consumer
     context.pop();
     return result;
-  } else if (std::holds_alternative<SchemaCompilerInternalNoAnnotation>(step)) {
-    const auto &assertion{std::get<SchemaCompilerInternalNoAnnotation>(step)};
+  } else if (std::holds_alternative<SchemaCompilerInternalNoAdjacentAnnotation>(
+                 step)) {
+    const auto &assertion{
+        std::get<SchemaCompilerInternalNoAdjacentAnnotation>(step)};
     context.push(assertion);
     EVALUATE_CONDITION_GUARD(assertion.condition, instance);
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<std::set<JSON>>(assertion.target, instance)};
     result = !target.contains(value);
+
+    // We treat this step as transparent to the consumer
+    context.pop();
+    return result;
+  } else if (std::holds_alternative<SchemaCompilerInternalNoAnnotation>(step)) {
+    const auto &assertion{std::get<SchemaCompilerInternalNoAnnotation>(step)};
+    context.push(assertion);
+    EVALUATE_CONDITION_GUARD(assertion.condition, instance);
+    const auto &value{context.resolve_value(assertion.value, instance)};
+    const auto &target{
+        context.resolve_target<EvaluationContext::InstanceAnnotations>(
+            assertion.target, instance)};
+    result = true;
+
+    if (!assertion.data.empty()) {
+      for (const auto &[schema_location, annotations] : target) {
+        assert(!schema_location.empty());
+        const auto &keyword{schema_location.back()};
+        if (keyword.is_property() &&
+            assertion.data.contains(keyword.to_property()) &&
+            annotations.contains(value)) {
+          result = false;
+          break;
+        }
+      }
+    }
 
     // We treat this step as transparent to the consumer
     context.pop();
@@ -720,6 +781,66 @@ auto evaluate_step(
 
       context.pop();
     }
+  } else if (std::holds_alternative<SchemaCompilerLoopItemsFromAnnotationIndex>(
+                 step)) {
+    const auto &loop{
+        std::get<SchemaCompilerLoopItemsFromAnnotationIndex>(step)};
+    context.push(loop);
+    EVALUATE_CONDITION_GUARD(loop.condition, instance);
+    CALLBACK_PRE(context.instance_location());
+    const auto &value{context.resolve_value(loop.value, instance)};
+    const auto &target{context.resolve_target<JSON>(loop.target, instance)};
+    assert(target.is_array());
+    const auto &array{target.as_array()};
+    result = true;
+    auto iterator{array.cbegin()};
+
+    // Determine the proper start based on integer annotations collected for the
+    // current instance location by the keyword requested by the user. We will
+    // exhaustively check the matching annotations and end up with the largest
+    // index or zero
+    std::uint64_t start{0};
+    for (const auto &[schema_location, annotations] :
+         context.annotations(context.instance_location())) {
+      assert(!schema_location.empty());
+      const auto &keyword{schema_location.back()};
+      if (!keyword.is_property() || keyword.to_property() != value) {
+        continue;
+      }
+
+      for (const auto &annotation : annotations) {
+        if (annotation.is_integer() && annotation.is_positive()) {
+          start = std::max(
+              start, static_cast<std::uint64_t>(annotation.to_integer()) + 1);
+        }
+      }
+    }
+
+    // We need this check, as advancing an iterator past its bounds
+    // is considered undefined behavior
+    // See https://en.cppreference.com/w/cpp/iterator/advance
+    std::advance(iterator,
+                 std::min(static_cast<std::ptrdiff_t>(start),
+                          static_cast<std::ptrdiff_t>(target.size())));
+
+    for (; iterator != array.cend(); ++iterator) {
+      const auto index{std::distance(array.cbegin(), iterator)};
+      context.push(empty_pointer, {static_cast<Pointer::Token::Index>(index)});
+      for (const auto &child : loop.children) {
+        if (!evaluate_step(child, instance, mode, callback, context)) {
+          result = false;
+          if (mode == SchemaCompilerEvaluationMode::Fast) {
+            context.pop();
+            // For efficiently breaking from the outer loop too
+            goto evaluate_step_end;
+          } else {
+            break;
+          }
+        }
+      }
+
+      context.pop();
+    }
   } else if (std::holds_alternative<SchemaCompilerLoopContains>(step)) {
     const auto &loop{std::get<SchemaCompilerLoopContains>(step)};
     context.push(loop);
@@ -727,6 +848,7 @@ auto evaluate_step(
     CALLBACK_PRE(context.instance_location());
     const auto &value{context.resolve_value(loop.value, instance)};
     const auto minimum{value.first};
+    assert(minimum > 0);
     const auto &maximum{value.second};
     assert(!maximum.has_value() || maximum.value() >= minimum);
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
@@ -755,7 +877,7 @@ auto evaluate_step(
           break;
         }
 
-        if (match_count > minimum) {
+        if (match_count >= minimum) {
           result = true;
 
           // Exceeding the lower bound when there is no upper bound

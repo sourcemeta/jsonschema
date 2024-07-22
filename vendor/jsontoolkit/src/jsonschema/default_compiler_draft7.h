@@ -63,9 +63,10 @@ auto compiler_draft7_applicator_else(
   SchemaCompilerTemplate children{compile(context, schema_context,
                                           relative_dynamic_context,
                                           empty_pointer, empty_pointer)};
-  SchemaCompilerTemplate condition{make<SchemaCompilerInternalNoAnnotation>(
-      schema_context, relative_dynamic_context, JSON{true}, {},
-      SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
+  SchemaCompilerTemplate condition{
+      make<SchemaCompilerInternalNoAdjacentAnnotation>(
+          schema_context, relative_dynamic_context, JSON{true}, {},
+          SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
   return {make<SchemaCompilerLogicalAnd>(
       schema_context, dynamic_context, SchemaCompilerValueNone{},
       std::move(children), std::move(condition))};
