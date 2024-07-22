@@ -81,8 +81,8 @@ auto intelligence::jsonschema::cli::frame(
           "type",
           sourcemeta::jsontoolkit::JSON{
               pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                  ? "Dynamic"
-                  : "Static"});
+                  ? "dynamic"
+                  : "static"});
       ref_entry.assign("destination",
                        sourcemeta::jsontoolkit::JSON{entry.destination});
       if (entry.base.has_value()) {
