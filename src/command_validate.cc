@@ -1,4 +1,5 @@
 #include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/jsontoolkit/jsonl.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
@@ -46,26 +47,68 @@ auto intelligence::jsonschema::cli::validate(
   }
 
   bool result{true};
-  const auto &instance_path{options.at("").at(1)};
+  const std::filesystem::path instance_path{options.at("").at(1)};
   const auto schema_template{sourcemeta::jsontoolkit::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
       sourcemeta::jsontoolkit::default_schema_compiler)};
 
-  const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+  if (instance_path.extension() == ".jsonl") {
+    log_verbose(options) << "Interpreting input as JSONL\n";
+    std::size_t index{0};
 
-  std::ostringstream error;
-  result = sourcemeta::jsontoolkit::evaluate(
-      schema_template, instance,
-      sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-      pretty_evaluate_callback(error, sourcemeta::jsontoolkit::empty_pointer));
+    auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
+    try {
+      for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
+        std::ostringstream error;
+        const auto subresult = sourcemeta::jsontoolkit::evaluate(
+            schema_template, instance,
+            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+            pretty_evaluate_callback(error,
+                                     sourcemeta::jsontoolkit::empty_pointer));
 
-  if (result) {
-    log_verbose(options)
-        << "ok: " << std::filesystem::weakly_canonical(instance_path).string()
-        << "\n  matches "
-        << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+        if (subresult) {
+          log_verbose(options)
+              << "ok: "
+              << std::filesystem::weakly_canonical(instance_path).string()
+              << " (entry #" << index << ")"
+              << "\n  matches "
+              << std::filesystem::weakly_canonical(schema_path).string()
+              << "\n";
+        } else {
+          std::cerr << "fail: "
+                    << std::filesystem::weakly_canonical(instance_path).string()
+                    << " (entry #" << index << ")\n\n";
+          sourcemeta::jsontoolkit::prettify(instance, std::cerr);
+          std::cerr << "\n\n";
+          std::cerr << error.str();
+          result = false;
+          break;
+        }
+
+        index += 1;
+      }
+    } catch (const sourcemeta::jsontoolkit::ParseError &error) {
+      // For producing better error messages
+      throw sourcemeta::jsontoolkit::FileParseError(instance_path, error);
+    }
   } else {
-    std::cerr << error.str();
+    const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+
+    std::ostringstream error;
+    result = sourcemeta::jsontoolkit::evaluate(
+        schema_template, instance,
+        sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+        pretty_evaluate_callback(error,
+                                 sourcemeta::jsontoolkit::empty_pointer));
+
+    if (result) {
+      log_verbose(options)
+          << "ok: " << std::filesystem::weakly_canonical(instance_path).string()
+          << "\n  matches "
+          << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+    } else {
+      std::cerr << error.str();
+    }
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;
