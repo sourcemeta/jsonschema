@@ -2,7 +2,7 @@ Framing
 =======
 
 ```sh
-jsonschema frame <schema.json> [--verbose/-v]
+jsonschema frame <schema.json> [--json/-j] [--verbose/-v]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the
@@ -59,4 +59,10 @@ reference:
 
 ```sh
 jsonschema frame path/to/my/schema.json
+```
+
+### Frame a JSON Schema and output result as a JSON document
+
+```sh
+jsonschema frame path/to/my/schema.json --json
 ```
