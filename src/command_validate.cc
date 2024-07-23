@@ -2,6 +2,7 @@
 #include <sourcemeta/jsontoolkit/jsonl.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
+#include <chrono>   // std::chrono
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <set>      // std::set
@@ -15,7 +16,7 @@
 // TODO: Add a flag to take a pre-compiled schema as input
 auto intelligence::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http"})};
+  const auto options{parse_options(arguments, {"h", "http", "b", "benchmark"})};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -52,6 +53,8 @@ auto intelligence::jsonschema::cli::validate(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
       sourcemeta::jsontoolkit::default_schema_compiler)};
 
+  const auto benchmark{options.contains("b") || options.contains("benchmark")};
+
   if (instance_path.extension() == ".jsonl") {
     log_verbose(options) << "Interpreting input as JSONL\n";
     std::size_t index{0};
@@ -60,11 +63,27 @@ auto intelligence::jsonschema::cli::validate(
     try {
       for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
         std::ostringstream error;
-        const auto subresult = sourcemeta::jsontoolkit::evaluate(
-            schema_template, instance,
-            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error,
-                                     sourcemeta::jsontoolkit::empty_pointer));
+        bool subresult = true;
+        if (benchmark) {
+          const auto timestamp_start{std::chrono::high_resolution_clock::now()};
+          subresult =
+              sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+          const auto timestamp_end{std::chrono::high_resolution_clock::now()};
+          const auto duration_us{
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  timestamp_end - timestamp_start)};
+          if (subresult) {
+            std::cout << "took: " << duration_us.count() << "us\n";
+          } else {
+            error << "error: Schema validation failure\n";
+          }
+        } else {
+          subresult = sourcemeta::jsontoolkit::evaluate(
+              schema_template, instance,
+              sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+              pretty_evaluate_callback(error,
+                                       sourcemeta::jsontoolkit::empty_pointer));
+        }
 
         if (subresult) {
           log_verbose(options)
@@ -93,13 +112,26 @@ auto intelligence::jsonschema::cli::validate(
     }
   } else {
     const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
-
     std::ostringstream error;
-    result = sourcemeta::jsontoolkit::evaluate(
-        schema_template, instance,
-        sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-        pretty_evaluate_callback(error,
-                                 sourcemeta::jsontoolkit::empty_pointer));
+    if (benchmark) {
+      const auto timestamp_start{std::chrono::high_resolution_clock::now()};
+      result = sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+      const auto timestamp_end{std::chrono::high_resolution_clock::now()};
+      const auto duration_us{
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              timestamp_end - timestamp_start)};
+      if (result) {
+        std::cout << "took: " << duration_us.count() << "us\n";
+      } else {
+        error << "error: Schema validation failure\n";
+      }
+    } else {
+      result = sourcemeta::jsontoolkit::evaluate(
+          schema_template, instance,
+          sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+          pretty_evaluate_callback(error,
+                                   sourcemeta::jsontoolkit::empty_pointer));
+    }
 
     if (result) {
       log_verbose(options)
