@@ -8,7 +8,7 @@ Validating
 
 ```sh
 jsonschema validate <schema.json> <instance.json|.jsonl> [--http/-h]
-  [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--verbose/-v] [--resolve/-r <schemas-or-directories> ...] [--benchmark/-b]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -79,4 +79,10 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json \
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json \
   --resolve path/to/schemas --extension schema.json
+```
+
+### Validate a JSON instance against a schema printing timing information
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json --benchmark
 ```
