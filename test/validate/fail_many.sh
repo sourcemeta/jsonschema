@@ -19,16 +19,28 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-cat << 'EOF' > "$TMP/instance.json"
+cat << 'EOF' > "$TMP/instance_1.json"
+{ "foo": "bar" }
+EOF
+
+cat << 'EOF' > "$TMP/instance_2.json"
 { "foo": 1 }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" 2> "$TMP/stderr.txt" \
+cat << 'EOF' > "$TMP/instance_3.json"
+{ "foo": "baz" }
+EOF
+
+"$1" validate "$TMP/schema.json" \
+  "$TMP/instance_1.json" \
+  "$TMP/instance_2.json" \
+  "$TMP/instance_3.json" \
+  2> "$TMP/stderr.txt" \
   && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-fail: $(realpath "$TMP")/instance.json
+fail: $(realpath "$TMP")/instance_2.json
 error: Schema validation failure
   The target document is expected to be of the given type
     at instance location "/foo"

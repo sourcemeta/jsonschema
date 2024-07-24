@@ -68,6 +68,10 @@ add_jsonschema_test_unix(validate/fail_jsonl_one)
 add_jsonschema_test_unix(validate/fail_jsonl_one_verbose)
 add_jsonschema_test_unix(validate/fail_jsonl_all)
 add_jsonschema_test_unix(validate/fail_jsonl_all_verbose)
+add_jsonschema_test_unix(validate/pass_many)
+add_jsonschema_test_unix(validate/pass_many_verbose)
+add_jsonschema_test_unix(validate/fail_many)
+add_jsonschema_test_unix(validate/fail_many_verbose)
 
 # Test
 add_jsonschema_test_unix(test/fail_true_single_resolve)
