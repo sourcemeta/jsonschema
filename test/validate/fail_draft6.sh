@@ -28,6 +28,7 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
+fail: $(realpath "$TMP")/instance.json
 error: Schema validation failure
   The target document is expected to be of the given type
     at instance location "/foo"

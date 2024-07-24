@@ -47,99 +47,115 @@ auto intelligence::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  bool result{true};
-  const std::filesystem::path instance_path{options.at("").at(1)};
+  const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto schema_template{sourcemeta::jsontoolkit::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
       sourcemeta::jsontoolkit::default_schema_compiler)};
 
-  const auto benchmark{options.contains("b") || options.contains("benchmark")};
+  bool result{true};
 
-  if (instance_path.extension() == ".jsonl") {
-    log_verbose(options) << "Interpreting input as JSONL\n";
-    std::size_t index{0};
-
-    auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
-    try {
-      for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
-        std::ostringstream error;
-        bool subresult = true;
-        if (benchmark) {
-          const auto timestamp_start{std::chrono::high_resolution_clock::now()};
-          subresult =
-              sourcemeta::jsontoolkit::evaluate(schema_template, instance);
-          const auto timestamp_end{std::chrono::high_resolution_clock::now()};
-          const auto duration_us{
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  timestamp_end - timestamp_start)};
-          if (subresult) {
-            std::cout << "took: " << duration_us.count() << "us\n";
-          } else {
-            error << "error: Schema validation failure\n";
-          }
-        } else {
-          subresult = sourcemeta::jsontoolkit::evaluate(
-              schema_template, instance,
-              sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-              pretty_evaluate_callback(error,
-                                       sourcemeta::jsontoolkit::empty_pointer));
-        }
-
-        if (subresult) {
-          log_verbose(options)
-              << "ok: "
-              << std::filesystem::weakly_canonical(instance_path).string()
-              << " (entry #" << index << ")"
-              << "\n  matches "
-              << std::filesystem::weakly_canonical(schema_path).string()
-              << "\n";
-        } else {
-          std::cerr << "fail: "
-                    << std::filesystem::weakly_canonical(instance_path).string()
-                    << " (entry #" << index << ")\n\n";
-          sourcemeta::jsontoolkit::prettify(instance, std::cerr);
-          std::cerr << "\n\n";
-          std::cerr << error.str();
-          result = false;
-          break;
-        }
-
-        index += 1;
-      }
-    } catch (const sourcemeta::jsontoolkit::ParseError &error) {
-      // For producing better error messages
-      throw sourcemeta::jsontoolkit::FileParseError(instance_path, error);
-    }
-  } else {
-    const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
-    std::ostringstream error;
-    if (benchmark) {
-      const auto timestamp_start{std::chrono::high_resolution_clock::now()};
-      result = sourcemeta::jsontoolkit::evaluate(schema_template, instance);
-      const auto timestamp_end{std::chrono::high_resolution_clock::now()};
-      const auto duration_us{
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              timestamp_end - timestamp_start)};
-      if (result) {
-        std::cout << "took: " << duration_us.count() << "us\n";
-      } else {
-        error << "error: Schema validation failure\n";
-      }
-    } else {
-      result = sourcemeta::jsontoolkit::evaluate(
-          schema_template, instance,
-          sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-          pretty_evaluate_callback(error,
-                                   sourcemeta::jsontoolkit::empty_pointer));
-    }
-
-    if (result) {
+  auto iterator{options.at("").cbegin()};
+  std::advance(iterator, 1);
+  for (; iterator != options.at("").cend(); ++iterator) {
+    const std::filesystem::path instance_path{*iterator};
+    if (instance_path.extension() == ".jsonl") {
       log_verbose(options)
-          << "ok: " << std::filesystem::weakly_canonical(instance_path).string()
-          << "\n  matches "
-          << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+          << "Interpreting input as JSONL: "
+          << std::filesystem::weakly_canonical(instance_path).string() << "\n";
+      std::size_t index{0};
+
+      auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
+      try {
+        for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
+          std::ostringstream error;
+          bool subresult = true;
+          if (benchmark) {
+            const auto timestamp_start{
+                std::chrono::high_resolution_clock::now()};
+            subresult =
+                sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+            const auto timestamp_end{std::chrono::high_resolution_clock::now()};
+            const auto duration_us{
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    timestamp_end - timestamp_start)};
+            if (subresult) {
+              std::cout << "took: " << duration_us.count() << "us\n";
+            } else {
+              error << "error: Schema validation failure\n";
+            }
+          } else {
+            subresult = sourcemeta::jsontoolkit::evaluate(
+                schema_template, instance,
+                sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+                pretty_evaluate_callback(
+                    error, sourcemeta::jsontoolkit::empty_pointer));
+          }
+
+          if (subresult) {
+            log_verbose(options)
+                << "ok: "
+                << std::filesystem::weakly_canonical(instance_path).string()
+                << " (entry #" << index << ")"
+                << "\n  matches "
+                << std::filesystem::weakly_canonical(schema_path).string()
+                << "\n";
+          } else {
+            std::cerr
+                << "fail: "
+                << std::filesystem::weakly_canonical(instance_path).string()
+                << " (entry #" << index << ")\n\n";
+            sourcemeta::jsontoolkit::prettify(instance, std::cerr);
+            std::cerr << "\n\n";
+            std::cerr << error.str();
+            result = false;
+            break;
+          }
+
+          index += 1;
+        }
+      } catch (const sourcemeta::jsontoolkit::ParseError &error) {
+        // For producing better error messages
+        throw sourcemeta::jsontoolkit::FileParseError(instance_path, error);
+      }
     } else {
-      std::cerr << error.str();
+      const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+      std::ostringstream error;
+      bool subresult{true};
+      if (benchmark) {
+        const auto timestamp_start{std::chrono::high_resolution_clock::now()};
+        subresult =
+            sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+        const auto timestamp_end{std::chrono::high_resolution_clock::now()};
+        const auto duration_us{
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                timestamp_end - timestamp_start)};
+        if (subresult) {
+          std::cout << "took: " << duration_us.count() << "us\n";
+        } else {
+          error << "error: Schema validation failure\n";
+          result = false;
+        }
+      } else {
+        subresult = sourcemeta::jsontoolkit::evaluate(
+            schema_template, instance,
+            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+            pretty_evaluate_callback(error,
+                                     sourcemeta::jsontoolkit::empty_pointer));
+      }
+
+      if (subresult) {
+        log_verbose(options)
+            << "ok: "
+            << std::filesystem::weakly_canonical(instance_path).string()
+            << "\n  matches "
+            << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+      } else {
+        std::cerr << "fail: "
+                  << std::filesystem::weakly_canonical(instance_path).string()
+                  << "\n";
+        std::cerr << error.str();
+        result = false;
+      }
     }
   }
 

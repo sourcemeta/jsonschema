@@ -27,7 +27,7 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl" --verbose 2> "$TMP/output.txt" 1>&2
 
 cat << EOF > "$TMP/expected.txt"
-Interpreting input as JSONL
+Interpreting input as JSONL: $(realpath "$TMP")/instance.jsonl
 ok: $(realpath "$TMP")/instance.jsonl (entry #0)
   matches $(realpath "$TMP")/schema.json
 ok: $(realpath "$TMP")/instance.jsonl (entry #1)
