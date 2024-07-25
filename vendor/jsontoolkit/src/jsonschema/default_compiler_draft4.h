@@ -297,7 +297,7 @@ auto compiler_draft4_applicator_properties(
 
   return {make<SchemaCompilerLogicalAnd>(
       schema_context, dynamic_context, SchemaCompilerValueNone{},
-      std::move(children), type_condition(schema_context, JSON::Type::Object))};
+      std::move(children), SchemaCompilerTemplate{})};
 }
 
 auto compiler_draft4_applicator_patternproperties(

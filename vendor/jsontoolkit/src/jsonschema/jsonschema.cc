@@ -15,15 +15,55 @@ auto sourcemeta::jsontoolkit::is_schema(
   return schema.is_object() || schema.is_boolean();
 }
 
+static auto guess_identifier(const sourcemeta::jsontoolkit::JSON &schema)
+    -> std::optional<std::string> {
+  if (schema.defines("$id") && schema.at("$id").is_string()) {
+    if (!schema.defines("id") ||
+        (schema.defines("id") && (!schema.at("id").is_string() ||
+                                  schema.at("$id") == schema.at("id")))) {
+      return schema.at("$id").to_string();
+    }
+  } else if (schema.defines("id") && schema.at("id").is_string()) {
+    return schema.at("id").to_string();
+  }
+
+  return std::nullopt;
+}
+
 auto sourcemeta::jsontoolkit::id(
     const sourcemeta::jsontoolkit::JSON &schema, const SchemaResolver &resolver,
+    const IdentificationStrategy strategy,
     const std::optional<std::string> &default_dialect,
     const std::optional<std::string> &default_id)
     -> std::future<std::optional<std::string>> {
-  const std::optional<std::string> maybe_base_dialect{
-      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
-          .get()};
+  std::optional<std::string> maybe_base_dialect;
+
+  // TODO: Can we avoid a C++ exception as the potential normal way of
+  // operation?
+  try {
+    maybe_base_dialect =
+        sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
+            .get();
+  } catch (const SchemaResolutionError &) {
+    // Attempt to play a heuristic guessing game before giving up
+    if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
+      std::promise<std::optional<std::string>> promise;
+      promise.set_value(guess_identifier(schema));
+      return promise.get_future();
+    }
+
+    throw;
+  }
+
   if (!maybe_base_dialect.has_value()) {
+
+    // Attempt to play a heuristic guessing game before giving up
+    if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
+      std::promise<std::optional<std::string>> promise;
+      promise.set_value(guess_identifier(schema));
+      return promise.get_future();
+    }
+
     std::promise<std::optional<std::string>> promise;
     promise.set_value(default_id);
     return promise.get_future();
