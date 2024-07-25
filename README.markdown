@@ -148,6 +148,7 @@ documentation:
 - [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
 - [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
 - [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
+- [`jsonschema identify`](./docs/identify.markdown)
 
 Coming Soon
 -----------

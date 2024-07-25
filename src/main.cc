@@ -64,6 +64,11 @@ Commands:
        Pre-process a JSON Schema into JSON Toolkit's low-level JSON-based
        compiled form for faster evaluation.
 
+   identify <schema.json> [--relative-from/-f <uri>]
+
+       Print the URI of the given schema to standard output, optionally
+       relative to a given base URI.
+
 For more documentation, visit https://github.com/Intelligence-AI/jsonschema
 )EOF"};
 
@@ -85,6 +90,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return intelligence::jsonschema::cli::metaschema(arguments);
   } else if (command == "test") {
     return intelligence::jsonschema::cli::test(arguments);
+  } else if (command == "identify") {
+    return intelligence::jsonschema::cli::identify(arguments);
   } else {
     std::cout << "JSON Schema CLI - v"
               << intelligence::jsonschema::cli::PROJECT_VERSION << "\n";
@@ -118,6 +125,10 @@ auto main(int argc, char *argv[]) noexcept -> int {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
                  "at\nhttps://github.com/intelligence-ai/jsonschema\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
+    std::cerr << "error: " << error.what() << " at column " << error.column()
+              << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::FileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
