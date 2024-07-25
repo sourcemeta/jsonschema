@@ -58,6 +58,7 @@ jobs:
           -DCMAKE_BUILD_TYPE:STRING=Release
           -DJSONSCHEMA_TESTS:BOOL=ON
           -DJSONSCHEMA_TESTS_CI:BOOL=ON
+          -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
       - run: cmake --build ./build --config Release --target clang_format_test
