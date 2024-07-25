@@ -70,6 +70,16 @@ SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto is_schema(const JSON &schema) -> bool;
 
 /// @ingroup jsonschema
+/// The strategy to follow when attempting to identify a schema
+enum class IdentificationStrategy {
+  /// Only proceed if we can guarantee the identifier is valid
+  Strict,
+
+  /// Attempt to guess even if we don't know the base dialect
+  Loose
+};
+
+/// @ingroup jsonschema
 ///
 /// This function returns the URI identifier of the given schema, if any. For
 /// example:
@@ -90,8 +100,13 @@ auto is_schema(const JSON &schema) -> bool;
 /// assert(id.has_value());
 /// assert(id.value() == "https://sourcemeta.com/example-schema");
 /// ```
+///
+/// You can opt-in to a loose identification strategy to attempt to play a
+/// guessing game. Often useful if you have a schema without a dialect and you
+/// want to at least try to get something.
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto id(const JSON &schema, const SchemaResolver &resolver,
+        const IdentificationStrategy strategy = IdentificationStrategy::Strict,
         const std::optional<std::string> &default_dialect = std::nullopt,
         const std::optional<std::string> &default_id = std::nullopt)
     -> std::future<std::optional<std::string>>;

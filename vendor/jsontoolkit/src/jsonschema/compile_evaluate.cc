@@ -146,7 +146,7 @@ public:
             assert(!this->instance_location(target).empty());
             assert(this->instance_location(target).back().is_property());
             return this->value(
-                JSON{this->instance_location(target).back().to_property()});
+                this->instance_location(target).back().to_property());
           }
 
           assert(this->target_type() == TargetType::Value);

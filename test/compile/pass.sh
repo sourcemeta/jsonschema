@@ -32,26 +32,7 @@ cat << 'EOF' > "$TMP/expected.json"
       "type": "instance",
       "location": ""
     },
-    "condition": [
-      {
-        "category": "assertion",
-        "type": "type-strict",
-        "value": {
-          "category": "value",
-          "type": "type",
-          "value": "object"
-        },
-        "absoluteKeywordLocation": "#/properties",
-        "relativeSchemaLocation": "",
-        "relativeInstanceLocation": "",
-        "target": {
-          "category": "target",
-          "type": "instance",
-          "location": ""
-        },
-        "condition": []
-      }
-    ],
+    "condition": [],
     "children": [
       {
         "category": "internal",

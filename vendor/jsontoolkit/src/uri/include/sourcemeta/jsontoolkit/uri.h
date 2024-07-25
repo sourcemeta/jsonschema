@@ -14,8 +14,10 @@
 #include <memory>      // std::unique_ptr
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 /// @defgroup uri URI
 /// @brief A RFC 3986 URI implementation based on `uriparser`.
@@ -308,6 +310,9 @@ public:
   [[nodiscard]] auto userinfo() const -> std::optional<std::string_view>;
 
 private:
+  bool parsed = false;
+  auto parse() -> void;
+
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -318,6 +323,15 @@ private:
   // points to fragments of it.
   // We keep this as const as this class is immutable
   std::string data;
+
+  std::optional<std::string> path_;
+  std::optional<std::string> userinfo_;
+  std::optional<std::string> host_;
+  std::optional<std::uint32_t> port_;
+  std::optional<std::string> scheme_;
+  std::optional<std::string> fragment_;
+  std::optional<std::string> query_;
+
   // Use PIMPL idiom to hide `urlparser`
   struct Internal;
   std::unique_ptr<Internal> internal;
