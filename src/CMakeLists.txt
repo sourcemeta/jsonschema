@@ -8,7 +8,8 @@ add_executable(jsonschema_cli
   command_test.cc
   command_lint.cc
   command_metaschema.cc
-  command_validate.cc)
+  command_validate.cc
+  command_identify.cc)
 
 noa_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)

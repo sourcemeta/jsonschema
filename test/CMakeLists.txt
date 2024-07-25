@@ -141,6 +141,21 @@ add_jsonschema_test_unix(compile/fail_no_schema)
 add_jsonschema_test_unix(compile/fail_schema_invalid_json)
 add_jsonschema_test_unix(compile/fail_unknown_metaschema)
 
+# Identify
+add_jsonschema_test_unix(identify/fail_resolve_from_no_match)
+add_jsonschema_test_unix(identify/fail_resolve_from_equal)
+add_jsonschema_test_unix(identify/fail_invalid_id)
+add_jsonschema_test_unix(identify/fail_invalid_id_uri)
+add_jsonschema_test_unix(identify/fail_invalid_base_uri)
+add_jsonschema_test_unix(identify/fail_no_id)
+add_jsonschema_test_unix(identify/fail_no_schema)
+add_jsonschema_test_unix(identify/pass_with_official_dialect)
+add_jsonschema_test_unix(identify/pass_with_official_dialect_verbose)
+add_jsonschema_test_unix(identify/pass_with_resolve_from)
+add_jsonschema_test_unix(identify/pass_with_resolve_from_verbose)
+add_jsonschema_test_unix(identify/pass_with_unknown_dialect)
+add_jsonschema_test_unix(identify/pass_with_unknown_dialect_verbose)
+
 # CI specific tests
 add_jsonschema_test_unix_ci(pass_bundle_http)
 add_jsonschema_test_unix_ci(fail_bundle_http_non_200)

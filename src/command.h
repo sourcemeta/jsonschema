@@ -13,6 +13,7 @@ auto test(const std::span<const std::string> &arguments) -> int;
 auto lint(const std::span<const std::string> &arguments) -> int;
 auto validate(const std::span<const std::string> &arguments) -> int;
 auto metaschema(const std::span<const std::string> &arguments) -> int;
+auto identify(const std::span<const std::string> &arguments) -> int;
 } // namespace intelligence::jsonschema::cli
 
 #endif
