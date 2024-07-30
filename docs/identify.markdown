@@ -2,7 +2,7 @@ Identify
 ========
 
 ```sh
-jsonschema identify <schema.json> [--relative-from/-f <uri>] [--verbose/-v]
+jsonschema identify <schema.json> [--relative-to/-t <uri>] [--verbose/-v]
 ```
 
 A schema may be associated with a URI through the use of keywords like `$id` or
@@ -31,7 +31,7 @@ We can interact with the identifier URI of this schema as follows:
 $ jsonschema identify schema.json
 https://example.com/foo/bar
 
-$ jsonschema identify schema.json --relative-from "https://example.com"
+$ jsonschema identify schema.json --relative-to "https://example.com"
 /foo/bar
 ```
 
@@ -44,5 +44,5 @@ jsonschema identify path/to/my/schema.json
 ### Identify a JSON Schema resolving the URI relative to a given base
 
 ```sh
-jsonschema identify path/to/my/schema.json --relative-from "https://example.com"
+jsonschema identify path/to/my/schema.json --relative-to "https://example.com"
 ```
