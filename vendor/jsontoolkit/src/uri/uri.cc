@@ -408,6 +408,49 @@ auto URI::resolve_from(const URI &base) -> URI & {
   }
 }
 
+auto URI::relative_to(const URI &base) -> URI & {
+  if (!this->is_absolute() || !base.is_absolute() ||
+      this->host() != base.host()) {
+    return *this;
+  }
+
+  UriUriA result;
+  URI copy{*this};
+
+  // According to the docs, we only need to free on success
+  // See
+  // https://uriparser.github.io/doc/api/latest/Uri_8h.html#a20cc7888b62700d6cb7e7896647b0d5d
+  switch (uriRemoveBaseUriMmA(&result, &copy.internal->uri, &base.internal->uri,
+                              URI_FALSE, nullptr)) {
+    case URI_SUCCESS:
+      break;
+    default:
+      throw URIError{"Could not resolve URI relative to the given base"};
+  }
+
+  try {
+    uri_normalize(&result);
+    copy.data = uri_to_string(&result);
+  } catch (...) {
+    uriFreeUriMembersMmA(&result, nullptr);
+    throw;
+  }
+
+  uriFreeUriMembersMmA(&result, nullptr);
+  copy.parse();
+
+  // `uriparser` has this weird thing where it will only look at scheme and
+  // authority, incorrectly thinking that a certain URI is a base of another one
+  // if the path of the former exceeds the path of the latter. This is an ugly
+  // workaround to prevent this non-sense.
+  if (!copy.recompose().empty() || base.recompose() == this->recompose()) {
+    this->data = std::move(copy.data);
+    this->parse();
+  }
+
+  return *this;
+}
+
 auto URI::from_fragment(std::string_view fragment) -> URI {
   assert(fragment.empty() || fragment.front() != '#');
   std::ostringstream uri;

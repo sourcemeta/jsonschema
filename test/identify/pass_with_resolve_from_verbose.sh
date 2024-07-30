@@ -24,7 +24,7 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
 Resolving identifier against: https://example.com/foo
-/bar/baz
+bar/baz
 EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"
