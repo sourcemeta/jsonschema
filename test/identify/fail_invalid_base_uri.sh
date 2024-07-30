@@ -15,7 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" identify "$TMP/schema.json" \
-  --relative-from "111https://////" >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
+  --relative-to "111https://////" >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"

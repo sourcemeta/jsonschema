@@ -64,7 +64,7 @@ Commands:
        Pre-process a JSON Schema into JSON Toolkit's low-level JSON-based
        compiled form for faster evaluation.
 
-   identify <schema.json> [--relative-from/-f <uri>]
+   identify <schema.json> [--relative-to/-t <uri>]
 
        Print the URI of the given schema to standard output, optionally
        relative to a given base URI.

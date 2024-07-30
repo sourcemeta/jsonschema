@@ -8,14 +8,13 @@
 #include "command.h"
 #include "utils.h"
 
-static auto find_relative_from(
-    const std::map<std::string, std::vector<std::string>> &options)
+static auto
+find_relative_to(const std::map<std::string, std::vector<std::string>> &options)
     -> std::optional<std::string> {
-  if (options.contains("relative-from") &&
-      !options.at("relative-from").empty()) {
-    return options.at("relative-from").front();
-  } else if (options.contains("f") && !options.at("f").empty()) {
-    return options.at("f").front();
+  if (options.contains("relative-to") && !options.at("relative-to").empty()) {
+    return options.at("relative-to").front();
+  } else if (options.contains("t") && !options.at("t").empty()) {
+    return options.at("t").front();
   }
 
   return std::nullopt;
@@ -87,19 +86,19 @@ auto intelligence::jsonschema::cli::identify(
     return EXIT_FAILURE;
   }
 
-  const auto relative_from{find_relative_from(options)};
-  if (relative_from.has_value()) {
+  const auto relative_to{find_relative_to(options)};
+  if (relative_to.has_value()) {
     log_verbose(options) << "Resolving identifier against: "
-                         << relative_from.value() << "\n";
+                         << relative_to.value() << "\n";
     std::string base;
 
     try {
-      base = sourcemeta::jsontoolkit::URI{relative_from.value()}
+      base = sourcemeta::jsontoolkit::URI{relative_to.value()}
                  .canonicalize()
                  .recompose();
     } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
       std::cerr << "error: Invalid base URI at column " << error.column()
-                << "\n  " << relative_from.value() << "\n";
+                << "\n  " << relative_to.value() << "\n";
       return EXIT_FAILURE;
     }
 
@@ -113,7 +112,7 @@ auto intelligence::jsonschema::cli::identify(
         return EXIT_FAILURE;
       }
 
-      // TODO: We should have a `relative_from` function in the URI module
+      // TODO: We should have a `relative_to` function in the URI module
       // instead
       std::cout << result.substr(base.size()) << "\n";
     } else {

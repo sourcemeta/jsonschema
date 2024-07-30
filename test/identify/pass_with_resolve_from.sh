@@ -19,7 +19,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" identify "$TMP/schema.json" \
-  --relative-from "https://example.com/foo" > "$TMP/result.txt" 2>&1
+  --relative-to "https://example.com/foo" > "$TMP/result.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 /bar/baz
