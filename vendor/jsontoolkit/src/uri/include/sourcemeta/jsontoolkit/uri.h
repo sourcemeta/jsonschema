@@ -251,6 +251,20 @@ public:
   /// ```
   auto resolve_from_if_absolute(const URI &base) -> URI &;
 
+  /// Attempt to resolve a URI relative to another URI. If the latter URI is not
+  /// a base for the former, leave the URI intact. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::URI base{"https://www.sourcemeta.com"};
+  /// sourcemeta::jsontoolkit::URI result{"https://www.sourcemeta.com/foo"};
+  /// result.relative_to(base);
+  /// assert(result.recompose() == "foo");
+  /// ```
+  auto relative_to(const URI &base) -> URI &;
+
   /// Escape a string as established by RFC 3986 using C++ standard stream. For
   /// example:
   ///

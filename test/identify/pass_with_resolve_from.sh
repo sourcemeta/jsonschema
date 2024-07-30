@@ -22,7 +22,7 @@ EOF
   --relative-to "https://example.com/foo" > "$TMP/result.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
-/bar/baz
+bar/baz
 EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"

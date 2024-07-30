@@ -102,8 +102,14 @@ auto intelligence::jsonschema::cli::identify(
       return EXIT_FAILURE;
     }
 
-    if (result.starts_with(base)) {
-      if (result == base) {
+    sourcemeta::jsontoolkit::URI base_uri{base};
+    base_uri.canonicalize();
+    sourcemeta::jsontoolkit::URI uri{result};
+    uri.canonicalize();
+    uri.relative_to(base_uri);
+
+    if (!uri.is_absolute()) {
+      if (uri.recompose().empty()) {
         std::cerr << "error: the base URI cannot be equal to the schema "
                      "identifier\n  "
                   << std::filesystem::weakly_canonical(options.at("").front())
@@ -112,9 +118,7 @@ auto intelligence::jsonschema::cli::identify(
         return EXIT_FAILURE;
       }
 
-      // TODO: We should have a `relative_to` function in the URI module
-      // instead
-      std::cout << result.substr(base.size()) << "\n";
+      std::cout << uri.recompose() << "\n";
     } else {
       std::cerr
           << "error: the schema identifier " << result
