@@ -15,22 +15,49 @@ auto sourcemeta::jsontoolkit::is_schema(
   return schema.is_object() || schema.is_boolean();
 }
 
-static auto guess_identifier(const sourcemeta::jsontoolkit::JSON &schema)
+static auto id_keyword_guess(const sourcemeta::jsontoolkit::JSON &schema)
     -> std::optional<std::string> {
   if (schema.defines("$id") && schema.at("$id").is_string()) {
     if (!schema.defines("id") ||
         (schema.defines("id") && (!schema.at("id").is_string() ||
                                   schema.at("$id") == schema.at("id")))) {
-      return schema.at("$id").to_string();
+      return "$id";
     }
   } else if (schema.defines("id") && schema.at("id").is_string()) {
-    return schema.at("id").to_string();
+    return "id";
   }
 
   return std::nullopt;
 }
 
-auto sourcemeta::jsontoolkit::id(
+static auto id_keyword(const std::string &base_dialect) -> std::string {
+  if (base_dialect == "https://json-schema.org/draft/2020-12/schema" ||
+      base_dialect == "https://json-schema.org/draft/2020-12/hyper-schema" ||
+      base_dialect == "https://json-schema.org/draft/2019-09/schema" ||
+      base_dialect == "https://json-schema.org/draft/2019-09/hyper-schema" ||
+      base_dialect == "http://json-schema.org/draft-07/schema#" ||
+      base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
+      base_dialect == "http://json-schema.org/draft-06/schema#" ||
+      base_dialect == "http://json-schema.org/draft-06/hyper-schema#") {
+    return "$id";
+  }
+
+  if (base_dialect == "http://json-schema.org/draft-04/schema#" ||
+      base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
+      base_dialect == "http://json-schema.org/draft-03/schema#" ||
+      base_dialect == "http://json-schema.org/draft-03/hyper-schema#" ||
+      base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
+      base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
+      base_dialect == "http://json-schema.org/draft-00/hyper-schema#") {
+    return "id";
+  }
+
+  std::ostringstream error;
+  error << "Unrecognized base dialect: " << base_dialect;
+  throw sourcemeta::jsontoolkit::SchemaError(error.str());
+}
+
+auto sourcemeta::jsontoolkit::identify(
     const sourcemeta::jsontoolkit::JSON &schema, const SchemaResolver &resolver,
     const IdentificationStrategy strategy,
     const std::optional<std::string> &default_dialect,
@@ -47,8 +74,15 @@ auto sourcemeta::jsontoolkit::id(
   } catch (const SchemaResolutionError &) {
     // Attempt to play a heuristic guessing game before giving up
     if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
+      const auto keyword{id_keyword_guess(schema)};
       std::promise<std::optional<std::string>> promise;
-      promise.set_value(guess_identifier(schema));
+
+      if (keyword.has_value()) {
+        promise.set_value(schema.at(keyword.value()).to_string());
+      } else {
+        promise.set_value(std::nullopt);
+      }
+
       return promise.get_future();
     }
 
@@ -59,8 +93,15 @@ auto sourcemeta::jsontoolkit::id(
 
     // Attempt to play a heuristic guessing game before giving up
     if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
+      const auto keyword{id_keyword_guess(schema)};
       std::promise<std::optional<std::string>> promise;
-      promise.set_value(guess_identifier(schema));
+
+      if (keyword.has_value()) {
+        promise.set_value(schema.at(keyword.value()).to_string());
+      } else {
+        promise.set_value(std::nullopt);
+      }
+
       return promise.get_future();
     }
 
@@ -70,46 +111,61 @@ auto sourcemeta::jsontoolkit::id(
   }
 
   std::promise<std::optional<std::string>> promise;
-  promise.set_value(id(schema, maybe_base_dialect.value(), default_id));
+  promise.set_value(identify(schema, maybe_base_dialect.value(), default_id));
   return promise.get_future();
 }
 
-SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-auto sourcemeta::jsontoolkit::id(const JSON &schema,
-                                 const std::string &base_dialect,
-                                 const std::optional<std::string> &default_id)
+auto sourcemeta::jsontoolkit::identify(
+    const JSON &schema, const std::string &base_dialect,
+    const std::optional<std::string> &default_id)
     -> std::optional<std::string> {
-  if (base_dialect == "http://json-schema.org/draft-00/hyper-schema#" ||
-      base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
-      base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
-      base_dialect == "http://json-schema.org/draft-03/hyper-schema#" ||
-      base_dialect == "http://json-schema.org/draft-03/schema#" ||
-      base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
-      base_dialect == "http://json-schema.org/draft-04/schema#") {
-    if (schema.is_object() && schema.defines("id")) {
-      const sourcemeta::jsontoolkit::JSON &id{schema.at("id")};
-      if (!id.is_string() || id.empty()) {
-        throw sourcemeta::jsontoolkit::SchemaError(
-            "The value of the id property is not valid");
-      }
-
-      return id.to_string();
-    } else {
-      return default_id;
-    }
+  if (!schema.is_object()) {
+    return default_id;
   }
 
-  if (schema.is_object() && schema.defines("$id")) {
-    const sourcemeta::jsontoolkit::JSON &id{schema.at("$id")};
-    if (!id.is_string() || id.empty()) {
-      throw sourcemeta::jsontoolkit::SchemaError(
-          "The value of the $id property is not valid");
-    }
-
-    return id.to_string();
+  const auto keyword{id_keyword(base_dialect)};
+  if (!schema.defines(keyword)) {
+    return default_id;
   }
 
-  return default_id;
+  const auto &identifier{schema.at(keyword)};
+  if (!identifier.is_string() || identifier.empty()) {
+    std::ostringstream error;
+    error << "The value of the " << keyword << " property is not valid";
+    throw sourcemeta::jsontoolkit::SchemaError(error.str());
+  }
+
+  return identifier.to_string();
+}
+
+auto sourcemeta::jsontoolkit::anonymize(
+    JSON &schema, const std::string &base_dialect) -> void {
+  if (schema.is_object()) {
+    schema.erase(id_keyword(base_dialect));
+  }
+}
+
+auto sourcemeta::jsontoolkit::reidentify(
+    JSON &schema, const std::string &new_identifier,
+    const SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect) -> void {
+  const auto base_dialect{
+      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
+          .get()};
+  if (!base_dialect.has_value()) {
+    throw sourcemeta::jsontoolkit::SchemaError("Cannot determine base dialect");
+  }
+
+  reidentify(schema, new_identifier, base_dialect.value());
+}
+
+auto sourcemeta::jsontoolkit::reidentify(
+    JSON &schema, const std::string &new_identifier,
+    const std::string &base_dialect) -> void {
+  assert(is_schema(schema));
+  assert(schema.is_object());
+  schema.assign(id_keyword(base_dialect), JSON{new_identifier});
+  assert(identify(schema, base_dialect).has_value());
 }
 
 auto sourcemeta::jsontoolkit::dialect(

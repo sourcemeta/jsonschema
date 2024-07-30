@@ -140,7 +140,7 @@ auto sourcemeta::jsontoolkit::frame(
           .get()};
   assert(root_base_dialect.has_value());
 
-  const std::optional<std::string> root_id{sourcemeta::jsontoolkit::id(
+  const std::optional<std::string> root_id{sourcemeta::jsontoolkit::identify(
       schema, root_base_dialect.value(), default_id)};
   const std::optional<std::string> root_dialect{
       sourcemeta::jsontoolkit::dialect(schema, default_dialect)};
@@ -171,7 +171,7 @@ auto sourcemeta::jsontoolkit::frame(
     assert(entry.base_dialect.has_value());
 
     // Schema identifier
-    std::optional<std::string> id{sourcemeta::jsontoolkit::id(
+    std::optional<std::string> id{sourcemeta::jsontoolkit::identify(
         entry.value, entry.base_dialect.value(),
         entry.pointer.empty() ? default_id : std::nullopt)};
 
