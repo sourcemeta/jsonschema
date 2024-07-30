@@ -28,61 +28,6 @@ auto definitions_keyword(const std::map<std::string, bool> &vocabularies)
       "Cannot determine how to bundle on this dialect");
 }
 
-auto id_keyword(const std::map<std::string, bool> &vocabularies)
-    -> std::string {
-  if (vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/core") ||
-      vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core") ||
-      vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-06/schema#")) {
-    return "$id";
-  } else if (vocabularies.contains("http://json-schema.org/draft-04/schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-03/schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-02/schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-01/schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-00/schema#")) {
-    return "id";
-  } else {
-    throw sourcemeta::jsontoolkit::SchemaError(
-        "Cannot determine how to bundle on this dialect");
-  }
-}
-
-// TODO: Turn it into an official function to set a schema identifier
-auto upsert_id(sourcemeta::jsontoolkit::JSON &target,
-               const std::string &identifier,
-               const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-               const std::optional<std::string> &default_dialect) -> void {
-  if (!sourcemeta::jsontoolkit::is_schema(target)) {
-    throw sourcemeta::jsontoolkit::SchemaResolutionError(
-        identifier, "The JSON document is not a valid JSON Schema");
-  }
-
-  const auto dialect{sourcemeta::jsontoolkit::dialect(target, default_dialect)};
-  if (!dialect.has_value()) {
-    throw sourcemeta::jsontoolkit::SchemaResolutionError(
-        identifier, "The JSON document is not a valid JSON Schema");
-  }
-
-  const auto base_dialect{
-      sourcemeta::jsontoolkit::base_dialect(target, resolver, dialect).get()};
-  const auto vocabularies{sourcemeta::jsontoolkit::vocabularies(
-                              resolver, base_dialect.value(), dialect.value())
-                              .get()};
-  assert(!vocabularies.empty());
-
-  // Always insert an identifier, as a schema might refer to another schema
-  // using another URI (i.e. due to relying on HTTP re-directions, etc)
-
-  if (target.is_object()) {
-    target.assign(id_keyword(vocabularies),
-                  sourcemeta::jsontoolkit::JSON{identifier});
-  }
-
-  assert(sourcemeta::jsontoolkit::id(target, base_dialect.value()).has_value());
-}
-
 auto embed_schema(sourcemeta::jsontoolkit::JSON &definitions,
                   const std::string &identifier,
                   const sourcemeta::jsontoolkit::JSON &target) -> void {
@@ -159,7 +104,24 @@ auto bundle_schema(sourcemeta::jsontoolkit::JSON &root,
     // Otherwise, if the target schema does not declare an inline identifier,
     // references to that identifier from the outer schema won't resolve.
     sourcemeta::jsontoolkit::JSON copy{remote.value()};
-    upsert_id(copy, identifier, resolver, default_dialect);
+
+    if (!sourcemeta::jsontoolkit::is_schema(copy)) {
+      throw sourcemeta::jsontoolkit::SchemaResolutionError(
+          identifier, "The JSON document is not a valid JSON Schema");
+    }
+
+    const auto dialect{sourcemeta::jsontoolkit::dialect(copy, default_dialect)};
+    if (!dialect.has_value()) {
+      throw sourcemeta::jsontoolkit::SchemaResolutionError(
+          identifier, "The JSON document is not a valid JSON Schema");
+    }
+
+    if (copy.is_object()) {
+      // Always insert an identifier, as a schema might refer to another schema
+      // using another URI (i.e. due to relying on HTTP re-directions, etc)
+      sourcemeta::jsontoolkit::reidentify(copy, identifier, resolver,
+                                          default_dialect);
+    }
 
     embed_schema(root.at(container), identifier, copy);
     bundle_schema(root, container, copy, frame, walker, resolver,
@@ -187,7 +149,8 @@ auto remove_identifiers(sourcemeta::jsontoolkit::JSON &schema,
       continue;
     }
 
-    subschema.erase(id_keyword(entry.vocabularies));
+    assert(entry.base_dialect.has_value());
+    sourcemeta::jsontoolkit::anonymize(subschema, entry.base_dialect.value());
 
     if (entry.vocabularies.contains(
             "https://json-schema.org/draft/2020-12/vocab/core")) {

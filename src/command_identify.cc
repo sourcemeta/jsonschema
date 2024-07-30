@@ -52,7 +52,7 @@ auto intelligence::jsonschema::cli::identify(
   std::optional<std::string> identifier;
 
   try {
-    identifier = sourcemeta::jsontoolkit::id(
+    identifier = sourcemeta::jsontoolkit::identify(
                      schema, sourcemeta::jsontoolkit::official_resolver,
                      sourcemeta::jsontoolkit::IdentificationStrategy::Loose)
                      .get();

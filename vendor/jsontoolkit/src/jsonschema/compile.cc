@@ -80,7 +80,7 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
       .wait();
 
   const std::string base{
-      URI{sourcemeta::jsontoolkit::id(
+      URI{sourcemeta::jsontoolkit::identify(
               schema, resolver,
               sourcemeta::jsontoolkit::IdentificationStrategy::Strict,
               default_dialect)
