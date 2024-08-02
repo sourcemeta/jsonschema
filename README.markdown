@@ -22,20 +22,6 @@ local development and when running on CI/CD pipelines. For example:
 > and Code: Designing Data Products with JSON
 > Schema](https://www.oreilly.com/library/view/unifying-business-data/9781098144999/).
 
-***
-
-> [!WARNING]
-> This project is under heavy development. Some features are partly available
-> and may contain bugs. Please [share
-> feedback](https://github.com/Intelligence-AI/jsonschema/issues/new) and give
-> us a star show your support! To see what else we are up to,
-> [check out our website](https://jsonschema.intelligence.ai).
->
-> **Current Limitations:**
->
-> - The `validate` and `test` commands only support JSON Schema Draft 4, Draft 6, and Draft 7
-> - It is not possible to collect annotations with the `validate` command
-
 What our users are saying
 -------------------------
 
@@ -44,6 +30,24 @@ What our users are saying
 
 [@alombarte](https://github.com/alombarte), co-founder of the
 [KrakenD](https://www.krakend.io) API Gateway.
+
+Usage
+-----
+
+The functionality provided by the JSON Schema CLI is divided into commands. The
+following pages describe each command in detail. Additionally, running the JSON
+Schema CLI without passing a command will print convenient reference
+documentation:
+
+- [`jsonschema validate`](./docs/validate.markdown)
+- [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
+- [`jsonschema test`](./docs/test.markdown) (write unit tests for your schemas)
+- [`jsonschema fmt`](./docs/format.markdown)
+- [`jsonschema lint`](./docs/lint.markdown)
+- [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
+- [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
+- [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
+- [`jsonschema identify`](./docs/identify.markdown)
 
 Installation
 ------------
@@ -131,24 +135,6 @@ cmake --install ./build --prefix <prefix> \
 
 Where `<prefix>` can be any destination prefix of your choosing, such as `/opt`
 or `/usr/local`.
-
-Usage
------
-
-The functionality provided by the JSON Schema CLI is divided into commands. The
-following pages describe each command in detail. Additionally, running the JSON
-Schema CLI without passing a command will print convenient reference
-documentation:
-
-- [`jsonschema validate`](./docs/validate.markdown)
-- [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
-- [`jsonschema test`](./docs/test.markdown) (write unit tests for your schemas)
-- [`jsonschema fmt`](./docs/format.markdown)
-- [`jsonschema lint`](./docs/lint.markdown)
-- [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
-- [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
-- [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
-- [`jsonschema identify`](./docs/identify.markdown)
 
 Coming Soon
 -----------
