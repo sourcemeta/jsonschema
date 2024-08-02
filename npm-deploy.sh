@@ -56,7 +56,12 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
   "license": "AGPL-3.0",
   "homepage": "https://github.com/intelligence-ai/jsonschema",
   "author": "Juan Cruz Viotti <juan@intelligence.ai>",
-  "keywords": [ "jsonschema", "json" ],
+  "keywords": [
+    "jsonschema", "json", "schema", "json-schema",
+    "cli", "\$ref", "dereference", "reference", "resolve",
+    "json-pointer", "validator", "bundle",
+    "lint", "format"
+  ],
   "bugs": {
     "url": "https://github.com/intelligence-ai/jsonschema/issues"
   },
