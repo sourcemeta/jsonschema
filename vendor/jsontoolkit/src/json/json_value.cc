@@ -1,6 +1,6 @@
 #include <sourcemeta/jsontoolkit/json_value.h>
 
-#include <algorithm> // std::find, std::sort, std::unique
+#include <algorithm> // std::find
 #include <cassert>   // assert
 #include <cmath>     // std::isinf, std::isnan, std::modf, std::trunc
 #include <numeric>   // std::transform
@@ -473,10 +473,19 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 [[nodiscard]] auto JSON::unique() const -> bool {
   assert(this->is_array());
-  // TODO: Can we do efficiently do this without copying?
-  auto copy{std::get<JSON::Array>(this->data).data};
-  std::sort(copy.begin(), copy.end());
-  return std::unique(copy.begin(), copy.end()) == copy.end();
+  const auto &items{std::get<JSON::Array>(this->data).data};
+
+  // Otherwise std::unique would require us to create a copy of the contents
+  for (auto iterator = items.cbegin(); iterator != items.cend(); ++iterator) {
+    for (auto subiterator = std::next(iterator); subiterator != items.cend();
+         ++subiterator) {
+      if (*iterator == *subiterator) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 auto JSON::push_back(const JSON &value) -> void {

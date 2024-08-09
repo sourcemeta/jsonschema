@@ -65,8 +65,8 @@ static auto uri_parse(const std::string &data, UriUriA *uri) -> void {
   uri_normalize(uri);
 }
 
-static auto
-canonicalize_path(const std::string &path) -> std::optional<std::string> {
+static auto canonicalize_path(const std::string &path, const bool is_relative)
+    -> std::optional<std::string> {
   std::vector<std::string> segments;
   std::string segment;
 
@@ -93,7 +93,7 @@ canonicalize_path(const std::string &path) -> std::optional<std::string> {
 
   // Reconstruct the canonical path
   std::string canonical_path;
-  std::string separator = "";
+  std::string separator = is_relative ? "/" : "";
   for (const auto &seg : segments) {
     canonical_path += separator + seg;
     separator = "/";
@@ -200,9 +200,13 @@ auto URI::parse() -> void {
   this->parsed = true;
 }
 
+auto URI::is_relative() const -> bool {
+  return !this->scheme().has_value() || this->data.starts_with(".");
+}
+
 auto URI::is_absolute() const noexcept -> bool {
   // An absolute URI always contains a scheme component,
-  return this->internal->uri.scheme.first != nullptr;
+  return this->scheme_.has_value();
 }
 
 auto URI::is_urn() const -> bool {
@@ -240,13 +244,37 @@ auto URI::path() const -> std::optional<std::string> {
     return "/" + this->path_.value();
   }
 
-  size_t path_pos = this->data.find(this->path_.value());
-  if (path_pos != std::string::npos && path_pos > 0 &&
-      this->data[path_pos - 1] == '/') {
-    return "/" + this->path_.value();
+  return path_;
+}
+
+auto URI::path(const std::string &path) -> URI & {
+  if (path.empty()) {
+    this->path_ = std::nullopt;
+    return *this;
   }
 
-  return path_;
+  const auto is_relative_path = path.starts_with(".");
+  if (is_relative_path) {
+    throw URIError{"You cannot set a relative path"};
+  }
+
+  this->path_ = URI{path}.path_;
+  return *this;
+}
+
+auto URI::path(std::string &&path) -> URI & {
+  if (path.empty()) {
+    this->path_ = std::nullopt;
+    return *this;
+  }
+
+  const auto is_relative_path = path.starts_with(".");
+  if (is_relative_path) {
+    throw URIError{"You cannot set a relative path"};
+  }
+
+  this->path_ = URI{std::move(path)}.path_;
+  return *this;
 }
 
 auto URI::fragment() const -> std::optional<std::string_view> {
@@ -343,7 +371,8 @@ auto URI::canonicalize() -> URI & {
   // Clean Path form ".." and "."
   const auto result_path{this->path()};
   if (result_path.has_value()) {
-    const auto canonical_path{canonicalize_path(result_path.value())};
+    const auto canonical_path{
+        canonicalize_path(result_path.value(), this->is_relative())};
     if (canonical_path.has_value()) {
       this->path_ = canonical_path.value();
     }

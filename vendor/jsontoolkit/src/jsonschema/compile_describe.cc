@@ -49,8 +49,16 @@ struct DescribeVisitor {
     return "Mark the current position of the evaluation process for future "
            "jumps";
   }
+  auto operator()(const SchemaCompilerControlMark &) const -> std::string {
+    return "Mark the current position of the evaluation process for future "
+           "jumps";
+  }
   auto operator()(const SchemaCompilerControlJump &) const -> std::string {
     return "Jump to another point of the evaluation process";
+  }
+  auto operator()(const SchemaCompilerControlDynamicAnchorJump &) const
+      -> std::string {
+    return "Jump to a dynamic anchor";
   }
   auto operator()(const SchemaCompilerAnnotationPublic &) const -> std::string {
     return "Emit an annotation";

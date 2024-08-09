@@ -10,16 +10,11 @@ tox.ini
 tests/latest
 tests/draft-next
 tests/draft2020-12
-tests/draft2019-09
 tests/draft3
 remotes/draft-next
 remotes/draft2020-12
-remotes/draft2019-09
 remotes/locationIndependentIdentifier.json
-remotes/different-id-ref-string.json
 remotes/name-defs.json
 remotes/ref-and-defs.json
-remotes/nested-absolute-ref-to-string.json
 remotes/tree.json
 remotes/extendible-dynamic-ref.json
-remotes/urn-ref-string.json

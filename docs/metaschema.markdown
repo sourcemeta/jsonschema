@@ -1,6 +1,11 @@
 Metaschema
 ==========
 
+> [!WARNING]
+> Only JSON Schema Draft 4, Draft 6, Draft 7, and 2019-09 are supported at this
+> point in time. We have plans to support *every* dialect of JSON Schema from
+> Draft 0 to Draft 2020-12 soon.
+
 ```sh
 jsonschema metaschema [schemas-or-directories...]
   [--verbose/-v] [--http/-h] [--extension/-e <extension>]

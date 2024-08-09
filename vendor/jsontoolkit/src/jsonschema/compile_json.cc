@@ -179,6 +179,8 @@ auto encode_step(const std::string_view category, const std::string_view type,
   result.assign("relativeInstanceLocation",
                 JSON{to_string(step.relative_instance_location)});
   result.assign("absoluteKeywordLocation", JSON{step.keyword_location});
+  result.assign("schemaResource", JSON{step.schema_resource});
+  result.assign("dynamic", JSON{step.dynamic});
 
   if constexpr (requires { step.id; }) {
     result.assign("id", JSON{step.id});
@@ -260,7 +262,10 @@ struct StepVisitor {
               SchemaCompilerLoopItemsFromAnnotationIndex)
   HANDLE_STEP("loop", "contains", SchemaCompilerLoopContains)
   HANDLE_STEP("control", "label", SchemaCompilerControlLabel)
+  HANDLE_STEP("control", "mark", SchemaCompilerControlMark)
   HANDLE_STEP("control", "jump", SchemaCompilerControlJump)
+  HANDLE_STEP("control", "dynamic-anchor-jump",
+              SchemaCompilerControlDynamicAnchorJump)
 
 #undef HANDLE_STEP
 };
@@ -286,13 +291,15 @@ auto compiler_template_format_compare(const JSON::String &left,
   static Rank rank{{"category", 0},
                    {"type", 1},
                    {"value", 2},
-                   {"absoluteKeywordLocation", 3},
-                   {"relativeSchemaLocation", 4},
-                   {"relativeInstanceLocation", 5},
-                   {"target", 6},
-                   {"location", 7},
-                   {"condition", 8},
-                   {"children", 9}};
+                   {"schemaResource", 3},
+                   {"absoluteKeywordLocation", 4},
+                   {"relativeSchemaLocation", 5},
+                   {"relativeInstanceLocation", 6},
+                   {"target", 7},
+                   {"location", 8},
+                   {"dynamic", 9},
+                   {"condition", 10},
+                   {"children", 11}};
 
   // We define and control all of these keywords, so if we are missing
   // some here, then we did something wrong?

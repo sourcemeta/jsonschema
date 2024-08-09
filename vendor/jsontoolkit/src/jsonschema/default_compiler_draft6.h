@@ -10,7 +10,7 @@ namespace internal {
 using namespace sourcemeta::jsontoolkit;
 
 auto compiler_draft6_validation_type(
-    const SchemaCompilerContext &,
+    const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
@@ -19,32 +19,32 @@ auto compiler_draft6_validation_type(
         schema_context.schema.at(dynamic_context.keyword).to_string()};
     if (type == "null") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Null, {},
+          context, schema_context, dynamic_context, JSON::Type::Null, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "boolean") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Boolean, {},
+          context, schema_context, dynamic_context, JSON::Type::Boolean, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "object") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Object, {},
+          context, schema_context, dynamic_context, JSON::Type::Object, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "array") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Array, {},
+          context, schema_context, dynamic_context, JSON::Type::Array, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "number") {
       return {make<SchemaCompilerAssertionTypeStrictAny>(
-          schema_context, dynamic_context,
+          context, schema_context, dynamic_context,
           std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer}, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "integer") {
       return {make<SchemaCompilerAssertionType>(
-          schema_context, dynamic_context, JSON::Type::Integer, {},
+          context, schema_context, dynamic_context, JSON::Type::Integer, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "string") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::String, {},
+          context, schema_context, dynamic_context, JSON::Type::String, {},
           SchemaCompilerTargetType::Instance)};
     } else {
       return {};
@@ -58,32 +58,32 @@ auto compiler_draft6_validation_type(
         schema_context.schema.at(dynamic_context.keyword).front().to_string()};
     if (type == "null") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Null, {},
+          context, schema_context, dynamic_context, JSON::Type::Null, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "boolean") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Boolean, {},
+          context, schema_context, dynamic_context, JSON::Type::Boolean, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "object") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Object, {},
+          context, schema_context, dynamic_context, JSON::Type::Object, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "array") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::Array, {},
+          context, schema_context, dynamic_context, JSON::Type::Array, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "number") {
       return {make<SchemaCompilerAssertionTypeStrictAny>(
-          schema_context, dynamic_context,
+          context, schema_context, dynamic_context,
           std::set<JSON::Type>{JSON::Type::Real, JSON::Type::Integer}, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "integer") {
       return {make<SchemaCompilerAssertionType>(
-          schema_context, dynamic_context, JSON::Type::Integer, {},
+          context, schema_context, dynamic_context, JSON::Type::Integer, {},
           SchemaCompilerTargetType::Instance)};
     } else if (type == "string") {
       return {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, dynamic_context, JSON::Type::String, {},
+          context, schema_context, dynamic_context, JSON::Type::String, {},
           SchemaCompilerTargetType::Instance)};
     } else {
       return {};
@@ -115,7 +115,7 @@ auto compiler_draft6_validation_type(
     assert(types.size() >=
            schema_context.schema.at(dynamic_context.keyword).size());
     return {make<SchemaCompilerAssertionTypeAny>(
-        schema_context, dynamic_context, std::move(types), {},
+        context, schema_context, dynamic_context, std::move(types), {},
         SchemaCompilerTargetType::Instance)};
   }
 
@@ -123,18 +123,18 @@ auto compiler_draft6_validation_type(
 }
 
 auto compiler_draft6_validation_const(
-    const SchemaCompilerContext &,
+    const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   return {make<SchemaCompilerAssertionEqual>(
-      schema_context, dynamic_context,
+      context, schema_context, dynamic_context,
       schema_context.schema.at(dynamic_context.keyword), {},
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft6_validation_exclusivemaximum(
-    const SchemaCompilerContext &,
+    const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
@@ -143,23 +143,23 @@ auto compiler_draft6_validation_exclusivemaximum(
   // TODO: As an optimization, avoid this condition if the subschema
   // declares `type` to `number` or `integer` already
   SchemaCompilerTemplate condition{make<SchemaCompilerLogicalOr>(
-      schema_context, relative_dynamic_context, SchemaCompilerValueNone{},
+      context, schema_context, relative_dynamic_context, false,
       {make<SchemaCompilerAssertionTypeStrict>(
-           schema_context, relative_dynamic_context, JSON::Type::Real, {},
-           SchemaCompilerTargetType::Instance),
+           context, schema_context, relative_dynamic_context, JSON::Type::Real,
+           {}, SchemaCompilerTargetType::Instance),
        make<SchemaCompilerAssertionTypeStrict>(
-           schema_context, relative_dynamic_context, JSON::Type::Integer, {},
-           SchemaCompilerTargetType::Instance)},
+           context, schema_context, relative_dynamic_context,
+           JSON::Type::Integer, {}, SchemaCompilerTargetType::Instance)},
       SchemaCompilerTemplate{})};
 
   return {make<SchemaCompilerAssertionLess>(
-      schema_context, dynamic_context,
+      context, schema_context, dynamic_context,
       schema_context.schema.at(dynamic_context.keyword), std::move(condition),
       SchemaCompilerTargetType::Instance)};
 }
 
 auto compiler_draft6_validation_exclusiveminimum(
-    const SchemaCompilerContext &,
+    const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
@@ -168,17 +168,17 @@ auto compiler_draft6_validation_exclusiveminimum(
   // TODO: As an optimization, avoid this condition if the subschema
   // declares `type` to `number` or `integer` already
   SchemaCompilerTemplate condition{make<SchemaCompilerLogicalOr>(
-      schema_context, relative_dynamic_context, SchemaCompilerValueNone{},
+      context, schema_context, relative_dynamic_context, false,
       {make<SchemaCompilerAssertionTypeStrict>(
-           schema_context, relative_dynamic_context, JSON::Type::Real, {},
-           SchemaCompilerTargetType::Instance),
+           context, schema_context, relative_dynamic_context, JSON::Type::Real,
+           {}, SchemaCompilerTargetType::Instance),
        make<SchemaCompilerAssertionTypeStrict>(
-           schema_context, relative_dynamic_context, JSON::Type::Integer, {},
-           SchemaCompilerTargetType::Instance)},
+           context, schema_context, relative_dynamic_context,
+           JSON::Type::Integer, {}, SchemaCompilerTargetType::Instance)},
       SchemaCompilerTemplate{})};
 
   return {make<SchemaCompilerAssertionGreater>(
-      schema_context, dynamic_context,
+      context, schema_context, dynamic_context,
       schema_context.schema.at(dynamic_context.keyword), std::move(condition),
       SchemaCompilerTargetType::Instance)};
 }
@@ -189,7 +189,7 @@ auto compiler_draft6_applicator_contains(
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   return {make<SchemaCompilerLoopContains>(
-      schema_context, dynamic_context,
+      context, schema_context, dynamic_context,
       SchemaCompilerValueRange{1, std::nullopt},
       compile(context, schema_context, relative_dynamic_context, empty_pointer,
               empty_pointer),
@@ -197,8 +197,8 @@ auto compiler_draft6_applicator_contains(
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `array` already
       {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, relative_dynamic_context, JSON::Type::Array, {},
-          SchemaCompilerTargetType::Instance)})};
+          context, schema_context, relative_dynamic_context, JSON::Type::Array,
+          {}, SchemaCompilerTargetType::Instance)})};
 }
 
 auto compiler_draft6_validation_propertynames(
@@ -207,15 +207,15 @@ auto compiler_draft6_validation_propertynames(
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   return {make<SchemaCompilerLoopKeys>(
-      schema_context, dynamic_context, SchemaCompilerValueNone{},
+      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
       compile(context, schema_context, relative_dynamic_context, empty_pointer,
               empty_pointer),
 
       // TODO: As an optimization, avoid this condition if the subschema
       // declares `type` to `object` already
       {make<SchemaCompilerAssertionTypeStrict>(
-          schema_context, relative_dynamic_context, JSON::Type::Object, {},
-          SchemaCompilerTargetType::Instance)})};
+          context, schema_context, relative_dynamic_context, JSON::Type::Object,
+          {}, SchemaCompilerTargetType::Instance)})};
 }
 
 } // namespace internal

@@ -24,6 +24,7 @@ cat << 'EOF' > "$TMP/expected.json"
     "category": "logical",
     "type": "and",
     "value": null,
+    "schemaResource": "",
     "absoluteKeywordLocation": "#/properties",
     "relativeSchemaLocation": "/properties",
     "relativeInstanceLocation": "",
@@ -32,12 +33,14 @@ cat << 'EOF' > "$TMP/expected.json"
       "type": "instance",
       "location": ""
     },
+    "dynamic": false,
     "condition": [],
     "children": [
       {
         "category": "internal",
         "type": "container",
         "value": null,
+        "schemaResource": "",
         "absoluteKeywordLocation": "#/properties",
         "relativeSchemaLocation": "",
         "relativeInstanceLocation": "",
@@ -46,6 +49,7 @@ cat << 'EOF' > "$TMP/expected.json"
           "type": "instance",
           "location": ""
         },
+        "dynamic": false,
         "condition": [
           {
             "category": "assertion",
@@ -55,6 +59,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "string",
               "value": "foo"
             },
+            "schemaResource": "",
             "absoluteKeywordLocation": "#/properties",
             "relativeSchemaLocation": "",
             "relativeInstanceLocation": "",
@@ -63,6 +68,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "instance",
               "location": ""
             },
+            "dynamic": false,
             "condition": []
           }
         ],
@@ -75,6 +81,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "type",
               "value": "string"
             },
+            "schemaResource": "",
             "absoluteKeywordLocation": "#/properties/foo/type",
             "relativeSchemaLocation": "/foo/type",
             "relativeInstanceLocation": "/foo",
@@ -83,6 +90,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "instance",
               "location": ""
             },
+            "dynamic": false,
             "condition": []
           },
           {
@@ -93,6 +101,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "json",
               "value": "foo"
             },
+            "schemaResource": "",
             "absoluteKeywordLocation": "#/properties",
             "relativeSchemaLocation": "",
             "relativeInstanceLocation": "",
@@ -101,6 +110,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "instance",
               "location": ""
             },
+            "dynamic": false,
             "condition": []
           }
         ]
