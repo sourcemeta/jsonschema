@@ -1,11 +1,7 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_URI_H_
 #define SOURCEMETA_JSONTOOLKIT_URI_H_
 
-#if defined(__EMSCRIPTEN__) || defined(__Unikraft__)
-#define SOURCEMETA_JSONTOOLKIT_URI_EXPORT
-#else
 #include "uri_export.h"
-#endif
 
 #include <sourcemeta/jsontoolkit/uri_error.h>
 
@@ -108,6 +104,17 @@ public:
   /// ```
   auto is_fragment_only() const -> bool;
 
+  /// Check if the URI is relative. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::jsontoolkit::URI uri{"./foo"};
+  /// assert(uri.is_relative());
+  /// ```
+  auto is_relative() const -> bool;
+
   /// Get the scheme part of the URI, if any. For example:
   ///
   /// ```cpp
@@ -156,6 +163,33 @@ public:
   /// assert(uri.path().value() == "/foo/bar");
   /// ```
   [[nodiscard]] auto path() const -> std::optional<std::string>;
+
+  /// Set the path part of the URI. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::jsontoolkit::URI uri{"https://www.sourcemeta.com"};
+  /// const std::string path{"/foo/bar"};
+  /// uri.path(path);
+  /// assert(uri.path().has_value());
+  /// assert(uri.path().value() == "/foo/bar");
+  /// ```
+  auto path(const std::string &path) -> URI &;
+
+  /// Set the path part of the URI with move semantics. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::jsontoolkit::URI uri{"https://www.sourcemeta.com"};
+  /// std::string path{"/foo/bar"};
+  /// uri.path(std::move(path));
+  /// assert(uri.path().has_value());
+  /// assert(uri.path().value() == "/foo/bar");
+  auto path(std::string &&path) -> URI &;
 
   /// Get the fragment part of the URI, if any. For example:
   ///

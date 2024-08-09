@@ -22,6 +22,23 @@ local development and when running on CI/CD pipelines. For example:
 > and Code: Designing Data Products with JSON
 > Schema](https://www.oreilly.com/library/view/unifying-business-data/9781098144999/).
 
+Version support
+---------------
+
+We aim to fully support _every_ version of JSON Schema and combinations between them.
+
+| Dialect             | Support                                                          |
+|---------------------|------------------------------------------------------------------|
+| JSON Schema 2020-12 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| JSON Schema 2019-09 | **Full**                                                         |
+| JSON Schema Draft 7 | **Full**                                                         |
+| JSON Schema Draft 6 | **Full**                                                         |
+| JSON Schema Draft 4 | **Full**                                                         |
+| JSON Schema Draft 3 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+
 What our users are saying
 -------------------------
 

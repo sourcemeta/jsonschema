@@ -210,7 +210,7 @@ auto sourcemeta::jsontoolkit::frame(
           }
 
           const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
-          maybe_relative.resolve_from(base);
+          maybe_relative.resolve_from_if_absolute(base);
           const std::string new_id{maybe_relative.recompose()};
 
           if (!maybe_relative_is_absolute ||
@@ -238,7 +238,7 @@ auto sourcemeta::jsontoolkit::frame(
       const auto nearest_bases{
           find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
       if (!nearest_bases.first.empty()) {
-        metaschema.resolve_from(nearest_bases.first.front());
+        metaschema.resolve_from_if_absolute(nearest_bases.first.front());
       }
 
       metaschema.canonicalize();
@@ -251,7 +251,6 @@ auto sourcemeta::jsontoolkit::frame(
     }
 
     // Handle schema anchors
-    // TODO: Support $recursiveAnchor
     for (const auto &[name, type] : sourcemeta::jsontoolkit::anchors(
              entry.common.value, entry.common.vocabularies)) {
       const auto bases{
@@ -324,7 +323,7 @@ auto sourcemeta::jsontoolkit::frame(
       auto relative_pointer_uri{
           sourcemeta::jsontoolkit::to_uri(pointer.resolve_from(base.second))};
       if (!base.first.empty()) {
-        relative_pointer_uri.resolve_from({base.first});
+        relative_pointer_uri.resolve_from_if_absolute({base.first});
       }
 
       relative_pointer_uri.canonicalize();
@@ -344,7 +343,6 @@ auto sourcemeta::jsontoolkit::frame(
 
   // Resolve references after all framing was performed
   for (const auto &entry : subschema_entries) {
-    // TODO: Handle $recursiveRef too
     if (entry.common.value.is_object()) {
       const auto nearest_bases{
           find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
@@ -355,7 +353,7 @@ auto sourcemeta::jsontoolkit::frame(
         sourcemeta::jsontoolkit::URI ref{
             entry.common.value.at("$ref").to_string()};
         if (!nearest_bases.first.empty()) {
-          ref.resolve_from(nearest_bases.first.front());
+          ref.resolve_from_if_absolute(nearest_bases.first.front());
         }
 
         ref.canonicalize();
@@ -363,6 +361,37 @@ auto sourcemeta::jsontoolkit::frame(
             {{ReferenceType::Static, entry.common.pointer.concat({"$ref"})},
              {ref.recompose(), ref.recompose_without_fragment(),
               fragment_string(ref)}});
+      }
+
+      if (entry.common.vocabularies.contains(
+              "https://json-schema.org/draft/2019-09/vocab/core") &&
+          entry.common.value.defines("$recursiveRef")) {
+        assert(entry.common.value.at("$recursiveRef").is_string());
+        const auto &ref{entry.common.value.at("$recursiveRef").to_string()};
+
+        // The behavior of this keyword is defined only for the value "#".
+        // Implementations MAY choose to consider other values to be errors.
+        // See
+        // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.2.4.2.1
+        if (ref != "#") {
+          std::ostringstream error;
+          error << "Invalid recursive reference: " << ref;
+          throw sourcemeta::jsontoolkit::SchemaError(error.str());
+        }
+
+        auto anchor_uri_string{
+            nearest_bases.first.empty() ? "" : nearest_bases.first.front()};
+        const auto recursive_anchor{
+            frame.find({ReferenceType::Dynamic, anchor_uri_string})};
+        const auto reference_type{recursive_anchor == frame.end()
+                                      ? ReferenceType::Static
+                                      : ReferenceType::Dynamic};
+        const sourcemeta::jsontoolkit::URI anchor_uri{
+            std::move(anchor_uri_string)};
+        references.insert(
+            {{reference_type, entry.common.pointer.concat({"$recursiveRef"})},
+             {anchor_uri.recompose(), anchor_uri.recompose_without_fragment(),
+              fragment_string(anchor_uri)}});
       }
 
       if (entry.common.vocabularies.contains(

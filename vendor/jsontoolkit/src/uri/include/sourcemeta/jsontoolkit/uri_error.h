@@ -1,11 +1,7 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_URI_ERROR_H_
 #define SOURCEMETA_JSONTOOLKIT_URI_ERROR_H_
 
-#if defined(__EMSCRIPTEN__) || defined(__Unikraft__)
-#define SOURCEMETA_JSONTOOLKIT_URI_EXPORT
-#else
 #include "uri_export.h"
-#endif
 
 #include <cstdint>   // std::uint64_t
 #include <exception> // std::exception

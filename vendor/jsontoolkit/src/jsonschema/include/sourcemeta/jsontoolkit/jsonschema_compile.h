@@ -1,11 +1,7 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_COMPILE_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_COMPILE_H_
 
-#if defined(__EMSCRIPTEN__) || defined(__Unikraft__)
-#define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-#else
 #include "jsonschema_export.h"
-#endif
 
 #include <sourcemeta/jsontoolkit/jsonschema_reference.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
@@ -289,13 +285,23 @@ struct SchemaCompilerLoopItemsFromAnnotationIndex;
 struct SchemaCompilerLoopContains;
 
 /// @ingroup jsonschema
-/// Represents a compiler step that consists of a mark to jump to
+/// Represents a compiler step that consists of a mark to jump to while
+/// executing children instructions
 struct SchemaCompilerControlLabel;
+
+/// @ingroup jsonschema
+/// Represents a compiler step that consists of a mark to jump to, but without
+/// executing children instructions
+struct SchemaCompilerControlMark;
 
 /// @ingroup jsonschema
 /// Represents a compiler step that consists of jumping into a pre-registered
 /// label
 struct SchemaCompilerControlJump;
+
+/// @ingroup jsonschema
+/// Represents a compiler step that consists of jump to a dynamic anchor
+struct SchemaCompilerControlDynamicAnchorJump;
 
 /// @ingroup jsonschema
 /// Represents a schema compilation step that can be evaluated
@@ -319,7 +325,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerInternalDefinesAll, SchemaCompilerLoopProperties,
     SchemaCompilerLoopKeys, SchemaCompilerLoopItems,
     SchemaCompilerLoopItemsFromAnnotationIndex, SchemaCompilerLoopContains,
-    SchemaCompilerControlLabel, SchemaCompilerControlJump>>;
+    SchemaCompilerControlLabel, SchemaCompilerControlMark,
+    SchemaCompilerControlJump, SchemaCompilerControlDynamicAnchorJump>>;
 
 #if !defined(DOXYGEN)
 #define DEFINE_STEP_WITH_VALUE(category, name, type)                           \
@@ -328,6 +335,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
+    const std::string schema_resource;                                         \
+    const bool dynamic;                                                        \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
   };
@@ -338,6 +347,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
+    const std::string schema_resource;                                         \
+    const bool dynamic;                                                        \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
     const data_type data;                                                      \
@@ -349,17 +360,21 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
+    const std::string schema_resource;                                         \
+    const bool dynamic;                                                        \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate children;                                     \
     const SchemaCompilerTemplate condition;                                    \
   };
 
-#define DEFINE_CONTROL(name)                                                   \
+#define DEFINE_CONTROL(name, type)                                             \
   struct SchemaCompilerControl##name {                                         \
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
-    const std::size_t id;                                                      \
+    const std::string schema_resource;                                         \
+    const bool dynamic;                                                        \
+    const type id;                                                             \
     const SchemaCompilerTemplate children;                                     \
   };
 
@@ -385,7 +400,7 @@ DEFINE_STEP_WITH_VALUE(Assertion, Unique, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Divisible, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, StringType, SchemaCompilerValueStringType)
 DEFINE_STEP_WITH_VALUE(Annotation, Public, SchemaCompilerValueJSON)
-DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueNone)
+DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueBoolean)
 DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
@@ -402,8 +417,10 @@ DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_APPLICATOR(Loop, ItemsFromAnnotationIndex,
                        SchemaCompilerValueString)
 DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueRange)
-DEFINE_CONTROL(Label)
-DEFINE_CONTROL(Jump)
+DEFINE_CONTROL(Label, SchemaCompilerValueUnsignedInteger)
+DEFINE_CONTROL(Mark, SchemaCompilerValueUnsignedInteger)
+DEFINE_CONTROL(Jump, SchemaCompilerValueUnsignedInteger)
+DEFINE_CONTROL(DynamicAnchorJump, SchemaCompilerValueString)
 
 #undef DEFINE_STEP_WITH_VALUE
 #undef DEFINE_STEP_WITH_VALUE_AND_DATA
@@ -468,6 +485,8 @@ struct SchemaCompilerContext {
   const SchemaResolver &resolver;
   /// The schema compiler in use
   const SchemaCompiler &compiler;
+  /// Whether the schema makes use of dynamic scoping
+  const bool uses_dynamic_scopes;
 };
 
 /// @ingroup jsonschema

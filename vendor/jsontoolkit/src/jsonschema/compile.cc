@@ -1,8 +1,10 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 
-#include <cassert> // assert
-#include <utility> // std::move
+#include <algorithm> // std::move
+#include <cassert>   // assert
+#include <iterator>  // std::back_inserter
+#include <utility>   // std::move
 
 #include "compile_helpers.h"
 
@@ -25,8 +27,8 @@ auto compile_subschema(
       return {};
     } else {
       return {make<SchemaCompilerAssertionFail>(
-          schema_context, dynamic_context, SchemaCompilerValueNone{}, {},
-          SchemaCompilerTargetType::Instance)};
+          context, schema_context, dynamic_context, SchemaCompilerValueNone{},
+          {}, SchemaCompilerTargetType::Instance)};
     }
   }
 
@@ -92,14 +94,78 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
   assert(frame.contains({ReferenceType::Static, base}));
   const auto root_frame_entry{frame.at({ReferenceType::Static, base})};
 
-  return compile_subschema(
-      {result, frame, references, walker, resolver, compiler},
-      {empty_pointer,
-       result,
-       vocabularies(schema, resolver, root_frame_entry.dialect).get(),
-       root_frame_entry.base,
-       {}},
-      relative_dynamic_context, root_frame_entry.dialect);
+  // Check whether dynamic referencing takes places in this schema. If not,
+  // we can avoid the overhead of keeping track of dynamics scopes, etc
+  bool uses_dynamic_scopes{false};
+  for (const auto &reference : references) {
+    if (reference.first.first == ReferenceType::Dynamic) {
+      uses_dynamic_scopes = true;
+      break;
+    }
+  }
+
+  const sourcemeta::jsontoolkit::SchemaCompilerContext context{
+      result,   frame,    references,         walker,
+      resolver, compiler, uses_dynamic_scopes};
+  sourcemeta::jsontoolkit::SchemaCompilerSchemaContext schema_context{
+      empty_pointer,
+      result,
+      vocabularies(schema, resolver, root_frame_entry.dialect).get(),
+      root_frame_entry.base,
+      {}};
+  const sourcemeta::jsontoolkit::SchemaCompilerDynamicContext dynamic_context{
+      relative_dynamic_context};
+  sourcemeta::jsontoolkit::SchemaCompilerTemplate compiler_template;
+
+  // TODO: Support dynamic anchors on 2020-12
+  if (uses_dynamic_scopes &&
+      schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2019-09/vocab/core")) {
+    for (const auto &entry : frame) {
+      // We are only trying to find dynamic anchors
+      if (entry.second.type != ReferenceEntryType::Anchor ||
+          entry.first.first != ReferenceType::Dynamic) {
+        continue;
+      }
+
+      const URI anchor_uri{entry.first.second};
+      std::ostringstream name;
+      name << anchor_uri.recompose_without_fragment().value_or("");
+      name << '#';
+      name << anchor_uri.fragment().value_or("");
+      const auto label{std::hash<std::string>{}(name.str())};
+      schema_context.labels.insert(label);
+
+      // Configure a schema context that corresponds to the
+      // schema resource that we are precompiling
+      auto subschema{get(result, entry.second.pointer)};
+      auto nested_vocabularies{
+          vocabularies(subschema, resolver, entry.second.dialect).get()};
+      const sourcemeta::jsontoolkit::SchemaCompilerSchemaContext
+          nested_schema_context{entry.second.relative_pointer,
+                                std::move(subschema),
+                                std::move(nested_vocabularies),
+                                entry.second.base,
+                                {}};
+
+      compiler_template.push_back(make<SchemaCompilerControlMark>(
+          context, nested_schema_context, dynamic_context,
+          SchemaCompilerValueUnsignedInteger{label},
+          compile(context, nested_schema_context, relative_dynamic_context,
+                  empty_pointer, empty_pointer, entry.first.second)));
+    }
+  }
+
+  auto children{compile_subschema(context, schema_context, dynamic_context,
+                                  root_frame_entry.dialect)};
+  if (compiler_template.empty()) {
+    return children;
+  } else {
+    compiler_template.reserve(compiler_template.size() + children.size());
+    std::move(children.begin(), children.end(),
+              std::back_inserter(compiler_template));
+    return compiler_template;
+  }
 }
 
 auto compile(const SchemaCompilerContext &context,
