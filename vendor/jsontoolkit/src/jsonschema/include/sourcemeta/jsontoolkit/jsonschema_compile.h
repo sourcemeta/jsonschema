@@ -17,6 +17,7 @@
 #include <regex>      // std::regex
 #include <set>        // std::set
 #include <string>     // std::string
+#include <tuple>      // std::tuple
 #include <utility>    // std::move, std::pair
 #include <variant>    // std::variant
 #include <vector>     // std::vector
@@ -94,9 +95,11 @@ using SchemaCompilerValueRegex = std::pair<std::regex, std::string>;
 using SchemaCompilerValueUnsignedInteger = std::size_t;
 
 /// @ingroup jsonschema
-/// Represents a compiler step range value
+/// Represents a compiler step range value. The boolean option
+/// modifies whether the range is considered exhaustively or
+/// if the evaluator is allowed to break early
 using SchemaCompilerValueRange =
-    std::pair<std::size_t, std::optional<std::size_t>>;
+    std::tuple<std::size_t, std::optional<std::size_t>, bool>;
 
 /// @ingroup jsonschema
 /// Represents a compiler step boolean value

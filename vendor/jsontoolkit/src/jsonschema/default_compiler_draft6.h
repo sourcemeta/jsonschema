@@ -190,7 +190,7 @@ auto compiler_draft6_applicator_contains(
     -> SchemaCompilerTemplate {
   return {make<SchemaCompilerLoopContains>(
       context, schema_context, dynamic_context,
-      SchemaCompilerValueRange{1, std::nullopt},
+      SchemaCompilerValueRange{1, std::nullopt, false},
       compile(context, schema_context, relative_dynamic_context, empty_pointer,
               empty_pointer),
 

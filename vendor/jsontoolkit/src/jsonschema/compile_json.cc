@@ -115,9 +115,11 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     result.assign("type", JSON{"range"});
     JSON values{JSON::make_array()};
     const auto &range{std::get<T>(value)};
-    values.push_back(JSON{range.first});
-    values.push_back(range.second.has_value() ? JSON{range.second.value()}
-                                              : JSON{nullptr});
+    values.push_back(JSON{std::get<0>(range)});
+    values.push_back(std::get<1>(range).has_value()
+                         ? JSON{std::get<1>(range).value()}
+                         : JSON{nullptr});
+    values.push_back(JSON{std::get<2>(range)});
     result.assign("value", std::move(values));
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueStringType, T>) {
@@ -297,9 +299,10 @@ auto compiler_template_format_compare(const JSON::String &left,
                    {"relativeInstanceLocation", 6},
                    {"target", 7},
                    {"location", 8},
-                   {"dynamic", 9},
-                   {"condition", 10},
-                   {"children", 11}};
+                   {"id", 9},
+                   {"dynamic", 10},
+                   {"condition", 11},
+                   {"children", 12}};
 
   // We define and control all of these keywords, so if we are missing
   // some here, then we did something wrong?

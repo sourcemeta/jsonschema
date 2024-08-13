@@ -47,7 +47,7 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
                        "patternProperties", "additionalProperties")
   WALK_MAYBE_DEPENDENT(
       HTTPS_BASE "2020-12/vocab/unevaluated", "unevaluatedItems", Value,
-      HTTPS_BASE "2020-12/vocab/applicator", "prefixItems", "items")
+      HTTPS_BASE "2020-12/vocab/applicator", "prefixItems", "items", "contains")
 
   // 2019-09
   WALK(HTTPS_BASE "2019-09/vocab/core", "$defs", Members)
