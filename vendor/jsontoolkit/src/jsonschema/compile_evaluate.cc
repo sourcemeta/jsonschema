@@ -241,18 +241,26 @@ public:
 
   auto find_dynamic_anchor(const std::string &anchor) const
       -> std::optional<std::size_t> {
-    for (const auto &resource : this->resources()) {
+    std::optional<std::size_t> result;
+
+    // We want to check every schema resource from the current one
+    // backwards until the dynamic anchor chain is lost. The one
+    // before its lost is the one we want to jump to
+    for (auto iterator = this->resources().crbegin();
+         iterator < this->resources().crend(); ++iterator) {
       std::ostringstream name;
-      name << resource;
+      name << *iterator;
       name << '#';
       name << anchor;
       const auto label{std::hash<std::string>{}(name.str())};
       if (this->labels.contains(label)) {
-        return label;
+        result = label;
+      } else {
+        break;
       }
     }
 
-    return std::nullopt;
+    return result;
   }
 
   auto jump(const std::size_t id) const -> const Template & {
@@ -1013,9 +1021,10 @@ auto evaluate_step(
     EVALUATE_CONDITION_GUARD(loop, instance);
     CALLBACK_PRE(context.instance_location());
     const auto &value{context.resolve_value(loop.value, instance)};
-    const auto minimum{value.first};
-    const auto &maximum{value.second};
+    const auto minimum{std::get<0>(value)};
+    const auto &maximum{std::get<1>(value)};
     assert(!maximum.has_value() || maximum.value() >= minimum);
+    const auto is_exhaustive{std::get<2>(value)};
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_array());
     result = minimum == 0 && target.empty();
@@ -1041,6 +1050,10 @@ auto evaluate_step(
         // Exceeding the upper bound is definitely a failure
         if (maximum.has_value() && match_count > maximum.value()) {
           result = false;
+
+          // Note that here we don't want to consider whether to run
+          // exhaustively or not. At this point, its already a failure,
+          // and anything that comes after would not run at all anyway
           break;
         }
 
@@ -1049,7 +1062,7 @@ auto evaluate_step(
 
           // Exceeding the lower bound when there is no upper bound
           // is definitely a success
-          if (!maximum.has_value()) {
+          if (!maximum.has_value() && !is_exhaustive) {
             break;
           }
         }

@@ -90,11 +90,11 @@ auto compiler_2019_09_core_annotation(
       SchemaCompilerTargetType::Instance)};
 }
 
-auto compiler_2019_09_applicator_contains(
+auto compiler_2019_09_applicator_contains_conditional_annotate(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context)
-    -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context,
+    const bool annotate) -> SchemaCompilerTemplate {
 
   std::size_t minimum{1};
   if (schema_context.schema.defines("minContains")) {
@@ -130,14 +130,44 @@ auto compiler_2019_09_applicator_contains(
     return {};
   }
 
+  SchemaCompilerTemplate children{compile(context, schema_context,
+                                          relative_dynamic_context,
+                                          empty_pointer, empty_pointer)};
+
+  if (annotate) {
+    children.push_back(make<SchemaCompilerAnnotationPublic>(
+        context, schema_context, relative_dynamic_context,
+        SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
+                             empty_pointer},
+        {}, SchemaCompilerTargetType::InstanceParent));
+
+    // TODO: If after emitting the above annotation, the number of annotations
+    // for the current schema location + instance location is equal to the
+    // array size (which means we annotated all of the items), then emit
+    // an annotation "true"
+  }
+
   return {make<SchemaCompilerLoopContains>(
       context, schema_context, dynamic_context,
-      SchemaCompilerValueRange{minimum, maximum},
-      compile(context, schema_context, relative_dynamic_context, empty_pointer,
-              empty_pointer),
+      SchemaCompilerValueRange{
+          minimum, maximum,
+          // TODO: We only need to be exhaustive here if `unevaluatedItems` is
+          // in use on the schema. Can we pre-determine that and speed things up
+          // if not?
+          annotate},
+      std::move(children),
       {make<SchemaCompilerAssertionTypeStrict>(
           context, schema_context, relative_dynamic_context, JSON::Type::Array,
           {}, SchemaCompilerTargetType::Instance)})};
+}
+
+auto compiler_2019_09_applicator_contains(
+    const SchemaCompilerContext &context,
+    const SchemaCompilerSchemaContext &schema_context,
+    const SchemaCompilerDynamicContext &dynamic_context)
+    -> SchemaCompilerTemplate {
+  return compiler_2019_09_applicator_contains_conditional_annotate(
+      context, schema_context, dynamic_context, false);
 }
 
 auto compiler_2019_09_applicator_additionalproperties(
@@ -145,48 +175,8 @@ auto compiler_2019_09_applicator_additionalproperties(
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  // Evaluate the subschema against the current property if it
-  // was NOT collected as an annotation on either "properties" or
-  // "patternProperties"
-  SchemaCompilerTemplate conjunctions{
-      make<SchemaCompilerInternalNoAdjacentAnnotation>(
-          context, schema_context, relative_dynamic_context,
-          SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
-                               empty_pointer},
-          {}, SchemaCompilerTargetType::ParentAdjacentAnnotations,
-          Pointer{"properties"}),
-
-      make<SchemaCompilerInternalNoAdjacentAnnotation>(
-          context, schema_context, relative_dynamic_context,
-          SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
-                               empty_pointer},
-          {}, SchemaCompilerTargetType::ParentAdjacentAnnotations,
-          Pointer{"patternProperties"}),
-  };
-
-  SchemaCompilerTemplate children{compile(context, schema_context,
-                                          relative_dynamic_context,
-                                          empty_pointer, empty_pointer)};
-
-  children.push_back(make<SchemaCompilerAnnotationPublic>(
-      context, schema_context, relative_dynamic_context,
-      SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
-                           empty_pointer},
-      {}, SchemaCompilerTargetType::InstanceParent));
-
-  SchemaCompilerTemplate wrapper{make<SchemaCompilerInternalContainer>(
-      context, schema_context, relative_dynamic_context,
-      SchemaCompilerValueNone{}, std::move(children),
-      {make<SchemaCompilerLogicalAnd>(
-          context, schema_context, relative_dynamic_context,
-          SchemaCompilerValueNone{}, std::move(conjunctions),
-          SchemaCompilerTemplate{})})};
-
-  return {make<SchemaCompilerLoopProperties>(
-      context, schema_context, dynamic_context, true, {std::move(wrapper)},
-      {make<SchemaCompilerAssertionTypeStrict>(
-          context, schema_context, relative_dynamic_context, JSON::Type::Object,
-          {}, SchemaCompilerTargetType::Instance)})};
+  return compiler_draft4_applicator_additionalproperties_conditional_annotation(
+      context, schema_context, dynamic_context, true);
 }
 
 auto compiler_2019_09_applicator_items(
@@ -194,101 +184,8 @@ auto compiler_2019_09_applicator_items(
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  if (is_schema(schema_context.schema.at(dynamic_context.keyword))) {
-    SchemaCompilerTemplate children;
-    children.push_back(make<SchemaCompilerLoopItems>(
-        context, schema_context, relative_dynamic_context,
-        SchemaCompilerValueUnsignedInteger{0},
-        compile(context, schema_context, relative_dynamic_context,
-                empty_pointer, empty_pointer),
-        SchemaCompilerTemplate{}));
-    children.push_back(make<SchemaCompilerAnnotationPublic>(
-        context, schema_context, relative_dynamic_context, JSON{true}, {},
-        SchemaCompilerTargetType::Instance));
-
-    return {make<SchemaCompilerInternalContainer>(
-        context, schema_context, dynamic_context, SchemaCompilerValueNone{},
-        std::move(children),
-        {make<SchemaCompilerAssertionTypeStrict>(
-            context, schema_context, relative_dynamic_context,
-            JSON::Type::Array, {}, SchemaCompilerTargetType::Instance)})};
-  }
-
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
-  const auto items_size{
-      schema_context.schema.at(dynamic_context.keyword).size()};
-  if (items_size == 0) {
-    return {};
-  }
-
-  // The idea here is to precompile all possibilities depending on the size
-  // of the instance array up to the size of the `items` keyword array.
-  // For example, if `items` is set to `[ {}, {}, {} ]`, we create 3
-  // conjunctions:
-  // - [ {}, {}, {} ] if the instance array size is >= 3
-  // - [ {}, {} ] if the instance array size is == 2
-  // - [ {} ] if the instance array size is == 1
-
-  // Precompile subschemas
-  std::vector<SchemaCompilerTemplate> subschemas;
-  subschemas.reserve(items_size);
-  const auto &array{
-      schema_context.schema.at(dynamic_context.keyword).as_array()};
-  for (auto iterator{array.cbegin()}; iterator != array.cend(); ++iterator) {
-    subschemas.push_back(compile(context, schema_context,
-                                 relative_dynamic_context, {subschemas.size()},
-                                 {subschemas.size()}));
-  }
-
-  SchemaCompilerTemplate children;
-  for (std::size_t cursor = items_size; cursor > 0; cursor--) {
-    SchemaCompilerTemplate subchildren;
-    for (std::size_t index = 0; index < cursor; index++) {
-      for (const auto &substep : subschemas.at(index)) {
-        subchildren.push_back(substep);
-      }
-    }
-
-    // The first entry
-    if (cursor == items_size) {
-      subchildren.push_back(make<SchemaCompilerAnnotationPublic>(
-          context, schema_context, relative_dynamic_context, JSON{true},
-          {make<SchemaCompilerAssertionSizeEqual>(
-              context, schema_context, relative_dynamic_context, cursor, {},
-              SchemaCompilerTargetType::Instance)},
-          SchemaCompilerTargetType::Instance));
-      subchildren.push_back(make<SchemaCompilerAnnotationPublic>(
-          context, schema_context, relative_dynamic_context, JSON{cursor - 1},
-          {make<SchemaCompilerAssertionSizeGreater>(
-              context, schema_context, relative_dynamic_context, cursor, {},
-              SchemaCompilerTargetType::Instance)},
-          SchemaCompilerTargetType::Instance));
-
-      children.push_back(make<SchemaCompilerInternalContainer>(
-          context, schema_context, relative_dynamic_context,
-          SchemaCompilerValueNone{}, std::move(subchildren),
-          {make<SchemaCompilerAssertionSizeGreater>(
-              context, schema_context, relative_dynamic_context, cursor - 1, {},
-              SchemaCompilerTargetType::Instance)}));
-    } else {
-      subchildren.push_back(make<SchemaCompilerAnnotationPublic>(
-          context, schema_context, relative_dynamic_context, JSON{cursor - 1},
-          {}, SchemaCompilerTargetType::Instance));
-      children.push_back(make<SchemaCompilerInternalContainer>(
-          context, schema_context, relative_dynamic_context,
-          SchemaCompilerValueNone{}, std::move(subchildren),
-          {make<SchemaCompilerAssertionSizeEqual>(
-              context, schema_context, relative_dynamic_context, cursor, {},
-              SchemaCompilerTargetType::Instance)}));
-    }
-  }
-
-  return {make<SchemaCompilerLogicalAnd>(
-      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
-      std::move(children),
-      {make<SchemaCompilerAssertionTypeStrict>(
-          context, schema_context, relative_dynamic_context, JSON::Type::Array,
-          {}, SchemaCompilerTargetType::Instance)})};
+  return compiler_draft4_applicator_items_conditional_annotation(
+      context, schema_context, dynamic_context, true);
 }
 
 auto compiler_2019_09_applicator_additionalitems(
@@ -296,39 +193,8 @@ auto compiler_2019_09_applicator_additionalitems(
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  assert(schema_context.schema.is_object());
-
-  // Nothing to do here
-  if (!schema_context.schema.defines("items") ||
-      schema_context.schema.at("items").is_object()) {
-    return {};
-  }
-
-  const auto cursor{(schema_context.schema.defines("items") &&
-                     schema_context.schema.at("items").is_array())
-                        ? schema_context.schema.at("items").size()
-                        : 0};
-
-  SchemaCompilerTemplate condition{make<SchemaCompilerAssertionTypeStrict>(
-      context, schema_context, dynamic_context, JSON::Type::Array, {},
-      SchemaCompilerTargetType::Instance)};
-  condition.push_back(make<SchemaCompilerAssertionSizeGreater>(
-      context, schema_context, dynamic_context, cursor, {},
-      SchemaCompilerTargetType::Instance));
-
-  SchemaCompilerTemplate children{make<SchemaCompilerLoopItems>(
-      context, schema_context, relative_dynamic_context,
-      SchemaCompilerValueUnsignedInteger{cursor},
-      compile(context, schema_context, relative_dynamic_context, empty_pointer,
-              empty_pointer),
-      SchemaCompilerTemplate{})};
-  children.push_back(make<SchemaCompilerAnnotationPublic>(
-      context, schema_context, relative_dynamic_context, JSON{true}, {},
-      SchemaCompilerTargetType::Instance));
-
-  return {make<SchemaCompilerInternalContainer>(
-      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
-      std::move(children), std::move(condition))};
+  return compiler_draft4_applicator_additionalitems_conditional_annotation(
+      context, schema_context, dynamic_context, true);
 }
 
 auto compiler_2019_09_applicator_unevaluateditems(
@@ -337,24 +203,59 @@ auto compiler_2019_09_applicator_unevaluateditems(
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   SchemaCompilerValueStrings dependencies{"unevaluatedItems"};
+
   if (schema_context.vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/applicator")) {
     dependencies.emplace("items");
     dependencies.emplace("additionalItems");
   }
 
-  SchemaCompilerTemplate children{compile(context, schema_context,
-                                          relative_dynamic_context,
-                                          empty_pointer, empty_pointer)};
-  children.push_back(make<SchemaCompilerAnnotationPublic>(
+  if (schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/applicator")) {
+    dependencies.emplace("prefixItems");
+    dependencies.emplace("items");
+    dependencies.emplace("contains");
+  }
+
+  SchemaCompilerTemplate children;
+
+  SchemaCompilerTemplate loop_children{compile(context, schema_context,
+                                               relative_dynamic_context,
+                                               empty_pointer, empty_pointer)};
+  loop_children.push_back(make<SchemaCompilerAnnotationPublic>(
       context, schema_context, relative_dynamic_context, JSON{true}, {},
       SchemaCompilerTargetType::InstanceParent));
 
+  if (schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/applicator")) {
+    SchemaCompilerTemplate subcondition{
+        make<SchemaCompilerInternalNoAnnotation>(
+            context, schema_context, relative_dynamic_context,
+            SchemaCompilerTarget{SchemaCompilerTargetType::InstanceBasename,
+                                 empty_pointer},
+            {}, SchemaCompilerTargetType::ParentAnnotations, {"contains"})};
+    children.push_back(make<SchemaCompilerInternalContainer>(
+        context, schema_context, relative_dynamic_context,
+        SchemaCompilerValueNone{}, std::move(loop_children),
+        std::move(subcondition)));
+  } else {
+    children = std::move(loop_children);
+  }
+
   SchemaCompilerTemplate loop;
-  if (dependencies.contains("items")) {
+  if (schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2019-09/vocab/applicator") &&
+      dependencies.contains("items")) {
     loop.push_back(make<SchemaCompilerLoopItemsFromAnnotationIndex>(
         context, schema_context, relative_dynamic_context,
         SchemaCompilerValueString{"items"}, std::move(children),
+        SchemaCompilerTemplate{}));
+  } else if (schema_context.vocabularies.contains(
+                 "https://json-schema.org/draft/2020-12/vocab/applicator") &&
+             dependencies.contains("prefixItems")) {
+    loop.push_back(make<SchemaCompilerLoopItemsFromAnnotationIndex>(
+        context, schema_context, relative_dynamic_context,
+        SchemaCompilerValueString{"prefixItems"}, std::move(children),
         SchemaCompilerTemplate{}));
   } else {
     loop.push_back(make<SchemaCompilerLoopItems>(
@@ -381,8 +282,16 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
   SchemaCompilerValueStrings dependencies{"unevaluatedProperties"};
+
   if (schema_context.vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/applicator")) {
+    dependencies.emplace("properties");
+    dependencies.emplace("patternProperties");
+    dependencies.emplace("additionalProperties");
+  }
+
+  if (schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/applicator")) {
     dependencies.emplace("properties");
     dependencies.emplace("patternProperties");
     dependencies.emplace("additionalProperties");
@@ -437,28 +346,13 @@ auto compiler_2019_09_applicator_anyof(
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
-  assert(!schema_context.schema.at(dynamic_context.keyword).empty());
-
-  SchemaCompilerTemplate disjunctors;
-  for (std::uint64_t index = 0;
-       index < schema_context.schema.at(dynamic_context.keyword).size();
-       index++) {
-    disjunctors.push_back(make<SchemaCompilerInternalContainer>(
-        context, schema_context, relative_dynamic_context,
-        SchemaCompilerValueNone{},
-        compile(context, schema_context, relative_dynamic_context,
-                {static_cast<Pointer::Token::Index>(index)}),
-        SchemaCompilerTemplate{}));
-  }
-
-  return {make<SchemaCompilerLogicalOr>(
+  return compiler_draft4_applicator_anyof_conditional_exhaustive(
       context, schema_context, dynamic_context,
       // TODO: This set to true means that every disjunction of `anyOf`
       // is always evaluated. In fact, we only need to enable this if
       // the schema makes any use of `unevaluatedItems` or
       // `unevaluatedProperties`
-      true, std::move(disjunctors), SchemaCompilerTemplate{})};
+      true);
 }
 
 } // namespace internal
