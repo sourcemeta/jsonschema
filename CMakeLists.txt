@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(jsonschema VERSION 3.1.0 LANGUAGES CXX)
+project(jsonschema VERSION 3.1.1 LANGUAGES CXX)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(vendor/noa/cmake/noa.cmake)
 
