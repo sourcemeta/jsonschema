@@ -140,6 +140,7 @@ add_jsonschema_test_unix(compile/pass_2)
 add_jsonschema_test_unix(compile/fail_no_schema)
 add_jsonschema_test_unix(compile/fail_schema_invalid_json)
 add_jsonschema_test_unix(compile/fail_unknown_metaschema)
+add_jsonschema_test_unix(compile/fail_ref_from_unknown_keyword)
 
 # Identify
 add_jsonschema_test_unix(identify/fail_resolve_from_no_match)

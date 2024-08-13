@@ -23,7 +23,13 @@ auto compiler_draft4_core_ref(const SchemaCompilerContext &context,
   const auto current{keyword_location(schema_context)};
   assert(context.frame.contains({type, current}));
   const auto &entry{context.frame.at({type, current})};
-  assert(context.references.contains({type, entry.pointer}));
+  if (!context.references.contains({type, entry.pointer})) {
+    assert(schema_context.schema.at(dynamic_context.keyword).is_string());
+    throw SchemaReferenceError(
+        schema_context.schema.at(dynamic_context.keyword).to_string(),
+        entry.pointer, "The schema location is inside of an unknown keyword");
+  }
+
   const auto &reference{context.references.at({type, entry.pointer})};
   const auto label{std::hash<std::string>{}(reference.destination)};
 
