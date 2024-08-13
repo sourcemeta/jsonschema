@@ -135,7 +135,8 @@ add_jsonschema_test_unix(frame/fail_schema_invalid_json)
 add_jsonschema_test_unix(frame/fail_unknown_metaschema)
 
 # Compile
-add_jsonschema_test_unix(compile/pass)
+add_jsonschema_test_unix(compile/pass_1)
+add_jsonschema_test_unix(compile/pass_2)
 add_jsonschema_test_unix(compile/fail_no_schema)
 add_jsonschema_test_unix(compile/fail_schema_invalid_json)
 add_jsonschema_test_unix(compile/fail_unknown_metaschema)
