@@ -2,7 +2,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <algorithm>   // std::min, std::adjacent_find
+#include <algorithm>   // std::min
 #include <cassert>     // assert
 #include <functional>  // std::reference_wrapper
 #include <iterator>    // std::distance, std::advance
@@ -82,24 +82,12 @@ public:
 
     // TODO: Do schema resource management using hashes to avoid
     // expensive string comparisons
-    if (step.dynamic && (this->resources_.empty() ||
-                         this->resources_.back() != step.schema_resource)) {
-      // Some keywords may operate under the previous schema resource. For
-      // example, `additionalProperties` will emit annotations at that level
-      // after evaluating the `additionalProperties` subschema.
-      if (this->resources_.size() > 1 &&
-          this->resources_[this->resources_.size() - 2] ==
-              step.schema_resource) {
-        return;
-      }
-
+    if (step.dynamic) {
+      // Note that we are potentially repeatedly pushing back the
+      // same schema resource over and over again. However, the
+      // logic for making sure this list is "pure" takes a lot of
+      // computation power. Being silly seems faster.
       this->resources_.push_back(step.schema_resource);
-      // If we are doing things right, there should never be adjacent
-      // equal schema resources on the stack, as we cannot jump from
-      // a schema resource to the same schema resource
-      assert(std::adjacent_find(this->resources_.cbegin(),
-                                this->resources_.cend()) ==
-             this->resources_.cend());
     }
   }
 
@@ -117,8 +105,7 @@ public:
 
     // TODO: Do schema resource management using hashes to avoid
     // expensive string comparisons
-    if (step.dynamic && !this->resources_.empty() &&
-        this->resources_.back() != step.schema_resource) {
+    if (step.dynamic) {
       assert(!this->resources_.empty());
       this->resources_.pop_back();
     }
@@ -241,26 +228,18 @@ public:
 
   auto find_dynamic_anchor(const std::string &anchor) const
       -> std::optional<std::size_t> {
-    std::optional<std::size_t> result;
-
-    // We want to check every schema resource from the current one
-    // backwards until the dynamic anchor chain is lost. The one
-    // before its lost is the one we want to jump to
-    for (auto iterator = this->resources().crbegin();
-         iterator < this->resources().crend(); ++iterator) {
+    for (const auto &resource : this->resources()) {
       std::ostringstream name;
-      name << *iterator;
+      name << resource;
       name << '#';
       name << anchor;
       const auto label{std::hash<std::string>{}(name.str())};
       if (this->labels.contains(label)) {
-        result = label;
-      } else {
-        break;
+        return label;
       }
     }
 
-    return result;
+    return std::nullopt;
   }
 
   auto jump(const std::size_t id) const -> const Template & {
@@ -1102,10 +1081,7 @@ auto evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
   // we are done, otherwise there was a frame push/pop mismatch
   assert(context.evaluate_path().empty());
   assert(context.instance_location().empty());
-  // The stack of schema resources will either be empty if no dynamic
-  // scoping was necessary, or it will contain exactly one schema resource,
-  // the top-level one.
-  assert(context.resources().empty() || context.resources().size() == 1);
+  assert(context.resources().empty());
   return overall;
 }
 
