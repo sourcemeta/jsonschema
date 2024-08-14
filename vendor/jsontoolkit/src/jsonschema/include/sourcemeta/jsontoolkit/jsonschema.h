@@ -8,7 +8,6 @@
 #include <sourcemeta/jsontoolkit/jsonschema_bundle.h>
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 #include <sourcemeta/jsontoolkit/jsonschema_error.h>
-#include <sourcemeta/jsontoolkit/jsonschema_explain.h>
 #include <sourcemeta/jsontoolkit/jsonschema_reference.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_transform_bundle.h>

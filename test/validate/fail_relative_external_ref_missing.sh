@@ -11,7 +11,9 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "id": "https://example.com",
-  "$ref": "nested"
+  "allOf": [
+    { "$ref": "nested" }
+  ]
 }
 EOF
 

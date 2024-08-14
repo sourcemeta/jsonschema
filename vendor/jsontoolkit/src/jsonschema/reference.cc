@@ -66,10 +66,7 @@ ref_overrides_adjacent_keywords(const std::string &base_dialect) -> bool {
          base_dialect == "http://json-schema.org/draft-04/schema#" ||
          base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
          base_dialect == "http://json-schema.org/draft-03/schema#" ||
-         base_dialect == "http://json-schema.org/draft-03/hyper-schema#" ||
-         base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
-         base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
-         base_dialect == "http://json-schema.org/draft-00/hyper-schema#";
+         base_dialect == "http://json-schema.org/draft-03/hyper-schema#";
 }
 
 static auto supports_id_anchors(const std::string &base_dialect) -> bool {

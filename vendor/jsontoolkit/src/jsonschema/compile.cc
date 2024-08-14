@@ -117,10 +117,11 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
       relative_dynamic_context};
   sourcemeta::jsontoolkit::SchemaCompilerTemplate compiler_template;
 
-  // TODO: Support dynamic anchors on 2020-12
   if (uses_dynamic_scopes &&
-      schema_context.vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core")) {
+      (schema_context.vocabularies.contains(
+           "https://json-schema.org/draft/2019-09/vocab/core") ||
+       schema_context.vocabularies.contains(
+           "https://json-schema.org/draft/2020-12/vocab/core"))) {
     for (const auto &entry : frame) {
       // We are only trying to find dynamic anchors
       if (entry.second.type != ReferenceEntryType::Anchor ||

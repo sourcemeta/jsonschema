@@ -29,7 +29,7 @@ We aim to fully support _every_ version of JSON Schema and combinations between 
 
 | Dialect             | Support                                                          |
 |---------------------|------------------------------------------------------------------|
-| JSON Schema 2020-12 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| JSON Schema 2020-12 | **Full**                                                         |
 | JSON Schema 2019-09 | **Full**                                                         |
 | JSON Schema Draft 7 | **Full**                                                         |
 | JSON Schema Draft 6 | **Full**                                                         |

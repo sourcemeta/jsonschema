@@ -135,6 +135,23 @@ auto sourcemeta::jsontoolkit::identify(
     throw sourcemeta::jsontoolkit::SchemaError(error.str());
   }
 
+  // In older drafts, the presence of `$ref` would override any sibling
+  // keywords. Note that `$ref` was first introduced in Draft 3, so we
+  // don't check for base dialects lower than that.
+  // See
+  // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
+  if (schema.defines("$ref") &&
+      (base_dialect == "http://json-schema.org/draft-07/schema#" ||
+       base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
+       base_dialect == "http://json-schema.org/draft-06/schema#" ||
+       base_dialect == "http://json-schema.org/draft-06/hyper-schema#" ||
+       base_dialect == "http://json-schema.org/draft-04/schema#" ||
+       base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
+       base_dialect == "http://json-schema.org/draft-03/schema#" ||
+       base_dialect == "http://json-schema.org/draft-03/hyper-schema#")) {
+    return std::nullopt;
+  }
+
   return identifier.to_string();
 }
 
