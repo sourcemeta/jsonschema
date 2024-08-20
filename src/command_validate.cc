@@ -88,7 +88,7 @@ auto intelligence::jsonschema::cli::validate(
                 schema_template, instance,
                 sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
                 pretty_evaluate_callback(
-                    error, sourcemeta::jsontoolkit::empty_pointer));
+                    error, instance, sourcemeta::jsontoolkit::empty_pointer));
           }
 
           if (subresult) {
@@ -139,7 +139,7 @@ auto intelligence::jsonschema::cli::validate(
         subresult = sourcemeta::jsontoolkit::evaluate(
             schema_template, instance,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error,
+            pretty_evaluate_callback(error, instance,
                                      sourcemeta::jsontoolkit::empty_pointer));
       }
 
