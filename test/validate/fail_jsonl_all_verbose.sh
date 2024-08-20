@@ -26,7 +26,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Interpreting input as JSONL: $(realpath "$TMP")/instance.jsonl
-fail: $(realpath "$TMP")/instance.jsonl (entry #0)
+fail: $(realpath "$TMP")/instance.jsonl (entry #1)
 
 {
   "foo": 1

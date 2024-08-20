@@ -67,6 +67,7 @@ auto intelligence::jsonschema::cli::validate(
       auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
       try {
         for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
+          index += 1;
           std::ostringstream error;
           bool subresult = true;
           if (benchmark) {
@@ -110,12 +111,14 @@ auto intelligence::jsonschema::cli::validate(
             result = false;
             break;
           }
-
-          index += 1;
         }
       } catch (const sourcemeta::jsontoolkit::ParseError &error) {
         // For producing better error messages
         throw sourcemeta::jsontoolkit::FileParseError(instance_path, error);
+      }
+
+      if (index == 0) {
+        log_verbose(options) << "warning: The JSONL file is empty\n";
       }
     } else {
       const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
