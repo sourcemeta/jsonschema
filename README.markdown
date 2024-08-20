@@ -88,7 +88,7 @@ brew install intelligence-ai/apps/jsonschema
 Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```yaml
-- uses: intelligence-ai/jsonschema@v3.2.0
+- uses: intelligence-ai/jsonschema@v3.2.1
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
 ```
