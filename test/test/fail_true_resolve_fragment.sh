@@ -40,10 +40,10 @@ $(realpath "$TMP")/test.json:
   1/1 FAIL Fail
 
 error: Schema validation failure
-  The target document is expected to be of the given type
+  The value was expected to be of type string but it was of type object
     at instance location ""
     at evaluate path "/type"
-  Mark the current position of the evaluation process for future jumps
+  The object value was expected to validate against the statically referenced schema
     at instance location ""
     at evaluate path ""
 EOF

@@ -517,21 +517,22 @@ enum class SchemaCompilerEvaluationType { Pre, Post };
 /// - The step that was just evaluated
 /// - The evaluation path
 /// - The instance location
-/// - The instance document
 /// - The annotation result, if any (otherwise null)
 ///
 /// You can use this callback mechanism to implement arbitrary output formats.
-using SchemaCompilerEvaluationCallback = std::function<void(
-    const SchemaCompilerEvaluationType, bool,
-    const SchemaCompilerTemplate::value_type &, const Pointer &,
-    const Pointer &, const JSON &, const JSON &)>;
+using SchemaCompilerEvaluationCallback =
+    std::function<void(const SchemaCompilerEvaluationType, bool,
+                       const SchemaCompilerTemplate::value_type &,
+                       const Pointer &, const Pointer &, const JSON &)>;
 
 /// @ingroup jsonschema
 ///
 /// This function translates a step execution into a human-readable string.
 /// Useful as the building block for producing user-friendly evaluation results.
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-describe(const SchemaCompilerTemplate::value_type &step) -> std::string;
+describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
+         const Pointer &evaluate_path, const Pointer &instance_location,
+         const JSON &instance, const JSON &annotation) -> std::string;
 
 // TODO: Support standard output formats. Maybe through pre-made evaluation
 // callbacks?

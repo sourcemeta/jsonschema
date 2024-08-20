@@ -15,7 +15,26 @@ struct ConstJSONLIterator::Internal {
  */
 
 auto ConstJSONLIterator::parse_next() -> JSON {
-  if (this->data && !this->data->eof()) {
+  while (this->data && !this->data->eof()) {
+    switch (this->data->peek()) {
+      // Whitespace
+      case internal::token_jsonl_whitespace_space<JSON::Char>:
+      case internal::token_jsonl_whitespace_tabulation<JSON::Char>:
+      case internal::token_jsonl_whitespace_carriage_return<JSON::Char>:
+        this->column += 1;
+        this->data->ignore(1);
+        break;
+      case JSON::CharTraits::eof():
+        this->data = nullptr;
+        break;
+      default:
+        goto parse_start;
+    }
+  }
+
+parse_start:
+  if (this->data) {
+    assert(!this->data->eof());
     return parse(*this->data, this->line, this->column);
   } else {
     // Just as a cheap placeholder

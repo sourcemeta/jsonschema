@@ -28,6 +28,7 @@ auto for_each_json(const std::vector<std::string> &arguments,
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 
 auto pretty_evaluate_callback(std::ostringstream &,
+                              const sourcemeta::jsontoolkit::JSON &,
                               const sourcemeta::jsontoolkit::Pointer &)
     -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback;
 

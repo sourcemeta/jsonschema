@@ -44,10 +44,10 @@ ok: $(realpath "$TMP")/instance_1.json
   matches $(realpath "$TMP")/schema.json
 fail: $(realpath "$TMP")/instance_2.json
 error: Schema validation failure
-  The target document is expected to be of the given type
+  The value was expected to be of type string but it was of type integer
     at instance location "/foo"
     at evaluate path "/properties/foo/type"
-  The target is expected to match all of the given assertions
+  The object value was expected to validate against the single defined property subschema
     at instance location ""
     at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance_3.json

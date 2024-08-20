@@ -269,7 +269,6 @@ auto callback_noop(
     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
     const sourcemeta::jsontoolkit::Pointer &,
     const sourcemeta::jsontoolkit::Pointer &,
-    const sourcemeta::jsontoolkit::JSON &,
     const sourcemeta::jsontoolkit::JSON &) noexcept -> void {}
 
 auto evaluate_step(
@@ -283,12 +282,12 @@ auto evaluate_step(
 
 #define CALLBACK_PRE(current_instance_location)                                \
   callback(SchemaCompilerEvaluationType::Pre, true, step,                      \
-           context.evaluate_path(), current_instance_location, instance,       \
+           context.evaluate_path(), current_instance_location,                 \
            context.value(nullptr));
 
 #define CALLBACK_POST(current_step)                                            \
   callback(SchemaCompilerEvaluationType::Post, result, step,                   \
-           context.evaluate_path(), context.instance_location(), instance,     \
+           context.evaluate_path(), context.instance_location(),               \
            context.value(nullptr));                                            \
   context.pop(current_step);                                                   \
   return result;
@@ -325,6 +324,8 @@ auto evaluate_step(
     EVALUATE_CONDITION_GUARD(assertion, instance);
     CALLBACK_PRE(context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
+    // Otherwise we are we even emitting this instruction?
+    assert(value.size() > 1);
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     assert(target.is_object());
@@ -357,6 +358,8 @@ auto evaluate_step(
     EVALUATE_CONDITION_GUARD(assertion, instance);
     CALLBACK_PRE(context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
+    // Otherwise we are we even emitting this instruction?
+    assert(value.size() > 1);
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     // In non-strict mode, we consider a real number that represents an
@@ -382,6 +385,8 @@ auto evaluate_step(
     EVALUATE_CONDITION_GUARD(assertion, instance);
     CALLBACK_PRE(context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
+    // Otherwise we are we even emitting this instruction?
+    assert(value.size() > 1);
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = value.contains(target.type());
@@ -817,8 +822,7 @@ auto evaluate_step(
     if (value.second) {
       CALLBACK_PRE(current_instance_location);
       callback(SchemaCompilerEvaluationType::Post, result, step,
-               context.evaluate_path(), current_instance_location, instance,
-               value.first);
+               context.evaluate_path(), current_instance_location, value.first);
     }
 
     context.pop(annotation);

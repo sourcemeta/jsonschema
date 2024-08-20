@@ -52,7 +52,7 @@ $(realpath "$TMP")/test.json:
   2/4 FAIL First failure
 
 error: Schema validation failure
-  The target document is expected to be of the given type
+  The value was expected to be of type string but it was of type object
     at instance location ""
     at evaluate path "/type"
 

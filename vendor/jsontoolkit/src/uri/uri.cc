@@ -236,7 +236,13 @@ auto URI::host() const -> std::optional<std::string_view> {
 auto URI::port() const -> std::optional<std::uint32_t> { return this->port_; }
 
 auto URI::path() const -> std::optional<std::string> {
+  // NOTE: This is a workaround for the fact that `uriparser` does not
+  // parse /.. as a segment, then we store nothing in the path_ field.
+  // By that we can't add the initial slash to the URI.
   if (!this->path_.has_value()) {
+    if (this->data == "/..") {
+      return "/";
+    }
     return std::nullopt;
   }
 
@@ -314,6 +320,11 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
     } else {
       result << "://";
     }
+  }
+
+  const auto user_info{this->userinfo()};
+  if (user_info.has_value()) {
+    result << user_info.value() << "@";
   }
 
   // Host

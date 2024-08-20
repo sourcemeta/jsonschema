@@ -30,9 +30,9 @@ auto intelligence::jsonschema::cli::metaschema(
     const auto dialect{sourcemeta::jsontoolkit::dialect(entry.second)};
     assert(dialect.has_value());
 
+    const auto metaschema{
+        sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver)};
     if (!cache.contains(dialect.value())) {
-      const auto metaschema{
-          sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver)};
       const auto metaschema_template{sourcemeta::jsontoolkit::compile(
           metaschema, sourcemeta::jsontoolkit::default_schema_walker,
           custom_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
@@ -43,7 +43,7 @@ auto intelligence::jsonschema::cli::metaschema(
     if (sourcemeta::jsontoolkit::evaluate(
             cache.at(dialect.value()), entry.second,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error,
+            pretty_evaluate_callback(error, metaschema,
                                      sourcemeta::jsontoolkit::empty_pointer))) {
       log_verbose(options)
           << entry.first.string()

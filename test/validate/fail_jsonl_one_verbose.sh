@@ -37,7 +37,7 @@ fail: $(realpath "$TMP")/instance.jsonl (entry #1)
 ]
 
 error: Schema validation failure
-  The target document is expected to be of the given type
+  The value was expected to be of type object but it was of type array
     at instance location ""
     at evaluate path "/type"
 EOF
