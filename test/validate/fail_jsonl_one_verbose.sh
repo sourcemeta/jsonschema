@@ -26,9 +26,9 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Interpreting input as JSONL: $(realpath "$TMP")/instance.jsonl
-ok: $(realpath "$TMP")/instance.jsonl (entry #0)
+ok: $(realpath "$TMP")/instance.jsonl (entry #1)
   matches $(realpath "$TMP")/schema.json
-fail: $(realpath "$TMP")/instance.jsonl (entry #1)
+fail: $(realpath "$TMP")/instance.jsonl (entry #2)
 
 [
   {
