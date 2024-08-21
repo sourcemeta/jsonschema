@@ -563,7 +563,7 @@ auto compiler_draft4_applicator_items_array(
       if (annotate) {
         subchildren.push_back(make<SchemaCompilerAnnotationPublic>(
             context, schema_context, relative_dynamic_context, JSON{true},
-            {make<SchemaCompilerAssertionSizeEqual>(
+            {make<SchemaCompilerInternalSizeEqual>(
                 context, schema_context, relative_dynamic_context, cursor, {},
                 SchemaCompilerTargetType::Instance)},
             SchemaCompilerTargetType::Instance));
@@ -591,7 +591,7 @@ auto compiler_draft4_applicator_items_array(
       children.push_back(make<SchemaCompilerInternalContainer>(
           context, schema_context, relative_dynamic_context,
           SchemaCompilerValueNone{}, std::move(subchildren),
-          {make<SchemaCompilerAssertionSizeEqual>(
+          {make<SchemaCompilerInternalSizeEqual>(
               context, schema_context, relative_dynamic_context, cursor, {},
               SchemaCompilerTargetType::Instance)}));
     }

@@ -166,12 +166,6 @@ struct SchemaCompilerAssertionSizeGreater;
 struct SchemaCompilerAssertionSizeLess;
 
 /// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given array, object, or
-/// string has a certain number of items, properties, or characters,
-/// respectively
-struct SchemaCompilerAssertionSizeEqual;
-
-/// @ingroup jsonschema
 /// Represents a compiler assertion step that checks the instance equals a given
 /// JSON document
 struct SchemaCompilerAssertionEqual;
@@ -240,6 +234,12 @@ struct SchemaCompilerLogicalTry;
 /// @ingroup jsonschema
 /// Represents a compiler logical step that represents a negation
 struct SchemaCompilerLogicalNot;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a given array, object, or
+/// string has a certain number of items, properties, or characters,
+/// respectively
+struct SchemaCompilerInternalSizeEqual;
 
 /// @ingroup jsonschema
 /// Represents a hidden compiler assertion step that checks a certain
@@ -314,15 +314,14 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionTypeAny, SchemaCompilerAssertionTypeStrict,
     SchemaCompilerAssertionTypeStrictAny, SchemaCompilerAssertionRegex,
     SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
-    SchemaCompilerAssertionSizeEqual, SchemaCompilerAssertionEqual,
-    SchemaCompilerAssertionEqualsAny, SchemaCompilerAssertionGreaterEqual,
-    SchemaCompilerAssertionLessEqual, SchemaCompilerAssertionGreater,
-    SchemaCompilerAssertionLess, SchemaCompilerAssertionUnique,
-    SchemaCompilerAssertionDivisible, SchemaCompilerAssertionStringType,
-    SchemaCompilerAnnotationPublic, SchemaCompilerLogicalOr,
-    SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
+    SchemaCompilerAssertionEqual, SchemaCompilerAssertionEqualsAny,
+    SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
+    SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
+    SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
+    SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
+    SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
-    SchemaCompilerInternalAnnotation,
+    SchemaCompilerInternalSizeEqual, SchemaCompilerInternalAnnotation,
     SchemaCompilerInternalNoAdjacentAnnotation,
     SchemaCompilerInternalNoAnnotation, SchemaCompilerInternalContainer,
     SchemaCompilerInternalDefinesAll, SchemaCompilerLoopProperties,
@@ -392,7 +391,6 @@ DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeGreater,
                        SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_WITH_VALUE(Assertion, SizeLess, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_WITH_VALUE(Assertion, SizeEqual, SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_WITH_VALUE(Assertion, Equal, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, EqualsAny, SchemaCompilerValueArray)
 DEFINE_STEP_WITH_VALUE(Assertion, GreaterEqual, SchemaCompilerValueJSON)
@@ -408,6 +406,7 @@ DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Not, SchemaCompilerValueNone)
+DEFINE_STEP_WITH_VALUE(Internal, SizeEqual, SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_WITH_VALUE(Internal, Annotation, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Internal, NoAdjacentAnnotation, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE_AND_DATA(Internal, NoAnnotation, SchemaCompilerValueJSON,
