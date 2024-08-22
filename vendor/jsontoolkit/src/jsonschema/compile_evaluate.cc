@@ -424,8 +424,8 @@ auto evaluate_step(
     result = (target.is_array() || target.is_object() || target.is_string()) &&
              (target.size() < value);
     CALLBACK_POST(assertion);
-  } else if (std::holds_alternative<SchemaCompilerAssertionSizeEqual>(step)) {
-    const auto &assertion{std::get<SchemaCompilerAssertionSizeEqual>(step)};
+  } else if (std::holds_alternative<SchemaCompilerInternalSizeEqual>(step)) {
+    const auto &assertion{std::get<SchemaCompilerInternalSizeEqual>(step)};
     context.push(assertion);
     EVALUATE_CONDITION_GUARD(assertion, instance);
     CALLBACK_PRE(context.instance_location());
