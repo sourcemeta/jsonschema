@@ -69,6 +69,8 @@ auto intelligence::jsonschema::cli::validate(
         for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
+          sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{
+              instance};
           bool subresult = true;
           if (benchmark) {
             const auto timestamp_start{
@@ -88,8 +90,7 @@ auto intelligence::jsonschema::cli::validate(
             subresult = sourcemeta::jsontoolkit::evaluate(
                 schema_template, instance,
                 sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-                pretty_evaluate_callback(
-                    error, instance, sourcemeta::jsontoolkit::empty_pointer));
+                std::ref(output));
           }
 
           if (subresult) {
@@ -108,6 +109,7 @@ auto intelligence::jsonschema::cli::validate(
             sourcemeta::jsontoolkit::prettify(instance, std::cerr);
             std::cerr << "\n\n";
             std::cerr << error.str();
+            print(output, std::cerr);
             result = false;
             break;
           }
@@ -123,6 +125,7 @@ auto intelligence::jsonschema::cli::validate(
     } else {
       const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
       std::ostringstream error;
+      sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{instance};
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};
@@ -142,8 +145,7 @@ auto intelligence::jsonschema::cli::validate(
         subresult = sourcemeta::jsontoolkit::evaluate(
             schema_template, instance,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error, instance,
-                                     sourcemeta::jsontoolkit::empty_pointer));
+            std::ref(output));
       }
 
       if (subresult) {
@@ -157,6 +159,7 @@ auto intelligence::jsonschema::cli::validate(
                   << std::filesystem::weakly_canonical(instance_path).string()
                   << "\n";
         std::cerr << error.str();
+        print(output, std::cerr);
         result = false;
       }
     }

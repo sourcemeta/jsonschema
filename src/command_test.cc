@@ -237,12 +237,13 @@ auto intelligence::jsonschema::cli::test(
         return EXIT_FAILURE;
       }
 
-      std::ostringstream error;
+      sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{
+          schema.value(), {"$ref"}};
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
           schema_template,
           get_data(test_case, entry.first.parent_path(), verbose),
           sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-          pretty_evaluate_callback(error, schema.value(), {"$ref"}))};
+          std::ref(output))};
 
       std::ostringstream test_case_description;
       if (test_case.defines("description")) {
@@ -278,7 +279,7 @@ auto intelligence::jsonschema::cli::test(
 
         std::cout << "  " << index << "/" << total << " FAIL "
                   << test_case_description.str() << "\n\n";
-        std::cout << error.str();
+        print(output, std::cout);
 
         if (index != total && verbose) {
           std::cout << "\n";

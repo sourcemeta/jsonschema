@@ -1,7 +1,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 
-#include <algorithm> // std::move
+#include <algorithm> // std::move, std::any_of
 #include <cassert>   // assert
 #include <iterator>  // std::back_inserter
 #include <utility>   // std::move
@@ -210,6 +210,67 @@ auto compile(const SchemaCompilerContext &context,
       {dynamic_context.keyword, destination_pointer,
        dynamic_context.base_instance_location.concat(instance_suffix)},
       entry.dialect);
+}
+
+SchemaCompilerErrorTraceOutput::SchemaCompilerErrorTraceOutput(
+    const JSON &instance, const Pointer &base)
+    : instance_{instance}, base_{base} {}
+
+auto SchemaCompilerErrorTraceOutput::begin() const -> const_iterator {
+  return this->output.begin();
+}
+
+auto SchemaCompilerErrorTraceOutput::end() const -> const_iterator {
+  return this->output.end();
+}
+
+auto SchemaCompilerErrorTraceOutput::cbegin() const -> const_iterator {
+  return this->output.cbegin();
+}
+
+auto SchemaCompilerErrorTraceOutput::cend() const -> const_iterator {
+  return this->output.cend();
+}
+
+auto SchemaCompilerErrorTraceOutput::operator()(
+    const SchemaCompilerEvaluationType type, const bool result,
+    const SchemaCompilerTemplate::value_type &step,
+    const Pointer &evaluate_path, const Pointer &instance_location,
+    const JSON &annotation) -> void {
+  assert(!evaluate_path.empty());
+  assert(evaluate_path.back().is_property());
+
+  if (type == sourcemeta::jsontoolkit::SchemaCompilerEvaluationType::Pre) {
+    assert(result);
+    const auto &keyword{evaluate_path.back().to_property()};
+    // To ease the output
+    if (keyword == "oneOf" || keyword == "not") {
+      this->mask.insert(evaluate_path);
+    }
+  } else if (type ==
+                 sourcemeta::jsontoolkit::SchemaCompilerEvaluationType::Post &&
+             this->mask.contains(evaluate_path)) {
+    this->mask.erase(evaluate_path);
+  }
+
+  // Ignore successful or masked steps
+  if (result || std::any_of(this->mask.cbegin(), this->mask.cend(),
+                            [&evaluate_path](const auto &entry) {
+                              return evaluate_path.starts_with(entry);
+                            })) {
+    return;
+  }
+
+  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
+  if (effective_evaluate_path.empty()) {
+    return;
+  }
+
+  this->output.push_back(
+      {sourcemeta::jsontoolkit::describe(result, step, evaluate_path,
+                                         instance_location, this->instance_,
+                                         annotation),
+       instance_location, std::move(effective_evaluate_path)});
 }
 
 } // namespace sourcemeta::jsontoolkit
