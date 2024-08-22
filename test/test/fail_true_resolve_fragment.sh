@@ -43,9 +43,6 @@ error: Schema validation failure
   The value was expected to be of type string but it was of type object
     at instance location ""
     at evaluate path "/type"
-  The object value was expected to validate against the statically referenced schema
-    at instance location ""
-    at evaluate path ""
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

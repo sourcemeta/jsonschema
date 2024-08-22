@@ -175,37 +175,19 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto pretty_evaluate_callback(std::ostringstream &output,
-                              const sourcemeta::jsontoolkit::JSON &instance,
-                              const sourcemeta::jsontoolkit::Pointer &base)
-    -> sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback {
-  output << "error: Schema validation failure\n";
-  return [&output, &instance, &base](
-             const sourcemeta::jsontoolkit::SchemaCompilerEvaluationType,
-             const bool result,
-             const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type
-                 &step,
-             const sourcemeta::jsontoolkit::Pointer &evaluate_path,
-             const sourcemeta::jsontoolkit::Pointer &instance_location,
-             const sourcemeta::jsontoolkit::JSON &annotation) -> void {
-    if (result) {
-      return;
-    }
-
-    output << "  "
-           << sourcemeta::jsontoolkit::describe(result, step, evaluate_path,
-                                                instance_location, instance,
-                                                annotation)
-           << "\n";
-    output << "    at instance location \"";
-    sourcemeta::jsontoolkit::stringify(instance_location, output);
-    output << "\"\n";
-
-    output << "    at evaluate path \"";
-    sourcemeta::jsontoolkit::stringify(evaluate_path.resolve_from(base),
-                                       output);
-    output << "\"\n";
-  };
+auto print(
+    const sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput &output,
+    std::ostream &stream) -> void {
+  stream << "error: Schema validation failure\n";
+  for (const auto &entry : output) {
+    stream << "  " << entry.message << "\n";
+    stream << "    at instance location \"";
+    sourcemeta::jsontoolkit::stringify(entry.instance_location, stream);
+    stream << "\"\n";
+    stream << "    at evaluate path \"";
+    sourcemeta::jsontoolkit::stringify(entry.evaluate_path, stream);
+    stream << "\"\n";
+  }
 }
 
 static auto fallback_resolver(

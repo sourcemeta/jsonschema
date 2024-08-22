@@ -524,6 +524,94 @@ using SchemaCompilerEvaluationCallback =
                        const SchemaCompilerTemplate::value_type &,
                        const Pointer &, const Pointer &, const JSON &)>;
 
+// TODO: Support standard output formats too
+
+/// @ingroup jsonschema
+///
+/// A simple evaluation callback that reports a stack trace in the case of
+/// validation error that you can report as you with. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <cassert>
+/// #include <functional>
+///
+/// const sourcemeta::jsontoolkit::JSON schema =
+///     sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "type": "string"
+/// })JSON");
+///
+/// const auto schema_template{sourcemeta::jsontoolkit::compile(
+///     schema, sourcemeta::jsontoolkit::default_schema_walker,
+///     sourcemeta::jsontoolkit::official_resolver,
+///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///
+/// const sourcemeta::jsontoolkit::JSON instance{5};
+///
+/// sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output;
+/// const auto result{sourcemeta::jsontoolkit::evaluate(
+///   schema_template, instance,
+///   sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
+///   std::ref(output))};
+///
+/// if (!result) {
+///   for (const auto &trace : output) {
+///     std::cerr << trace.message << "\n";
+///     sourcemeta::jsontoolkit::stringify(trace.instance_location, std::cerr);
+///     std::cerr << "\n";
+///     sourcemeta::jsontoolkit::stringify(trace.evaluate_path, std::cerr);
+///     std::cerr << "\n";
+///   }
+/// }
+/// ```
+class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaCompilerErrorTraceOutput {
+public:
+  SchemaCompilerErrorTraceOutput(const JSON &instance,
+                                 const Pointer &base = empty_pointer);
+
+  // Prevent accidental copies
+  SchemaCompilerErrorTraceOutput(const SchemaCompilerErrorTraceOutput &) =
+      delete;
+  auto operator=(const SchemaCompilerErrorTraceOutput &)
+      -> SchemaCompilerErrorTraceOutput & = delete;
+
+  struct Entry {
+    const std::string message;
+    const Pointer instance_location;
+    const Pointer evaluate_path;
+  };
+
+  auto operator()(const SchemaCompilerEvaluationType type, const bool result,
+                  const SchemaCompilerTemplate::value_type &step,
+                  const Pointer &evaluate_path,
+                  const Pointer &instance_location,
+                  const JSON &annotation) -> void;
+
+  using container_type = typename std::vector<Entry>;
+  using const_iterator = typename container_type::const_iterator;
+  auto begin() const -> const_iterator;
+  auto end() const -> const_iterator;
+  auto cbegin() const -> const_iterator;
+  auto cend() const -> const_iterator;
+
+private:
+// Exporting symbols that depends on the standard C++ library is considered
+// safe.
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251)
+#endif
+  const JSON &instance_;
+  const Pointer base_;
+  container_type output;
+  std::set<Pointer> mask;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251)
+#endif
+};
+
 /// @ingroup jsonschema
 ///
 /// This function translates a step execution into a human-readable string.
@@ -532,9 +620,6 @@ auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
          const Pointer &evaluate_path, const Pointer &instance_location,
          const JSON &instance, const JSON &annotation) -> std::string;
-
-// TODO: Support standard output formats. Maybe through pre-made evaluation
-// callbacks?
 
 /// @ingroup jsonschema
 ///

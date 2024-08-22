@@ -39,17 +39,16 @@ auto intelligence::jsonschema::cli::metaschema(
       cache.insert({dialect.value(), metaschema_template});
     }
 
-    std::ostringstream error;
+    sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{metaschema};
     if (sourcemeta::jsontoolkit::evaluate(
             cache.at(dialect.value()), entry.second,
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            pretty_evaluate_callback(error, metaschema,
-                                     sourcemeta::jsontoolkit::empty_pointer))) {
+            std::ref(output))) {
       log_verbose(options)
           << entry.first.string()
           << ": The schema is valid with respect to its metaschema\n";
     } else {
-      std::cerr << error.str();
+      print(output, std::cerr);
       std::cerr << entry.first.string()
                 << ": The schema is NOT valid with respect to its metaschema\n";
       result = false;
