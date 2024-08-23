@@ -1,0 +1,24 @@
+@PACKAGE_INIT@
+
+# Support both casing styles
+list(APPEND ALTERSCHEMA_COMPONENTS ${AlterSchema_FIND_COMPONENTS})
+list(APPEND ALTERSCHEMA_COMPONENTS ${alterschema_FIND_COMPONENTS})
+if(NOT ALTERSCHEMA_COMPONENTS)
+  list(APPEND ALTERSCHEMA_COMPONENTS engine)
+  list(APPEND ALTERSCHEMA_COMPONENTS linter)
+endif()
+
+include(CMakeFindDependencyMacro)
+
+foreach(component ${ALTERSCHEMA_COMPONENTS})
+  if(component STREQUAL "engine")
+    find_dependency(JSONToolkit COMPONENTS uri json jsonpointer jsonschema)
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_alterschema_engine.cmake")
+  elseif(component STREQUAL "linter")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_alterschema_linter.cmake")
+  else()
+    message(FATAL_ERROR "Unknown AlterSchema component: ${component}")
+  endif()
+endforeach()
+
+check_required_components("@PROJECT_NAME@")

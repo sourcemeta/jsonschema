@@ -154,12 +154,28 @@ auto URI::parse() -> void {
     uriFreeUriMembersA(&this->internal->uri);
   }
 
+  // NOTE: we don't skip this line for fast path
+  // as the internal structure of uriparser could still
+  // be used by resolve_from and relative_to methods
   uri_parse(this->data, &this->internal->uri);
 
-  this->scheme_ = uri_text_range(&this->internal->uri.scheme);
+  // Fast path for the root path
+  if (this->data == "/") {
+    this->path_ = "/";
+    this->parsed = true;
+    return;
+  }
+
+  // Fast path for empty URI
+  if (this->data.empty()) {
+    this->parsed = true;
+    return;
+  };
+
   this->scheme_ = uri_text_range(&this->internal->uri.scheme);
   this->userinfo_ = uri_text_range(&this->internal->uri.userInfo);
   this->host_ = uri_text_range(&this->internal->uri.hostText);
+  this->is_ipv6_ = this->internal->uri.hostData.ip6 != nullptr;
   this->fragment_ = uri_text_range(&this->internal->uri.fragment);
   this->query_ = uri_text_range(&this->internal->uri.query);
   const auto port_text{uri_text_range(&this->internal->uri.portText)};
@@ -219,6 +235,13 @@ auto URI::is_tag() const -> bool {
   return scheme.has_value() && scheme.value() == "tag";
 }
 
+auto URI::is_mailto() const -> bool {
+  const auto scheme{this->scheme()};
+  return scheme.has_value() && scheme.value() == "mailto";
+}
+
+auto URI::is_ipv6() const -> bool { return this->is_ipv6_; }
+
 auto URI::is_fragment_only() const -> bool {
   return !this->scheme().has_value() && !this->host().has_value() &&
          !this->port().has_value() && !this->path().has_value() &&
@@ -246,7 +269,12 @@ auto URI::path() const -> std::optional<std::string> {
     return std::nullopt;
   }
 
-  if (!this->is_urn() && !this->is_tag() && this->scheme().has_value()) {
+  if (!this->is_urn() && !this->is_tag() && !this->is_mailto() &&
+      this->scheme().has_value()) {
+    return "/" + this->path_.value();
+  }
+
+  if (this->port().has_value() || this->host().has_value()) {
     return "/" + this->path_.value();
   }
 
@@ -315,7 +343,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   const auto result_scheme{this->scheme()};
   if (result_scheme.has_value()) {
     result << result_scheme.value();
-    if (this->is_urn() || this->is_tag()) {
+    if (this->is_urn() || this->is_tag() || this->is_mailto()) {
       result << ":";
     } else {
       result << "://";
@@ -330,7 +358,16 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   // Host
   const auto result_host{this->host()};
   if (result_host.has_value()) {
-    result << result_host.value();
+    if (this->is_ipv6()) {
+      // By default uriparser will parse the IPv6 address without brackets
+      // so we need to add them manually, as said in the RFC 2732:
+      // "To use a literal IPv6 address in a URL, the literal address should be
+      // enclosed in "[" and "]" characters."
+      // See https://tools.ietf.org/html/rfc2732#section-2
+      result << '[' << result_host.value() << ']';
+    } else {
+      result << result_host.value();
+    }
   }
 
   // Port
