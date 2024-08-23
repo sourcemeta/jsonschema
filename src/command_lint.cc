@@ -1,3 +1,5 @@
+#include <sourcemeta/alterschema/engine.h>
+#include <sourcemeta/alterschema/linter.h>
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
@@ -12,11 +14,15 @@ auto intelligence::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"f", "fix"})};
 
-  sourcemeta::jsontoolkit::SchemaTransformBundle bundle;
-  bundle.add(
-      sourcemeta::jsontoolkit::SchemaTransformBundle::Category::Modernize);
-  bundle.add(
-      sourcemeta::jsontoolkit::SchemaTransformBundle::Category::AntiPattern);
+  sourcemeta::alterschema::Bundle bundle;
+  sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::Modernize);
+  sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::AntiPattern);
+  sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::Simplify);
+  sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::Redundant);
 
   bool result{true};
 

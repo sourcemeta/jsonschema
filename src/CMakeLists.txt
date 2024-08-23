@@ -17,6 +17,8 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::uri)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::json)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonl)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonschema)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::alterschema::engine)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::alterschema::linter)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::hydra::httpclient)
 
 configure_file(configure.h.in configure.h @ONLY)

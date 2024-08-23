@@ -10,6 +10,7 @@ option(JSONSCHEMA_DEVELOPMENT "Build the JSON Schema CLI in development mode" OF
 option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 
 find_package(JSONToolkit REQUIRED)
+find_package(AlterSchema REQUIRED)
 find_package(Hydra REQUIRED)
 add_subdirectory(src)
 
