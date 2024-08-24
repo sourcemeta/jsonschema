@@ -1,8 +1,3 @@
-**Warning! If you are making use of this package on NPM, be aware that its
-location will moved to
-[`@sourcemeta/jsonschema`](https://www.npmjs.com/package/@sourcemeta/jsonschema)
-on the next version. Please upgrade your `package.json` accordingly.**
-
 ![JSON Schema](./assets/banner.png)
 
 The command-line tool for working with [JSON Schema](https://json-schema.org),
