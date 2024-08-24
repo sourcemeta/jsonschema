@@ -76,19 +76,19 @@ powerful [JSON Toolkit](https://github.com/sourcemeta/jsontoolkit) library.
 ### From Homebrew
 
 ```sh
-brew install intelligence-ai/apps/jsonschema
+brew install sourcemeta/apps/jsonschema
 ```
 
 ### From GitHub Actions
 
 ```yaml
-- uses: intelligence-ai/jsonschema@vX.Y.Z
+- uses: sourcemeta/jsonschema@vX.Y.Z
 ```
 
 Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```yaml
-- uses: intelligence-ai/jsonschema@v3.2.3
+- uses: sourcemeta/jsonschema@v3.2.3
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
 ```
@@ -96,21 +96,21 @@ Where `X.Y.Z` is replaced with the desired version. For example:
 ### From NPM
 
 ```sh
-npm install --global @intelligence-ai/jsonschema
+npm install --global @sourcemeta/jsonschema
 ```
 
 ### From GitHub Releases
 
 We publish precompiled binaries for every supported platform to [GitHub
-Releases](https://github.com/Intelligence-AI/jsonschema/releases), including a
-[continuous](https://github.com/Intelligence-AI/jsonschema/releases/tag/continuous)
+Releases](https://github.com/sourcemeta/jsonschema/releases), including a
+[continuous](https://github.com/sourcemeta/jsonschema/releases/tag/continuous)
 that is updated on every commit from the main branch.
 
 For convenience, we also provide a POSIX shell script capable of installing the
 latest pre-built binaries, which you can run as follows:
 
 ```sh
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
 ```
 
 ### From Dockerfile
@@ -142,12 +142,12 @@ docker run --interactive --volume "$PWD:/workspace" jsonschema lint --verbose my
 ### Building from source
 
 ```sh
-git clone https://github.com/intelligence-ai/jsonschema
+git clone https://github.com/sourcemeta/jsonschema
 cd jsonschema
 cmake -S . -B ./build -DCMAKE_BUILD_TYPE:STRING=Release
 cmake --build ./build --config Release --parallel 4
 cmake --install ./build --prefix <prefix> \
-  --config Release --verbose --component intelligence_jsonschema
+  --config Release --verbose --component sourcemeta_jsonschema
 ```
 
 Where `<prefix>` can be any destination prefix of your choosing, such as `/opt`

@@ -20,7 +20,7 @@ find_relative_to(const std::map<std::string, std::vector<std::string>> &options)
   return std::nullopt;
 }
 
-auto intelligence::jsonschema::cli::identify(
+auto sourcemeta::jsonschema::cli::identify(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
   if (options.at("").size() < 1) {

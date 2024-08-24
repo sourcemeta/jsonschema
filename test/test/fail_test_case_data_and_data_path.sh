@@ -29,7 +29,7 @@ $(realpath "$TMP")/test.json:
 error: Test case documents must contain either a \`data\` or \`dataPath\` property, but not both
   at test case #1
 
-Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
+Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

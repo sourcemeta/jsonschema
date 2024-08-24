@@ -61,7 +61,7 @@ static auto get_data(const sourcemeta::jsontoolkit::JSON &test_case,
   }
 }
 
-auto intelligence::jsonschema::cli::test(
+auto sourcemeta::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http"})};
   bool result{true};
@@ -78,7 +78,7 @@ auto intelligence::jsonschema::cli::test(
     if (!test.is_object()) {
       std::cout << "\nerror: The test document must be an object\n\n";
       std::cout << "Learn more here: "
-                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
@@ -87,7 +87,7 @@ auto intelligence::jsonschema::cli::test(
       std::cout
           << "\nerror: The test document must contain a `target` property\n\n";
       std::cout << "Learn more here: "
-                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
@@ -96,7 +96,7 @@ auto intelligence::jsonschema::cli::test(
       std::cout
           << "\nerror: The test document `target` property must be a URI\n\n";
       std::cout << "Learn more here: "
-                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
@@ -105,7 +105,7 @@ auto intelligence::jsonschema::cli::test(
       std::cout
           << "\nerror: The test document must contain a `tests` property\n\n";
       std::cout << "Learn more here: "
-                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
@@ -114,7 +114,7 @@ auto intelligence::jsonschema::cli::test(
       std::cout
           << "\nerror: The test document `tests` property must be an array\n\n";
       std::cout << "Learn more here: "
-                   "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
                    "docs/test.markdown\n";
       return EXIT_FAILURE;
     }
@@ -169,7 +169,7 @@ auto intelligence::jsonschema::cli::test(
             << "\nerror: Test case documents must be objects\n  at test case #"
             << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -179,7 +179,7 @@ auto intelligence::jsonschema::cli::test(
                      "`dataPath` property\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -190,7 +190,7 @@ auto intelligence::jsonschema::cli::test(
                "`dataPath` property, but not both\n  at test case #"
             << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -201,7 +201,7 @@ auto intelligence::jsonschema::cli::test(
                      "property to a string\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -212,7 +212,7 @@ auto intelligence::jsonschema::cli::test(
                      "a string\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -222,7 +222,7 @@ auto intelligence::jsonschema::cli::test(
                      "property\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }
@@ -232,7 +232,7 @@ auto intelligence::jsonschema::cli::test(
                      "a boolean\n  at test case #"
                   << index << "\n\n";
         std::cout << "Learn more here: "
-                     "https://github.com/Intelligence-AI/jsonschema/blob/main/"
+                     "https://github.com/sourcemeta/jsonschema/blob/main/"
                      "docs/test.markdown\n";
         return EXIT_FAILURE;
       }

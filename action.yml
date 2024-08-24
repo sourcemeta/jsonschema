@@ -8,7 +8,7 @@ runs:
       run: |
         curl --retry 5 --location --fail-early --silent --show-error \
           --output "${GITHUB_WORKSPACE}/install.sh" \
-          "https://raw.githubusercontent.com/intelligence-ai/jsonschema/main/install"
+          "https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install"
         chmod +x "${GITHUB_WORKSPACE}/install.sh"
         "${GITHUB_WORKSPACE}/install.sh" 3.2.3
         rm "${GITHUB_WORKSPACE}/install.sh"

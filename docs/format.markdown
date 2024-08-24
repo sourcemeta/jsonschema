@@ -24,7 +24,7 @@ spacing, keyword ordering, and more:
 ```json
 { "$schema":"https://json-schema.org/draft/2020-12/schema",
       "type": "string","pattern": "^(?!0000)\\d{4}$",
-  "$id": "https://schemas.intelligence.ai/std/iso8601-year/v1.json",
+  "$id": "https://example.com/iso8601/v1.json",
       "title":    "ISO 8601 four-digit year (YYYY)" }
 ```
 
@@ -33,7 +33,7 @@ After formatting it, the JSON Schema looks like this:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.intelligence.ai/std/iso8601-year/v1.json",
+  "$id": "https://example.com/iso8601/v1.json",
   "title": "ISO 8601 four-digit year (YYYY)",
   "type": "string",
   "pattern": "^(?!0000)\\d{4}$"

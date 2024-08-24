@@ -1,5 +1,5 @@
-#ifndef INTELLIGENCE_JSONSCHEMA_CLI_UTILS_H_
-#define INTELLIGENCE_JSONSCHEMA_CLI_UTILS_H_
+#ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
+#define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
@@ -15,7 +15,7 @@
 #include <utility>    // std::pair
 #include <vector>     // std::vector
 
-namespace intelligence::jsonschema::cli {
+namespace sourcemeta::jsonschema::cli {
 
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
@@ -44,6 +44,6 @@ auto parse_extensions(const std::map<std::string, std::vector<std::string>>
 auto parse_ignore(const std::map<std::string, std::vector<std::string>>
                       &options) -> std::set<std::filesystem::path>;
 
-} // namespace intelligence::jsonschema::cli
+} // namespace sourcemeta::jsonschema::cli
 
 #endif

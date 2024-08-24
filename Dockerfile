@@ -9,7 +9,7 @@ COPY CMakeLists.txt /source/CMakeLists.txt
 
 RUN cmake -S /source -B ./build -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS:BOOL=OFF
 RUN cmake --build /build --config Release --parallel 4
-RUN cmake --install /build --prefix /usr/local --config Release --verbose --component intelligence_jsonschema
+RUN cmake --install /build --prefix /usr/local --config Release --verbose --component sourcemeta_jsonschema
 
 FROM debian:bookworm-slim
 COPY --from=builder /usr/local/bin/jsonschema /usr/local/bin/jsonschema
