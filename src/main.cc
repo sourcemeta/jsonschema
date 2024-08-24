@@ -69,32 +69,32 @@ Commands:
        Print the URI of the given schema to standard output, optionally
        relative to a given base URI.
 
-For more documentation, visit https://github.com/Intelligence-AI/jsonschema
+For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
   if (command == "fmt") {
-    return intelligence::jsonschema::cli::fmt(arguments);
+    return sourcemeta::jsonschema::cli::fmt(arguments);
   } else if (command == "frame") {
-    return intelligence::jsonschema::cli::frame(arguments);
+    return sourcemeta::jsonschema::cli::frame(arguments);
   } else if (command == "bundle") {
-    return intelligence::jsonschema::cli::bundle(arguments);
+    return sourcemeta::jsonschema::cli::bundle(arguments);
   } else if (command == "compile") {
-    return intelligence::jsonschema::cli::compile(arguments);
+    return sourcemeta::jsonschema::cli::compile(arguments);
   } else if (command == "lint") {
-    return intelligence::jsonschema::cli::lint(arguments);
+    return sourcemeta::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {
-    return intelligence::jsonschema::cli::validate(arguments);
+    return sourcemeta::jsonschema::cli::validate(arguments);
   } else if (command == "metaschema") {
-    return intelligence::jsonschema::cli::metaschema(arguments);
+    return sourcemeta::jsonschema::cli::metaschema(arguments);
   } else if (command == "test") {
-    return intelligence::jsonschema::cli::test(arguments);
+    return sourcemeta::jsonschema::cli::test(arguments);
   } else if (command == "identify") {
-    return intelligence::jsonschema::cli::identify(arguments);
+    return sourcemeta::jsonschema::cli::identify(arguments);
   } else {
     std::cout << "JSON Schema CLI - v"
-              << intelligence::jsonschema::cli::PROJECT_VERSION << "\n";
+              << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
@@ -124,7 +124,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
-                 "at\nhttps://github.com/intelligence-ai/jsonschema\n";
+                 "at\nhttps://github.com/sourcemeta/jsonschema\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
     std::cerr << "error: " << error.what() << " at column " << error.column()
@@ -162,7 +162,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const std::exception &error) {
     std::cerr << "unexpected error: " << error.what()
               << "\nPlease report it at "
-              << "https://github.com/intelligence-ai/jsonschema\n";
+              << "https://github.com/sourcemeta/jsonschema\n";
     return EXIT_FAILURE;
   }
 }

@@ -66,7 +66,7 @@ jobs:
       - run: cmake --build ./build --config Release --parallel 4
       - run: >
           cmake --install ./build --prefix ./build/dist --config Release --verbose
-          --component intelligence_jsonschema
+          --component sourcemeta_jsonschema
 
       # Not every CTest version supports the --test-dir option. If such option
       # is not recognized, `ctest` will successfully exit finding no tests.

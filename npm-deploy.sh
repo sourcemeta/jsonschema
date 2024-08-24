@@ -15,7 +15,7 @@ VERSION="$(echo "$1" | tr -d 'v')"
 # (1) Download artifacts
 mkdir -p "$OUTPUT/npm/artifacts"
 echo "Preparing $VERSION" 1>&2
-PACKAGE_BASE_URL="https://github.com/intelligence-ai/jsonschema/releases/download/v$VERSION"
+PACKAGE_BASE_URL="https://github.com/sourcemeta/jsonschema/releases/download/v$VERSION"
 curl --retry 5 --location --output "$OUTPUT/npm/artifacts/darwin-arm64.zip" \
   "$PACKAGE_BASE_URL/jsonschema-$VERSION-darwin-arm64.zip"
 curl --retry 5 --location --output "$OUTPUT/npm/artifacts/darwin-x86_64.zip" \
@@ -46,7 +46,7 @@ install -m 0644 "$(pwd)/README.markdown" "$OUTPUT/npm/staging/README.md"
 
 cat << EOF > "$OUTPUT/npm/staging/package.json"
 {
-  "name": "@intelligence-ai/jsonschema",
+  "name": "@sourcemeta/jsonschema",
   "version": "$VERSION",
   "description": "The CLI for working with JSON Schema. Covers formatting, linting, testing, and much more for both local development and CI/CD pipelines",
   "main": "cli.js",
@@ -54,8 +54,8 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
     "jsonschema": "cli.js"
   },
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/intelligence-ai/jsonschema",
-  "author": "Juan Cruz Viotti <juan@intelligence.ai>",
+  "homepage": "https://github.com/sourcemeta/jsonschema",
+  "author": "Juan Cruz Viotti <jviotti@sourcemeta.com>",
   "keywords": [
     "jsonschema", "json", "schema", "json-schema",
     "cli", "\$ref", "dereference", "reference", "resolve",
@@ -63,11 +63,11 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
     "lint", "format"
   ],
   "bugs": {
-    "url": "https://github.com/intelligence-ai/jsonschema/issues"
+    "url": "https://github.com/sourcemeta/jsonschema/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/intelligence-ai/jsonschema.git"
+    "url": "git+https://github.com/sourcemeta/jsonschema.git"
   },
   "publishConfig": {
     "access": "public"
@@ -90,7 +90,7 @@ const EXECUTABLE = PLATFORM === 'windows'
 
 if (!fs.existsSync(EXECUTABLE)) {
   console.error(`The JSON Schema CLI NPM package does not support ${os.platform()} for ${ARCH} yet`);
-  console.error('Please open a GitHub issue at https://github.com/Intelligence-AI/jsonschema');
+  console.error('Please open a GitHub issue at https://github.com/sourcemeta/jsonschema');
   process.exit(1);
 }
 

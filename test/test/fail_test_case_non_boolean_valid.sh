@@ -32,7 +32,7 @@ $(realpath "$TMP")/test.json:
 error: The test case document \`valid\` property must be a boolean
   at test case #1
 
-Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
+Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

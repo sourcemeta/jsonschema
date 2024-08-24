@@ -9,7 +9,7 @@ ARCH="$(uname -m)"
 if [ "$UNAME" = "Darwin" ] || [ "$UNAME" = "Linux" ]
 then
   echo "---- Fetching the pre-built JSON Schema CLI binary from GitHub Releases" 1>&2
-  OWNER="intelligence-ai"
+  OWNER="sourcemeta"
   REPOSITORY="jsonschema"
 
   if [ $# -lt 1 ]
@@ -34,6 +34,6 @@ then
   install -v -m 0755 "$TMP/out/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH/bin/jsonschema" "$OUTPUT/bin"
 else
   echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
-  echo "Open an issue here: https://github.com/Intelligence-AI/jsonschema/issues" 1>&2
+  echo "Open an issue here: https://github.com/sourcemeta/jsonschema/issues" 1>&2
   exit 1
 fi

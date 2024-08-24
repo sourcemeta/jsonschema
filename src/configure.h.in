@@ -1,9 +1,9 @@
-#ifndef INTELLIGENCE_JSONSCHEMA_CLI_CONFIGURE_H_
-#define INTELLIGENCE_JSONSCHEMA_CLI_CONFIGURE_H_
+#ifndef SOURCEMETA_JSONSCHEMA_CLI_CONFIGURE_H_
+#define SOURCEMETA_JSONSCHEMA_CLI_CONFIGURE_H_
 
 #include <string_view> // std::string_view
 
-namespace intelligence::jsonschema::cli {
+namespace sourcemeta::jsonschema::cli {
 constexpr std::string_view PROJECT_VERSION{"@PROJECT_VERSION@"};
 }
 

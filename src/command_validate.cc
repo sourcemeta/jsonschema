@@ -14,7 +14,7 @@
 // TODO: Add a flag to emit output using the standard JSON Schema output format
 // TODO: Add a flag to collect annotations
 // TODO: Add a flag to take a pre-compiled schema as input
-auto intelligence::jsonschema::cli::validate(
+auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http", "b", "benchmark"})};
 

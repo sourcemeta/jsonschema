@@ -7,7 +7,7 @@
 #include "command.h"
 #include "utils.h"
 
-auto intelligence::jsonschema::cli::compile(
+auto sourcemeta::jsonschema::cli::compile(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
 

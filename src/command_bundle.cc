@@ -7,7 +7,7 @@
 #include "command.h"
 #include "utils.h"
 
-auto intelligence::jsonschema::cli::bundle(
+auto sourcemeta::jsonschema::cli::bundle(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
       parse_options(arguments, {"h", "http", "w", "without-id"})};

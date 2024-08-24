@@ -102,7 +102,7 @@ auto normalize_extension(const std::string &extension) -> std::string {
 
 } // namespace
 
-namespace intelligence::jsonschema::cli {
+namespace sourcemeta::jsonschema::cli {
 
 auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::filesystem::path> &blacklist,
@@ -319,4 +319,4 @@ auto parse_ignore(const std::map<std::string, std::vector<std::string>>
   return result;
 }
 
-} // namespace intelligence::jsonschema::cli
+} // namespace sourcemeta::jsonschema::cli

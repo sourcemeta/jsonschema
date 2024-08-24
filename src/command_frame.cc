@@ -22,7 +22,7 @@ static auto enum_to_string(
   }
 }
 
-auto intelligence::jsonschema::cli::frame(
+auto sourcemeta::jsonschema::cli::frame(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
   if (options.at("").size() < 1) {

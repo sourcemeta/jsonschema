@@ -10,7 +10,7 @@
 #include "command.h"
 #include "utils.h"
 
-auto intelligence::jsonschema::cli::lint(
+auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"f", "fix"})};
 

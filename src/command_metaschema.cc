@@ -11,7 +11,7 @@
 #include "utils.h"
 
 // TODO: Add a flag to emit output using the standard JSON Schema output format
-auto intelligence::jsonschema::cli::metaschema(
+auto sourcemeta::jsonschema::cli::metaschema(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http"})};
   const auto custom_resolver{

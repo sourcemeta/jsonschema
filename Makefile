@@ -25,7 +25,7 @@ compile: .always
 	$(CMAKE) --build ./build --config $(PRESET) --target shellcheck
 	$(CMAKE) --build ./build --config $(PRESET) --parallel 4
 	$(CMAKE) --install ./build --prefix $(PREFIX) --config $(PRESET) --verbose \
-		--component intelligence_jsonschema
+		--component sourcemeta_jsonschema
 	$(CPACK) --config build/CPackConfig.cmake -B build/out -C $(PRESET)
 
 lint: .always

@@ -28,7 +28,7 @@ $(realpath "$TMP")/test.json:
 error: Test case documents must set the \`dataPath\` property to a string
   at test case #1
 
-Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
+Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

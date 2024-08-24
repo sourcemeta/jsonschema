@@ -27,4 +27,4 @@ target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 include(GNUInstallDirs)
 install(TARGETS jsonschema_cli
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  COMPONENT intelligence_jsonschema)
+  COMPONENT sourcemeta_jsonschema)

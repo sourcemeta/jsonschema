@@ -34,7 +34,7 @@ $(realpath "$TMP")/test.json:
 error: If you set a test case description, it must be a string
   at test case #2
 
-Learn more here: https://github.com/Intelligence-AI/jsonschema/blob/main/docs/test.markdown
+Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

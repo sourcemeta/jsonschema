@@ -9,7 +9,7 @@
 #include "command.h"
 #include "utils.h"
 
-auto intelligence::jsonschema::cli::fmt(
+auto sourcemeta::jsonschema::cli::fmt(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"c", "check"})};
 
