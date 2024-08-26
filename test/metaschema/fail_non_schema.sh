@@ -12,16 +12,11 @@ cat << 'EOF' > "$TMP/document.json"
 EOF
 
 "$1" metaschema "$TMP/document.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-fi
+test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Not a schema: $(realpath "$TMP/document.json")
+error: The schema file you provided does not represent a valid JSON Schema
+  $(realpath "$TMP/document.json")
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
-echo "PASS" 1>&2

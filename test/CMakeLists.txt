@@ -25,12 +25,6 @@ add_jsonschema_test_unix(format_check_single_pass)
 add_jsonschema_test_unix(format_directory_ignore_directory)
 add_jsonschema_test_unix(format_directory_ignore_file)
 add_jsonschema_test_unix(format_check_single_invalid)
-add_jsonschema_test_unix(metaschema_fail_directory)
-add_jsonschema_test_unix(metaschema_fail_single)
-add_jsonschema_test_unix(metaschema_fail_non_schema)
-add_jsonschema_test_unix(metaschema_pass_cwd)
-add_jsonschema_test_unix(metaschema_pass_single)
-add_jsonschema_test_unix(metaschema_pass_2020_12)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)
@@ -75,6 +69,14 @@ add_jsonschema_test_unix(validate/pass_many)
 add_jsonschema_test_unix(validate/pass_many_verbose)
 add_jsonschema_test_unix(validate/fail_many)
 add_jsonschema_test_unix(validate/fail_many_verbose)
+
+# Metaschema
+add_jsonschema_test_unix(metaschema/fail_directory)
+add_jsonschema_test_unix(metaschema/fail_single)
+add_jsonschema_test_unix(metaschema/fail_non_schema)
+add_jsonschema_test_unix(metaschema/pass_cwd)
+add_jsonschema_test_unix(metaschema/pass_single)
+add_jsonschema_test_unix(metaschema/pass_2020_12)
 
 # Test
 add_jsonschema_test_unix(test/fail_true_single_resolve)

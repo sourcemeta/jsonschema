@@ -23,7 +23,9 @@ auto sourcemeta::jsonschema::cli::metaschema(
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
     if (!sourcemeta::jsontoolkit::is_schema(entry.second)) {
-      std::cerr << "Not a schema: " << entry.first.string() << "\n";
+      std::cerr << "error: The schema file you provided does not represent a "
+                   "valid JSON Schema\n  "
+                << std::filesystem::canonical(entry.first).string() << "\n";
       return EXIT_FAILURE;
     }
 
@@ -45,12 +47,13 @@ auto sourcemeta::jsonschema::cli::metaschema(
             sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
             std::ref(output))) {
       log_verbose(options)
-          << entry.first.string()
-          << ": The schema is valid with respect to its metaschema\n";
+          << "ok: " << std::filesystem::weakly_canonical(entry.first).string()
+          << "\n  matches " << dialect.value() << "\n";
     } else {
+      std::cerr << "fail: "
+                << std::filesystem::weakly_canonical(entry.first).string()
+                << "\n";
       print(output, std::cerr);
-      std::cerr << entry.first.string()
-                << ": The schema is NOT valid with respect to its metaschema\n";
       result = false;
     }
   }

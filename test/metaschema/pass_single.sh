@@ -10,16 +10,13 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": 1
+  "type": "string"
 }
 EOF
 
-"$1" metaschema "$TMP/schema.json" && CODE="$?" || CODE="$?"
+"$1" metaschema "$TMP/schema.json" > "$TMP/output.txt" 2>&1
 
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-else
-  echo "PASS" 1>&2
-fi
+cat << EOF > "$TMP/expected.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
