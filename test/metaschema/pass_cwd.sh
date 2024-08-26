@@ -21,4 +21,14 @@ cat << 'EOF' > "$TMP/schema_2.json"
 }
 EOF
 
-"$1" metaschema --verbose
+cd "$TMP"
+"$1" metaschema --verbose > "$TMP/output.txt" 2>&1
+
+cat << EOF > "$TMP/expected.txt"
+ok: $(realpath "$TMP")/schema_1.json
+  matches http://json-schema.org/draft-04/schema#
+ok: $(realpath "$TMP")/schema_2.json
+  matches http://json-schema.org/draft-04/schema#
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
