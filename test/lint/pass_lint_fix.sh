@@ -15,7 +15,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --fix
+"$1" lint "$TMP/schema.json" --fix > "$TMP/result.txt" 2>&1
+
+cat << 'EOF' > "$TMP/output.txt"
+EOF
+
+diff "$TMP/result.txt" "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
