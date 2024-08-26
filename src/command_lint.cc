@@ -48,10 +48,11 @@ auto sourcemeta::jsonschema::cli::lint(
           entry.second, sourcemeta::jsontoolkit::default_schema_walker,
           resolver(options),
           [&entry](const auto &pointer, const auto &name, const auto &message) {
-            std::cout << entry.first.string() << "\n";
-            std::cout << "    ";
+            std::cout << entry.first.string() << ":\n";
+            std::cout << "  " << message << " (" << name << ")\n";
+            std::cout << "    at schema location \"";
             sourcemeta::jsontoolkit::stringify(pointer, std::cout);
-            std::cout << " " << message << " (" << name << ")\n";
+            std::cout << "\"\n";
           });
 
       if (subresult) {
