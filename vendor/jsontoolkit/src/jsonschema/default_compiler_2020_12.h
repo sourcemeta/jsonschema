@@ -67,7 +67,7 @@ auto compiler_2020_12_core_dynamicref(
   // reference (if any), as even if we jump first there, we will still
   // look for the oldest dynamic anchor in the schema resource chain.
   return {make<SchemaCompilerControlDynamicAnchorJump>(
-      context, schema_context, dynamic_context,
+      true, context, schema_context, dynamic_context,
       std::string{reference.fragment().value()}, {})};
 }
 

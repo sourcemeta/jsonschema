@@ -2,6 +2,8 @@
 #include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
+#include "trace.h"
+
 #include <algorithm>   // std::min
 #include <cassert>     // assert
 #include <functional>  // std::reference_wrapper
@@ -121,20 +123,6 @@ public:
     return this->instance_location_;
   }
 
-  auto instance_location(const sourcemeta::jsontoolkit::SchemaCompilerTarget
-                             &target) const -> Pointer {
-    switch (target.first) {
-      case sourcemeta::jsontoolkit::SchemaCompilerTargetType::InstanceParent:
-        return this->instance_location().concat(target.second).initial();
-      default:
-        return this->instance_location().concat(target.second);
-    }
-  }
-
-  template <typename T> auto instance_location(const T &step) const -> Pointer {
-    return this->instance_location(step.target);
-  }
-
   auto target_type(const TargetType type) -> void { this->target_type_ = type; }
 
   auto target_type() const -> TargetType { return this->target_type_; }
@@ -151,6 +139,8 @@ public:
           this->evaluate_path().initial().concat(target.second)};
       assert(target.first != SchemaCompilerTargetType::ParentAnnotations);
       if (target.first == SchemaCompilerTargetType::ParentAdjacentAnnotations) {
+        // TODO: This involves expensive pointer copies, allocations, and
+        // destructions
         return this->annotations(this->instance_location().initial(),
                                  schema_location);
       } else {
@@ -158,6 +148,8 @@ public:
       }
     } else if constexpr (std::is_same_v<InstanceAnnotations, T>) {
       if (target.first == SchemaCompilerTargetType::ParentAnnotations) {
+        // TODO: This involves expensive pointer copies, allocations, and
+        // destructions
         return this->annotations(this->instance_location().initial());
       } else {
         assert(target.first == SchemaCompilerTargetType::Annotations);
@@ -165,19 +157,27 @@ public:
       }
     } else {
       static_assert(std::is_same_v<JSON, T>);
+      assert(target.second.empty());
+      assert(target.first !=
+             sourcemeta::jsontoolkit::SchemaCompilerTargetType::InstanceParent);
       switch (target.first) {
         case SchemaCompilerTargetType::Instance:
           if (this->target_type() == TargetType::Key) {
-            assert(!this->instance_location(target).empty());
-            assert(this->instance_location(target).back().is_property());
-            return this->value(
-                this->instance_location(target).back().to_property());
+            assert(!this->instance_location().empty());
+            assert(this->instance_location().back().is_property());
+            return this->value(this->instance_location().back().to_property());
           }
 
           assert(this->target_type() == TargetType::Value);
-          return get(instance, this->instance_location(target));
+
+          // TODO: This means that we traverse the instance into
+          // the current instance location EVERY single time.
+          // Can we be smarter? Maybe we keep a reference to the current
+          // instance location in this class that we manipulate through
+          // .push() and .pop()
+          return get(instance, this->instance_location());
         case SchemaCompilerTargetType::InstanceBasename:
-          return this->value(this->instance_location(target).back().to_json());
+          return this->value(this->instance_location().back().to_json());
         default:
           // We should never get here
           assert(false);
@@ -264,65 +264,73 @@ private:
   TargetType target_type_ = TargetType::Value;
 };
 
-auto callback_noop(
-    const sourcemeta::jsontoolkit::SchemaCompilerEvaluationType, bool,
-    const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &,
-    const sourcemeta::jsontoolkit::Pointer &,
-    const sourcemeta::jsontoolkit::Pointer &,
-    const sourcemeta::jsontoolkit::JSON &) noexcept -> void {}
-
 auto evaluate_step(
     const sourcemeta::jsontoolkit::SchemaCompilerTemplate::value_type &step,
     const sourcemeta::jsontoolkit::JSON &instance,
     const sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode mode,
-    const sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback &callback,
+    const std::optional<
+        sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback> &callback,
     EvaluationContext &context) -> bool {
+  SOURCEMETA_TRACE_REGISTER_ID(trace_id);
+
   using namespace sourcemeta::jsontoolkit;
   bool result{false};
 
-#define CALLBACK_PRE(current_instance_location)                                \
-  callback(SchemaCompilerEvaluationType::Pre, true, step,                      \
-           context.evaluate_path(), current_instance_location,                 \
-           context.value(nullptr));
+#define CALLBACK_PRE(current_step, current_instance_location)                  \
+  if (current_step.report && callback.has_value()) {                           \
+    callback.value()(SchemaCompilerEvaluationType::Pre, true, step,            \
+                     context.evaluate_path(), current_instance_location,       \
+                     context.value(nullptr));                                  \
+  }
 
-#define CALLBACK_POST(current_step)                                            \
-  callback(SchemaCompilerEvaluationType::Post, result, step,                   \
-           context.evaluate_path(), context.instance_location(),               \
-           context.value(nullptr));                                            \
+#define CALLBACK_POST(title, current_step)                                     \
+  if (current_step.report && callback.has_value()) {                           \
+    callback.value()(SchemaCompilerEvaluationType::Post, result, step,         \
+                     context.evaluate_path(), context.instance_location(),     \
+                     context.value(nullptr));                                  \
+  }                                                                            \
   context.pop(current_step);                                                   \
+  SOURCEMETA_TRACE_END(trace_id, title);                                       \
   return result;
 
-#define EVALUATE_CONDITION_GUARD(step, instance)                               \
+#define EVALUATE_CONDITION_GUARD(title, step, instance)                        \
   for (const auto &child : step.condition) {                                   \
     if (!evaluate_step(child, instance, SchemaCompilerEvaluationMode::Fast,    \
-                       callback_noop, context)) {                              \
+                       std::nullopt, context)) {                               \
       context.pop(step);                                                       \
+      SOURCEMETA_TRACE_END(trace_id, title);                                   \
       return true;                                                             \
     }                                                                          \
   }
 
   if (std::holds_alternative<SchemaCompilerAssertionFail>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionFail");
     const auto &assertion{std::get<SchemaCompilerAssertionFail>(step)};
     context.push(assertion);
     assert(std::holds_alternative<SchemaCompilerValueNone>(assertion.value));
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
-    CALLBACK_POST(assertion);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionFail", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
+    CALLBACK_POST("SchemaCompilerAssertionFail", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionDefines>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionDefines");
     const auto &assertion{std::get<SchemaCompilerAssertionDefines>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionDefines", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target.is_object() && target.defines(value);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionDefines", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionDefinesAll>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionDefinesAll");
     const auto &assertion{std::get<SchemaCompilerAssertionDefinesAll>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionDefinesAll", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     // Otherwise we are we even emitting this instruction?
     assert(value.size() > 1);
@@ -337,12 +345,14 @@ auto evaluate_step(
       }
     }
 
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionDefinesAll", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionType>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionType");
     const auto &assertion{std::get<SchemaCompilerAssertionType>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionType", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
@@ -351,12 +361,14 @@ auto evaluate_step(
     result = target.type() == value ||
              (value == JSON::Type::Integer && target.is_integer_real());
 
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionType", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionTypeAny>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionTypeAny");
     const auto &assertion{std::get<SchemaCompilerAssertionTypeAny>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionTypeAny", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     // Otherwise we are we even emitting this instruction?
     assert(value.size() > 1);
@@ -367,162 +379,192 @@ auto evaluate_step(
     result = value.contains(target.type()) ||
              (value.contains(JSON::Type::Integer) && target.is_integer_real());
 
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionTypeAny", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionTypeStrict>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionTypeStrict");
     const auto &assertion{std::get<SchemaCompilerAssertionTypeStrict>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionTypeStrict", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target.type() == value;
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionTypeStrict", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionTypeStrictAny>(
                  step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionTypeStrictAny");
     const auto &assertion{std::get<SchemaCompilerAssertionTypeStrictAny>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionTypeStrictAny", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     // Otherwise we are we even emitting this instruction?
     assert(value.size() > 1);
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = value.contains(target.type());
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionTypeStrictAny", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionRegex>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionRegex");
     const auto &assertion{std::get<SchemaCompilerAssertionRegex>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionRegex", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     assert(target.is_string());
     result = std::regex_search(target.to_string(), value.first);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionRegex", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionSizeGreater>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionSizeGreater");
     const auto &assertion{std::get<SchemaCompilerAssertionSizeGreater>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionSizeGreater", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = (target.is_array() || target.is_object() || target.is_string()) &&
              (target.size() > value);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionSizeGreater", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionSizeLess>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionSizeLess");
     const auto &assertion{std::get<SchemaCompilerAssertionSizeLess>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionSizeLess", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = (target.is_array() || target.is_object() || target.is_string()) &&
              (target.size() < value);
-    CALLBACK_POST(assertion);
-  } else if (std::holds_alternative<SchemaCompilerInternalSizeEqual>(step)) {
-    const auto &assertion{std::get<SchemaCompilerInternalSizeEqual>(step)};
+    CALLBACK_POST("SchemaCompilerAssertionSizeLess", assertion);
+  } else if (std::holds_alternative<SchemaCompilerAssertionSizeEqual>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionSizeEqual");
+    const auto &assertion{std::get<SchemaCompilerAssertionSizeEqual>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionSizeEqual", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = (target.is_array() || target.is_object() || target.is_string()) &&
              (target.size() == value);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionSizeEqual", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionEqual>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionEqual");
     const auto &assertion{std::get<SchemaCompilerAssertionEqual>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionEqual", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = (target == value);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionEqual", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionEqualsAny>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionEqualsAny");
     const auto &assertion{std::get<SchemaCompilerAssertionEqualsAny>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionEqualsAny", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = value.contains(target);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionEqualsAny", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionGreaterEqual>(
                  step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionGreaterEqual");
     const auto &assertion{std::get<SchemaCompilerAssertionGreaterEqual>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionGreaterEqual", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target >= value;
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionGreaterEqual", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionLessEqual>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionLessEqual");
     const auto &assertion{std::get<SchemaCompilerAssertionLessEqual>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionLessEqual", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target <= value;
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionLessEqual", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionGreater>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionGreater");
     const auto &assertion{std::get<SchemaCompilerAssertionGreater>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionGreater", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target > value;
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionGreater", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionLess>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionLess");
     const auto &assertion{std::get<SchemaCompilerAssertionLess>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionLess", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target < value;
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionLess", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionUnique>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionUnique");
     const auto &assertion{std::get<SchemaCompilerAssertionUnique>(step)};
     assert(std::holds_alternative<SchemaCompilerValueNone>(assertion.value));
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionUnique", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     result = target.is_array() && target.unique();
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionUnique", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionDivisible>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionDivisible");
     const auto &assertion{std::get<SchemaCompilerAssertionDivisible>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionDivisible", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
     assert(value.is_number());
     assert(target.is_number());
     result = target.divisible_by(value);
-    CALLBACK_POST(assertion);
+    CALLBACK_POST("SchemaCompilerAssertionDivisible", assertion);
   } else if (std::holds_alternative<SchemaCompilerAssertionStringType>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionStringType");
     const auto &assertion{std::get<SchemaCompilerAssertionStringType>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionStringType", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<JSON>(assertion.target, instance)};
@@ -541,148 +583,42 @@ auto evaluate_step(
         assert(false);
     }
 
-    CALLBACK_POST(assertion);
-  } else if (std::holds_alternative<SchemaCompilerLogicalOr>(step)) {
-    const auto &logical{std::get<SchemaCompilerLogicalOr>(step)};
-    context.push(logical);
-    EVALUATE_CONDITION_GUARD(logical, instance);
-    CALLBACK_PRE(context.instance_location());
-    // This boolean value controls whether we should still evaluate
-    // every disjunction even on fast mode
-    const auto value{context.resolve_value(logical.value, instance)};
-    result = logical.children.empty();
-    for (const auto &child : logical.children) {
-      if (evaluate_step(child, instance, mode, callback, context)) {
-        result = true;
-        if (mode == SchemaCompilerEvaluationMode::Fast && !value) {
-          break;
-        }
-      }
-    }
-
-    CALLBACK_POST(logical);
-  } else if (std::holds_alternative<SchemaCompilerLogicalAnd>(step)) {
-    const auto &logical{std::get<SchemaCompilerLogicalAnd>(step)};
-    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
-    context.push(logical);
-    EVALUATE_CONDITION_GUARD(logical, instance);
-    CALLBACK_PRE(context.instance_location());
-    result = true;
-    for (const auto &child : logical.children) {
-      if (!evaluate_step(child, instance, mode, callback, context)) {
-        result = false;
-        if (mode == SchemaCompilerEvaluationMode::Fast) {
-          break;
-        }
-      }
-    }
-
-    CALLBACK_POST(logical);
-  } else if (std::holds_alternative<SchemaCompilerLogicalXor>(step)) {
-    const auto &logical{std::get<SchemaCompilerLogicalXor>(step)};
-    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
-    context.push(logical);
-    EVALUATE_CONDITION_GUARD(logical, instance);
-    CALLBACK_PRE(context.instance_location());
-    result = false;
-
-    // TODO: Cache results of a given branch so we can avoid
-    // computing it multiple times
-    for (auto iterator{logical.children.cbegin()};
-         iterator != logical.children.cend(); ++iterator) {
-      if (!evaluate_step(*iterator, instance, mode, callback, context)) {
-        continue;
-      }
-
-      // Check if another one matches
-      bool subresult{true};
-      for (auto subiterator{logical.children.cbegin()};
-           subiterator != logical.children.cend(); ++subiterator) {
-        // Don't compare the element against itself
-        if (std::distance(logical.children.cbegin(), iterator) ==
-            std::distance(logical.children.cbegin(), subiterator)) {
-          continue;
-        }
-
-        // We don't need to report traces that part of the exhaustive
-        // XOR search. We can treat those as internal
-        if (evaluate_step(*subiterator, instance, mode, callback_noop,
-                          context)) {
-          subresult = false;
-          break;
-        }
-      }
-
-      result = result || subresult;
-      if (result && mode == SchemaCompilerEvaluationMode::Fast) {
-        break;
-      }
-    }
-
-    CALLBACK_POST(logical);
-  } else if (std::holds_alternative<SchemaCompilerLogicalTry>(step)) {
-    const auto &logical{std::get<SchemaCompilerLogicalTry>(step)};
-    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
-    context.push(logical);
-    EVALUATE_CONDITION_GUARD(logical, instance);
-    CALLBACK_PRE(context.instance_location());
-    result = true;
-    for (const auto &child : logical.children) {
-      if (!evaluate_step(child, instance, mode, callback, context)) {
-        break;
-      }
-    }
-
-    CALLBACK_POST(logical);
-  } else if (std::holds_alternative<SchemaCompilerLogicalNot>(step)) {
-    const auto &logical{std::get<SchemaCompilerLogicalNot>(step)};
-    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
-    context.push(logical);
-    EVALUATE_CONDITION_GUARD(logical, instance);
-    CALLBACK_PRE(context.instance_location());
-    // Ignore annotations produced inside "not"
-    context.mask();
-    result = false;
-    for (const auto &child : logical.children) {
-      if (!evaluate_step(child, instance, mode, callback, context)) {
-        result = true;
-        if (mode == SchemaCompilerEvaluationMode::Fast) {
-          break;
-        }
-      }
-    }
-
-    CALLBACK_POST(logical);
-  } else if (std::holds_alternative<SchemaCompilerInternalAnnotation>(step)) {
-    const auto &assertion{std::get<SchemaCompilerInternalAnnotation>(step)};
+    CALLBACK_POST("SchemaCompilerAssertionStringType", assertion);
+  } else if (std::holds_alternative<SchemaCompilerAssertionAnnotation>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionAnnotation");
+    const auto &assertion{std::get<SchemaCompilerAssertionAnnotation>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionAnnotation", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<std::set<JSON>>(assertion.target, instance)};
     result = target.contains(value);
-
-    // We treat this step as transparent to the consumer
-    context.pop(assertion);
-    return result;
-  } else if (std::holds_alternative<SchemaCompilerInternalNoAdjacentAnnotation>(
-                 step)) {
+    CALLBACK_POST("SchemaCompilerAssertionAnnotation", assertion);
+  } else if (std::holds_alternative<
+                 SchemaCompilerAssertionNoAdjacentAnnotation>(step)) {
+    SOURCEMETA_TRACE_START(trace_id,
+                           "SchemaCompilerAssertionNoAdjacentAnnotation");
     const auto &assertion{
-        std::get<SchemaCompilerInternalNoAdjacentAnnotation>(step)};
+        std::get<SchemaCompilerAssertionNoAdjacentAnnotation>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionNoAdjacentAnnotation",
+                             assertion, instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<std::set<JSON>>(assertion.target, instance)};
     result = !target.contains(value);
-
-    // We treat this step as transparent to the consumer
-    context.pop(assertion);
-    return result;
-  } else if (std::holds_alternative<SchemaCompilerInternalNoAnnotation>(step)) {
-    const auto &assertion{std::get<SchemaCompilerInternalNoAnnotation>(step)};
+    CALLBACK_POST("SchemaCompilerAssertionNoAdjacentAnnotation", assertion);
+  } else if (std::holds_alternative<SchemaCompilerAssertionNoAnnotation>(
+                 step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAssertionNoAnnotation");
+    const auto &assertion{std::get<SchemaCompilerAssertionNoAnnotation>(step)};
     context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAssertionNoAnnotation", assertion,
+                             instance);
+    CALLBACK_PRE(assertion, context.instance_location());
     const auto &value{context.resolve_value(assertion.value, instance)};
     const auto &target{
         context.resolve_target<EvaluationContext::InstanceAnnotations>(
@@ -713,131 +649,214 @@ auto evaluate_step(
       }
     }
 
-    // We treat this step as transparent to the consumer
-    context.pop(assertion);
-    return result;
-  } else if (std::holds_alternative<SchemaCompilerInternalContainer>(step)) {
-    const auto &container{std::get<SchemaCompilerInternalContainer>(step)};
-    assert(std::holds_alternative<SchemaCompilerValueNone>(container.value));
-    context.push(container);
-    EVALUATE_CONDITION_GUARD(container, instance);
+    CALLBACK_POST("SchemaCompilerAssertionNoAnnotation", assertion);
+  } else if (std::holds_alternative<SchemaCompilerLogicalOr>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLogicalOr");
+    const auto &logical{std::get<SchemaCompilerLogicalOr>(step)};
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLogicalOr", logical, instance);
+    CALLBACK_PRE(logical, context.instance_location());
+    // This boolean value controls whether we should still evaluate
+    // every disjunction even on fast mode
+    const auto value{context.resolve_value(logical.value, instance)};
+    result = logical.children.empty();
+    for (const auto &child : logical.children) {
+      if (evaluate_step(child, instance, mode, callback, context)) {
+        result = true;
+        if (mode == SchemaCompilerEvaluationMode::Fast && !value) {
+          break;
+        }
+      }
+    }
+
+    CALLBACK_POST("SchemaCompilerLogicalOr", logical);
+  } else if (std::holds_alternative<SchemaCompilerLogicalAnd>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLogicalAnd");
+    const auto &logical{std::get<SchemaCompilerLogicalAnd>(step)};
+    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLogicalAnd", logical, instance);
+    CALLBACK_PRE(logical, context.instance_location());
     result = true;
-    for (const auto &child : container.children) {
+    for (const auto &child : logical.children) {
       if (!evaluate_step(child, instance, mode, callback, context)) {
         result = false;
         break;
       }
     }
 
-    // We treat this step as transparent to the consumer
-    context.pop(container);
-    return result;
-  } else if (std::holds_alternative<SchemaCompilerInternalDefinesAll>(step)) {
-    const auto &assertion{std::get<SchemaCompilerInternalDefinesAll>(step)};
-    context.push(assertion);
-    EVALUATE_CONDITION_GUARD(assertion, instance);
-    const auto &value{context.resolve_value(assertion.value, instance)};
-    const auto &target{
-        context.resolve_target<JSON>(assertion.target, instance)};
-    assert(target.is_object());
-    result = true;
-    for (const auto &property : value) {
-      if (!target.defines(property)) {
-        result = false;
+    CALLBACK_POST("SchemaCompilerLogicalAnd", logical);
+  } else if (std::holds_alternative<SchemaCompilerLogicalXor>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLogicalXor");
+    const auto &logical{std::get<SchemaCompilerLogicalXor>(step)};
+    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLogicalXor", logical, instance);
+    CALLBACK_PRE(logical, context.instance_location());
+    result = false;
+
+    // TODO: Cache results of a given branch so we can avoid
+    // computing it multiple times
+    for (auto iterator{logical.children.cbegin()};
+         iterator != logical.children.cend(); ++iterator) {
+      if (!evaluate_step(*iterator, instance, mode, callback, context)) {
+        continue;
+      }
+
+      // Check if another one matches
+      bool subresult{true};
+      for (auto subiterator{logical.children.cbegin()};
+           subiterator != logical.children.cend(); ++subiterator) {
+        // Don't compare the element against itself
+        if (std::distance(logical.children.cbegin(), iterator) ==
+            std::distance(logical.children.cbegin(), subiterator)) {
+          continue;
+        }
+
+        // We don't need to report traces that part of the exhaustive
+        // XOR search. We can treat those as internal
+        if (evaluate_step(*subiterator, instance, mode, std::nullopt,
+                          context)) {
+          subresult = false;
+          break;
+        }
+      }
+
+      result = result || subresult;
+      if (result && mode == SchemaCompilerEvaluationMode::Fast) {
         break;
       }
     }
 
-    // We treat this step as transparent to the consumer
-    context.pop(assertion);
-    return result;
-  } else if (std::holds_alternative<SchemaCompilerControlLabel>(step)) {
-    const auto &control{std::get<SchemaCompilerControlLabel>(step)};
-    context.mark(control.id, control.children);
-    context.push(control);
-    CALLBACK_PRE(context.instance_location());
+    CALLBACK_POST("SchemaCompilerLogicalXor", logical);
+  } else if (std::holds_alternative<SchemaCompilerLogicalTry>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLogicalTry");
+    const auto &logical{std::get<SchemaCompilerLogicalTry>(step)};
+    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLogicalTry", logical, instance);
+    CALLBACK_PRE(logical, context.instance_location());
     result = true;
-    for (const auto &child : control.children) {
+    for (const auto &child : logical.children) {
       if (!evaluate_step(child, instance, mode, callback, context)) {
-        result = false;
+        break;
+      }
+    }
+
+    CALLBACK_POST("SchemaCompilerLogicalTry", logical);
+  } else if (std::holds_alternative<SchemaCompilerLogicalNot>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLogicalNot");
+    const auto &logical{std::get<SchemaCompilerLogicalNot>(step)};
+    assert(std::holds_alternative<SchemaCompilerValueNone>(logical.value));
+    context.push(logical);
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLogicalNot", logical, instance);
+    CALLBACK_PRE(logical, context.instance_location());
+    // Ignore annotations produced inside "not"
+    context.mask();
+    result = false;
+    for (const auto &child : logical.children) {
+      if (!evaluate_step(child, instance, mode, callback, context)) {
+        result = true;
         if (mode == SchemaCompilerEvaluationMode::Fast) {
           break;
         }
       }
     }
 
-    CALLBACK_POST(control);
+    CALLBACK_POST("SchemaCompilerLogicalNot", logical);
+  } else if (std::holds_alternative<SchemaCompilerControlLabel>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerControlLabel");
+    const auto &control{std::get<SchemaCompilerControlLabel>(step)};
+    context.mark(control.id, control.children);
+    context.push(control);
+    CALLBACK_PRE(control, context.instance_location());
+    result = true;
+    for (const auto &child : control.children) {
+      if (!evaluate_step(child, instance, mode, callback, context)) {
+        result = false;
+        break;
+      }
+    }
+
+    CALLBACK_POST("SchemaCompilerControlLabel", control);
   } else if (std::holds_alternative<SchemaCompilerControlMark>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerControlMark");
     const auto &control{std::get<SchemaCompilerControlMark>(step)};
     context.mark(control.id, control.children);
+    SOURCEMETA_TRACE_END(trace_id, "SchemaCompilerControlMark");
     return true;
   } else if (std::holds_alternative<SchemaCompilerControlJump>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerControlJump");
     const auto &control{std::get<SchemaCompilerControlJump>(step)};
     context.push(control);
-    CALLBACK_PRE(context.instance_location());
+    CALLBACK_PRE(control, context.instance_location());
     assert(control.children.empty());
     result = true;
     for (const auto &child : context.jump(control.id)) {
       if (!evaluate_step(child, instance, mode, callback, context)) {
         result = false;
-        if (mode == SchemaCompilerEvaluationMode::Fast) {
-          break;
-        }
+        break;
       }
     }
 
-    CALLBACK_POST(control);
+    CALLBACK_POST("SchemaCompilerControlJump", control);
   } else if (std::holds_alternative<SchemaCompilerControlDynamicAnchorJump>(
                  step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerControlDynamicAnchorJump");
     const auto &control{std::get<SchemaCompilerControlDynamicAnchorJump>(step)};
     context.push(control);
-    CALLBACK_PRE(context.instance_location());
+    CALLBACK_PRE(control, context.instance_location());
     const auto id{context.find_dynamic_anchor(control.id)};
     result = id.has_value();
     if (id.has_value()) {
       for (const auto &child : context.jump(id.value())) {
         if (!evaluate_step(child, instance, mode, callback, context)) {
           result = false;
-          if (mode == SchemaCompilerEvaluationMode::Fast) {
-            break;
-          }
+          break;
         }
       }
     }
 
-    CALLBACK_POST(control);
-  } else if (std::holds_alternative<SchemaCompilerAnnotationPublic>(step)) {
-    const auto &annotation{std::get<SchemaCompilerAnnotationPublic>(step)};
+    CALLBACK_POST("SchemaCompilerControlDynamicAnchorJump", control);
+  } else if (std::holds_alternative<SchemaCompilerAnnotationEmit>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerAnnotationEmit");
+    const auto &annotation{std::get<SchemaCompilerAnnotationEmit>(step)};
     context.push(annotation);
-    EVALUATE_CONDITION_GUARD(annotation, instance);
-    const auto current_instance_location{context.instance_location(annotation)};
+    EVALUATE_CONDITION_GUARD("SchemaCompilerAnnotationEmit", annotation,
+                             instance);
+    // Annotations never fail
+    result = true;
+    assert(annotation.target.second.empty());
+
+    // TODO: Can we avoid a copy of the instance location here?
+    const auto current_instance_location{
+        annotation.target.first == SchemaCompilerTargetType::InstanceParent
+            ? context.instance_location().initial()
+            : context.instance_location()};
+
     const auto value{
         context.annotate(current_instance_location,
                          context.resolve_value(annotation.value, instance))};
-    // Annotations never fail
-    result = true;
 
     // As a safety guard, only emit the annotation if it didn't exist already.
     // Otherwise we risk confusing consumers
-    if (value.second) {
-      CALLBACK_PRE(current_instance_location);
-      callback(SchemaCompilerEvaluationType::Post, result, step,
-               context.evaluate_path(), current_instance_location, value.first);
+    if (value.second && callback.has_value()) {
+      CALLBACK_PRE(annotation, current_instance_location);
+      callback.value()(SchemaCompilerEvaluationType::Post, result, step,
+                       context.evaluate_path(), current_instance_location,
+                       value.first);
     }
 
     context.pop(annotation);
+    SOURCEMETA_TRACE_END(trace_id, "SchemaCompilerAnnotationEmit");
     return result;
   } else if (std::holds_alternative<SchemaCompilerLoopProperties>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLoopProperties");
     const auto &loop{std::get<SchemaCompilerLoopProperties>(step)};
     context.push(loop);
-    EVALUATE_CONDITION_GUARD(loop, instance);
-    const auto value{context.resolve_value(loop.value, instance)};
-
-    // Setting the value to false means "don't report it"
-    if (value) {
-      CALLBACK_PRE(context.instance_location());
-    }
-
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLoopProperties", loop, instance);
+    assert(std::holds_alternative<SchemaCompilerValueNone>(loop.value));
+    CALLBACK_PRE(loop, context.instance_location());
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_object());
     result = true;
@@ -846,13 +865,9 @@ auto evaluate_step(
       for (const auto &child : loop.children) {
         if (!evaluate_step(child, instance, mode, callback, context)) {
           result = false;
-          if (mode == SchemaCompilerEvaluationMode::Fast) {
-            context.pop(loop);
-            // For efficiently breaking from the outer loop too
-            goto evaluate_loop_properties_end;
-          } else {
-            break;
-          }
+          context.pop(loop);
+          // For efficiently breaking from the outer loop too
+          goto evaluate_loop_properties_end;
         }
       }
 
@@ -860,18 +875,13 @@ auto evaluate_step(
     }
 
   evaluate_loop_properties_end:
-    // Setting the value to false means "don't report it"
-    if (!value) {
-      context.pop(loop);
-      return result;
-    }
-
-    CALLBACK_POST(loop);
+    CALLBACK_POST("SchemaCompilerLoopProperties", loop);
   } else if (std::holds_alternative<SchemaCompilerLoopKeys>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLoopKeys");
     const auto &loop{std::get<SchemaCompilerLoopKeys>(step)};
     context.push(loop);
-    EVALUATE_CONDITION_GUARD(loop, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLoopKeys", loop, instance);
+    CALLBACK_PRE(loop, context.instance_location());
     assert(std::holds_alternative<SchemaCompilerValueNone>(loop.value));
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_object());
@@ -882,12 +892,8 @@ auto evaluate_step(
       for (const auto &child : loop.children) {
         if (!evaluate_step(child, instance, mode, callback, context)) {
           result = false;
-          if (mode == SchemaCompilerEvaluationMode::Fast) {
-            context.pop(loop);
-            goto evaluate_loop_keys_end;
-          } else {
-            break;
-          }
+          context.pop(loop);
+          goto evaluate_loop_keys_end;
         }
       }
 
@@ -896,12 +902,13 @@ auto evaluate_step(
 
   evaluate_loop_keys_end:
     context.target_type(EvaluationContext::TargetType::Value);
-    CALLBACK_POST(loop);
+    CALLBACK_POST("SchemaCompilerLoopKeys", loop);
   } else if (std::holds_alternative<SchemaCompilerLoopItems>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLoopItems");
     const auto &loop{std::get<SchemaCompilerLoopItems>(step)};
     context.push(loop);
-    EVALUATE_CONDITION_GUARD(loop, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLoopItems", loop, instance);
+    CALLBACK_PRE(loop, context.instance_location());
     const auto value{context.resolve_value(loop.value, instance)};
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_array());
@@ -923,26 +930,25 @@ auto evaluate_step(
       for (const auto &child : loop.children) {
         if (!evaluate_step(child, instance, mode, callback, context)) {
           result = false;
-          if (mode == SchemaCompilerEvaluationMode::Fast) {
-            context.pop(loop);
-            CALLBACK_POST(loop);
-          } else {
-            break;
-          }
+          context.pop(loop);
+          CALLBACK_POST("SchemaCompilerLoopItems", loop);
         }
       }
 
       context.pop(loop);
     }
 
-    CALLBACK_POST(loop);
+    CALLBACK_POST("SchemaCompilerLoopItems", loop);
   } else if (std::holds_alternative<SchemaCompilerLoopItemsFromAnnotationIndex>(
                  step)) {
+    SOURCEMETA_TRACE_START(trace_id,
+                           "SchemaCompilerLoopItemsFromAnnotationIndex");
     const auto &loop{
         std::get<SchemaCompilerLoopItemsFromAnnotationIndex>(step)};
     context.push(loop);
-    EVALUATE_CONDITION_GUARD(loop, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLoopItemsFromAnnotationIndex", loop,
+                             instance);
+    CALLBACK_PRE(loop, context.instance_location());
     const auto &value{context.resolve_value(loop.value, instance)};
     const auto &target{context.resolve_target<JSON>(loop.target, instance)};
     assert(target.is_array());
@@ -985,24 +991,21 @@ auto evaluate_step(
       for (const auto &child : loop.children) {
         if (!evaluate_step(child, instance, mode, callback, context)) {
           result = false;
-          if (mode == SchemaCompilerEvaluationMode::Fast) {
-            context.pop(loop);
-            CALLBACK_POST(loop);
-          } else {
-            break;
-          }
+          context.pop(loop);
+          CALLBACK_POST("SchemaCompilerLoopItemsFromAnnotationIndex", loop);
         }
       }
 
       context.pop(loop);
     }
 
-    CALLBACK_POST(loop);
+    CALLBACK_POST("SchemaCompilerLoopItemsFromAnnotationIndex", loop);
   } else if (std::holds_alternative<SchemaCompilerLoopContains>(step)) {
+    SOURCEMETA_TRACE_START(trace_id, "SchemaCompilerLoopContains");
     const auto &loop{std::get<SchemaCompilerLoopContains>(step)};
     context.push(loop);
-    EVALUATE_CONDITION_GUARD(loop, instance);
-    CALLBACK_PRE(context.instance_location());
+    EVALUATE_CONDITION_GUARD("SchemaCompilerLoopContains", loop, instance);
+    CALLBACK_PRE(loop, context.instance_location());
     const auto &value{context.resolve_value(loop.value, instance)};
     const auto minimum{std::get<0>(value)};
     const auto &maximum{std::get<1>(value)};
@@ -1052,7 +1055,7 @@ auto evaluate_step(
       }
     }
 
-    CALLBACK_POST(loop);
+    CALLBACK_POST("SchemaCompilerLoopContains", loop);
   }
 
 #undef CALLBACK_PRE
@@ -1063,21 +1066,19 @@ auto evaluate_step(
   return result;
 }
 
-} // namespace
-
-namespace sourcemeta::jsontoolkit {
-
-auto evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
-              const SchemaCompilerEvaluationMode mode,
-              const SchemaCompilerEvaluationCallback &callback) -> bool {
+inline auto evaluate_internal(
+    const sourcemeta::jsontoolkit::SchemaCompilerTemplate &steps,
+    const sourcemeta::jsontoolkit::JSON &instance,
+    const sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode mode,
+    const std::optional<
+        sourcemeta::jsontoolkit::SchemaCompilerEvaluationCallback> &callback)
+    -> bool {
   EvaluationContext context;
   bool overall{true};
   for (const auto &step : steps) {
     if (!evaluate_step(step, instance, mode, callback, context)) {
       overall = false;
-      if (mode == SchemaCompilerEvaluationMode::Fast) {
-        break;
-      }
+      break;
     }
   }
 
@@ -1089,12 +1090,22 @@ auto evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
   return overall;
 }
 
+} // namespace
+
+namespace sourcemeta::jsontoolkit {
+
+auto evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
+              const SchemaCompilerEvaluationMode mode,
+              const SchemaCompilerEvaluationCallback &callback) -> bool {
+  return evaluate_internal(steps, instance, mode, callback);
+}
+
 auto evaluate(const SchemaCompilerTemplate &steps,
               const JSON &instance) -> bool {
-  // Otherwise what's the point of an exhaustive
-  // evaluation if you don't get the results?
-  return evaluate(steps, instance, SchemaCompilerEvaluationMode::Fast,
-                  callback_noop);
+  return evaluate_internal(steps, instance,
+                           // Otherwise what's the point of an exhaustive
+                           // evaluation if you don't get the results?
+                           SchemaCompilerEvaluationMode::Fast, std::nullopt);
 }
 
 } // namespace sourcemeta::jsontoolkit

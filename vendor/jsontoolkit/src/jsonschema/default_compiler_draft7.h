@@ -17,11 +17,11 @@ auto compiler_draft7_applicator_if(
   SchemaCompilerTemplate children{compile(context, schema_context,
                                           relative_dynamic_context,
                                           empty_pointer, empty_pointer)};
-  children.push_back(make<SchemaCompilerAnnotationPublic>(
-      context, schema_context, relative_dynamic_context, JSON{true}, {},
+  children.push_back(make<SchemaCompilerAnnotationEmit>(
+      true, context, schema_context, relative_dynamic_context, JSON{true}, {},
       SchemaCompilerTargetType::Instance));
   return {make<SchemaCompilerLogicalTry>(
-      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
+      true, context, schema_context, dynamic_context, SchemaCompilerValueNone{},
       std::move(children), SchemaCompilerTemplate{})};
 }
 
@@ -40,11 +40,11 @@ auto compiler_draft7_applicator_then(
   SchemaCompilerTemplate children{compile(context, schema_context,
                                           relative_dynamic_context,
                                           empty_pointer, empty_pointer)};
-  SchemaCompilerTemplate condition{make<SchemaCompilerInternalAnnotation>(
-      context, schema_context, relative_dynamic_context, JSON{true}, {},
+  SchemaCompilerTemplate condition{make<SchemaCompilerAssertionAnnotation>(
+      false, context, schema_context, relative_dynamic_context, JSON{true}, {},
       SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
   return {make<SchemaCompilerLogicalAnd>(
-      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
+      true, context, schema_context, dynamic_context, SchemaCompilerValueNone{},
       std::move(children), std::move(condition))};
 }
 
@@ -64,11 +64,11 @@ auto compiler_draft7_applicator_else(
                                           relative_dynamic_context,
                                           empty_pointer, empty_pointer)};
   SchemaCompilerTemplate condition{
-      make<SchemaCompilerInternalNoAdjacentAnnotation>(
-          context, schema_context, relative_dynamic_context, JSON{true}, {},
-          SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
+      make<SchemaCompilerAssertionNoAdjacentAnnotation>(
+          false, context, schema_context, relative_dynamic_context, JSON{true},
+          {}, SchemaCompilerTargetType::AdjacentAnnotations, Pointer{"if"})};
   return {make<SchemaCompilerLogicalAnd>(
-      context, schema_context, dynamic_context, SchemaCompilerValueNone{},
+      true, context, schema_context, dynamic_context, SchemaCompilerValueNone{},
       std::move(children), std::move(condition))};
 }
 

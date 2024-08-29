@@ -10,7 +10,7 @@ noa_library(NAMESPACE sourcemeta PROJECT jsontoolkit NAME jsonschema
     anchor.cc resolver.cc
     walker.cc bundle.cc compile.cc compile_evaluate.cc
     compile_json.cc compile_describe.cc
-    compile_helpers.h default_compiler.cc
+    compile_helpers.h default_compiler.cc trace.h
 
     default_compiler_2020_12.h
     default_compiler_2019_09.h

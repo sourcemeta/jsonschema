@@ -211,8 +211,29 @@ struct SchemaCompilerAssertionDivisible;
 struct SchemaCompilerAssertionStringType;
 
 /// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a given array, object, or
+/// string has a certain number of items, properties, or characters,
+/// respectively
+struct SchemaCompilerAssertionSizeEqual;
+
+/// @ingroup jsonschema
 /// Represents a compiler step that emits an annotation
-struct SchemaCompilerAnnotationPublic;
+struct SchemaCompilerAnnotationEmit;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a certain
+/// annotation was produced
+struct SchemaCompilerAssertionAnnotation;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a certain
+/// annotation was not produced at an adjacent location
+struct SchemaCompilerAssertionNoAdjacentAnnotation;
+
+/// @ingroup jsonschema
+/// Represents a compiler assertion step that checks a certain
+/// annotation was not produced independently of the schema location
+struct SchemaCompilerAssertionNoAnnotation;
 
 /// @ingroup jsonschema
 /// Represents a compiler logical step that represents a disjunction
@@ -234,36 +255,6 @@ struct SchemaCompilerLogicalTry;
 /// @ingroup jsonschema
 /// Represents a compiler logical step that represents a negation
 struct SchemaCompilerLogicalNot;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given array, object, or
-/// string has a certain number of items, properties, or characters,
-/// respectively
-struct SchemaCompilerInternalSizeEqual;
-
-/// @ingroup jsonschema
-/// Represents a hidden compiler assertion step that checks a certain
-/// annotation was produced
-struct SchemaCompilerInternalAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a hidden compiler assertion step that checks a certain
-/// annotation was not produced at an adjacent location
-struct SchemaCompilerInternalNoAdjacentAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a hidden compiler assertion step that checks a certain
-/// annotation was not produced independently of the schema location
-struct SchemaCompilerInternalNoAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a hidden conjunction compiler step
-struct SchemaCompilerInternalContainer;
-
-/// @ingroup jsonschema
-/// Represents a hidden compiler assertion step that checks if an object defines
-/// a set of properties
-struct SchemaCompilerInternalDefinesAll;
 
 /// @ingroup jsonschema
 /// Represents a compiler step that loops over object properties
@@ -318,17 +309,17 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
     SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
     SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
-    SchemaCompilerAssertionStringType, SchemaCompilerAnnotationPublic,
+    SchemaCompilerAssertionStringType, SchemaCompilerAssertionSizeEqual,
+    SchemaCompilerAssertionAnnotation,
+    SchemaCompilerAssertionNoAdjacentAnnotation,
+    SchemaCompilerAssertionNoAnnotation, SchemaCompilerAnnotationEmit,
     SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
     SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
-    SchemaCompilerInternalSizeEqual, SchemaCompilerInternalAnnotation,
-    SchemaCompilerInternalNoAdjacentAnnotation,
-    SchemaCompilerInternalNoAnnotation, SchemaCompilerInternalContainer,
-    SchemaCompilerInternalDefinesAll, SchemaCompilerLoopProperties,
-    SchemaCompilerLoopKeys, SchemaCompilerLoopItems,
-    SchemaCompilerLoopItemsFromAnnotationIndex, SchemaCompilerLoopContains,
-    SchemaCompilerControlLabel, SchemaCompilerControlMark,
-    SchemaCompilerControlJump, SchemaCompilerControlDynamicAnchorJump>>;
+    SchemaCompilerLoopProperties, SchemaCompilerLoopKeys,
+    SchemaCompilerLoopItems, SchemaCompilerLoopItemsFromAnnotationIndex,
+    SchemaCompilerLoopContains, SchemaCompilerControlLabel,
+    SchemaCompilerControlMark, SchemaCompilerControlJump,
+    SchemaCompilerControlDynamicAnchorJump>>;
 
 #if !defined(DOXYGEN)
 #define DEFINE_STEP_WITH_VALUE(category, name, type)                           \
@@ -339,6 +330,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
+    const bool report;                                                         \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
   };
@@ -351,6 +343,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
+    const bool report;                                                         \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate condition;                                    \
     const data_type data;                                                      \
@@ -364,6 +357,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
+    const bool report;                                                         \
     const SchemaCompilerStepValue<type> value;                                 \
     const SchemaCompilerTemplate children;                                     \
     const SchemaCompilerTemplate condition;                                    \
@@ -376,6 +370,7 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
+    const bool report;                                                         \
     const type id;                                                             \
     const SchemaCompilerTemplate children;                                     \
   };
@@ -400,20 +395,19 @@ DEFINE_STEP_WITH_VALUE(Assertion, Less, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, Unique, SchemaCompilerValueNone)
 DEFINE_STEP_WITH_VALUE(Assertion, Divisible, SchemaCompilerValueJSON)
 DEFINE_STEP_WITH_VALUE(Assertion, StringType, SchemaCompilerValueStringType)
-DEFINE_STEP_WITH_VALUE(Annotation, Public, SchemaCompilerValueJSON)
+DEFINE_STEP_WITH_VALUE(Assertion, SizeEqual, SchemaCompilerValueUnsignedInteger)
+DEFINE_STEP_WITH_VALUE(Assertion, Annotation, SchemaCompilerValueJSON)
+DEFINE_STEP_WITH_VALUE(Assertion, NoAdjacentAnnotation, SchemaCompilerValueJSON)
+DEFINE_STEP_WITH_VALUE_AND_DATA(Assertion, NoAnnotation,
+                                SchemaCompilerValueJSON,
+                                SchemaCompilerValueStrings)
+DEFINE_STEP_WITH_VALUE(Annotation, Emit, SchemaCompilerValueJSON)
 DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueBoolean)
 DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Not, SchemaCompilerValueNone)
-DEFINE_STEP_WITH_VALUE(Internal, SizeEqual, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_WITH_VALUE(Internal, Annotation, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE(Internal, NoAdjacentAnnotation, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE_AND_DATA(Internal, NoAnnotation, SchemaCompilerValueJSON,
-                                SchemaCompilerValueStrings)
-DEFINE_STEP_APPLICATOR(Internal, Container, SchemaCompilerValueNone)
-DEFINE_STEP_WITH_VALUE(Internal, DefinesAll, SchemaCompilerValueStrings)
-DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueBoolean)
+DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
 DEFINE_STEP_APPLICATOR(Loop, ItemsFromAnnotationIndex,
@@ -463,6 +457,16 @@ struct SchemaCompilerContext;
 #endif
 
 /// @ingroup jsonschema
+/// Represents the mode of compilation
+enum class SchemaCompilerCompilationMode {
+  /// Produce a compile template optimized for speed, ignoring everything
+  /// that is not strictly required for that case
+  Optimized,
+  /// Produce a compile template optimized for full coverage
+  Full
+};
+
+/// @ingroup jsonschema
 /// A compiler is represented as a function that maps a keyword compiler
 /// contexts into a compiler template. You can provide your own to implement
 /// your own keywords
@@ -475,6 +479,8 @@ using SchemaCompiler = std::function<SchemaCompilerTemplate(
 /// disposal to implement a keyword that will never change throughout
 /// the compilation process
 struct SchemaCompilerContext {
+  /// The selected mode of compilation
+  const SchemaCompilerCompilationMode mode;
   /// The root schema resource
   const JSON &root;
   /// The reference frame of the entire schema
@@ -494,9 +500,7 @@ struct SchemaCompilerContext {
 /// @ingroup jsonschema
 /// Represents the mode of evalution
 enum class SchemaCompilerEvaluationMode {
-  /// Attempt to get to a boolean result as fast as possible, ignoring
-  /// everything that is not strictly required (like collecting most
-  /// annotations)
+  /// Attempt to get to a boolean result as fast as possible
   Fast,
   /// Perform a full schema evaluation
   Exhaustive
@@ -737,6 +741,8 @@ auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT default_schema_compiler(
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 compile(const JSON &schema, const SchemaWalker &walker,
         const SchemaResolver &resolver, const SchemaCompiler &compiler,
+        const SchemaCompilerCompilationMode mode =
+            SchemaCompilerCompilationMode::Optimized,
         const std::optional<std::string> &default_dialect = std::nullopt)
     -> SchemaCompilerTemplate;
 

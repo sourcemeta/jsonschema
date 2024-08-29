@@ -30,7 +30,7 @@ auto sourcemeta::jsonschema::cli::fmt(
         log_verbose(options) << "PASS: " << entry.first.string() << "\n";
       } else {
         std::cerr << "FAIL: " << entry.first.string() << "\n";
-        std::cerr << "Got: \n"
+        std::cerr << "Got:\n"
                   << buffer.str() << "\nBut expected:\n"
                   << expected.str() << "\n";
         return EXIT_FAILURE;

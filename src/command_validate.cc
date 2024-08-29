@@ -50,7 +50,8 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto schema_template{sourcemeta::jsontoolkit::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-      sourcemeta::jsontoolkit::default_schema_compiler)};
+      sourcemeta::jsontoolkit::default_schema_compiler,
+      sourcemeta::jsontoolkit::SchemaCompilerCompilationMode::Optimized)};
 
   bool result{true};
 
