@@ -14,15 +14,26 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --check && CODE="$?" || CODE="$?"
+"$1" fmt "$TMP/schema.json" --check 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
 
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-else
-  echo "PASS" 1>&2
-fi
+cat << EOF > "$TMP/error.txt"
+FAIL: $(realpath "$TMP")/schema.json
+Got:
+{
+  "type": 1,
+  "\$schema": "http://json-schema.org/draft-04/schema#"
+}
+
+But expected:
+{
+  "\$schema": "http://json-schema.org/draft-04/schema#",
+  "type": 1
+}
+
+EOF
+
+diff "$TMP/stderr.txt" "$TMP/error.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

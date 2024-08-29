@@ -25,7 +25,7 @@ inline auto relative_schema_location(
 
 // Instantiate a value-oriented step
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const bool report, const SchemaCompilerContext &context,
           const SchemaCompilerSchemaContext &schema_context,
           const SchemaCompilerDynamicContext &dynamic_context,
           // Take the value type from the "type" property of the step struct
@@ -40,13 +40,14 @@ auto make(const SchemaCompilerContext &context,
           keyword_location(schema_context),
           schema_context.base.recompose(),
           context.uses_dynamic_scopes,
+          report,
           std::move(value),
           std::move(condition)};
 }
 
 // Instantiate a value-oriented step with data
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const bool report, const SchemaCompilerContext &context,
           const SchemaCompilerSchemaContext &schema_context,
           const SchemaCompilerDynamicContext &dynamic_context,
           // Take the value type from the "type" property of the step struct
@@ -63,6 +64,7 @@ auto make(const SchemaCompilerContext &context,
           keyword_location(schema_context),
           schema_context.base.recompose(),
           context.uses_dynamic_scopes,
+          report,
           std::move(value),
           std::move(condition),
           std::move(data)};
@@ -70,7 +72,7 @@ auto make(const SchemaCompilerContext &context,
 
 // Instantiate an applicator step
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const bool report, const SchemaCompilerContext &context,
           const SchemaCompilerSchemaContext &schema_context,
           const SchemaCompilerDynamicContext &dynamic_context,
           // Take the value type from the "value" property of the step struct
@@ -83,6 +85,7 @@ auto make(const SchemaCompilerContext &context,
           keyword_location(schema_context),
           schema_context.base.recompose(),
           context.uses_dynamic_scopes,
+          report,
           std::move(value),
           std::move(children),
           std::move(condition)};
@@ -90,7 +93,7 @@ auto make(const SchemaCompilerContext &context,
 
 // Instantiate a control step
 template <typename Step>
-auto make(const SchemaCompilerContext &context,
+auto make(const bool report, const SchemaCompilerContext &context,
           const SchemaCompilerSchemaContext &schema_context,
           const SchemaCompilerDynamicContext &dynamic_context,
           // Take the value type from the "id" property of the step struct
@@ -101,6 +104,7 @@ auto make(const SchemaCompilerContext &context,
           keyword_location(schema_context),
           schema_context.base.recompose(),
           context.uses_dynamic_scopes,
+          report,
           std::move(id),
           std::move(children)};
 }
@@ -129,7 +133,7 @@ inline auto type_condition(const SchemaCompilerContext &context,
   }
 
   return {make<SchemaCompilerAssertionTypeStrict>(
-      context, schema_context, relative_dynamic_context, type, {},
+      true, context, schema_context, relative_dynamic_context, type, {},
       SchemaCompilerTargetType::Instance)};
 }
 

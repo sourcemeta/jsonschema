@@ -183,6 +183,7 @@ auto encode_step(const std::string_view category, const std::string_view type,
   result.assign("absoluteKeywordLocation", JSON{step.keyword_location});
   result.assign("schemaResource", JSON{step.schema_resource});
   result.assign("dynamic", JSON{step.dynamic});
+  result.assign("report", JSON{step.report});
 
   if constexpr (requires { step.id; }) {
     result.assign("id", JSON{step.id});
@@ -244,19 +245,17 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "divisible", SchemaCompilerAssertionDivisible)
   HANDLE_STEP("assertion", "string-type", SchemaCompilerAssertionStringType)
   HANDLE_STEP("assertion", "equals-any", SchemaCompilerAssertionEqualsAny)
-  HANDLE_STEP("annotation", "public", SchemaCompilerAnnotationPublic)
+  HANDLE_STEP("annotation", "emit", SchemaCompilerAnnotationEmit)
+  HANDLE_STEP("assertion", "size-equal", SchemaCompilerAssertionSizeEqual)
+  HANDLE_STEP("assertion", "annotation", SchemaCompilerAssertionAnnotation)
+  HANDLE_STEP("assertion", "no-adjacent-annotation",
+              SchemaCompilerAssertionNoAdjacentAnnotation)
+  HANDLE_STEP("assertion", "no-annotation", SchemaCompilerAssertionNoAnnotation)
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)
   HANDLE_STEP("logical", "try", SchemaCompilerLogicalTry)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
-  HANDLE_STEP("internal", "size-equal", SchemaCompilerInternalSizeEqual)
-  HANDLE_STEP("internal", "annotation", SchemaCompilerInternalAnnotation)
-  HANDLE_STEP("internal", "no-adjacent-annotation",
-              SchemaCompilerInternalNoAdjacentAnnotation)
-  HANDLE_STEP("internal", "no-annotation", SchemaCompilerInternalNoAnnotation)
-  HANDLE_STEP("internal", "container", SchemaCompilerInternalContainer)
-  HANDLE_STEP("internal", "defines-all", SchemaCompilerInternalDefinesAll)
   HANDLE_STEP("loop", "properties", SchemaCompilerLoopProperties)
   HANDLE_STEP("loop", "keys", SchemaCompilerLoopKeys)
   HANDLE_STEP("loop", "items", SchemaCompilerLoopItems)
@@ -300,9 +299,10 @@ auto compiler_template_format_compare(const JSON::String &left,
                    {"target", 7},
                    {"location", 8},
                    {"id", 9},
-                   {"dynamic", 10},
-                   {"condition", 11},
-                   {"children", 12}};
+                   {"report", 10},
+                   {"dynamic", 11},
+                   {"condition", 12},
+                   {"children", 13}};
 
   // We define and control all of these keywords, so if we are missing
   // some here, then we did something wrong?

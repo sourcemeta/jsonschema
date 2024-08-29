@@ -249,8 +249,8 @@ struct DescribeVisitor {
 
       for (const auto &child : step.children) {
         // Schema
-        if (std::holds_alternative<SchemaCompilerInternalContainer>(child)) {
-          const auto &substep{std::get<SchemaCompilerInternalContainer>(child)};
+        if (std::holds_alternative<SchemaCompilerLogicalAnd>(child)) {
+          const auto &substep{std::get<SchemaCompilerLogicalAnd>(child)};
           assert(substep.condition.size() == 1);
           assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
               substep.condition.front()));
@@ -268,9 +268,9 @@ struct DescribeVisitor {
           // Properties
         } else {
           assert(
-              std::holds_alternative<SchemaCompilerInternalDefinesAll>(child));
+              std::holds_alternative<SchemaCompilerAssertionDefinesAll>(child));
           const auto &substep{
-              std::get<SchemaCompilerInternalDefinesAll>(child)};
+              std::get<SchemaCompilerAssertionDefinesAll>(child)};
           assert(substep.condition.size() == 1);
           assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
               substep.condition.front()));
@@ -386,24 +386,46 @@ struct DescribeVisitor {
       std::set<std::string> all_dependencies;
       std::set<std::string> required;
       for (const auto &child : step.children) {
-        assert(std::holds_alternative<SchemaCompilerInternalDefinesAll>(child));
-        const auto &substep{std::get<SchemaCompilerInternalDefinesAll>(child)};
-        assert(substep.condition.size() == 1);
-        assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-            substep.condition.front()));
-        const auto &define{std::get<SchemaCompilerAssertionDefines>(
-            substep.condition.front())};
-        const auto &property{step_value(define)};
-        all_dependencies.insert(property);
-        if (!this->target.defines(property)) {
-          continue;
-        }
 
-        present.insert(property);
-        const auto &requirements{step_value(substep)};
-        for (const auto &requirement : requirements) {
-          if (this->valid || !this->target.defines(requirement)) {
-            required.insert(requirement);
+        if (std::holds_alternative<SchemaCompilerAssertionDefines>(child)) {
+          const auto &substep{std::get<SchemaCompilerAssertionDefines>(child)};
+          assert(substep.condition.size() == 1);
+          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
+              substep.condition.front()));
+          const auto &define{std::get<SchemaCompilerAssertionDefines>(
+              substep.condition.front())};
+          const auto &property{step_value(define)};
+          all_dependencies.insert(property);
+          if (!this->target.defines(property)) {
+            continue;
+          }
+
+          present.insert(property);
+          if (this->valid || !this->target.defines(step_value(substep))) {
+            required.insert(step_value(substep));
+          }
+        } else {
+          assert(
+              std::holds_alternative<SchemaCompilerAssertionDefinesAll>(child));
+          const auto &substep{
+              std::get<SchemaCompilerAssertionDefinesAll>(child)};
+          assert(substep.condition.size() == 1);
+          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
+              substep.condition.front()));
+          const auto &define{std::get<SchemaCompilerAssertionDefines>(
+              substep.condition.front())};
+          const auto &property{step_value(define)};
+          all_dependencies.insert(property);
+          if (!this->target.defines(property)) {
+            continue;
+          }
+
+          present.insert(property);
+          const auto &requirements{step_value(substep)};
+          for (const auto &requirement : requirements) {
+            if (this->valid || !this->target.defines(requirement)) {
+              required.insert(requirement);
+            }
           }
         }
       }
@@ -470,8 +492,8 @@ struct DescribeVisitor {
       std::set<std::string> present;
       std::set<std::string> all_dependencies;
       for (const auto &child : step.children) {
-        assert(std::holds_alternative<SchemaCompilerInternalContainer>(child));
-        const auto &substep{std::get<SchemaCompilerInternalContainer>(child)};
+        assert(std::holds_alternative<SchemaCompilerLogicalAnd>(child));
+        const auto &substep{std::get<SchemaCompilerLogicalAnd>(child)};
         assert(substep.condition.size() == 1);
         assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
             substep.condition.front()));
@@ -601,7 +623,7 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const SchemaCompilerAnnotationPublic &) const -> std::string {
+  auto operator()(const SchemaCompilerAnnotationEmit &) const -> std::string {
     if (this->keyword == "if") {
       assert(this->annotation == JSON{true});
       std::ostringstream message;
@@ -882,10 +904,10 @@ struct DescribeVisitor {
     if (this->keyword == "unevaluatedProperties") {
       std::ostringstream message;
       if (step.children.size() == 1 &&
-          std::holds_alternative<SchemaCompilerInternalContainer>(
+          std::holds_alternative<SchemaCompilerLogicalAnd>(
               step.children.front()) &&
           std::holds_alternative<SchemaCompilerAssertionFail>(
-              std::get<SchemaCompilerInternalContainer>(step.children.front())
+              std::get<SchemaCompilerLogicalAnd>(step.children.front())
                   .children.front())) {
         message << "The object value was not expected to define unevaluated "
                    "properties";
@@ -900,10 +922,10 @@ struct DescribeVisitor {
     assert(this->keyword == "additionalProperties");
     std::ostringstream message;
     if (step.children.size() == 1 &&
-        std::holds_alternative<SchemaCompilerInternalContainer>(
+        std::holds_alternative<SchemaCompilerLogicalAnd>(
             step.children.front()) &&
         std::holds_alternative<SchemaCompilerAssertionFail>(
-            std::get<SchemaCompilerInternalContainer>(step.children.front())
+            std::get<SchemaCompilerLogicalAnd>(step.children.front())
                 .children.front())) {
       message << "The object value was not expected to define additional "
                  "properties";
@@ -1507,31 +1529,22 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  // Internal steps that should never be described
-  // TODO: Can we get rid of these somehow?
+  // These steps are never described, at least not right now
 
   auto
-  operator()(const SchemaCompilerInternalSizeEqual &) const -> std::string {
+  operator()(const SchemaCompilerAssertionSizeEqual &) const -> std::string {
     return unknown();
   }
   auto
-  operator()(const SchemaCompilerInternalContainer &) const -> std::string {
+  operator()(const SchemaCompilerAssertionNoAnnotation &) const -> std::string {
     return unknown();
   }
   auto
-  operator()(const SchemaCompilerInternalAnnotation &) const -> std::string {
+  operator()(const SchemaCompilerAssertionAnnotation &) const -> std::string {
     return unknown();
   }
-  auto operator()(const SchemaCompilerInternalNoAdjacentAnnotation &) const
+  auto operator()(const SchemaCompilerAssertionNoAdjacentAnnotation &) const
       -> std::string {
-    return unknown();
-  }
-  auto
-  operator()(const SchemaCompilerInternalNoAnnotation &) const -> std::string {
-    return unknown();
-  }
-  auto
-  operator()(const SchemaCompilerInternalDefinesAll &) const -> std::string {
     return unknown();
   }
 };

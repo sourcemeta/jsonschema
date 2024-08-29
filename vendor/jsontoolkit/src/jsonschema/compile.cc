@@ -27,8 +27,8 @@ auto compile_subschema(
       return {};
     } else {
       return {make<SchemaCompilerAssertionFail>(
-          context, schema_context, dynamic_context, SchemaCompilerValueNone{},
-          {}, SchemaCompilerTargetType::Instance)};
+          true, context, schema_context, dynamic_context,
+          SchemaCompilerValueNone{}, {}, SchemaCompilerTargetType::Instance)};
     }
   }
 
@@ -64,6 +64,7 @@ namespace sourcemeta::jsontoolkit {
 
 auto compile(const JSON &schema, const SchemaWalker &walker,
              const SchemaResolver &resolver, const SchemaCompiler &compiler,
+             const SchemaCompilerCompilationMode mode,
              const std::optional<std::string> &default_dialect)
     -> SchemaCompilerTemplate {
   assert(is_schema(schema));
@@ -105,8 +106,8 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
   }
 
   const sourcemeta::jsontoolkit::SchemaCompilerContext context{
-      result,   frame,    references,         walker,
-      resolver, compiler, uses_dynamic_scopes};
+      mode,   result,   frame,    references,
+      walker, resolver, compiler, uses_dynamic_scopes};
   sourcemeta::jsontoolkit::SchemaCompilerSchemaContext schema_context{
       empty_pointer,
       result,
@@ -150,7 +151,7 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
                                 {}};
 
       compiler_template.push_back(make<SchemaCompilerControlMark>(
-          context, nested_schema_context, dynamic_context,
+          true, context, nested_schema_context, dynamic_context,
           SchemaCompilerValueUnsignedInteger{label},
           compile(context, nested_schema_context, relative_dynamic_context,
                   empty_pointer, empty_pointer, entry.first.second)));

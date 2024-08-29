@@ -33,12 +33,13 @@ cat << 'EOF' > "$TMP/expected.json"
       "type": "instance",
       "location": ""
     },
+    "report": true,
     "dynamic": false,
     "condition": [],
     "children": [
       {
-        "category": "internal",
-        "type": "container",
+        "category": "logical",
+        "type": "and",
         "value": null,
         "schemaResource": "",
         "absoluteKeywordLocation": "#/properties",
@@ -49,6 +50,7 @@ cat << 'EOF' > "$TMP/expected.json"
           "type": "instance",
           "location": ""
         },
+        "report": false,
         "dynamic": false,
         "condition": [
           {
@@ -68,6 +70,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "instance",
               "location": ""
             },
+            "report": false,
             "dynamic": false,
             "condition": []
           }
@@ -90,26 +93,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "instance",
               "location": ""
             },
-            "dynamic": false,
-            "condition": []
-          },
-          {
-            "category": "annotation",
-            "type": "public",
-            "value": {
-              "category": "value",
-              "type": "json",
-              "value": "foo"
-            },
-            "schemaResource": "",
-            "absoluteKeywordLocation": "#/properties",
-            "relativeSchemaLocation": "",
-            "relativeInstanceLocation": "",
-            "target": {
-              "category": "target",
-              "type": "instance",
-              "location": ""
-            },
+            "report": true,
             "dynamic": false,
             "condition": []
           }
