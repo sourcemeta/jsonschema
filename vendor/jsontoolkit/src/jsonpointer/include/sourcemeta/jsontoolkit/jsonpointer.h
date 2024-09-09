@@ -11,9 +11,10 @@
 #include <sourcemeta/jsontoolkit/jsonpointer_walker.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <memory>  // std::allocator
-#include <ostream> // std::basic_ostream
-#include <string>  // std::basic_string
+#include <functional> // std::reference_wrapper
+#include <memory>     // std::allocator
+#include <ostream>    // std::basic_ostream
+#include <string>     // std::basic_string
 
 /// @defgroup jsonpointer JSON Pointer
 /// @brief An growing implementation of RFC 6901 JSON Pointer.
@@ -24,12 +25,13 @@
 /// #include <sourcemeta/jsontoolkit/jsonpointer.h>
 /// ```
 
-// TODO: Remove character and character traits template arguments from pointers
-
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-using Pointer = GenericPointer<JSON::Char, JSON::CharTraits, std::allocator>;
+using Pointer = GenericPointer<JSON::String>;
+
+/// @ingroup jsonpointer
+using WeakPointer = GenericPointer<std::reference_wrapper<const std::string>>;
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON Pointer.
@@ -80,6 +82,50 @@ auto get(const JSON &document, const Pointer &pointer) -> const JSON &;
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
 auto get(JSON &document, const Pointer &pointer) -> JSON &;
+
+/// @ingroup jsonpointer
+/// Get a value from a JSON document using a JSON Pointer token (`const`
+/// overload).
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"{ \"foo\": 1 }"};
+/// const sourcemeta::jsontoolkit::JSON document =
+///   sourcemeta::jsontoolkit::parse(stream);
+///
+/// const sourcemeta::jsontoolkit::JSON &value{
+///   sourcemeta::jsontoolkit::get(document, "bar")};
+/// assert(value.is_integer());
+/// assert(value.to_integer() == 2);
+/// ```
+SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
+auto get(const JSON &document, const Pointer::Token &token) -> const JSON &;
+
+/// @ingroup jsonpointer
+/// Get a value from a JSON document using a JSON Pointer token (non-`const`
+/// overload).
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"{ \"foo\": 1 }"};
+/// sourcemeta::jsontoolkit::JSON document =
+///   sourcemeta::jsontoolkit::parse(stream);
+///
+/// sourcemeta::jsontoolkit::JSON &value{
+///   sourcemeta::jsontoolkit::get(document, "bar")};
+/// assert(value.is_integer());
+/// assert(value.to_integer() == 2);
+/// ```
+SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
+auto get(JSON &document, const Pointer::Token &token) -> JSON &;
 
 /// @ingroup jsonpointer
 /// Set a value in a JSON document using a JSON Pointer (`const` overload).
@@ -270,8 +316,7 @@ auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 /// assert(subpointers.at(2) == sourcemeta::jsontoolkit::Pointer{1});
 /// assert(subpointers.at(3) == sourcemeta::jsontoolkit::Pointer{2});
 /// ```
-using PointerWalker =
-    GenericPointerWalker<JSON::Char, JSON::CharTraits, std::allocator>;
+using PointerWalker = GenericPointerWalker<Pointer>;
 
 /// @ingroup jsonpointer
 ///
@@ -297,8 +342,7 @@ using PointerWalker =
 /// assert(subpointers.at(1) == sourcemeta::jsontoolkit::Pointer{"foo"});
 /// assert(subpointers.at(2) == sourcemeta::jsontoolkit::Pointer{});
 /// ```
-using SubPointerWalker =
-    GenericSubPointerWalker<JSON::Char, JSON::CharTraits, std::allocator>;
+using SubPointerWalker = GenericSubPointerWalker<Pointer>;
 
 } // namespace sourcemeta::jsontoolkit
 

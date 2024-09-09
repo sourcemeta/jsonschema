@@ -40,6 +40,8 @@ function(noa_add_default_options visibility target)
       -Wnon-virtual-dtor
       -Woverloaded-virtual
       -Winvalid-offsetof
+      -funroll-loops
+      -fstrict-aliasing
 
       # Assume that signed arithmetic overflow of addition, subtraction and
       # multiplication wraps around using twos-complement representation
@@ -68,6 +70,18 @@ function(noa_add_default_options visibility target)
       -Wc++11-extensions
       -Wcomma
       -Wno-exit-time-destructors
-      -Wrange-loop-analysis)
+      -Wrange-loop-analysis
+
+      # Enable loop vectorization for performance reasons
+      -fvectorize
+      # Enable vectorization of straight-line code for performance
+      -fslp-vectorize)
+  elseif(NOA_COMPILER_GCC)
+    target_compile_options("${target}" ${visibility}
+      # Newer versions of GCC (i.e. 14) seem to print a lot of false-positives here
+      -Wno-dangling-reference
+
+      # Disables runtime type information
+      -fno-rtti)
   endif()
 endfunction()

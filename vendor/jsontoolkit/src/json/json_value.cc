@@ -313,13 +313,13 @@ JSON::at(const typename JSON::Array::size_type index) -> JSON & {
 [[nodiscard]] auto JSON::at(const JSON::String &key) const -> const JSON & {
   assert(this->is_object());
   assert(this->defines(key));
-  return std::get<Object>(this->data).data.at(key);
+  return std::get<Object>(this->data).data.find(key)->second;
 }
 
 [[nodiscard]] auto JSON::at(const JSON::String &key) -> JSON & {
   assert(this->is_object());
   assert(this->defines(key));
-  return std::get<Object>(this->data).data.at(key);
+  return std::get<Object>(this->data).data.find(key)->second;
 }
 
 [[nodiscard]] auto JSON::front() -> JSON & {

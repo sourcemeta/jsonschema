@@ -21,21 +21,21 @@ EOF
 cat << 'EOF' > "$TMP/expected.json"
 [
   {
-    "category": "logical",
-    "type": "and",
-    "value": null,
+    "category": "loop",
+    "type": "properties-match",
+    "value": {
+      "category": "value",
+      "type": "named-indexes",
+      "value": {
+        "foo": 0
+      }
+    },
     "schemaResource": "",
     "absoluteKeywordLocation": "#/properties",
     "relativeSchemaLocation": "/properties",
     "relativeInstanceLocation": "",
-    "target": {
-      "category": "target",
-      "type": "instance",
-      "location": ""
-    },
     "report": true,
     "dynamic": false,
-    "condition": [],
     "children": [
       {
         "category": "logical",
@@ -45,36 +45,8 @@ cat << 'EOF' > "$TMP/expected.json"
         "absoluteKeywordLocation": "#/properties",
         "relativeSchemaLocation": "",
         "relativeInstanceLocation": "",
-        "target": {
-          "category": "target",
-          "type": "instance",
-          "location": ""
-        },
         "report": false,
         "dynamic": false,
-        "condition": [
-          {
-            "category": "assertion",
-            "type": "defines",
-            "value": {
-              "category": "value",
-              "type": "string",
-              "value": "foo"
-            },
-            "schemaResource": "",
-            "absoluteKeywordLocation": "#/properties",
-            "relativeSchemaLocation": "",
-            "relativeInstanceLocation": "",
-            "target": {
-              "category": "target",
-              "type": "instance",
-              "location": ""
-            },
-            "report": false,
-            "dynamic": false,
-            "condition": []
-          }
-        ],
         "children": [
           {
             "category": "assertion",
@@ -88,14 +60,8 @@ cat << 'EOF' > "$TMP/expected.json"
             "absoluteKeywordLocation": "#/properties/foo/type",
             "relativeSchemaLocation": "/foo/type",
             "relativeInstanceLocation": "/foo",
-            "target": {
-              "category": "target",
-              "type": "instance",
-              "location": ""
-            },
             "report": true,
-            "dynamic": false,
-            "condition": []
+            "dynamic": false
           }
         ]
       }

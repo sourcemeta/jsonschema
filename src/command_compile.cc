@@ -23,8 +23,7 @@ auto sourcemeta::jsonschema::cli::compile(
   const auto compiled_schema{sourcemeta::jsontoolkit::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker,
       resolver(options, options.contains("h") || options.contains("http")),
-      sourcemeta::jsontoolkit::default_schema_compiler,
-      sourcemeta::jsontoolkit::SchemaCompilerCompilationMode::Optimized)};
+      sourcemeta::jsontoolkit::default_schema_compiler)};
 
   const sourcemeta::jsontoolkit::JSON result{
       sourcemeta::jsontoolkit::to_json(compiled_schema)};

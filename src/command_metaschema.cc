@@ -37,8 +37,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
     if (!cache.contains(dialect.value())) {
       const auto metaschema_template{sourcemeta::jsontoolkit::compile(
           metaschema, sourcemeta::jsontoolkit::default_schema_walker,
-          custom_resolver, sourcemeta::jsontoolkit::default_schema_compiler,
-          sourcemeta::jsontoolkit::SchemaCompilerCompilationMode::Optimized)};
+          custom_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
       cache.insert({dialect.value(), metaschema_template});
     }
 

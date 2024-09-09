@@ -8,15 +8,9 @@
 namespace {
 using namespace sourcemeta::jsontoolkit;
 
-template <typename T>
-auto step_value(const SchemaCompilerStepValue<T> &value) -> const T & {
-  assert(std::holds_alternative<T>(value));
-  return std::get<T>(value);
-}
-
 template <typename T> auto step_value(const T &step) -> decltype(auto) {
   if constexpr (requires { step.value; }) {
-    return step_value(step.value);
+    return step.value;
   } else {
     return step.id;
   }
@@ -62,12 +56,17 @@ auto describe_type_check(const bool valid, const JSON::Type current,
 }
 
 auto describe_types_check(const bool valid, const JSON::Type current,
-                          const std::set<JSON::Type> &expected,
+                          const std::vector<JSON::Type> &expected,
                           std::ostringstream &message) -> void {
   assert(expected.size() > 1);
   auto copy = expected;
-  if (copy.contains(JSON::Type::Real) && copy.contains(JSON::Type::Integer)) {
-    copy.erase(JSON::Type::Integer);
+
+  const auto match_real{
+      std::find(copy.cbegin(), copy.cend(), JSON::Type::Real)};
+  const auto match_integer{
+      std::find(copy.cbegin(), copy.cend(), JSON::Type::Integer)};
+  if (match_real != copy.cend() && match_integer != copy.cend()) {
+    copy.erase(match_integer);
   }
 
   if (copy.size() == 1) {
@@ -91,7 +90,7 @@ auto describe_types_check(const bool valid, const JSON::Type current,
   }
 
   if (valid && current == JSON::Type::Integer &&
-      copy.contains(JSON::Type::Real)) {
+      std::find(copy.cbegin(), copy.cend(), JSON::Type::Real) != copy.cend()) {
     message << "number";
   } else {
     message << to_string(current);
@@ -178,21 +177,6 @@ struct DescribeVisitor {
       return message.str();
     }
 
-    if (this->keyword == "then" || this->keyword == "else") {
-      assert(!step.children.empty());
-      std::ostringstream message;
-      message << "Because of the conditional outcome, the "
-              << to_string(this->target.type())
-              << " value was expected to validate against the ";
-      if (step.children.size() > 1) {
-        message << step.children.size() << " given subschemas";
-      } else {
-        message << "given subschema";
-      }
-
-      return message.str();
-    }
-
     if (this->keyword == "properties") {
       assert(!step.children.empty());
       assert(this->target.is_object());
@@ -201,356 +185,17 @@ struct DescribeVisitor {
       if (step.children.size() == 1) {
         message << "single defined property subschema";
       } else {
-        message << step.children.size() << " defined properties subschemas";
+        // We cannot provide the specific number of properties,
+        // as the number of children might be flatten out
+        // for performance reasons
+        message << "defined properties subschemas";
       }
 
       return message.str();
     }
 
-    if (this->keyword == "patternProperties") {
-      assert(!step.children.empty());
-      assert(this->target.is_object());
-      std::ostringstream message;
-      message << "The object value was expected to validate against the ";
-      if (step.children.size() == 1) {
-        message << "single defined pattern property subschema";
-      } else {
-        message << step.children.size()
-                << " defined pattern properties subschemas";
-      }
-
-      return message.str();
-    }
-
-    if (this->keyword == "items" || this->keyword == "prefixItems") {
-      assert(!step.children.empty());
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "The first ";
-      if (step.children.size() == 1) {
-        message << "item of the array value was";
-      } else {
-        message << step.children.size() << " items of the array value were";
-      }
-
-      message << " expected to validate against the corresponding subschemas";
-      return message.str();
-    }
-
-    if (this->keyword == "dependencies") {
-      assert(this->target.is_object());
-      assert(!step.children.empty());
-
-      std::set<std::string> present;
-      std::set<std::string> present_with_schemas;
-      std::set<std::string> present_with_properties;
-      std::set<std::string> all_dependencies;
-      std::set<std::string> required_properties;
-
-      for (const auto &child : step.children) {
-        // Schema
-        if (std::holds_alternative<SchemaCompilerLogicalAnd>(child)) {
-          const auto &substep{std::get<SchemaCompilerLogicalAnd>(child)};
-          assert(substep.condition.size() == 1);
-          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-              substep.condition.front()));
-          const auto &define{std::get<SchemaCompilerAssertionDefines>(
-              substep.condition.front())};
-          const auto &property{step_value(define)};
-          all_dependencies.insert(property);
-          if (!this->target.defines(property)) {
-            continue;
-          }
-
-          present.insert(property);
-          present_with_schemas.insert(property);
-
-          // Properties
-        } else {
-          assert(
-              std::holds_alternative<SchemaCompilerAssertionDefinesAll>(child));
-          const auto &substep{
-              std::get<SchemaCompilerAssertionDefinesAll>(child)};
-          assert(substep.condition.size() == 1);
-          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-              substep.condition.front()));
-          const auto &define{std::get<SchemaCompilerAssertionDefines>(
-              substep.condition.front())};
-          const auto &property{step_value(define)};
-          all_dependencies.insert(property);
-          if (!this->target.defines(property)) {
-            continue;
-          }
-
-          present.insert(property);
-          present_with_properties.insert(property);
-
-          const auto &requirements{step_value(substep)};
-          for (const auto &requirement : requirements) {
-            if (this->valid || !this->target.defines(requirement)) {
-              required_properties.insert(requirement);
-            }
-          }
-        }
-      }
-
-      std::ostringstream message;
-
-      if (present_with_schemas.empty() && present_with_properties.empty()) {
-        message << "The object value did not define the";
-        assert(!all_dependencies.empty());
-        if (all_dependencies.size() == 1) {
-          message << " property "
-                  << escape_string(*(all_dependencies.cbegin()));
-        } else {
-          message << " properties ";
-          for (auto iterator = all_dependencies.cbegin();
-               iterator != all_dependencies.cend(); ++iterator) {
-            if (std::next(iterator) == all_dependencies.cend()) {
-              message << "or " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-        }
-
-        return message.str();
-      }
-
-      if (present.size() == 1) {
-        message << "Because the object value defined the";
-        message << " property " << escape_string(*(present.cbegin()));
-      } else {
-        message << "Because the object value defined the";
-        message << " properties ";
-        for (auto iterator = present.cbegin(); iterator != present.cend();
-             ++iterator) {
-          if (std::next(iterator) == present.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
-      }
-
-      if (!required_properties.empty()) {
-        message << ", it was also expected to define the";
-        if (required_properties.size() == 1) {
-          message << " property "
-                  << escape_string(*(required_properties.cbegin()));
-        } else {
-          message << " properties ";
-          for (auto iterator = required_properties.cbegin();
-               iterator != required_properties.cend(); ++iterator) {
-            if (std::next(iterator) == required_properties.cend()) {
-              message << "and " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-        }
-      }
-
-      if (!present_with_schemas.empty()) {
-        message << ", ";
-        if (!required_properties.empty()) {
-          message << "and ";
-        }
-
-        message << "it was also expected to successfully validate against the "
-                   "corresponding ";
-        if (present_with_schemas.size() == 1) {
-          message << escape_string(*(present_with_schemas.cbegin()));
-          message << " subschema";
-        } else {
-          for (auto iterator = present_with_schemas.cbegin();
-               iterator != present_with_schemas.cend(); ++iterator) {
-            if (std::next(iterator) == present_with_schemas.cend()) {
-              message << "and " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-
-          message << " subschemas";
-        }
-      }
-
-      return message.str();
-    }
-
-    if (this->keyword == "dependentRequired") {
-      assert(!step.children.empty());
-      assert(this->target.is_object());
-      std::set<std::string> present;
-      std::set<std::string> all_dependencies;
-      std::set<std::string> required;
-      for (const auto &child : step.children) {
-
-        if (std::holds_alternative<SchemaCompilerAssertionDefines>(child)) {
-          const auto &substep{std::get<SchemaCompilerAssertionDefines>(child)};
-          assert(substep.condition.size() == 1);
-          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-              substep.condition.front()));
-          const auto &define{std::get<SchemaCompilerAssertionDefines>(
-              substep.condition.front())};
-          const auto &property{step_value(define)};
-          all_dependencies.insert(property);
-          if (!this->target.defines(property)) {
-            continue;
-          }
-
-          present.insert(property);
-          if (this->valid || !this->target.defines(step_value(substep))) {
-            required.insert(step_value(substep));
-          }
-        } else {
-          assert(
-              std::holds_alternative<SchemaCompilerAssertionDefinesAll>(child));
-          const auto &substep{
-              std::get<SchemaCompilerAssertionDefinesAll>(child)};
-          assert(substep.condition.size() == 1);
-          assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-              substep.condition.front()));
-          const auto &define{std::get<SchemaCompilerAssertionDefines>(
-              substep.condition.front())};
-          const auto &property{step_value(define)};
-          all_dependencies.insert(property);
-          if (!this->target.defines(property)) {
-            continue;
-          }
-
-          present.insert(property);
-          const auto &requirements{step_value(substep)};
-          for (const auto &requirement : requirements) {
-            if (this->valid || !this->target.defines(requirement)) {
-              required.insert(requirement);
-            }
-          }
-        }
-      }
-
-      std::ostringstream message;
-
-      if (present.empty()) {
-        message << "The object value did not define the";
-        assert(!all_dependencies.empty());
-        if (all_dependencies.size() == 1) {
-          message << " property "
-                  << escape_string(*(all_dependencies.cbegin()));
-        } else {
-          message << " properties ";
-          for (auto iterator = all_dependencies.cbegin();
-               iterator != all_dependencies.cend(); ++iterator) {
-            if (std::next(iterator) == all_dependencies.cend()) {
-              message << "or " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-        }
-
-        return message.str();
-      } else if (present.size() == 1) {
-        message << "Because the object value defined the";
-        message << " property " << escape_string(*(present.cbegin()));
-      } else {
-        message << "Because the object value defined the";
-        message << " properties ";
-        for (auto iterator = present.cbegin(); iterator != present.cend();
-             ++iterator) {
-          if (std::next(iterator) == present.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
-      }
-
-      assert(!required.empty());
-      message << ", it was also expected to define the";
-      if (required.size() == 1) {
-        message << " property " << escape_string(*(required.cbegin()));
-      } else {
-        message << " properties ";
-        for (auto iterator = required.cbegin(); iterator != required.cend();
-             ++iterator) {
-          if (std::next(iterator) == required.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
-      }
-
-      return message.str();
-    }
-
-    if (this->keyword == "dependentSchemas") {
-      assert(this->target.is_object());
-      assert(!step.children.empty());
-      std::set<std::string> present;
-      std::set<std::string> all_dependencies;
-      for (const auto &child : step.children) {
-        assert(std::holds_alternative<SchemaCompilerLogicalAnd>(child));
-        const auto &substep{std::get<SchemaCompilerLogicalAnd>(child)};
-        assert(substep.condition.size() == 1);
-        assert(std::holds_alternative<SchemaCompilerAssertionDefines>(
-            substep.condition.front()));
-        const auto &define{std::get<SchemaCompilerAssertionDefines>(
-            substep.condition.front())};
-        const auto &property{step_value(define)};
-        all_dependencies.insert(property);
-        if (!this->target.defines(property)) {
-          continue;
-        }
-
-        present.insert(property);
-      }
-
-      std::ostringstream message;
-
-      if (present.empty()) {
-        message << "The object value did not define the";
-        assert(!all_dependencies.empty());
-        if (all_dependencies.size() == 1) {
-          message << " property "
-                  << escape_string(*(all_dependencies.cbegin()));
-        } else {
-          message << " properties ";
-          for (auto iterator = all_dependencies.cbegin();
-               iterator != all_dependencies.cend(); ++iterator) {
-            if (std::next(iterator) == all_dependencies.cend()) {
-              message << "or " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-        }
-      } else if (present.size() == 1) {
-        message << "Because the object value defined the";
-        message << " property " << escape_string(*(present.cbegin()));
-        message
-            << ", it was also expected to validate against the corresponding "
-               "subschema";
-      } else {
-        message << "Because the object value defined the";
-        message << " properties ";
-        for (auto iterator = present.cbegin(); iterator != present.cend();
-             ++iterator) {
-          if (std::next(iterator) == present.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
-
-        message
-            << ", it was also expected to validate against the corresponding "
-               "subschemas";
-      }
-
-      return message.str();
+    if (this->keyword == "$ref") {
+      return describe_reference(this->target);
     }
 
     return unknown();
@@ -571,7 +216,7 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const SchemaCompilerLogicalTry &) const -> std::string {
+  auto operator()(const SchemaCompilerLogicalTryMark &) const -> std::string {
     assert(this->keyword == "if");
     std::ostringstream message;
     message << "The " << to_string(this->target.type())
@@ -624,15 +269,6 @@ struct DescribeVisitor {
   }
 
   auto operator()(const SchemaCompilerAnnotationEmit &) const -> std::string {
-    if (this->keyword == "if") {
-      assert(this->annotation == JSON{true});
-      std::ostringstream message;
-      message
-          << "The " << to_string(this->target.type())
-          << " value successfully validated against the conditional subschema";
-      return message.str();
-    }
-
     if (this->keyword == "properties") {
       assert(this->annotation.is_string());
       std::ostringstream message;
@@ -643,60 +279,12 @@ struct DescribeVisitor {
       return message.str();
     }
 
-    if (this->keyword == "unevaluatedProperties") {
-      assert(this->annotation.is_string());
-      std::ostringstream message;
-      message << "The object property "
-              << escape_string(this->annotation.to_string())
-              << " successfully validated against the subschema for "
-                 "unevaluated properties";
-      return message.str();
-    }
-
-    if (this->keyword == "patternProperties") {
-      assert(this->annotation.is_string());
-      std::ostringstream message;
-      message << "The object property "
-              << escape_string(this->annotation.to_string())
-              << " successfully validated against its pattern property "
-                 "subschema";
-      return message.str();
-    }
-
-    if (this->keyword == "additionalProperties") {
-      assert(this->annotation.is_string());
-      std::ostringstream message;
-      message << "The object property "
-              << escape_string(this->annotation.to_string())
-              << " successfully validated against the additional properties "
-                 "subschema";
-      return message.str();
-    }
-
     if ((this->keyword == "items" || this->keyword == "additionalItems") &&
         this->annotation.is_boolean() && this->annotation.to_boolean()) {
       assert(this->target.is_array());
       std::ostringstream message;
       message << "At least one item of the array value successfully validated "
                  "against the given subschema";
-      return message.str();
-    }
-
-    if (this->keyword == "unevaluatedItems" && this->annotation.is_boolean() &&
-        this->annotation.to_boolean()) {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "At least one item of the array value successfully validated "
-                 "against the subschema for unevaluated items";
-      return message.str();
-    }
-
-    if (this->keyword == "prefixItems" && this->annotation.is_boolean() &&
-        this->annotation.to_boolean()) {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "Every item of the array value validated against the given "
-                 "positional subschemas";
       return message.str();
     }
 
@@ -716,16 +304,6 @@ struct DescribeVisitor {
                    "positional subschemas";
       }
 
-      return message.str();
-    }
-
-    if (this->keyword == "contains" && this->annotation.is_integer()) {
-      assert(this->target.is_array());
-      assert(this->annotation.is_positive());
-      std::ostringstream message;
-      message << "The item at index " << this->annotation.to_integer()
-              << " of the array value successfully validated against the "
-                 "containment check subschema";
       return message.str();
     }
 
@@ -899,16 +477,136 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const SchemaCompilerAnnotationWhenArraySizeEqual &) const
+      -> std::string {
+    if (this->keyword == "items" && this->annotation.is_boolean() &&
+        this->annotation.to_boolean()) {
+      assert(this->target.is_array());
+      std::ostringstream message;
+      message << "At least one item of the array value successfully validated "
+                 "against the given subschema";
+      return message.str();
+    }
+
+    if (this->keyword == "prefixItems" && this->annotation.is_boolean() &&
+        this->annotation.to_boolean()) {
+      assert(this->target.is_array());
+      std::ostringstream message;
+      message << "Every item of the array value validated against the given "
+                 "positional subschemas";
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAnnotationWhenArraySizeGreater &) const
+      -> std::string {
+    if ((this->keyword == "prefixItems" || this->keyword == "items") &&
+        this->annotation.is_integer()) {
+      assert(this->target.is_array());
+      assert(this->annotation.is_positive());
+      std::ostringstream message;
+      if (this->annotation.to_integer() == 0) {
+        message << "The first item of the array value successfully validated "
+                   "against the first "
+                   "positional subschema";
+      } else {
+        message << "The first " << this->annotation.to_integer() + 1
+                << " items of the array value successfully validated against "
+                   "the given "
+                   "positional subschemas";
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto
+  operator()(const SchemaCompilerAnnotationToParent &) const -> std::string {
+    if (this->keyword == "unevaluatedItems" && this->annotation.is_boolean() &&
+        this->annotation.to_boolean()) {
+      assert(this->target.is_array());
+      std::ostringstream message;
+      message << "At least one item of the array value successfully validated "
+                 "against the subschema for unevaluated items";
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAnnotationBasenameToParent &) const
+      -> std::string {
+    if (this->keyword == "patternProperties") {
+      assert(this->annotation.is_string());
+      std::ostringstream message;
+      message << "The object property "
+              << escape_string(this->annotation.to_string())
+              << " successfully validated against its pattern property "
+                 "subschema";
+      return message.str();
+    }
+
+    if (this->keyword == "additionalProperties") {
+      assert(this->annotation.is_string());
+      std::ostringstream message;
+      message << "The object property "
+              << escape_string(this->annotation.to_string())
+              << " successfully validated against the additional properties "
+                 "subschema";
+      return message.str();
+    }
+
+    if (this->keyword == "unevaluatedProperties") {
+      assert(this->annotation.is_string());
+      std::ostringstream message;
+      message << "The object property "
+              << escape_string(this->annotation.to_string())
+              << " successfully validated against the subschema for "
+                 "unevaluated properties";
+      return message.str();
+    }
+
+    if (this->keyword == "contains" && this->annotation.is_integer()) {
+      assert(this->target.is_array());
+      assert(this->annotation.is_positive());
+      std::ostringstream message;
+      message << "The item at index " << this->annotation.to_integer()
+              << " of the array value successfully validated against the "
+                 "containment check subschema";
+      return message.str();
+    }
+
+    return unknown();
+  }
+
   auto
   operator()(const SchemaCompilerLoopProperties &step) const -> std::string {
+    assert(this->keyword == "additionalProperties");
+    std::ostringstream message;
+    if (step.children.size() == 1 &&
+        std::holds_alternative<SchemaCompilerAssertionFail>(
+            step.children.front())) {
+      message << "The object value was not expected to define additional "
+                 "properties";
+    } else {
+      message << "The object properties not covered by other adjacent object "
+                 "keywords were expected to validate against this subschema";
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const SchemaCompilerLoopPropertiesNoAnnotation &step) const
+      -> std::string {
     if (this->keyword == "unevaluatedProperties") {
       std::ostringstream message;
-      if (step.children.size() == 1 &&
-          std::holds_alternative<SchemaCompilerLogicalAnd>(
-              step.children.front()) &&
+      if (!step.children.empty() &&
           std::holds_alternative<SchemaCompilerAssertionFail>(
-              std::get<SchemaCompilerLogicalAnd>(step.children.front())
-                  .children.front())) {
+              step.children.front())) {
         message << "The object value was not expected to define unevaluated "
                    "properties";
       } else {
@@ -919,14 +617,16 @@ struct DescribeVisitor {
       return message.str();
     }
 
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerLoopPropertiesExcept &step) const
+      -> std::string {
     assert(this->keyword == "additionalProperties");
     std::ostringstream message;
     if (step.children.size() == 1 &&
-        std::holds_alternative<SchemaCompilerLogicalAnd>(
-            step.children.front()) &&
         std::holds_alternative<SchemaCompilerAssertionFail>(
-            std::get<SchemaCompilerLogicalAnd>(step.children.front())
-                .children.front())) {
+            step.children.front())) {
       message << "The object value was not expected to define additional "
                  "properties";
     } else {
@@ -982,13 +682,18 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const SchemaCompilerLoopItemsFromAnnotationIndex &step) const
+  auto
+  operator()(const SchemaCompilerLoopItemsUnmarked &) const -> std::string {
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerLoopItemsUnevaluated &step) const
       -> std::string {
     assert(this->keyword == "unevaluatedItems");
     const auto &value{step_value(step)};
     std::ostringstream message;
     message << "The array items not evaluated by the keyword "
-            << escape_string(value)
+            << escape_string(value.index)
             << ", if any, were expected to validate against this subschema";
     return message.str();
   }
@@ -1079,7 +784,7 @@ struct DescribeVisitor {
       message << " but did not define properties ";
       for (auto iterator = missing.cbegin(); iterator != missing.cend();
            ++iterator) {
-        if (std::next(iterator) == value.cend()) {
+        if (std::next(iterator) == missing.cend()) {
           message << "and " << escape_string(*iterator);
         } else {
           message << escape_string(*iterator) << ", ";
@@ -1143,7 +848,49 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const SchemaCompilerAssertionSizeGreater &step) const
+  auto operator()(const SchemaCompilerAssertionStringSizeLess &step) const
+      -> std::string {
+    if (this->keyword == "maxLength") {
+      std::ostringstream message;
+      const auto maximum{step_value(step) - 1};
+
+      if (is_within_keyword(this->evaluate_path, "propertyNames")) {
+        assert(this->instance_location.back().is_property());
+        message << "The object property name "
+                << escape_string(this->instance_location.back().to_property());
+      } else {
+        message << "The string value ";
+        stringify(this->target, message);
+      }
+
+      message << " was expected to consist of at most " << maximum
+              << (maximum == 1 ? " character" : " characters");
+
+      if (this->valid) {
+        message << " and";
+      } else {
+        message << " but";
+      }
+
+      message << " it consisted of ";
+
+      if (is_within_keyword(this->evaluate_path, "propertyNames")) {
+        message << this->instance_location.back().to_property().size();
+        message << (this->instance_location.back().to_property().size() == 1
+                        ? " character"
+                        : " characters");
+      } else {
+        message << this->target.size();
+        message << (this->target.size() == 1 ? " character" : " characters");
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAssertionStringSizeGreater &step) const
       -> std::string {
     if (this->keyword == "minLength") {
       std::ostringstream message;
@@ -1182,114 +929,11 @@ struct DescribeVisitor {
       return message.str();
     }
 
-    if (this->keyword == "minItems") {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      const auto minimum{step_value(step) + 1};
-      message << "The array value was expected to contain at least " << minimum;
-      assert(minimum > 0);
-      if (minimum == 1) {
-        message << " item";
-      } else {
-        message << " items";
-      }
-
-      if (this->valid) {
-        message << " and";
-      } else {
-        message << " but";
-      }
-
-      message << " it contained " << this->target.size();
-      if (this->target.size() == 1) {
-        message << " item";
-      } else {
-        message << " items";
-      }
-
-      return message.str();
-    }
-
-    if (this->keyword == "minProperties") {
-      assert(this->target.is_object());
-      std::ostringstream message;
-      const auto minimum{step_value(step) + 1};
-      message << "The object value was expected to contain at least "
-              << minimum;
-      assert(minimum > 0);
-      if (minimum == 1) {
-        message << " property";
-      } else {
-        message << " properties";
-      }
-
-      if (this->valid) {
-        message << " and";
-      } else {
-        message << " but";
-      }
-
-      message << " it contained " << this->target.size();
-      if (this->target.size() == 1) {
-        message << " property: ";
-        message << escape_string(this->target.as_object().cbegin()->first);
-      } else {
-        message << " properties: ";
-        for (auto iterator = this->target.as_object().cbegin();
-             iterator != this->target.as_object().cend(); ++iterator) {
-          if (std::next(iterator) == this->target.as_object().cend()) {
-            message << "and " << escape_string(iterator->first);
-          } else {
-            message << escape_string(iterator->first) << ", ";
-          }
-        }
-      }
-
-      return message.str();
-    }
-
     return unknown();
   }
 
-  auto
-  operator()(const SchemaCompilerAssertionSizeLess &step) const -> std::string {
-    if (this->keyword == "maxLength") {
-      std::ostringstream message;
-      const auto maximum{step_value(step) - 1};
-
-      if (is_within_keyword(this->evaluate_path, "propertyNames")) {
-        assert(this->instance_location.back().is_property());
-        message << "The object property name "
-                << escape_string(this->instance_location.back().to_property());
-      } else {
-        message << "The string value ";
-        stringify(this->target, message);
-      }
-
-      message << " was expected to consist of at most " << maximum
-              << (maximum == 1 ? " character" : " characters");
-
-      if (this->valid) {
-        message << " and";
-      } else {
-        message << " but";
-      }
-
-      message << " it consisted of ";
-
-      if (is_within_keyword(this->evaluate_path, "propertyNames")) {
-        message << this->instance_location.back().to_property().size();
-        message << (this->instance_location.back().to_property().size() == 1
-                        ? " character"
-                        : " characters");
-      } else {
-        message << this->target.size();
-        message << (this->target.size() == 1 ? " character" : " characters");
-      }
-
-      return message.str();
-    }
-
+  auto operator()(const SchemaCompilerAssertionArraySizeLess &step) const
+      -> std::string {
     if (this->keyword == "maxItems") {
       assert(this->target.is_array());
       std::ostringstream message;
@@ -1318,6 +962,44 @@ struct DescribeVisitor {
       return message.str();
     }
 
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAssertionArraySizeGreater &step) const
+      -> std::string {
+    if (this->keyword == "minItems") {
+      assert(this->target.is_array());
+      std::ostringstream message;
+      const auto minimum{step_value(step) + 1};
+      message << "The array value was expected to contain at least " << minimum;
+      assert(minimum > 0);
+      if (minimum == 1) {
+        message << " item";
+      } else {
+        message << " items";
+      }
+
+      if (this->valid) {
+        message << " and";
+      } else {
+        message << " but";
+      }
+
+      message << " it contained " << this->target.size();
+      if (this->target.size() == 1) {
+        message << " item";
+      } else {
+        message << " items";
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAssertionObjectSizeLess &step) const
+      -> std::string {
     if (this->keyword == "maxProperties") {
       assert(this->target.is_object());
       std::ostringstream message;
@@ -1342,12 +1024,68 @@ struct DescribeVisitor {
         message << escape_string(this->target.as_object().cbegin()->first);
       } else {
         message << " properties: ";
-        for (auto iterator = this->target.as_object().cbegin();
-             iterator != this->target.as_object().cend(); ++iterator) {
-          if (std::next(iterator) == this->target.as_object().cend()) {
-            message << "and " << escape_string(iterator->first);
+
+        std::vector<std::string> properties;
+        for (const auto &entry : this->target.as_object()) {
+          properties.push_back(entry.first);
+        }
+        std::sort(properties.begin(), properties.end());
+
+        for (auto iterator = properties.cbegin(); iterator != properties.cend();
+             ++iterator) {
+          if (std::next(iterator) == properties.cend()) {
+            message << "and " << escape_string(*iterator);
           } else {
-            message << escape_string(iterator->first) << ", ";
+            message << escape_string(*iterator) << ", ";
+          }
+        }
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAssertionObjectSizeGreater &step) const
+      -> std::string {
+    if (this->keyword == "minProperties") {
+      assert(this->target.is_object());
+      std::ostringstream message;
+      const auto minimum{step_value(step) + 1};
+      message << "The object value was expected to contain at least "
+              << minimum;
+      assert(minimum > 0);
+      if (minimum == 1) {
+        message << " property";
+      } else {
+        message << " properties";
+      }
+
+      if (this->valid) {
+        message << " and";
+      } else {
+        message << " but";
+      }
+
+      message << " it contained " << this->target.size();
+      if (this->target.size() == 1) {
+        message << " property: ";
+        message << escape_string(this->target.as_object().cbegin()->first);
+      } else {
+        message << " properties: ";
+        std::vector<std::string> properties;
+        for (const auto &entry : this->target.as_object()) {
+          properties.push_back(entry.first);
+        }
+        std::sort(properties.begin(), properties.end());
+
+        for (auto iterator = properties.cbegin(); iterator != properties.cend();
+             ++iterator) {
+          if (std::next(iterator) == properties.cend()) {
+            message << "and " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
           }
         }
       }
@@ -1529,22 +1267,384 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  // These steps are never described, at least not right now
+  auto operator()(const SchemaCompilerLoopPropertiesMatch &step) const
+      -> std::string {
+    assert(!step.children.empty());
+    assert(this->target.is_object());
+    std::ostringstream message;
+    message << "The object value was expected to validate against the ";
+    if (step.children.size() == 1) {
+      message << "single defined property subschema";
+    } else {
+      message << step.children.size() << " defined properties subschemas";
+    }
+
+    return message.str();
+  }
 
   auto
-  operator()(const SchemaCompilerAssertionSizeEqual &) const -> std::string {
+  operator()(const SchemaCompilerLogicalWhenType &step) const -> std::string {
+    if (this->keyword == "patternProperties") {
+      assert(!step.children.empty());
+      assert(this->target.is_object());
+      std::ostringstream message;
+      message << "The object value was expected to validate against the ";
+      if (step.children.size() == 1) {
+        message << "single defined pattern property subschema";
+      } else {
+        message << step.children.size()
+                << " defined pattern properties subschemas";
+      }
+
+      return message.str();
+    }
+
+    if (this->keyword == "items" || this->keyword == "prefixItems") {
+      assert(!step.children.empty());
+      assert(this->target.is_array());
+      std::ostringstream message;
+      message << "The first ";
+      if (step.children.size() == 1) {
+        message << "item of the array value was";
+      } else {
+        message << step.children.size() << " items of the array value were";
+      }
+
+      message << " expected to validate against the corresponding subschemas";
+      return message.str();
+    }
+
+    if (this->keyword == "dependencies") {
+      assert(this->target.is_object());
+      assert(!step.children.empty());
+
+      std::set<std::string> present;
+      std::set<std::string> present_with_schemas;
+      std::set<std::string> present_with_properties;
+      std::set<std::string> all_dependencies;
+      std::set<std::string> required_properties;
+
+      for (const auto &child : step.children) {
+        // Schema
+        if (std::holds_alternative<SchemaCompilerLogicalWhenDefines>(child)) {
+          const auto &substep{
+              std::get<SchemaCompilerLogicalWhenDefines>(child)};
+          const auto &property{step_value(substep)};
+          all_dependencies.insert(property);
+          if (!this->target.defines(property)) {
+            continue;
+          }
+
+          present.insert(property);
+          present_with_schemas.insert(property);
+
+          // Properties
+        } else {
+          assert(std::holds_alternative<
+                 SchemaCompilerAssertionPropertyDependencies>(child));
+          const auto &substep{
+              std::get<SchemaCompilerAssertionPropertyDependencies>(child)};
+
+          for (const auto &[property, dependencies] : substep.value) {
+            all_dependencies.insert(property);
+            if (this->target.defines(property)) {
+              present.insert(property);
+              present_with_properties.insert(property);
+              for (const auto &dependency : dependencies) {
+                if (this->valid || !this->target.defines(dependency)) {
+                  required_properties.insert(dependency);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      std::ostringstream message;
+
+      if (present_with_schemas.empty() && present_with_properties.empty()) {
+        message << "The object value did not define the";
+        assert(!all_dependencies.empty());
+        if (all_dependencies.size() == 1) {
+          message << " property "
+                  << escape_string(*(all_dependencies.cbegin()));
+        } else {
+          message << " properties ";
+          for (auto iterator = all_dependencies.cbegin();
+               iterator != all_dependencies.cend(); ++iterator) {
+            if (std::next(iterator) == all_dependencies.cend()) {
+              message << "or " << escape_string(*iterator);
+            } else {
+              message << escape_string(*iterator) << ", ";
+            }
+          }
+        }
+
+        return message.str();
+      }
+
+      if (present.size() == 1) {
+        message << "Because the object value defined the";
+        message << " property " << escape_string(*(present.cbegin()));
+      } else {
+        message << "Because the object value defined the";
+        message << " properties ";
+        for (auto iterator = present.cbegin(); iterator != present.cend();
+             ++iterator) {
+          if (std::next(iterator) == present.cend()) {
+            message << "and " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
+          }
+        }
+      }
+
+      if (!required_properties.empty()) {
+        message << ", it was also expected to define the";
+        if (required_properties.size() == 1) {
+          message << " property "
+                  << escape_string(*(required_properties.cbegin()));
+        } else {
+          message << " properties ";
+          for (auto iterator = required_properties.cbegin();
+               iterator != required_properties.cend(); ++iterator) {
+            if (std::next(iterator) == required_properties.cend()) {
+              message << "and " << escape_string(*iterator);
+            } else {
+              message << escape_string(*iterator) << ", ";
+            }
+          }
+        }
+      }
+
+      if (!present_with_schemas.empty()) {
+        message << ", ";
+        if (!required_properties.empty()) {
+          message << "and ";
+        }
+
+        message << "it was also expected to successfully validate against the "
+                   "corresponding ";
+        if (present_with_schemas.size() == 1) {
+          message << escape_string(*(present_with_schemas.cbegin()));
+          message << " subschema";
+        } else {
+          for (auto iterator = present_with_schemas.cbegin();
+               iterator != present_with_schemas.cend(); ++iterator) {
+            if (std::next(iterator) == present_with_schemas.cend()) {
+              message << "and " << escape_string(*iterator);
+            } else {
+              message << escape_string(*iterator) << ", ";
+            }
+          }
+
+          message << " subschemas";
+        }
+      }
+
+      return message.str();
+    }
+
+    if (this->keyword == "dependentSchemas") {
+      assert(this->target.is_object());
+      assert(!step.children.empty());
+      std::set<std::string> present;
+      std::set<std::string> all_dependencies;
+      for (const auto &child : step.children) {
+        assert(std::holds_alternative<SchemaCompilerLogicalWhenDefines>(child));
+        const auto &substep{std::get<SchemaCompilerLogicalWhenDefines>(child)};
+        const auto &property{step_value(substep)};
+        all_dependencies.insert(property);
+        if (!this->target.defines(property)) {
+          continue;
+        }
+
+        present.insert(property);
+      }
+
+      std::ostringstream message;
+
+      if (present.empty()) {
+        message << "The object value did not define the";
+        assert(!all_dependencies.empty());
+        if (all_dependencies.size() == 1) {
+          message << " property "
+                  << escape_string(*(all_dependencies.cbegin()));
+        } else {
+          message << " properties ";
+          for (auto iterator = all_dependencies.cbegin();
+               iterator != all_dependencies.cend(); ++iterator) {
+            if (std::next(iterator) == all_dependencies.cend()) {
+              message << "or " << escape_string(*iterator);
+            } else {
+              message << escape_string(*iterator) << ", ";
+            }
+          }
+        }
+      } else if (present.size() == 1) {
+        message << "Because the object value defined the";
+        message << " property " << escape_string(*(present.cbegin()));
+        message
+            << ", it was also expected to validate against the corresponding "
+               "subschema";
+      } else {
+        message << "Because the object value defined the";
+        message << " properties ";
+        for (auto iterator = present.cbegin(); iterator != present.cend();
+             ++iterator) {
+          if (std::next(iterator) == present.cend()) {
+            message << "and " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
+          }
+        }
+
+        message
+            << ", it was also expected to validate against the corresponding "
+               "subschemas";
+      }
+
+      return message.str();
+    }
+
     return unknown();
   }
-  auto
-  operator()(const SchemaCompilerAssertionNoAnnotation &) const -> std::string {
-    return unknown();
-  }
-  auto
-  operator()(const SchemaCompilerAssertionAnnotation &) const -> std::string {
-    return unknown();
-  }
-  auto operator()(const SchemaCompilerAssertionNoAdjacentAnnotation &) const
+
+  auto operator()(const SchemaCompilerLogicalWhenAdjacentUnmarked &step) const
       -> std::string {
+    if (this->keyword == "else") {
+      assert(!step.children.empty());
+      std::ostringstream message;
+      message << "Because of the conditional outcome, the "
+              << to_string(this->target.type())
+              << " value was expected to validate against the ";
+      if (step.children.size() > 1) {
+        message << step.children.size() << " given subschemas";
+      } else {
+        message << "given subschema";
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerLogicalWhenAdjacentMarked &step) const
+      -> std::string {
+    if (this->keyword == "then") {
+      assert(!step.children.empty());
+      std::ostringstream message;
+      message << "Because of the conditional outcome, the "
+              << to_string(this->target.type())
+              << " value was expected to validate against the ";
+      if (step.children.size() > 1) {
+        message << step.children.size() << " given subschemas";
+      } else {
+        message << "given subschema";
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const SchemaCompilerAssertionPropertyDependencies &step) const
+      -> std::string {
+    if (this->keyword == "dependentRequired") {
+      assert(this->target.is_object());
+      std::set<std::string> present;
+      std::set<std::string> all_dependencies;
+      std::set<std::string> required;
+
+      for (const auto &[property, dependencies] : step.value) {
+        all_dependencies.insert(property);
+        if (this->target.defines(property)) {
+          present.insert(property);
+          for (const auto &dependency : dependencies) {
+            if (this->valid || !this->target.defines(dependency)) {
+              required.insert(dependency);
+            }
+          }
+        }
+      }
+
+      std::ostringstream message;
+
+      if (present.empty()) {
+        message << "The object value did not define the";
+        assert(!all_dependencies.empty());
+        if (all_dependencies.size() == 1) {
+          message << " property "
+                  << escape_string(*(all_dependencies.cbegin()));
+        } else {
+          message << " properties ";
+          for (auto iterator = all_dependencies.cbegin();
+               iterator != all_dependencies.cend(); ++iterator) {
+            if (std::next(iterator) == all_dependencies.cend()) {
+              message << "or " << escape_string(*iterator);
+            } else {
+              message << escape_string(*iterator) << ", ";
+            }
+          }
+        }
+
+        return message.str();
+      } else if (present.size() == 1) {
+        message << "Because the object value defined the";
+        message << " property " << escape_string(*(present.cbegin()));
+      } else {
+        message << "Because the object value defined the";
+        message << " properties ";
+        for (auto iterator = present.cbegin(); iterator != present.cend();
+             ++iterator) {
+          if (std::next(iterator) == present.cend()) {
+            message << "and " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
+          }
+        }
+      }
+
+      assert(!required.empty());
+      message << ", it was also expected to define the";
+      if (required.size() == 1) {
+        message << " property " << escape_string(*(required.cbegin()));
+      } else {
+        message << " properties ";
+        for (auto iterator = required.cbegin(); iterator != required.cend();
+             ++iterator) {
+          if (std::next(iterator) == required.cend()) {
+            message << "and " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
+          }
+        }
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  // These steps are never described, at least not right now
+
+  auto operator()(const SchemaCompilerLogicalWhenArraySizeGreater &) const
+      -> std::string {
+    return unknown();
+  }
+  auto operator()(const SchemaCompilerLogicalWhenArraySizeEqual &) const
+      -> std::string {
+    return unknown();
+  }
+  auto
+  operator()(const SchemaCompilerLogicalWhenDefines &) const -> std::string {
+    return unknown();
+  }
+  auto
+  operator()(const SchemaCompilerLoopPropertiesRegex &) const -> std::string {
     return unknown();
   }
 };

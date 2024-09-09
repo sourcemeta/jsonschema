@@ -177,6 +177,8 @@ private:
 /// This walker traverse over the first-level of subschemas of the JSON Schema
 /// definition, ignoring the top-level schema and reporting back each subschema.
 ///
+/// Note that we don't promise any specific walking ordering.
+///
 /// For example:
 ///
 /// ```cpp

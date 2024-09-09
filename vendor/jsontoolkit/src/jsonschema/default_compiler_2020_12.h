@@ -48,7 +48,8 @@ auto compiler_2020_12_core_dynamicref(
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  const auto current{keyword_location(schema_context)};
+  const auto current{
+      to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
   assert(context.frame.contains({ReferenceType::Static, current}));
   const auto &entry{context.frame.at({ReferenceType::Static, current})};
   // In this case, just behave as a normal static reference
@@ -68,7 +69,7 @@ auto compiler_2020_12_core_dynamicref(
   // look for the oldest dynamic anchor in the schema resource chain.
   return {make<SchemaCompilerControlDynamicAnchorJump>(
       true, context, schema_context, dynamic_context,
-      std::string{reference.fragment().value()}, {})};
+      std::string{reference.fragment().value()})};
 }
 
 } // namespace internal

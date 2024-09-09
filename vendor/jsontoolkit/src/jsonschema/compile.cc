@@ -26,9 +26,9 @@ auto compile_subschema(
     if (schema_context.schema.to_boolean()) {
       return {};
     } else {
-      return {make<SchemaCompilerAssertionFail>(
-          true, context, schema_context, dynamic_context,
-          SchemaCompilerValueNone{}, {}, SchemaCompilerTargetType::Instance)};
+      return {make<SchemaCompilerAssertionFail>(true, context, schema_context,
+                                                dynamic_context,
+                                                SchemaCompilerValueNone{})};
     }
   }
 
@@ -43,7 +43,7 @@ auto compile_subschema(
              {schema_context.relative_pointer.concat({keyword}),
               schema_context.schema, entry.vocabularies, schema_context.base,
               // TODO: This represents a copy
-              schema_context.labels},
+              schema_context.labels, schema_context.references},
              {keyword, dynamic_context.base_schema_location,
               dynamic_context.base_instance_location})) {
       // Just a sanity check to ensure every keyword location is indeed valid
@@ -64,7 +64,6 @@ namespace sourcemeta::jsontoolkit {
 
 auto compile(const JSON &schema, const SchemaWalker &walker,
              const SchemaResolver &resolver, const SchemaCompiler &compiler,
-             const SchemaCompilerCompilationMode mode,
              const std::optional<std::string> &default_dialect)
     -> SchemaCompilerTemplate {
   assert(is_schema(schema));
@@ -106,13 +105,14 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
   }
 
   const sourcemeta::jsontoolkit::SchemaCompilerContext context{
-      mode,   result,   frame,    references,
-      walker, resolver, compiler, uses_dynamic_scopes};
+      result,   frame,    references,         walker,
+      resolver, compiler, uses_dynamic_scopes};
   sourcemeta::jsontoolkit::SchemaCompilerSchemaContext schema_context{
       empty_pointer,
       result,
       vocabularies(schema, resolver, root_frame_entry.dialect).get(),
       root_frame_entry.base,
+      {},
       {}};
   const sourcemeta::jsontoolkit::SchemaCompilerDynamicContext dynamic_context{
       relative_dynamic_context};
@@ -148,6 +148,7 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
                                 std::move(subschema),
                                 std::move(nested_vocabularies),
                                 entry.second.base,
+                                {},
                                 {}};
 
       compiler_template.push_back(make<SchemaCompilerControlMark>(
@@ -207,7 +208,7 @@ auto compile(const SchemaCompilerContext &context,
        vocabularies(new_schema, context.resolver, entry.dialect).get(),
        entry.base,
        // TODO: This represents a copy
-       schema_context.labels},
+       schema_context.labels, schema_context.references},
       {dynamic_context.keyword, destination_pointer,
        dynamic_context.base_instance_location.concat(instance_suffix)},
       entry.dialect);

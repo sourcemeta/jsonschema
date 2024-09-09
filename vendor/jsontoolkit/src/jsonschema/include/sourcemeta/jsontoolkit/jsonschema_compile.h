@@ -11,420 +11,517 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <functional> // std::function
-#include <map>        // std::map
-#include <optional>   // std::optional, std::nullopt
-#include <regex>      // std::regex
-#include <set>        // std::set
-#include <string>     // std::string
-#include <tuple>      // std::tuple
-#include <utility>    // std::move, std::pair
-#include <variant>    // std::variant
-#include <vector>     // std::vector
+#include <functional>    // std::function
+#include <map>           // std::map
+#include <optional>      // std::optional, std::nullopt
+#include <regex>         // std::regex
+#include <set>           // std::set
+#include <string>        // std::string
+#include <tuple>         // std::tuple
+#include <unordered_map> // std::unordered_map
+#include <utility>       // std::move, std::pair
+#include <variant>       // std::variant
+#include <vector>        // std::vector
+
+/// @ingroup jsonschema
+/// @defgroup jsonschema_compiler Compiler
+/// @brief Compile a JSON Schema into a set of low-level instructions for fast
+/// evaluation
 
 namespace sourcemeta::jsontoolkit {
 
-/// @ingroup jsonschema
-/// Represents a type of compiler step target
-enum class SchemaCompilerTargetType {
-  /// An static instance literal
-  Instance,
-
-  /// The last path (i.e. property or index) of the instance location
-  InstanceBasename,
-
-  /// The penultimate path (i.e. property or index) of the instance location
-  InstanceParent,
-
-  /// The annotations produced at the same base evaluation path for the
-  /// current instance location
-  AdjacentAnnotations,
-
-  /// The annotations produced at the same base evaluation path for the parent
-  /// of the current instance location
-  ParentAdjacentAnnotations,
-
-  /// The annotations produced for the parent of the current instance location
-  ParentAnnotations,
-
-  /// The annotations produced for current instance location
-  Annotations
-};
-
-/// @ingroup jsonschema
-/// Represents a generic compiler step target
-using SchemaCompilerTarget = std::pair<SchemaCompilerTargetType, Pointer>;
-
-/// @ingroup jsonschema
-/// Represents a compiler step empty value
+/// @ingroup jsonschema_compiler
+/// @brief Represents a compiler step empty value
 struct SchemaCompilerValueNone {};
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step JSON value
 using SchemaCompilerValueJSON = JSON;
 
-/// @ingroup jsonschema
-/// Represents a set of JSON values
-using SchemaCompilerValueArray = std::set<JSON>;
+// Note that for these steps, we prefer vectors over sets as the former performs
+// better for small collections, where we can even guarantee uniqueness when
+// generating the instructions
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
+/// Represents a set of JSON values
+using SchemaCompilerValueArray = std::vector<JSON>;
+
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step string values
+using SchemaCompilerValueStrings = std::vector<JSON::String>;
+
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step JSON types value
+using SchemaCompilerValueTypes = std::vector<JSON::Type>;
+
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step string value
 using SchemaCompilerValueString = JSON::String;
 
-/// @ingroup jsonschema
-/// Represents a compiler step string values
-using SchemaCompilerValueStrings = std::set<JSON::String>;
-
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step JSON type value
 using SchemaCompilerValueType = JSON::Type;
 
-/// @ingroup jsonschema
-/// Represents a compiler step JSON types value
-using SchemaCompilerValueTypes = std::set<JSON::Type>;
-
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step ECMA regular expression value. We store both the
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
 /// purposes)
 using SchemaCompilerValueRegex = std::pair<std::regex, std::string>;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step JSON unsigned integer value
 using SchemaCompilerValueUnsignedInteger = std::size_t;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step range value. The boolean option
 /// modifies whether the range is considered exhaustively or
 /// if the evaluator is allowed to break early
 using SchemaCompilerValueRange =
     std::tuple<std::size_t, std::optional<std::size_t>, bool>;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a compiler step boolean value
 using SchemaCompilerValueBoolean = bool;
 
-/// @ingroup jsonschema
-/// Represents a compiler step a string logical type
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step string to index map
+using SchemaCompilerValueNamedIndexes =
+    std::unordered_map<SchemaCompilerValueString,
+                       SchemaCompilerValueUnsignedInteger>;
+
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step string logical type
 enum class SchemaCompilerValueStringType { URI };
 
-/// @ingroup jsonschema
-/// Represents a value in a compiler step
-template <typename T>
-using SchemaCompilerStepValue = std::variant<T, SchemaCompilerTarget>;
+/// @ingroup jsonschema_compiler
+/// Represents an array loop compiler step annotation keywords
+struct SchemaCompilerValueItemsAnnotationKeywords {
+  const SchemaCompilerValueString index;
+  const SchemaCompilerValueStrings filter;
+  const SchemaCompilerValueStrings mask;
+};
 
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that always fails
+/// @ingroup jsonschema_compiler
+/// Represents an compiler step that maps strings to strings
+using SchemaCompilerValueStringMap =
+    std::unordered_map<SchemaCompilerValueString, SchemaCompilerValueStrings>;
+
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step JSON value accompanied with an index
+using SchemaCompilerValueIndexedJSON =
+    std::pair<SchemaCompilerValueUnsignedInteger, JSON>;
+
+// Note that while we generally avoid sets, in this case, we want
+// hash-based lookups on string collections that might get large.
+/// @ingroup jsonschema_compiler
+/// Represents a compiler step value that consist of object property filters
+using SchemaCompilerValuePropertyFilter =
+    std::pair<std::set<SchemaCompilerValueString>,
+              std::vector<SchemaCompilerValueRegex>>;
+
+// Forward declarations for the sole purpose of being bale to define circular
+// structures
+#ifndef DOXYGEN
 struct SchemaCompilerAssertionFail;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if an object defines a
-/// given property
 struct SchemaCompilerAssertionDefines;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if an object defines a
-/// set of properties
 struct SchemaCompilerAssertionDefinesAll;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if a document is of the
-/// given type
+struct SchemaCompilerAssertionPropertyDependencies;
 struct SchemaCompilerAssertionType;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if a document is of any of
-/// the given types
 struct SchemaCompilerAssertionTypeAny;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if a document is of the
-/// given type (strict version)
 struct SchemaCompilerAssertionTypeStrict;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks if a document is of any of
-/// the given types (strict version)
 struct SchemaCompilerAssertionTypeStrictAny;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a string against an ECMA
-/// regular expression
 struct SchemaCompilerAssertionRegex;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given array, object, or
-/// string has at least a certain number of items, properties, or characters,
-/// respectively
-struct SchemaCompilerAssertionSizeGreater;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given array, object, or
-/// string has less than a certain number of items, properties, or characters,
-/// respectively
-struct SchemaCompilerAssertionSizeLess;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks the instance equals a given
-/// JSON document
+struct SchemaCompilerAssertionStringSizeLess;
+struct SchemaCompilerAssertionStringSizeGreater;
+struct SchemaCompilerAssertionArraySizeLess;
+struct SchemaCompilerAssertionArraySizeGreater;
+struct SchemaCompilerAssertionObjectSizeLess;
+struct SchemaCompilerAssertionObjectSizeGreater;
 struct SchemaCompilerAssertionEqual;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks that a JSON document is
-/// equal to at least one of the given elements
 struct SchemaCompilerAssertionEqualsAny;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a JSON document is greater
-/// than or equal to another JSON document
 struct SchemaCompilerAssertionGreaterEqual;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a JSON document is less
-/// than or equal to another JSON document
 struct SchemaCompilerAssertionLessEqual;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a JSON document is greater
-/// than another JSON document
 struct SchemaCompilerAssertionGreater;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a JSON document is less
-/// than another JSON document
 struct SchemaCompilerAssertionLess;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given JSON array does not
-/// contain duplicate items
 struct SchemaCompilerAssertionUnique;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a number is divisible by
-/// another number
 struct SchemaCompilerAssertionDivisible;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks that a string is of a
-/// certain type
 struct SchemaCompilerAssertionStringType;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a given array, object, or
-/// string has a certain number of items, properties, or characters,
-/// respectively
-struct SchemaCompilerAssertionSizeEqual;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that emits an annotation
 struct SchemaCompilerAnnotationEmit;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a certain
-/// annotation was produced
-struct SchemaCompilerAssertionAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a certain
-/// annotation was not produced at an adjacent location
-struct SchemaCompilerAssertionNoAdjacentAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a compiler assertion step that checks a certain
-/// annotation was not produced independently of the schema location
-struct SchemaCompilerAssertionNoAnnotation;
-
-/// @ingroup jsonschema
-/// Represents a compiler logical step that represents a disjunction
+struct SchemaCompilerAnnotationWhenArraySizeEqual;
+struct SchemaCompilerAnnotationWhenArraySizeGreater;
+struct SchemaCompilerAnnotationToParent;
+struct SchemaCompilerAnnotationBasenameToParent;
 struct SchemaCompilerLogicalOr;
-
-/// @ingroup jsonschema
-/// Represents a compiler logical step that represents a conjunction
 struct SchemaCompilerLogicalAnd;
-
-/// @ingroup jsonschema
-/// Represents a compiler logical step that represents an exclusive disjunction
 struct SchemaCompilerLogicalXor;
-
-/// @ingroup jsonschema
-/// Represents a compiler logical step that represents a conjunction that always
-/// reports success
-struct SchemaCompilerLogicalTry;
-
-/// @ingroup jsonschema
-/// Represents a compiler logical step that represents a negation
+struct SchemaCompilerLogicalTryMark;
 struct SchemaCompilerLogicalNot;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that loops over object properties
+struct SchemaCompilerLogicalWhenType;
+struct SchemaCompilerLogicalWhenDefines;
+struct SchemaCompilerLogicalWhenAdjacentUnmarked;
+struct SchemaCompilerLogicalWhenAdjacentMarked;
+struct SchemaCompilerLogicalWhenArraySizeGreater;
+struct SchemaCompilerLogicalWhenArraySizeEqual;
+struct SchemaCompilerLoopPropertiesMatch;
 struct SchemaCompilerLoopProperties;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that loops over object property keys
+struct SchemaCompilerLoopPropertiesRegex;
+struct SchemaCompilerLoopPropertiesNoAnnotation;
+struct SchemaCompilerLoopPropertiesExcept;
 struct SchemaCompilerLoopKeys;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that loops over array items starting from a given
-/// index
 struct SchemaCompilerLoopItems;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that loops over array items, potentially starting
-/// from a given index that was previously collected as an annotation
-struct SchemaCompilerLoopItemsFromAnnotationIndex;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that checks array items match a given criteria
+struct SchemaCompilerLoopItemsUnmarked;
+struct SchemaCompilerLoopItemsUnevaluated;
 struct SchemaCompilerLoopContains;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that consists of a mark to jump to while
-/// executing children instructions
 struct SchemaCompilerControlLabel;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that consists of a mark to jump to, but without
-/// executing children instructions
 struct SchemaCompilerControlMark;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that consists of jumping into a pre-registered
-/// label
 struct SchemaCompilerControlJump;
-
-/// @ingroup jsonschema
-/// Represents a compiler step that consists of jump to a dynamic anchor
 struct SchemaCompilerControlDynamicAnchorJump;
+#endif
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents a schema compilation step that can be evaluated
 using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionFail, SchemaCompilerAssertionDefines,
-    SchemaCompilerAssertionDefinesAll, SchemaCompilerAssertionType,
+    SchemaCompilerAssertionDefinesAll,
+    SchemaCompilerAssertionPropertyDependencies, SchemaCompilerAssertionType,
     SchemaCompilerAssertionTypeAny, SchemaCompilerAssertionTypeStrict,
     SchemaCompilerAssertionTypeStrictAny, SchemaCompilerAssertionRegex,
-    SchemaCompilerAssertionSizeGreater, SchemaCompilerAssertionSizeLess,
-    SchemaCompilerAssertionEqual, SchemaCompilerAssertionEqualsAny,
-    SchemaCompilerAssertionGreaterEqual, SchemaCompilerAssertionLessEqual,
-    SchemaCompilerAssertionGreater, SchemaCompilerAssertionLess,
-    SchemaCompilerAssertionUnique, SchemaCompilerAssertionDivisible,
-    SchemaCompilerAssertionStringType, SchemaCompilerAssertionSizeEqual,
-    SchemaCompilerAssertionAnnotation,
-    SchemaCompilerAssertionNoAdjacentAnnotation,
-    SchemaCompilerAssertionNoAnnotation, SchemaCompilerAnnotationEmit,
+    SchemaCompilerAssertionStringSizeLess,
+    SchemaCompilerAssertionStringSizeGreater,
+    SchemaCompilerAssertionArraySizeLess,
+    SchemaCompilerAssertionArraySizeGreater,
+    SchemaCompilerAssertionObjectSizeLess,
+    SchemaCompilerAssertionObjectSizeGreater, SchemaCompilerAssertionEqual,
+    SchemaCompilerAssertionEqualsAny, SchemaCompilerAssertionGreaterEqual,
+    SchemaCompilerAssertionLessEqual, SchemaCompilerAssertionGreater,
+    SchemaCompilerAssertionLess, SchemaCompilerAssertionUnique,
+    SchemaCompilerAssertionDivisible, SchemaCompilerAssertionStringType,
+    SchemaCompilerAnnotationEmit, SchemaCompilerAnnotationWhenArraySizeEqual,
+    SchemaCompilerAnnotationWhenArraySizeGreater,
+    SchemaCompilerAnnotationToParent, SchemaCompilerAnnotationBasenameToParent,
     SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
-    SchemaCompilerLogicalTry, SchemaCompilerLogicalNot,
-    SchemaCompilerLoopProperties, SchemaCompilerLoopKeys,
-    SchemaCompilerLoopItems, SchemaCompilerLoopItemsFromAnnotationIndex,
-    SchemaCompilerLoopContains, SchemaCompilerControlLabel,
-    SchemaCompilerControlMark, SchemaCompilerControlJump,
-    SchemaCompilerControlDynamicAnchorJump>>;
+    SchemaCompilerLogicalTryMark, SchemaCompilerLogicalNot,
+    SchemaCompilerLogicalWhenType, SchemaCompilerLogicalWhenDefines,
+    SchemaCompilerLogicalWhenAdjacentUnmarked,
+    SchemaCompilerLogicalWhenAdjacentMarked,
+    SchemaCompilerLogicalWhenArraySizeGreater,
+    SchemaCompilerLogicalWhenArraySizeEqual, SchemaCompilerLoopPropertiesMatch,
+    SchemaCompilerLoopProperties, SchemaCompilerLoopPropertiesRegex,
+    SchemaCompilerLoopPropertiesNoAnnotation,
+    SchemaCompilerLoopPropertiesExcept, SchemaCompilerLoopKeys,
+    SchemaCompilerLoopItems, SchemaCompilerLoopItemsUnmarked,
+    SchemaCompilerLoopItemsUnevaluated, SchemaCompilerLoopContains,
+    SchemaCompilerControlLabel, SchemaCompilerControlMark,
+    SchemaCompilerControlJump, SchemaCompilerControlDynamicAnchorJump>>;
 
-#if !defined(DOXYGEN)
 #define DEFINE_STEP_WITH_VALUE(category, name, type)                           \
   struct SchemaCompiler##category##name {                                      \
-    const SchemaCompilerTarget target;                                         \
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
     const bool report;                                                         \
-    const SchemaCompilerStepValue<type> value;                                 \
-    const SchemaCompilerTemplate condition;                                    \
-  };
-
-#define DEFINE_STEP_WITH_VALUE_AND_DATA(category, name, type, data_type)       \
-  struct SchemaCompiler##category##name {                                      \
-    const SchemaCompilerTarget target;                                         \
-    const Pointer relative_schema_location;                                    \
-    const Pointer relative_instance_location;                                  \
-    const std::string keyword_location;                                        \
-    const std::string schema_resource;                                         \
-    const bool dynamic;                                                        \
-    const bool report;                                                         \
-    const SchemaCompilerStepValue<type> value;                                 \
-    const SchemaCompilerTemplate condition;                                    \
-    const data_type data;                                                      \
+    const type value;                                                          \
   };
 
 #define DEFINE_STEP_APPLICATOR(category, name, type)                           \
   struct SchemaCompiler##category##name {                                      \
-    const SchemaCompilerTarget target;                                         \
     const Pointer relative_schema_location;                                    \
     const Pointer relative_instance_location;                                  \
     const std::string keyword_location;                                        \
     const std::string schema_resource;                                         \
     const bool dynamic;                                                        \
     const bool report;                                                         \
-    const SchemaCompilerStepValue<type> value;                                 \
-    const SchemaCompilerTemplate children;                                     \
-    const SchemaCompilerTemplate condition;                                    \
-  };
-
-#define DEFINE_CONTROL(name, type)                                             \
-  struct SchemaCompilerControl##name {                                         \
-    const Pointer relative_schema_location;                                    \
-    const Pointer relative_instance_location;                                  \
-    const std::string keyword_location;                                        \
-    const std::string schema_resource;                                         \
-    const bool dynamic;                                                        \
-    const bool report;                                                         \
-    const type id;                                                             \
+    const type value;                                                          \
     const SchemaCompilerTemplate children;                                     \
   };
 
+/// @defgroup jsonschema_compiler_instructions Instruction Set
+/// @ingroup jsonschema_compiler
+/// @brief The set of instructions supported by the compiler.
+/// @details
+///
+/// Every instruction operates at a specific instance location and with the
+/// given value, whose type depends on the instruction.
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that always fails
 DEFINE_STEP_WITH_VALUE(Assertion, Fail, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if an object defines
+/// a given property
 DEFINE_STEP_WITH_VALUE(Assertion, Defines, SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if an object defines
+/// a set of properties
 DEFINE_STEP_WITH_VALUE(Assertion, DefinesAll, SchemaCompilerValueStrings)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if an object defines
+/// a set of properties if it defines other set of properties
+DEFINE_STEP_WITH_VALUE(Assertion, PropertyDependencies,
+                       SchemaCompilerValueStringMap)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if a document is of
+/// the given type
 DEFINE_STEP_WITH_VALUE(Assertion, Type, SchemaCompilerValueType)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if a document is of
+/// any of the given types
 DEFINE_STEP_WITH_VALUE(Assertion, TypeAny, SchemaCompilerValueTypes)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if a document is of
+/// the given type (strict version)
 DEFINE_STEP_WITH_VALUE(Assertion, TypeStrict, SchemaCompilerValueType)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks if a document is of
+/// any of the given types (strict version)
 DEFINE_STEP_WITH_VALUE(Assertion, TypeStrictAny, SchemaCompilerValueTypes)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a string against an
+/// ECMA regular expression
 DEFINE_STEP_WITH_VALUE(Assertion, Regex, SchemaCompilerValueRegex)
-DEFINE_STEP_WITH_VALUE(Assertion, SizeGreater,
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given string has
+/// less than a certain number of characters
+DEFINE_STEP_WITH_VALUE(Assertion, StringSizeLess,
                        SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_WITH_VALUE(Assertion, SizeLess, SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given string has
+/// greater than a certain number of characters
+DEFINE_STEP_WITH_VALUE(Assertion, StringSizeGreater,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given array has
+/// less than a certain number of items
+DEFINE_STEP_WITH_VALUE(Assertion, ArraySizeLess,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given array has
+/// greater than a certain number of items
+DEFINE_STEP_WITH_VALUE(Assertion, ArraySizeGreater,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given object has
+/// less than a certain number of properties
+DEFINE_STEP_WITH_VALUE(Assertion, ObjectSizeLess,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given object has
+/// greater than a certain number of properties
+DEFINE_STEP_WITH_VALUE(Assertion, ObjectSizeGreater,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks the instance equals
+/// a given JSON document
 DEFINE_STEP_WITH_VALUE(Assertion, Equal, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks that a JSON document
+/// is equal to at least one of the given elements
 DEFINE_STEP_WITH_VALUE(Assertion, EqualsAny, SchemaCompilerValueArray)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a JSON document is
+/// greater than or equal to another JSON document
 DEFINE_STEP_WITH_VALUE(Assertion, GreaterEqual, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a JSON document is
+/// less than or equal to another JSON document
 DEFINE_STEP_WITH_VALUE(Assertion, LessEqual, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a JSON document is
+/// greater than another JSON document
 DEFINE_STEP_WITH_VALUE(Assertion, Greater, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a JSON document is
+/// less than another JSON document
 DEFINE_STEP_WITH_VALUE(Assertion, Less, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a given JSON array
+/// does not contain duplicate items
 DEFINE_STEP_WITH_VALUE(Assertion, Unique, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks a number is
+/// divisible by another number
 DEFINE_STEP_WITH_VALUE(Assertion, Divisible, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks that a string is of
+/// a certain type
 DEFINE_STEP_WITH_VALUE(Assertion, StringType, SchemaCompilerValueStringType)
-DEFINE_STEP_WITH_VALUE(Assertion, SizeEqual, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_WITH_VALUE(Assertion, Annotation, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE(Assertion, NoAdjacentAnnotation, SchemaCompilerValueJSON)
-DEFINE_STEP_WITH_VALUE_AND_DATA(Assertion, NoAnnotation,
-                                SchemaCompilerValueJSON,
-                                SchemaCompilerValueStrings)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that emits an annotation
 DEFINE_STEP_WITH_VALUE(Annotation, Emit, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that emits an annotation when the size of
+/// the array instance is equal to the given size
+DEFINE_STEP_WITH_VALUE(Annotation, WhenArraySizeEqual,
+                       SchemaCompilerValueIndexedJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that emits an annotation when the size of
+/// the array instance is greater than the given size
+DEFINE_STEP_WITH_VALUE(Annotation, WhenArraySizeGreater,
+                       SchemaCompilerValueIndexedJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that emits an annotation to the parent
+DEFINE_STEP_WITH_VALUE(Annotation, ToParent, SchemaCompilerValueJSON)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that emits the current basename as an
+/// annotation to the parent
+DEFINE_STEP_WITH_VALUE(Annotation, BasenameToParent, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a disjunction
 DEFINE_STEP_APPLICATOR(Logical, Or, SchemaCompilerValueBoolean)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction
 DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents an exclusive
+/// disjunction
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
-DEFINE_STEP_APPLICATOR(Logical, Try, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction that
+/// always reports success and marks its outcome for other steps
+DEFINE_STEP_APPLICATOR(Logical, TryMark, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a negation
 DEFINE_STEP_APPLICATOR(Logical, Not, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the instance is of a given type
+DEFINE_STEP_APPLICATOR(Logical, WhenType, SchemaCompilerValueType)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the instance is an object and defines a given property
+DEFINE_STEP_APPLICATOR(Logical, WhenDefines, SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the instance and desired evaluation path was not marked
+DEFINE_STEP_APPLICATOR(Logical, WhenAdjacentUnmarked, SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the instance and desired evaluation path was marked
+DEFINE_STEP_APPLICATOR(Logical, WhenAdjacentMarked, SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the array instance size is greater than the given number
+DEFINE_STEP_APPLICATOR(Logical, WhenArraySizeGreater,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler logical step that represents a conjunction when
+/// the array instance size is equal to the given number
+DEFINE_STEP_APPLICATOR(Logical, WhenArraySizeEqual,
+                       SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that matches steps to object properties
+DEFINE_STEP_APPLICATOR(Loop, PropertiesMatch, SchemaCompilerValueNamedIndexes)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over object properties
 DEFINE_STEP_APPLICATOR(Loop, Properties, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over object properties that
+/// match a given ECMA regular expression
+DEFINE_STEP_APPLICATOR(Loop, PropertiesRegex, SchemaCompilerValueRegex)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over object properties that
+/// were not collected as annotations
+DEFINE_STEP_APPLICATOR(Loop, PropertiesNoAnnotation, SchemaCompilerValueStrings)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over object properties that
+/// do not match the given property filters
+DEFINE_STEP_APPLICATOR(Loop, PropertiesExcept,
+                       SchemaCompilerValuePropertyFilter)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over object property keys
 DEFINE_STEP_APPLICATOR(Loop, Keys, SchemaCompilerValueNone)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over array items starting from
+/// a given index
 DEFINE_STEP_APPLICATOR(Loop, Items, SchemaCompilerValueUnsignedInteger)
-DEFINE_STEP_APPLICATOR(Loop, ItemsFromAnnotationIndex,
-                       SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over array items when the array
+/// is considered unmarked
+DEFINE_STEP_APPLICATOR(Loop, ItemsUnmarked, SchemaCompilerValueStrings)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that loops over unevaluated array items
+DEFINE_STEP_APPLICATOR(Loop, ItemsUnevaluated,
+                       SchemaCompilerValueItemsAnnotationKeywords)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that checks array items match a given
+/// criteria
 DEFINE_STEP_APPLICATOR(Loop, Contains, SchemaCompilerValueRange)
-DEFINE_CONTROL(Label, SchemaCompilerValueUnsignedInteger)
-DEFINE_CONTROL(Mark, SchemaCompilerValueUnsignedInteger)
-DEFINE_CONTROL(Jump, SchemaCompilerValueUnsignedInteger)
-DEFINE_CONTROL(DynamicAnchorJump, SchemaCompilerValueString)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that consists of a mark to jump to while
+/// executing children instructions
+DEFINE_STEP_APPLICATOR(Control, Label, SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that consists of a mark to jump to, but
+/// without executing children instructions
+DEFINE_STEP_APPLICATOR(Control, Mark, SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that consists of jumping into a
+/// pre-registered label
+DEFINE_STEP_WITH_VALUE(Control, Jump, SchemaCompilerValueUnsignedInteger)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler step that consists of jump to a dynamic anchor
+DEFINE_STEP_WITH_VALUE(Control, DynamicAnchorJump, SchemaCompilerValueString)
 
 #undef DEFINE_STEP_WITH_VALUE
-#undef DEFINE_STEP_WITH_VALUE_AND_DATA
 #undef DEFINE_STEP_APPLICATOR
-#undef DEFINE_CONTROL
-#endif
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// The schema compiler context is the current subschema information you have at
 /// your disposal to implement a keyword
 struct SchemaCompilerSchemaContext {
@@ -438,9 +535,11 @@ struct SchemaCompilerSchemaContext {
   const URI &base;
   /// The set of labels registered so far
   std::set<std::size_t> labels;
+  /// The set of references destinations traversed so far
+  std::set<std::string> references;
 };
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// The dynamic compiler context is the read-write information you have at your
 /// disposal to implement a keyword
 struct SchemaCompilerDynamicContext {
@@ -456,17 +555,7 @@ struct SchemaCompilerDynamicContext {
 struct SchemaCompilerContext;
 #endif
 
-/// @ingroup jsonschema
-/// Represents the mode of compilation
-enum class SchemaCompilerCompilationMode {
-  /// Produce a compile template optimized for speed, ignoring everything
-  /// that is not strictly required for that case
-  Optimized,
-  /// Produce a compile template optimized for full coverage
-  Full
-};
-
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// A compiler is represented as a function that maps a keyword compiler
 /// contexts into a compiler template. You can provide your own to implement
 /// your own keywords
@@ -474,13 +563,11 @@ using SchemaCompiler = std::function<SchemaCompilerTemplate(
     const SchemaCompilerContext &, const SchemaCompilerSchemaContext &,
     const SchemaCompilerDynamicContext &)>;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// The static compiler context is the information you have at your
 /// disposal to implement a keyword that will never change throughout
 /// the compilation process
 struct SchemaCompilerContext {
-  /// The selected mode of compilation
-  const SchemaCompilerCompilationMode mode;
   /// The root schema resource
   const JSON &root;
   /// The reference frame of the entire schema
@@ -497,7 +584,7 @@ struct SchemaCompilerContext {
   const bool uses_dynamic_scopes;
 };
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents the mode of evalution
 enum class SchemaCompilerEvaluationMode {
   /// Attempt to get to a boolean result as fast as possible
@@ -506,11 +593,11 @@ enum class SchemaCompilerEvaluationMode {
   Exhaustive
 };
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// Represents the state of a step evaluation
 enum class SchemaCompilerEvaluationType { Pre, Post };
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// A callback of this type is invoked after evaluating any keyword. The
 /// arguments go as follows:
 ///
@@ -530,7 +617,7 @@ using SchemaCompilerEvaluationCallback =
 
 // TODO: Support standard output formats too
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// A simple evaluation callback that reports a stack trace in the case of
 /// validation error that you can report as you with. For example:
@@ -616,7 +703,7 @@ private:
 #endif
 };
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function translates a step execution into a human-readable string.
 /// Useful as the building block for producing user-friendly evaluation results.
@@ -625,7 +712,7 @@ describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
          const Pointer &evaluate_path, const Pointer &instance_location,
          const JSON &instance, const JSON &annotation) -> std::string;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function evaluates a schema compiler template in validation mode,
 /// returning a boolean without error information. For example:
@@ -654,7 +741,7 @@ describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 evaluate(const SchemaCompilerTemplate &steps, const JSON &instance) -> bool;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function evaluates a schema compiler template, executing the given
 /// callback at every step of the way. For example:
@@ -709,14 +796,14 @@ evaluate(const SchemaCompilerTemplate &steps, const JSON &instance,
          const SchemaCompilerEvaluationMode mode,
          const SchemaCompilerEvaluationCallback &callback) -> bool;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 /// A default compiler that aims to implement every keyword for official JSON
 /// Schema dialects.
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT default_schema_compiler(
     const SchemaCompilerContext &, const SchemaCompilerSchemaContext &,
     const SchemaCompilerDynamicContext &) -> SchemaCompilerTemplate;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function compiles an input JSON Schema into a template that can be
 /// later evaluated. For example:
@@ -741,12 +828,10 @@ auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT default_schema_compiler(
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 compile(const JSON &schema, const SchemaWalker &walker,
         const SchemaResolver &resolver, const SchemaCompiler &compiler,
-        const SchemaCompilerCompilationMode mode =
-            SchemaCompilerCompilationMode::Optimized,
         const std::optional<std::string> &default_dialect = std::nullopt)
     -> SchemaCompilerTemplate;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function compiles a single subschema into a compiler template as
 /// determined by the given pointer. If a URI is given, the compiler will
@@ -763,7 +848,7 @@ compile(const SchemaCompilerContext &context,
         const std::optional<std::string> &uri = std::nullopt)
     -> SchemaCompilerTemplate;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// This function converts a compiler template into JSON. Convenient for storing
 /// it or sending it over the wire. For example:
@@ -793,7 +878,7 @@ compile(const SchemaCompilerContext &context,
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 to_json(const SchemaCompilerTemplate &steps) -> JSON;
 
-/// @ingroup jsonschema
+/// @ingroup jsonschema_compiler
 ///
 /// An opinionated key comparison for printing JSON Schema compiler templates
 /// with sourcemeta::jsontoolkit::prettify or

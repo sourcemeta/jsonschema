@@ -3,12 +3,14 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <cassert>  // assert
-#include <map>      // std::map
-#include <optional> // std::optional
-#include <sstream>  // std::ostringstream
-#include <utility>  // std::pair, std::move
-#include <vector>   // std::vector
+#include <algorithm>  // std::sort
+#include <cassert>    // assert
+#include <functional> // std::less
+#include <map>        // std::map
+#include <optional>   // std::optional
+#include <sstream>    // std::ostringstream
+#include <utility>    // std::pair, std::move
+#include <vector>     // std::vector
 
 static auto find_nearest_bases(const std::map<sourcemeta::jsontoolkit::Pointer,
                                               std::vector<std::string>> &bases,
@@ -340,8 +342,16 @@ auto sourcemeta::jsontoolkit::frame(
     }
   }
 
+  // It is important for the loop that follows to assume a specific ordering
+  // where smaller pointers (by number of tokens) are scanned first.
+  const auto pointer_walker{sourcemeta::jsontoolkit::PointerWalker{schema}};
+  std::vector<sourcemeta::jsontoolkit::Pointer> pointers{
+      pointer_walker.cbegin(), pointer_walker.cend()};
+  std::sort(pointers.begin(), pointers.end(),
+            std::less<sourcemeta::jsontoolkit::Pointer>());
+
   // Pre-compute every possible pointer to the schema
-  for (const auto &pointer : sourcemeta::jsontoolkit::PointerWalker{schema}) {
+  for (const auto &pointer : pointers) {
     const auto dialects{
         find_nearest_bases(base_dialects, pointer, root_dialect)};
     assert(dialects.first.size() == 1);

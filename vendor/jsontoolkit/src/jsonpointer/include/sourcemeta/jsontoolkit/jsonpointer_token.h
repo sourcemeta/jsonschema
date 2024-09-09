@@ -10,12 +10,10 @@
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-template <typename CharT, typename Traits,
-          template <typename T> typename Allocator>
-class GenericToken {
+template <typename PropertyT> class GenericToken {
 public:
   using Value = JSON;
-  using Property = typename Value::String;
+  using Property = PropertyT;
   using Index = typename Value::Array::size_type;
 
   /// This constructor creates an JSON Pointer token from a string. For
@@ -39,7 +37,7 @@ public:
   ///
   /// const sourcemeta::jsontoolkit::Pointer::Token token{"foo"};
   /// ```
-  GenericToken(const CharT *const property)
+  GenericToken(const JSON::Char *const property)
       : data{std::in_place_type<Property>, property} {}
 
   /// This constructor creates an JSON Pointer token from a character. For
@@ -51,7 +49,7 @@ public:
   ///
   /// const sourcemeta::jsontoolkit::Pointer::Token token{'a'};
   /// ```
-  GenericToken(const CharT character)
+  GenericToken(const JSON::Char character)
       : data{std::in_place_type<Property>, Property{character}} {}
 
   /// This constructor creates an JSON Pointer token from an item index. For
@@ -146,9 +144,13 @@ public:
   /// assert(token.is_property());
   /// assert(token.to_property() == "foo");
   /// ```
-  [[nodiscard]] auto to_property() const noexcept -> const Property & {
+  [[nodiscard]] auto to_property() const noexcept -> const auto & {
     assert(this->is_property());
-    return std::get<Property>(this->data);
+    if constexpr (requires { std::get<Property>(this->data).get(); }) {
+      return std::get<Property>(this->data).get();
+    } else {
+      return std::get<Property>(this->data);
+    }
   }
 
   /// Get the underlying value of a JSON Pointer object property token
@@ -162,9 +164,13 @@ public:
   /// assert(token.is_property());
   /// assert(token.to_property() == "foo");
   /// ```
-  auto to_property() noexcept -> Property & {
+  auto to_property() noexcept -> auto & {
     assert(this->is_property());
-    return std::get<Property>(this->data);
+    if constexpr (requires { std::get<Property>(this->data).get(); }) {
+      return std::get<Property>(this->data).get();
+    } else {
+      return std::get<Property>(this->data);
+    }
   }
 
   /// Get the underlying value of a JSON Pointer array index token
@@ -208,16 +214,26 @@ public:
   }
 
   /// Compare JSON Pointer tokens
-  auto operator==(const GenericToken<CharT, Traits, Allocator> &other)
-      const noexcept -> bool {
-    return this->data == other.data;
+  auto operator==(const GenericToken<PropertyT> &other) const noexcept -> bool {
+    if (this->data.index() != other.data.index()) {
+      return false;
+    }
+    if (this->is_property()) {
+      return this->to_property() == other.to_property();
+    }
+    return this->to_index() == other.to_index();
   }
 
   /// Overload to support ordering of JSON Pointer token. Typically for sorting
   /// reasons.
-  auto operator<(const GenericToken<CharT, Traits, Allocator> &other)
-      const noexcept -> bool {
-    return this->data < other.data;
+  auto operator<(const GenericToken<PropertyT> &other) const noexcept -> bool {
+    if (this->data.index() != other.data.index()) {
+      return this->data.index() < other.data.index();
+    }
+    if (this->is_property()) {
+      return this->to_property() < other.to_property();
+    }
+    return this->to_index() < other.to_index();
   }
 
 private:
