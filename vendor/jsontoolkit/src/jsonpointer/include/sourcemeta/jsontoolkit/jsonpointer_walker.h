@@ -9,13 +9,11 @@
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-/// A walker to get every JSON Pointer in a JSON document
-template <typename CharT, typename Traits,
-          template <typename T> typename Allocator>
-class GenericPointerWalker {
+/// A walker to get every JSON Pointer in a JSON document. Note that no specific
+/// ordering is guaranteed. If you expect any ordering, sort afterwards.
+template <typename PointerT> class GenericPointerWalker {
 private:
-  using internal =
-      typename std::vector<GenericPointer<CharT, Traits, Allocator>>;
+  using internal = typename std::vector<PointerT>;
 
 public:
   GenericPointerWalker(const JSON &document) { this->walk(document, {}); }
@@ -27,18 +25,17 @@ public:
   auto cend() const -> const_iterator { return this->pointers.cend(); };
 
 private:
-  auto walk(const JSON &document,
-            const GenericPointer<CharT, Traits, Allocator> &pointer) -> void {
+  auto walk(const JSON &document, const PointerT &pointer) -> void {
     this->pointers.push_back(pointer);
     if (document.is_array()) {
       for (std::size_t index = 0; index < document.size(); index++) {
-        GenericPointer<CharT, Traits, Allocator> subpointer{pointer};
+        PointerT subpointer{pointer};
         subpointer.emplace_back(index);
         this->walk(document.at(index), subpointer);
       }
     } else if (document.is_object()) {
       for (const auto &pair : document.as_object()) {
-        GenericPointer<CharT, Traits, Allocator> subpointer{pointer};
+        PointerT subpointer{pointer};
         subpointer.emplace_back(pair.first);
         this->walk(pair.second, subpointer);
       }

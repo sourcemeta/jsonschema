@@ -2,7 +2,7 @@
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_TRACE_H_
 
 // We only perform tracing on debugging builds, at least for now
-#if !defined(NDEBUG) && defined(__APPLE__)
+#if !defined(NDEBUG) && defined(__APPLE__) && defined(__clang__)
 
 #include <os/log.h>
 #include <os/signpost.h>

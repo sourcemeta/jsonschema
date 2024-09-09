@@ -10,74 +10,33 @@
 
 namespace {
 
-auto target_to_json(const sourcemeta::jsontoolkit::SchemaCompilerTarget &target)
-    -> sourcemeta::jsontoolkit::JSON {
-  using namespace sourcemeta::jsontoolkit;
-  JSON result{JSON::make_object()};
-  result.assign("category", JSON{"target"});
-  result.assign("location", JSON{to_string(target.second)});
-  switch (target.first) {
-    case SchemaCompilerTargetType::Instance:
-      result.assign("type", JSON{"instance"});
-      return result;
-    case SchemaCompilerTargetType::InstanceBasename:
-      result.assign("type", JSON{"instance-basename"});
-      return result;
-    case SchemaCompilerTargetType::InstanceParent:
-      result.assign("type", JSON{"instance-parent"});
-      return result;
-    case SchemaCompilerTargetType::AdjacentAnnotations:
-      result.assign("type", JSON{"adjacent-annotations"});
-      return result;
-    case SchemaCompilerTargetType::ParentAdjacentAnnotations:
-      result.assign("type", JSON{"parent-adjacent-annotations"});
-      return result;
-    case SchemaCompilerTargetType::ParentAnnotations:
-      result.assign("type", JSON{"parent-annotations"});
-      return result;
-    case SchemaCompilerTargetType::Annotations:
-      result.assign("type", JSON{"annotations"});
-      return result;
-    default:
-      // We should never get here
-      assert(false);
-      return result;
-  }
-}
-
 template <typename T>
-auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
-                       &value) -> sourcemeta::jsontoolkit::JSON {
+auto value_to_json(const T &value) -> sourcemeta::jsontoolkit::JSON {
   using namespace sourcemeta::jsontoolkit;
-  if (std::holds_alternative<SchemaCompilerTarget>(value)) {
-    return target_to_json(std::get<SchemaCompilerTarget>(value));
-  }
-
-  assert(std::holds_alternative<T>(value));
   JSON result{JSON::make_object()};
   result.assign("category", JSON{"value"});
   if constexpr (std::is_same_v<SchemaCompilerValueJSON, T>) {
     result.assign("type", JSON{"json"});
-    result.assign("value", JSON{std::get<T>(value)});
+    result.assign("value", JSON{value});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueBoolean, T>) {
     result.assign("type", JSON{"boolean"});
-    result.assign("value", JSON{std::get<T>(value)});
+    result.assign("value", JSON{value});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueRegex, T>) {
     result.assign("type", JSON{"regex"});
-    result.assign("value", JSON{std::get<T>(value).second});
+    result.assign("value", JSON{value.second});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueType, T>) {
     result.assign("type", JSON{"type"});
     std::ostringstream type_string;
-    type_string << std::get<T>(value);
+    type_string << value;
     result.assign("value", JSON{type_string.str()});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueTypes, T>) {
     result.assign("type", JSON{"types"});
     JSON types{JSON::make_array()};
-    for (const auto type : std::get<T>(value)) {
+    for (const auto type : value) {
       std::ostringstream type_string;
       type_string << type;
       types.push_back(JSON{type_string.str()});
@@ -87,12 +46,12 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueString, T>) {
     result.assign("type", JSON{"string"});
-    result.assign("value", JSON{std::get<T>(value)});
+    result.assign("value", JSON{value});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueStrings, T>) {
     result.assign("type", JSON{"strings"});
     JSON items{JSON::make_array()};
-    for (const auto &item : std::get<T>(value)) {
+    for (const auto &item : value) {
       items.push_back(JSON{item});
     }
 
@@ -101,7 +60,7 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
   } else if constexpr (std::is_same_v<SchemaCompilerValueArray, T>) {
     result.assign("type", JSON{"array"});
     JSON items{JSON::make_array()};
-    for (const auto &item : std::get<T>(value)) {
+    for (const auto &item : value) {
       items.push_back(item);
     }
 
@@ -109,12 +68,12 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueUnsignedInteger, T>) {
     result.assign("type", JSON{"unsigned-integer"});
-    result.assign("value", JSON{std::get<T>(value)});
+    result.assign("value", JSON{value});
     return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueRange, T>) {
     result.assign("type", JSON{"range"});
     JSON values{JSON::make_array()};
-    const auto &range{std::get<T>(value)};
+    const auto &range{value};
     values.push_back(JSON{std::get<0>(range)});
     values.push_back(std::get<1>(range).has_value()
                          ? JSON{std::get<1>(range).value()}
@@ -122,9 +81,75 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     values.push_back(JSON{std::get<2>(range)});
     result.assign("value", std::move(values));
     return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueNamedIndexes, T>) {
+    result.assign("type", JSON{"named-indexes"});
+    JSON values{JSON::make_object()};
+    for (const auto &[name, index] : value) {
+      values.assign(name, JSON{index});
+    }
+
+    result.assign("value", std::move(values));
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueStringMap, T>) {
+    result.assign("type", JSON{"string-map"});
+    JSON map{JSON::make_object()};
+    for (const auto &[string, strings] : value) {
+      JSON dependencies{JSON::make_array()};
+      for (const auto &substring : strings) {
+        dependencies.push_back(JSON{substring});
+      }
+
+      map.assign(string, std::move(dependencies));
+    }
+
+    result.assign("value", std::move(map));
+    return result;
+  } else if constexpr (std::is_same_v<
+                           SchemaCompilerValueItemsAnnotationKeywords, T>) {
+    result.assign("type", JSON{"items-annotation-keywords"});
+    JSON data{JSON::make_object()};
+    data.assign("index", JSON{value.index});
+
+    JSON mask{JSON::make_array()};
+    for (const auto &keyword : value.mask) {
+      mask.push_back(JSON{keyword});
+    }
+    data.assign("mask", std::move(mask));
+
+    JSON filter{JSON::make_array()};
+    for (const auto &keyword : value.filter) {
+      filter.push_back(JSON{keyword});
+    }
+    data.assign("filter", std::move(filter));
+
+    result.assign("value", std::move(data));
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueIndexedJSON, T>) {
+    result.assign("type", JSON{"indexed-json"});
+    JSON data{JSON::make_object()};
+    data.assign("index", JSON{value.first});
+    data.assign("value", value.second);
+    result.assign("value", std::move(data));
+    return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValuePropertyFilter, T>) {
+    result.assign("type", JSON{"property-filter"});
+    JSON data{JSON::make_object()};
+    data.assign("names", JSON::make_array());
+    data.assign("patterns", JSON::make_array());
+
+    for (const auto &name : value.first) {
+      data.at("names").push_back(JSON{name});
+    }
+
+    for (const auto &pattern : value.second) {
+      data.at("patterns").push_back(JSON{pattern.second});
+    }
+
+    result.assign("value", std::move(data));
+    return result;
   } else if constexpr (std::is_same_v<SchemaCompilerValueStringType, T>) {
     result.assign("type", JSON{"string-type"});
-    switch (std::get<T>(value)) {
+    switch (value) {
       case SchemaCompilerValueStringType::URI:
         result.assign("value", JSON{"uri"});
         break;
@@ -136,27 +161,6 @@ auto value_to_json(const sourcemeta::jsontoolkit::SchemaCompilerStepValue<T>
     return result;
   } else {
     static_assert(std::is_same_v<SchemaCompilerValueNone, T>);
-    return JSON{nullptr};
-  }
-}
-
-template <typename T>
-auto data_to_json(const T &data) -> sourcemeta::jsontoolkit::JSON {
-  using namespace sourcemeta::jsontoolkit;
-  JSON result{JSON::make_object()};
-  result.assign("category", JSON{"data"});
-  if constexpr (std::is_same_v<SchemaCompilerValueStrings, T>) {
-    result.assign("type", JSON{"strings"});
-    JSON items{JSON::make_array()};
-    for (const auto &item : data) {
-      items.push_back(JSON{item});
-    }
-
-    result.assign("value", std::move(items));
-    return result;
-  } else {
-    // We should never get here
-    assert(false);
     return JSON{nullptr};
   }
 }
@@ -184,29 +188,7 @@ auto encode_step(const std::string_view category, const std::string_view type,
   result.assign("schemaResource", JSON{step.schema_resource});
   result.assign("dynamic", JSON{step.dynamic});
   result.assign("report", JSON{step.report});
-
-  if constexpr (requires { step.id; }) {
-    result.assign("id", JSON{step.id});
-  }
-
-  if constexpr (requires { step.target; }) {
-    result.assign("target", target_to_json(step.target));
-  }
-
-  if constexpr (requires { step.value; }) {
-    result.assign("value", value_to_json(step.value));
-  }
-
-  if constexpr (requires { step.data; }) {
-    result.assign("data", data_to_json(step.data));
-  }
-
-  if constexpr (requires { step.condition; }) {
-    result.assign("condition", JSON::make_array());
-    for (const auto &substep : step.condition) {
-      result.at("condition").push_back(step_to_json<V>(substep));
-    }
-  }
+  result.assign("value", value_to_json(step.value));
 
   if constexpr (requires { step.children; }) {
     result.assign("children", JSON::make_array());
@@ -228,14 +210,26 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "fail", SchemaCompilerAssertionFail)
   HANDLE_STEP("assertion", "defines", SchemaCompilerAssertionDefines)
   HANDLE_STEP("assertion", "defines-all", SchemaCompilerAssertionDefinesAll)
+  HANDLE_STEP("assertion", "property-dependencies",
+              SchemaCompilerAssertionPropertyDependencies)
   HANDLE_STEP("assertion", "type", SchemaCompilerAssertionType)
   HANDLE_STEP("assertion", "type-any", SchemaCompilerAssertionTypeAny)
   HANDLE_STEP("assertion", "type-strict", SchemaCompilerAssertionTypeStrict)
   HANDLE_STEP("assertion", "type-strict-any",
               SchemaCompilerAssertionTypeStrictAny)
   HANDLE_STEP("assertion", "regex", SchemaCompilerAssertionRegex)
-  HANDLE_STEP("assertion", "size-greater", SchemaCompilerAssertionSizeGreater)
-  HANDLE_STEP("assertion", "size-less", SchemaCompilerAssertionSizeLess)
+  HANDLE_STEP("assertion", "string-size-less",
+              SchemaCompilerAssertionStringSizeLess)
+  HANDLE_STEP("assertion", "string-size-greater",
+              SchemaCompilerAssertionStringSizeGreater)
+  HANDLE_STEP("assertion", "array-size-less",
+              SchemaCompilerAssertionArraySizeLess)
+  HANDLE_STEP("assertion", "array-size-greater",
+              SchemaCompilerAssertionArraySizeGreater)
+  HANDLE_STEP("assertion", "object-size-less",
+              SchemaCompilerAssertionObjectSizeLess)
+  HANDLE_STEP("assertion", "object-size-greater",
+              SchemaCompilerAssertionObjectSizeGreater)
   HANDLE_STEP("assertion", "equal", SchemaCompilerAssertionEqual)
   HANDLE_STEP("assertion", "greater-equal", SchemaCompilerAssertionGreaterEqual)
   HANDLE_STEP("assertion", "less-equal", SchemaCompilerAssertionLessEqual)
@@ -246,21 +240,38 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "string-type", SchemaCompilerAssertionStringType)
   HANDLE_STEP("assertion", "equals-any", SchemaCompilerAssertionEqualsAny)
   HANDLE_STEP("annotation", "emit", SchemaCompilerAnnotationEmit)
-  HANDLE_STEP("assertion", "size-equal", SchemaCompilerAssertionSizeEqual)
-  HANDLE_STEP("assertion", "annotation", SchemaCompilerAssertionAnnotation)
-  HANDLE_STEP("assertion", "no-adjacent-annotation",
-              SchemaCompilerAssertionNoAdjacentAnnotation)
-  HANDLE_STEP("assertion", "no-annotation", SchemaCompilerAssertionNoAnnotation)
+  HANDLE_STEP("annotation", "when-array-size-equal",
+              SchemaCompilerAnnotationWhenArraySizeEqual)
+  HANDLE_STEP("annotation", "when-array-size-greater",
+              SchemaCompilerAnnotationWhenArraySizeGreater)
+  HANDLE_STEP("annotation", "to-parent", SchemaCompilerAnnotationToParent)
+  HANDLE_STEP("annotation", "basename-to-parent",
+              SchemaCompilerAnnotationBasenameToParent)
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)
-  HANDLE_STEP("logical", "try", SchemaCompilerLogicalTry)
+  HANDLE_STEP("logical", "try-mark", SchemaCompilerLogicalTryMark)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
+  HANDLE_STEP("logical", "when-type", SchemaCompilerLogicalWhenType)
+  HANDLE_STEP("logical", "when-defines", SchemaCompilerLogicalWhenDefines)
+  HANDLE_STEP("logical", "when-adjacent-unmarked",
+              SchemaCompilerLogicalWhenAdjacentUnmarked)
+  HANDLE_STEP("logical", "when-adjacent-marked",
+              SchemaCompilerLogicalWhenAdjacentMarked)
+  HANDLE_STEP("logical", "when-array-size-greater",
+              SchemaCompilerLogicalWhenArraySizeGreater)
+  HANDLE_STEP("logical", "when-array-size-equal",
+              SchemaCompilerLogicalWhenArraySizeEqual)
+  HANDLE_STEP("loop", "properties-match", SchemaCompilerLoopPropertiesMatch)
   HANDLE_STEP("loop", "properties", SchemaCompilerLoopProperties)
+  HANDLE_STEP("loop", "properties-regex", SchemaCompilerLoopPropertiesRegex)
+  HANDLE_STEP("loop", "properties-no-annotation",
+              SchemaCompilerLoopPropertiesNoAnnotation)
+  HANDLE_STEP("loop", "properties-except", SchemaCompilerLoopPropertiesExcept)
   HANDLE_STEP("loop", "keys", SchemaCompilerLoopKeys)
   HANDLE_STEP("loop", "items", SchemaCompilerLoopItems)
-  HANDLE_STEP("loop", "items-from-annotation-index",
-              SchemaCompilerLoopItemsFromAnnotationIndex)
+  HANDLE_STEP("loop", "items-unmarked", SchemaCompilerLoopItemsUnmarked)
+  HANDLE_STEP("loop", "items-unevaluated", SchemaCompilerLoopItemsUnevaluated)
   HANDLE_STEP("loop", "contains", SchemaCompilerLoopContains)
   HANDLE_STEP("control", "label", SchemaCompilerControlLabel)
   HANDLE_STEP("control", "mark", SchemaCompilerControlMark)
@@ -296,13 +307,10 @@ auto compiler_template_format_compare(const JSON::String &left,
                    {"absoluteKeywordLocation", 4},
                    {"relativeSchemaLocation", 5},
                    {"relativeInstanceLocation", 6},
-                   {"target", 7},
-                   {"location", 8},
-                   {"id", 9},
-                   {"report", 10},
-                   {"dynamic", 11},
-                   {"condition", 12},
-                   {"children", 13}};
+                   {"location", 7},
+                   {"report", 8},
+                   {"dynamic", 9},
+                   {"children", 10}};
 
   // We define and control all of these keywords, so if we are missing
   // some here, then we did something wrong?

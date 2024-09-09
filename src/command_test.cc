@@ -142,8 +142,7 @@ auto sourcemeta::jsonschema::cli::test(
     try {
       schema_template = sourcemeta::jsontoolkit::compile(
           schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
-          test_resolver, sourcemeta::jsontoolkit::default_schema_compiler,
-          sourcemeta::jsontoolkit::SchemaCompilerCompilationMode::Optimized);
+          test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
     } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
       if (error.location().empty() && error.id() == schema_uri.recompose()) {
         std::cout << "\n";

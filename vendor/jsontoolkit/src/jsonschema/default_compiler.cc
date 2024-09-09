@@ -77,9 +77,13 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
 
   COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
           "dependentRequired", compiler_2019_09_validation_dependentrequired);
-
   COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
           "dependentSchemas", compiler_2019_09_applicator_dependentschemas);
+
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
+          "properties", compiler_2019_09_applicator_properties);
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
+          "patternProperties", compiler_2019_09_applicator_patternproperties);
   COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
           "additionalProperties",
           compiler_2019_09_applicator_additionalproperties);
@@ -130,11 +134,6 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
   COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "not",
           compiler_draft4_applicator_not);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "properties", compiler_draft4_applicator_properties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "patternProperties", compiler_draft4_applicator_patternproperties);
-
   COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "enum",
           compiler_draft4_validation_enum);
   COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
@@ -183,11 +182,15 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_2019_09_applicator_items);
   COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
           "additionalItems", compiler_2019_09_applicator_additionalitems);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "anyOf",
+          compiler_2019_09_applicator_anyof);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "properties", compiler_2019_09_applicator_properties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
+          "patternProperties", compiler_2019_09_applicator_patternproperties);
   COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
           "additionalProperties",
           compiler_2019_09_applicator_additionalproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "anyOf",
-          compiler_2019_09_applicator_anyof);
 
   // Same as Draft 7
 
@@ -226,11 +229,6 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
           compiler_draft4_applicator_oneof);
   COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "not",
           compiler_draft4_applicator_not);
-
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "properties", compiler_draft4_applicator_properties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "patternProperties", compiler_draft4_applicator_patternproperties);
 
   COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "enum",
           compiler_draft4_validation_enum);
