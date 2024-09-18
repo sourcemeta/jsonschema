@@ -70,9 +70,8 @@ auto compile(const JSON &schema, const SchemaWalker &walker,
 
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here
-  const JSON result{
-      bundle(schema, walker, resolver, BundleOptions::Default, default_dialect)
-          .get()};
+  const JSON result{bundle(schema, walker, resolver, BundleOptions::Default,
+                           default_dialect)};
 
   // Perform framing to resolve references later on
   ReferenceFrame frame;
@@ -215,7 +214,7 @@ auto compile(const SchemaCompilerContext &context,
 }
 
 SchemaCompilerErrorTraceOutput::SchemaCompilerErrorTraceOutput(
-    const JSON &instance, const Pointer &base)
+    const JSON &instance, const WeakPointer &base)
     : instance_{instance}, base_{base} {}
 
 auto SchemaCompilerErrorTraceOutput::begin() const -> const_iterator {
@@ -237,7 +236,7 @@ auto SchemaCompilerErrorTraceOutput::cend() const -> const_iterator {
 auto SchemaCompilerErrorTraceOutput::operator()(
     const SchemaCompilerEvaluationType type, const bool result,
     const SchemaCompilerTemplate::value_type &step,
-    const Pointer &evaluate_path, const Pointer &instance_location,
+    const WeakPointer &evaluate_path, const WeakPointer &instance_location,
     const JSON &annotation) -> void {
   assert(!evaluate_path.empty());
   assert(evaluate_path.back().is_property());

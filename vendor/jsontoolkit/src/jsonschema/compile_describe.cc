@@ -105,7 +105,7 @@ auto describe_reference(const JSON &target) -> std::string {
   return message.str();
 }
 
-auto is_within_keyword(const Pointer &evaluate_path,
+auto is_within_keyword(const WeakPointer &evaluate_path,
                        const std::string &keyword) -> bool {
   return std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
                      [&keyword](const auto &token) {
@@ -122,9 +122,9 @@ auto unknown() -> std::string {
 
 struct DescribeVisitor {
   const bool valid;
-  const Pointer &evaluate_path;
+  const WeakPointer &evaluate_path;
   const std::string &keyword;
-  const Pointer &instance_location;
+  const WeakPointer &instance_location;
   const JSON &target;
   const JSON &annotation;
 
@@ -1267,6 +1267,44 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const SchemaCompilerAssertionPropertyType &step) const
+      -> std::string {
+    std::ostringstream message;
+    const auto &value{step_value(step)};
+    if (!this->valid && value == JSON::Type::Real &&
+        this->target.type() == JSON::Type::Integer) {
+      message
+          << "The value was expected to be a real number but it was an integer";
+    } else if (!this->valid && value == JSON::Type::Integer &&
+               this->target.type() == JSON::Type::Real) {
+      message
+          << "The value was expected to be an integer but it was a real number";
+    } else {
+      describe_type_check(this->valid, this->target.type(), value, message);
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const SchemaCompilerAssertionPropertyTypeStrict &step) const
+      -> std::string {
+    std::ostringstream message;
+    const auto &value{step_value(step)};
+    if (!this->valid && value == JSON::Type::Real &&
+        this->target.type() == JSON::Type::Integer) {
+      message
+          << "The value was expected to be a real number but it was an integer";
+    } else if (!this->valid && value == JSON::Type::Integer &&
+               this->target.type() == JSON::Type::Real) {
+      message
+          << "The value was expected to be an integer but it was a real number";
+    } else {
+      describe_type_check(this->valid, this->target.type(), value, message);
+    }
+
+    return message.str();
+  }
+
   auto operator()(const SchemaCompilerLoopPropertiesMatch &step) const
       -> std::string {
     assert(!step.children.empty());
@@ -1656,8 +1694,9 @@ namespace sourcemeta::jsontoolkit {
 // TODO: What will unlock even better error messages is being able to
 // get the subschema being evaluated along with the keyword
 auto describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
-              const Pointer &evaluate_path, const Pointer &instance_location,
-              const JSON &instance, const JSON &annotation) -> std::string {
+              const WeakPointer &evaluate_path,
+              const WeakPointer &instance_location, const JSON &instance,
+              const JSON &annotation) -> std::string {
   assert(evaluate_path.empty() || evaluate_path.back().is_property());
   return std::visit<std::string>(
       DescribeVisitor{

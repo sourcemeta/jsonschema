@@ -65,7 +65,7 @@ enum class BundleOptions {
 /// })JSON");
 ///
 /// sourcemeta::jsontoolkit::bundle(document,
-///   sourcemeta::jsontoolkit::default_schema_walker, test_resolver).wait();
+///   sourcemeta::jsontoolkit::default_schema_walker, test_resolver);
 ///
 /// const sourcemeta::jsontoolkit::JSON expected =
 ///     sourcemeta::jsontoolkit::parse(R"JSON({
@@ -87,7 +87,7 @@ auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const BundleOptions options = BundleOptions::Default,
             const std::optional<std::string> &default_dialect = std::nullopt)
-    -> std::future<void>;
+    -> void;
 
 /// @ingroup jsonschema
 ///
@@ -127,7 +127,7 @@ auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
 ///
 /// const sourcemeta::jsontoolkit::JSON result =
 ///   sourcemeta::jsontoolkit::bundle(document,
-///     sourcemeta::jsontoolkit::default_schema_walker, test_resolver).get();
+///     sourcemeta::jsontoolkit::default_schema_walker, test_resolver);
 ///
 /// const sourcemeta::jsontoolkit::JSON expected =
 ///     sourcemeta::jsontoolkit::parse(R"JSON({
@@ -149,7 +149,7 @@ auto bundle(const sourcemeta::jsontoolkit::JSON &schema,
             const SchemaWalker &walker, const SchemaResolver &resolver,
             const BundleOptions options = BundleOptions::Default,
             const std::optional<std::string> &default_dialect = std::nullopt)
-    -> std::future<sourcemeta::jsontoolkit::JSON>;
+    -> sourcemeta::jsontoolkit::JSON;
 
 } // namespace sourcemeta::jsontoolkit
 

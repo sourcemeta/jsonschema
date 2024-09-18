@@ -144,7 +144,8 @@ auto sourcemeta::jsonschema::cli::test(
           schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
           test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
     } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
-      if (error.location().empty() && error.id() == schema_uri.recompose()) {
+      if (error.location() == sourcemeta::jsontoolkit::Pointer{"$ref"} &&
+          error.id() == schema_uri.recompose()) {
         std::cout << "\n";
         throw sourcemeta::jsontoolkit::SchemaResolutionError(
             test.at("target").to_string(),
@@ -237,8 +238,9 @@ auto sourcemeta::jsonschema::cli::test(
         return EXIT_FAILURE;
       }
 
+      const std::string ref{"$ref"};
       sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{
-          schema.value(), {"$ref"}};
+          schema.value(), {std::cref(ref)}};
       const auto case_result{sourcemeta::jsontoolkit::evaluate(
           schema_template,
           get_data(test_case, entry.first.parent_path(), verbose),

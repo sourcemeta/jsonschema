@@ -238,6 +238,9 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "unique", SchemaCompilerAssertionUnique)
   HANDLE_STEP("assertion", "divisible", SchemaCompilerAssertionDivisible)
   HANDLE_STEP("assertion", "string-type", SchemaCompilerAssertionStringType)
+  HANDLE_STEP("assertion", "property-type", SchemaCompilerAssertionPropertyType)
+  HANDLE_STEP("assertion", "property-type-strict",
+              SchemaCompilerAssertionPropertyTypeStrict)
   HANDLE_STEP("assertion", "equals-any", SchemaCompilerAssertionEqualsAny)
   HANDLE_STEP("annotation", "emit", SchemaCompilerAnnotationEmit)
   HANDLE_STEP("annotation", "when-array-size-equal",

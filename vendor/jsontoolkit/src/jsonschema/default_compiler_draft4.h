@@ -56,11 +56,22 @@ auto compiler_draft4_core_ref(const SchemaCompilerContext &context,
            context.frame.at({type, reference.destination}).pointer)) ||
       schema_context.references.contains(reference.destination)};
   if (!is_recursive) {
-    return {make<SchemaCompilerLogicalAnd>(
-        true, context, schema_context, dynamic_context,
-        SchemaCompilerValueNone{},
-        compile(context, new_schema_context, relative_dynamic_context,
-                empty_pointer, empty_pointer, reference.destination))};
+    // TODO: Enable this optimization for 2019-09 on-wards
+    if (schema_context.vocabularies.contains(
+            "http://json-schema.org/draft-04/schema#") ||
+        schema_context.vocabularies.contains(
+            "http://json-schema.org/draft-06/schema#") ||
+        schema_context.vocabularies.contains(
+            "http://json-schema.org/draft-07/schema#")) {
+      return compile(context, new_schema_context, dynamic_context,
+                     empty_pointer, empty_pointer, reference.destination);
+    } else {
+      return {make<SchemaCompilerLogicalAnd>(
+          true, context, schema_context, dynamic_context,
+          SchemaCompilerValueNone{},
+          compile(context, new_schema_context, relative_dynamic_context,
+                  empty_pointer, empty_pointer, reference.destination))};
+    }
   }
 
   // The idea to handle recursion is to expand the reference once, and when
@@ -360,8 +371,14 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
   // or whether most of the properties are optional. Each shines
   // in the corresponding case.
 
-  // This strategy only makes sense if most of the properties are "optional"
-  if (is_required <= (size / 2)) {
+  const auto prefer_loop_over_instance{
+      // This strategy only makes sense if most of the properties are "optional"
+      is_required <= (size / 2) &&
+      // If `properties` only defines a relatively small amount of properties,
+      // then its probably still faster to unroll
+      schema_context.schema.at(dynamic_context.keyword).size() > 3};
+
+  if (prefer_loop_over_instance) {
     SchemaCompilerValueNamedIndexes indexes;
     SchemaCompilerTemplate children;
     std::size_t cursor = 0;
@@ -408,11 +425,59 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
       for (auto &&substep : substeps) {
         children.push_back(std::move(substep));
       }
+
+      // Optimize `properties` where its subschemas just include a type check,
+      // as that's a very common pattern
+
+    } else if (substeps.size() == 1 &&
+               std::holds_alternative<SchemaCompilerAssertionTypeStrict>(
+                   substeps.front())) {
+      const auto &type_step{
+          std::get<SchemaCompilerAssertionTypeStrict>(substeps.front())};
+      children.push_back(SchemaCompilerAssertionPropertyTypeStrict{
+          type_step.relative_schema_location,
+          dynamic_context.base_instance_location.concat(
+              type_step.relative_instance_location),
+          type_step.keyword_location, type_step.schema_resource,
+          type_step.dynamic, type_step.report, type_step.value});
+    } else if (substeps.size() == 1 &&
+               std::holds_alternative<SchemaCompilerAssertionType>(
+                   substeps.front())) {
+      const auto &type_step{
+          std::get<SchemaCompilerAssertionType>(substeps.front())};
+      children.push_back(SchemaCompilerAssertionPropertyType{
+          type_step.relative_schema_location,
+          dynamic_context.base_instance_location.concat(
+              type_step.relative_instance_location),
+          type_step.keyword_location, type_step.schema_resource,
+          type_step.dynamic, type_step.report, type_step.value});
+    } else if (substeps.size() == 1 &&
+               std::holds_alternative<
+                   SchemaCompilerAssertionPropertyTypeStrict>(
+                   substeps.front())) {
+      children.push_back(unroll<SchemaCompilerAssertionPropertyTypeStrict>(
+          relative_dynamic_context, substeps.front(),
+          dynamic_context.base_instance_location));
+    } else if (substeps.size() == 1 &&
+               std::holds_alternative<SchemaCompilerAssertionPropertyType>(
+                   substeps.front())) {
+      children.push_back(unroll<SchemaCompilerAssertionPropertyType>(
+          relative_dynamic_context, substeps.front(),
+          dynamic_context.base_instance_location));
+
     } else {
       children.push_back(make<SchemaCompilerLogicalWhenDefines>(
           false, context, schema_context, relative_dynamic_context,
           SchemaCompilerValueString{name}, std::move(substeps)));
     }
+  }
+
+  // Optimize away the wrapper when emitting a single instruction
+  if (children.size() == 1 &&
+      std::holds_alternative<SchemaCompilerAssertionPropertyTypeStrict>(
+          children.front())) {
+    return {unroll<SchemaCompilerAssertionPropertyTypeStrict>(
+        dynamic_context, children.front())};
   }
 
   return {make<SchemaCompilerLogicalAnd>(
@@ -470,13 +535,21 @@ auto compiler_draft4_applicator_patternproperties_conditional_annotation(
           SchemaCompilerValueNone{}));
     }
 
-    // Loop over the instance properties
-    children.push_back(make<SchemaCompilerLoopPropertiesRegex>(
-        // Treat this as an internal step
-        false, context, schema_context, relative_dynamic_context,
-        SchemaCompilerValueRegex{std::regex{pattern, std::regex::ECMAScript},
-                                 pattern},
-        std::move(substeps)));
+    // If the `patternProperties` subschema for the given pattern does
+    // nothing, then we can avoid generating an entire loop for it
+    if (!substeps.empty()) {
+      // Loop over the instance properties
+      children.push_back(make<SchemaCompilerLoopPropertiesRegex>(
+          // Treat this as an internal step
+          false, context, schema_context, relative_dynamic_context,
+          SchemaCompilerValueRegex{std::regex{pattern, std::regex::ECMAScript},
+                                   pattern},
+          std::move(substeps)));
+    }
+  }
+
+  if (children.empty()) {
+    return {};
   }
 
   // If the instance is an object...
