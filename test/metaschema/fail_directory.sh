@@ -32,9 +32,6 @@ error: Schema validation failure
   The string value "object" was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/0/\$ref/enum"
-  The string value was expected to validate against the statically referenced schema
-    at instance location "/type"
-    at evaluate path "/properties/type/anyOf/0/\$ref"
   The value was expected to be of type array but it was of type string
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/1/type"

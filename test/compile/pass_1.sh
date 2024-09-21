@@ -21,51 +21,19 @@ EOF
 cat << 'EOF' > "$TMP/expected.json"
 [
   {
-    "category": "loop",
-    "type": "properties-match",
+    "category": "assertion",
+    "type": "property-type-strict",
     "value": {
       "category": "value",
-      "type": "named-indexes",
-      "value": {
-        "foo": 0
-      }
+      "type": "type",
+      "value": "string"
     },
     "schemaResource": "",
-    "absoluteKeywordLocation": "#/properties",
-    "relativeSchemaLocation": "/properties",
-    "relativeInstanceLocation": "",
+    "absoluteKeywordLocation": "#/properties/foo/type",
+    "relativeSchemaLocation": "/properties/foo/type",
+    "relativeInstanceLocation": "/foo",
     "report": true,
-    "dynamic": false,
-    "children": [
-      {
-        "category": "logical",
-        "type": "and",
-        "value": null,
-        "schemaResource": "",
-        "absoluteKeywordLocation": "#/properties",
-        "relativeSchemaLocation": "",
-        "relativeInstanceLocation": "",
-        "report": false,
-        "dynamic": false,
-        "children": [
-          {
-            "category": "assertion",
-            "type": "type-strict",
-            "value": {
-              "category": "value",
-              "type": "type",
-              "value": "string"
-            },
-            "schemaResource": "",
-            "absoluteKeywordLocation": "#/properties/foo/type",
-            "relativeSchemaLocation": "/foo/type",
-            "relativeInstanceLocation": "/foo",
-            "report": true,
-            "dynamic": false
-          }
-        ]
-      }
-    ]
+    "dynamic": false
   }
 ]
 EOF

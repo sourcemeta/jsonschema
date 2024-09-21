@@ -35,9 +35,27 @@ public:
   // Operators
   // We cannot default given that this class references
   // a JSON "value" as an incomplete type
-  auto operator<(const JSONObject<Key, Value> &) const noexcept -> bool {
+
+  auto operator<(const JSONObject<Key, Value> &other) const noexcept -> bool {
+    // The `std::unordered_map` container, by definition, does not provide
+    // ordering. However, we still want some level of ordering to allow
+    // arrays of objects to be sorted.
+
+    // First try a size comparison
+    if (this->data.size() != other.data.size()) {
+      return this->data.size() < other.data.size();
+    }
+
+    // Otherwise do value comparison for common properties
+    for (const auto &[key, value] : this->data) {
+      if (other.data.contains(key) && value < other.data.at(key)) {
+        return true;
+      }
+    }
+
     return false;
   }
+
   auto operator<=(const JSONObject<Key, Value> &other) const noexcept -> bool {
     return this->data <= other.data;
   }

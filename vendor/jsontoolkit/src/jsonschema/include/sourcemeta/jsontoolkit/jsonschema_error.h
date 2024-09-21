@@ -99,6 +99,20 @@ private:
   std::string message_;
 };
 
+/// @ingroup jsonschema
+/// An error that represents a schema evaluation error event
+class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaEvaluationError
+    : public std::exception {
+public:
+  SchemaEvaluationError(std::string message) : message_{std::move(message)} {}
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+private:
+  std::string message_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

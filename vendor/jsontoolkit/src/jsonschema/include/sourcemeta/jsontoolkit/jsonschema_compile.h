@@ -147,6 +147,8 @@ struct SchemaCompilerAssertionLess;
 struct SchemaCompilerAssertionUnique;
 struct SchemaCompilerAssertionDivisible;
 struct SchemaCompilerAssertionStringType;
+struct SchemaCompilerAssertionPropertyType;
+struct SchemaCompilerAssertionPropertyTypeStrict;
 struct SchemaCompilerAnnotationEmit;
 struct SchemaCompilerAnnotationWhenArraySizeEqual;
 struct SchemaCompilerAnnotationWhenArraySizeGreater;
@@ -197,7 +199,9 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAssertionLessEqual, SchemaCompilerAssertionGreater,
     SchemaCompilerAssertionLess, SchemaCompilerAssertionUnique,
     SchemaCompilerAssertionDivisible, SchemaCompilerAssertionStringType,
-    SchemaCompilerAnnotationEmit, SchemaCompilerAnnotationWhenArraySizeEqual,
+    SchemaCompilerAssertionPropertyType,
+    SchemaCompilerAssertionPropertyTypeStrict, SchemaCompilerAnnotationEmit,
+    SchemaCompilerAnnotationWhenArraySizeEqual,
     SchemaCompilerAnnotationWhenArraySizeGreater,
     SchemaCompilerAnnotationToParent, SchemaCompilerAnnotationBasenameToParent,
     SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
@@ -371,6 +375,16 @@ DEFINE_STEP_WITH_VALUE(Assertion, Divisible, SchemaCompilerValueJSON)
 /// @brief Represents a compiler assertion step that checks that a string is of
 /// a certain type
 DEFINE_STEP_WITH_VALUE(Assertion, StringType, SchemaCompilerValueStringType)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks that an instance
+/// property is of a given type if present
+DEFINE_STEP_WITH_VALUE(Assertion, PropertyType, SchemaCompilerValueType)
+
+/// @ingroup jsonschema_compiler_instructions
+/// @brief Represents a compiler assertion step that checks that an instance
+/// property is of a given type if present (strict mode)
+DEFINE_STEP_WITH_VALUE(Assertion, PropertyTypeStrict, SchemaCompilerValueType)
 
 /// @ingroup jsonschema_compiler_instructions
 /// @brief Represents a compiler step that emits an annotation
@@ -613,7 +627,7 @@ enum class SchemaCompilerEvaluationType { Pre, Post };
 using SchemaCompilerEvaluationCallback =
     std::function<void(const SchemaCompilerEvaluationType, bool,
                        const SchemaCompilerTemplate::value_type &,
-                       const Pointer &, const Pointer &, const JSON &)>;
+                       const WeakPointer &, const WeakPointer &, const JSON &)>;
 
 // TODO: Support standard output formats too
 
@@ -660,7 +674,7 @@ using SchemaCompilerEvaluationCallback =
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaCompilerErrorTraceOutput {
 public:
   SchemaCompilerErrorTraceOutput(const JSON &instance,
-                                 const Pointer &base = empty_pointer);
+                                 const WeakPointer &base = empty_weak_pointer);
 
   // Prevent accidental copies
   SchemaCompilerErrorTraceOutput(const SchemaCompilerErrorTraceOutput &) =
@@ -670,14 +684,14 @@ public:
 
   struct Entry {
     const std::string message;
-    const Pointer instance_location;
-    const Pointer evaluate_path;
+    const WeakPointer instance_location;
+    const WeakPointer evaluate_path;
   };
 
   auto operator()(const SchemaCompilerEvaluationType type, const bool result,
                   const SchemaCompilerTemplate::value_type &step,
-                  const Pointer &evaluate_path,
-                  const Pointer &instance_location,
+                  const WeakPointer &evaluate_path,
+                  const WeakPointer &instance_location,
                   const JSON &annotation) -> void;
 
   using container_type = typename std::vector<Entry>;
@@ -695,9 +709,9 @@ private:
 #pragma warning(disable : 4251)
 #endif
   const JSON &instance_;
-  const Pointer base_;
+  const WeakPointer base_;
   container_type output;
-  std::set<Pointer> mask;
+  std::set<WeakPointer> mask;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
@@ -709,7 +723,7 @@ private:
 /// Useful as the building block for producing user-friendly evaluation results.
 auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 describe(const bool valid, const SchemaCompilerTemplate::value_type &step,
-         const Pointer &evaluate_path, const Pointer &instance_location,
+         const WeakPointer &evaluate_path, const WeakPointer &instance_location,
          const JSON &instance, const JSON &annotation) -> std::string;
 
 /// @ingroup jsonschema_compiler

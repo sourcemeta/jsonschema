@@ -26,14 +26,12 @@ auto sourcemeta::jsonschema::cli::bundle(
     sourcemeta::jsontoolkit::bundle(
         schema, sourcemeta::jsontoolkit::default_schema_walker,
         resolver(options, options.contains("h") || options.contains("http")),
-        sourcemeta::jsontoolkit::BundleOptions::WithoutIdentifiers)
-        .wait();
+        sourcemeta::jsontoolkit::BundleOptions::WithoutIdentifiers);
   } else {
     sourcemeta::jsontoolkit::bundle(
         schema, sourcemeta::jsontoolkit::default_schema_walker,
         resolver(options, options.contains("h") || options.contains("http")),
-        sourcemeta::jsontoolkit::BundleOptions::Default)
-        .wait();
+        sourcemeta::jsontoolkit::BundleOptions::Default);
   }
 
   sourcemeta::jsontoolkit::prettify(

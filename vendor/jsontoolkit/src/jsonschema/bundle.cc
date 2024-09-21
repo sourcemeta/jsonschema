@@ -197,8 +197,7 @@ namespace sourcemeta::jsontoolkit {
 
 auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver, const BundleOptions options,
-            const std::optional<std::string> &default_dialect)
-    -> std::future<void> {
+            const std::optional<std::string> &default_dialect) -> void {
   const auto vocabularies{
       sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)
           .get()};
@@ -209,20 +208,16 @@ auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
   if (options == BundleOptions::WithoutIdentifiers) {
     remove_identifiers(schema, walker, resolver, default_dialect);
   }
-
-  return std::promise<void>{}.get_future();
 }
 
 auto bundle(const sourcemeta::jsontoolkit::JSON &schema,
             const SchemaWalker &walker, const SchemaResolver &resolver,
             const BundleOptions options,
             const std::optional<std::string> &default_dialect)
-    -> std::future<sourcemeta::jsontoolkit::JSON> {
+    -> sourcemeta::jsontoolkit::JSON {
   sourcemeta::jsontoolkit::JSON copy = schema;
-  bundle(copy, walker, resolver, options, default_dialect).wait();
-  std::promise<sourcemeta::jsontoolkit::JSON> promise;
-  promise.set_value(std::move(copy));
-  return promise.get_future();
+  bundle(copy, walker, resolver, options, default_dialect);
+  return copy;
 }
 
 } // namespace sourcemeta::jsontoolkit

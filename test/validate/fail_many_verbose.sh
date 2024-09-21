@@ -47,9 +47,6 @@ error: Schema validation failure
   The value was expected to be of type string but it was of type integer
     at instance location "/foo"
     at evaluate path "/properties/foo/type"
-  The object value was expected to validate against the single defined property subschema
-    at instance location ""
-    at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance_3.json
   matches $(realpath "$TMP")/schema.json
 EOF

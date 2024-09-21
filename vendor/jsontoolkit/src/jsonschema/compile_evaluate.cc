@@ -19,7 +19,7 @@ namespace {
 
 class EvaluationContext {
 public:
-  using Pointer = sourcemeta::jsontoolkit::Pointer;
+  using Pointer = sourcemeta::jsontoolkit::WeakPointer;
   using JSON = sourcemeta::jsontoolkit::JSON;
   using Template = sourcemeta::jsontoolkit::SchemaCompilerTemplate;
   EvaluationContext(const JSON &instance) : instances_{instance} {};
@@ -166,16 +166,23 @@ public:
   }
 
   template <typename T> auto push(const T &step) -> void {
-    assert(step.relative_instance_location.size() <= 1);
+    // Guard against infinite recursion in a cheap manner, as
+    // infinite recursion will manifest itself through huge
+    // ever-growing evaluate paths
+    constexpr auto EVALUATE_PATH_LIMIT{400};
+    if (this->evaluate_path_.size() > EVALUATE_PATH_LIMIT) [[unlikely]] {
+      throw sourcemeta::jsontoolkit::SchemaEvaluationError(
+          "The evaluation path depth limit was reached "
+          "likely due to infinite recursion");
+    }
+
     this->frame_sizes.emplace_back(step.relative_schema_location.size(),
                                    step.relative_instance_location.size());
     this->evaluate_path_.push_back(step.relative_schema_location);
     this->instance_location_.push_back(step.relative_instance_location);
-    assert(step.relative_instance_location.size() <= 1);
     if (!step.relative_instance_location.empty()) {
       this->instances_.emplace_back(
-          get(this->instances_.back().get(),
-              step.relative_instance_location.back()));
+          get(this->instances_.back().get(), step.relative_instance_location));
     }
 
     if (step.dynamic) {
@@ -192,8 +199,7 @@ public:
     const auto &sizes{this->frame_sizes.back()};
     this->evaluate_path_.pop_back(sizes.first);
     this->instance_location_.pop_back(sizes.second);
-    assert(sizes.second <= 1);
-    if (sizes.second == 1) {
+    if (sizes.second > 0) {
       this->instances_.pop_back();
     }
 
@@ -598,6 +604,34 @@ auto evaluate_step(
     }
 
     EVALUATE_END(assertion, SchemaCompilerAssertionStringType);
+  } else if (IS_STEP(SchemaCompilerAssertionPropertyType)) {
+    EVALUATE_BEGIN_NO_TARGET(assertion, SchemaCompilerAssertionPropertyType,
+                             // Note that here are are referring to the parent
+                             // object that might hold the given property,
+                             // before traversing into the actual property
+                             context.resolve_target().is_object() &&
+                                 has(context.resolve_target(),
+                                     assertion.relative_instance_location));
+    // Now here we refer to the actual property
+    const auto &target{context.resolve_target()};
+    // In non-strict mode, we consider a real number that represents an
+    // integer to be an integer
+    result =
+        target.type() == assertion.value ||
+        (assertion.value == JSON::Type::Integer && target.is_integer_real());
+    EVALUATE_END(assertion, SchemaCompilerAssertionPropertyType);
+  } else if (IS_STEP(SchemaCompilerAssertionPropertyTypeStrict)) {
+    EVALUATE_BEGIN_NO_TARGET(assertion,
+                             SchemaCompilerAssertionPropertyTypeStrict,
+                             // Note that here are are referring to the parent
+                             // object that might hold the given property,
+                             // before traversing into the actual property
+                             context.resolve_target().is_object() &&
+                                 has(context.resolve_target(),
+                                     assertion.relative_instance_location));
+    // Now here we refer to the actual property
+    result = context.resolve_target().type() == assertion.value;
+    EVALUATE_END(assertion, SchemaCompilerAssertionPropertyTypeStrict);
   } else if (IS_STEP(SchemaCompilerLogicalOr)) {
     EVALUATE_BEGIN_NO_PRECONDITION(logical, SchemaCompilerLogicalOr);
     result = logical.children.empty();

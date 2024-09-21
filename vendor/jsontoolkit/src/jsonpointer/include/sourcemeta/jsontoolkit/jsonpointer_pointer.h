@@ -5,10 +5,12 @@
 
 #include <algorithm>        // std::copy, std::equal
 #include <cassert>          // assert
+#include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::advance, std::back_inserter
 #include <sstream>          // std::basic_ostringstream
 #include <stdexcept>        // std::runtime_error
+#include <type_traits>      // std::enable_if_t, std::is_same_v
 #include <utility>          // std::move
 #include <vector>           // std::vector
 
@@ -236,6 +238,53 @@ public:
     this->data.reserve(this->data.size() + other.size());
     std::move(other.data.begin(), other.data.end(),
               std::back_inserter(this->data));
+  }
+
+  /// Push a JSON Pointer into the back of a JSON WeakPointer. Make sure that
+  /// the pointer you are pushing remains alive for the duration of the
+  /// WeakPointer. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const std::string foo{"foo"};
+  /// sourcemeta::jsontoolkit::WeakPointer pointer{std::cref(foo)};
+  /// const sourcemeta::jsontoolkit::Pointer other{"bar", "baz"};
+  /// pointer.push_back(other);
+  /// assert(pointer.size() == 3);
+  ///
+  /// assert(pointer.at(0).is_property());
+  /// assert(pointer.at(1).is_property());
+  /// assert(pointer.at(2).is_property());
+  ///
+  /// assert(pointer.at(0).to_property() == "foo");
+  /// assert(pointer.at(1).to_property() == "bar");
+  /// assert(pointer.at(2).to_property() == "baz");
+  /// ```
+  template <typename OtherT,
+            typename = std::enable_if_t<std::is_same_v<
+                PropertyT, std::reference_wrapper<const OtherT>>>>
+  auto push_back(const GenericPointer<OtherT> &other) -> void {
+    if (other.empty()) {
+      return;
+    } else if (other.size() == 1) {
+      const auto &token{other.back()};
+      if (token.is_property()) {
+        this->data.emplace_back(token.to_property());
+      } else {
+        this->data.emplace_back(token.to_index());
+      }
+    } else {
+      this->data.reserve(this->data.size() + other.size());
+      for (const auto &token : other) {
+        if (token.is_property()) {
+          this->data.emplace_back(token.to_property());
+        } else {
+          this->data.emplace_back(token.to_index());
+        }
+      }
+    }
   }
 
   /// Push a property token into the back of a JSON Pointer.
