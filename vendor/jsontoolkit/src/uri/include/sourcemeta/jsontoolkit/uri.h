@@ -264,8 +264,8 @@ public:
   /// assert(uri.recompose_without_fragment().value() ==
   /// "https://sourcemeta.com/foo");
   /// ```
-  [[nodiscard]] auto
-  recompose_without_fragment() const -> std::optional<std::string>;
+  [[nodiscard]] auto recompose_without_fragment() const
+      -> std::optional<std::string>;
 
   /// Recompose and canonicalize a URI. For example:
   ///

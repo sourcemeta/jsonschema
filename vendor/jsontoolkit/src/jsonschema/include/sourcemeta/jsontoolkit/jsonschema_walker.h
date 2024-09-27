@@ -7,6 +7,7 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
+#include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
 #include <map>         // std::map
 #include <optional>    // std::optional
@@ -26,7 +27,7 @@ namespace sourcemeta::jsontoolkit {
 #endif
 /// @ingroup jsonschema
 /// Determines the possible states of a schema walk strategy
-enum class SchemaWalkerStrategy {
+enum class SchemaWalkerStrategy : std::uint8_t {
   /// The JSON Schema keyword is not an applicator
   None,
   /// The JSON Schema keyword is an applicator that potentially

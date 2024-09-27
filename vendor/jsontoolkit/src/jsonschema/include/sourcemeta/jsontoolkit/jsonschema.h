@@ -46,7 +46,7 @@ auto is_schema(const JSON &schema) -> bool;
 
 /// @ingroup jsonschema
 /// The strategy to follow when attempting to identify a schema
-enum class IdentificationStrategy {
+enum class IdentificationStrategy : std::uint8_t {
   /// Only proceed if we can guarantee the identifier is valid
   Strict,
 
@@ -316,8 +316,8 @@ auto vocabularies(const SchemaResolver &resolver,
 /// std::cout << stream.str() << std::endl;
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-auto schema_format_compare(const JSON::String &left,
-                           const JSON::String &right) -> bool;
+auto schema_format_compare(const JSON::String &left, const JSON::String &right)
+    -> bool;
 
 } // namespace sourcemeta::jsontoolkit
 

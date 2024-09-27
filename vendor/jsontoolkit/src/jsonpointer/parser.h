@@ -14,8 +14,9 @@
 namespace sourcemeta::jsontoolkit::internal {
 template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
-inline auto reset(
-    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream) -> void {
+inline auto
+reset(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream)
+    -> void {
   stream.str("");
   stream.clear();
 }

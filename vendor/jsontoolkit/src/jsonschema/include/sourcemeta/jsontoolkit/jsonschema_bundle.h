@@ -7,6 +7,7 @@
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
+#include <cstdint>  // std::uint8_t
 #include <future>   // std::future
 #include <optional> // std::optional, std::nullopt
 #include <string>   // std::string
@@ -17,7 +18,7 @@ namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonschema
 /// A set of options that modify the behavior of bundling
-enum class BundleOptions {
+enum class BundleOptions : std::uint8_t {
   /// Perform standard JSON Schema bundling
   Default,
 

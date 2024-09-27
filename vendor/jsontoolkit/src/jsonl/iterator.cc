@@ -102,8 +102,8 @@ ConstJSONLIterator::ConstJSONLIterator(
 
 ConstJSONLIterator::~ConstJSONLIterator() {}
 
-auto operator==(const ConstJSONLIterator &left,
-                const ConstJSONLIterator &right) -> bool {
+auto operator==(const ConstJSONLIterator &left, const ConstJSONLIterator &right)
+    -> bool {
   return (!left.data && !right.data) ||
          (left.data && right.data &&
           left.internal->current == right.internal->current);

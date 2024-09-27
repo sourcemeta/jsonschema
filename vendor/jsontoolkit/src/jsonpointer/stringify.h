@@ -14,8 +14,8 @@
 namespace sourcemeta::jsontoolkit::internal {
 inline auto
 write_character(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-                const JSON::Char character,
-                const bool perform_uri_escaping) -> void {
+                const JSON::Char character, const bool perform_uri_escaping)
+    -> void {
   // The dollar sign does not need to be encoded in URI fragments
   // See `fragment` in https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   if (perform_uri_escaping && character != '$') {

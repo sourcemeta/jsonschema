@@ -6,6 +6,7 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
+#include <cstdint>  // std::uint8_t
 #include <future>   // std::promise, std::future
 #include <map>      // std::map
 #include <optional> // std::optional
@@ -15,7 +16,7 @@ namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonschema
 /// The anchor type
-enum class AnchorType { Static, Dynamic, All };
+enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 
 /// @ingroup jsonschema
 ///

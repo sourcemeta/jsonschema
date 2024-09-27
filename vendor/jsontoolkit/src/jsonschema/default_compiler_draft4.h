@@ -15,10 +15,11 @@
 namespace internal {
 using namespace sourcemeta::jsontoolkit;
 
-auto compiler_draft4_core_ref(const SchemaCompilerContext &context,
-                              const SchemaCompilerSchemaContext &schema_context,
-                              const SchemaCompilerDynamicContext
-                                  &dynamic_context) -> SchemaCompilerTemplate {
+auto compiler_draft4_core_ref(
+    const SchemaCompilerContext &context,
+    const SchemaCompilerSchemaContext &schema_context,
+    const SchemaCompilerDynamicContext &dynamic_context)
+    -> SchemaCompilerTemplate {
   // Determine the label
   const auto type{ReferenceType::Static};
   const auto current{
@@ -84,7 +85,7 @@ auto compiler_draft4_core_ref(const SchemaCompilerContext &context,
   return {make<SchemaCompilerControlLabel>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{label},
-      compile(context, std::move(new_schema_context), relative_dynamic_context,
+      compile(context, new_schema_context, relative_dynamic_context,
               empty_pointer, empty_pointer, reference.destination))};
 }
 
@@ -103,9 +104,29 @@ auto compiler_draft4_validation_type(
       return {make<SchemaCompilerAssertionTypeStrict>(
           true, context, schema_context, dynamic_context, JSON::Type::Boolean)};
     } else if (type == "object") {
+      const auto minimum{
+          unsigned_integer_property(schema_context.schema, "minProperties", 0)};
+      const auto maximum{
+          unsigned_integer_property(schema_context.schema, "maxProperties")};
+      if (minimum > 0 || maximum.has_value()) {
+        return {make<SchemaCompilerAssertionTypeObjectBounded>(
+            true, context, schema_context, dynamic_context,
+            {minimum, maximum, false})};
+      }
+
       return {make<SchemaCompilerAssertionTypeStrict>(
           true, context, schema_context, dynamic_context, JSON::Type::Object)};
     } else if (type == "array") {
+      const auto minimum{
+          unsigned_integer_property(schema_context.schema, "minItems", 0)};
+      const auto maximum{
+          unsigned_integer_property(schema_context.schema, "maxItems")};
+      if (minimum > 0 || maximum.has_value()) {
+        return {make<SchemaCompilerAssertionTypeArrayBounded>(
+            true, context, schema_context, dynamic_context,
+            {minimum, maximum, false})};
+      }
+
       return {make<SchemaCompilerAssertionTypeStrict>(
           true, context, schema_context, dynamic_context, JSON::Type::Array)};
     } else if (type == "number") {
@@ -116,6 +137,16 @@ auto compiler_draft4_validation_type(
       return {make<SchemaCompilerAssertionTypeStrict>(
           true, context, schema_context, dynamic_context, JSON::Type::Integer)};
     } else if (type == "string") {
+      const auto minimum{
+          unsigned_integer_property(schema_context.schema, "minLength", 0)};
+      const auto maximum{
+          unsigned_integer_property(schema_context.schema, "maxLength")};
+      if (minimum > 0 || maximum.has_value()) {
+        return {make<SchemaCompilerAssertionTypeStringBounded>(
+            true, context, schema_context, dynamic_context,
+            {minimum, maximum, false})};
+      }
+
       return {make<SchemaCompilerAssertionTypeStrict>(
           true, context, schema_context, dynamic_context, JSON::Type::String)};
     } else {
@@ -257,8 +288,8 @@ auto compiler_draft4_applicator_allof(
 auto compiler_draft4_applicator_anyof_conditional_exhaustive(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool exhaustive) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool exhaustive)
+    -> SchemaCompilerTemplate {
   assert(schema_context.schema.at(dynamic_context.keyword).is_array());
   assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
@@ -314,8 +345,8 @@ auto compiler_draft4_applicator_oneof(
 auto compiler_draft4_applicator_properties_conditional_annotation(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   assert(schema_context.schema.at(dynamic_context.keyword).is_object());
   if (schema_context.schema.at(dynamic_context.keyword).empty()) {
     return {};
@@ -376,7 +407,7 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
       is_required <= (size / 2) &&
       // If `properties` only defines a relatively small amount of properties,
       // then its probably still faster to unroll
-      schema_context.schema.at(dynamic_context.keyword).size() > 3};
+      schema_context.schema.at(dynamic_context.keyword).size() > 5};
 
   if (prefer_loop_over_instance) {
     SchemaCompilerValueNamedIndexes indexes;
@@ -497,8 +528,8 @@ auto compiler_draft4_applicator_properties(
 auto compiler_draft4_applicator_patternproperties_conditional_annotation(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   assert(schema_context.schema.at(dynamic_context.keyword).is_object());
   if (schema_context.schema.at(dynamic_context.keyword).empty()) {
     return {};
@@ -570,8 +601,8 @@ auto compiler_draft4_applicator_patternproperties(
 auto compiler_draft4_applicator_additionalproperties_conditional_annotation(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "object") {
@@ -612,6 +643,24 @@ auto compiler_draft4_applicator_additionalproperties_conditional_annotation(
         true, context, schema_context, dynamic_context, std::move(filter),
         std::move(children))};
   } else {
+    if (children.size() == 1) {
+      // Optimize `additionalProperties` set to just `type`, which is a
+      // pretty common pattern
+      if (std::holds_alternative<SchemaCompilerAssertionTypeStrict>(
+              children.front())) {
+        const auto &type_step{
+            std::get<SchemaCompilerAssertionTypeStrict>(children.front())};
+        return {make<SchemaCompilerLoopPropertiesTypeStrict>(
+            true, context, schema_context, dynamic_context, type_step.value)};
+      } else if (std::holds_alternative<SchemaCompilerAssertionType>(
+                     children.front())) {
+        const auto &type_step{
+            std::get<SchemaCompilerAssertionType>(children.front())};
+        return {make<SchemaCompilerLoopPropertiesType>(
+            true, context, schema_context, dynamic_context, type_step.value)};
+      }
+    }
+
     return {make<SchemaCompilerLoopProperties>(
         true, context, schema_context, dynamic_context,
         SchemaCompilerValueNone{}, std::move(children))};
@@ -709,8 +758,8 @@ auto compiler_draft4_applicator_not(
 auto compiler_draft4_applicator_items_array(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   assert(schema_context.schema.at(dynamic_context.keyword).is_array());
   const auto items_size{
       schema_context.schema.at(dynamic_context.keyword).size()};
@@ -789,8 +838,8 @@ auto compiler_draft4_applicator_items_array(
 auto compiler_draft4_applicator_items_conditional_annotation(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
@@ -863,8 +912,8 @@ auto compiler_draft4_applicator_additionalitems_from_cursor(
 auto compiler_draft4_applicator_additionalitems_conditional_annotation(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
@@ -1005,8 +1054,13 @@ auto compiler_draft4_validation_maxlength(
     return {};
   }
 
-  // TODO: As an optimization, if `minLength` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "string") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionStringSizeLess>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{
@@ -1030,8 +1084,13 @@ auto compiler_draft4_validation_minlength(
     return {};
   }
 
-  // TODO: As an optimization, if `maxLength` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "string") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionStringSizeGreater>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{
@@ -1055,8 +1114,13 @@ auto compiler_draft4_validation_maxitems(
     return {};
   }
 
-  // TODO: As an optimization, if `minItems` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "array") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionArraySizeLess>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{
@@ -1080,8 +1144,13 @@ auto compiler_draft4_validation_minitems(
     return {};
   }
 
-  // TODO: As an optimization, if `maxItems` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "array") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionArraySizeGreater>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{
@@ -1105,8 +1174,13 @@ auto compiler_draft4_validation_maxproperties(
     return {};
   }
 
-  // TODO: As an optimization, if `minProperties` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "object") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionObjectSizeLess>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{
@@ -1130,8 +1204,13 @@ auto compiler_draft4_validation_minproperties(
     return {};
   }
 
-  // TODO: As an optimization, if `maxProperties` is set to the same number, do
-  // a single size equality assertion
+  // We'll handle it at the type level as an optimization
+  if (schema_context.schema.defines("type") &&
+      schema_context.schema.at("type").is_string() &&
+      schema_context.schema.at("type").to_string() == "object") {
+    return {};
+  }
+
   return {make<SchemaCompilerAssertionObjectSizeGreater>(
       true, context, schema_context, dynamic_context,
       SchemaCompilerValueUnsignedInteger{

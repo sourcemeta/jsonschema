@@ -11,9 +11,10 @@ MapSchemaResolver::MapSchemaResolver() {}
 MapSchemaResolver::MapSchemaResolver(const SchemaResolver &resolver)
     : default_resolver{resolver} {}
 
-auto MapSchemaResolver::add(
-    const JSON &schema, const std::optional<std::string> &default_dialect,
-    const std::optional<std::string> &default_id) -> void {
+auto MapSchemaResolver::add(const JSON &schema,
+                            const std::optional<std::string> &default_dialect,
+                            const std::optional<std::string> &default_id)
+    -> void {
   assert(sourcemeta::jsontoolkit::is_schema(schema));
 
   // Registering the top-level schema is not enough. We need to check

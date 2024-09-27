@@ -108,8 +108,8 @@ auto compiler_2019_09_core_annotation(
 auto compiler_2019_09_applicator_contains_conditional_annotate(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context,
-    const bool annotate) -> SchemaCompilerTemplate {
+    const SchemaCompilerDynamicContext &dynamic_context, const bool annotate)
+    -> SchemaCompilerTemplate {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {

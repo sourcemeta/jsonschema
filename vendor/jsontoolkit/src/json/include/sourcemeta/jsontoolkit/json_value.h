@@ -12,6 +12,7 @@
 #include <functional>       // std::less, std::reference_wrapper
 #include <initializer_list> // std::initializer_list
 #include <memory>           // std::allocator
+#include <optional>         // std::optional
 #include <set>              // std::set
 #include <sstream>          // std::basic_istringstream
 #include <string>           // std::basic_string, std::char_traits
@@ -650,8 +651,8 @@ public:
   ///   sourcemeta::jsontoolkit::parse("{ \"1\": "foo" }");
   /// assert(my_array.at(1).to_string() == "foo");
   /// ```
-  [[nodiscard]] auto
-  at(const typename Array::size_type index) const -> const JSON &;
+  [[nodiscard]] auto at(const typename Array::size_type index) const
+      -> const JSON &;
 
   /// This method retrieves a element by its index. If the input JSON instance
   /// is an object, a property that corresponds to the stringified integer will
@@ -847,6 +848,22 @@ public:
   /// ```
   [[nodiscard]] auto empty() const -> bool;
 
+  /// This method checks whether an input JSON object defines a specific key
+  /// and returns the value if it does. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  /// EXPECT_TRUE(document.is_object());
+  /// const auto result = document.try_at("foo");
+  /// EXPECT_TRUE(result.has_value());
+  /// EXPECT_EQ(result.value().get().to_integer(), 1);
+  [[nodiscard]] auto try_at(const String &key) const
+      -> std::optional<std::reference_wrapper<const JSON>>;
+
   /// This method checks whether an input JSON object defines a specific key.
   /// For example:
   ///
@@ -873,8 +890,8 @@ public:
   /// assert(document.defines(0));
   /// assert(!document.defines(1));
   /// ```
-  [[nodiscard]] auto
-  defines(const typename Array::size_type index) const -> bool;
+  [[nodiscard]] auto defines(const typename Array::size_type index) const
+      -> bool;
 
   /// This method checks whether an input JSON object defines at least one given
   /// key.
@@ -910,8 +927,8 @@ public:
   ///
   /// assert(document.defines_any({ "foo", "qux" }));
   /// ```
-  [[nodiscard]] auto
-  defines_any(std::initializer_list<String> keys) const -> bool;
+  [[nodiscard]] auto defines_any(std::initializer_list<String> keys) const
+      -> bool;
 
   /// This method checks if an JSON array contains a given JSON instance. For
   /// example:
