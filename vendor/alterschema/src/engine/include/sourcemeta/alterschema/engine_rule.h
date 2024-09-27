@@ -30,7 +30,7 @@ namespace sourcemeta::alterschema {
 ///
 /// class MyRule final : public sourcemeta::alterschema::Rule {
 /// public:
-///   MyRule() : sourcemeta::alterschema::Rule("my_rule") {};
+///   MyRule() : sourcemeta::alterschema::Rule("my_rule", "My rule") {};
 ///
 ///   [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
 ///                                const std::string &dialect,
@@ -50,7 +50,7 @@ namespace sourcemeta::alterschema {
 class SOURCEMETA_ALTERSCHEMA_ENGINE_EXPORT Rule {
 public:
   /// Create a transformation rule. Each rule must have a unique name.
-  Rule(std::string &&name, std::string &&message = "Condition matched");
+  Rule(std::string &&name, std::string &&message);
 
   // Necessary to wrap rules on smart pointers
   virtual ~Rule() = default;

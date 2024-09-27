@@ -16,13 +16,15 @@ auto sourcemeta::jsonschema::cli::lint(
 
   sourcemeta::alterschema::Bundle bundle;
   sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::Modernize);
-  sourcemeta::alterschema::add(
       bundle, sourcemeta::alterschema::LinterCategory::AntiPattern);
   sourcemeta::alterschema::add(
       bundle, sourcemeta::alterschema::LinterCategory::Simplify);
   sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::Superfluous);
+  sourcemeta::alterschema::add(
       bundle, sourcemeta::alterschema::LinterCategory::Redundant);
+  sourcemeta::alterschema::add(
+      bundle, sourcemeta::alterschema::LinterCategory::SyntaxSugar);
 
   bool result{true};
 

@@ -70,4 +70,12 @@ if(ALTERSCHEMA_TESTS)
   if(ALTERSCHEMA_LINTER)
     add_subdirectory(test/linter)
   endif()
+
+  if(PROJECT_IS_TOP_LEVEL)
+    # Otherwise we need the child project to link
+    # against the sanitizers too.
+    if(NOT ALTERSCHEMA_ADDRESS_SANITIZER AND NOT ALTERSCHEMA_UNDEFINED_SANITIZER)
+      add_subdirectory(test/packaging)
+    endif()
+  endif()
 endif()
