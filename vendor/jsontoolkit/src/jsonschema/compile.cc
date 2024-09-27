@@ -184,6 +184,22 @@ auto compile(const SchemaCompilerContext &context,
                 .canonicalize()
                 .recompose()};
 
+  // Otherwise the recursion attempt is non-sense
+  if (!context.frame.contains({ReferenceType::Static, destination})) {
+    throw SchemaReferenceError(
+        destination, schema_context.relative_pointer,
+        "The target of the reference does not exist in the schema");
+  }
+
+  const auto &entry{context.frame.at({ReferenceType::Static, destination})};
+  const auto &new_schema{get(context.root, entry.pointer)};
+
+  if (!is_schema(new_schema)) {
+    throw SchemaReferenceError(
+        destination, schema_context.relative_pointer,
+        "The target of the reference is not a valid schema");
+  }
+
   const Pointer destination_pointer{
       dynamic_context.keyword.empty()
           ? dynamic_context.base_schema_location.concat(schema_suffix)
@@ -191,16 +207,6 @@ auto compile(const SchemaCompilerContext &context,
                 .concat({dynamic_context.keyword})
                 .concat(schema_suffix)};
 
-  // Otherwise the recursion attempt is non-sense
-  if (!context.frame.contains({ReferenceType::Static, destination})) {
-    throw SchemaReferenceError(
-        destination, destination_pointer,
-        "The target of the reference does not exist in the schema");
-  }
-
-  const auto &entry{context.frame.at({ReferenceType::Static, destination})};
-
-  const auto &new_schema{get(context.root, entry.pointer)};
   return compile_subschema(
       context,
       {entry.relative_pointer, new_schema,

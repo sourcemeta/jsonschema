@@ -35,8 +35,8 @@ get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
 }
 
 static auto get_data(const sourcemeta::jsontoolkit::JSON &test_case,
-                     const std::filesystem::path &base,
-                     const bool verbose) -> sourcemeta::jsontoolkit::JSON {
+                     const std::filesystem::path &base, const bool verbose)
+    -> sourcemeta::jsontoolkit::JSON {
   assert(base.is_absolute());
   assert(test_case.is_object());
   assert(test_case.defines("data") || test_case.defines("dataPath"));

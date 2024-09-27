@@ -271,8 +271,9 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
   return null_stream;
 }
 
-auto parse_extensions(const std::map<std::string, std::vector<std::string>>
-                          &options) -> std::set<std::string> {
+auto parse_extensions(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::set<std::string> {
   std::set<std::string> result;
 
   if (options.contains("extension")) {
@@ -296,8 +297,9 @@ auto parse_extensions(const std::map<std::string, std::vector<std::string>>
   return result;
 }
 
-auto parse_ignore(const std::map<std::string, std::vector<std::string>>
-                      &options) -> std::set<std::filesystem::path> {
+auto parse_ignore(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::set<std::filesystem::path> {
   std::set<std::filesystem::path> result;
 
   if (options.contains("ignore")) {

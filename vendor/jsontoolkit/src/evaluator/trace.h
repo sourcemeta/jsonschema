@@ -1,5 +1,5 @@
-#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_TRACE_H_
-#define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_TRACE_H_
+#ifndef SOURCEMETA_JSONTOOLKIT_EVALUATOR_TRACE_H_
+#define SOURCEMETA_JSONTOOLKIT_EVALUATOR_TRACE_H_
 
 // We only perform tracing on debugging builds, at least for now
 #if !defined(NDEBUG) && defined(__APPLE__) && defined(__clang__)

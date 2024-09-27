@@ -32,7 +32,7 @@ error: Schema validation failure
   The string value "object" was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/0/\$ref/enum"
-  The value was expected to be of type array but it was of type string
+  The value was expected to consist of an array of at least 1 item
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/1/type"
   The string value was expected to validate against at least one of the 2 given subschemas

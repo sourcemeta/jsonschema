@@ -155,8 +155,9 @@ auto sourcemeta::jsontoolkit::identify(
   return identifier.to_string();
 }
 
-auto sourcemeta::jsontoolkit::anonymize(
-    JSON &schema, const std::string &base_dialect) -> void {
+auto sourcemeta::jsontoolkit::anonymize(JSON &schema,
+                                        const std::string &base_dialect)
+    -> void {
   if (schema.is_object()) {
     schema.erase(id_keyword(base_dialect));
   }
@@ -176,9 +177,10 @@ auto sourcemeta::jsontoolkit::reidentify(
   reidentify(schema, new_identifier, base_dialect.value());
 }
 
-auto sourcemeta::jsontoolkit::reidentify(
-    JSON &schema, const std::string &new_identifier,
-    const std::string &base_dialect) -> void {
+auto sourcemeta::jsontoolkit::reidentify(JSON &schema,
+                                         const std::string &new_identifier,
+                                         const std::string &base_dialect)
+    -> void {
   assert(is_schema(schema));
   assert(schema.is_object());
   schema.assign(id_keyword(base_dialect), JSON{new_identifier});
@@ -335,9 +337,10 @@ auto sourcemeta::jsontoolkit::vocabularies(
                       maybe_dialect.value());
 }
 
-auto sourcemeta::jsontoolkit::vocabularies(
-    const SchemaResolver &resolver, const std::string &base_dialect,
-    const std::string &dialect) -> std::future<std::map<std::string, bool>> {
+auto sourcemeta::jsontoolkit::vocabularies(const SchemaResolver &resolver,
+                                           const std::string &base_dialect,
+                                           const std::string &dialect)
+    -> std::future<std::map<std::string, bool>> {
   // As a performance optimization shortcut
   if (base_dialect == dialect) {
     if (dialect == "https://json-schema.org/draft/2020-12/schema") {

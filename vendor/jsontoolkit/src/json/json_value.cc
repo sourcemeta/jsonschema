@@ -284,8 +284,8 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   }
 }
 
-[[nodiscard]] auto
-JSON::at(const typename JSON::Array::size_type index) const -> const JSON & {
+[[nodiscard]] auto JSON::at(const typename JSON::Array::size_type index) const
+    -> const JSON & {
   // In practice, this case only applies in some edge cases when
   // using JSON Pointers
   if (this->is_object()) [[unlikely]] {
@@ -297,8 +297,8 @@ JSON::at(const typename JSON::Array::size_type index) const -> const JSON & {
   return std::get<JSON::Array>(this->data).data.at(index);
 }
 
-[[nodiscard]] auto
-JSON::at(const typename JSON::Array::size_type index) -> JSON & {
+[[nodiscard]] auto JSON::at(const typename JSON::Array::size_type index)
+    -> JSON & {
   // In practice, this case only applies in some edge cases when
   // using JSON Pointers
   if (this->is_object()) [[unlikely]] {
@@ -450,6 +450,19 @@ JSON::at(const typename JSON::Array::size_type index) -> JSON & {
   }
 }
 
+[[nodiscard]] auto JSON::try_at(const JSON::String &key) const
+    -> std::optional<std::reference_wrapper<const JSON>> {
+  assert(this->is_object());
+
+  const auto &object{std::get<Object>(this->data)};
+  const auto value{object.data.find(key)};
+
+  if (value == object.data.cend()) {
+    return std::nullopt;
+  }
+  return value->second;
+}
+
 [[nodiscard]] auto JSON::defines(const JSON::String &key) const -> bool {
   assert(this->is_object());
   return std::get<Object>(this->data).data.contains(key);
@@ -474,6 +487,10 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 [[nodiscard]] auto JSON::unique() const -> bool {
   assert(this->is_array());
   const auto &items{std::get<JSON::Array>(this->data).data};
+  // Arrays of 0 or 1 item are unique by definition
+  if (items.size() <= 1) {
+    return true;
+  }
 
   // Otherwise std::unique would require us to create a copy of the contents
   for (auto iterator = items.cbegin(); iterator != items.cend(); ++iterator) {
@@ -534,8 +551,8 @@ auto JSON::assign(const JSON::String &key, JSON &&value) -> void {
   std::get<Object>(this->data).data.insert_or_assign(key, std::move(value));
 }
 
-auto JSON::assign_if_missing(const JSON::String &key,
-                             const JSON &value) -> void {
+auto JSON::assign_if_missing(const JSON::String &key, const JSON &value)
+    -> void {
   assert(this->is_object());
   if (!this->defines(key)) {
     this->assign(key, value);

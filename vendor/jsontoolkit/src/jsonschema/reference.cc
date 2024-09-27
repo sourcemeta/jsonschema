@@ -55,8 +55,8 @@ static auto find_every_base(const std::map<sourcemeta::jsontoolkit::Pointer,
   return result;
 }
 
-static auto
-ref_overrides_adjacent_keywords(const std::string &base_dialect) -> bool {
+static auto ref_overrides_adjacent_keywords(const std::string &base_dialect)
+    -> bool {
   // In older drafts, the presence of `$ref` would override any sibling
   // keywords
   // See
@@ -80,7 +80,7 @@ static auto supports_id_anchors(const std::string &base_dialect) -> bool {
          base_dialect == "http://json-schema.org/draft-04/hyper-schema#";
 }
 
-static auto fragment_string(const sourcemeta::jsontoolkit::URI uri)
+static auto fragment_string(const sourcemeta::jsontoolkit::URI &uri)
     -> std::optional<std::string> {
   const auto fragment{uri.fragment()};
   if (fragment.has_value()) {
@@ -178,8 +178,7 @@ auto sourcemeta::jsontoolkit::frame(
         entry.pointer.empty() ? default_id : std::nullopt)};
 
     // Store information
-    subschema_entries.emplace_back(
-        InternalEntry{std::move(entry), std::move(id)});
+    subschema_entries.emplace_back(InternalEntry{entry, std::move(id)});
   }
 
   for (const auto &entry : subschema_entries) {

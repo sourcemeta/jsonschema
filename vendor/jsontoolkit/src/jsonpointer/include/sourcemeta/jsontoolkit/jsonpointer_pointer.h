@@ -519,15 +519,15 @@ public:
   }
 
   /// Compare JSON Pointer instances
-  auto
-  operator==(const GenericPointer<PropertyT> &other) const noexcept -> bool {
+  auto operator==(const GenericPointer<PropertyT> &other) const noexcept
+      -> bool {
     return this->data == other.data;
   }
 
   /// Overload to support ordering of JSON Pointers. Typically for sorting
   /// reasons.
-  auto
-  operator<(const GenericPointer<PropertyT> &other) const noexcept -> bool {
+  auto operator<(const GenericPointer<PropertyT> &other) const noexcept
+      -> bool {
     return this->data < other.data;
   }
 

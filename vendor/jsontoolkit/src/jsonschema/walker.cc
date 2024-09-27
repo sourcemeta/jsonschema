@@ -20,7 +20,7 @@ auto sourcemeta::jsontoolkit::keyword_priority(
 }
 
 namespace {
-enum class SchemaWalkerType_t { Deep, Flat };
+enum class SchemaWalkerType_t : std::uint8_t { Deep, Flat };
 
 auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
           std::vector<sourcemeta::jsontoolkit::SchemaIteratorEntry> &subschemas,
