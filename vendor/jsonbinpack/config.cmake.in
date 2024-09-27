@@ -1,0 +1,30 @@
+@PACKAGE_INIT@
+
+# Support both casing styles
+list(APPEND JSONBINPACK_COMPONENTS ${JSONBinPack_FIND_COMPONENTS})
+list(APPEND JSONBINPACK_COMPONENTS ${jsonbinpack_FIND_COMPONENTS})
+if(NOT JSONBINPACK_COMPONENTS)
+  list(APPEND JSONBINPACK_COMPONENTS numeric)
+  list(APPEND JSONBINPACK_COMPONENTS runtime)
+  list(APPEND JSONBINPACK_COMPONENTS compiler)
+endif()
+
+include(CMakeFindDependencyMacro)
+find_dependency(JSONToolkit COMPONENTS uri json jsonpointer jsonschema)
+find_dependency(AlterSchema COMPONENTS engine linter)
+
+foreach(component ${JSONBINPACK_COMPONENTS})
+  if(component STREQUAL "numeric")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsonbinpack_numeric.cmake")
+  elseif(component STREQUAL "runtime")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsonbinpack_numeric.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsonbinpack_runtime.cmake")
+  elseif(component STREQUAL "compiler")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsonbinpack_numeric.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_jsonbinpack_compiler.cmake")
+  else()
+    message(FATAL_ERROR "Unknown JSON BinPack component: ${component}")
+  endif()
+endforeach()
+
+check_required_components("@PROJECT_NAME@")

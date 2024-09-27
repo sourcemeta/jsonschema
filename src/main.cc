@@ -69,6 +69,11 @@ Commands:
        Print the URI of the given schema to standard output, optionally
        relative to a given base URI.
 
+   canonicalize <schema.json>
+
+       Pre-process a JSON Schema into JSON BinPack's canonical form
+       for static analysis.
+
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
@@ -92,6 +97,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::test(arguments);
   } else if (command == "identify") {
     return sourcemeta::jsonschema::cli::identify(arguments);
+  } else if (command == "canonicalize") {
+    return sourcemeta::jsonschema::cli::canonicalize(arguments);
   } else {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";

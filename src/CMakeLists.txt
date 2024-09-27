@@ -9,7 +9,8 @@ add_executable(jsonschema_cli
   command_lint.cc
   command_metaschema.cc
   command_validate.cc
-  command_identify.cc)
+  command_identify.cc
+  command_canonicalize.cc)
 
 noa_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
@@ -20,6 +21,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsontoolkit::jsonschema
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::alterschema::engine)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::alterschema::linter)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::hydra::httpclient)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::compiler)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
