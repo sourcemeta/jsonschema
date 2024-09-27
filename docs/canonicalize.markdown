@@ -12,7 +12,7 @@ problem by transforming a given JSON Schema into a simpler (but more verbose)
 normalized form referred to as _canonical_.
 
 > Refer to [Juan Cruz Viotti's dissertation on JSON
-> BinPack's](https://www.jviotti.com/dissertation.pdf) for how JSON Schema
+> BinPack](https://www.jviotti.com/dissertation.pdf) for how JSON Schema
 > canonicalization was originally defined.
 
 Examples
