@@ -14,6 +14,7 @@ auto lint(const std::span<const std::string> &arguments) -> int;
 auto validate(const std::span<const std::string> &arguments) -> int;
 auto metaschema(const std::span<const std::string> &arguments) -> int;
 auto identify(const std::span<const std::string> &arguments) -> int;
+auto canonicalize(const std::span<const std::string> &arguments) -> int;
 } // namespace sourcemeta::jsonschema::cli
 
 #endif

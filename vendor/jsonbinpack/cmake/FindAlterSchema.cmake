@@ -1,0 +1,10 @@
+if(NOT Alterschema_FOUND)
+  if(JSONBINPACK_INSTALL)
+    set(ALTERSCHEMA_INSTALL ON CACHE BOOL "enable AlterSchema installation")
+  else()
+    set(ALTERSCHEMA_INSTALL OFF CACHE BOOL "disable AlterSchema installation")
+  endif()
+
+  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/alterschema")
+  set(Alterschema_FOUND ON)
+endif()

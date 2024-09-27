@@ -1,0 +1,11 @@
+if(NOT JSONToolkit_FOUND)
+  if(JSONBINPACK_INSTALL)
+    set(JSONTOOLKIT_INSTALL ON CACHE BOOL "enable JSON Toolkit installation")
+  else()
+    set(JSONTOOLKIT_INSTALL OFF CACHE BOOL "disable JSON Toolkit installation")
+  endif()
+
+  set(JSONTOOLKIT_JSONL OFF CACHE BOOL "disable JSONL support")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/jsontoolkit")
+  set(JSONToolkit_FOUND ON)
+endif()

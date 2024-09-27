@@ -65,6 +65,7 @@ documentation:
 - [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
 - [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
 - [`jsonschema identify`](./docs/identify.markdown)
+- [`jsonschema canonicalize`](./docs/canonicalize.markdown) (for static analysis)
 
 Installation
 ------------

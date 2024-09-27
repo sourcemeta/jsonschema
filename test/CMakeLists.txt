@@ -166,6 +166,12 @@ add_jsonschema_test_unix(lint/pass_lint_fix)
 add_jsonschema_test_unix(lint/pass_lint_no_fix)
 add_jsonschema_test_unix(lint/fail_lint)
 
+# Canonicalize
+add_jsonschema_test_unix(canonicalize/pass_1)
+add_jsonschema_test_unix(canonicalize/fail_no_schema)
+add_jsonschema_test_unix(canonicalize/fail_schema_invalid_json)
+add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
+
 # CI specific tests
 add_jsonschema_test_unix_ci(pass_bundle_http)
 add_jsonschema_test_unix_ci(fail_bundle_http_non_200)
