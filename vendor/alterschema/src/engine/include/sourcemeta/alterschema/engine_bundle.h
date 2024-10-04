@@ -103,13 +103,14 @@ public:
   }
 
   /// Apply the bundle of rules to a schema
-  auto apply(sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::SchemaWalker &walker,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-             const sourcemeta::jsontoolkit::Pointer &pointer =
-                 sourcemeta::jsontoolkit::empty_pointer,
-             const std::optional<std::string> &default_dialect =
-                 std::nullopt) const -> void;
+  auto
+  apply(sourcemeta::jsontoolkit::JSON &schema,
+        const sourcemeta::jsontoolkit::SchemaWalker &walker,
+        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+        const sourcemeta::jsontoolkit::Pointer &pointer =
+            sourcemeta::jsontoolkit::empty_pointer,
+        const std::optional<std::string> &default_dialect = std::nullopt) const
+      -> void;
 
   /// The callback that is called whenever the "check" functionality reports a
   /// rule whose condition holds true. The arguments are as follows:
@@ -122,14 +123,15 @@ public:
                          const std::string_view, const std::string_view)>;
 
   /// Report back the rules from the bundle that need to be applied to a schema
-  auto check(const sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::SchemaWalker &walker,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-             const CheckCallback &callback,
-             const sourcemeta::jsontoolkit::Pointer &pointer =
-                 sourcemeta::jsontoolkit::empty_pointer,
-             const std::optional<std::string> &default_dialect =
-                 std::nullopt) const -> bool;
+  auto
+  check(const sourcemeta::jsontoolkit::JSON &schema,
+        const sourcemeta::jsontoolkit::SchemaWalker &walker,
+        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+        const CheckCallback &callback,
+        const sourcemeta::jsontoolkit::Pointer &pointer =
+            sourcemeta::jsontoolkit::empty_pointer,
+        const std::optional<std::string> &default_dialect = std::nullopt) const
+      -> bool;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered
