@@ -1,8 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_DECODER_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_DECODER_H_
 
+#include <sourcemeta/jsonbinpack/numeric.h>
+
 #include <sourcemeta/jsonbinpack/runtime_decoder_basic.h>
-#include <sourcemeta/jsonbinpack/runtime_numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_plan.h>
 #include <sourcemeta/jsonbinpack/runtime_plan_wrap.h>
 
@@ -209,9 +210,9 @@ public:
     if (is_shared) {
       const std::uint64_t position{this->position()};
       const std::uint64_t current{this->rewind(this->get_varint(), position)};
-      sourcemeta::jsontoolkit::JSON string{this->get_string_utf8(length)};
+      const sourcemeta::jsontoolkit::JSON value{this->get_string_utf8(length)};
       this->seek(current);
-      return string;
+      return value;
     } else {
       return UTF8_STRING_NO_LENGTH({length});
     }
@@ -229,9 +230,10 @@ public:
     if (is_shared) {
       const std::uint64_t position{this->position()};
       const std::uint64_t current{this->rewind(this->get_varint(), position)};
-      sourcemeta::jsontoolkit::JSON string = UTF8_STRING_NO_LENGTH({length});
+      const sourcemeta::jsontoolkit::JSON value{
+          UTF8_STRING_NO_LENGTH({length})};
       this->seek(current);
-      return string;
+      return value;
     } else {
       return UTF8_STRING_NO_LENGTH({length});
     }
@@ -251,9 +253,10 @@ public:
     if (is_shared) {
       const std::uint64_t position{this->position()};
       const std::uint64_t current{this->rewind(this->get_varint(), position)};
-      sourcemeta::jsontoolkit::JSON string = UTF8_STRING_NO_LENGTH({length});
+      const sourcemeta::jsontoolkit::JSON value{
+          UTF8_STRING_NO_LENGTH({length})};
       this->seek(current);
-      return string;
+      return value;
     } else {
       return UTF8_STRING_NO_LENGTH({length});
     }
@@ -289,10 +292,10 @@ public:
     if (prefix == 0) {
       const std::uint64_t position{this->position()};
       const std::uint64_t current{this->rewind(this->get_varint(), position)};
-      sourcemeta::jsontoolkit::JSON string =
-          PREFIX_VARINT_LENGTH_STRING_SHARED(options);
+      const sourcemeta::jsontoolkit::JSON value{
+          PREFIX_VARINT_LENGTH_STRING_SHARED(options)};
       this->seek(current);
-      return string;
+      return value;
     } else {
       return sourcemeta::jsontoolkit::JSON{this->get_string_utf8(prefix - 1)};
     }
@@ -438,9 +441,10 @@ public:
           const std::uint64_t position{this->position()};
           const std::uint64_t current{
               this->rewind(this->get_varint(), position)};
-          sourcemeta::jsontoolkit::JSON string{this->get_string_utf8(length)};
+          const sourcemeta::jsontoolkit::JSON value{
+              this->get_string_utf8(length)};
           this->seek(current);
-          return string;
+          return value;
         };
         case TYPE_STRING:
           return subtype == 0 ? this->FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(

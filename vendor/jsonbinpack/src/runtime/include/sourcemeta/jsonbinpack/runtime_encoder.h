@@ -1,9 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_H_
 
+#include <sourcemeta/jsonbinpack/numeric.h>
+
 #include <sourcemeta/jsonbinpack/runtime_encoder_basic.h>
-#include <sourcemeta/jsonbinpack/runtime_encoder_real.h>
-#include <sourcemeta/jsonbinpack/runtime_numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_plan.h>
 #include <sourcemeta/jsonbinpack/runtime_plan_wrap.h>
 

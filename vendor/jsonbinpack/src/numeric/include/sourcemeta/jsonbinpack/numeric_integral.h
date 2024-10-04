@@ -1,27 +1,39 @@
-#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_NUMERIC_H_
-#define SOURCEMETA_JSONBINPACK_RUNTIME_NUMERIC_H_
+#ifndef SOURCEMETA_JSONBINPACK_NUMERIC_INTEGRAL_H_
+#define SOURCEMETA_JSONBINPACK_NUMERIC_INTEGRAL_H_
 
 #include <cassert> // assert
 #include <cmath>   // std::abs
 #include <cstdint> // std::uint8_t, std::int64_t, std::uint64_t
 #include <limits>  // std::numeric_limits
 
-// TODO: Move to src/numeric
-
 namespace sourcemeta::jsonbinpack {
 
-template <unsigned int T> constexpr auto uint_max = (2 << (T - 1)) - 1;
-
+/// @ingroup numeric
 template <typename T> constexpr auto is_byte(const T value) noexcept -> bool {
   return value <= std::numeric_limits<std::uint8_t>::max();
 }
 
+/// @ingroup numeric
+constexpr auto count_multiples(const std::int64_t minimum,
+                               const std::int64_t maximum,
+                               const std::int64_t multiplier) -> std::uint64_t {
+  assert(minimum <= maximum);
+  assert(multiplier > 0);
+  return static_cast<std::uint64_t>((maximum / multiplier) -
+                                    ((minimum - 1) / multiplier));
+}
+
+/// @ingroup numeric
+template <unsigned int T> constexpr auto uint_max = (2 << (T - 1)) - 1;
+
+/// @ingroup numeric
 template <typename T>
 constexpr auto is_within(const T value, const std::int64_t lower,
                          const std::int64_t higher) noexcept -> bool {
   return value >= lower && value <= higher;
 }
 
+/// @ingroup numeric
 template <typename T>
 constexpr auto is_within(const T value, const std::uint64_t lower,
                          const std::uint64_t higher) noexcept -> bool {
@@ -33,6 +45,7 @@ constexpr auto is_within(const T value, const std::uint64_t lower,
   }
 }
 
+/// @ingroup numeric
 constexpr auto abs(const std::int64_t value) noexcept -> std::uint64_t {
   if (value < 0) {
     return static_cast<std::uint64_t>(value * -1);
@@ -41,6 +54,7 @@ constexpr auto abs(const std::int64_t value) noexcept -> std::uint64_t {
   }
 }
 
+/// @ingroup numeric
 constexpr auto divide_ceil(const std::int64_t dividend,
                            const std::uint64_t divisor) noexcept
     -> std::int64_t {
@@ -68,6 +82,7 @@ constexpr auto divide_ceil(const std::int64_t dividend,
   }
 }
 
+/// @ingroup numeric
 constexpr auto divide_floor(const std::int64_t dividend,
                             const std::uint64_t divisor) noexcept
     -> std::int64_t {
@@ -88,6 +103,7 @@ constexpr auto divide_floor(const std::int64_t dividend,
   }
 }
 
+/// @ingroup numeric
 constexpr auto closest_smallest_exponent(const std::uint64_t value,
                                          const std::uint8_t base,
                                          const std::uint8_t exponent_start,

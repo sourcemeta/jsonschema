@@ -2,9 +2,10 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_BASIC_H_
 #ifndef DOXYGEN
 
+#include <sourcemeta/jsonbinpack/numeric.h>
+
 #include <sourcemeta/jsonbinpack/runtime_encoder_context.h>
 #include <sourcemeta/jsonbinpack/runtime_varint.h>
-#include <sourcemeta/jsonbinpack/runtime_zigzag.h>
 
 #include <algorithm> // std::find_if
 #include <cassert>   // assert

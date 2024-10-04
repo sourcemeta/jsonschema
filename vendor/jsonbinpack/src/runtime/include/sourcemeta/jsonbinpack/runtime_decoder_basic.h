@@ -2,8 +2,9 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_DECODER_BASIC_H_
 #ifndef DOXYGEN
 
+#include <sourcemeta/jsonbinpack/numeric.h>
+
 #include <sourcemeta/jsonbinpack/runtime_varint.h>
-#include <sourcemeta/jsonbinpack/runtime_zigzag.h>
 
 #include <cassert> // assert
 #include <cmath>   // std::ceil

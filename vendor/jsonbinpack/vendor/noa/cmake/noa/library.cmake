@@ -22,12 +22,13 @@ function(noa_library)
 
   if(NOA_LIBRARY_SOURCES)
     set(ABSOLUTE_PRIVATE_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${NOA_LIBRARY_NAME}_export.h")
-    foreach(private_header IN LISTS NOA_LIBRARY_PRIVATE_HEADERS)
-      list(APPEND ABSOLUTE_PRIVATE_HEADERS "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_${private_header}")
-    endforeach()
   else()
     set(ABSOLUTE_PRIVATE_HEADERS)
   endif()
+
+  foreach(private_header IN LISTS NOA_LIBRARY_PRIVATE_HEADERS)
+    list(APPEND ABSOLUTE_PRIVATE_HEADERS "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_${private_header}")
+  endforeach()
 
   if(NOA_LIBRARY_NAMESPACE)
     set(TARGET_NAME "${NOA_LIBRARY_NAMESPACE}_${NOA_LIBRARY_PROJECT}_${NOA_LIBRARY_NAME}")
