@@ -159,6 +159,13 @@ auto value_to_json(const T &value) -> sourcemeta::jsontoolkit::JSON {
     }
 
     return result;
+  } else if constexpr (std::is_same_v<SchemaCompilerValueIndexPair, T>) {
+    result.assign("type", JSON{"index-pair"});
+    JSON data{JSON::make_array()};
+    data.push_back(JSON{value.first});
+    data.push_back(JSON{value.second});
+    result.assign("value", std::move(data));
+    return result;
   } else {
     static_assert(std::is_same_v<SchemaCompilerValueNone, T>);
     return JSON{nullptr};
@@ -259,14 +266,10 @@ struct StepVisitor {
   HANDLE_STEP("logical", "or", SchemaCompilerLogicalOr)
   HANDLE_STEP("logical", "and", SchemaCompilerLogicalAnd)
   HANDLE_STEP("logical", "xor", SchemaCompilerLogicalXor)
-  HANDLE_STEP("logical", "try-mark", SchemaCompilerLogicalTryMark)
+  HANDLE_STEP("logical", "condition", SchemaCompilerLogicalCondition)
   HANDLE_STEP("logical", "not", SchemaCompilerLogicalNot)
   HANDLE_STEP("logical", "when-type", SchemaCompilerLogicalWhenType)
   HANDLE_STEP("logical", "when-defines", SchemaCompilerLogicalWhenDefines)
-  HANDLE_STEP("logical", "when-adjacent-unmarked",
-              SchemaCompilerLogicalWhenAdjacentUnmarked)
-  HANDLE_STEP("logical", "when-adjacent-marked",
-              SchemaCompilerLogicalWhenAdjacentMarked)
   HANDLE_STEP("logical", "when-array-size-greater",
               SchemaCompilerLogicalWhenArraySizeGreater)
   HANDLE_STEP("logical", "when-array-size-equal",

@@ -44,6 +44,27 @@ auto evaluate_step(
   }                                                                            \
   bool result{false};
 
+#define EVALUATE_BEGIN_IF_STRING(step_category, step_type)                     \
+  SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
+  SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
+  const auto &step_category{std::get<step_type>(step)};                        \
+  context.push(step_category.relative_schema_location,                         \
+               step_category.relative_instance_location,                       \
+               step_category.schema_resource, step_category.dynamic);          \
+  const auto &maybe_target{context.resolve_string_target()};                   \
+  if (!maybe_target.has_value()) {                                             \
+    context.pop(step_category.dynamic);                                        \
+    SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
+    return true;                                                               \
+  }                                                                            \
+  if (step_category.report && callback.has_value()) {                          \
+    callback.value()(SchemaCompilerEvaluationType::Pre, true, step,            \
+                     context.evaluate_path(), context.instance_location(),     \
+                     context.null);                                            \
+  }                                                                            \
+  const auto &target{maybe_target.value().get()};                              \
+  bool result{false};
+
 #define EVALUATE_BEGIN_NO_TARGET(step_category, step_type, precondition)       \
   SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
@@ -317,23 +338,22 @@ auto evaluate_step(
     }
 
     case IS_STEP(SchemaCompilerAssertionRegex): {
-      EVALUATE_BEGIN(assertion, SchemaCompilerAssertionRegex,
-                     target.is_string());
-      result = std::regex_search(target.to_string(), assertion.value.first);
+      EVALUATE_BEGIN_IF_STRING(assertion, SchemaCompilerAssertionRegex);
+      result = std::regex_search(target, assertion.value.first);
       EVALUATE_END(assertion, SchemaCompilerAssertionRegex);
     }
 
     case IS_STEP(SchemaCompilerAssertionStringSizeLess): {
-      EVALUATE_BEGIN(assertion, SchemaCompilerAssertionStringSizeLess,
-                     target.is_string());
-      result = (target.size() < assertion.value);
+      EVALUATE_BEGIN_IF_STRING(assertion,
+                               SchemaCompilerAssertionStringSizeLess);
+      result = (JSON::size(target) < assertion.value);
       EVALUATE_END(assertion, SchemaCompilerAssertionStringSizeLess);
     }
 
     case IS_STEP(SchemaCompilerAssertionStringSizeGreater): {
-      EVALUATE_BEGIN(assertion, SchemaCompilerAssertionStringSizeGreater,
-                     target.is_string());
-      result = (target.size() > assertion.value);
+      EVALUATE_BEGIN_IF_STRING(assertion,
+                               SchemaCompilerAssertionStringSizeGreater);
+      result = (JSON::size(target) > assertion.value);
       EVALUATE_END(assertion, SchemaCompilerAssertionStringSizeGreater);
     }
 
@@ -423,13 +443,12 @@ auto evaluate_step(
     }
 
     case IS_STEP(SchemaCompilerAssertionStringType): {
-      EVALUATE_BEGIN(assertion, SchemaCompilerAssertionStringType,
-                     target.is_string());
+      EVALUATE_BEGIN_IF_STRING(assertion, SchemaCompilerAssertionStringType);
       switch (assertion.value) {
         case SchemaCompilerValueStringType::URI:
           try {
             // TODO: This implies a string copy
-            result = URI{target.to_string()}.is_absolute();
+            result = URI{target}.is_absolute();
           } catch (const URIParseError &) {
             result = false;
           }
@@ -530,39 +549,6 @@ auto evaluate_step(
       EVALUATE_END(logical, SchemaCompilerLogicalWhenDefines);
     }
 
-    case IS_STEP(SchemaCompilerLogicalWhenAdjacentUnmarked): {
-      EVALUATE_BEGIN_NO_TARGET(
-          logical, SchemaCompilerLogicalWhenAdjacentUnmarked,
-          !context.defines_any_adjacent_annotation(context.instance_location(),
-                                                   context.evaluate_path(),
-                                                   logical.value));
-      result = true;
-      for (const auto &child : logical.children) {
-        if (!evaluate_step(child, mode, callback, context)) {
-          result = false;
-          break;
-        }
-      }
-
-      EVALUATE_END(logical, SchemaCompilerLogicalWhenAdjacentUnmarked);
-    }
-
-    case IS_STEP(SchemaCompilerLogicalWhenAdjacentMarked): {
-      EVALUATE_BEGIN_NO_TARGET(logical, SchemaCompilerLogicalWhenAdjacentMarked,
-                               context.defines_any_adjacent_annotation(
-                                   context.instance_location(),
-                                   context.evaluate_path(), logical.value));
-      result = true;
-      for (const auto &child : logical.children) {
-        if (!evaluate_step(child, mode, callback, context)) {
-          result = false;
-          break;
-        }
-      }
-
-      EVALUATE_END(logical, SchemaCompilerLogicalWhenAdjacentMarked);
-    }
-
     case IS_STEP(SchemaCompilerLogicalWhenArraySizeGreater): {
       EVALUATE_BEGIN(logical, SchemaCompilerLogicalWhenArraySizeGreater,
                      target.is_array() && target.size() > logical.value);
@@ -593,61 +579,64 @@ auto evaluate_step(
 
     case IS_STEP(SchemaCompilerLogicalXor): {
       EVALUATE_BEGIN_NO_PRECONDITION(logical, SchemaCompilerLogicalXor);
-      result = false;
-
-      // TODO: Cache results of a given branch so we can avoid
-      // computing it multiple times
-      for (auto iterator{logical.children.cbegin()};
-           iterator != logical.children.cend(); ++iterator) {
-        if (!evaluate_step(*iterator, mode, callback, context)) {
-          continue;
-        }
-
-        // Check if another one matches
-        bool subresult{true};
-        for (auto subiterator{logical.children.cbegin()};
-             subiterator != logical.children.cend(); ++subiterator) {
-          // Don't compare the element against itself
-          if (std::distance(logical.children.cbegin(), iterator) ==
-              std::distance(logical.children.cbegin(), subiterator)) {
-            continue;
+      result = true;
+      bool has_matched{false};
+      for (const auto &child : logical.children) {
+        if (evaluate_step(child, mode, callback, context)) {
+          if (has_matched) {
+            result = false;
+            if (mode == SchemaCompilerEvaluationMode::Fast) {
+              break;
+            }
+          } else {
+            has_matched = true;
           }
-
-          // We don't need to report traces that part of the exhaustive
-          // XOR search. We can treat those as internal
-          if (evaluate_step(*subiterator, mode, std::nullopt, context)) {
-            subresult = false;
-            break;
-          }
-        }
-
-        result = result || subresult;
-        if (result && mode == SchemaCompilerEvaluationMode::Fast) {
-          break;
         }
       }
 
+      result = result && has_matched;
       EVALUATE_END(logical, SchemaCompilerLogicalXor);
     }
 
-    case IS_STEP(SchemaCompilerLogicalTryMark): {
-      EVALUATE_BEGIN_NO_PRECONDITION(logical, SchemaCompilerLogicalTryMark);
+    case IS_STEP(SchemaCompilerLogicalCondition): {
+      EVALUATE_BEGIN_NO_PRECONDITION(logical, SchemaCompilerLogicalCondition);
       result = true;
-      for (const auto &child : logical.children) {
-        if (!evaluate_step(child, mode, callback, context)) {
+      const auto children_size{logical.children.size()};
+      assert(children_size >= logical.value.first);
+      assert(children_size >= logical.value.second);
+
+      auto condition_end{children_size};
+      if (logical.value.first > 0) {
+        condition_end = logical.value.first;
+      } else if (logical.value.second > 0) {
+        condition_end = logical.value.second;
+      }
+
+      for (std::size_t cursor = 0; cursor < condition_end; cursor++) {
+        if (!evaluate_step(logical.children[cursor], mode, callback, context)) {
           result = false;
           break;
         }
       }
 
-      if (result) {
-        // TODO: This implies an allocation of a JSON boolean
-        context.annotate(context.instance_location(), JSON{true});
-      } else {
-        result = true;
+      const auto consequence_start{result ? logical.value.first
+                                          : logical.value.second};
+      const auto consequence_end{(result && logical.value.second > 0)
+                                     ? logical.value.second
+                                     : children_size};
+      result = true;
+      if (consequence_start > 0) {
+        for (auto cursor = consequence_start; cursor < consequence_end;
+             cursor++) {
+          if (!evaluate_step(logical.children[cursor], mode, callback,
+                             context)) {
+            result = false;
+            break;
+          }
+        }
       }
 
-      EVALUATE_END(logical, SchemaCompilerLogicalTryMark);
+      EVALUATE_END(logical, SchemaCompilerLogicalCondition);
     }
 
     case IS_STEP(SchemaCompilerLogicalNot): {
@@ -1127,6 +1116,7 @@ auto evaluate_step(
 #undef IS_STEP
 #undef STRINGIFY
 #undef EVALUATE_BEGIN
+#undef EVALUATE_BEGIN_IF_STRING
 #undef EVALUATE_BEGIN_NO_TARGET
 #undef EVALUATE_BEGIN_TRY_TARGET
 #undef EVALUATE_BEGIN_NO_PRECONDITION

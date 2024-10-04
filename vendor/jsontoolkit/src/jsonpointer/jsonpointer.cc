@@ -47,7 +47,11 @@ auto traverse(V &document, typename PointerT::const_iterator begin,
       // array element with the zero-based index identified by the
       // token.
       // See https://www.rfc-editor.org/rfc/rfc6901#section-4
-      current = current.get().at(iterator->to_index());
+      if (current.get().is_object()) {
+        current = current.get().at(std::to_string(iterator->to_index()));
+      } else {
+        current = current.get().at(iterator->to_index());
+      }
     }
   }
 
@@ -66,17 +70,28 @@ auto try_traverse(const sourcemeta::jsontoolkit::JSON &document,
     const auto &instance{current.get()};
     if (token.is_property()) {
       const auto &property{token.to_property()};
+      if (!instance.is_object()) {
+        return std::nullopt;
+      }
+
       auto json_value{instance.try_at(property)};
       if (json_value.has_value()) {
         current = std::move(json_value.value());
-
       } else {
         return std::nullopt;
       }
     } else {
+      if (!instance.is_array() && !instance.is_object()) {
+        return std::nullopt;
+      }
+
       const auto index{token.to_index()};
       if (index < instance.size()) {
-        current = instance.at(index);
+        if (instance.is_object()) {
+          current = instance.at(std::to_string(index));
+        } else {
+          current = instance.at(index);
+        }
       } else {
         return std::nullopt;
       }
@@ -161,7 +176,11 @@ auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
   } else if (last.is_property()) {
     current.at(last.to_property()).into(value);
   } else {
-    current.at(last.to_index()).into(value);
+    if (current.is_object()) {
+      current.at(std::to_string(last.to_index())).into(value);
+    } else {
+      current.at(last.to_index()).into(value);
+    }
   }
 }
 

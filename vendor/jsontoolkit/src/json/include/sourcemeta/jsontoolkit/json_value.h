@@ -218,6 +218,18 @@ public:
   /// objects.
   static auto make_object() -> JSON;
 
+  /// This function calculates the logical size of a string according to the
+  /// JSON specification. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON::String value{"foo"};
+  /// assert(sourcemeta::jsontoolkit::JSON::size(value) == 3);
+  /// ```
+  static auto size(const String &value) noexcept -> std::size_t;
+
   /*
    * Operators
    */

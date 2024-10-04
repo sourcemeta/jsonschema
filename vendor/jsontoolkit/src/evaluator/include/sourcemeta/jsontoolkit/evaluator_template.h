@@ -51,12 +51,10 @@ struct SchemaCompilerAnnotationBasenameToParent;
 struct SchemaCompilerLogicalOr;
 struct SchemaCompilerLogicalAnd;
 struct SchemaCompilerLogicalXor;
-struct SchemaCompilerLogicalTryMark;
+struct SchemaCompilerLogicalCondition;
 struct SchemaCompilerLogicalNot;
 struct SchemaCompilerLogicalWhenType;
 struct SchemaCompilerLogicalWhenDefines;
-struct SchemaCompilerLogicalWhenAdjacentUnmarked;
-struct SchemaCompilerLogicalWhenAdjacentMarked;
 struct SchemaCompilerLogicalWhenArraySizeGreater;
 struct SchemaCompilerLogicalWhenArraySizeEqual;
 struct SchemaCompilerLoopPropertiesMatch;
@@ -104,10 +102,8 @@ using SchemaCompilerTemplate = std::vector<std::variant<
     SchemaCompilerAnnotationWhenArraySizeGreater,
     SchemaCompilerAnnotationToParent, SchemaCompilerAnnotationBasenameToParent,
     SchemaCompilerLogicalOr, SchemaCompilerLogicalAnd, SchemaCompilerLogicalXor,
-    SchemaCompilerLogicalTryMark, SchemaCompilerLogicalNot,
+    SchemaCompilerLogicalCondition, SchemaCompilerLogicalNot,
     SchemaCompilerLogicalWhenType, SchemaCompilerLogicalWhenDefines,
-    SchemaCompilerLogicalWhenAdjacentUnmarked,
-    SchemaCompilerLogicalWhenAdjacentMarked,
     SchemaCompilerLogicalWhenArraySizeGreater,
     SchemaCompilerLogicalWhenArraySizeEqual, SchemaCompilerLoopPropertiesMatch,
     SchemaCompilerLoopProperties, SchemaCompilerLoopPropertiesRegex,
@@ -160,12 +156,10 @@ enum class SchemaCompilerTemplateIndex : std::uint8_t {
   SchemaCompilerLogicalOr,
   SchemaCompilerLogicalAnd,
   SchemaCompilerLogicalXor,
-  SchemaCompilerLogicalTryMark,
+  SchemaCompilerLogicalCondition,
   SchemaCompilerLogicalNot,
   SchemaCompilerLogicalWhenType,
   SchemaCompilerLogicalWhenDefines,
-  SchemaCompilerLogicalWhenAdjacentUnmarked,
-  SchemaCompilerLogicalWhenAdjacentMarked,
   SchemaCompilerLogicalWhenArraySizeGreater,
   SchemaCompilerLogicalWhenArraySizeEqual,
   SchemaCompilerLoopPropertiesMatch,
@@ -408,9 +402,8 @@ DEFINE_STEP_APPLICATOR(Logical, And, SchemaCompilerValueNone)
 DEFINE_STEP_APPLICATOR(Logical, Xor, SchemaCompilerValueNone)
 
 /// @ingroup evaluator_instructions
-/// @brief Represents a compiler logical step that represents a conjunction that
-/// always reports success and marks its outcome for other steps
-DEFINE_STEP_APPLICATOR(Logical, TryMark, SchemaCompilerValueNone)
+/// @brief Represents an imperative conditional compiler logical step
+DEFINE_STEP_APPLICATOR(Logical, Condition, SchemaCompilerValueIndexPair)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler logical step that represents a negation
@@ -425,16 +418,6 @@ DEFINE_STEP_APPLICATOR(Logical, WhenType, SchemaCompilerValueType)
 /// @brief Represents a compiler logical step that represents a conjunction when
 /// the instance is an object and defines a given property
 DEFINE_STEP_APPLICATOR(Logical, WhenDefines, SchemaCompilerValueString)
-
-/// @ingroup evaluator_instructions
-/// @brief Represents a compiler logical step that represents a conjunction when
-/// the instance and desired evaluation path was not marked
-DEFINE_STEP_APPLICATOR(Logical, WhenAdjacentUnmarked, SchemaCompilerValueString)
-
-/// @ingroup evaluator_instructions
-/// @brief Represents a compiler logical step that represents a conjunction when
-/// the instance and desired evaluation path was marked
-DEFINE_STEP_APPLICATOR(Logical, WhenAdjacentMarked, SchemaCompilerValueString)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler logical step that represents a conjunction when

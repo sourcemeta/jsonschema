@@ -71,12 +71,10 @@ inline auto parse_boolean_false(
   return JSON{false};
 }
 
-auto parse_string_unicode(
+auto parse_string_unicode_code_point(
     const std::uint64_t line, std::uint64_t &column,
-    std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    std::basic_ostringstream<typename JSON::Char, typename JSON::CharTraits,
-                             typename JSON::Allocator<typename JSON::Char>>
-        &result) -> void {
+    std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream)
+    -> unsigned long {
   std::basic_string<typename JSON::Char, typename JSON::CharTraits,
                     typename JSON::Allocator<typename JSON::Char>>
       code_point;
@@ -109,8 +107,68 @@ auto parse_string_unicode(
   // According to ECMA 404, \u can be followed by "any"
   // sequence of 4 hexadecimal digits.
   constexpr auto unicode_base{16};
-  result.put(static_cast<typename JSON::Char>(
-      std::stoul(code_point, nullptr, unicode_base)));
+  const auto result{std::stoul(code_point, nullptr, unicode_base)};
+  // The largest possible valid unicode code point
+  assert(result <= 0xFFFF);
+  return result;
+}
+
+auto parse_string_unicode(
+    const std::uint64_t line, std::uint64_t &column,
+    std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream,
+    std::basic_ostringstream<typename JSON::Char, typename JSON::CharTraits,
+                             typename JSON::Allocator<typename JSON::Char>>
+        &result) -> void {
+  auto code_point{parse_string_unicode_code_point(line, column, stream)};
+  using CharT = typename JSON::Char;
+
+  // This means we are at the beginning of a UTF-16 surrogate pair high code
+  // point See
+  // https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
+  if (code_point >= 0xD800 && code_point <= 0xDBFF) {
+    // Next, we expect "\"
+    column += 1;
+    if (stream.get() != internal::token_string_escape<CharT>) {
+      throw ParseError(line, column);
+    }
+
+    // Next, we expect "u"
+    column += 1;
+    if (stream.get() != internal::token_string_escape_unicode<CharT>) {
+      throw ParseError(line, column);
+    }
+
+    // Finally, get the low code point of the surrogate and calculate
+    // the real final code point
+    const auto low_code_point{
+        parse_string_unicode_code_point(line, column, stream)};
+
+    // See
+    // https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
+    if (low_code_point >= 0xDC00 && low_code_point <= 0xDFFF) {
+      code_point =
+          0x10000 + ((code_point - 0xD800) << 10) + (low_code_point - 0xDC00);
+    } else {
+      throw ParseError(line, column);
+    }
+  }
+
+  // Convert a Unicode codepoint into UTF-8
+  // See https://en.wikipedia.org/wiki/UTF-8#Description
+
+  if (code_point <= 0x7F) {
+    // UTF-8
+    result.put(static_cast<CharT>(code_point));
+  } else if (code_point <= 0x7FF) {
+    // UTF-16
+    result.put(static_cast<CharT>(0xC0 | ((code_point >> 6) & 0x1F)));
+    result.put(static_cast<CharT>(0x80 | (code_point & 0x3F)));
+  } else {
+    // UTF-32
+    result.put(static_cast<CharT>(0xE0 | ((code_point >> 12) & 0x0F)));
+    result.put(static_cast<CharT>(0x80 | ((code_point >> 6) & 0x3F)));
+    result.put(static_cast<CharT>(0x80 | (code_point & 0x3F)));
+  }
 }
 
 auto parse_string_escape(
@@ -596,7 +654,7 @@ auto internal_parse(
     std::uint64_t &line, std::uint64_t &column) -> JSON {
   // Globals
   using Result = JSON;
-  enum class Container { Array, Object };
+  enum class Container : std::uint8_t { Array, Object };
   std::stack<Container> levels;
   std::stack<std::reference_wrapper<Result>> frames;
   std::optional<Result> result;

@@ -106,6 +106,10 @@ using SchemaCompilerValuePropertyFilter =
     std::pair<std::set<SchemaCompilerValueString>,
               std::vector<SchemaCompilerValueRegex>>;
 
+/// @ingroup evaluator
+/// Represents a compiler step value that consists of two indexes
+using SchemaCompilerValueIndexPair = std::pair<std::size_t, std::size_t>;
+
 } // namespace sourcemeta::jsontoolkit
 
 #endif

@@ -216,12 +216,8 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const SchemaCompilerLogicalTryMark &) const -> std::string {
-    assert(this->keyword == "if");
-    std::ostringstream message;
-    message << "The " << to_string(this->target.type())
-            << " value was tested against the conditional subschema";
-    return message.str();
+  auto operator()(const SchemaCompilerLogicalCondition &) const -> std::string {
+    return unknown();
   }
 
   auto operator()(const SchemaCompilerLogicalNot &) const -> std::string {
@@ -1621,46 +1617,6 @@ struct DescribeVisitor {
         message
             << ", it was also expected to validate against the corresponding "
                "subschemas";
-      }
-
-      return message.str();
-    }
-
-    return unknown();
-  }
-
-  auto operator()(const SchemaCompilerLogicalWhenAdjacentUnmarked &step) const
-      -> std::string {
-    if (this->keyword == "else") {
-      assert(!step.children.empty());
-      std::ostringstream message;
-      message << "Because of the conditional outcome, the "
-              << to_string(this->target.type())
-              << " value was expected to validate against the ";
-      if (step.children.size() > 1) {
-        message << step.children.size() << " given subschemas";
-      } else {
-        message << "given subschema";
-      }
-
-      return message.str();
-    }
-
-    return unknown();
-  }
-
-  auto operator()(const SchemaCompilerLogicalWhenAdjacentMarked &step) const
-      -> std::string {
-    if (this->keyword == "then") {
-      assert(!step.children.empty());
-      std::ostringstream message;
-      message << "Because of the conditional outcome, the "
-              << to_string(this->target.type())
-              << " value was expected to validate against the ";
-      if (step.children.size() > 1) {
-        message << step.children.size() << " given subschemas";
-      } else {
-        message << "given subschema";
       }
 
       return message.str();

@@ -9,51 +9,76 @@
 namespace internal {
 using namespace sourcemeta::jsontoolkit;
 
+// TODO: Don't generate `if` if neither `then` nor `else` is defined
 auto compiler_draft7_applicator_if(
     const SchemaCompilerContext &context,
     const SchemaCompilerSchemaContext &schema_context,
     const SchemaCompilerDynamicContext &dynamic_context)
     -> SchemaCompilerTemplate {
-  return {make<SchemaCompilerLogicalTryMark>(
-      true, context, schema_context, dynamic_context, SchemaCompilerValueNone{},
-      compile(context, schema_context, relative_dynamic_context, empty_pointer,
-              empty_pointer))};
-}
+  // `if`
+  SchemaCompilerTemplate children{compile(
+      context, schema_context, dynamic_context, empty_pointer, empty_pointer)};
 
-auto compiler_draft7_applicator_then(
-    const SchemaCompilerContext &context,
-    const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context)
-    -> SchemaCompilerTemplate {
-  assert(schema_context.schema.is_object());
+  // `then`
+  std::size_t then_cursor{0};
+  if (schema_context.schema.defines("then")) {
+    then_cursor = children.size();
+    const auto destination{
+        to_uri(schema_context.relative_pointer.initial().concat({"then"}),
+               schema_context.base)
+            .recompose()};
+    assert(context.frame.contains({ReferenceType::Static, destination}));
+    for (auto &&step :
+         compile(context, schema_context, relative_dynamic_context, {"then"},
+                 empty_pointer, destination)) {
+      children.push_back(std::move(step));
+    }
 
-  // Nothing to do here
-  if (!schema_context.schema.defines("if")) {
-    return {};
+    // In this case, `if` did nothing, so we can short-circuit
+    if (then_cursor == 0) {
+      return children;
+    }
   }
 
-  return {make<SchemaCompilerLogicalWhenAdjacentMarked>(
-      true, context, schema_context, dynamic_context, "if",
-      compile(context, schema_context, relative_dynamic_context, empty_pointer,
-              empty_pointer))};
-}
-
-auto compiler_draft7_applicator_else(
-    const SchemaCompilerContext &context,
-    const SchemaCompilerSchemaContext &schema_context,
-    const SchemaCompilerDynamicContext &dynamic_context)
-    -> SchemaCompilerTemplate {
-  assert(schema_context.schema.is_object());
-
-  // Nothing to do here
-  if (!schema_context.schema.defines("if")) {
-    return {};
+  // `else`
+  std::size_t else_cursor{0};
+  if (schema_context.schema.defines("else")) {
+    else_cursor = children.size();
+    const auto destination{
+        to_uri(schema_context.relative_pointer.initial().concat({"else"}),
+               schema_context.base)
+            .recompose()};
+    assert(context.frame.contains({ReferenceType::Static, destination}));
+    for (auto &&step :
+         compile(context, schema_context, relative_dynamic_context, {"else"},
+                 empty_pointer, destination)) {
+      children.push_back(std::move(step));
+    }
   }
 
-  return {make<SchemaCompilerLogicalWhenAdjacentUnmarked>(
-      true, context, schema_context, dynamic_context, "if",
-      compile(context, schema_context, relative_dynamic_context, empty_pointer,
-              empty_pointer))};
+  return {make<SchemaCompilerLogicalCondition>(
+      false, context,
+      {schema_context.relative_pointer.initial(), schema_context.schema,
+       schema_context.vocabularies, schema_context.base, schema_context.labels,
+       schema_context.references},
+      relative_dynamic_context, {then_cursor, else_cursor},
+      std::move(children))};
+}
+
+// We handle `then` as part of `if`
+auto compiler_draft7_applicator_then(const SchemaCompilerContext &,
+                                     const SchemaCompilerSchemaContext &,
+                                     const SchemaCompilerDynamicContext &)
+    -> SchemaCompilerTemplate {
+  return {};
+}
+
+// We handle `else` as part of `if`
+auto compiler_draft7_applicator_else(const SchemaCompilerContext &,
+                                     const SchemaCompilerSchemaContext &,
+                                     const SchemaCompilerDynamicContext &)
+    -> SchemaCompilerTemplate {
+  return {};
 }
 
 } // namespace internal
