@@ -6,11 +6,26 @@
 
 #include <algorithm> // std::sort, std::any_of
 #include <cassert>   // assert
-#include <regex>     // std::regex
+#include <regex>     // std::regex, std::regex_error
 #include <set>       // std::set
+#include <sstream>   // std::ostringstream
 #include <utility>   // std::move
 
 #include "compile_helpers.h"
+
+static auto parse_regex(const std::string &pattern,
+                        const sourcemeta::jsontoolkit::URI &base,
+                        const sourcemeta::jsontoolkit::Pointer &schema_location)
+    -> std::regex {
+  try {
+    return std::regex{pattern, std::regex::ECMAScript | std::regex::nosubs};
+  } catch (const std::regex_error &) {
+    std::ostringstream message;
+    message << "Invalid regular expression: " << pattern;
+    throw sourcemeta::jsontoolkit::SchemaCompilationError(base, schema_location,
+                                                          message.str());
+  }
+}
 
 namespace internal {
 using namespace sourcemeta::jsontoolkit;
@@ -46,6 +61,16 @@ auto compiler_draft4_core_ref(
   auto new_schema_context{schema_context};
   new_schema_context.references.insert(reference.destination);
 
+  std::size_t direct_children_references{0};
+  if (context.frame.contains({type, reference.destination})) {
+    for (const auto &reference_entry : context.references) {
+      if (reference_entry.first.second.starts_with(
+              context.frame.at({type, reference.destination}).pointer)) {
+        direct_children_references += 1;
+      }
+    }
+  }
+
   // If the reference is not a recursive one, we can avoid the extra
   // overhead of marking the location for future jumps, and pretty much
   // just expand the reference destination in place.
@@ -56,7 +81,8 @@ auto compiler_draft4_core_ref(
        entry.pointer.starts_with(
            context.frame.at({type, reference.destination}).pointer)) ||
       schema_context.references.contains(reference.destination)};
-  if (!is_recursive) {
+
+  if (!is_recursive && direct_children_references <= 5) {
     // TODO: Enable this optimization for 2019-09 on-wards
     if (schema_context.vocabularies.contains(
             "http://json-schema.org/draft-04/schema#") ||
@@ -359,7 +385,7 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
   }
 
   const auto size{schema_context.schema.at(dynamic_context.keyword).size()};
-  const auto imports_required_keyword =
+  const auto imports_validation_vocabulary =
       schema_context.vocabularies.contains(
           "http://json-schema.org/draft-04/schema#") ||
       schema_context.vocabularies.contains(
@@ -371,7 +397,8 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
       schema_context.vocabularies.contains(
           "https://json-schema.org/draft/2020-12/vocab/validation");
   std::set<std::string> required;
-  if (imports_required_keyword && schema_context.schema.defines("required") &&
+  if (imports_validation_vocabulary &&
+      schema_context.schema.defines("required") &&
       schema_context.schema.at("required").is_array()) {
     for (const auto &property :
          schema_context.schema.at("required").as_array()) {
@@ -385,40 +412,62 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
   }
 
   std::size_t is_required = 0;
-  std::vector<std::string> properties;
+  std::vector<std::pair<std::string, SchemaCompilerTemplate>> properties;
   for (const auto &entry :
        schema_context.schema.at(dynamic_context.keyword).as_object()) {
-    properties.push_back(entry.first);
+    properties.push_back(
+        {entry.first, compile(context, schema_context, relative_dynamic_context,
+                              {entry.first}, {entry.first})});
     if (required.contains(entry.first)) {
       is_required += 1;
     }
   }
 
-  // To guarantee order
-  std::sort(properties.begin(), properties.end());
+  // In many cases, `properties` have some subschemas that are small
+  // and some subschemas that are large. To attempt to improve performance,
+  // we prefer to evaluate smaller subschemas first, in the hope of failing
+  // earlier without spending a lot of time on other subschemas
+  std::sort(properties.begin(), properties.end(),
+            [](const auto &left, const auto &right) {
+              return (left.second.size() == right.second.size())
+                         ? (left.first < right.first)
+                         : (left.second.size() < right.second.size());
+            });
+
+  assert(schema_context.relative_pointer.back().is_property());
+  assert(schema_context.relative_pointer.back().to_property() ==
+         dynamic_context.keyword);
+  const auto relative_pointer_size{schema_context.relative_pointer.size()};
+  const auto is_directly_inside_oneof{
+      relative_pointer_size > 2 &&
+      schema_context.relative_pointer.at(relative_pointer_size - 2)
+          .is_index() &&
+      schema_context.relative_pointer.at(relative_pointer_size - 3)
+          .is_property() &&
+      schema_context.relative_pointer.at(relative_pointer_size - 3)
+              .to_property() == "oneOf"};
 
   // There are two ways to compile `properties` depending on whether
   // most of the properties are marked as required using `required`
   // or whether most of the properties are optional. Each shines
   // in the corresponding case.
-
   const auto prefer_loop_over_instance{
       // This strategy only makes sense if most of the properties are "optional"
       is_required <= (size / 2) &&
       // If `properties` only defines a relatively small amount of properties,
       // then its probably still faster to unroll
-      schema_context.schema.at(dynamic_context.keyword).size() > 5};
+      schema_context.schema.at(dynamic_context.keyword).size() > 5 &&
+      // Always unroll inside `oneOf`, to have a better chance at
+      // short-circuiting quickly
+      !is_directly_inside_oneof};
 
   if (prefer_loop_over_instance) {
     SchemaCompilerValueNamedIndexes indexes;
     SchemaCompilerTemplate children;
     std::size_t cursor = 0;
 
-    for (const auto &name : properties) {
+    for (auto &&[name, substeps] : properties) {
       indexes.emplace(name, cursor);
-      auto substeps{compile(context, schema_context, relative_dynamic_context,
-                            {name}, {name})};
-
       if (annotate) {
         substeps.push_back(make<SchemaCompilerAnnotationEmit>(
             true, context, schema_context, relative_dynamic_context,
@@ -439,17 +488,21 @@ auto compiler_draft4_applicator_properties_conditional_annotation(
 
   SchemaCompilerTemplate children;
 
-  for (const auto &name : properties) {
-    auto substeps{compile(context, schema_context, relative_dynamic_context,
-                          {name}, {name})};
-
+  for (auto &&[name, substeps] : properties) {
     if (annotate) {
       substeps.push_back(make<SchemaCompilerAnnotationEmit>(
           true, context, schema_context, relative_dynamic_context, JSON{name}));
     }
 
+    const auto assume_object{imports_validation_vocabulary &&
+                             schema_context.schema.defines("type") &&
+                             schema_context.schema.at("type").is_string() &&
+                             schema_context.schema.at("type").to_string() ==
+                                 "object"};
+
     // We can avoid this "defines" condition if the property is a required one
-    if (imports_required_keyword && schema_context.schema.defines("required") &&
+    if (imports_validation_vocabulary && assume_object &&
+        schema_context.schema.defines("required") &&
         schema_context.schema.at("required").is_array() &&
         schema_context.schema.at("required").contains(JSON{name})) {
       // We can avoid the container too and just inline these steps
@@ -573,7 +626,8 @@ auto compiler_draft4_applicator_patternproperties_conditional_annotation(
       children.push_back(make<SchemaCompilerLoopPropertiesRegex>(
           // Treat this as an internal step
           false, context, schema_context, relative_dynamic_context,
-          SchemaCompilerValueRegex{std::regex{pattern, std::regex::ECMAScript},
+          SchemaCompilerValueRegex{parse_regex(pattern, schema_context.base,
+                                               schema_context.relative_pointer),
                                    pattern},
           std::move(substeps)));
     }
@@ -634,7 +688,10 @@ auto compiler_draft4_applicator_additionalproperties_conditional_annotation(
     for (const auto &entry :
          schema_context.schema.at("patternProperties").as_object()) {
       filter.second.push_back(
-          {std::regex{entry.first, std::regex::ECMAScript}, entry.first});
+          {parse_regex(entry.first, schema_context.base,
+                       schema_context.relative_pointer.initial().concat(
+                           {"patternProperties"})),
+           entry.first});
     }
   }
 
@@ -693,7 +750,8 @@ auto compiler_draft4_validation_pattern(
       schema_context.schema.at(dynamic_context.keyword).to_string()};
   return {make<SchemaCompilerAssertionRegex>(
       true, context, schema_context, dynamic_context,
-      SchemaCompilerValueRegex{std::regex{regex_string, std::regex::ECMAScript},
+      SchemaCompilerValueRegex{parse_regex(regex_string, schema_context.base,
+                                           schema_context.relative_pointer),
                                regex_string})};
 }
 
@@ -732,9 +790,10 @@ auto compiler_draft4_validation_format(
   if (format == (name)) {                                                      \
     return {make<SchemaCompilerAssertionRegex>(                                \
         true, context, schema_context, dynamic_context,                        \
-        SchemaCompilerValueRegex{                                              \
-            std::regex{(regular_expression), std::regex::ECMAScript},          \
-            (regular_expression)})};                                           \
+        SchemaCompilerValueRegex{parse_regex(regular_expression,               \
+                                             schema_context.base,              \
+                                             schema_context.relative_pointer), \
+                                 (regular_expression)})};                      \
   }
 
   COMPILE_FORMAT_REGEX("ipv4", FORMAT_REGEX_IPV4)

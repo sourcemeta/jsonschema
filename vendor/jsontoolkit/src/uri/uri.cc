@@ -133,7 +133,7 @@ URI::URI(URI &&other)
   this->scheme_ = std::move(other.scheme_);
   this->userinfo_ = std::move(other.userinfo_);
   this->host_ = std::move(other.host_);
-  this->port_ = std::move(other.port_);
+  this->port_ = other.port_;
   this->fragment_ = std::move(other.fragment_);
   this->query_ = std::move(other.query_);
 

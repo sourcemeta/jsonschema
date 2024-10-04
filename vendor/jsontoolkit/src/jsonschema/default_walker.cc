@@ -55,6 +55,10 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTPS_BASE "2020-12/vocab/validation", "maximum", None, "type")
   WALK(HTTPS_BASE "2020-12/vocab/validation", "minimum", None, "type")
 
+  // JSON Schema still defines this for backwards-compatibility
+  // See https://json-schema.org/draft/2020-12/schema
+  WALK(HTTPS_BASE "2020-12/vocab/core", "definitions", Members)
+
   // 2019-09
   WALK(HTTPS_BASE "2019-09/vocab/core", "$defs", Members)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "items", ValueOrElements)
@@ -93,6 +97,10 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
                        "required")
   WALK(HTTPS_BASE "2019-09/vocab/validation", "maximum", None, "type")
   WALK(HTTPS_BASE "2019-09/vocab/validation", "minimum", None, "type")
+
+  // JSON Schema still defines this for backwards-compatibility
+  // See https://json-schema.org/draft/2019-09/schema
+  WALK(HTTPS_BASE "2019-09/vocab/core", "definitions", Members)
 
 #undef HTTPS_BASE
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(jsontoolkit VERSION 2.0.0 LANGUAGES CXX
-  DESCRIPTION "The swiss-army knife for JSON programming in C++"
+  DESCRIPTION "The high-performance JSON Schema evaluator and related JSON utilities for modern C++"
   HOMEPAGE_URL "https://jsontoolkit.sourcemeta.com")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(vendor/noa/cmake/noa.cmake)

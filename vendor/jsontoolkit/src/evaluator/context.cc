@@ -71,7 +71,7 @@ auto EvaluationContext::push(const Pointer &relative_schema_location,
                               relative_instance_location, schema_resource,
                               dynamic);
   assert(!relative_instance_location.empty());
-  this->instances_.emplace_back(std::move(new_instance));
+  this->instances_.emplace_back(new_instance);
 }
 
 auto EvaluationContext::pop(const bool dynamic) -> void {
@@ -102,69 +102,6 @@ auto EvaluationContext::annotate(const WeakPointer &current_instance_location,
   return {*(result.first), result.second};
 }
 
-auto EvaluationContext::annotations(
-    const WeakPointer &current_instance_location,
-    const WeakPointer &schema_location) const -> const std::set<JSON> & {
-  static const decltype(this->annotations_)::mapped_type::mapped_type
-      placeholder;
-  // Use `.find()` instead of `.contains()` and `.at()` for performance
-  // reasons
-  const auto instance_location_result{
-      this->annotations_.find(current_instance_location)};
-  if (instance_location_result == this->annotations_.end()) {
-    return placeholder;
-  }
-
-  const auto schema_location_result{
-      instance_location_result->second.find(schema_location)};
-  if (schema_location_result == instance_location_result->second.end()) {
-    return placeholder;
-  }
-
-  return schema_location_result->second;
-}
-
-auto EvaluationContext::annotations(
-    const WeakPointer &current_instance_location) const
-    -> const std::map<WeakPointer, std::set<JSON>> & {
-  static const decltype(this->annotations_)::mapped_type placeholder;
-  // Use `.find()` instead of `.contains()` and `.at()` for performance
-  // reasons
-  const auto instance_location_result{
-      this->annotations_.find(current_instance_location)};
-  if (instance_location_result == this->annotations_.end()) {
-    return placeholder;
-  }
-
-  return instance_location_result->second;
-}
-
-auto EvaluationContext::defines_any_adjacent_annotation(
-    const WeakPointer &expected_instance_location,
-    const WeakPointer &base_evaluate_path, const std::string &keyword) const
-    -> bool {
-  // TODO: We should be taking masks into account
-  // TODO: How can we avoid this expensive pointer manipulation?
-  auto expected_evaluate_path{base_evaluate_path};
-  expected_evaluate_path.push_back({keyword});
-  return !this->annotations(expected_instance_location, expected_evaluate_path)
-              .empty();
-}
-
-auto EvaluationContext::defines_any_adjacent_annotation(
-    const WeakPointer &expected_instance_location,
-    const WeakPointer &base_evaluate_path,
-    const std::vector<std::string> &keywords) const -> bool {
-  for (const auto &keyword : keywords) {
-    if (this->defines_any_adjacent_annotation(expected_instance_location,
-                                              base_evaluate_path, keyword)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 auto EvaluationContext::defines_annotation(
     const WeakPointer &expected_instance_location,
     const WeakPointer &base_evaluate_path,
@@ -173,10 +110,14 @@ auto EvaluationContext::defines_annotation(
     return false;
   }
 
-  const auto instance_annotations{
-      this->annotations(expected_instance_location)};
+  const auto instance_location_result{
+      this->annotations_.find(expected_instance_location)};
+  if (instance_location_result == this->annotations_.end()) {
+    return false;
+  }
+
   for (const auto &[schema_location, schema_annotations] :
-       instance_annotations) {
+       instance_location_result->second) {
     assert(!schema_location.empty());
     const auto &keyword{schema_location.back()};
 
@@ -210,8 +151,15 @@ auto EvaluationContext::largest_annotation_index(
   // TODO: We should be taking masks into account
 
   std::uint64_t result{default_value};
+
+  const auto instance_location_result{
+      this->annotations_.find(expected_instance_location)};
+  if (instance_location_result == this->annotations_.end()) {
+    return result;
+  }
+
   for (const auto &[schema_location, schema_annotations] :
-       this->annotations(expected_instance_location)) {
+       instance_location_result->second) {
     assert(!schema_location.empty());
     const auto &keyword{schema_location.back()};
     if (!keyword.is_property()) {
@@ -275,18 +223,31 @@ auto EvaluationContext::target_type(const TargetType type) noexcept -> void {
 
 auto EvaluationContext::resolve_target() -> const JSON & {
   if (this->property_as_instance) [[unlikely]] {
-    assert(!this->instance_location().empty());
-    assert(this->instance_location().back().is_property());
-    // For efficiency, as we likely reference the same JSON values
-    // over and over again
-    // TODO: Get rid of this once we have weak pointers
-    static std::set<JSON> property_values;
-    return *(
-        property_values.emplace(this->instance_location().back().to_property())
-            .first);
+    // In this case, we still need to return a string in order
+    // to cope with non-string keywords inside `propertyNames`
+    // that need to fail validation. But then, the actual string
+    // we return doesn't matter, so we can always return a dummy one.
+    static const JSON empty_string{""};
+    return empty_string;
   }
 
   return this->instances_.back().get();
+}
+
+auto EvaluationContext::resolve_string_target()
+    -> std::optional<std::reference_wrapper<const JSON::String>> {
+  if (this->property_as_instance) [[unlikely]] {
+    assert(!this->instance_location().empty());
+    assert(this->instance_location().back().is_property());
+    return this->instance_location().back().to_property();
+  } else {
+    const auto &result{this->instances_.back().get()};
+    if (!result.is_string()) {
+      return std::nullopt;
+    }
+
+    return result.to_string();
+  }
 }
 
 auto EvaluationContext::mark(const std::size_t id,

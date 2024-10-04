@@ -499,7 +499,8 @@ auto sourcemeta::jsontoolkit::default_schema_compiler(
            "https://json-schema.org/draft/2019-09/vocab/core") ||
        schema_context.vocabularies.contains(
            "https://json-schema.org/draft/2020-12/vocab/core")) &&
-      !dynamic_context.keyword.starts_with('$')) {
+      !dynamic_context.keyword.starts_with('$') &&
+      dynamic_context.keyword != "definitions") {
 
     // We handle these keywords as part of "contains"
     if ((schema_context.vocabularies.contains(
