@@ -9,7 +9,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(vendor/noa/cmake/noa.cmake)
 
 # Options
-option(JSONBINPACK_CLI "Build the JSON BinPack CLI" ON)
 option(JSONBINPACK_NUMERIC "Build the JSON BinPack numeric library" ON)
 option(JSONBINPACK_RUNTIME "Build the JSON BinPack runtime" ON)
 option(JSONBINPACK_COMPILER "Build the JSON BinPack compiler" ON)
@@ -56,11 +55,6 @@ if(JSONBINPACK_COMPILER)
   add_subdirectory(src/compiler)
 endif()
 
-# CLI
-if(JSONBINPACK_CLI)
-  add_subdirectory(src/cli)
-endif()
-
 if(JSONBINPACK_ADDRESS_SANITIZER)
   noa_sanitizer(TYPE address)
 elseif(JSONBINPACK_UNDEFINED_SANITIZER)
@@ -89,16 +83,16 @@ if(JSONBINPACK_TESTS)
   find_package(GoogleTest REQUIRED)
   enable_testing()
 
+  if(JSONBINPACK_NUMERIC)
+    add_subdirectory(test/numeric)
+  endif()
+
   if(JSONBINPACK_RUNTIME)
     add_subdirectory(test/runtime)
   endif()
 
   if(JSONBINPACK_COMPILER)
     add_subdirectory(test/compiler)
-  endif()
-
-  if(JSONBINPACK_CLI)
-    add_subdirectory(test/cli)
   endif()
 
   add_subdirectory(test/e2e)

@@ -1,7 +1,8 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_ENCODING_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODING_H_
 
-#include <sourcemeta/jsonbinpack/runtime_numeric.h>
+#include <sourcemeta/jsonbinpack/numeric.h>
+
 #include <sourcemeta/jsontoolkit/json.h>
 
 #include <cstdint> // std::int64_t, std::uint64_t

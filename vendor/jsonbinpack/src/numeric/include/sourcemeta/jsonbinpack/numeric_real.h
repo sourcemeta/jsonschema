@@ -1,11 +1,9 @@
-#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_REAL_H_
-#define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_REAL_H_
+#ifndef SOURCEMETA_JSONBINPACK_NUMERIC_REAL_H_
+#define SOURCEMETA_JSONBINPACK_NUMERIC_REAL_H_
 
 #include <cassert>  // assert
 #include <cmath>    // std::modf, std::floor, std::isfinite
 #include <concepts> // std::floating_point, std::integral
-
-// TODO: Move to src/numeric
 
 namespace sourcemeta::jsonbinpack {
 
@@ -14,6 +12,7 @@ namespace sourcemeta::jsonbinpack {
 // used. Here, we abuse those imprecision characteristics for
 // space-efficiency by performing rounding on a very, very low
 // threshold.
+/// @ingroup numeric
 template <std::floating_point Real>
 constexpr auto correct_ieee764(const Real value) -> Real {
   assert(std::isfinite(value));
@@ -29,6 +28,7 @@ constexpr auto correct_ieee764(const Real value) -> Real {
   }
 }
 
+/// @ingroup numeric
 template <std::integral Integer, std::floating_point Real>
 constexpr auto real_digits(Real value, std::uint64_t *point_position)
     -> Integer {
