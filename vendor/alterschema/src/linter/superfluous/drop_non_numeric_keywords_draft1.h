@@ -5,10 +5,11 @@ public:
              "Keywords that don't apply to numbers will never match if the "
              "instance is guaranteed to be a number"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
-            const std::set<std::string> &vocabularies,
-            const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
+                               const std::string &,
+                               const std::set<std::string> &vocabularies,
+                               const sourcemeta::jsontoolkit::Pointer &) const
+      -> bool override {
     return vocabularies.contains(
                "http://json-schema.org/draft-01/hyper-schema#") &&
            schema.is_object() && schema.defines("type") &&

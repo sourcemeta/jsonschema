@@ -6,10 +6,11 @@ public:
              "that is already marked as required is an unnecessarily complex "
              "use of `dependencies`"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
-            const std::set<std::string> &vocabularies,
-            const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
+                               const std::string &,
+                               const std::set<std::string> &vocabularies,
+                               const sourcemeta::jsontoolkit::Pointer &) const
+      -> bool override {
     return contains_any(vocabularies,
                         {"http://json-schema.org/draft-07/schema#",
                          "http://json-schema.org/draft-06/schema#",

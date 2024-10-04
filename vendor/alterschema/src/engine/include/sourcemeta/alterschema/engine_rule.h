@@ -71,18 +71,20 @@ public:
   [[nodiscard]] auto message() const -> const std::string &;
 
   /// Apply the rule to a schema
-  auto apply(sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::Pointer &pointer,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-             const std::optional<std::string> &default_dialect =
-                 std::nullopt) const -> std::vector<Operation>;
+  auto
+  apply(sourcemeta::jsontoolkit::JSON &schema,
+        const sourcemeta::jsontoolkit::Pointer &pointer,
+        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+        const std::optional<std::string> &default_dialect = std::nullopt) const
+      -> std::vector<Operation>;
 
   /// Check if the rule applies to a schema
-  auto check(const sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::Pointer &pointer,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-             const std::optional<std::string> &default_dialect =
-                 std::nullopt) const -> bool;
+  auto
+  check(const sourcemeta::jsontoolkit::JSON &schema,
+        const sourcemeta::jsontoolkit::Pointer &pointer,
+        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+        const std::optional<std::string> &default_dialect = std::nullopt) const
+      -> bool;
 
 private:
   /// The rule condition

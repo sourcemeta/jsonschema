@@ -5,10 +5,11 @@ public:
              "Setting both `exclusiveMinimum` and `minimum` at the same time "
              "is considered an anti-pattern. You should choose one"} {};
 
-  [[nodiscard]] auto
-  condition(const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
-            const std::set<std::string> &vocabularies,
-            const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
+                               const std::string &,
+                               const std::set<std::string> &vocabularies,
+                               const sourcemeta::jsontoolkit::Pointer &) const
+      -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",
