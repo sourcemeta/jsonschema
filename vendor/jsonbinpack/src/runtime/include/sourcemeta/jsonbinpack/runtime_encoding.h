@@ -12,16 +12,49 @@
 
 namespace sourcemeta::jsonbinpack {
 
-// We cannot directly create an Plan variant type whose values potentially
-// include other Plan instances.  As a workaround, we have a helper
-// encoding wrapper that we can use as an incomplete type
-struct __internal_encoding_wrapper;
-// Use these alias types. Never use the internal wrapper type directly
-using SinglePlan = std::shared_ptr<__internal_encoding_wrapper>;
-using MultiplePlans = std::vector<__internal_encoding_wrapper>;
+// Forward declarations for the sole purpose of being bale to define circular
+// structures
+#ifndef DOXYGEN
+struct BOUNDED_MULTIPLE_8BITS_ENUM_FIXED;
+struct FLOOR_MULTIPLE_ENUM_VARINT;
+struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT;
+struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT;
+struct DOUBLE_VARINT_TUPLE;
+struct BYTE_CHOICE_INDEX;
+struct LARGE_CHOICE_INDEX;
+struct TOP_LEVEL_BYTE_CHOICE_INDEX;
+struct CONST_NONE;
+struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX;
+struct UTF8_STRING_NO_LENGTH;
+struct FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED;
+struct ROOF_VARINT_PREFIX_UTF8_STRING_SHARED;
+struct BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED;
+struct RFC3339_DATE_INTEGER_TRIPLET;
+struct PREFIX_VARINT_LENGTH_STRING_SHARED;
+struct FIXED_TYPED_ARRAY;
+struct BOUNDED_8BITS_TYPED_ARRAY;
+struct FLOOR_TYPED_ARRAY;
+struct ROOF_TYPED_ARRAY;
+struct FIXED_TYPED_ARBITRARY_OBJECT;
+struct VARINT_TYPED_ARBITRARY_OBJECT;
+#endif
 
 /// @ingroup runtime
-/// @defgroup plan_integer Integer Encodings
+/// Represents an encoding
+using Encoding = std::variant<
+    BOUNDED_MULTIPLE_8BITS_ENUM_FIXED, FLOOR_MULTIPLE_ENUM_VARINT,
+    ROOF_MULTIPLE_MIRROR_ENUM_VARINT, ARBITRARY_MULTIPLE_ZIGZAG_VARINT,
+    DOUBLE_VARINT_TUPLE, BYTE_CHOICE_INDEX, LARGE_CHOICE_INDEX,
+    TOP_LEVEL_BYTE_CHOICE_INDEX, CONST_NONE, ANY_PACKED_TYPE_TAG_BYTE_PREFIX,
+    UTF8_STRING_NO_LENGTH, FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED,
+    ROOF_VARINT_PREFIX_UTF8_STRING_SHARED,
+    BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED, RFC3339_DATE_INTEGER_TRIPLET,
+    PREFIX_VARINT_LENGTH_STRING_SHARED, FIXED_TYPED_ARRAY,
+    BOUNDED_8BITS_TYPED_ARRAY, FLOOR_TYPED_ARRAY, ROOF_TYPED_ARRAY,
+    FIXED_TYPED_ARBITRARY_OBJECT, VARINT_TYPED_ARBITRARY_OBJECT>;
+
+/// @ingroup runtime
+/// @defgroup encoding_integer Integer Encodings
 /// @{
 
 // clang-format off
@@ -179,7 +212,7 @@ struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT {
 /// @}
 
 /// @ingroup runtime
-/// @defgroup plan_number Number Encodings
+/// @defgroup encoding_number Number Encodings
 /// @{
 
 // clang-format off
@@ -226,7 +259,7 @@ struct DOUBLE_VARINT_TUPLE {};
 /// @}
 
 /// @ingroup runtime
-/// @defgroup plan_enum Enumeration Encodings
+/// @defgroup encoding_any Any Encodings
 /// @{
 
 // clang-format off
@@ -367,10 +400,65 @@ struct CONST_NONE {
   const sourcemeta::jsontoolkit::JSON value;
 };
 
+// TODO: Write brief description
+struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX {};
+#ifndef DOXYGEN
+namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX {
+constexpr auto type_size = 3;
+constexpr std::uint8_t TYPE_SHARED_STRING = 0b00000000;
+constexpr std::uint8_t TYPE_STRING = 0b00000001;
+constexpr std::uint8_t TYPE_LONG_STRING = 0b00000010;
+constexpr std::uint8_t TYPE_OBJECT = 0b00000011;
+constexpr std::uint8_t TYPE_ARRAY = 0b00000100;
+constexpr std::uint8_t TYPE_POSITIVE_INTEGER_BYTE = 0b00000101;
+constexpr std::uint8_t TYPE_NEGATIVE_INTEGER_BYTE = 0b00000110;
+constexpr std::uint8_t TYPE_OTHER = 0b00000111;
+static_assert(TYPE_SHARED_STRING <= uint_max<type_size>);
+static_assert(TYPE_STRING <= uint_max<type_size>);
+static_assert(TYPE_LONG_STRING <= uint_max<type_size>);
+static_assert(TYPE_OBJECT <= uint_max<type_size>);
+static_assert(TYPE_ARRAY <= uint_max<type_size>);
+static_assert(TYPE_POSITIVE_INTEGER_BYTE <= uint_max<type_size>);
+static_assert(TYPE_NEGATIVE_INTEGER_BYTE <= uint_max<type_size>);
+static_assert(TYPE_OTHER <= uint_max<type_size>);
+
+constexpr auto subtype_size = 5;
+constexpr std::uint8_t SUBTYPE_FALSE = 0b00000000;
+constexpr std::uint8_t SUBTYPE_TRUE = 0b00000001;
+constexpr std::uint8_t SUBTYPE_NULL = 0b00000010;
+constexpr std::uint8_t SUBTYPE_POSITIVE_INTEGER = 0b00000011;
+constexpr std::uint8_t SUBTYPE_NEGATIVE_INTEGER = 0b00000100;
+constexpr std::uint8_t SUBTYPE_NUMBER = 0b00000101;
+constexpr std::uint8_t SUBTYPE_POSITIVE_REAL_INTEGER_BYTE = 0b00000110;
+constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_7 = 0b00000111;
+constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_8 = 0b00001000;
+constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_9 = 0b00001001;
+constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_10 = 0b00001010;
+
+static_assert(SUBTYPE_FALSE <= uint_max<subtype_size>);
+static_assert(SUBTYPE_TRUE <= uint_max<subtype_size>);
+static_assert(SUBTYPE_NULL <= uint_max<subtype_size>);
+static_assert(SUBTYPE_POSITIVE_INTEGER <= uint_max<subtype_size>);
+static_assert(SUBTYPE_NEGATIVE_INTEGER <= uint_max<subtype_size>);
+static_assert(SUBTYPE_NUMBER <= uint_max<subtype_size>);
+static_assert(SUBTYPE_POSITIVE_REAL_INTEGER_BYTE <= uint_max<subtype_size>);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 <= uint_max<subtype_size>);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 <= uint_max<subtype_size>);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 <= uint_max<subtype_size>);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 <= uint_max<subtype_size>);
+
+// Note that the binary values actually match the declared exponents
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 == 7);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 == 8);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 == 9);
+static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 == 10);
+} // namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX
+#endif
+
 /// @}
 
 /// @ingroup runtime
-/// @defgroup plan_string String Encodings
+/// @defgroup encoding_string String Encodings
 /// @{
 
 // clang-format off
@@ -661,7 +749,7 @@ struct PREFIX_VARINT_LENGTH_STRING_SHARED {};
 /// @}
 
 /// @ingroup runtime
-/// @defgroup plan_array Array Encodings
+/// @defgroup encoding_array Array Encodings
 /// @{
 
 // clang-format off
@@ -703,9 +791,9 @@ struct FIXED_TYPED_ARRAY {
   /// The array length
   const std::uint64_t size;
   /// Element encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const MultiplePlans prefix_encodings;
+  const std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -754,9 +842,9 @@ struct BOUNDED_8BITS_TYPED_ARRAY {
   /// The maximum length of the array
   const std::uint64_t maximum;
   /// Element encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const MultiplePlans prefix_encodings;
+  const std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -800,9 +888,9 @@ struct FLOOR_TYPED_ARRAY {
   /// The minimum length of the array
   const std::uint64_t minimum;
   /// Element encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const MultiplePlans prefix_encodings;
+  const std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -845,15 +933,15 @@ struct ROOF_TYPED_ARRAY {
   /// The maximum length of the array
   const std::uint64_t maximum;
   /// Element encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const MultiplePlans prefix_encodings;
+  const std::vector<Encoding> prefix_encodings;
 };
 
 /// @}
 
 /// @ingroup runtime
-/// @defgroup plan_object Object Encodings
+/// @defgroup encoding_object Object Encodings
 /// @{
 
 // clang-format off
@@ -902,9 +990,9 @@ struct FIXED_TYPED_ARBITRARY_OBJECT {
   /// The object size
   const std::uint64_t size;
   /// Key encoding
-  const SinglePlan key_encoding;
+  const std::shared_ptr<Encoding> key_encoding;
   /// Value encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
 };
 
 // clang-format off
@@ -946,95 +1034,12 @@ struct FIXED_TYPED_ARBITRARY_OBJECT {
 // clang-format on
 struct VARINT_TYPED_ARBITRARY_OBJECT {
   /// Key encoding
-  const SinglePlan key_encoding;
+  const std::shared_ptr<Encoding> key_encoding;
   /// Value encoding
-  const SinglePlan encoding;
+  const std::shared_ptr<Encoding> encoding;
 };
 
 /// @}
-
-/// @ingroup runtime
-/// @defgroup plan_any Any Encodings
-/// @{
-
-// TODO: Write brief description
-struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX {};
-#ifndef DOXYGEN
-namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX {
-constexpr auto type_size = 3;
-constexpr std::uint8_t TYPE_SHARED_STRING = 0b00000000;
-constexpr std::uint8_t TYPE_STRING = 0b00000001;
-constexpr std::uint8_t TYPE_LONG_STRING = 0b00000010;
-constexpr std::uint8_t TYPE_OBJECT = 0b00000011;
-constexpr std::uint8_t TYPE_ARRAY = 0b00000100;
-constexpr std::uint8_t TYPE_POSITIVE_INTEGER_BYTE = 0b00000101;
-constexpr std::uint8_t TYPE_NEGATIVE_INTEGER_BYTE = 0b00000110;
-constexpr std::uint8_t TYPE_OTHER = 0b00000111;
-static_assert(TYPE_SHARED_STRING <= uint_max<type_size>);
-static_assert(TYPE_STRING <= uint_max<type_size>);
-static_assert(TYPE_LONG_STRING <= uint_max<type_size>);
-static_assert(TYPE_OBJECT <= uint_max<type_size>);
-static_assert(TYPE_ARRAY <= uint_max<type_size>);
-static_assert(TYPE_POSITIVE_INTEGER_BYTE <= uint_max<type_size>);
-static_assert(TYPE_NEGATIVE_INTEGER_BYTE <= uint_max<type_size>);
-static_assert(TYPE_OTHER <= uint_max<type_size>);
-
-constexpr auto subtype_size = 5;
-constexpr std::uint8_t SUBTYPE_FALSE = 0b00000000;
-constexpr std::uint8_t SUBTYPE_TRUE = 0b00000001;
-constexpr std::uint8_t SUBTYPE_NULL = 0b00000010;
-constexpr std::uint8_t SUBTYPE_POSITIVE_INTEGER = 0b00000011;
-constexpr std::uint8_t SUBTYPE_NEGATIVE_INTEGER = 0b00000100;
-constexpr std::uint8_t SUBTYPE_NUMBER = 0b00000101;
-constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_7 = 0b00000111;
-constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_8 = 0b00001000;
-constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_9 = 0b00001001;
-constexpr std::uint8_t SUBTYPE_LONG_STRING_BASE_EXPONENT_10 = 0b00001010;
-
-static_assert(SUBTYPE_FALSE <= uint_max<subtype_size>);
-static_assert(SUBTYPE_TRUE <= uint_max<subtype_size>);
-static_assert(SUBTYPE_NULL <= uint_max<subtype_size>);
-static_assert(SUBTYPE_POSITIVE_INTEGER <= uint_max<subtype_size>);
-static_assert(SUBTYPE_NEGATIVE_INTEGER <= uint_max<subtype_size>);
-static_assert(SUBTYPE_NUMBER <= uint_max<subtype_size>);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 <= uint_max<subtype_size>);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 <= uint_max<subtype_size>);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 <= uint_max<subtype_size>);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 <= uint_max<subtype_size>);
-
-// Note that the binary values actually match the declared exponents
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 == 7);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 == 8);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 == 9);
-static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 == 10);
-} // namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX
-#endif
-
-/// @}
-// clang-format on
-
-/// @ingroup runtime
-/// Represents an encoding plan
-using Plan = std::variant<
-    BOUNDED_MULTIPLE_8BITS_ENUM_FIXED, FLOOR_MULTIPLE_ENUM_VARINT,
-    ROOF_MULTIPLE_MIRROR_ENUM_VARINT, ARBITRARY_MULTIPLE_ZIGZAG_VARINT,
-    DOUBLE_VARINT_TUPLE, BYTE_CHOICE_INDEX, LARGE_CHOICE_INDEX,
-    TOP_LEVEL_BYTE_CHOICE_INDEX, CONST_NONE, UTF8_STRING_NO_LENGTH,
-    FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED,
-    ROOF_VARINT_PREFIX_UTF8_STRING_SHARED,
-    BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED, RFC3339_DATE_INTEGER_TRIPLET,
-    PREFIX_VARINT_LENGTH_STRING_SHARED, FIXED_TYPED_ARRAY,
-    BOUNDED_8BITS_TYPED_ARRAY, FLOOR_TYPED_ARRAY, ROOF_TYPED_ARRAY,
-    FIXED_TYPED_ARBITRARY_OBJECT, VARINT_TYPED_ARBITRARY_OBJECT,
-    ANY_PACKED_TYPE_TAG_BYTE_PREFIX>;
-
-// Helper definitions that rely on the Plan data type
-#ifndef DOXYGEN
-// Ignore this definition on the documentation
-struct __internal_encoding_wrapper {
-  const Plan value;
-};
-#endif
 
 } // namespace sourcemeta::jsonbinpack
 

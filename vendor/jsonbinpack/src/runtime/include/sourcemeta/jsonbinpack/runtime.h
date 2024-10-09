@@ -10,9 +10,50 @@
 /// #include <sourcemeta/jsonbinpack/runtime.h>
 /// ```
 
+#include "runtime_export.h"
+
+#include <sourcemeta/jsontoolkit/json.h>
+
 #include <sourcemeta/jsonbinpack/runtime_decoder.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
-#include <sourcemeta/jsonbinpack/runtime_parser.h>
-#include <sourcemeta/jsonbinpack/runtime_plan.h>
+#include <sourcemeta/jsonbinpack/runtime_encoding.h>
+
+#include <exception> // std::exception
+#include <utility>   // std::move
+
+namespace sourcemeta::jsonbinpack {
+
+/// @ingroup runtime
+SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
+auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding;
+
+// Exporting symbols that depends on the standard C++ library is considered
+// safe.
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251 4275)
+#endif
+
+/// @ingroup runtime
+/// This class represents an encoding error
+class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT EncodingError
+    : public std::exception {
+public:
+  EncodingError(sourcemeta::jsontoolkit::JSON::String message)
+      : message_{std::move(message)} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+private:
+  const sourcemeta::jsontoolkit::JSON::String message_;
+};
+
+#if defined(_MSC_VER)
+#pragma warning(default : 4251 4275)
+#endif
+
+} // namespace sourcemeta::jsonbinpack
 
 #endif

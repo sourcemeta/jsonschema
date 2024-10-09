@@ -1,6 +1,10 @@
-#include <sourcemeta/jsonbinpack/runtime_parser.h>
+#include <sourcemeta/jsonbinpack/runtime.h>
 
-#include "runtime_parser_v1.h"
+#include "loader_v1_any.h"
+#include "loader_v1_array.h"
+#include "loader_v1_integer.h"
+#include "loader_v1_number.h"
+#include "loader_v1_string.h"
 
 #include <cassert>   // assert
 #include <sstream>   // std::ostringstream
@@ -8,7 +12,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto parse(const sourcemeta::jsontoolkit::JSON &input) -> Plan {
+auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding {
   assert(input.defines("binpackEncoding"));
   assert(input.defines("binpackOptions"));
   const auto encoding{input.at("binpackEncoding").to_string()};
@@ -25,11 +29,12 @@ auto parse(const sourcemeta::jsontoolkit::JSON &input) -> Plan {
   PARSE_ENCODING(v1, ARBITRARY_MULTIPLE_ZIGZAG_VARINT)
   // Numbers
   PARSE_ENCODING(v1, DOUBLE_VARINT_TUPLE)
-  // Enumerations
+  // Any
   PARSE_ENCODING(v1, BYTE_CHOICE_INDEX)
   PARSE_ENCODING(v1, LARGE_CHOICE_INDEX)
   PARSE_ENCODING(v1, TOP_LEVEL_BYTE_CHOICE_INDEX)
   PARSE_ENCODING(v1, CONST_NONE)
+  PARSE_ENCODING(v1, ANY_PACKED_TYPE_TAG_BYTE_PREFIX)
   // Strings
   PARSE_ENCODING(v1, UTF8_STRING_NO_LENGTH)
   PARSE_ENCODING(v1, FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED)
@@ -42,15 +47,14 @@ auto parse(const sourcemeta::jsontoolkit::JSON &input) -> Plan {
   PARSE_ENCODING(v1, BOUNDED_8BITS_TYPED_ARRAY)
   PARSE_ENCODING(v1, FLOOR_TYPED_ARRAY)
   PARSE_ENCODING(v1, ROOF_TYPED_ARRAY)
-  // Any
-  PARSE_ENCODING(v1, ANY_PACKED_TYPE_TAG_BYTE_PREFIX)
+
+  // TODO: Handle object encodings
 
 #undef PARSE_ENCODING
 
-  // TODO: Have a custom error for this
   std::ostringstream error;
   error << "Unrecognized encoding: " << encoding;
-  throw std::runtime_error(error.str());
+  throw EncodingError(error.str());
 }
 
 } // namespace sourcemeta::jsonbinpack
