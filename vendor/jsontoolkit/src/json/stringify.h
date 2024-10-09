@@ -6,7 +6,8 @@
 #include <sourcemeta/jsontoolkit/json.h>
 
 #include <algorithm> // std::transform, std::sort
-#include <ios>       // std::showpoint, std::noshowpoint
+#include <iomanip>   // std::setprecision
+#include <ios>       // std::noshowpoint, std::fixed
 #include <iterator>  // std::next, std::cbegin, std::cend, std::back_inserter
 #include <ostream>   // std::basic_ostream
 #include <string>    // std::to_string
@@ -64,14 +65,23 @@ auto stringify(
 
 template <template <typename T> typename Allocator>
 auto stringify(
-    const double value,
+    const double value, const bool is_integer_real,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
     -> void {
   if (value == static_cast<double>(0.0)) {
     stream.write("0.0", 3);
+  } else if (is_integer_real) {
+    const auto flags{stream.flags()};
+    const auto precision{stream.precision()};
+    stream << std::fixed << std::setprecision(1) << value;
+    stream.flags(flags);
+    stream.precision(precision);
   } else {
-    // TODO: use .put() etc instead of formatted output
-    stream << std::noshowpoint << value << std::showpoint;
+    const auto flags{stream.flags()};
+    const auto precision{stream.precision()};
+    stream << std::noshowpoint << value;
+    stream.flags(flags);
+    stream.precision(precision);
   }
 }
 
@@ -534,7 +544,8 @@ auto stringify(
       stringify<Allocator>(document.to_integer(), stream);
       break;
     case JSON::Type::Real:
-      stringify<Allocator>(document.to_real(), stream);
+      stringify<Allocator>(document.to_real(), document.is_integer_real(),
+                           stream);
       break;
     case JSON::Type::String:
       stringify<Allocator>(document.to_string(), stream);
@@ -566,7 +577,8 @@ auto prettify(
       stringify<Allocator>(document.to_integer(), stream);
       break;
     case JSON::Type::Real:
-      stringify<Allocator>(document.to_real(), stream);
+      stringify<Allocator>(document.to_real(), document.is_integer_real(),
+                           stream);
       break;
     case JSON::Type::String:
       stringify<Allocator>(document.to_string(), stream);
