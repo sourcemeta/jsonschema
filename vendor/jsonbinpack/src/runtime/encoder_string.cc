@@ -20,7 +20,7 @@ auto Encoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
   assert(document.is_string());
   const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
   const auto size{value.size()};
-  assert(document.size() == size);
+  assert(document.byte_size() == size);
   const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
 
   // (1) Write 0x00 if shared, else do nothing
@@ -46,7 +46,7 @@ auto Encoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
   assert(document.is_string());
   const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
   const auto size{value.size()};
-  assert(document.size() == size);
+  assert(document.byte_size() == size);
   assert(size <= options.maximum);
   const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
 
@@ -73,7 +73,7 @@ auto Encoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
   assert(document.is_string());
   const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
   const auto size{value.size()};
-  assert(document.size() == size);
+  assert(document.byte_size() == size);
   assert(options.minimum <= options.maximum);
   assert(is_byte(options.maximum - options.minimum + 1));
   assert(is_within(size, options.minimum, options.maximum));
@@ -137,7 +137,7 @@ auto Encoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
                         Cache::Type::PrefixLengthVarintPlusOne);
   } else {
     const auto size{value.size()};
-    assert(document.size() == size);
+    assert(document.byte_size() == size);
     this->cache_.record(value, this->position(),
                         Cache::Type::PrefixLengthVarintPlusOne);
     this->put_varint(size + 1);
