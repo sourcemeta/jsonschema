@@ -74,11 +74,11 @@ Commands:
        Pre-process a JSON Schema into JSON BinPack's canonical form
        for static analysis.
 
-   encode <document.json> <output.binpack>
+   encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
 
-   decode <output.binpack> <output.json>
+   decode <output.binpack> <output.json|.jsonl>
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 

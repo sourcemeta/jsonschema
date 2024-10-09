@@ -19,7 +19,9 @@ cat << 'EOF' > "$TMP/expected.txt"
 EOF
 
 cat << 'EOF' > "$TMP/expected-output.txt"
-size: 11 bytes
+original file size: 19 bytes
+encoded file size: 11 bytes
+compression ratio: 57%
 EOF
 
 diff "$TMP/expected.txt" "$TMP/output.hex"
