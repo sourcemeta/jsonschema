@@ -172,6 +172,16 @@ add_jsonschema_test_unix(canonicalize/fail_no_schema)
 add_jsonschema_test_unix(canonicalize/fail_schema_invalid_json)
 add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
 
+# Encode
+add_jsonschema_test_unix(encode/pass_schema_less)
+add_jsonschema_test_unix(encode/fail_no_document)
+add_jsonschema_test_unix(encode/fail_no_output)
+
+# Decode
+add_jsonschema_test_unix(decode/pass_schema_less)
+add_jsonschema_test_unix(decode/fail_no_document)
+add_jsonschema_test_unix(decode/fail_no_output)
+
 # CI specific tests
 add_jsonschema_test_unix_ci(pass_bundle_http)
 add_jsonschema_test_unix_ci(fail_bundle_http_non_200)

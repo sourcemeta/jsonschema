@@ -66,6 +66,8 @@ documentation:
 - [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
 - [`jsonschema identify`](./docs/identify.markdown)
 - [`jsonschema canonicalize`](./docs/canonicalize.markdown) (for static analysis)
+- [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
+- [`jsonschema decode`](./docs/decode.markdown)
 
 Installation
 ------------

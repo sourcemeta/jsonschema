@@ -74,6 +74,14 @@ Commands:
        Pre-process a JSON Schema into JSON BinPack's canonical form
        for static analysis.
 
+   encode <document.json> <output.binpack>
+
+       Encode a JSON document or JSONL dataset using JSON BinPack.
+
+   decode <output.binpack> <output.json>
+
+       Decode a JSON document or JSONL dataset using JSON BinPack.
+
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
@@ -99,6 +107,10 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::identify(arguments);
   } else if (command == "canonicalize") {
     return sourcemeta::jsonschema::cli::canonicalize(arguments);
+  } else if (command == "encode") {
+    return sourcemeta::jsonschema::cli::encode(arguments);
+  } else if (command == "decode") {
+    return sourcemeta::jsonschema::cli::decode(arguments);
   } else {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
