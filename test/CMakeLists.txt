@@ -174,11 +174,15 @@ add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
+add_jsonschema_test_unix(encode/pass_schema_less_jsonl)
+add_jsonschema_test_unix(encode/pass_schema_less_jsonl_verbose)
 add_jsonschema_test_unix(encode/fail_no_document)
 add_jsonschema_test_unix(encode/fail_no_output)
 
 # Decode
 add_jsonschema_test_unix(decode/pass_schema_less)
+add_jsonschema_test_unix(decode/pass_schema_less_jsonl)
+add_jsonschema_test_unix(decode/pass_schema_less_jsonl_verbose)
 add_jsonschema_test_unix(decode/fail_no_document)
 add_jsonschema_test_unix(decode/fail_no_output)
 

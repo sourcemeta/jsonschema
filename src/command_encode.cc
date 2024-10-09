@@ -1,6 +1,7 @@
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
 #include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/jsontoolkit/jsonl.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>    // EXIT_SUCCESS
@@ -33,18 +34,52 @@ auto sourcemeta::jsonschema::cli::encode(
       resolver(options, options.contains("h") || options.contains("http")));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
-  const auto document{
-      sourcemeta::jsontoolkit::from_file(options.at("").front())};
+  const std::filesystem::path document{options.at("").front()};
+  const auto original_size{std::filesystem::file_size(document)};
+  std::cerr << "original file size: " << original_size << " bytes\n";
 
-  std::ofstream output_stream(
-      std::filesystem::weakly_canonical(options.at("").at(1)),
-      std::ios::binary);
-  output_stream.exceptions(std::ios_base::badbit);
-  sourcemeta::jsonbinpack::Encoder encoder{output_stream};
-  encoder.write(document, encoding);
-  output_stream.flush();
-  const auto size{output_stream.tellp()};
-  output_stream.close();
-  std::cerr << "size: " << size << " bytes\n";
+  if (document.extension() == ".jsonl") {
+    log_verbose(options) << "Interpreting input as JSONL: "
+                         << std::filesystem::weakly_canonical(document).string()
+                         << "\n";
+
+    auto stream{sourcemeta::jsontoolkit::read_file(document)};
+    std::ofstream output_stream(
+        std::filesystem::weakly_canonical(options.at("").at(1)),
+        std::ios::binary);
+    output_stream.exceptions(std::ios_base::badbit);
+    sourcemeta::jsonbinpack::Encoder encoder{output_stream};
+    std::size_t count{0};
+    for (const auto &entry : sourcemeta::jsontoolkit::JSONL{stream}) {
+      log_verbose(options) << "Encoding entry #" << count << "\n";
+      encoder.write(entry, encoding);
+      count += 1;
+    }
+
+    output_stream.flush();
+    const auto total_size{output_stream.tellp()};
+    output_stream.close();
+    std::cerr << "encoded file size: " << total_size << " bytes\n";
+    std::cerr << "compression ratio: "
+              << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
+              << "%\n";
+  } else {
+    const auto entry{
+        sourcemeta::jsontoolkit::from_file(options.at("").front())};
+    std::ofstream output_stream(
+        std::filesystem::weakly_canonical(options.at("").at(1)),
+        std::ios::binary);
+    output_stream.exceptions(std::ios_base::badbit);
+    sourcemeta::jsonbinpack::Encoder encoder{output_stream};
+    encoder.write(entry, encoding);
+    output_stream.flush();
+    const auto total_size{output_stream.tellp()};
+    output_stream.close();
+    std::cerr << "encoded file size: " << total_size << " bytes\n";
+    std::cerr << "compression ratio: "
+              << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
+              << "%\n";
+  }
+
   return EXIT_SUCCESS;
 }

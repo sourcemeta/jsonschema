@@ -2,7 +2,7 @@ Encode
 ======
 
 ```sh
-jsonschema encode <document.json> <output.binpack>
+jsonschema encode <document.json|.jsonl> <output.binpack>
 ```
 
 This command encodes a JSON document using [JSON
@@ -32,4 +32,10 @@ $ xxd output.binpack
 
 ```sh
 jsonschema encode path/to/my/document.json path/to/output.binpack
+```
+
+### Encode a JSONL dataset
+
+```sh
+jsonschema encode path/to/my/dataset.jsonl path/to/output.binpack
 ```

@@ -2,7 +2,7 @@ Decode
 ======
 
 ```sh
-jsonschema decode <output.binpack> <output.json>
+jsonschema decode <output.binpack> <output.json|.jsonl>
 ```
 
 This command decodes a JSON document using [JSON
@@ -28,8 +28,14 @@ Decoding this file using JSON BinPack will result in the following document:
 }
 ```
 
-### Decode a binary file
+### Decode a binary file into a JSON document
 
 ```sh
 jsonschema decode path/to/output.binpack path/to/my/output.json
+```
+
+### Decode a binary file into a JSONL dataset
+
+```sh
+jsonschema decode path/to/output.binpack path/to/my/dataset.jsonl
 ```
