@@ -3,9 +3,9 @@ project(hydra VERSION 0.0.1 LANGUAGES C CXX
   DESCRIPTION "A convenience networking library for modern C++")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(vendor/noa/cmake/noa.cmake)
-include(cmake/CompilerOptions.cmake)
 
 # Options
+option(HYDRA_CRYPTO "Build the Hydra crypto library" ON)
 option(HYDRA_HTTPCLIENT "Build the Hydra HTTP client library" ON)
 if(WIN32)
   # TODO: Make it work on Windows. Main challenge is that uSockets
@@ -42,14 +42,22 @@ if(HYDRA_HTTPCLIENT OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
   add_subdirectory(src/http)
 endif()
 
+if(HYDRA_CRYPTO OR HYDRA_HTTPCLIENT OR HYDRA_BUCKET)
+  find_package(BearSSL REQUIRED)
+endif()
+
+if(HYDRA_CRYPTO OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
+  add_subdirectory(src/crypto)
+endif()
+
 if(HYDRA_HTTPCLIENT OR HYDRA_BUCKET)
   find_package(ZLIB REQUIRED)
-  find_package(BearSSL REQUIRED)
   find_package(CURL REQUIRED)
   add_subdirectory(src/httpclient)
 endif()
 
 if(HYDRA_HTTPSERVER)
+  find_package(ZLIB REQUIRED)
   find_package(uSockets REQUIRED)
   find_package(uWebSockets REQUIRED)
   add_subdirectory(src/httpserver)
@@ -85,6 +93,10 @@ if(HYDRA_TESTS)
 
   if(HYDRA_HTTPCLIENT OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
     add_subdirectory(test/unit/http)
+  endif()
+
+  if(HYDRA_CRYPTO)
+    add_subdirectory(test/unit/crypto)
   endif()
 
   if(HYDRA_HTTPCLIENT)

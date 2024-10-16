@@ -1,14 +1,15 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_REFERENCE_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_REFERENCE_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
 #include <cstdint>  // std::uint8_t
-#include <future>   // std::future
 #include <map>      // std::map
 #include <optional> // std::optional
 #include <string>   // std::string
@@ -102,11 +103,9 @@ using ReferenceMap =
 ///
 /// sourcemeta::jsontoolkit::ReferenceFrame frame;
 /// sourcemeta::jsontoolkit::ReferenceMap references;
-/// sourcemeta::jsontoolkit::frame(document, frame,
-/// references,
+/// sourcemeta::jsontoolkit::frame(document, frame, references,
 ///                                sourcemeta::jsontoolkit::default_schema_walker,
-///                                sourcemeta::jsontoolkit::official_resolver)
-///     .wait();
+///                                sourcemeta::jsontoolkit::official_resolver);
 ///
 /// // IDs
 /// assert(frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
@@ -159,8 +158,7 @@ SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto frame(const JSON &schema, ReferenceFrame &frame, ReferenceMap &references,
            const SchemaWalker &walker, const SchemaResolver &resolver,
            const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt)
-    -> std::future<void>;
+           const std::optional<std::string> &default_id = std::nullopt) -> void;
 
 } // namespace sourcemeta::jsontoolkit
 

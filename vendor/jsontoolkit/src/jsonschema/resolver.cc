@@ -22,8 +22,7 @@ auto MapSchemaResolver::add(const JSON &schema,
   ReferenceFrame entries;
   ReferenceMap references;
   frame(schema, entries, references, default_schema_walker, *this,
-        default_dialect, default_id)
-      .wait();
+        default_dialect, default_id);
 
   for (const auto &[key, entry] : entries) {
     if (entry.type != ReferenceEntryType::Resource) {
@@ -33,11 +32,10 @@ auto MapSchemaResolver::add(const JSON &schema,
     auto subschema{get(schema, entry.pointer)};
     // TODO: Set the base dialect in the frame entries
     const auto subschema_base_dialect{
-        base_dialect(subschema, *this, entry.dialect).get()};
+        base_dialect(subschema, *this, entry.dialect)};
     assert(subschema_base_dialect.has_value());
     const auto subschema_vocabularies{
-        vocabularies(*this, subschema_base_dialect.value(), entry.dialect)
-            .get()};
+        vocabularies(*this, subschema_base_dialect.value(), entry.dialect)};
 
     // Given we might be resolving embedded resources, we fully
     // resolve their dialect and identifiers, otherwise the
@@ -69,21 +67,17 @@ auto MapSchemaResolver::add(const JSON &schema,
 }
 
 auto MapSchemaResolver::operator()(std::string_view identifier) const
-    -> std::future<std::optional<JSON>> {
+    -> std::optional<JSON> {
   const std::string string_identifier{identifier};
   if (this->schemas.contains(string_identifier)) {
-    std::promise<std::optional<JSON>> promise;
-    promise.set_value(this->schemas.at(string_identifier));
-    return promise.get_future();
+    return this->schemas.at(string_identifier);
   }
 
   if (this->default_resolver) {
     return this->default_resolver(identifier);
   }
 
-  std::promise<std::optional<JSON>> promise;
-  promise.set_value(std::nullopt);
-  return promise.get_future();
+  return std::nullopt;
 }
 
 } // namespace sourcemeta::jsontoolkit

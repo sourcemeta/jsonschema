@@ -27,7 +27,7 @@ namespace uWS {
 
 template <bool SSL, bool isServer, typename USERDATA>
 struct WebSocketContext {
-    template <bool> friend struct TemplatedApp;
+    template <bool, typename> friend struct TemplatedApp;
     template <bool, typename> friend struct WebSocketProtocol;
 private:
     WebSocketContext() = delete;
@@ -269,9 +269,11 @@ private:
                 webSocketContextData->topicTree->freeSubscriber(webSocketData->subscriber);
                 webSocketData->subscriber = nullptr;
 
+                auto *ws = (WebSocket<SSL, isServer, USERDATA> *) s;
                 if (webSocketContextData->closeHandler) {
-                    webSocketContextData->closeHandler((WebSocket<SSL, isServer, USERDATA> *) s, 1006, {(char *) reason, (size_t) code});
+                    webSocketContextData->closeHandler(ws, 1006, {(char *) reason, (size_t) code});
                 }
+                ((USERDATA *) ws->getUserData())->~USERDATA();
             }
 
             /* Destruct in-placed data struct */
@@ -369,11 +371,11 @@ private:
             return s;
         });
 
-        /* Handle FIN, HTTP does not support half-closed sockets, so simply close */
+        /* Handle FIN, WebSocket does not support half-closed sockets, so simply close */
         us_socket_context_on_end(SSL, getSocketContext(), [](auto *s) {
 
             /* If we get a fin, we just close I guess */
-            us_socket_close(SSL, (us_socket_t *) s, 0, nullptr);
+            us_socket_close(SSL, (us_socket_t *) s, (int) ERR_TCP_FIN.length(), (void *) ERR_TCP_FIN.data());
 
             return s;
         });

@@ -1,13 +1,14 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_ANCHOR_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_ANCHOR_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
 #include <cstdint>  // std::uint8_t
-#include <future>   // std::promise, std::future
 #include <map>      // std::map
 #include <optional> // std::optional
 #include <string>   // std::string
@@ -38,7 +39,7 @@ enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 /// })JSON");
 ///
 /// const auto anchors{sourcemeta::jsontoolkit::anchors(
-///   document, sourcemeta::jsontoolkit::official_resolver).get()};
+///   document, sourcemeta::jsontoolkit::official_resolver)};
 /// assert(anchors.size() == 1);
 /// assert(anchors.contains("foo"));
 /// // This is a static anchor
@@ -47,7 +48,7 @@ enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto anchors(const JSON &schema, const SchemaResolver &resolver,
              const std::optional<std::string> &default_dialect = std::nullopt)
-    -> std::future<std::map<std::string, AnchorType>>;
+    -> std::map<std::string, AnchorType>;
 
 /// @ingroup jsonschema
 ///

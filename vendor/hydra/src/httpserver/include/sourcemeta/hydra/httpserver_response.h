@@ -189,15 +189,20 @@ public:
   ///
   /// static auto
   /// on_root(const sourcemeta::hydra::http::ServerLogger &,
-  ///         const sourcemeta::hydra::http::ServerRequest &,
+  ///         const sourcemeta::hydra::http::ServerRequest &request,
   ///         sourcemeta::hydra::http::ServerResponse &response) -> void {
   ///   response.status(sourcemeta::hydra::http::Status::OK);
   ///   response.end("Hello world!");
   /// }
   ///
   /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
+  /// server.route(sourcemeta::hydra::http::Method::HEAD, "/", on_root);
   /// ```
   auto end(const std::string_view message) -> void;
+
+  /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
+  /// the actual response content
+  auto head(const std::string_view message) -> void;
 
   /// Respond with a JSON document. Keep in mind that you still need to manually
   /// set a corresponding `Content-Type` header. For example:
@@ -224,6 +229,42 @@ public:
   /// ```
   auto end(const sourcemeta::jsontoolkit::JSON &document) -> void;
 
+  /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
+  /// the actual response content
+  auto head(const sourcemeta::jsontoolkit::JSON &document) -> void;
+
+  /// Respond with a JSON document, passing a key comparison for formatting
+  /// purposes. Keep in mind that you still need to manually set a corresponding
+  /// `Content-Type` header. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/hydra/httpserver.h>
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  ///
+  /// sourcemeta::hydra::http::Server server;
+  ///
+  /// static auto
+  /// on_root(const sourcemeta::hydra::http::ServerLogger &,
+  ///         const sourcemeta::hydra::http::ServerRequest &,
+  ///         sourcemeta::hydra::http::ServerResponse &response) -> void {
+  ///   response.status(sourcemeta::hydra::http::Status::OK);
+  ///   response.header("Content-Type", "application/json");
+  ///   auto schema{sourcemeta::jsontoolkit::JSON::make_object()};
+  ///   schema.assign("type", sourcemeta::jsontoolkit::JSON{"string"});
+  ///   schema.assign("minLength", sourcemeta::jsontoolkit::JSON{1});
+  ///   response.end(schema, sourcemeta::jsontoolkit::schema_format_compare);
+  /// }
+  ///
+  /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
+  /// ```
+  auto end(const sourcemeta::jsontoolkit::JSON &document,
+           const sourcemeta::jsontoolkit::KeyComparison &compare) -> void;
+
+  /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
+  /// the actual response content
+  auto head(const sourcemeta::jsontoolkit::JSON &document,
+            const sourcemeta::jsontoolkit::KeyComparison &compare) -> void;
+
   /// Respond with an empty body. For example:
   ///
   /// ```cpp
@@ -241,6 +282,9 @@ public:
   ///
   /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
   /// ```
+  ///
+  /// Do not make use of this method to respond to `HEAD` requests, as it will
+  /// incorrectly result in a `Content-Length` of `0`.
   auto end() -> void;
 
 private:

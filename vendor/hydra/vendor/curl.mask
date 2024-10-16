@@ -58,3 +58,10 @@ lib/curl_config.h.cmake
 Dockerfile
 lib/dllmain.c
 renovate.json
+REUSE.toml
+CHANGES.md
+lib/libcurl.def
+lib/vauth/.checksrc
+lib/vquic/.checksrc
+lib/vssh/.checksrc
+lib/vtls/.checksrc

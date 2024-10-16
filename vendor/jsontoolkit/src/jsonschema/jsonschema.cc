@@ -4,7 +4,6 @@
 #include <cassert>     // assert
 #include <cstdint>     // std::uint64_t
 #include <functional>  // std::less
-#include <future>      // std::future
 #include <limits>      // std::numeric_limits
 #include <sstream>     // std::ostringstream
 #include <type_traits> // std::remove_reference_t
@@ -62,57 +61,43 @@ auto sourcemeta::jsontoolkit::identify(
     const IdentificationStrategy strategy,
     const std::optional<std::string> &default_dialect,
     const std::optional<std::string> &default_id)
-    -> std::future<std::optional<std::string>> {
+    -> std::optional<std::string> {
   std::optional<std::string> maybe_base_dialect;
 
   // TODO: Can we avoid a C++ exception as the potential normal way of
   // operation?
   try {
-    maybe_base_dialect =
-        sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
-            .get();
+    maybe_base_dialect = sourcemeta::jsontoolkit::base_dialect(schema, resolver,
+                                                               default_dialect);
   } catch (const SchemaResolutionError &) {
     // Attempt to play a heuristic guessing game before giving up
     if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
       const auto keyword{id_keyword_guess(schema)};
-      std::promise<std::optional<std::string>> promise;
-
       if (keyword.has_value()) {
-        promise.set_value(schema.at(keyword.value()).to_string());
+        return schema.at(keyword.value()).to_string();
       } else {
-        promise.set_value(std::nullopt);
+        return std::nullopt;
       }
-
-      return promise.get_future();
     }
 
     throw;
   }
 
   if (!maybe_base_dialect.has_value()) {
-
     // Attempt to play a heuristic guessing game before giving up
     if (strategy == IdentificationStrategy::Loose && schema.is_object()) {
       const auto keyword{id_keyword_guess(schema)};
-      std::promise<std::optional<std::string>> promise;
-
       if (keyword.has_value()) {
-        promise.set_value(schema.at(keyword.value()).to_string());
+        return schema.at(keyword.value()).to_string();
       } else {
-        promise.set_value(std::nullopt);
+        return std::nullopt;
       }
-
-      return promise.get_future();
     }
 
-    std::promise<std::optional<std::string>> promise;
-    promise.set_value(default_id);
-    return promise.get_future();
+    return default_id;
   }
 
-  std::promise<std::optional<std::string>> promise;
-  promise.set_value(identify(schema, maybe_base_dialect.value(), default_id));
-  return promise.get_future();
+  return identify(schema, maybe_base_dialect.value(), default_id);
 }
 
 auto sourcemeta::jsontoolkit::identify(
@@ -168,8 +153,7 @@ auto sourcemeta::jsontoolkit::reidentify(
     const SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect) -> void {
   const auto base_dialect{
-      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
-          .get()};
+      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)};
   if (!base_dialect.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaError("Cannot determine base dialect");
   }
@@ -212,7 +196,7 @@ auto sourcemeta::jsontoolkit::metaschema(
         "Could not determine dialect of the schema");
   }
 
-  const auto maybe_metaschema{resolver(maybe_dialect.value()).get()};
+  const auto maybe_metaschema{resolver(maybe_dialect.value())};
   if (!maybe_metaschema.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaResolutionError(
         maybe_dialect.value(),
@@ -226,7 +210,7 @@ auto sourcemeta::jsontoolkit::base_dialect(
     const sourcemeta::jsontoolkit::JSON &schema,
     const sourcemeta::jsontoolkit::SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect)
-    -> std::future<std::optional<std::string>> {
+    -> std::optional<std::string> {
   assert(sourcemeta::jsontoolkit::is_schema(schema));
   const std::optional<std::string> dialect{
       sourcemeta::jsontoolkit::dialect(schema, default_dialect)};
@@ -234,9 +218,7 @@ auto sourcemeta::jsontoolkit::base_dialect(
   // There is no metaschema information whatsoever
   // Nothing we can do at this point
   if (!dialect.has_value()) {
-    std::promise<std::optional<std::string>> promise;
-    promise.set_value(std::nullopt);
-    return promise.get_future();
+    return std::nullopt;
   }
 
   const std::string &effective_dialect{dialect.value()};
@@ -246,9 +228,7 @@ auto sourcemeta::jsontoolkit::base_dialect(
       effective_dialect == "https://json-schema.org/draft/2019-09/schema" ||
       effective_dialect == "http://json-schema.org/draft-07/schema#" ||
       effective_dialect == "http://json-schema.org/draft-06/schema#") {
-    std::promise<std::optional<std::string>> promise;
-    promise.set_value(effective_dialect);
-    return promise.get_future();
+    return effective_dialect;
   }
 
   // For compatibility with older JSON Schema drafts that didn't support $id nor
@@ -266,9 +246,7 @@ auto sourcemeta::jsontoolkit::base_dialect(
       effective_dialect == "http://json-schema.org/draft-03/schema#" ||
       effective_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
       effective_dialect == "http://json-schema.org/draft-04/schema#") {
-    std::promise<std::optional<std::string>> promise;
-    promise.set_value(effective_dialect);
-    return promise.get_future();
+    return effective_dialect;
   }
 
   // If we reach the bottom of the metaschema hierarchy, where the schema
@@ -276,15 +254,13 @@ auto sourcemeta::jsontoolkit::base_dialect(
   if (schema.is_object() && schema.defines("$id")) {
     assert(schema.at("$id").is_string());
     if (schema.at("$id").to_string() == effective_dialect) {
-      std::promise<std::optional<std::string>> promise;
-      promise.set_value(schema.at("$id").to_string());
-      return promise.get_future();
+      return schema.at("$id").to_string();
     }
   }
 
   // Otherwise, traverse the metaschema hierarchy up
   const std::optional<sourcemeta::jsontoolkit::JSON> metaschema{
-      resolver(effective_dialect).get()};
+      resolver(effective_dialect)};
   if (!metaschema.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaResolutionError(
         effective_dialect, "Could not resolve the requested schema");
@@ -314,10 +290,9 @@ auto sourcemeta::jsontoolkit::vocabularies(
     const sourcemeta::jsontoolkit::JSON &schema,
     const sourcemeta::jsontoolkit::SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect)
-    -> std::future<std::map<std::string, bool>> {
+    -> std::map<std::string, bool> {
   const std::optional<std::string> maybe_base_dialect{
-      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
-          .get()};
+      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)};
   if (!maybe_base_dialect.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaError(
         "Could not determine base dialect for schema");
@@ -340,33 +315,25 @@ auto sourcemeta::jsontoolkit::vocabularies(
 auto sourcemeta::jsontoolkit::vocabularies(const SchemaResolver &resolver,
                                            const std::string &base_dialect,
                                            const std::string &dialect)
-    -> std::future<std::map<std::string, bool>> {
+    -> std::map<std::string, bool> {
   // As a performance optimization shortcut
   if (base_dialect == dialect) {
     if (dialect == "https://json-schema.org/draft/2020-12/schema") {
-      std::promise<std::map<std::string, bool>> promise;
-      promise.set_value(
-          {{"https://json-schema.org/draft/2020-12/vocab/core", true},
-           {"https://json-schema.org/draft/2020-12/vocab/applicator", true},
-           {"https://json-schema.org/draft/2020-12/vocab/unevaluated", true},
-           {"https://json-schema.org/draft/2020-12/vocab/validation", true},
-           {"https://json-schema.org/draft/2020-12/vocab/meta-data", true},
-           {"https://json-schema.org/draft/2020-12/vocab/format-annotation",
-            true},
-           {"https://json-schema.org/draft/2020-12/vocab/content", true}});
-
-      return promise.get_future();
+      return {{"https://json-schema.org/draft/2020-12/vocab/core", true},
+              {"https://json-schema.org/draft/2020-12/vocab/applicator", true},
+              {"https://json-schema.org/draft/2020-12/vocab/unevaluated", true},
+              {"https://json-schema.org/draft/2020-12/vocab/validation", true},
+              {"https://json-schema.org/draft/2020-12/vocab/meta-data", true},
+              {"https://json-schema.org/draft/2020-12/vocab/format-annotation",
+               true},
+              {"https://json-schema.org/draft/2020-12/vocab/content", true}};
     } else if (dialect == "https://json-schema.org/draft/2019-09/schema") {
-      std::promise<std::map<std::string, bool>> promise;
-      promise.set_value(
-          {{"https://json-schema.org/draft/2019-09/vocab/core", true},
-           {"https://json-schema.org/draft/2019-09/vocab/applicator", true},
-           {"https://json-schema.org/draft/2019-09/vocab/validation", true},
-           {"https://json-schema.org/draft/2019-09/vocab/meta-data", true},
-           {"https://json-schema.org/draft/2019-09/vocab/format", false},
-           {"https://json-schema.org/draft/2019-09/vocab/content", true}});
-
-      return promise.get_future();
+      return {{"https://json-schema.org/draft/2019-09/vocab/core", true},
+              {"https://json-schema.org/draft/2019-09/vocab/applicator", true},
+              {"https://json-schema.org/draft/2019-09/vocab/validation", true},
+              {"https://json-schema.org/draft/2019-09/vocab/meta-data", true},
+              {"https://json-schema.org/draft/2019-09/vocab/format", false},
+              {"https://json-schema.org/draft/2019-09/vocab/content", true}};
     }
   }
 
@@ -387,9 +354,7 @@ auto sourcemeta::jsontoolkit::vocabularies(const SchemaResolver &resolver,
       base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
       base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
       base_dialect == "http://json-schema.org/draft-00/hyper-schema#") {
-    std::promise<std::map<std::string, bool>> promise;
-    promise.set_value({{base_dialect, true}});
-    return promise.get_future();
+    return {{base_dialect, true}};
   }
 
   /*
@@ -397,7 +362,7 @@ auto sourcemeta::jsontoolkit::vocabularies(const SchemaResolver &resolver,
    */
 
   const std::optional<sourcemeta::jsontoolkit::JSON> maybe_schema_dialect{
-      resolver(dialect).get()};
+      resolver(dialect)};
   if (!maybe_schema_dialect.has_value()) {
     throw sourcemeta::jsontoolkit::SchemaResolutionError(
         dialect, "Could not resolve the requested schema");
@@ -438,9 +403,7 @@ auto sourcemeta::jsontoolkit::vocabularies(const SchemaResolver &resolver,
         "The core vocabulary must always be required");
   }
 
-  std::promise<std::map<std::string, bool>> promise;
-  promise.set_value(std::move(result));
-  return promise.get_future();
+  return result;
 }
 
 auto sourcemeta::jsontoolkit::schema_format_compare(

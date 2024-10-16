@@ -8,13 +8,10 @@ namespace sourcemeta::jsontoolkit {
 
 auto anchors(const JSON &schema, const SchemaResolver &resolver,
              const std::optional<std::string> &default_dialect)
-    -> std::future<std::map<std::string, AnchorType>> {
+    -> std::map<std::string, AnchorType> {
   const std::map<std::string, bool> vocabularies{
-      sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)
-          .get()};
-  std::promise<std::map<std::string, AnchorType>> promise;
-  promise.set_value(anchors(schema, vocabularies));
-  return promise.get_future();
+      sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)};
+  return anchors(schema, vocabularies);
 }
 
 auto anchors(const JSON &schema,

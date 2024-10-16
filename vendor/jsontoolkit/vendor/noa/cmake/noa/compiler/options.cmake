@@ -85,6 +85,8 @@ function(noa_add_default_options visibility target)
       -fno-trapping-math
       # Newer versions of GCC (i.e. 14) seem to print a lot of false-positives here
       -Wno-dangling-reference
+      # GCC seems to print a lot of false-positives here
+      -Wno-free-nonheap-object
       # Disables runtime type information
       -fno-rtti)
   endif()

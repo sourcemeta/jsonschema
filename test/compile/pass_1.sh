@@ -28,7 +28,7 @@ cat << 'EOF' > "$TMP/expected.json"
       "type": "type",
       "value": "string"
     },
-    "schemaResource": "",
+    "schemaResource": 0,
     "absoluteKeywordLocation": "#/properties/foo/type",
     "relativeSchemaLocation": "/properties/foo/type",
     "relativeInstanceLocation": "/foo",

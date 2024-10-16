@@ -1,6 +1,9 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
+
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <map>      // std::map
@@ -18,7 +21,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
       resolver(options, options.contains("h") || options.contains("http"))};
   bool result{true};
 
-  std::map<std::string, sourcemeta::jsontoolkit::SchemaCompilerTemplate> cache;
+  std::map<std::string, sourcemeta::blaze::Template> cache;
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
@@ -35,17 +38,15 @@ auto sourcemeta::jsonschema::cli::metaschema(
     const auto metaschema{
         sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver)};
     if (!cache.contains(dialect.value())) {
-      const auto metaschema_template{sourcemeta::jsontoolkit::compile(
+      const auto metaschema_template{sourcemeta::blaze::compile(
           metaschema, sourcemeta::jsontoolkit::default_schema_walker,
-          custom_resolver, sourcemeta::jsontoolkit::default_schema_compiler)};
+          custom_resolver, sourcemeta::blaze::default_schema_compiler)};
       cache.insert({dialect.value(), metaschema_template});
     }
 
-    sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{metaschema};
-    if (sourcemeta::jsontoolkit::evaluate(
-            cache.at(dialect.value()), entry.second,
-            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            std::ref(output))) {
+    sourcemeta::blaze::ErrorTraceOutput output{metaschema};
+    if (sourcemeta::blaze::evaluate(cache.at(dialect.value()), entry.second,
+                                    std::ref(output))) {
       log_verbose(options)
           << "ok: " << std::filesystem::weakly_canonical(entry.first).string()
           << "\n  matches " << dialect.value() << "\n";

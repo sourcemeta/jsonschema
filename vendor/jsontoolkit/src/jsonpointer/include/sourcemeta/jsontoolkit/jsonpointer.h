@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
 #include "jsonpointer_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>

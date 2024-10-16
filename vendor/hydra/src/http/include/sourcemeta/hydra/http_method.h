@@ -38,8 +38,9 @@ enum class Method {
 /// output << sourcemeta::hydra::http::Method::GET;
 /// assert(output.str() == "GET");
 /// ```
-auto SOURCEMETA_HYDRA_HTTP_EXPORT
-operator<<(std::ostream &stream, const Method method) -> std::ostream &;
+auto SOURCEMETA_HYDRA_HTTP_EXPORT operator<<(std::ostream &stream,
+                                             const Method method)
+    -> std::ostream &;
 
 /// @ingroup http
 /// Construct a HTTP method from a string. Note that casing is not supported.

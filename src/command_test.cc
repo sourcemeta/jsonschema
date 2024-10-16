@@ -2,6 +2,9 @@
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
+#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
+
 #include <cstdlib>    // EXIT_SUCCESS, EXIT_FAILURE
 #include <filesystem> // std::filesystem
 #include <iostream>   // std::cerr, std::cout
@@ -13,7 +16,7 @@ static auto
 get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
                   const sourcemeta::jsontoolkit::SchemaResolver &resolver)
     -> std::optional<sourcemeta::jsontoolkit::JSON> {
-  const auto schema{resolver(identifier.recompose()).get()};
+  const auto schema{resolver(identifier.recompose())};
   if (schema.has_value()) {
     return schema;
   }
@@ -137,12 +140,12 @@ auto sourcemeta::jsonschema::cli::test(
       continue;
     }
 
-    sourcemeta::jsontoolkit::SchemaCompilerTemplate schema_template;
+    sourcemeta::blaze::Template schema_template;
 
     try {
-      schema_template = sourcemeta::jsontoolkit::compile(
+      schema_template = sourcemeta::blaze::compile(
           schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
-          test_resolver, sourcemeta::jsontoolkit::default_schema_compiler);
+          test_resolver, sourcemeta::blaze::default_schema_compiler);
     } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::jsontoolkit::Pointer{"$ref"} &&
           error.id() == schema_uri.recompose()) {
@@ -239,12 +242,11 @@ auto sourcemeta::jsonschema::cli::test(
       }
 
       const std::string ref{"$ref"};
-      sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{
-          schema.value(), {std::cref(ref)}};
-      const auto case_result{sourcemeta::jsontoolkit::evaluate(
+      sourcemeta::blaze::ErrorTraceOutput output{schema.value(),
+                                                 {std::cref(ref)}};
+      const auto case_result{sourcemeta::blaze::evaluate(
           schema_template,
           get_data(test_case, entry.first.parent_path(), verbose),
-          sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
           std::ref(output))};
 
       std::ostringstream test_case_description;

@@ -23,6 +23,7 @@
 
 #include <cstdint>    // std::uint32_t
 #include <exception>  // std::exception_ptr
+#include <filesystem> // std::filesystem::path
 #include <functional> // std::function
 #include <string>     // std::string
 #include <tuple>      // std::tuple
@@ -79,8 +80,8 @@ public:
   ///
   /// server.run(3000);
   /// ```
-  auto route(const Method method, std::string &&path,
-             RouteCallback &&callback) -> void;
+  auto route(const Method method, std::string &&path, RouteCallback &&callback)
+      -> void;
 
   /// Set a handler that responds to HTTP requests that do not match any other
   /// registered routes. For example:
@@ -197,6 +198,37 @@ private:
   ErrorCallback error_handler;
   ServerLogger logger{"global"};
 };
+
+/// @ingroup httpserver
+/// Serve a static file. This function assumes that the file exists and that is
+/// not a directory. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/hydra/httpserver.h>
+///
+/// static auto
+/// on_static(const sourcemeta::hydra::http::ServerLogger &,
+///         const sourcemeta::hydra::http::ServerRequest &request,
+///         sourcemeta::hydra::http::ServerResponse &response) -> void {
+///   const std::filesystem::path file_path{"path/to/static" + request.path()};
+///   if (!std::filesystem::exists(file_path)) {
+///     response.status(sourcemeta::hydra::http::Status::NOT_FOUND);
+///     response.end();
+///     return;
+///   }
+///
+///   sourcemeta::hydra::http::serve_file(file_path, request, response);
+/// }
+///
+/// int main() {
+///   sourcemeta::hydra::http::Server server;
+///   server.route(sourcemeta::hydra::http::Method::GET, "/*", on_static);
+///   return server.run(3000);
+/// }
+/// ```
+auto SOURCEMETA_HYDRA_HTTPSERVER_EXPORT
+serve_file(const std::filesystem::path &file_path, const ServerRequest &request,
+           ServerResponse &response) -> void;
 
 } // namespace sourcemeta::hydra::http
 

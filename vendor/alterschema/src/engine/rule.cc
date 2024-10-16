@@ -48,9 +48,9 @@ auto sourcemeta::alterschema::Rule::apply(
         "Could not determine the schema dialect");
   }
 
-  const auto vocabularies{vocabularies_to_set(
-      sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)
-          .get())};
+  const auto vocabularies{
+      vocabularies_to_set(sourcemeta::jsontoolkit::vocabularies(
+          schema, resolver, default_dialect))};
   if (!this->condition(schema, dialect.value(), vocabularies, pointer)) {
     return {};
   }
@@ -83,8 +83,8 @@ auto sourcemeta::alterschema::Rule::check(
         "Could not determine the schema dialect");
   }
 
-  const auto vocabularies{vocabularies_to_set(
-      sourcemeta::jsontoolkit::vocabularies(schema, resolver, default_dialect)
-          .get())};
+  const auto vocabularies{
+      vocabularies_to_set(sourcemeta::jsontoolkit::vocabularies(
+          schema, resolver, default_dialect))};
   return this->condition(schema, dialect.value(), vocabularies, pointer);
 }

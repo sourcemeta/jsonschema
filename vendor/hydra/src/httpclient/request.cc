@@ -40,8 +40,8 @@ auto ClientRequest::capture(std::initializer_list<std::string> headers)
 
 auto ClientRequest::capture() -> void { this->capture_all_ = true; }
 
-auto ClientRequest::header(std::string_view key,
-                           std::string_view value) -> void {
+auto ClientRequest::header(std::string_view key, std::string_view value)
+    -> void {
   this->stream.header(key, value);
 }
 

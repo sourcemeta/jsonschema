@@ -40,8 +40,7 @@ auto sourcemeta::jsonschema::cli::frame(
   sourcemeta::jsontoolkit::ReferenceMap references;
   sourcemeta::jsontoolkit::frame(schema, frame, references,
                                  sourcemeta::jsontoolkit::default_schema_walker,
-                                 resolver(options))
-      .wait();
+                                 resolver(options));
 
   const auto output_json = options.contains("json") || options.contains("j");
   if (output_json) {

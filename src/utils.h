@@ -5,6 +5,8 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
+
 #include <filesystem> // std::filesystem
 #include <map>        // std::map
 #include <ostream>    // std::ostream
@@ -27,9 +29,8 @@ auto for_each_json(const std::vector<std::string> &arguments,
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 
-auto print(
-    const sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput &output,
-    std::ostream &stream) -> void;
+auto print(const sourcemeta::blaze::ErrorTraceOutput &output,
+           std::ostream &stream) -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote = false)

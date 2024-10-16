@@ -1,14 +1,15 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_BUNDLE_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_BUNDLE_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
 #include <cstdint>  // std::uint8_t
-#include <future>   // std::future
 #include <optional> // std::optional, std::nullopt
 #include <string>   // std::string
 
@@ -43,20 +44,16 @@ enum class BundleOptions : std::uint8_t {
 ///
 /// // A custom resolver that knows about an additional schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
-///   std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
+///     -> std::optional<sourcemeta::jsontoolkit::JSON> {
 ///   if (identifier == "https://www.example.com/test") {
-///     promise.set_value(sourcemeta::jsontoolkit::parse(R"JSON({
+///     return sourcemeta::jsontoolkit::parse(R"JSON({
 ///       "$id": "https://www.example.com/test",
 ///       "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///       "type": "string"
-///     })JSON"));
+///     })JSON");
 ///   } else {
-///     promise.set_value(
-///         sourcemeta::jsontoolkit::official_resolver(identifier).get());
+///     return sourcemeta::jsontoolkit::official_resolver(identifier);
 ///   }
-///
-///   return promise.get_future();
 /// }
 ///
 /// sourcemeta::jsontoolkit::JSON document =
@@ -104,20 +101,16 @@ auto bundle(sourcemeta::jsontoolkit::JSON &schema, const SchemaWalker &walker,
 ///
 /// // A custom resolver that knows about an additional schema
 /// static auto test_resolver(std::string_view identifier)
-///     -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
-///   std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
+///     -> std::optional<sourcemeta::jsontoolkit::JSON> {
 ///   if (identifier == "https://www.example.com/test") {
-///     promise.set_value(sourcemeta::jsontoolkit::parse(R"JSON({
+///     return sourcemeta::jsontoolkit::parse(R"JSON({
 ///       "$id": "https://www.example.com/test",
 ///       "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///       "type": "string"
-///     })JSON"));
+///     })JSON");
 ///   } else {
-///     promise.set_value(
-///         sourcemeta::jsontoolkit::official_resolver(identifier).get());
+///     return sourcemeta::jsontoolkit::official_resolver(identifier);
 ///   }
-///
-///   return promise.get_future();
 /// }
 ///
 /// const sourcemeta::jsontoolkit::JSON document =

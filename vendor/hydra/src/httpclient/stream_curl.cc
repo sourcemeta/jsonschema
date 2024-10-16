@@ -42,10 +42,10 @@ inline auto handle_curl(CURLcode code) -> void {
   }
 }
 
-auto callback_on_response_body(const void *const data, const std::size_t size,
-                               const std::size_t count,
-                               const sourcemeta::hydra::http::ClientStream
-                                   *const request) noexcept -> std::size_t {
+auto callback_on_response_body(
+    const void *const data, const std::size_t size, const std::size_t count,
+    const sourcemeta::hydra::http::ClientStream *const request) noexcept
+    -> std::size_t {
   const std::size_t total_size{size * count};
   if (request->internal->on_data) {
     try {
@@ -61,10 +61,10 @@ auto callback_on_response_body(const void *const data, const std::size_t size,
   return total_size;
 }
 
-auto callback_on_header(const void *const data, const std::size_t size,
-                        const std::size_t count,
-                        sourcemeta::hydra::http::ClientStream
-                            *const request) noexcept -> std::size_t {
+auto callback_on_header(
+    const void *const data, const std::size_t size, const std::size_t count,
+    sourcemeta::hydra::http::ClientStream *const request) noexcept
+    -> std::size_t {
   const std::size_t total_size{size * count};
   const std::string_view line{static_cast<const char *>(data), total_size};
   const std::size_t colon{line.find(':')};
@@ -130,10 +130,10 @@ auto callback_on_header(const void *const data, const std::size_t size,
   return total_size;
 }
 
-auto callback_on_request_body(char *buffer, const std::size_t size,
-                              const std::size_t count,
-                              sourcemeta::hydra::http::ClientStream
-                                  *const request) noexcept -> std::size_t {
+auto callback_on_request_body(
+    char *buffer, const std::size_t size, const std::size_t count,
+    sourcemeta::hydra::http::ClientStream *const request) noexcept
+    -> std::size_t {
   assert(buffer);
   assert(request->internal->on_body);
   const std::size_t total_size{size * count};
@@ -242,8 +242,8 @@ auto ClientStream::on_body(BodyCallback callback) noexcept -> void {
   this->internal->on_body = std::move(callback);
 }
 
-auto ClientStream::header(std::string_view key,
-                          std::string_view value) -> void {
+auto ClientStream::header(std::string_view key, std::string_view value)
+    -> void {
   std::stringstream stream;
   stream << key << ": " << value;
   const std::string result{stream.str()};

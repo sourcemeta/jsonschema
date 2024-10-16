@@ -1,6 +1,6 @@
 function(noa_library)
   cmake_parse_arguments(NOA_LIBRARY ""
-    "NAMESPACE;PROJECT;NAME;FOLDER" "PRIVATE_HEADERS;SOURCES" ${ARGN})
+    "NAMESPACE;PROJECT;NAME;FOLDER;VARIANT" "PRIVATE_HEADERS;SOURCES" ${ARGN})
 
   if(NOT NOA_LIBRARY_PROJECT)
     message(FATAL_ERROR "You must pass the project name using the PROJECT option")
@@ -18,7 +18,11 @@ function(noa_library)
     set(INCLUDE_PREFIX "include/${NOA_LIBRARY_PROJECT}")
   endif()
 
-  set(PUBLIC_HEADER "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}.h")
+  if(NOT NOA_LIBRARY_VARIANT)
+    set(PUBLIC_HEADER "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}.h")
+  else()
+    set(PUBLIC_HEADER "../${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}.h")
+  endif()
 
   if(NOA_LIBRARY_SOURCES)
     set(ABSOLUTE_PRIVATE_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${NOA_LIBRARY_NAME}_export.h")
@@ -38,6 +42,11 @@ function(noa_library)
     set(ALIAS_NAME "${NOA_LIBRARY_PROJECT}::${NOA_LIBRARY_NAME}")
   endif()
 
+  if(NOA_LIBRARY_VARIANT)
+    set(TARGET_NAME "${TARGET_NAME}_${NOA_LIBRARY_VARIANT}")
+    set(ALIAS_NAME "${ALIAS_NAME}::${NOA_LIBRARY_VARIANT}")
+  endif()
+
   if(NOA_LIBRARY_SOURCES)
     add_library(${TARGET_NAME}
       ${PUBLIC_HEADER} ${ABSOLUTE_PRIVATE_HEADERS} ${NOA_LIBRARY_SOURCES})
@@ -50,23 +59,34 @@ function(noa_library)
 
   add_library(${ALIAS_NAME} ALIAS ${TARGET_NAME})
 
+  if(NOT NOA_LIBRARY_VARIANT)
+    set(include_dir "${CMAKE_CURRENT_SOURCE_DIR}/include")
+  else()
+    set(include_dir "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+  endif()
   if(NOA_LIBRARY_SOURCES)
     target_include_directories(${TARGET_NAME} PUBLIC
-      "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+      "$<BUILD_INTERFACE:${include_dir}>"
       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
   else()
     target_include_directories(${TARGET_NAME} INTERFACE
-      "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+      "$<BUILD_INTERFACE:${include_dir}>"
       "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
   endif()
 
   if(NOA_LIBRARY_SOURCES)
+    if(NOA_LIBRARY_VARIANT)
+      set(export_name "${NOA_LIBRARY_PROJECT}::${NOA_LIBRARY_NAME}::${NOA_LIBRARY_VARIANT}")
+    else()
+      set(export_name "${NOA_LIBRARY_PROJECT}::${NOA_LIBRARY_NAME}")
+    endif()
+
     set_target_properties(${TARGET_NAME}
       PROPERTIES
         OUTPUT_NAME ${TARGET_NAME}
         PUBLIC_HEADER "${PUBLIC_HEADER}"
         PRIVATE_HEADER "${ABSOLUTE_PRIVATE_HEADERS}"
-        EXPORT_NAME "${NOA_LIBRARY_PROJECT}::${NOA_LIBRARY_NAME}"
+        EXPORT_NAME "${export_name}"
         FOLDER "${NOA_LIBRARY_FOLDER}")
   else()
     set_target_properties(${TARGET_NAME}
@@ -93,7 +113,7 @@ function(noa_library)
 endfunction()
 
 function(noa_library_install)
-  cmake_parse_arguments(NOA_LIBRARY "" "NAMESPACE;PROJECT;NAME" "" ${ARGN})
+  cmake_parse_arguments(NOA_LIBRARY "" "NAMESPACE;PROJECT;NAME;VARIANT" "" ${ARGN})
 
   if(NOT NOA_LIBRARY_PROJECT)
     message(FATAL_ERROR "You must pass the project name using the PROJECT option")
@@ -112,6 +132,10 @@ function(noa_library_install)
     set(TARGET_NAME "${NOA_LIBRARY_PROJECT}_${NOA_LIBRARY_NAME}")
     set(INCLUDE_PATH "${CMAKE_INSTALL_INCLUDEDIR}/${NOA_LIBRARY_PROJECT}")
     set(NAMESPACE_PREFIX "")
+  endif()
+
+  if(NOA_LIBRARY_VARIANT)
+    set(TARGET_NAME "${TARGET_NAME}_${NOA_LIBRARY_VARIANT}")
   endif()
 
   include(GNUInstallDirs)

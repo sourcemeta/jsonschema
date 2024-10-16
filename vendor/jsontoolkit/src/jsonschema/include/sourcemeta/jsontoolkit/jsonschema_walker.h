@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_WALKER_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_WALKER_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
@@ -262,7 +264,7 @@ private:
 ///
 /// const auto vocabularies{
 ///   sourcemeta::jsontoolkit::vocabularies(
-///     document, sourcemeta::jsontoolkit::official_resolver).get()};
+///     document, sourcemeta::jsontoolkit::official_resolver)};
 ///
 /// assert(sourcemeta::jsontoolkit::keyword_priority(
 ///   "prefixItems", vocabularies,

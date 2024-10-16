@@ -89,8 +89,9 @@ enum class Status : std::uint16_t {
 };
 
 /// @ingroup http
-auto SOURCEMETA_HYDRA_HTTP_EXPORT
-operator<<(std::ostream &stream, const Status value) -> std::ostream &;
+auto SOURCEMETA_HYDRA_HTTP_EXPORT operator<<(std::ostream &stream,
+                                             const Status value)
+    -> std::ostream &;
 
 } // namespace sourcemeta::hydra::http
 
