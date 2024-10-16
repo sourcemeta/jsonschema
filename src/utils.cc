@@ -175,9 +175,8 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto print(
-    const sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput &output,
-    std::ostream &stream) -> void {
+auto print(const sourcemeta::blaze::ErrorTraceOutput &output,
+           std::ostream &stream) -> void {
   stream << "error: Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
@@ -193,13 +192,10 @@ auto print(
 static auto fallback_resolver(
     const std::map<std::string, std::vector<std::string>> &options,
     std::string_view identifier)
-    -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>> {
-  auto official_result{
-      sourcemeta::jsontoolkit::official_resolver(identifier).get()};
+    -> std::optional<sourcemeta::jsontoolkit::JSON> {
+  auto official_result{sourcemeta::jsontoolkit::official_resolver(identifier)};
   if (official_result.has_value()) {
-    std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
-    promise.set_value(std::move(official_result));
-    return promise.get_future();
+    return official_result;
   }
 
   // If the URI is not an HTTP URL, then abort
@@ -207,9 +203,7 @@ static auto fallback_resolver(
   const auto maybe_scheme{uri.scheme()};
   if (uri.is_urn() || !maybe_scheme.has_value() ||
       (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
-    std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
-    promise.set_value(std::nullopt);
-    return promise.get_future();
+    return std::nullopt;
   }
 
   log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
@@ -222,9 +216,7 @@ static auto fallback_resolver(
     throw std::runtime_error(error.str());
   }
 
-  std::promise<std::optional<sourcemeta::jsontoolkit::JSON>> promise;
-  promise.set_value(sourcemeta::jsontoolkit::parse(response.body()));
-  return promise.get_future();
+  return sourcemeta::jsontoolkit::parse(response.body());
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,

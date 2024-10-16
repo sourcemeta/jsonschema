@@ -2,6 +2,9 @@
 #include <sourcemeta/jsontoolkit/jsonl.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
+
 #include <chrono>   // std::chrono
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
@@ -48,9 +51,9 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
-  const auto schema_template{sourcemeta::jsontoolkit::compile(
+  const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
-      sourcemeta::jsontoolkit::default_schema_compiler)};
+      sourcemeta::blaze::default_schema_compiler)};
 
   bool result{true};
 
@@ -69,14 +72,12 @@ auto sourcemeta::jsonschema::cli::validate(
         for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
-          sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{
-              instance};
+          sourcemeta::blaze::ErrorTraceOutput output{instance};
           bool subresult = true;
           if (benchmark) {
             const auto timestamp_start{
                 std::chrono::high_resolution_clock::now()};
-            subresult =
-                sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+            subresult = sourcemeta::blaze::evaluate(schema_template, instance);
             const auto timestamp_end{std::chrono::high_resolution_clock::now()};
             const auto duration_us{
                 std::chrono::duration_cast<std::chrono::microseconds>(
@@ -87,10 +88,8 @@ auto sourcemeta::jsonschema::cli::validate(
               error << "error: Schema validation failure\n";
             }
           } else {
-            subresult = sourcemeta::jsontoolkit::evaluate(
-                schema_template, instance,
-                sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-                std::ref(output));
+            subresult = sourcemeta::blaze::evaluate(schema_template, instance,
+                                                    std::ref(output));
           }
 
           if (subresult) {
@@ -125,12 +124,11 @@ auto sourcemeta::jsonschema::cli::validate(
     } else {
       const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
       std::ostringstream error;
-      sourcemeta::jsontoolkit::SchemaCompilerErrorTraceOutput output{instance};
+      sourcemeta::blaze::ErrorTraceOutput output{instance};
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};
-        subresult =
-            sourcemeta::jsontoolkit::evaluate(schema_template, instance);
+        subresult = sourcemeta::blaze::evaluate(schema_template, instance);
         const auto timestamp_end{std::chrono::high_resolution_clock::now()};
         const auto duration_us{
             std::chrono::duration_cast<std::chrono::microseconds>(
@@ -142,10 +140,8 @@ auto sourcemeta::jsonschema::cli::validate(
           result = false;
         }
       } else {
-        subresult = sourcemeta::jsontoolkit::evaluate(
-            schema_template, instance,
-            sourcemeta::jsontoolkit::SchemaCompilerEvaluationMode::Fast,
-            std::ref(output));
+        subresult = sourcemeta::blaze::evaluate(schema_template, instance,
+                                                std::ref(output));
       }
 
       if (subresult) {

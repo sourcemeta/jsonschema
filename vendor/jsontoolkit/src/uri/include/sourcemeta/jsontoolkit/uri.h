@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_URI_H_
 #define SOURCEMETA_JSONTOOLKIT_URI_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_URI_EXPORT
 #include "uri_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/uri_error.h>
 

@@ -9,4 +9,3 @@ endif()
 
 target_link_libraries(sourcemeta_hydra_httpclient PRIVATE CURL::libcurl)
 target_link_libraries(sourcemeta_hydra_httpclient PUBLIC sourcemeta::hydra::http)
-sourcemeta_hydra_add_compile_options(sourcemeta_hydra_httpclient)

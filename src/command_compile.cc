@@ -1,6 +1,9 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
+
 #include <cstdlib>  // EXIT_SUCCESS
 #include <iostream> // std::cout, std::endl
 
@@ -20,16 +23,15 @@ auto sourcemeta::jsonschema::cli::compile(
 
   const auto schema{sourcemeta::jsontoolkit::from_file(options.at("").front())};
 
-  const auto compiled_schema{sourcemeta::jsontoolkit::compile(
+  const auto compiled_schema{sourcemeta::blaze::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker,
       resolver(options, options.contains("h") || options.contains("http")),
-      sourcemeta::jsontoolkit::default_schema_compiler)};
+      sourcemeta::blaze::default_schema_compiler)};
 
   const sourcemeta::jsontoolkit::JSON result{
-      sourcemeta::jsontoolkit::to_json(compiled_schema)};
-  sourcemeta::jsontoolkit::prettify(
-      result, std::cout,
-      sourcemeta::jsontoolkit::compiler_template_format_compare);
+      sourcemeta::blaze::to_json(compiled_schema)};
+  sourcemeta::jsontoolkit::prettify(result, std::cout,
+                                    sourcemeta::blaze::template_format_compare);
   std::cout << std::endl;
   return EXIT_SUCCESS;
 }

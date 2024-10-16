@@ -1,5 +1,6 @@
 #include <sourcemeta/hydra/bucket.h>
 #include <sourcemeta/hydra/bucket_aws_sigv4.h>
+#include <sourcemeta/hydra/crypto.h>
 #include <sourcemeta/hydra/httpclient.h>
 
 #include <sourcemeta/jsontoolkit/uri.h>
@@ -115,7 +116,7 @@ auto Bucket::upsert_json(const std::string &key,
   std::stringstream content;
   sourcemeta::jsontoolkit::prettify(document, content);
   std::ostringstream content_checksum;
-  aws_sigv4_sha256(content.str(), content_checksum);
+  sourcemeta::hydra::sha256(content.str(), content_checksum);
   request.header("content-length", std::to_string(content.str().size()));
   request.header("transfer-encoding", "");
 
@@ -139,9 +140,10 @@ auto Bucket::upsert_json(const std::string &key,
   return promise.get_future();
 }
 
-auto Bucket::fetch_or_upsert(const std::string &key,
-                             std::function<sourcemeta::jsontoolkit::JSON()>
-                                 callback) -> std::future<ResponseJSON> {
+auto Bucket::fetch_or_upsert(
+    const std::string &key,
+    std::function<sourcemeta::jsontoolkit::JSON()> callback)
+    -> std::future<ResponseJSON> {
   std::promise<ResponseJSON> promise;
   auto maybe_response{this->fetch_json(key).get()};
   if (maybe_response.has_value()) {

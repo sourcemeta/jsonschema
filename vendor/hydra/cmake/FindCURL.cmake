@@ -358,6 +358,10 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/vquic/vquic-tls.c"
     "${CURL_DIR}/lib/vquic/vquic-tls.h")
 
+  if(NOT MSVC)
+    target_compile_options(curl PRIVATE -Wno-enum-conversion)
+  endif()
+
   # General options
   target_compile_definitions(curl PRIVATE BUILDING_LIBCURL)
   target_compile_definitions(curl PRIVATE UNICODE)

@@ -130,7 +130,7 @@ auto sourcemeta::jsontoolkit::frame(
     const sourcemeta::jsontoolkit::SchemaWalker &walker,
     const sourcemeta::jsontoolkit::SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect,
-    const std::optional<std::string> &default_id) -> std::future<void> {
+    const std::optional<std::string> &default_id) -> void {
   std::vector<InternalEntry> subschema_entries;
   std::map<sourcemeta::jsontoolkit::Pointer, std::vector<std::string>>
       base_uris;
@@ -138,8 +138,7 @@ auto sourcemeta::jsontoolkit::frame(
       base_dialects;
 
   const std::optional<std::string> root_base_dialect{
-      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)
-          .get()};
+      sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)};
   assert(root_base_dialect.has_value());
 
   const std::optional<std::string> root_id{sourcemeta::jsontoolkit::identify(
@@ -463,6 +462,4 @@ auto sourcemeta::jsontoolkit::frame(
       }
     }
   }
-
-  return std::promise<void>{}.get_future();
 }

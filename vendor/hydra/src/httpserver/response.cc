@@ -65,8 +65,8 @@ auto ServerResponse::status(const Status status_code) -> void {
 
 auto ServerResponse::status() const -> Status { return this->code; }
 
-auto ServerResponse::header(std::string_view key,
-                            std::string_view value) -> void {
+auto ServerResponse::header(std::string_view key, std::string_view value)
+    -> void {
   this->headers.emplace(key, value);
 }
 
@@ -128,9 +128,33 @@ auto ServerResponse::end(const std::string_view message) -> void {
   switch (this->content_encoding) {
     case ServerContentEncoding::GZIP:
       this->internal->handler->end(zlib_compress_gzip(message));
+
       break;
     case ServerContentEncoding::Identity:
       this->internal->handler->end(message);
+
+      break;
+  }
+}
+
+auto ServerResponse::head(const std::string_view message) -> void {
+  std::ostringstream code_string;
+  code_string << this->code;
+  this->internal->handler->writeStatus(code_string.str());
+
+  for (const auto &[key, value] : this->headers) {
+    this->internal->handler->writeHeader(key, value);
+  }
+
+  switch (this->content_encoding) {
+    case ServerContentEncoding::GZIP:
+      this->internal->handler->endWithoutBody(
+          zlib_compress_gzip(message).size());
+      this->internal->handler->end();
+      break;
+    case ServerContentEncoding::Identity:
+      this->internal->handler->endWithoutBody(message.size());
+      this->internal->handler->end();
       break;
   }
 }
@@ -140,6 +164,29 @@ auto ServerResponse::end(const sourcemeta::jsontoolkit::JSON &document)
   std::ostringstream output;
   sourcemeta::jsontoolkit::prettify(document, output);
   this->end(output.str());
+}
+
+auto ServerResponse::head(const sourcemeta::jsontoolkit::JSON &document)
+    -> void {
+  std::ostringstream output;
+  sourcemeta::jsontoolkit::prettify(document, output);
+  this->head(output.str());
+}
+
+auto ServerResponse::end(const sourcemeta::jsontoolkit::JSON &document,
+                         const sourcemeta::jsontoolkit::KeyComparison &compare)
+    -> void {
+  std::ostringstream output;
+  sourcemeta::jsontoolkit::prettify(document, output, compare);
+  this->end(output.str());
+}
+
+auto ServerResponse::head(const sourcemeta::jsontoolkit::JSON &document,
+                          const sourcemeta::jsontoolkit::KeyComparison &compare)
+    -> void {
+  std::ostringstream output;
+  sourcemeta::jsontoolkit::prettify(document, output, compare);
+  this->head(output.str());
 }
 
 auto ServerResponse::end() -> void {

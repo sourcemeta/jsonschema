@@ -1,12 +1,13 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_RESOLVER_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_RESOLVER_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 
 #include <functional>  // std::function
-#include <future>      // std::future
 #include <map>         // std::map
 #include <optional>    // std::optional
 #include <string_view> // std::string_view
@@ -28,14 +29,13 @@ namespace sourcemeta::jsontoolkit {
 /// requests, or anything your application might require. Unless your resolver
 /// is trivial, it is recommended to create a callable object that implements
 /// the function interface.
-using SchemaResolver =
-    std::function<std::future<std::optional<JSON>>(std::string_view)>;
+using SchemaResolver = std::function<std::optional<JSON>(std::string_view)>;
 
 /// @ingroup jsonschema
 /// A default resolver that relies on built-in official schemas.
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto official_resolver(std::string_view identifier)
-    -> std::future<std::optional<sourcemeta::jsontoolkit::JSON>>;
+    -> std::optional<sourcemeta::jsontoolkit::JSON>;
 
 /// @ingroup jsonschema
 /// This is a convenient helper for constructing schema resolvers at runtime.
@@ -60,7 +60,7 @@ auto official_resolver(std::string_view identifier)
 /// // (2) Register a schema
 /// resolver.add(schema);
 ///
-/// assert(resolver("https://www.example.com").get().has_value());
+/// assert(resolver("https://www.example.com").has_value());
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT MapSchemaResolver {
 public:
@@ -78,8 +78,7 @@ public:
            const std::optional<std::string> &default_id = std::nullopt) -> void;
 
   /// Attempt to resolve a schema
-  auto operator()(std::string_view identifier) const
-      -> std::future<std::optional<JSON>>;
+  auto operator()(std::string_view identifier) const -> std::optional<JSON>;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered

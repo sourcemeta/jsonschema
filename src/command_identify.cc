@@ -35,10 +35,8 @@ auto sourcemeta::jsonschema::cli::identify(
 
   // Just to print a nice warning
   try {
-    const auto base_dialect{
-        sourcemeta::jsontoolkit::base_dialect(
-            schema, sourcemeta::jsontoolkit::official_resolver)
-            .get()};
+    const auto base_dialect{sourcemeta::jsontoolkit::base_dialect(
+        schema, sourcemeta::jsontoolkit::official_resolver)};
     if (!base_dialect.has_value()) {
       std::cerr << "warning: Cannot determine the base dialect of the schema, "
                    "but will attempt to guess\n";
@@ -52,9 +50,8 @@ auto sourcemeta::jsonschema::cli::identify(
 
   try {
     identifier = sourcemeta::jsontoolkit::identify(
-                     schema, sourcemeta::jsontoolkit::official_resolver,
-                     sourcemeta::jsontoolkit::IdentificationStrategy::Loose)
-                     .get();
+        schema, sourcemeta::jsontoolkit::official_resolver,
+        sourcemeta::jsontoolkit::IdentificationStrategy::Loose);
   } catch (const sourcemeta::jsontoolkit::SchemaError &error) {
     std::cerr
         << "error: " << error.what() << "\n  "

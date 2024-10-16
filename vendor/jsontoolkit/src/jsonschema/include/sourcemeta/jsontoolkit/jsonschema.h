@@ -1,18 +1,18 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_H_
 
+#ifndef SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 #include "jsonschema_export.h"
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema_anchor.h>
 #include <sourcemeta/jsontoolkit/jsonschema_bundle.h>
-#include <sourcemeta/jsontoolkit/jsonschema_compile.h>
 #include <sourcemeta/jsontoolkit/jsonschema_error.h>
 #include <sourcemeta/jsontoolkit/jsonschema_reference.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
-#include <future>   // std::future
 #include <map>      // std::map
 #include <optional> // std::optional
 #include <string>   // std::string
@@ -71,7 +71,7 @@ enum class IdentificationStrategy : std::uint8_t {
 /// })JSON");
 ///
 /// std::optional<std::string> id{sourcemeta::jsontoolkit::identify(
-///   document, sourcemeta::jsontoolkit::official_resolver).get()};
+///   document, sourcemeta::jsontoolkit::official_resolver)};
 /// assert(id.has_value());
 /// assert(id.value() == "https://sourcemeta.com/example-schema");
 /// ```
@@ -85,7 +85,7 @@ auto identify(
     const IdentificationStrategy strategy = IdentificationStrategy::Strict,
     const std::optional<std::string> &default_dialect = std::nullopt,
     const std::optional<std::string> &default_id = std::nullopt)
-    -> std::future<std::optional<std::string>>;
+    -> std::optional<std::string>;
 
 /// @ingroup jsonschema
 ///
@@ -118,7 +118,7 @@ auto identify(const JSON &schema, const std::string &base_dialect,
 ///   "https://json-schema.org/draft/2020-12/schema");
 ///
 /// std::optional<std::string> id{sourcemeta::jsontoolkit::identify(
-///   document, sourcemeta::jsontoolkit::official_resolver).get()};
+///   document, sourcemeta::jsontoolkit::official_resolver)};
 /// assert(!id.has_value());
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
@@ -145,7 +145,7 @@ auto anonymize(JSON &schema, const std::string &base_dialect) -> void;
 ///   sourcemeta::jsontoolkit::official_resolver);
 ///
 /// std::optional<std::string> id{sourcemeta::jsontoolkit::identify(
-///   document, sourcemeta::jsontoolkit::official_resolver).get()};
+///   document, sourcemeta::jsontoolkit::official_resolver)};
 /// assert(id.has_value());
 /// assert(id.value() == "https://example.com/my-new-id");
 /// ```
@@ -239,7 +239,7 @@ auto metaschema(
 ///
 /// const std::optional<std::string> base_dialect{
 ///   sourcemeta::jsontoolkit::base_dialect(
-///     document, sourcemeta::jsontoolkit::official_resolver).get()};
+///     document, sourcemeta::jsontoolkit::official_resolver)};
 ///
 /// assert(base_dialect.has_value());
 /// assert(base_dialect.value() ==
@@ -248,7 +248,7 @@ auto metaschema(
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
                   const std::optional<std::string> &default_dialect =
-                      std::nullopt) -> std::future<std::optional<std::string>>;
+                      std::nullopt) -> std::optional<std::string>;
 
 /// @ingroup jsonschema
 ///
@@ -272,7 +272,7 @@ auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
 ///
 /// const std::map<std::string, bool> vocabularies{
 ///   sourcemeta::jsontoolkit::vocabularies(
-///     document, sourcemeta::jsontoolkit::official_resolver).get()};
+///     document, sourcemeta::jsontoolkit::official_resolver)};
 ///
 /// assert(vocabularies.at("https://json-schema.org/draft/2020-12/vocab/core"));
 /// assert(vocabularies.at("https://json-schema.org/draft/2020-12/vocab/applicator"));
@@ -285,7 +285,7 @@ auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto vocabularies(const JSON &schema, const SchemaResolver &resolver,
                   const std::optional<std::string> &default_dialect =
-                      std::nullopt) -> std::future<std::map<std::string, bool>>;
+                      std::nullopt) -> std::map<std::string, bool>;
 
 /// @ingroup jsonschema
 ///
@@ -294,7 +294,7 @@ auto vocabularies(const JSON &schema, const SchemaResolver &resolver,
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto vocabularies(const SchemaResolver &resolver,
                   const std::string &base_dialect, const std::string &dialect)
-    -> std::future<std::map<std::string, bool>>;
+    -> std::map<std::string, bool>;
 
 /// @ingroup jsonschema
 ///
