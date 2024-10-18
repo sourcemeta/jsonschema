@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_H_
 
-#include "runtime_export.h"
+#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
+#include <sourcemeta/jsonbinpack/runtime_export.h>
+#endif
 
 #include <sourcemeta/jsonbinpack/runtime_encoder_cache.h>
 #include <sourcemeta/jsonbinpack/runtime_encoding.h>

@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_COMPILE_H_
 
 #ifndef SOURCEMETA_BLAZE_COMPILER_EXPORT
-#include "compiler_export.h"
+#include <sourcemeta/blaze/compiler_export.h>
 #endif
 
 #include <sourcemeta/blaze/compiler_error.h>

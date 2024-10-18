@@ -10,7 +10,9 @@
 /// #include <sourcemeta/jsonbinpack/runtime.h>
 /// ```
 
-#include "runtime_export.h"
+#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
+#include <sourcemeta/jsonbinpack/runtime_export.h>
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 

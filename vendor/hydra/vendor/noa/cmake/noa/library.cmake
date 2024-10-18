@@ -18,6 +18,7 @@ function(noa_library)
     set(INCLUDE_PREFIX "include/${NOA_LIBRARY_PROJECT}")
   endif()
 
+  set(EXPORT_HEADER_PATH "${CMAKE_CURRENT_BINARY_DIR}/${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_export.h")
   if(NOT NOA_LIBRARY_VARIANT)
     set(PUBLIC_HEADER "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}.h")
   else()
@@ -25,7 +26,7 @@ function(noa_library)
   endif()
 
   if(NOA_LIBRARY_SOURCES)
-    set(ABSOLUTE_PRIVATE_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/${NOA_LIBRARY_NAME}_export.h")
+    set(ABSOLUTE_PRIVATE_HEADERS "${EXPORT_HEADER_PATH}")
   else()
     set(ABSOLUTE_PRIVATE_HEADERS)
   endif()
@@ -100,7 +101,7 @@ function(noa_library)
   if(NOA_LIBRARY_SOURCES)
     include(GenerateExportHeader)
     generate_export_header(${TARGET_NAME}
-      EXPORT_FILE_NAME ${NOA_LIBRARY_NAME}_export.h)
+      EXPORT_FILE_NAME ${EXPORT_HEADER_PATH})
     set_target_properties(${TARGET_NAME}
       PROPERTIES
         SOVERSION "${PROJECT_VERSION_MAJOR}"
@@ -108,7 +109,7 @@ function(noa_library)
 
     # To find the generated files
     target_include_directories(${TARGET_NAME}
-      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
+      PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
   endif()
 endfunction()
 

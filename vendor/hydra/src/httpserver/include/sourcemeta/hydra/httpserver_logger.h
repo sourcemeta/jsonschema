@@ -1,10 +1,8 @@
 #ifndef SOURCEMETA_HYDRA_HTTPSERVER_LOGGER_H
 #define SOURCEMETA_HYDRA_HTTPSERVER_LOGGER_H
 
-#if defined(__Unikraft__)
-#define SOURCEMETA_HYDRA_HTTPSERVER_EXPORT
-#else
-#include "httpserver_export.h"
+#ifndef SOURCEMETA_HYDRA_HTTPSERVER_EXPORT
+#include <sourcemeta/hydra/httpserver_export.h>
 #endif
 
 #include <string>      // std::string

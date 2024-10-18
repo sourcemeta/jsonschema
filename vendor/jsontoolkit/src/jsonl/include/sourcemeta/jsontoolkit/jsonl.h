@@ -2,7 +2,7 @@
 #define SOURCEMETA_JSONTOOLKIT_JSONL_H_
 
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONL_EXPORT
-#include "jsonl_export.h"
+#include <sourcemeta/jsontoolkit/jsonl_export.h>
 #endif
 
 #include <sourcemeta/jsontoolkit/json.h>

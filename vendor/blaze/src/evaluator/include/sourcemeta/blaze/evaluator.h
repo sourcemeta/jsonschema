@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_EVALUATOR_H_
 
 #ifndef SOURCEMETA_BLAZE_EVALUATOR_EXPORT
-#include "evaluator_export.h"
+#include <sourcemeta/blaze/evaluator_export.h>
 #endif
 
 #include <sourcemeta/blaze/evaluator_context.h>

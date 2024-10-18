@@ -28,11 +28,6 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::runtime)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::evaluator)
 
-# TODO: This is hack to disambiguate between JSON BinPack's "compiler" module
-# and Blaze's "compiler" module, where both will try to include "compiler_export.h"
-# We should fix these cases properly in Noa.
-target_compile_definitions(jsonschema_cli PRIVATE SOURCEMETA_BLAZE_COMPILER_EXPORT=)
-
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 

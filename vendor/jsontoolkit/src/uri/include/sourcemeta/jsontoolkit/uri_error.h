@@ -2,7 +2,7 @@
 #define SOURCEMETA_JSONTOOLKIT_URI_ERROR_H_
 
 #ifndef SOURCEMETA_JSONTOOLKIT_URI_EXPORT
-#include "uri_export.h"
+#include <sourcemeta/jsontoolkit/uri_export.h>
 #endif
 
 #include <cstdint>   // std::uint64_t

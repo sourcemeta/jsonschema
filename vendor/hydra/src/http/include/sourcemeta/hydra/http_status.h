@@ -1,10 +1,8 @@
 #ifndef SOURCEMETA_HYDRA_HTTP_STATUS_H
 #define SOURCEMETA_HYDRA_HTTP_STATUS_H
 
-#if defined(__Unikraft__)
-#define SOURCEMETA_HYDRA_HTTP_EXPORT
-#else
-#include "http_export.h"
+#ifndef SOURCEMETA_HYDRA_HTTP_EXPORT
+#include <sourcemeta/hydra/http_export.h>
 #endif
 
 #include <cstdint> // std::uint16_t

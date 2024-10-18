@@ -317,7 +317,10 @@ auto ErrorTraceOutput::operator()(
     const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
     const sourcemeta::jsontoolkit::WeakPointer &instance_location,
     const sourcemeta::jsontoolkit::JSON &annotation) -> void {
-  assert(!evaluate_path.empty());
+  if (evaluate_path.empty()) {
+    return;
+  }
+
   assert(evaluate_path.back().is_property());
 
   if (type == EvaluationType::Pre) {

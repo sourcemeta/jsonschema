@@ -48,10 +48,6 @@ struct AnnotationWhenArraySizeEqual;
 struct AnnotationWhenArraySizeGreater;
 struct AnnotationToParent;
 struct AnnotationBasenameToParent;
-struct AnnotationLoopPropertiesUnevaluated;
-struct AnnotationLoopItemsUnmarked;
-struct AnnotationLoopItemsUnevaluated;
-struct AnnotationNot;
 struct LogicalNot;
 struct LogicalOr;
 struct LogicalAnd;
@@ -61,6 +57,8 @@ struct LogicalWhenType;
 struct LogicalWhenDefines;
 struct LogicalWhenArraySizeGreater;
 struct LogicalWhenArraySizeEqual;
+struct LoopPropertiesUnevaluated;
+struct LoopItemsUnevaluated;
 struct LoopPropertiesMatch;
 struct LoopProperties;
 struct LoopPropertiesRegex;
@@ -72,6 +70,7 @@ struct LoopItems;
 struct LoopContains;
 struct ControlLabel;
 struct ControlMark;
+struct ControlEvaluate;
 struct ControlJump;
 struct ControlDynamicAnchorJump;
 #endif
@@ -90,14 +89,13 @@ using Template = std::vector<std::variant<
     AssertionUnique, AssertionDivisible, AssertionStringType,
     AssertionPropertyType, AssertionPropertyTypeStrict, AnnotationEmit,
     AnnotationWhenArraySizeEqual, AnnotationWhenArraySizeGreater,
-    AnnotationToParent, AnnotationBasenameToParent,
-    AnnotationLoopPropertiesUnevaluated, AnnotationLoopItemsUnmarked,
-    AnnotationLoopItemsUnevaluated, AnnotationNot, LogicalNot, LogicalOr,
+    AnnotationToParent, AnnotationBasenameToParent, LogicalNot, LogicalOr,
     LogicalAnd, LogicalXor, LogicalCondition, LogicalWhenType,
     LogicalWhenDefines, LogicalWhenArraySizeGreater, LogicalWhenArraySizeEqual,
-    LoopPropertiesMatch, LoopProperties, LoopPropertiesRegex,
-    LoopPropertiesExcept, LoopPropertiesType, LoopPropertiesTypeStrict,
-    LoopKeys, LoopItems, LoopContains, ControlLabel, ControlMark, ControlJump,
+    LoopPropertiesUnevaluated, LoopItemsUnevaluated, LoopPropertiesMatch,
+    LoopProperties, LoopPropertiesRegex, LoopPropertiesExcept,
+    LoopPropertiesType, LoopPropertiesTypeStrict, LoopKeys, LoopItems,
+    LoopContains, ControlLabel, ControlMark, ControlEvaluate, ControlJump,
     ControlDynamicAnchorJump>>;
 
 #if !defined(DOXYGEN)
@@ -138,10 +136,6 @@ enum class TemplateIndex : std::uint8_t {
   AnnotationWhenArraySizeGreater,
   AnnotationToParent,
   AnnotationBasenameToParent,
-  AnnotationLoopPropertiesUnevaluated,
-  AnnotationLoopItemsUnmarked,
-  AnnotationLoopItemsUnevaluated,
-  AnnotationNot,
   LogicalNot,
   LogicalOr,
   LogicalAnd,
@@ -151,6 +145,8 @@ enum class TemplateIndex : std::uint8_t {
   LogicalWhenDefines,
   LogicalWhenArraySizeGreater,
   LogicalWhenArraySizeEqual,
+  LoopPropertiesUnevaluated,
+  LoopItemsUnevaluated,
   LoopPropertiesMatch,
   LoopProperties,
   LoopPropertiesRegex,
@@ -162,6 +158,7 @@ enum class TemplateIndex : std::uint8_t {
   LoopContains,
   ControlLabel,
   ControlMark,
+  ControlEvaluate,
   ControlJump,
   ControlDynamicAnchorJump
 };
@@ -366,28 +363,8 @@ DEFINE_STEP_WITH_VALUE(Annotation, ToParent, ValueJSON)
 DEFINE_STEP_WITH_VALUE(Annotation, BasenameToParent, ValueNone)
 
 /// @ingroup evaluator_instructions
-/// @brief Represents a compiler step that loops over object properties that
-/// were not collected as annotations
-DEFINE_STEP_APPLICATOR(Annotation, LoopPropertiesUnevaluated, ValueStrings)
-
-/// @ingroup evaluator_instructions
-/// @brief Represents a compiler step that loops over array items when the array
-/// is considered unmarked
-DEFINE_STEP_APPLICATOR(Annotation, LoopItemsUnmarked, ValueString)
-
-/// @ingroup evaluator_instructions
-/// @brief Represents a compiler step that loops over unevaluated array items
-DEFINE_STEP_APPLICATOR(Annotation, LoopItemsUnevaluated,
-                       ValueItemsAnnotationKeywords)
-
-/// @ingroup evaluator_instructions
-/// @brief Represents an annotation-aware compiler logical step that represents
-/// a negation
-DEFINE_STEP_APPLICATOR(Annotation, Not, ValueNone)
-
-/// @ingroup evaluator_instructions
 /// @brief Represents a compiler logical step that represents a negation
-DEFINE_STEP_APPLICATOR(Logical, Not, ValueNone)
+DEFINE_STEP_APPLICATOR(Logical, Not, ValueBoolean)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler logical step that represents a disjunction
@@ -425,6 +402,15 @@ DEFINE_STEP_APPLICATOR(Logical, WhenArraySizeGreater, ValueUnsignedInteger)
 /// @brief Represents a compiler logical step that represents a conjunction when
 /// the array instance size is equal to the given number
 DEFINE_STEP_APPLICATOR(Logical, WhenArraySizeEqual, ValueUnsignedInteger)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over object properties that
+/// were not previously evaluated
+DEFINE_STEP_APPLICATOR(Loop, PropertiesUnevaluated, ValueNone)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over unevaluated array items
+DEFINE_STEP_APPLICATOR(Loop, ItemsUnevaluated, ValueNone)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that matches steps to object properties
@@ -477,6 +463,11 @@ DEFINE_STEP_APPLICATOR(Control, Label, ValueUnsignedInteger)
 /// @brief Represents a compiler step that consists of a mark to jump to, but
 /// without executing children instructions
 DEFINE_STEP_APPLICATOR(Control, Mark, ValueUnsignedInteger)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that marks the current instance location
+/// as evaluated
+DEFINE_STEP_WITH_VALUE(Control, Evaluate, ValuePointer)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that consists of jumping into a
