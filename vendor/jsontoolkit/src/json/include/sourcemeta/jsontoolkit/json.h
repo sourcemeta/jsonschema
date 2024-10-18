@@ -2,7 +2,7 @@
 #define SOURCEMETA_JSONTOOLKIT_JSON_H_
 
 #ifndef SOURCEMETA_JSONTOOLKIT_JSON_EXPORT
-#include "json_export.h"
+#include <sourcemeta/jsontoolkit/json_export.h>
 #endif
 
 #include <sourcemeta/jsontoolkit/json_error.h>

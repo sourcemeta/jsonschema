@@ -2,7 +2,9 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODER_CACHE_H_
 #ifndef DOXYGEN
 
-#include "runtime_export.h"
+#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
+#include <sourcemeta/jsonbinpack/runtime_export.h>
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 

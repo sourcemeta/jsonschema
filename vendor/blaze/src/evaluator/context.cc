@@ -16,8 +16,8 @@ auto EvaluationContext::prepare(const sourcemeta::jsontoolkit::JSON &instance)
   this->instances_.emplace_back(instance);
   this->labels.clear();
   this->property_as_instance = false;
-  this->annotation_blacklist.clear();
-  this->annotations_.clear();
+  this->evaluated_.clear();
+  this->evaluated_blacklist_.clear();
 }
 
 auto EvaluationContext::push_without_traverse(
@@ -79,8 +79,8 @@ auto EvaluationContext::pop(const bool dynamic) -> void {
   assert(!this->frame_sizes.empty());
   const auto &sizes{this->frame_sizes.back()};
   this->evaluate_path_.pop_back(sizes.first);
-  this->instance_location_.pop_back(sizes.second);
   if (sizes.second > 0) {
+    this->instance_location_.pop_back(sizes.second);
     this->instances_.pop_back();
   }
 
@@ -90,130 +90,6 @@ auto EvaluationContext::pop(const bool dynamic) -> void {
     assert(!this->resources_.empty());
     this->resources_.pop_back();
   }
-}
-
-// TODO: At least currently, we only need to mask if a schema
-// makes use of `unevaluatedProperties` or `unevaluatedItems`
-// Detect if a schema does need this so if not, we avoid
-// an unnecessary copy
-auto EvaluationContext::mask() -> void {
-  this->annotation_blacklist.push_back(this->evaluate_path_);
-}
-
-auto EvaluationContext::annotate(
-    const sourcemeta::jsontoolkit::WeakPointer &current_instance_location,
-    const sourcemeta::jsontoolkit::JSON &value)
-    -> std::pair<std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>,
-                 bool> {
-  const auto result{this->annotations_.insert({current_instance_location, {}})
-                        .first->second.insert({this->evaluate_path(), {}})
-                        .first->second.insert(value)};
-  return {*(result.first), result.second};
-}
-
-auto EvaluationContext::defines_any_annotation(
-    const std::string &expected_keyword) const -> bool {
-  const auto instance_location_result{
-      this->annotations_.find(this->instance_location_)};
-  if (instance_location_result == this->annotations_.end()) {
-    return false;
-  }
-
-  for (const auto &[schema_location, schema_annotations] :
-       instance_location_result->second) {
-    assert(!schema_location.empty());
-    const auto &keyword{schema_location.back()};
-
-    if (keyword.is_property() && expected_keyword == keyword.to_property() &&
-        !schema_annotations.empty() &&
-        schema_location.initial().starts_with(this->evaluate_path_)) {
-      bool blacklisted = false;
-      for (const auto &masked : this->annotation_blacklist) {
-        if (schema_location.starts_with(masked) &&
-            !this->evaluate_path_.starts_with(masked)) {
-          blacklisted = true;
-          break;
-        }
-      }
-
-      if (!blacklisted) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-auto EvaluationContext::defines_sibling_annotation(
-    const std::vector<std::string> &keywords,
-    const sourcemeta::jsontoolkit::JSON &value) const -> bool {
-  if (keywords.empty()) {
-    return false;
-  }
-
-  const auto instance_location_result{
-      this->annotations_.find(this->instance_location_)};
-  if (instance_location_result == this->annotations_.end()) {
-    return false;
-  }
-
-  for (const auto &[schema_location, schema_annotations] :
-       instance_location_result->second) {
-    assert(!schema_location.empty());
-    const auto &keyword{schema_location.back()};
-
-    if (keyword.is_property() &&
-        std::find(keywords.cbegin(), keywords.cend(), keyword.to_property()) !=
-            keywords.cend() &&
-        schema_annotations.contains(value) &&
-        schema_location.initial().starts_with(this->evaluate_path_.initial())) {
-      bool blacklisted = false;
-      for (const auto &masked : this->annotation_blacklist) {
-        if (schema_location.starts_with(masked) &&
-            !this->evaluate_path_.starts_with(masked)) {
-          blacklisted = true;
-          break;
-        }
-      }
-
-      if (!blacklisted) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-auto EvaluationContext::largest_annotation_index(
-    const std::string &expected_keyword) const -> std::uint64_t {
-  // TODO: We should be taking masks into account
-  std::uint64_t result{0};
-
-  const auto instance_location_result{
-      this->annotations_.find(this->instance_location_)};
-  if (instance_location_result == this->annotations_.end()) {
-    return result;
-  }
-
-  for (const auto &[schema_location, schema_annotations] :
-       instance_location_result->second) {
-    assert(!schema_location.empty());
-    const auto &keyword{schema_location.back()};
-    if (!keyword.is_property() || expected_keyword != keyword.to_property()) {
-      continue;
-    }
-
-    for (const auto &annotation : schema_annotations) {
-      if (annotation.is_integer() && annotation.is_positive()) {
-        result = std::max(
-            result, static_cast<std::uint64_t>(annotation.to_integer()) + 1);
-      }
-    }
-  }
-
-  return result;
 }
 
 auto EvaluationContext::enter(
@@ -315,6 +191,50 @@ auto EvaluationContext::find_dynamic_anchor(const std::string &anchor) const
   }
 
   return std::nullopt;
+}
+
+auto EvaluationContext::evaluate() -> void {
+  this->evaluated_.emplace_back(this->instance_location_, this->evaluate_path_);
+}
+
+auto EvaluationContext::evaluate(
+    const sourcemeta::jsontoolkit::Pointer &relative_instance_location)
+    -> void {
+  auto new_instance_location = this->instance_location_;
+  new_instance_location.push_back(relative_instance_location);
+  this->evaluated_.emplace_back(std::move(new_instance_location),
+                                this->evaluate_path_);
+}
+
+auto EvaluationContext::is_evaluated(
+    sourcemeta::jsontoolkit::WeakPointer::Token &&token) const -> bool {
+  auto expected_instance_location = this->instance_location_;
+  // TODO: Allow directly pushing back a token
+  expected_instance_location.push_back(
+      sourcemeta::jsontoolkit::WeakPointer{std::move(token)});
+
+  for (const auto &entry : this->evaluated_) {
+    if ((entry.first == expected_instance_location ||
+         entry.first == this->instance_location_) &&
+        // Its not possible to affect cousins
+        entry.second.starts_with(this->evaluate_path_.initial())) {
+      // Handle "not"
+      for (const auto &mask : this->evaluated_blacklist_) {
+        if (entry.second.starts_with(mask) &&
+            !this->evaluate_path_.starts_with(mask)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+auto EvaluationContext::unevaluate() -> void {
+  this->evaluated_blacklist_.push_back(this->evaluate_path_);
 }
 
 } // namespace sourcemeta::blaze

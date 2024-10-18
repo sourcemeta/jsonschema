@@ -10,7 +10,9 @@
 /// #include <sourcemeta/alterschema/linter.h>
 /// ```
 
-#include "linter_export.h"
+#ifndef SOURCEMETA_ALTERSCHEMA_LINTER_EXPORT
+#include <sourcemeta/alterschema/linter_export.h>
+#endif
 
 #include <sourcemeta/alterschema/engine.h>
 

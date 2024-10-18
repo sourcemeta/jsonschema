@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_INPUT_STREAM_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_INPUT_STREAM_H_
 
-#include "runtime_export.h"
+#ifndef SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
+#include <sourcemeta/jsonbinpack/runtime_export.h>
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 

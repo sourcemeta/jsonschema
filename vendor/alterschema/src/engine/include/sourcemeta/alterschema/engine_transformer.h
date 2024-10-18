@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_ALTERSCHEMA_ENGINE_TRANSFORMER_H_
 #define SOURCEMETA_ALTERSCHEMA_ENGINE_TRANSFORMER_H_
 
-#include "engine_export.h"
+#ifndef SOURCEMETA_ALTERSCHEMA_ENGINE_EXPORT
+#include <sourcemeta/alterschema/engine_export.h>
+#endif
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>

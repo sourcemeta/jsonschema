@@ -2,7 +2,7 @@
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_ERROR_H_
 
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
-#include "jsonpointer_export.h"
+#include <sourcemeta/jsontoolkit/jsonpointer_export.h>
 #endif
 
 #include <sourcemeta/jsontoolkit/json_error.h>

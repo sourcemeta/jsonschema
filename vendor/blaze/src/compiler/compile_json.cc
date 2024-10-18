@@ -113,29 +113,6 @@ auto value_to_json(const T &value) -> sourcemeta::jsontoolkit::JSON {
 
     result.assign("value", std::move(map));
     return result;
-  } else if constexpr (std::is_same_v<ValueItemsAnnotationKeywords, T>) {
-    result.assign("type",
-                  sourcemeta::jsontoolkit::JSON{"items-annotation-keywords"});
-    sourcemeta::jsontoolkit::JSON data{
-        sourcemeta::jsontoolkit::JSON::make_object()};
-    data.assign("index", sourcemeta::jsontoolkit::JSON{value.index});
-
-    sourcemeta::jsontoolkit::JSON mask{
-        sourcemeta::jsontoolkit::JSON::make_array()};
-    for (const auto &keyword : value.mask) {
-      mask.push_back(sourcemeta::jsontoolkit::JSON{keyword});
-    }
-    data.assign("mask", std::move(mask));
-
-    sourcemeta::jsontoolkit::JSON filter{
-        sourcemeta::jsontoolkit::JSON::make_array()};
-    for (const auto &keyword : value.filter) {
-      filter.push_back(sourcemeta::jsontoolkit::JSON{keyword});
-    }
-    data.assign("filter", std::move(filter));
-
-    result.assign("value", std::move(data));
-    return result;
   } else if constexpr (std::is_same_v<ValueIndexedJSON, T>) {
     result.assign("type", sourcemeta::jsontoolkit::JSON{"indexed-json"});
     sourcemeta::jsontoolkit::JSON data{
@@ -181,6 +158,11 @@ auto value_to_json(const T &value) -> sourcemeta::jsontoolkit::JSON {
     data.push_back(sourcemeta::jsontoolkit::JSON{value.first});
     data.push_back(sourcemeta::jsontoolkit::JSON{value.second});
     result.assign("value", std::move(data));
+    return result;
+  } else if constexpr (std::is_same_v<ValuePointer, T>) {
+    result.assign("type", sourcemeta::jsontoolkit::JSON{"pointer"});
+    result.assign("value", sourcemeta::jsontoolkit::JSON{
+                               sourcemeta::jsontoolkit::to_string(value)});
     return result;
   } else {
     static_assert(std::is_same_v<ValueNone, T>);
@@ -270,12 +252,6 @@ struct StepVisitor {
               AnnotationWhenArraySizeGreater)
   HANDLE_STEP("annotation", "to-parent", AnnotationToParent)
   HANDLE_STEP("annotation", "basename-to-parent", AnnotationBasenameToParent)
-  HANDLE_STEP("annotation", "loop-properties-unevaluated",
-              AnnotationLoopPropertiesUnevaluated)
-  HANDLE_STEP("annotation", "loop-items-unmarked", AnnotationLoopItemsUnmarked)
-  HANDLE_STEP("annotation", "loop-items-unevaluated",
-              AnnotationLoopItemsUnevaluated)
-  HANDLE_STEP("annotation", "not", AnnotationNot)
   HANDLE_STEP("logical", "not", LogicalNot)
   HANDLE_STEP("logical", "or", LogicalOr)
   HANDLE_STEP("logical", "and", LogicalAnd)
@@ -285,6 +261,8 @@ struct StepVisitor {
   HANDLE_STEP("logical", "when-defines", LogicalWhenDefines)
   HANDLE_STEP("logical", "when-array-size-greater", LogicalWhenArraySizeGreater)
   HANDLE_STEP("logical", "when-array-size-equal", LogicalWhenArraySizeEqual)
+  HANDLE_STEP("loop", "properties-unevaluated", LoopPropertiesUnevaluated)
+  HANDLE_STEP("loop", "items-unevaluated", LoopItemsUnevaluated)
   HANDLE_STEP("loop", "properties-match", LoopPropertiesMatch)
   HANDLE_STEP("loop", "properties", LoopProperties)
   HANDLE_STEP("loop", "properties-regex", LoopPropertiesRegex)
@@ -296,6 +274,7 @@ struct StepVisitor {
   HANDLE_STEP("loop", "contains", LoopContains)
   HANDLE_STEP("control", "label", ControlLabel)
   HANDLE_STEP("control", "mark", ControlMark)
+  HANDLE_STEP("control", "evaluate", ControlEvaluate)
   HANDLE_STEP("control", "jump", ControlJump)
   HANDLE_STEP("control", "dynamic-anchor-jump", ControlDynamicAnchorJump)
 

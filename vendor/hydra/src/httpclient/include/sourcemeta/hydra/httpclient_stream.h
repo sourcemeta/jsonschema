@@ -1,10 +1,8 @@
 #ifndef SOURCEMETA_HYDRA_HTTPCLIENT_STREAM_H
 #define SOURCEMETA_HYDRA_HTTPCLIENT_STREAM_H
 
-#if defined(__Unikraft__)
-#define SOURCEMETA_HYDRA_HTTPCLIENT_EXPORT
-#else
-#include "httpclient_export.h"
+#ifndef SOURCEMETA_HYDRA_HTTPCLIENT_EXPORT
+#include <sourcemeta/hydra/httpclient_export.h>
 #endif
 
 #include <sourcemeta/hydra/http.h>

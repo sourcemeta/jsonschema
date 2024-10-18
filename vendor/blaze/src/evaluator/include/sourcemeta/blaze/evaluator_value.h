@@ -2,6 +2,7 @@
 #define SOURCEMETA_BLAZE_EVALUATOR_VALUE_H
 
 #include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
 #include <cstdint>       // std::uint8_t
@@ -77,14 +78,6 @@ using ValueNamedIndexes = std::unordered_map<ValueString, ValueUnsignedInteger>;
 enum class ValueStringType : std::uint8_t { URI };
 
 /// @ingroup evaluator
-/// Represents an array loop compiler step annotation keywords
-struct ValueItemsAnnotationKeywords {
-  const ValueString index;
-  const ValueStrings filter;
-  const ValueStrings mask;
-};
-
-/// @ingroup evaluator
 /// Represents an compiler step that maps strings to strings
 using ValueStringMap = std::unordered_map<ValueString, ValueStrings>;
 
@@ -100,6 +93,10 @@ using ValuePropertyFilter = std::pair<ValueStrings, std::vector<ValueRegex>>;
 /// @ingroup evaluator
 /// Represents a compiler step value that consists of two indexes
 using ValueIndexPair = std::pair<std::size_t, std::size_t>;
+
+/// @ingroup evaluator
+/// Represents a compiler step value that consists of a pointer
+using ValuePointer = sourcemeta::jsontoolkit::Pointer;
 
 } // namespace sourcemeta::blaze
 

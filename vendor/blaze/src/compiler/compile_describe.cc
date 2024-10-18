@@ -149,7 +149,15 @@ struct DescribeVisitor {
       return message.str();
     }
 
-    assert(this->keyword.empty());
+    if (this->keyword == "unevaluatedItems") {
+      std::ostringstream message;
+      assert(!this->instance_location.empty());
+      assert(this->instance_location.back().is_index());
+      message << "The array value was not expected to define the item at index "
+              << this->instance_location.back().to_index();
+      return message.str();
+    }
+
     return "No instance is expected to succeed against the false schema";
   }
 
@@ -238,24 +246,16 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const AnnotationNot &) const -> std::string {
-    std::ostringstream message;
-    message
-        << "The " << to_string(this->target.type())
-        << " value was expected to not validate against the given subschema";
-    if (!this->valid) {
-      message << ", but it did";
-    }
-
-    return message.str();
-  }
-
   auto operator()(const ControlLabel &) const -> std::string {
     return describe_reference(this->target);
   }
 
   auto operator()(const ControlMark &) const -> std::string {
-    return describe_reference(this->target);
+    return "The schema location was marked for future use";
+  }
+
+  auto operator()(const ControlEvaluate &) const -> std::string {
+    return "The instance location was marked as evaluated";
   }
 
   auto operator()(const ControlJump &) const -> std::string {
@@ -607,8 +607,7 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const AnnotationLoopPropertiesUnevaluated &step) const
-      -> std::string {
+  auto operator()(const LoopPropertiesUnevaluated &step) const -> std::string {
     if (this->keyword == "unevaluatedProperties") {
       std::ostringstream message;
       if (!step.children.empty() &&
@@ -700,18 +699,11 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const AnnotationLoopItemsUnmarked &) const -> std::string {
-    return unknown();
-  }
-
-  auto operator()(const AnnotationLoopItemsUnevaluated &step) const
-      -> std::string {
+  auto operator()(const LoopItemsUnevaluated &) const -> std::string {
     assert(this->keyword == "unevaluatedItems");
-    const auto &value{step_value(step)};
     std::ostringstream message;
-    message << "The array items not evaluated by the keyword "
-            << escape_string(value.index)
-            << ", if any, were expected to validate against this subschema";
+    message << "The array items not covered by other array keywords, if any, "
+               "were expected to validate against this subschema";
     return message.str();
   }
 
@@ -1383,6 +1375,13 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LogicalWhenDefines &step) const -> std::string {
+    std::ostringstream message;
+    message << "The object value defined the property \"" << step_value(step)
+            << "\"";
+    return message.str();
+  }
+
   auto operator()(const LogicalWhenType &step) const -> std::string {
     if (this->keyword == "patternProperties") {
       assert(!step.children.empty());
@@ -1692,9 +1691,6 @@ struct DescribeVisitor {
     return unknown();
   }
   auto operator()(const LogicalWhenArraySizeEqual &) const -> std::string {
-    return unknown();
-  }
-  auto operator()(const LogicalWhenDefines &) const -> std::string {
     return unknown();
   }
   auto operator()(const LoopPropertiesRegex &) const -> std::string {

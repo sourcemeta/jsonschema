@@ -1,10 +1,8 @@
 #ifndef SOURCEMETA_HYDRA_BUCKET_AWS_SIGV4_H
 #define SOURCEMETA_HYDRA_BUCKET_AWS_SIGV4_H
 
-#if defined(__Unikraft__)
-#define SOURCEMETA_HYDRA_BUCKET_EXPORT
-#else
-#include "bucket_export.h"
+#ifndef SOURCEMETA_HYDRA_BUCKET_EXPORT
+#include <sourcemeta/hydra/bucket_export.h>
 #endif
 
 #include <sourcemeta/hydra/http.h>

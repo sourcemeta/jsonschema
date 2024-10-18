@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_ERROR_H
 
 #ifndef SOURCEMETA_BLAZE_COMPILER_EXPORT
-#include "compiler_export.h"
+#include <sourcemeta/blaze/compiler_export.h>
 #endif
 
 #include <sourcemeta/jsontoolkit/jsonpointer.h>

@@ -1,7 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_COMPILER_H_
 #define SOURCEMETA_JSONBINPACK_COMPILER_H_
 
-#include "compiler_export.h"
+#ifndef SOURCEMETA_JSONBINPACK_COMPILER_EXPORT
+#include <sourcemeta/jsonbinpack/compiler_export.h>
+#endif
 
 /// @defgroup compiler Compiler
 /// @brief The built-time schema compiler of JSON BinPack

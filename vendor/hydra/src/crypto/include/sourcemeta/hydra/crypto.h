@@ -1,10 +1,8 @@
 #ifndef SOURCEMETA_HYDRA_CRYPTO_H
 #define SOURCEMETA_HYDRA_CRYPTO_H
 
-#if defined(__Unikraft__)
-#define SOURCEMETA_HYDRA_CRYPTO_EXPORT
-#else
-#include "crypto_export.h"
+#ifndef SOURCEMETA_HYDRA_CRYPTO_EXPORT
+#include <sourcemeta/hydra/crypto_export.h>
 #endif
 
 #include <ostream>     // std::ostream
