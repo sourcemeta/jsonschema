@@ -44,7 +44,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
       cache.insert({dialect.value(), metaschema_template});
     }
 
-    sourcemeta::blaze::ErrorTraceOutput output{metaschema};
+    sourcemeta::blaze::ErrorTraceOutput output{entry.second};
     if (sourcemeta::blaze::evaluate(cache.at(dialect.value()), entry.second,
                                     std::ref(output))) {
       log_verbose(options)

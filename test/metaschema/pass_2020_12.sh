@@ -10,7 +10,12 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
+  "type": "string",
+  "$defs": {
+    "foo": {
+      "type": [ "string", "null" ]
+    }
+  }
 }
 EOF
 
