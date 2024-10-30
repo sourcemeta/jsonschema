@@ -82,13 +82,10 @@ enum class ValueStringType : std::uint8_t { URI };
 using ValueStringMap = std::unordered_map<ValueString, ValueStrings>;
 
 /// @ingroup evaluator
-/// Represents a compiler step JSON value accompanied with an index
-using ValueIndexedJSON =
-    std::pair<ValueUnsignedInteger, sourcemeta::jsontoolkit::JSON>;
-
-/// @ingroup evaluator
 /// Represents a compiler step value that consist of object property filters
-using ValuePropertyFilter = std::pair<ValueStrings, std::vector<ValueRegex>>;
+/// (strings, prefixes, regexes)
+using ValuePropertyFilter =
+    std::tuple<ValueStrings, ValueStrings, std::vector<ValueRegex>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consists of two indexes

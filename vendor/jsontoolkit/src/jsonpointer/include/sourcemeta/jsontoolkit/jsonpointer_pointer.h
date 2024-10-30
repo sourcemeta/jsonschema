@@ -451,6 +451,52 @@ public:
                       this->data.cbegin());
   }
 
+  /// Check whether a JSON Pointer plus a given tail starts with another JSON
+  /// Pointer. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::Pointer pointer{"foo", "bar"};
+  /// const sourcemeta::jsontoolkit::Pointer::Token tail{"baz"};
+  /// const sourcemeta::jsontoolkit::Pointer prefix{"foo", "bar", "baz"};
+  /// assert(pointer.starts_with(prefix, tail));
+  /// ```
+  auto starts_with(const GenericPointer<PropertyT> &other,
+                   const Token &tail) const -> bool {
+    if (other.size() == this->size() + 1) {
+      assert(!other.empty());
+      return other.starts_with(*this) && other.back() == tail;
+    } else {
+      return this->starts_with(other);
+    }
+  }
+
+  /// Check whether a JSON Pointer starts with the initial part of another JSON
+  /// Pointer. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::Pointer pointer{"foo", "bar", "baz"};
+  /// const sourcemeta::jsontoolkit::Pointer prefix{"foo", "bar", "qux"};
+  /// assert(pointer.starts_with_initial(prefix));
+  /// ```
+  auto starts_with_initial(const GenericPointer<PropertyT> &other) const
+      -> bool {
+    if (!other.empty()) {
+      for (std::size_t index = 0; index < other.size() - 1; index++) {
+        if (this->data[index] != other.data[index]) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   /// Replace a base of a JSON Pointer with another JSON Pointer. For example:
   ///
   /// ```cpp

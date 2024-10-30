@@ -38,43 +38,35 @@ public:
   // Evaluation stack
   ///////////////////////////////////////////////
 
-  auto evaluate_path() const noexcept
-      -> const sourcemeta::jsontoolkit::WeakPointer &;
-  auto instance_location() const noexcept
-      -> const sourcemeta::jsontoolkit::WeakPointer &;
   auto push(const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
             const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-            const std::size_t &schema_resource, const bool dynamic) -> void;
+            const std::size_t &schema_resource, const bool dynamic,
+            const bool track) -> void;
   // A performance shortcut for pushing without re-traversing the target
   // if we already know that the destination target will be
   auto push(const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
             const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
             const std::size_t &schema_resource, const bool dynamic,
+            const bool track,
             std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>
                 &&new_instance) -> void;
-  auto pop(const bool dynamic) -> void;
+  auto pop(const bool dynamic, const bool track) -> void;
   auto
-  enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property)
-      -> void;
-  auto enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Index &index)
-      -> void;
-  auto leave() -> void;
-
-private:
+  enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property,
+        const bool track) -> void;
+  auto enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Index &index,
+             const bool track) -> void;
+  auto leave(const bool track) -> void;
   auto push_without_traverse(
       const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
       const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-      const std::size_t &schema_resource, const bool dynamic) -> void;
+      const std::size_t &schema_resource, const bool dynamic, const bool track)
+      -> void;
 
-public:
   ///////////////////////////////////////////////
   // Target resolution
   ///////////////////////////////////////////////
 
-  auto instances() const noexcept -> const std::vector<
-      std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>> &;
-  enum class TargetType : std::uint8_t { Key, Value };
-  auto target_type(const TargetType type) noexcept -> void;
   auto resolve_target() -> const sourcemeta::jsontoolkit::JSON &;
   auto resolve_string_target() -> std::optional<
       std::reference_wrapper<const sourcemeta::jsontoolkit::JSON::String>>;
@@ -85,29 +77,26 @@ public:
 
   auto hash(const std::size_t &resource,
             const std::string &fragment) const noexcept -> std::size_t;
-  auto resources() const noexcept -> const std::vector<std::size_t> &;
-  auto mark(const std::size_t id, const Template &children) -> void;
-  auto jump(const std::size_t id) const noexcept -> const Template &;
-  auto find_dynamic_anchor(const std::string &anchor) const
-      -> std::optional<std::size_t>;
 
   ///////////////////////////////////////////////
   // Evaluation
   ///////////////////////////////////////////////
 
   auto evaluate() -> void;
+  auto evaluate(const sourcemeta::jsontoolkit::WeakPointer::Token::Index from,
+                const sourcemeta::jsontoolkit::WeakPointer::Token::Index to)
+      -> void;
   auto
   evaluate(const sourcemeta::jsontoolkit::Pointer &relative_instance_location)
       -> void;
-  auto is_evaluated(sourcemeta::jsontoolkit::WeakPointer::Token &&token) const
+  auto
+  is_evaluated(const sourcemeta::jsontoolkit::WeakPointer::Token &tail) const
       -> bool;
   auto unevaluate() -> void;
 
-public:
   // TODO: Remove this
   const sourcemeta::jsontoolkit::JSON null{nullptr};
 
-private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -115,20 +104,28 @@ private:
 #pragma warning(disable : 4251 4275)
 #endif
   std::vector<std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>>
-      instances_;
-  sourcemeta::jsontoolkit::WeakPointer evaluate_path_;
-  sourcemeta::jsontoolkit::WeakPointer instance_location_;
+      instances;
+  sourcemeta::jsontoolkit::WeakPointer evaluate_path;
+  std::uint64_t evaluate_path_size{0};
+  sourcemeta::jsontoolkit::WeakPointer instance_location;
   std::vector<std::pair<std::size_t, std::size_t>> frame_sizes;
   const std::hash<std::string> hasher_{};
-  std::vector<std::size_t> resources_;
+  std::vector<std::size_t> resources;
   std::map<std::size_t, const std::reference_wrapper<const Template>> labels;
-  bool property_as_instance{false};
+  std::optional<
+      std::reference_wrapper<const sourcemeta::jsontoolkit::JSON::String>>
+      property_target;
 
-  // TODO: Turn these into a trie
-  std::vector<std::pair<sourcemeta::jsontoolkit::WeakPointer,
-                        sourcemeta::jsontoolkit::WeakPointer>>
-      evaluated_;
-  std::vector<sourcemeta::jsontoolkit::WeakPointer> evaluated_blacklist_;
+  // TODO: Revamp the data structure we use to track evaluation
+  // to provide more performant lookups that don't involve so many
+  // pointer token string comparisons
+  struct Evaluation {
+    sourcemeta::jsontoolkit::WeakPointer instance_location;
+    sourcemeta::jsontoolkit::WeakPointer evaluate_path;
+    bool skip;
+  };
+
+  std::vector<Evaluation> evaluated_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
