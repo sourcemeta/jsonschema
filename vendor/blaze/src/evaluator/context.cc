@@ -8,27 +8,30 @@ namespace sourcemeta::blaze {
 auto EvaluationContext::prepare(const sourcemeta::jsontoolkit::JSON &instance)
     -> void {
   // Do a full reset for the next run
-  assert(this->evaluate_path_.empty());
-  assert(this->instance_location_.empty());
+  assert(this->evaluate_path.empty());
+  assert(this->evaluate_path_size == 0);
+  assert(this->instance_location.empty());
+  assert(!this->property_target.has_value());
   assert(this->frame_sizes.empty());
-  assert(this->resources_.empty());
-  this->instances_.clear();
-  this->instances_.emplace_back(instance);
+  assert(this->resources.empty());
+  this->instances.clear();
+  this->instances.emplace_back(instance);
   this->labels.clear();
-  this->property_as_instance = false;
   this->evaluated_.clear();
-  this->evaluated_blacklist_.clear();
 }
 
 auto EvaluationContext::push_without_traverse(
     const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
     const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-    const std::size_t &schema_resource, const bool dynamic) -> void {
+    const std::size_t &schema_resource, const bool dynamic, const bool track)
+    -> void {
   // Guard against infinite recursion in a cheap manner, as
   // infinite recursion will manifest itself through huge
   // ever-growing evaluate paths
   constexpr auto EVALUATE_PATH_LIMIT{300};
-  if (this->evaluate_path_.size() > EVALUATE_PATH_LIMIT) [[unlikely]] {
+  const auto stack_size{track ? this->evaluate_path.size()
+                              : this->evaluate_path_size};
+  if (stack_size > EVALUATE_PATH_LIMIT) [[unlikely]] {
     throw sourcemeta::blaze::EvaluationError(
         "The evaluation path depth limit was reached "
         "likely due to infinite recursion");
@@ -36,83 +39,103 @@ auto EvaluationContext::push_without_traverse(
 
   this->frame_sizes.emplace_back(relative_schema_location.size(),
                                  relative_instance_location.size());
-  this->evaluate_path_.push_back(relative_schema_location);
-  this->instance_location_.push_back(relative_instance_location);
+
+  if (track) {
+    this->evaluate_path.push_back(relative_schema_location);
+    this->instance_location.push_back(relative_instance_location);
+  } else {
+    // We still need to somewhat keep track of this to prevent infinite
+    // recursion
+    this->evaluate_path_size += relative_schema_location.size();
+  }
 
   if (dynamic) {
     // Note that we are potentially repeatedly pushing back the
     // same schema resource over and over again. However, the
     // logic for making sure this list is "pure" takes a lot of
     // computation power. Being silly seems faster.
-    this->resources_.push_back(schema_resource);
+    this->resources.push_back(schema_resource);
   }
 }
 
 auto EvaluationContext::push(
     const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
     const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-    const std::size_t &schema_resource, const bool dynamic) -> void {
+    const std::size_t &schema_resource, const bool dynamic, const bool track)
+    -> void {
   this->push_without_traverse(relative_schema_location,
                               relative_instance_location, schema_resource,
-                              dynamic);
+                              dynamic, track);
   if (!relative_instance_location.empty()) {
-    assert(!this->instances_.empty());
-    this->instances_.emplace_back(
-        get(this->instances_.back().get(), relative_instance_location));
+    assert(!this->instances.empty());
+    this->instances.emplace_back(
+        get(this->instances.back().get(), relative_instance_location));
   }
 }
 
 auto EvaluationContext::push(
     const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
     const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-    const std::size_t &schema_resource, const bool dynamic,
+    const std::size_t &schema_resource, const bool dynamic, const bool track,
     std::reference_wrapper<const sourcemeta::jsontoolkit::JSON> &&new_instance)
     -> void {
   this->push_without_traverse(relative_schema_location,
                               relative_instance_location, schema_resource,
-                              dynamic);
+                              dynamic, track);
   assert(!relative_instance_location.empty());
-  this->instances_.emplace_back(new_instance);
+  this->instances.emplace_back(new_instance);
 }
 
-auto EvaluationContext::pop(const bool dynamic) -> void {
+auto EvaluationContext::pop(const bool dynamic, const bool track) -> void {
   assert(!this->frame_sizes.empty());
   const auto &sizes{this->frame_sizes.back()};
-  this->evaluate_path_.pop_back(sizes.first);
   if (sizes.second > 0) {
-    this->instance_location_.pop_back(sizes.second);
-    this->instances_.pop_back();
+    this->instances.pop_back();
+  }
+
+  if (track) {
+    this->evaluate_path.pop_back(sizes.first);
+    if (sizes.second > 0) {
+      this->instance_location.pop_back(sizes.second);
+    }
+  } else {
+    this->evaluate_path_size -= sizes.first;
   }
 
   this->frame_sizes.pop_back();
 
   if (dynamic) {
-    assert(!this->resources_.empty());
-    this->resources_.pop_back();
+    assert(!this->resources.empty());
+    this->resources.pop_back();
   }
 }
 
 auto EvaluationContext::enter(
-    const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property)
-    -> void {
-  this->instance_location_.push_back(property);
-  this->instances_.emplace_back(this->instances_.back().get().at(property));
+    const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property,
+    const bool track) -> void {
+  if (track) {
+    this->instance_location.push_back(property);
+  }
+
+  this->instances.emplace_back(this->instances.back().get().at(property));
 }
 
 auto EvaluationContext::enter(
-    const sourcemeta::jsontoolkit::WeakPointer::Token::Index &index) -> void {
-  this->instance_location_.push_back(index);
-  this->instances_.emplace_back(this->instances_.back().get().at(index));
+    const sourcemeta::jsontoolkit::WeakPointer::Token::Index &index,
+    const bool track) -> void {
+  if (track) {
+    this->instance_location.push_back(index);
+  }
+
+  this->instances.emplace_back(this->instances.back().get().at(index));
 }
 
-auto EvaluationContext::leave() -> void {
-  this->instance_location_.pop_back();
-  this->instances_.pop_back();
-}
+auto EvaluationContext::leave(const bool track) -> void {
+  if (track) {
+    this->instance_location.pop_back();
+  }
 
-auto EvaluationContext::instances() const noexcept -> const
-    std::vector<std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>> & {
-  return this->instances_;
+  this->instances.pop_back();
 }
 
 auto EvaluationContext::hash(const std::size_t &resource,
@@ -121,28 +144,9 @@ auto EvaluationContext::hash(const std::size_t &resource,
   return resource + this->hasher_(fragment);
 }
 
-auto EvaluationContext::resources() const noexcept
-    -> const std::vector<std::size_t> & {
-  return this->resources_;
-}
-
-auto EvaluationContext::evaluate_path() const noexcept
-    -> const sourcemeta::jsontoolkit::WeakPointer & {
-  return this->evaluate_path_;
-}
-
-auto EvaluationContext::instance_location() const noexcept
-    -> const sourcemeta::jsontoolkit::WeakPointer & {
-  return this->instance_location_;
-}
-
-auto EvaluationContext::target_type(const TargetType type) noexcept -> void {
-  this->property_as_instance = (type == TargetType::Key);
-}
-
 auto EvaluationContext::resolve_target()
     -> const sourcemeta::jsontoolkit::JSON & {
-  if (this->property_as_instance) [[unlikely]] {
+  if (this->property_target.has_value()) [[unlikely]] {
     // In this case, we still need to return a string in order
     // to cope with non-string keywords inside `propertyNames`
     // that need to fail validation. But then, the actual string
@@ -151,17 +155,15 @@ auto EvaluationContext::resolve_target()
     return empty_string;
   }
 
-  return this->instances_.back().get();
+  return this->instances.back().get();
 }
 
 auto EvaluationContext::resolve_string_target() -> std::optional<
     std::reference_wrapper<const sourcemeta::jsontoolkit::JSON::String>> {
-  if (this->property_as_instance) [[unlikely]] {
-    assert(!this->instance_location().empty());
-    assert(this->instance_location().back().is_property());
-    return this->instance_location().back().to_property();
+  if (this->property_target.has_value()) [[unlikely]] {
+    return this->property_target.value();
   } else {
-    const auto &result{this->instances_.back().get()};
+    const auto &result{this->instances.back().get()};
     if (!result.is_string()) {
       return std::nullopt;
     }
@@ -170,62 +172,37 @@ auto EvaluationContext::resolve_string_target() -> std::optional<
   }
 }
 
-auto EvaluationContext::mark(const std::size_t id, const Template &children)
-    -> void {
-  this->labels.try_emplace(id, children);
-}
-
-auto EvaluationContext::jump(const std::size_t id) const noexcept
-    -> const Template & {
-  assert(this->labels.contains(id));
-  return this->labels.at(id).get();
-}
-
-auto EvaluationContext::find_dynamic_anchor(const std::string &anchor) const
-    -> std::optional<std::size_t> {
-  for (const auto &resource : this->resources()) {
-    const auto label{this->hash(resource, anchor)};
-    if (this->labels.contains(label)) {
-      return label;
-    }
-  }
-
-  return std::nullopt;
-}
-
 auto EvaluationContext::evaluate() -> void {
-  this->evaluated_.emplace_back(this->instance_location_, this->evaluate_path_);
+  this->evaluate(sourcemeta::jsontoolkit::empty_pointer);
+}
+
+auto EvaluationContext::evaluate(
+    const sourcemeta::jsontoolkit::WeakPointer::Token::Index from,
+    const sourcemeta::jsontoolkit::WeakPointer::Token::Index to) -> void {
+  for (auto cursor = from; cursor <= to; cursor++) {
+    this->evaluate({cursor});
+  }
 }
 
 auto EvaluationContext::evaluate(
     const sourcemeta::jsontoolkit::Pointer &relative_instance_location)
     -> void {
-  auto new_instance_location = this->instance_location_;
+  auto new_instance_location = this->instance_location;
   new_instance_location.push_back(relative_instance_location);
-  this->evaluated_.emplace_back(std::move(new_instance_location),
-                                this->evaluate_path_);
+  Evaluation entry{std::move(new_instance_location), this->evaluate_path,
+                   false};
+  this->evaluated_.emplace_back(std::move(entry));
 }
 
 auto EvaluationContext::is_evaluated(
-    sourcemeta::jsontoolkit::WeakPointer::Token &&token) const -> bool {
-  auto expected_instance_location = this->instance_location_;
-  // TODO: Allow directly pushing back a token
-  expected_instance_location.push_back(
-      sourcemeta::jsontoolkit::WeakPointer{std::move(token)});
-
-  for (const auto &entry : this->evaluated_) {
-    if ((entry.first == expected_instance_location ||
-         entry.first == this->instance_location_) &&
+    const sourcemeta::jsontoolkit::WeakPointer::Token &tail) const -> bool {
+  for (auto iterator = this->evaluated_.crbegin();
+       iterator != this->evaluated_.crend(); ++iterator) {
+    if (!iterator->skip &&
+        this->instance_location.starts_with(iterator->instance_location,
+                                            tail) &&
         // Its not possible to affect cousins
-        entry.second.starts_with(this->evaluate_path_.initial())) {
-      // Handle "not"
-      for (const auto &mask : this->evaluated_blacklist_) {
-        if (entry.second.starts_with(mask) &&
-            !this->evaluate_path_.starts_with(mask)) {
-          return false;
-        }
-      }
-
+        iterator->evaluate_path.starts_with_initial(this->evaluate_path)) {
       return true;
     }
   }
@@ -234,7 +211,11 @@ auto EvaluationContext::is_evaluated(
 }
 
 auto EvaluationContext::unevaluate() -> void {
-  this->evaluated_blacklist_.push_back(this->evaluate_path_);
+  for (auto &entry : this->evaluated_) {
+    if (!entry.skip && entry.evaluate_path.starts_with(this->evaluate_path)) {
+      entry.skip = true;
+    }
+  }
 }
 
 } // namespace sourcemeta::blaze

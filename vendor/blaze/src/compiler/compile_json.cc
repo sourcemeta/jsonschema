@@ -113,26 +113,23 @@ auto value_to_json(const T &value) -> sourcemeta::jsontoolkit::JSON {
 
     result.assign("value", std::move(map));
     return result;
-  } else if constexpr (std::is_same_v<ValueIndexedJSON, T>) {
-    result.assign("type", sourcemeta::jsontoolkit::JSON{"indexed-json"});
-    sourcemeta::jsontoolkit::JSON data{
-        sourcemeta::jsontoolkit::JSON::make_object()};
-    data.assign("index", sourcemeta::jsontoolkit::JSON{value.first});
-    data.assign("value", value.second);
-    result.assign("value", std::move(data));
-    return result;
   } else if constexpr (std::is_same_v<ValuePropertyFilter, T>) {
     result.assign("type", sourcemeta::jsontoolkit::JSON{"property-filter"});
     sourcemeta::jsontoolkit::JSON data{
         sourcemeta::jsontoolkit::JSON::make_object()};
     data.assign("names", sourcemeta::jsontoolkit::JSON::make_array());
+    data.assign("prefixes", sourcemeta::jsontoolkit::JSON::make_array());
     data.assign("patterns", sourcemeta::jsontoolkit::JSON::make_array());
 
-    for (const auto &name : value.first) {
+    for (const auto &name : std::get<0>(value)) {
       data.at("names").push_back(sourcemeta::jsontoolkit::JSON{name});
     }
 
-    for (const auto &pattern : value.second) {
+    for (const auto &prefix : std::get<1>(value)) {
+      data.at("prefixes").push_back(sourcemeta::jsontoolkit::JSON{prefix});
+    }
+
+    for (const auto &pattern : std::get<2>(value)) {
       data.at("patterns")
           .push_back(sourcemeta::jsontoolkit::JSON{pattern.second});
     }
@@ -195,7 +192,7 @@ auto encode_step(const std::string_view category, const std::string_view type,
   result.assign("schemaResource",
                 sourcemeta::jsontoolkit::JSON{step.schema_resource});
   result.assign("dynamic", sourcemeta::jsontoolkit::JSON{step.dynamic});
-  result.assign("report", sourcemeta::jsontoolkit::JSON{step.report});
+  result.assign("track", sourcemeta::jsontoolkit::JSON{step.track});
   result.assign("value", value_to_json(step.value));
 
   if constexpr (requires { step.children; }) {
@@ -243,16 +240,20 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "divisible", AssertionDivisible)
   HANDLE_STEP("assertion", "string-type", AssertionStringType)
   HANDLE_STEP("assertion", "property-type", AssertionPropertyType)
+  HANDLE_STEP("assertion", "property-type-evaluate",
+              AssertionPropertyTypeEvaluate)
   HANDLE_STEP("assertion", "property-type-strict", AssertionPropertyTypeStrict)
+  HANDLE_STEP("assertion", "property-type-strict-evaluate",
+              AssertionPropertyTypeStrictEvaluate)
+  HANDLE_STEP("assertion", "array-prefix", AssertionArrayPrefix)
+  HANDLE_STEP("assertion", "array-prefix-evaluate",
+              AssertionArrayPrefixEvaluate)
   HANDLE_STEP("assertion", "equals-any", AssertionEqualsAny)
   HANDLE_STEP("annotation", "emit", AnnotationEmit)
-  HANDLE_STEP("annotation", "when-array-size-equal",
-              AnnotationWhenArraySizeEqual)
-  HANDLE_STEP("annotation", "when-array-size-greater",
-              AnnotationWhenArraySizeGreater)
   HANDLE_STEP("annotation", "to-parent", AnnotationToParent)
   HANDLE_STEP("annotation", "basename-to-parent", AnnotationBasenameToParent)
   HANDLE_STEP("logical", "not", LogicalNot)
+  HANDLE_STEP("logical", "not-evaluate", LogicalNotEvaluate)
   HANDLE_STEP("logical", "or", LogicalOr)
   HANDLE_STEP("logical", "and", LogicalAnd)
   HANDLE_STEP("logical", "xor", LogicalXor)
@@ -260,18 +261,26 @@ struct StepVisitor {
   HANDLE_STEP("logical", "when-type", LogicalWhenType)
   HANDLE_STEP("logical", "when-defines", LogicalWhenDefines)
   HANDLE_STEP("logical", "when-array-size-greater", LogicalWhenArraySizeGreater)
-  HANDLE_STEP("logical", "when-array-size-equal", LogicalWhenArraySizeEqual)
   HANDLE_STEP("loop", "properties-unevaluated", LoopPropertiesUnevaluated)
+  HANDLE_STEP("loop", "properties-unevaluated-except",
+              LoopPropertiesUnevaluatedExcept)
   HANDLE_STEP("loop", "items-unevaluated", LoopItemsUnevaluated)
   HANDLE_STEP("loop", "properties-match", LoopPropertiesMatch)
   HANDLE_STEP("loop", "properties", LoopProperties)
+  HANDLE_STEP("loop", "properties-evaluate", LoopPropertiesEvaluate)
   HANDLE_STEP("loop", "properties-regex", LoopPropertiesRegex)
+  HANDLE_STEP("loop", "properties-starts-with", LoopPropertiesStartsWith)
   HANDLE_STEP("loop", "properties-except", LoopPropertiesExcept)
   HANDLE_STEP("loop", "properties-type", LoopPropertiesType)
+  HANDLE_STEP("loop", "properties-type-evaluate", LoopPropertiesTypeEvaluate)
   HANDLE_STEP("loop", "properties-type-strict", LoopPropertiesTypeStrict)
+  HANDLE_STEP("loop", "properties-type-strict-evaluate",
+              LoopPropertiesTypeStrictEvaluate)
   HANDLE_STEP("loop", "keys", LoopKeys)
   HANDLE_STEP("loop", "items", LoopItems)
   HANDLE_STEP("loop", "contains", LoopContains)
+  HANDLE_STEP("control", "group", ControlGroup)
+  HANDLE_STEP("control", "group-when-defines", ControlGroupWhenDefines)
   HANDLE_STEP("control", "label", ControlLabel)
   HANDLE_STEP("control", "mark", ControlMark)
   HANDLE_STEP("control", "evaluate", ControlEvaluate)
@@ -310,9 +319,10 @@ auto template_format_compare(const sourcemeta::jsontoolkit::JSON::String &left,
                    {"absoluteKeywordLocation", 4},
                    {"relativeSchemaLocation", 5},
                    {"relativeInstanceLocation", 6},
-                   {"report", 7},
+                   {"evaluatePath", 7},
                    {"dynamic", 8},
-                   {"children", 9}};
+                   {"track", 9},
+                   {"children", 10}};
 
   constexpr std::uint64_t DEFAULT_RANK{999};
   const auto left_rank{rank.contains(left) ? rank.at(left) : DEFAULT_RANK};

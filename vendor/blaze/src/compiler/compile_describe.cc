@@ -231,10 +231,25 @@ struct DescribeVisitor {
   }
 
   auto operator()(const LogicalCondition &) const -> std::string {
-    return unknown();
+    std::ostringstream message;
+    message << "The " << to_string(this->target.type())
+            << " value was expected to validate against the given conditional";
+    return message.str();
   }
 
   auto operator()(const LogicalNot &) const -> std::string {
+    std::ostringstream message;
+    message
+        << "The " << to_string(this->target.type())
+        << " value was expected to not validate against the given subschema";
+    if (!this->valid) {
+      message << ", but it did";
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const LogicalNotEvaluate &) const -> std::string {
     std::ostringstream message;
     message
         << "The " << to_string(this->target.type())
@@ -295,10 +310,7 @@ struct DescribeVisitor {
     if ((this->keyword == "items" || this->keyword == "additionalItems") &&
         this->annotation.is_boolean() && this->annotation.to_boolean()) {
       assert(this->target.is_array());
-      std::ostringstream message;
-      message << "At least one item of the array value successfully validated "
-                 "against the given subschema";
-      return message.str();
+      return "Every item in the array value was successfully validated";
     }
 
     if ((this->keyword == "prefixItems" || this->keyword == "items") &&
@@ -317,6 +329,15 @@ struct DescribeVisitor {
                    "positional subschemas";
       }
 
+      return message.str();
+    }
+
+    if (this->keyword == "prefixItems" && this->annotation.is_boolean() &&
+        this->annotation.to_boolean()) {
+      assert(this->target.is_array());
+      std::ostringstream message;
+      message << "Every item of the array value validated against the given "
+                 "positional subschemas";
       return message.str();
     }
 
@@ -490,51 +511,6 @@ struct DescribeVisitor {
     return message.str();
   }
 
-  auto operator()(const AnnotationWhenArraySizeEqual &) const -> std::string {
-    if (this->keyword == "items" && this->annotation.is_boolean() &&
-        this->annotation.to_boolean()) {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "At least one item of the array value successfully validated "
-                 "against the given subschema";
-      return message.str();
-    }
-
-    if (this->keyword == "prefixItems" && this->annotation.is_boolean() &&
-        this->annotation.to_boolean()) {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "Every item of the array value validated against the given "
-                 "positional subschemas";
-      return message.str();
-    }
-
-    return unknown();
-  }
-
-  auto operator()(const AnnotationWhenArraySizeGreater &) const -> std::string {
-    if ((this->keyword == "prefixItems" || this->keyword == "items") &&
-        this->annotation.is_integer()) {
-      assert(this->target.is_array());
-      assert(this->annotation.is_positive());
-      std::ostringstream message;
-      if (this->annotation.to_integer() == 0) {
-        message << "The first item of the array value successfully validated "
-                   "against the first "
-                   "positional subschema";
-      } else {
-        message << "The first " << this->annotation.to_integer() + 1
-                << " items of the array value successfully validated against "
-                   "the given "
-                   "positional subschemas";
-      }
-
-      return message.str();
-    }
-
-    return unknown();
-  }
-
   auto operator()(const AnnotationToParent &) const -> std::string {
     if (this->keyword == "unevaluatedItems" && this->annotation.is_boolean() &&
         this->annotation.to_boolean()) {
@@ -607,7 +583,41 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LoopPropertiesEvaluate &step) const -> std::string {
+    assert(this->keyword == "additionalProperties");
+    std::ostringstream message;
+    if (step.children.size() == 1 &&
+        std::holds_alternative<AssertionFail>(step.children.front())) {
+      message << "The object value was not expected to define additional "
+                 "properties";
+    } else {
+      message << "The object properties not covered by other adjacent object "
+                 "keywords were expected to validate against this subschema";
+    }
+
+    return message.str();
+  }
+
   auto operator()(const LoopPropertiesUnevaluated &step) const -> std::string {
+    if (this->keyword == "unevaluatedProperties") {
+      std::ostringstream message;
+      if (!step.children.empty() &&
+          std::holds_alternative<AssertionFail>(step.children.front())) {
+        message << "The object value was not expected to define unevaluated "
+                   "properties";
+      } else {
+        message << "The object properties not covered by other object "
+                   "keywords were expected to validate against this subschema";
+      }
+
+      return message.str();
+    }
+
+    return unknown();
+  }
+
+  auto operator()(const LoopPropertiesUnevaluatedExcept &step) const
+      -> std::string {
     if (this->keyword == "unevaluatedProperties") {
       std::ostringstream message;
       if (!step.children.empty() &&
@@ -647,7 +657,22 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LoopPropertiesTypeEvaluate &step) const -> std::string {
+    std::ostringstream message;
+    message << "The object properties were expected to be of type "
+            << to_string(step.value);
+    return message.str();
+  }
+
   auto operator()(const LoopPropertiesTypeStrict &step) const -> std::string {
+    std::ostringstream message;
+    message << "The object properties were expected to be of type "
+            << to_string(step.value);
+    return message.str();
+  }
+
+  auto operator()(const LoopPropertiesTypeStrictEvaluate &step) const
+      -> std::string {
     std::ostringstream message;
     message << "The object properties were expected to be of type "
             << to_string(step.value);
@@ -1029,35 +1054,31 @@ struct DescribeVisitor {
   }
 
   auto operator()(const AssertionArraySizeGreater &step) const -> std::string {
-    if (this->keyword == "minItems") {
-      assert(this->target.is_array());
-      std::ostringstream message;
-      const auto minimum{step_value(step) + 1};
-      message << "The array value was expected to contain at least " << minimum;
-      assert(minimum > 0);
-      if (minimum == 1) {
-        message << " item";
-      } else {
-        message << " items";
-      }
-
-      if (this->valid) {
-        message << " and";
-      } else {
-        message << " but";
-      }
-
-      message << " it contained " << this->target.size();
-      if (this->target.size() == 1) {
-        message << " item";
-      } else {
-        message << " items";
-      }
-
-      return message.str();
+    assert(this->target.is_array());
+    std::ostringstream message;
+    const auto minimum{step_value(step) + 1};
+    message << "The array value was expected to contain at least " << minimum;
+    assert(minimum > 0);
+    if (minimum == 1) {
+      message << " item";
+    } else {
+      message << " items";
     }
 
-    return unknown();
+    if (this->valid) {
+      message << " and";
+    } else {
+      message << " but";
+    }
+
+    message << " it contained " << this->target.size();
+    if (this->target.size() == 1) {
+      message << " item";
+    } else {
+      message << " items";
+    }
+
+    return message.str();
   }
 
   auto operator()(const AssertionObjectSizeLess &step) const -> std::string {
@@ -1340,6 +1361,27 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const AssertionPropertyTypeEvaluate &step) const
+      -> std::string {
+    std::ostringstream message;
+    const auto &value{step_value(step)};
+    if (!this->valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
+        this->target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+      message
+          << "The value was expected to be a real number but it was an integer";
+    } else if (!this->valid &&
+               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
+               this->target.type() ==
+                   sourcemeta::jsontoolkit::JSON::Type::Real) {
+      message
+          << "The value was expected to be an integer but it was a real number";
+    } else {
+      describe_type_check(this->valid, this->target.type(), value, message);
+    }
+
+    return message.str();
+  }
+
   auto operator()(const AssertionPropertyTypeStrict &step) const
       -> std::string {
     std::ostringstream message;
@@ -1358,6 +1400,62 @@ struct DescribeVisitor {
       describe_type_check(this->valid, this->target.type(), value, message);
     }
 
+    return message.str();
+  }
+
+  auto operator()(const AssertionPropertyTypeStrictEvaluate &step) const
+      -> std::string {
+    std::ostringstream message;
+    const auto &value{step_value(step)};
+    if (!this->valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
+        this->target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+      message
+          << "The value was expected to be a real number but it was an integer";
+    } else if (!this->valid &&
+               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
+               this->target.type() ==
+                   sourcemeta::jsontoolkit::JSON::Type::Real) {
+      message
+          << "The value was expected to be an integer but it was a real number";
+    } else {
+      describe_type_check(this->valid, this->target.type(), value, message);
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const AssertionArrayPrefix &step) const -> std::string {
+    assert(this->keyword == "items" || this->keyword == "prefixItems");
+    assert(!step.children.empty());
+    assert(this->target.is_array());
+
+    std::ostringstream message;
+    message << "The first ";
+    if (step.children.size() <= 2) {
+      message << "item of the array value was";
+    } else {
+      message << (step.children.size() - 1) << " items of the array value were";
+    }
+
+    message << " expected to validate against the corresponding subschemas";
+    return message.str();
+  }
+
+  auto operator()(const AssertionArrayPrefixEvaluate &step) const
+      -> std::string {
+    assert(this->keyword == "items" || this->keyword == "prefixItems");
+    assert(!step.children.empty());
+    assert(this->target.is_array());
+
+    std::ostringstream message;
+    message << "The first ";
+    if (step.children.size() <= 2) {
+      message << "item of the array value was";
+    } else {
+      message << (step.children.size() - 1) << " items of the array value were";
+    }
+
+    message << " expected to validate against the corresponding subschemas";
     return message.str();
   }
 
@@ -1382,34 +1480,31 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LoopPropertiesRegex &step) const -> std::string {
+    assert(this->target.is_object());
+    std::ostringstream message;
+    message << "The object properties that match the regular expression \""
+            << step_value(step).second
+            << "\" were expected to validate against the defined pattern "
+               "property subschema";
+    return message.str();
+  }
+
+  auto operator()(const LoopPropertiesStartsWith &step) const -> std::string {
+    assert(this->target.is_object());
+    std::ostringstream message;
+    message << "The object properties that start with the string \""
+            << step_value(step)
+            << "\" were expected to validate against the defined pattern "
+               "property subschema";
+    return message.str();
+  }
+
   auto operator()(const LogicalWhenType &step) const -> std::string {
-    if (this->keyword == "patternProperties") {
-      assert(!step.children.empty());
-      assert(this->target.is_object());
+    if (this->keyword == "items") {
       std::ostringstream message;
-      message << "The object value was expected to validate against the ";
-      if (step.children.size() == 1) {
-        message << "single defined pattern property subschema";
-      } else {
-        message << step.children.size()
-                << " defined pattern properties subschemas";
-      }
-
-      return message.str();
-    }
-
-    if (this->keyword == "items" || this->keyword == "prefixItems") {
-      assert(!step.children.empty());
-      assert(this->target.is_array());
-      std::ostringstream message;
-      message << "The first ";
-      if (step.children.size() == 1) {
-        message << "item of the array value was";
-      } else {
-        message << step.children.size() << " items of the array value were";
-      }
-
-      message << " expected to validate against the corresponding subschemas";
+      describe_type_check(this->valid, this->target.type(), step_value(step),
+                          message);
       return message.str();
     }
 
@@ -1608,75 +1703,92 @@ struct DescribeVisitor {
 
   auto operator()(const AssertionPropertyDependencies &step) const
       -> std::string {
-    if (this->keyword == "dependentRequired") {
-      assert(this->target.is_object());
-      std::set<std::string> present;
-      std::set<std::string> all_dependencies;
-      std::set<std::string> required;
+    assert(this->target.is_object());
+    std::set<std::string> present;
+    std::set<std::string> all_dependencies;
+    std::set<std::string> required;
 
-      for (const auto &[property, dependencies] : step.value) {
-        all_dependencies.insert(property);
-        if (this->target.defines(property)) {
-          present.insert(property);
-          for (const auto &dependency : dependencies) {
-            if (this->valid || !this->target.defines(dependency)) {
-              required.insert(dependency);
-            }
+    for (const auto &[property, dependencies] : step.value) {
+      all_dependencies.insert(property);
+      if (this->target.defines(property)) {
+        present.insert(property);
+        for (const auto &dependency : dependencies) {
+          if (this->valid || !this->target.defines(dependency)) {
+            required.insert(dependency);
+          }
+        }
+      }
+    }
+
+    std::ostringstream message;
+
+    if (present.empty()) {
+      message << "The object value did not define the";
+      assert(!all_dependencies.empty());
+      if (all_dependencies.size() == 1) {
+        message << " property " << escape_string(*(all_dependencies.cbegin()));
+      } else {
+        message << " properties ";
+        for (auto iterator = all_dependencies.cbegin();
+             iterator != all_dependencies.cend(); ++iterator) {
+          if (std::next(iterator) == all_dependencies.cend()) {
+            message << "or " << escape_string(*iterator);
+          } else {
+            message << escape_string(*iterator) << ", ";
           }
         }
       }
 
+      return message.str();
+    } else if (present.size() == 1) {
+      message << "Because the object value defined the";
+      message << " property " << escape_string(*(present.cbegin()));
+    } else {
+      message << "Because the object value defined the";
+      message << " properties ";
+      for (auto iterator = present.cbegin(); iterator != present.cend();
+           ++iterator) {
+        if (std::next(iterator) == present.cend()) {
+          message << "and " << escape_string(*iterator);
+        } else {
+          message << escape_string(*iterator) << ", ";
+        }
+      }
+    }
+
+    assert(!required.empty());
+    message << ", it was also expected to define the";
+    if (required.size() == 1) {
+      message << " property " << escape_string(*(required.cbegin()));
+    } else {
+      message << " properties ";
+      for (auto iterator = required.cbegin(); iterator != required.cend();
+           ++iterator) {
+        if (std::next(iterator) == required.cend()) {
+          message << "and " << escape_string(*iterator);
+        } else {
+          message << escape_string(*iterator) << ", ";
+        }
+      }
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const LogicalWhenArraySizeGreater &step) const
+      -> std::string {
+    if (this->keyword == "additionalItems" || this->keyword == "items") {
+      assert(this->target.is_array());
       std::ostringstream message;
 
-      if (present.empty()) {
-        message << "The object value did not define the";
-        assert(!all_dependencies.empty());
-        if (all_dependencies.size() == 1) {
-          message << " property "
-                  << escape_string(*(all_dependencies.cbegin()));
-        } else {
-          message << " properties ";
-          for (auto iterator = all_dependencies.cbegin();
-               iterator != all_dependencies.cend(); ++iterator) {
-            if (std::next(iterator) == all_dependencies.cend()) {
-              message << "or " << escape_string(*iterator);
-            } else {
-              message << escape_string(*iterator) << ", ";
-            }
-          }
-        }
-
-        return message.str();
-      } else if (present.size() == 1) {
-        message << "Because the object value defined the";
-        message << " property " << escape_string(*(present.cbegin()));
+      if (this->target.size() > step_value(step)) {
+        const auto rest{this->target.size() - step_value(step)};
+        message << "The array value contains " << rest << " additional"
+                << (rest == 1 ? " item" : " items")
+                << " not described by related keywords";
       } else {
-        message << "Because the object value defined the";
-        message << " properties ";
-        for (auto iterator = present.cbegin(); iterator != present.cend();
-             ++iterator) {
-          if (std::next(iterator) == present.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
-      }
-
-      assert(!required.empty());
-      message << ", it was also expected to define the";
-      if (required.size() == 1) {
-        message << " property " << escape_string(*(required.cbegin()));
-      } else {
-        message << " properties ";
-        for (auto iterator = required.cbegin(); iterator != required.cend();
-             ++iterator) {
-          if (std::next(iterator) == required.cend()) {
-            message << "and " << escape_string(*iterator);
-          } else {
-            message << escape_string(*iterator) << ", ";
-          }
-        }
+        message << "The array value does not contain additional items not "
+                   "described by related keywords";
       }
 
       return message.str();
@@ -1687,13 +1799,11 @@ struct DescribeVisitor {
 
   // These steps are never described, at least not right now
 
-  auto operator()(const LogicalWhenArraySizeGreater &) const -> std::string {
+  auto operator()(const ControlGroup &) const -> std::string {
     return unknown();
   }
-  auto operator()(const LogicalWhenArraySizeEqual &) const -> std::string {
-    return unknown();
-  }
-  auto operator()(const LoopPropertiesRegex &) const -> std::string {
+
+  auto operator()(const ControlGroupWhenDefines &) const -> std::string {
     return unknown();
   }
 };

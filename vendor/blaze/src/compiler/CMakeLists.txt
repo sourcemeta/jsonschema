@@ -1,9 +1,9 @@
 noa_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   FOLDER "Blaze/Compiler"
-  PRIVATE_HEADERS error.h
+  PRIVATE_HEADERS error.h output.h
   SOURCES
     compile.cc compile_json.cc compile_describe.cc
-    compile_helpers.h default_compiler.cc
+    compile_output.cc compile_helpers.h default_compiler.cc
     default_compiler_2020_12.h
     default_compiler_2019_09.h
     default_compiler_draft7.h

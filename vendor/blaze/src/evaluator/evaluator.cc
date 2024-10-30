@@ -26,18 +26,19 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
   SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
   const auto &step_category{std::get<step_type>(step)};                        \
+  const auto track{step_category.track || callback.has_value()};               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
+               step_category.schema_resource, step_category.dynamic, track);   \
   const auto &target{context.resolve_target()};                                \
   if (!(precondition)) {                                                       \
-    context.pop(step_category.dynamic);                                        \
+    context.pop(step_category.dynamic, track);                                 \
     SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
     return true;                                                               \
   }                                                                            \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   bool result{false};
 
@@ -45,18 +46,19 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
   SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
   const auto &step_category{std::get<step_type>(step)};                        \
+  const auto track{step_category.track || callback.has_value()};               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
+               step_category.schema_resource, step_category.dynamic, track);   \
   const auto &maybe_target{context.resolve_string_target()};                   \
   if (!maybe_target.has_value()) {                                             \
-    context.pop(step_category.dynamic);                                        \
+    context.pop(step_category.dynamic, track);                                 \
     SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
     return true;                                                               \
   }                                                                            \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   const auto &target{maybe_target.value().get()};                              \
   bool result{false};
@@ -69,12 +71,13 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
     SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
     return true;                                                               \
   }                                                                            \
+  const auto track{step_category.track || callback.has_value()};               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+               step_category.schema_resource, step_category.dynamic, track);   \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   bool result{false};
 
@@ -97,13 +100,14 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
     SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
     return true;                                                               \
   }                                                                            \
+  const auto track{step_category.track || callback.has_value()};               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic,           \
+               step_category.schema_resource, step_category.dynamic, track,    \
                std::move(target_check.value()));                               \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   bool result{false};
 
@@ -111,12 +115,13 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
   SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
   const auto &step_category{std::get<step_type>(step)};                        \
+  const auto track{step_category.track || callback.has_value()};               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+               step_category.schema_resource, step_category.dynamic, track);   \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   bool result{false};
 
@@ -124,71 +129,57 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
   SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
   const auto &step_category{std::get<step_type>(step)};                        \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     context.instance_location(), context.null);               \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
+                     context.instance_location, context.null);                 \
   }                                                                            \
   bool result{true};
 
+#define EVALUATE_BEGIN_PASS_THROUGH(step_category, step_type)                  \
+  SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");                         \
+  SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
+  const auto &step_category{std::get<step_type>(step)};                        \
+  bool result{true};
+
 #define EVALUATE_END(step_category, step_type)                                 \
-  if (step_category.report && callback.has_value()) {                          \
+  if (callback.has_value()) {                                                  \
     callback.value()(EvaluationType::Post, result, step,                       \
-                     context.evaluate_path(), context.instance_location(),     \
+                     context.evaluate_path, context.instance_location,         \
                      context.null);                                            \
   }                                                                            \
-  context.pop(step_category.dynamic);                                          \
+  context.pop(step_category.dynamic, track);                                   \
   SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                        \
   return result;
 
 #define EVALUATE_END_NO_POP(step_category, step_type)                          \
-  if (step_category.report && callback.has_value()) {                          \
+  if (callback.has_value()) {                                                  \
     callback.value()(EvaluationType::Post, result, step,                       \
-                     context.evaluate_path(), context.instance_location(),     \
+                     context.evaluate_path, context.instance_location,         \
                      context.null);                                            \
   }                                                                            \
   SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                        \
   return result;
 
-  // As a safety guard, only emit the annotation if it didn't exist already.
-  // Otherwise we risk confusing consumers
-
-#define EVALUATE_ANNOTATION(step_category, step_type, precondition,            \
-                            destination, annotation_value)                     \
-  SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
-  const auto &step_category{std::get<step_type>(step)};                        \
-  assert(step_category.relative_instance_location.empty());                    \
-  const auto &target{context.resolve_target()};                                \
-  if (!(precondition)) {                                                       \
-    SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                      \
-    return true;                                                               \
-  }                                                                            \
-  context.push(step_category.relative_schema_location,                         \
-               step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
-                     destination, context.null);                               \
-    callback.value()(EvaluationType::Post, true, step,                         \
-                     context.evaluate_path(), destination, annotation_value);  \
-  }                                                                            \
-  context.pop(step_category.dynamic);                                          \
+#define EVALUATE_END_PASS_THROUGH(step_type)                                   \
   SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                        \
-  return true;
+  return result;
 
-#define EVALUATE_ANNOTATION_NO_PRECONDITION(step_category, step_type,          \
-                                            destination, annotation_value)     \
+#define EVALUATE_ANNOTATION(step_category, step_type, destination,             \
+                            annotation_value)                                  \
   SOURCEMETA_TRACE_START(trace_id, STRINGIFY(step_type));                      \
   const auto &step_category{std::get<step_type>(step)};                        \
+  const auto track{step_category.track || callback.has_value()};               \
+  assert(track);                                                               \
   context.push(step_category.relative_schema_location,                         \
                step_category.relative_instance_location,                       \
-               step_category.schema_resource, step_category.dynamic);          \
-  if (step_category.report && callback.has_value()) {                          \
-    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path(), \
+               step_category.schema_resource, step_category.dynamic, track);   \
+  if (callback.has_value()) {                                                  \
+    callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,   \
                      destination, context.null);                               \
-    callback.value()(EvaluationType::Post, true, step,                         \
-                     context.evaluate_path(), destination, annotation_value);  \
+    callback.value()(EvaluationType::Post, true, step, context.evaluate_path,  \
+                     destination, annotation_value);                           \
   }                                                                            \
-  context.pop(step_category.dynamic);                                          \
+  context.pop(step_category.dynamic, track);                                   \
   SOURCEMETA_TRACE_END(trace_id, STRINGIFY(step_type));                        \
   return true;
 
@@ -467,6 +458,30 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(assertion, AssertionPropertyType);
     }
 
+    case IS_STEP(AssertionPropertyTypeEvaluate): {
+      EVALUATE_BEGIN_TRY_TARGET(
+          assertion, AssertionPropertyTypeEvaluate,
+          // Note that here are are referring to the parent
+          // object that might hold the given property,
+          // before traversing into the actual property
+          target.is_object());
+      // Now here we refer to the actual property
+      const auto &effective_target{context.resolve_target()};
+      // In non-strict mode, we consider a real number that represents an
+      // integer to be an integer
+      result =
+          effective_target.type() == assertion.value ||
+          (assertion.value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
+           effective_target.is_integer_real());
+
+      if (result) {
+        assert(track);
+        context.evaluate();
+      }
+
+      EVALUATE_END(assertion, AssertionPropertyTypeEvaluate);
+    }
+
     case IS_STEP(AssertionPropertyTypeStrict): {
       EVALUATE_BEGIN_TRY_TARGET(
           assertion, AssertionPropertyTypeStrict,
@@ -477,6 +492,75 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       // Now here we refer to the actual property
       result = context.resolve_target().type() == assertion.value;
       EVALUATE_END(assertion, AssertionPropertyTypeStrict);
+    }
+
+    case IS_STEP(AssertionPropertyTypeStrictEvaluate): {
+      EVALUATE_BEGIN_TRY_TARGET(
+          assertion, AssertionPropertyTypeStrictEvaluate,
+          // Note that here are are referring to the parent
+          // object that might hold the given property,
+          // before traversing into the actual property
+          target.is_object());
+      // Now here we refer to the actual property
+      result = context.resolve_target().type() == assertion.value;
+
+      if (result) {
+        assert(track);
+        context.evaluate();
+      }
+
+      EVALUATE_END(assertion, AssertionPropertyTypeStrictEvaluate);
+    }
+
+    case IS_STEP(AssertionArrayPrefix): {
+      EVALUATE_BEGIN(assertion, AssertionArrayPrefix, target.is_array());
+      // Otherwise there is no point in emitting this step
+      assert(!assertion.children.empty());
+      result = target.empty();
+      const auto prefixes{assertion.children.size() - 1};
+      const auto array_size{target.size()};
+      if (!result) [[likely]] {
+        const auto pointer{array_size == prefixes
+                               ? prefixes
+                               : std::min(array_size, prefixes) - 1};
+        const auto &entry{assertion.children[pointer]};
+        // TODO: Directly evaluate the control group entries
+        assert(std::holds_alternative<ControlGroup>(entry));
+        if (evaluate_step(entry, callback, context)) {
+          result = true;
+        }
+      }
+
+      EVALUATE_END(assertion, AssertionArrayPrefix);
+    }
+
+    case IS_STEP(AssertionArrayPrefixEvaluate): {
+      EVALUATE_BEGIN(assertion, AssertionArrayPrefixEvaluate,
+                     target.is_array());
+      // Otherwise there is no point in emitting this step
+      assert(!assertion.children.empty());
+      result = target.empty();
+      assert(track);
+      const auto prefixes{assertion.children.size() - 1};
+      const auto array_size{target.size()};
+      if (!result) [[likely]] {
+        const auto pointer{array_size == prefixes
+                               ? prefixes
+                               : std::min(array_size, prefixes) - 1};
+        const auto &entry{assertion.children[pointer]};
+        // TODO: Directly evaluate the control group entries
+        assert(std::holds_alternative<ControlGroup>(entry));
+        if (evaluate_step(entry, callback, context)) {
+          result = true;
+          if (array_size == prefixes) {
+            context.evaluate();
+          } else {
+            context.evaluate(0, pointer);
+          }
+        }
+      }
+
+      EVALUATE_END(assertion, AssertionArrayPrefixEvaluate);
     }
 
     case IS_STEP(LogicalOr): {
@@ -549,20 +633,6 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(logical, LogicalWhenArraySizeGreater);
     }
 
-    case IS_STEP(LogicalWhenArraySizeEqual): {
-      EVALUATE_BEGIN(logical, LogicalWhenArraySizeEqual,
-                     target.is_array() && target.size() == logical.value);
-      result = true;
-      for (const auto &child : logical.children) {
-        if (!evaluate_step(child, callback, context)) {
-          result = false;
-          break;
-        }
-      }
-
-      EVALUATE_END(logical, LogicalWhenArraySizeEqual);
-    }
-
     case IS_STEP(LogicalXor): {
       EVALUATE_BEGIN_NO_PRECONDITION(logical, LogicalXor);
       result = true;
@@ -613,11 +683,26 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
                                      : children_size};
       result = true;
       if (consequence_start > 0) {
-        for (auto cursor = consequence_start; cursor < consequence_end;
-             cursor++) {
-          if (!evaluate_step(logical.children[cursor], callback, context)) {
-            result = false;
-            break;
+        if (track) {
+          context.evaluate_path.pop_back(
+              logical.relative_schema_location.size());
+
+          for (auto cursor = consequence_start; cursor < consequence_end;
+               cursor++) {
+            if (!evaluate_step(logical.children[cursor], callback, context)) {
+              result = false;
+              break;
+            }
+          }
+
+          context.evaluate_path.push_back(logical.relative_schema_location);
+        } else {
+          for (auto cursor = consequence_start; cursor < consequence_end;
+               cursor++) {
+            if (!evaluate_step(logical.children[cursor], callback, context)) {
+              result = false;
+              break;
+            }
           }
         }
       }
@@ -625,9 +710,37 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(logical, LogicalCondition);
     }
 
+    case IS_STEP(ControlGroup): {
+      EVALUATE_BEGIN_PASS_THROUGH(control, ControlGroup);
+      for (const auto &child : control.children) {
+        if (!evaluate_step(child, callback, context)) {
+          result = false;
+          break;
+        }
+      }
+
+      EVALUATE_END_PASS_THROUGH(ControlGroup);
+    }
+
+    case IS_STEP(ControlGroupWhenDefines): {
+      EVALUATE_BEGIN_PASS_THROUGH(control, ControlGroupWhenDefines);
+      const auto &target{context.resolve_target()};
+
+      if (target.is_object() && target.defines(control.value)) {
+        for (const auto &child : control.children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            break;
+          }
+        }
+      }
+
+      EVALUATE_END_PASS_THROUGH(ControlGroupWhenDefines);
+    }
+
     case IS_STEP(ControlLabel): {
       EVALUATE_BEGIN_NO_PRECONDITION(control, ControlLabel);
-      context.mark(control.value, control.children);
+      context.labels.try_emplace(control.value, control.children);
       result = true;
       for (const auto &child : control.children) {
         if (!evaluate_step(child, callback, context)) {
@@ -641,36 +754,34 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(ControlMark): {
       EVALUATE_BEGIN_NO_PRECONDITION_AND_NO_PUSH(control, ControlMark);
-      context.mark(control.value, control.children);
+      context.labels.try_emplace(control.value, control.children);
       EVALUATE_END_NO_POP(control, ControlMark);
     }
 
     case IS_STEP(ControlEvaluate): {
-      SOURCEMETA_TRACE_END(trace_dispatch_id, "Dispatch");
-      SOURCEMETA_TRACE_START(trace_id, "ControlEvaluate");
-      const auto &control{std::get<ControlEvaluate>(step)};
+      EVALUATE_BEGIN_PASS_THROUGH(control, ControlEvaluate);
 
-      if (control.report && callback.has_value()) {
+      if (callback.has_value()) {
         // TODO: Optimize this case to avoid an extra pointer copy
-        auto destination = context.instance_location();
+        auto destination = context.instance_location;
         destination.push_back(control.value);
-        callback.value()(EvaluationType::Pre, true, step,
-                         context.evaluate_path(), destination, context.null);
+        callback.value()(EvaluationType::Pre, true, step, context.evaluate_path,
+                         destination, context.null);
         context.evaluate(control.value);
         callback.value()(EvaluationType::Post, true, step,
-                         context.evaluate_path(), destination, context.null);
+                         context.evaluate_path, destination, context.null);
       } else {
         context.evaluate(control.value);
       }
 
-      SOURCEMETA_TRACE_END(trace_id, "ControlEvaluate");
-      return true;
+      EVALUATE_END_PASS_THROUGH(ControlEvaluate);
     }
 
     case IS_STEP(ControlJump): {
       EVALUATE_BEGIN_NO_PRECONDITION(control, ControlJump);
       result = true;
-      for (const auto &child : context.jump(control.value)) {
+      assert(context.labels.contains(control.value));
+      for (const auto &child : context.labels.at(control.value).get()) {
         if (!evaluate_step(child, callback, context)) {
           result = false;
           break;
@@ -682,53 +793,45 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(ControlDynamicAnchorJump): {
       EVALUATE_BEGIN_NO_PRECONDITION(control, ControlDynamicAnchorJump);
-      const auto id{context.find_dynamic_anchor(control.value)};
-      result = id.has_value();
-      if (id.has_value()) {
-        for (const auto &child : context.jump(id.value())) {
-          if (!evaluate_step(child, callback, context)) {
-            result = false;
-            break;
+      result = false;
+      for (const auto &resource : context.resources) {
+        const auto label{context.hash(resource, control.value)};
+        const auto match{context.labels.find(label)};
+        if (match != context.labels.cend()) {
+          result = true;
+          for (const auto &child : match->second.get()) {
+            if (!evaluate_step(child, callback, context)) {
+              result = false;
+              goto evaluate_control_dynamic_anchor_jump_end;
+            }
           }
+
+          break;
         }
       }
 
+    evaluate_control_dynamic_anchor_jump_end:
       EVALUATE_END(control, ControlDynamicAnchorJump);
     }
 
     case IS_STEP(AnnotationEmit): {
-      EVALUATE_ANNOTATION_NO_PRECONDITION(annotation, AnnotationEmit,
-                                          context.instance_location(),
-                                          annotation.value);
-    }
-
-    case IS_STEP(AnnotationWhenArraySizeEqual): {
-      EVALUATE_ANNOTATION(annotation, AnnotationWhenArraySizeEqual,
-                          target.is_array() &&
-                              target.size() == annotation.value.first,
-                          context.instance_location(), annotation.value.second);
-    }
-
-    case IS_STEP(AnnotationWhenArraySizeGreater): {
-      EVALUATE_ANNOTATION(annotation, AnnotationWhenArraySizeGreater,
-                          target.is_array() &&
-                              target.size() > annotation.value.first,
-                          context.instance_location(), annotation.value.second);
+      EVALUATE_ANNOTATION(annotation, AnnotationEmit, context.instance_location,
+                          annotation.value);
     }
 
     case IS_STEP(AnnotationToParent): {
-      EVALUATE_ANNOTATION_NO_PRECONDITION(
+      EVALUATE_ANNOTATION(
           annotation, AnnotationToParent,
           // TODO: Can we avoid a copy of the instance location here?
-          context.instance_location().initial(), annotation.value);
+          context.instance_location.initial(), annotation.value);
     }
 
     case IS_STEP(AnnotationBasenameToParent): {
-      EVALUATE_ANNOTATION_NO_PRECONDITION(
+      EVALUATE_ANNOTATION(
           annotation, AnnotationBasenameToParent,
           // TODO: Can we avoid a copy of the instance location here?
-          context.instance_location().initial(),
-          context.instance_location().back().to_json());
+          context.instance_location.initial(),
+          context.instance_location.back().to_json());
     }
 
     case IS_STEP(LogicalNot): {
@@ -741,34 +844,47 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
         }
       }
 
-      if (logical.value) {
-        context.unevaluate();
+      EVALUATE_END(logical, LogicalNot);
+    }
+
+    case IS_STEP(LogicalNotEvaluate): {
+      EVALUATE_BEGIN_NO_PRECONDITION(logical, LogicalNotEvaluate);
+
+      for (const auto &child : logical.children) {
+        if (!evaluate_step(child, callback, context)) {
+          result = true;
+          break;
+        }
       }
 
-      EVALUATE_END(logical, LogicalNot);
+      assert(track);
+      context.unevaluate();
+
+      EVALUATE_END(logical, LogicalNotEvaluate);
     }
 
     case IS_STEP(LoopPropertiesUnevaluated): {
       EVALUATE_BEGIN(loop, LoopPropertiesUnevaluated, target.is_object());
+      assert(!loop.children.empty());
+      assert(track);
       result = true;
 
       for (const auto &entry : target.as_object()) {
-        if (context.is_evaluated(
-                sourcemeta::jsontoolkit::WeakPointer::Token{entry.first})) {
+        if (context.is_evaluated({entry.first})) {
           continue;
         }
 
-        context.enter(entry.first);
+        context.enter(entry.first, true);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(true);
             // For efficiently breaking from the outer loop too
             goto evaluate_annotation_loop_properties_unevaluated_end;
           }
         }
 
-        context.leave();
+        context.leave(true);
       }
 
       // Mark the entire object as evaluated
@@ -778,8 +894,67 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(loop, LoopPropertiesUnevaluated);
     }
 
+    case IS_STEP(LoopPropertiesUnevaluatedExcept): {
+      EVALUATE_BEGIN(loop, LoopPropertiesUnevaluatedExcept, target.is_object());
+      assert(!loop.children.empty());
+      assert(track);
+      result = true;
+      // Otherwise why emit this instruction?
+      assert(!std::get<0>(loop.value).empty() ||
+             !std::get<1>(loop.value).empty() ||
+             !std::get<2>(loop.value).empty());
+
+      for (const auto &entry : target.as_object()) {
+        if (std::find(std::get<0>(loop.value).cbegin(),
+                      std::get<0>(loop.value).cend(),
+                      entry.first) != std::get<0>(loop.value).cend()) {
+          continue;
+        }
+
+        if (std::any_of(std::get<1>(loop.value).cbegin(),
+                        std::get<1>(loop.value).cend(),
+                        [&entry](const auto &prefix) {
+                          return entry.first.starts_with(prefix);
+                        })) {
+          continue;
+        }
+
+        if (std::any_of(std::get<2>(loop.value).cbegin(),
+                        std::get<2>(loop.value).cend(),
+                        [&entry](const auto &pattern) {
+                          return std::regex_search(entry.first, pattern.first);
+                        })) {
+          continue;
+        }
+
+        if (context.is_evaluated({entry.first})) {
+          continue;
+        }
+
+        context.enter(entry.first, true);
+        for (const auto &child : loop.children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            context.leave(true);
+            // For efficiently breaking from the outer loop too
+            goto evaluate_annotation_loop_properties_unevaluated_except_end;
+          }
+        }
+
+        context.leave(true);
+      }
+
+      // Mark the entire object as evaluated
+      context.evaluate();
+
+    evaluate_annotation_loop_properties_unevaluated_except_end:
+      EVALUATE_END(loop, LoopPropertiesUnevaluatedExcept);
+    }
+
     case IS_STEP(LoopItemsUnevaluated): {
       EVALUATE_BEGIN(loop, LoopItemsUnevaluated, target.is_array());
+      assert(!loop.children.empty());
+      assert(track);
       const auto &array{target.as_array()};
       result = true;
       for (auto iterator = array.cbegin(); iterator != array.cend();
@@ -790,16 +965,16 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
           continue;
         }
 
-        context.enter(static_cast<Pointer::Token::Index>(index));
+        context.enter(static_cast<Pointer::Token::Index>(index), true);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(true);
             goto evaluate_compiler_annotation_loop_items_unevaluated_end;
           }
         }
 
-        context.leave();
+        context.leave(true);
       }
 
       // Mark the entire array as evaluated
@@ -820,8 +995,8 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
         }
 
         const auto &substep{loop.children[index->second]};
-        assert(std::holds_alternative<LogicalAnd>(substep));
-        for (const auto &child : std::get<LogicalAnd>(substep).children) {
+        assert(std::holds_alternative<ControlGroup>(substep));
+        for (const auto &child : std::get<ControlGroup>(substep).children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
             // For efficiently breaking from the outer loop too
@@ -836,77 +1011,151 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(LoopProperties): {
       EVALUATE_BEGIN(loop, LoopProperties, target.is_object());
+      assert(!loop.children.empty());
       result = true;
       for (const auto &entry : target.as_object()) {
-        context.enter(entry.first);
+        context.enter(entry.first, track);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(track);
+
             // For efficiently breaking from the outer loop too
             goto evaluate_loop_properties_end;
           }
         }
 
-        context.leave();
+        context.leave(track);
       }
 
     evaluate_loop_properties_end:
       EVALUATE_END(loop, LoopProperties);
     }
 
+    case IS_STEP(LoopPropertiesEvaluate): {
+      EVALUATE_BEGIN(loop, LoopPropertiesEvaluate, target.is_object());
+      assert(!loop.children.empty());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        context.enter(entry.first, track);
+        for (const auto &child : loop.children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            context.leave(track);
+
+            // For efficiently breaking from the outer loop too
+            goto evaluate_loop_properties_evaluate_end;
+          }
+        }
+
+        context.leave(track);
+      }
+
+      assert(track);
+      context.evaluate();
+
+    evaluate_loop_properties_evaluate_end:
+      EVALUATE_END(loop, LoopPropertiesEvaluate);
+    }
+
     case IS_STEP(LoopPropertiesRegex): {
       EVALUATE_BEGIN(loop, LoopPropertiesRegex, target.is_object());
+      assert(!loop.children.empty());
       result = true;
       for (const auto &entry : target.as_object()) {
         if (!std::regex_search(entry.first, loop.value.first)) {
           continue;
         }
 
-        context.enter(entry.first);
+        context.enter(entry.first, track);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(track);
+
             // For efficiently breaking from the outer loop too
             goto evaluate_loop_properties_regex_end;
           }
         }
 
-        context.leave();
+        context.leave(track);
       }
 
     evaluate_loop_properties_regex_end:
       EVALUATE_END(loop, LoopPropertiesRegex);
     }
 
+    case IS_STEP(LoopPropertiesStartsWith): {
+      EVALUATE_BEGIN(loop, LoopPropertiesStartsWith, target.is_object());
+      assert(!loop.children.empty());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        if (!entry.first.starts_with(loop.value)) {
+          continue;
+        }
+
+        context.enter(entry.first, track);
+        for (const auto &child : loop.children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            context.leave(track);
+
+            // For efficiently breaking from the outer loop too
+            goto evaluate_loop_properties_starts_with_end;
+          }
+        }
+
+        context.leave(track);
+      }
+
+    evaluate_loop_properties_starts_with_end:
+      EVALUATE_END(loop, LoopPropertiesStartsWith);
+    }
+
     case IS_STEP(LoopPropertiesExcept): {
       EVALUATE_BEGIN(loop, LoopPropertiesExcept, target.is_object());
+      assert(!loop.children.empty());
       result = true;
       // Otherwise why emit this instruction?
-      assert(!loop.value.first.empty() || !loop.value.second.empty());
+      assert(!std::get<0>(loop.value).empty() ||
+             !std::get<1>(loop.value).empty() ||
+             !std::get<2>(loop.value).empty());
 
       for (const auto &entry : target.as_object()) {
-        if (std::find(loop.value.first.cbegin(), loop.value.first.cend(),
-                      entry.first) != loop.value.first.cend() ||
-            std::any_of(loop.value.second.cbegin(), loop.value.second.cend(),
+        if (std::find(std::get<0>(loop.value).cbegin(),
+                      std::get<0>(loop.value).cend(),
+                      entry.first) != std::get<0>(loop.value).cend()) {
+          continue;
+        }
+
+        if (std::any_of(std::get<1>(loop.value).cbegin(),
+                        std::get<1>(loop.value).cend(),
+                        [&entry](const auto &prefix) {
+                          return entry.first.starts_with(prefix);
+                        })) {
+          continue;
+        }
+
+        if (std::any_of(std::get<2>(loop.value).cbegin(),
+                        std::get<2>(loop.value).cend(),
                         [&entry](const auto &pattern) {
                           return std::regex_search(entry.first, pattern.first);
                         })) {
           continue;
         }
 
-        context.enter(entry.first);
+        context.enter(entry.first, track);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(track);
+
             // For efficiently breaking from the outer loop too
             goto evaluate_loop_properties_except_end;
           }
         }
 
-        context.leave();
+        context.leave(track);
       }
 
     evaluate_loop_properties_except_end:
@@ -917,88 +1166,121 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_BEGIN(loop, LoopPropertiesType, target.is_object());
       result = true;
       for (const auto &entry : target.as_object()) {
-        context.enter(entry.first);
-        const auto &entry_target{context.resolve_target()};
-        if (entry_target.type() != loop.value &&
+        if (entry.second.type() != loop.value &&
             // In non-strict mode, we consider a real number that represents an
             // integer to be an integer
             (loop.value != sourcemeta::jsontoolkit::JSON::Type::Integer ||
-             !entry_target.is_integer_real())) {
+             !entry.second.is_integer_real())) {
           result = false;
-          context.leave();
           break;
         }
-
-        context.leave();
       }
 
       EVALUATE_END(loop, LoopPropertiesType);
+    }
+
+    case IS_STEP(LoopPropertiesTypeEvaluate): {
+      EVALUATE_BEGIN(loop, LoopPropertiesTypeEvaluate, target.is_object());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        if (entry.second.type() != loop.value &&
+            // In non-strict mode, we consider a real number that represents an
+            // integer to be an integer
+            (loop.value != sourcemeta::jsontoolkit::JSON::Type::Integer ||
+             !entry.second.is_integer_real())) {
+          result = false;
+          goto evaluate_loop_properties_type_evaluate_end;
+        }
+      }
+
+      assert(track);
+      context.evaluate();
+
+    evaluate_loop_properties_type_evaluate_end:
+      EVALUATE_END(loop, LoopPropertiesTypeEvaluate);
     }
 
     case IS_STEP(LoopPropertiesTypeStrict): {
       EVALUATE_BEGIN(loop, LoopPropertiesTypeStrict, target.is_object());
       result = true;
       for (const auto &entry : target.as_object()) {
-        context.enter(entry.first);
-        if (context.resolve_target().type() != loop.value) {
+        if (entry.second.type() != loop.value) {
           result = false;
-          context.leave();
           break;
         }
-
-        context.leave();
       }
 
       EVALUATE_END(loop, LoopPropertiesTypeStrict);
     }
 
+    case IS_STEP(LoopPropertiesTypeStrictEvaluate): {
+      EVALUATE_BEGIN(loop, LoopPropertiesTypeStrictEvaluate,
+                     target.is_object());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        if (entry.second.type() != loop.value) {
+          result = false;
+          goto evaluate_loop_properties_type_strict_evaluate_end;
+        }
+      }
+
+      assert(track);
+      context.evaluate();
+
+    evaluate_loop_properties_type_strict_evaluate_end:
+      EVALUATE_END(loop, LoopPropertiesTypeStrictEvaluate);
+    }
+
     case IS_STEP(LoopKeys): {
       EVALUATE_BEGIN(loop, LoopKeys, target.is_object());
+      assert(!loop.children.empty());
       result = true;
-      context.target_type(EvaluationContext::TargetType::Key);
       for (const auto &entry : target.as_object()) {
-        context.enter(entry.first);
+        context.enter(entry.first, track);
+        assert(!context.property_target.has_value());
+        context.property_target = std::cref(entry.first);
+
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            assert(context.property_target.has_value());
+            context.property_target = std::nullopt;
+            context.leave(track);
             goto evaluate_loop_keys_end;
           }
         }
 
-        context.leave();
+        assert(context.property_target.has_value());
+        context.property_target = std::nullopt;
+        context.leave(track);
       }
 
     evaluate_loop_keys_end:
-      context.target_type(EvaluationContext::TargetType::Value);
       EVALUATE_END(loop, LoopKeys);
     }
 
     case IS_STEP(LoopItems): {
-      EVALUATE_BEGIN(loop, LoopItems, target.is_array());
+      EVALUATE_BEGIN(loop, LoopItems,
+                     target.is_array() && loop.value < target.size());
+      assert(!loop.children.empty());
       const auto &array{target.as_array()};
       result = true;
       auto iterator{array.cbegin()};
-
-      // We need this check, as advancing an iterator past its bounds
-      // is considered undefined behavior
-      // See https://en.cppreference.com/w/cpp/iterator/advance
-      std::advance(iterator,
-                   std::min(static_cast<std::ptrdiff_t>(loop.value),
-                            static_cast<std::ptrdiff_t>(target.size())));
+      std::advance(iterator, static_cast<std::ptrdiff_t>(loop.value));
 
       for (; iterator != array.cend(); ++iterator) {
         const auto index{std::distance(array.cbegin(), iterator)};
-        context.enter(static_cast<Pointer::Token::Index>(index));
+        context.enter(static_cast<Pointer::Token::Index>(index), track);
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
             result = false;
-            context.leave();
+            context.leave(track);
+
             goto evaluate_compiler_loop_items_end;
           }
         }
 
-        context.leave();
+        context.leave(track);
       }
 
     evaluate_compiler_loop_items_end:
@@ -1007,6 +1289,7 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(LoopContains): {
       EVALUATE_BEGIN(loop, LoopContains, target.is_array());
+      assert(!loop.children.empty());
       const auto minimum{std::get<0>(loop.value)};
       const auto &maximum{std::get<1>(loop.value)};
       assert(!maximum.has_value() || maximum.value() >= minimum);
@@ -1017,7 +1300,7 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       for (auto iterator = array.cbegin(); iterator != array.cend();
            ++iterator) {
         const auto index{std::distance(array.cbegin(), iterator)};
-        context.enter(static_cast<Pointer::Token::Index>(index));
+        context.enter(static_cast<Pointer::Token::Index>(index), track);
         bool subresult{true};
         for (const auto &child : loop.children) {
           if (!evaluate_step(child, callback, context)) {
@@ -1026,7 +1309,7 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
           }
         }
 
-        context.leave();
+        context.leave(track);
 
         if (subresult) {
           match_count += 1;
@@ -1064,10 +1347,11 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 #undef EVALUATE_BEGIN_TRY_TARGET
 #undef EVALUATE_BEGIN_NO_PRECONDITION
 #undef EVALUATE_BEGIN_NO_PRECONDITION_AND_NO_PUSH
+#undef EVALUATE_BEGIN_PASS_THROUGH
 #undef EVALUATE_END
 #undef EVALUATE_END_NO_POP
+#undef EVALUATE_END_PASS_THROUGH
 #undef EVALUATE_ANNOTATION
-#undef EVALUATE_ANNOTATION_NO_PRECONDITION
 
     default:
       // We should never get here
@@ -1091,11 +1375,12 @@ evaluate_internal(sourcemeta::blaze::EvaluationContext &context,
 
   // The evaluation path and instance location must be empty by the time
   // we are done, otherwise there was a frame push/pop mismatch
-  assert(context.evaluate_path().empty());
-  assert(context.instance_location().empty());
-  assert(context.resources().empty());
+  assert(context.evaluate_path.empty());
+  assert(context.evaluate_path_size == 0);
+  assert(context.instance_location.empty());
+  assert(context.resources.empty());
   // We should end up at the root of the instance
-  assert(context.instances().size() == 1);
+  assert(context.instances.size() == 1);
   return overall;
 }
 

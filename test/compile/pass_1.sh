@@ -32,8 +32,8 @@ cat << 'EOF' > "$TMP/expected.json"
     "absoluteKeywordLocation": "#/properties/foo/type",
     "relativeSchemaLocation": "/properties/foo/type",
     "relativeInstanceLocation": "/foo",
-    "report": true,
-    "dynamic": false
+    "dynamic": false,
+    "track": false
   }
 ]
 EOF

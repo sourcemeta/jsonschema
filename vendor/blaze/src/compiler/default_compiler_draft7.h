@@ -14,7 +14,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                                    const DynamicContext &dynamic_context)
     -> Template {
   // `if`
-  Template children{compile(context, schema_context, dynamic_context,
+  Template children{compile(context, schema_context, relative_dynamic_context,
                             sourcemeta::jsontoolkit::empty_pointer,
                             sourcemeta::jsontoolkit::empty_pointer)};
 
@@ -57,13 +57,9 @@ auto compiler_draft7_applicator_if(const Context &context,
     }
   }
 
-  return {make<LogicalCondition>(
-      false, context,
-      {schema_context.relative_pointer.initial(), schema_context.schema,
-       schema_context.vocabularies, schema_context.base, schema_context.labels,
-       schema_context.references},
-      relative_dynamic_context, {then_cursor, else_cursor},
-      std::move(children))};
+  return {make<LogicalCondition>(context, schema_context, dynamic_context,
+                                 {then_cursor, else_cursor},
+                                 std::move(children))};
 }
 
 // We handle `then` as part of `if`

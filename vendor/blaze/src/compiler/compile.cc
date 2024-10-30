@@ -3,7 +3,7 @@
 
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <algorithm> // std::move, std::any_of, std::sort, std::unique
+#include <algorithm> // std::move, std::sort, std::unique
 #include <cassert>   // assert
 #include <iterator>  // std::back_inserter
 #include <utility>   // std::move
@@ -26,8 +26,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     if (schema_context.schema.to_boolean()) {
       return {};
     } else {
-      return {make<AssertionFail>(true, context, schema_context,
-                                  dynamic_context, ValueNone{})};
+      return {make<AssertionFail>(context, schema_context, dynamic_context,
+                                  ValueNone{})};
     }
   }
 
@@ -57,6 +57,43 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   }
 
   return steps;
+}
+
+auto precompile(
+    const sourcemeta::blaze::Context &context,
+    sourcemeta::blaze::SchemaContext &schema_context,
+    const sourcemeta::blaze::DynamicContext &dynamic_context,
+    const sourcemeta::jsontoolkit::ReferenceFrame::value_type &entry)
+    -> sourcemeta::blaze::Template {
+  const sourcemeta::jsontoolkit::URI anchor_uri{entry.first.second};
+  const auto label{sourcemeta::blaze::EvaluationContext{}.hash(
+      schema_resource_id(context,
+                         anchor_uri.recompose_without_fragment().value_or("")),
+      std::string{anchor_uri.fragment().value_or("")})};
+  schema_context.labels.insert(label);
+
+  // Configure a schema context that corresponds to the
+  // schema resource that we are precompiling
+  auto subschema{
+      sourcemeta::jsontoolkit::get(context.root, entry.second.pointer)};
+  auto nested_vocabularies{sourcemeta::jsontoolkit::vocabularies(
+      subschema, context.resolver, entry.second.dialect)};
+  const sourcemeta::blaze::SchemaContext nested_schema_context{
+      entry.second.relative_pointer,
+      std::move(subschema),
+      std::move(nested_vocabularies),
+      entry.second.base,
+      {},
+      {}};
+
+  return {make<sourcemeta::blaze::ControlMark>(
+      context, nested_schema_context, dynamic_context,
+      sourcemeta::blaze::ValueUnsignedInteger{label},
+      sourcemeta::blaze::compile(context, nested_schema_context,
+                                 sourcemeta::blaze::relative_dynamic_context,
+                                 sourcemeta::jsontoolkit::empty_pointer,
+                                 sourcemeta::jsontoolkit::empty_pointer,
+                                 entry.first.second))};
 }
 
 } // namespace
@@ -117,8 +154,9 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
       {},
       {}};
 
-  bool uses_unevaluated_properties{false};
-  bool uses_unevaluated_items{false};
+  std::set<sourcemeta::jsontoolkit::Pointer> unevaluated_properties_schemas;
+  std::set<sourcemeta::jsontoolkit::Pointer> unevaluated_items_schemas;
+
   if (schema_context.vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/core") ||
       schema_context.vocabularies.contains(
@@ -138,17 +176,54 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
         continue;
       }
 
-      if (!uses_unevaluated_properties &&
-          subschema.defines("unevaluatedProperties") &&
+      if (subschema.defines("unevaluatedProperties") &&
           sourcemeta::jsontoolkit::is_schema(
               subschema.at("unevaluatedProperties"))) {
-        uses_unevaluated_properties = true;
+
+        // No need to consider `unevaluatedProperties` if it has a sibling
+        // `additionalProperties`. By definition, nothing could remain
+        // unevaluated.
+
+        if (entry.vocabularies.contains(
+                "https://json-schema.org/draft/2019-09/vocab/applicator") &&
+            subschema.defines("additionalProperties")) {
+          continue;
+        }
+
+        if (entry.vocabularies.contains(
+                "https://json-schema.org/draft/2020-12/vocab/applicator") &&
+            subschema.defines("additionalProperties")) {
+          continue;
+        }
+
+        unevaluated_properties_schemas.insert(entry.pointer);
       }
 
-      if (!uses_unevaluated_items && subschema.defines("unevaluatedItems") &&
+      if (subschema.defines("unevaluatedItems") &&
           sourcemeta::jsontoolkit::is_schema(
               subschema.at("unevaluatedItems"))) {
-        uses_unevaluated_items = true;
+
+        // No need to consider `unevaluatedItems` if it has a
+        // sibling `items` schema (or its older equivalents).
+        // By definition, nothing could remain unevaluated.
+
+        if (entry.vocabularies.contains(
+                "https://json-schema.org/draft/2020-12/vocab/applicator") &&
+            subschema.defines("items")) {
+          continue;
+        } else if (entry.vocabularies.contains("https://json-schema.org/draft/"
+                                               "2019-09/vocab/applicator")) {
+          if (subschema.defines("items") &&
+              sourcemeta::jsontoolkit::is_schema(subschema.at("items"))) {
+            continue;
+          } else if (subschema.defines("items") &&
+                     subschema.at("items").is_array() &&
+                     subschema.defines("additionalItems")) {
+            continue;
+          }
+        }
+
+        unevaluated_items_schemas.insert(entry.pointer);
       }
     }
   }
@@ -169,6 +244,43 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
   assert(resources.size() ==
          std::set<std::string>(resources.cbegin(), resources.cend()).size());
 
+  // Calculate the top static reference destinations for precompilation purposes
+  std::map<std::string, std::size_t> static_references_count;
+  for (const auto &reference : references) {
+    if (reference.first.first !=
+            sourcemeta::jsontoolkit::ReferenceType::Static ||
+        !frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
+                         reference.second.destination})) {
+      continue;
+    }
+
+    const auto &entry{frame.at({sourcemeta::jsontoolkit::ReferenceType::Static,
+                                reference.second.destination})};
+    for (const auto &subreference : references) {
+      if (subreference.first.second.starts_with(entry.pointer)) {
+        static_references_count[reference.second.destination] += 1;
+      }
+    }
+  }
+  std::vector<std::pair<std::string, std::size_t>> top_static_destinations(
+      static_references_count.cbegin(), static_references_count.cend());
+  std::sort(top_static_destinations.begin(), top_static_destinations.end(),
+            [](const auto &left, const auto &right) {
+              return left.second > right.second;
+            });
+  constexpr auto MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE{5};
+  std::set<std::string> precompiled_static_schemas;
+  for (auto iterator = top_static_destinations.cbegin();
+       iterator != top_static_destinations.cend() &&
+       iterator != top_static_destinations.cbegin() +
+                       MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE;
+       ++iterator) {
+    // Only consider highly referenced schemas
+    if (iterator->second > 100) {
+      precompiled_static_schemas.insert(iterator->first);
+    }
+  }
+
   const Context context{result,
                         frame,
                         references,
@@ -178,10 +290,22 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
                         compiler,
                         mode,
                         uses_dynamic_scopes,
-                        uses_unevaluated_properties,
-                        uses_unevaluated_items};
+                        unevaluated_properties_schemas,
+                        unevaluated_items_schemas,
+                        std::move(precompiled_static_schemas)};
   const DynamicContext dynamic_context{relative_dynamic_context};
   Template compiler_template;
+
+  for (const auto &destination : context.precompiled_static_schemas) {
+    assert(frame.contains(
+        {sourcemeta::jsontoolkit::ReferenceType::Static, destination}));
+    const auto match{frame.find(
+        {sourcemeta::jsontoolkit::ReferenceType::Static, destination})};
+    for (auto &&substep :
+         precompile(context, schema_context, dynamic_context, *match)) {
+      compiler_template.push_back(std::move(substep));
+    }
+  }
 
   if (uses_dynamic_scopes &&
       (schema_context.vocabularies.contains(
@@ -197,31 +321,10 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
         continue;
       }
 
-      const sourcemeta::jsontoolkit::URI anchor_uri{entry.first.second};
-      const auto label{EvaluationContext{}.hash(
-          schema_resource_id(
-              context, anchor_uri.recompose_without_fragment().value_or("")),
-          std::string{anchor_uri.fragment().value_or("")})};
-      schema_context.labels.insert(label);
-
-      // Configure a schema context that corresponds to the
-      // schema resource that we are precompiling
-      auto subschema{get(result, entry.second.pointer)};
-      auto nested_vocabularies{
-          vocabularies(subschema, resolver, entry.second.dialect)};
-      const SchemaContext nested_schema_context{entry.second.relative_pointer,
-                                                std::move(subschema),
-                                                std::move(nested_vocabularies),
-                                                entry.second.base,
-                                                {},
-                                                {}};
-
-      compiler_template.push_back(make<ControlMark>(
-          true, context, nested_schema_context, dynamic_context,
-          ValueUnsignedInteger{label},
-          compile(context, nested_schema_context, relative_dynamic_context,
-                  sourcemeta::jsontoolkit::empty_pointer,
-                  sourcemeta::jsontoolkit::empty_pointer, entry.first.second)));
+      for (auto &&substep :
+           precompile(context, schema_context, dynamic_context, entry)) {
+        compiler_template.push_back(std::move(substep));
+      }
     }
   }
 
@@ -288,70 +391,6 @@ auto compile(const Context &context, const SchemaContext &schema_context,
       {dynamic_context.keyword, destination_pointer,
        dynamic_context.base_instance_location.concat(instance_suffix)},
       entry.dialect);
-}
-
-ErrorTraceOutput::ErrorTraceOutput(
-    const sourcemeta::jsontoolkit::JSON &instance,
-    const sourcemeta::jsontoolkit::WeakPointer &base)
-    : instance_{instance}, base_{base} {}
-
-auto ErrorTraceOutput::begin() const -> const_iterator {
-  return this->output.begin();
-}
-
-auto ErrorTraceOutput::end() const -> const_iterator {
-  return this->output.end();
-}
-
-auto ErrorTraceOutput::cbegin() const -> const_iterator {
-  return this->output.cbegin();
-}
-
-auto ErrorTraceOutput::cend() const -> const_iterator {
-  return this->output.cend();
-}
-
-auto ErrorTraceOutput::operator()(
-    const EvaluationType type, const bool result,
-    const Template::value_type &step,
-    const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-    const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-    const sourcemeta::jsontoolkit::JSON &annotation) -> void {
-  if (evaluate_path.empty()) {
-    return;
-  }
-
-  assert(evaluate_path.back().is_property());
-
-  if (type == EvaluationType::Pre) {
-    assert(result);
-    const auto &keyword{evaluate_path.back().to_property()};
-    // To ease the output
-    if (keyword == "oneOf" || keyword == "not") {
-      this->mask.insert(evaluate_path);
-    }
-  } else if (type == EvaluationType::Post &&
-             this->mask.contains(evaluate_path)) {
-    this->mask.erase(evaluate_path);
-  }
-
-  // Ignore successful or masked steps
-  if (result || std::any_of(this->mask.cbegin(), this->mask.cend(),
-                            [&evaluate_path](const auto &entry) {
-                              return evaluate_path.starts_with(entry);
-                            })) {
-    return;
-  }
-
-  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
-  if (effective_evaluate_path.empty()) {
-    return;
-  }
-
-  this->output.push_back(
-      {describe(result, step, evaluate_path, instance_location, this->instance_,
-                annotation),
-       instance_location, std::move(effective_evaluate_path)});
 }
 
 } // namespace sourcemeta::blaze

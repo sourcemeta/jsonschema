@@ -7,6 +7,7 @@
 #include <algorithm> // std::find
 #include <cassert>   // assert
 #include <iterator>  // std::distance
+#include <regex>     // std::regex, std::regex_match, std::smatch
 #include <utility>   // std::declval, std::move
 
 namespace sourcemeta::blaze {
@@ -31,8 +32,7 @@ inline auto schema_resource_id(const Context &context,
 
 // Instantiate a value-oriented step
 template <typename Step>
-auto make(const bool report, const Context &context,
-          const SchemaContext &schema_context,
+auto make(const Context &context, const SchemaContext &schema_context,
           const DynamicContext &dynamic_context,
           // Take the value type from the "type" property of the step struct
           const decltype(std::declval<Step>().value) &value) -> Step {
@@ -45,14 +45,15 @@ auto make(const bool report, const Context &context,
       to_uri(schema_context.relative_pointer, schema_context.base).recompose(),
       schema_resource_id(context, schema_context.base.recompose()),
       context.uses_dynamic_scopes,
-      report,
+      context.mode != Mode::FastValidation ||
+          !context.unevaluated_properties_schemas.empty() ||
+          !context.unevaluated_items_schemas.empty(),
       value};
 }
 
 // Instantiate an applicator step
 template <typename Step>
-auto make(const bool report, const Context &context,
-          const SchemaContext &schema_context,
+auto make(const Context &context, const SchemaContext &schema_context,
           const DynamicContext &dynamic_context,
           // Take the value type from the "value" property of the step struct
           decltype(std::declval<Step>().value) &&value, Template &&children)
@@ -66,7 +67,9 @@ auto make(const bool report, const Context &context,
       to_uri(schema_context.relative_pointer, schema_context.base).recompose(),
       schema_resource_id(context, schema_context.base.recompose()),
       context.uses_dynamic_scopes,
-      report,
+      context.mode != Mode::FastValidation ||
+          !context.unevaluated_properties_schemas.empty() ||
+          !context.unevaluated_items_schemas.empty(),
       std::move(value),
       std::move(children)};
 }
@@ -86,7 +89,7 @@ auto unroll(const DynamicContext &dynamic_context, const Step &step,
           std::get<Type>(step).keyword_location,
           std::get<Type>(step).schema_resource,
           std::get<Type>(step).dynamic,
-          std::get<Type>(step).report,
+          std::get<Type>(step).track,
           std::get<Type>(step).value};
 }
 
@@ -108,6 +111,105 @@ unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
                           const sourcemeta::jsontoolkit::JSON::String &property,
                           const std::size_t otherwise) -> std::size_t {
   return unsigned_integer_property(document, property).value_or(otherwise);
+}
+
+inline auto static_frame_entry(const Context &context,
+                               const SchemaContext &schema_context)
+    -> const sourcemeta::jsontoolkit::ReferenceFrameEntry & {
+  const auto type{sourcemeta::jsontoolkit::ReferenceType::Static};
+  const auto current{
+      to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
+  assert(context.frame.contains({type, current}));
+  return context.frame.at({type, current});
+}
+
+inline auto walk_subschemas(const Context &context,
+                            const SchemaContext &schema_context,
+                            const DynamicContext &dynamic_context) -> auto {
+  const auto &entry{static_frame_entry(context, schema_context)};
+  return sourcemeta::jsontoolkit::SchemaIterator{
+      schema_context.schema.at(dynamic_context.keyword), context.walker,
+      context.resolver, entry.dialect};
+}
+
+inline auto pattern_as_prefix(const std::string &pattern)
+    -> std::optional<std::string> {
+  static const std::regex starts_with_regex{R"(^\^([a-zA-Z0-9-_/]+)$)"};
+  std::smatch matches;
+  if (std::regex_match(pattern, matches, starts_with_regex)) {
+    return matches[1].str();
+  } else {
+    return std::nullopt;
+  }
+}
+
+inline auto find_adjacent(const Context &context,
+                          const SchemaContext &schema_context,
+                          const std::set<std::string> &vocabularies,
+                          const std::string &keyword,
+                          const sourcemeta::jsontoolkit::JSON::Type type)
+    -> auto {
+  std::vector<std::string> possible_keyword_uris;
+  possible_keyword_uris.push_back(
+      to_uri(schema_context.relative_pointer.initial().concat({keyword}),
+             schema_context.base)
+          .recompose());
+
+  // TODO: Do something similar with `allOf`
+
+  // Attempt to statically follow references
+  if (schema_context.schema.defines("$ref")) {
+    const auto reference_type{sourcemeta::jsontoolkit::ReferenceType::Static};
+    const auto destination_uri{
+        to_uri(schema_context.relative_pointer.initial().concat({"$ref"}),
+               schema_context.base)
+            .recompose()};
+    assert(context.frame.contains({reference_type, destination_uri}));
+    const auto &destination{
+        context.frame.at({reference_type, destination_uri})};
+    assert(context.references.contains({reference_type, destination.pointer}));
+    const auto &reference{
+        context.references.at({reference_type, destination.pointer})};
+    const auto keyword_uri{
+        sourcemeta::jsontoolkit::to_uri(
+            sourcemeta::jsontoolkit::to_pointer(reference.fragment.value_or(""))
+                .concat({keyword}))
+            .resolve_from_if_absolute(reference.base.value_or(""))};
+
+    // TODO: When this logic is used by
+    // `unevaluatedProperties`/`unevaluatedItems`, how can we let the
+    // applicators we detect here know that they have already been taken into
+    // consideration and thus do not have to track evaluation?
+    possible_keyword_uris.push_back(keyword_uri.recompose());
+  }
+
+  std::vector<std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>>
+      result;
+
+  for (const auto &possible_keyword_uri : possible_keyword_uris) {
+    if (!context.frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
+                                 possible_keyword_uri})) {
+      continue;
+    }
+
+    const auto &frame_entry{
+        context.frame.at({sourcemeta::jsontoolkit::ReferenceType::Static,
+                          possible_keyword_uri})};
+    const auto &subschema{
+        sourcemeta::jsontoolkit::get(context.root, frame_entry.pointer)};
+    const auto &subschema_vocabularies{sourcemeta::jsontoolkit::vocabularies(
+        subschema, context.resolver, frame_entry.dialect)};
+
+    if (std::any_of(vocabularies.cbegin(), vocabularies.cend(),
+                    [&subschema_vocabularies](const auto &vocabulary) {
+                      return subschema_vocabularies.contains(vocabulary);
+                    }) &&
+        subschema.type() == type) {
+      result.emplace_back(subschema);
+    }
+  }
+
+  return result;
 }
 
 } // namespace sourcemeta::blaze
