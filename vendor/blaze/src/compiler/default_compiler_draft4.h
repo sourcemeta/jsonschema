@@ -4,7 +4,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator_context.h>
 
-#include <algorithm> // std::sort, std::any_of
+#include <algorithm> // std::sort, std::any_of, std::all_of
 #include <cassert>   // assert
 #include <regex>     // std::regex, std::regex_error
 #include <set>       // std::set
@@ -25,6 +25,38 @@ static auto parse_regex(const std::string &pattern,
     throw sourcemeta::blaze::CompilerError(base, schema_location,
                                            message.str());
   }
+}
+
+static auto collect_jump_labels(const sourcemeta::blaze::Template &steps,
+                                std::set<std::size_t> &output) -> void {
+  for (const auto &variant : steps) {
+    std::visit(
+        [&output](const auto &step) {
+          using T = std::decay_t<decltype(step)>;
+          if constexpr (std::is_same_v<T, sourcemeta::blaze::ControlJump>) {
+            output.emplace(step.value);
+          } else if constexpr (requires { step.children; }) {
+            collect_jump_labels(step.children, output);
+          }
+        },
+        variant);
+  }
+}
+
+static auto defines_direct_enumeration(const sourcemeta::blaze::Template &steps)
+    -> bool {
+  return std::any_of(steps.cbegin(), steps.cend(), [](const auto &step) {
+    return std::holds_alternative<sourcemeta::blaze::AssertionEqual>(step) ||
+           std::holds_alternative<sourcemeta::blaze::AssertionEqualsAny>(step);
+  });
+}
+
+static auto
+is_inside_disjunctor(const sourcemeta::jsontoolkit::Pointer &pointer) -> bool {
+  return pointer.size() > 2 && pointer.at(pointer.size() - 2).is_index() &&
+         pointer.at(pointer.size() - 3).is_property() &&
+         (pointer.at(pointer.size() - 3).to_property() == "oneOf" ||
+          pointer.at(pointer.size() - 3).to_property() == "anyOf");
 }
 
 namespace internal {
@@ -100,18 +132,31 @@ auto compiler_draft4_core_ref(const Context &context,
     }
   }
 
+  new_schema_context.labels.insert(label);
+  Template children{
+      compile(context, new_schema_context, relative_dynamic_context,
+              sourcemeta::jsontoolkit::empty_pointer,
+              sourcemeta::jsontoolkit::empty_pointer, reference.destination)};
+
+  // If we ended up not using the label after all, then we can ignore the
+  // wrapper, at the expense of compiling the reference instructions once more
+  std::set<std::size_t> used_labels;
+  collect_jump_labels(children, used_labels);
+  if (!used_labels.contains(label)) {
+    return compile(context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::empty_pointer,
+                   sourcemeta::jsontoolkit::empty_pointer,
+                   reference.destination);
+  }
+
   // The idea to handle recursion is to expand the reference once, and when
   // doing so, create a "checkpoint" that we can jump back to in a subsequent
   // recursive reference. While unrolling the reference once may initially
   // feel weird, we do it so we can handle references purely in this keyword
   // handler, without having to add logic to every single keyword to check
   // whether something points to them and add the "checkpoint" themselves.
-  new_schema_context.labels.insert(label);
-  return {make<ControlLabel>(
-      context, schema_context, dynamic_context, ValueUnsignedInteger{label},
-      compile(context, new_schema_context, relative_dynamic_context,
-              sourcemeta::jsontoolkit::empty_pointer,
-              sourcemeta::jsontoolkit::empty_pointer, reference.destination))};
+  return {make<ControlLabel>(context, schema_context, dynamic_context,
+                             ValueUnsignedInteger{label}, std::move(children))};
 }
 
 auto compiler_draft4_validation_type(const Context &context,
@@ -122,10 +167,28 @@ auto compiler_draft4_validation_type(const Context &context,
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).to_string()};
     if (type == "null") {
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_null(); })) {
+        return {};
+      }
+
       return {
           make<AssertionTypeStrict>(context, schema_context, dynamic_context,
                                     sourcemeta::jsontoolkit::JSON::Type::Null)};
     } else if (type == "boolean") {
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_boolean(); })) {
+        return {};
+      }
+
       return {make<AssertionTypeStrict>(
           context, schema_context, dynamic_context,
           sourcemeta::jsontoolkit::JSON::Type::Boolean)};
@@ -139,6 +202,15 @@ auto compiler_draft4_validation_type(const Context &context,
         return {make<AssertionTypeObjectBounded>(context, schema_context,
                                                  dynamic_context,
                                                  {minimum, maximum, false})};
+      }
+
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_object(); })) {
+        return {};
       }
 
       return {make<AssertionTypeStrict>(
@@ -156,16 +228,43 @@ auto compiler_draft4_validation_type(const Context &context,
                                                 {minimum, maximum, false})};
       }
 
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_array(); })) {
+        return {};
+      }
+
       return {make<AssertionTypeStrict>(
           context, schema_context, dynamic_context,
           sourcemeta::jsontoolkit::JSON::Type::Array)};
     } else if (type == "number") {
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_number(); })) {
+        return {};
+      }
+
       return {make<AssertionTypeStrictAny>(
           context, schema_context, dynamic_context,
           std::vector<sourcemeta::jsontoolkit::JSON::Type>{
               sourcemeta::jsontoolkit::JSON::Type::Real,
               sourcemeta::jsontoolkit::JSON::Type::Integer})};
     } else if (type == "integer") {
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_integer(); })) {
+        return {};
+      }
+
       return {make<AssertionTypeStrict>(
           context, schema_context, dynamic_context,
           sourcemeta::jsontoolkit::JSON::Type::Integer)};
@@ -179,6 +278,15 @@ auto compiler_draft4_validation_type(const Context &context,
         return {make<AssertionTypeStringBounded>(context, schema_context,
                                                  dynamic_context,
                                                  {minimum, maximum, false})};
+      }
+
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("enum") &&
+          schema_context.schema.at("enum").is_array() &&
+          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
+                      schema_context.schema.at("enum").as_array().cend(),
+                      [](const auto &value) { return value.is_string(); })) {
+        return {};
       }
 
       return {make<AssertionTypeStrict>(
@@ -439,23 +547,42 @@ auto compiler_draft4_applicator_properties_with_options(
   // earlier without spending a lot of time on other subschemas
   std::sort(properties.begin(), properties.end(),
             [](const auto &left, const auto &right) {
-              return (left.second.size() == right.second.size())
-                         ? (left.first < right.first)
-                         : (left.second.size() < right.second.size());
+              // Enumerations always take precedence
+              if (defines_direct_enumeration(left.second)) {
+                return true;
+              } else if (defines_direct_enumeration(right.second)) {
+                return false;
+              }
+
+              const auto left_size{recursive_template_size(left.second)};
+              const auto right_size{recursive_template_size(right.second)};
+              if (left_size == right_size) {
+                return left.first < right.first;
+              } else {
+                return left_size < right_size;
+              }
             });
 
-  assert(schema_context.relative_pointer.back().is_property());
-  assert(schema_context.relative_pointer.back().to_property() ==
-         dynamic_context.keyword);
-  const auto relative_pointer_size{schema_context.relative_pointer.size()};
-  const auto is_directly_inside_oneof{
-      relative_pointer_size > 2 &&
-      schema_context.relative_pointer.at(relative_pointer_size - 2)
-          .is_index() &&
-      schema_context.relative_pointer.at(relative_pointer_size - 3)
-          .is_property() &&
-      schema_context.relative_pointer.at(relative_pointer_size - 3)
-              .to_property() == "oneOf"};
+  const auto &current_entry{static_frame_entry(context, schema_context)};
+  const auto inside_disjunctor{
+      is_inside_disjunctor(schema_context.relative_pointer) ||
+      // Check if any reference from `anyOf` or `oneOf` points to us
+      std::any_of(context.references.cbegin(), context.references.cend(),
+                  [&context, &current_entry](const auto &reference) {
+                    if (!context.frame.contains(
+                            {sourcemeta::jsontoolkit::ReferenceType::Static,
+                             reference.second.destination})) {
+                      return false;
+                    }
+
+                    const auto &target{
+                        context.frame
+                            .at({sourcemeta::jsontoolkit::ReferenceType::Static,
+                                 reference.second.destination})
+                            .pointer};
+                    return is_inside_disjunctor(reference.first.second) &&
+                           current_entry.pointer.initial() == target;
+                  })};
 
   // There are two ways to compile `properties` depending on whether
   // most of the properties are marked as required using `required`
@@ -463,13 +590,16 @@ auto compiler_draft4_applicator_properties_with_options(
   // in the corresponding case.
   const auto prefer_loop_over_instance{
       // This strategy only makes sense if most of the properties are "optional"
-      is_required <= (size / 2) &&
+      is_required <= (size / 4) &&
       // If `properties` only defines a relatively small amount of properties,
       // then its probably still faster to unroll
-      schema_context.schema.at(dynamic_context.keyword).size() > 5 &&
-      // Always unroll inside `oneOf`, to have a better chance at
+      size > 5 &&
+      // Unless the properties definition has a LOT of optional properties,
+      // we should unroll inside `oneOf` or `anyOf`, to have a better chance at
       // short-circuiting quickly
-      !is_directly_inside_oneof};
+      // TODO: Maybe the proper middle ground here is to ONLY
+      // unroll properties with `const`/`enum`?
+      (!inside_disjunctor || (is_required == 0 && size > 20))};
 
   if (prefer_loop_over_instance) {
     ValueNamedIndexes indexes;
@@ -556,6 +686,25 @@ auto compiler_draft4_applicator_properties_with_options(
             type_step.keyword_location, type_step.schema_resource,
             type_step.dynamic, type_step.track, type_step.value});
       }
+    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+               std::holds_alternative<AssertionTypeStrictAny>(
+                   substeps.front())) {
+      const auto &type_step{std::get<AssertionTypeStrictAny>(substeps.front())};
+      if (track_evaluation) {
+        children.push_back(AssertionPropertyTypeStrictAnyEvaluate{
+            type_step.relative_schema_location,
+            dynamic_context.base_instance_location.concat(
+                type_step.relative_instance_location),
+            type_step.keyword_location, type_step.schema_resource,
+            type_step.dynamic, type_step.track, type_step.value});
+      } else {
+        children.push_back(AssertionPropertyTypeStrictAny{
+            type_step.relative_schema_location,
+            dynamic_context.base_instance_location.concat(
+                type_step.relative_instance_location),
+            type_step.keyword_location, type_step.schema_resource,
+            type_step.dynamic, type_step.track, type_step.value});
+      }
 
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionPropertyTypeStrict>(
@@ -567,6 +716,12 @@ auto compiler_draft4_applicator_properties_with_options(
                std::holds_alternative<AssertionPropertyType>(
                    substeps.front())) {
       children.push_back(unroll<AssertionPropertyType>(
+          relative_dynamic_context, substeps.front(),
+          dynamic_context.base_instance_location));
+    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+               std::holds_alternative<AssertionPropertyTypeStrictAny>(
+                   substeps.front())) {
+      children.push_back(unroll<AssertionPropertyTypeStrictAny>(
           relative_dynamic_context, substeps.front(),
           dynamic_context.base_instance_location));
 
@@ -586,7 +741,7 @@ auto compiler_draft4_applicator_properties_with_options(
         for (auto &&substep : substeps) {
           children.push_back(std::move(substep));
         }
-      } else {
+      } else if (!substeps.empty()) {
         children.push_back(make<ControlGroupWhenDefines>(
             context, schema_context, relative_dynamic_context,
             ValueString{name}, std::move(substeps)));
@@ -604,8 +759,24 @@ auto compiler_draft4_applicator_properties_with_options(
                  children.front())) {
     return {unroll<AssertionPropertyTypeStrictEvaluate>(dynamic_context,
                                                         children.front())};
+  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
+             std::holds_alternative<AssertionPropertyTypeStrictAny>(
+                 children.front())) {
+    return {unroll<AssertionPropertyTypeStrictAny>(dynamic_context,
+                                                   children.front())};
+  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
+             std::holds_alternative<AssertionPropertyTypeStrictAnyEvaluate>(
+                 children.front())) {
+    return {unroll<AssertionPropertyTypeStrictAnyEvaluate>(dynamic_context,
+                                                           children.front())};
   }
 
+  if (children.empty()) {
+    return {};
+  }
+
+  // TODO: Should this be LogicalWhenType? If so, we can avoid evaluating
+  // every unrolled property against non-object instances
   return {make<LogicalAnd>(context, schema_context, dynamic_context,
                            ValueNone{}, std::move(children))};
 }
@@ -776,6 +947,16 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
     } else {
       return {make<LoopPropertiesType>(context, schema_context, dynamic_context,
                                        type_step.value)};
+    }
+  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
+             std::holds_alternative<AssertionTypeStrictAny>(children.front())) {
+    const auto &type_step{std::get<AssertionTypeStrictAny>(children.front())};
+    if (track_evaluation) {
+      return {make<LoopPropertiesTypeStrictAnyEvaluate>(
+          context, schema_context, dynamic_context, type_step.value)};
+    } else {
+      return {make<LoopPropertiesTypeStrictAny>(
+          context, schema_context, dynamic_context, type_step.value)};
     }
 
   } else if (track_evaluation) {
@@ -1035,6 +1216,23 @@ auto compiler_draft4_applicator_items_with_options(
 
     if (children.empty()) {
       return {};
+    }
+
+    if (context.mode == Mode::FastValidation && children.size() == 1) {
+      if (std::holds_alternative<AssertionTypeStrict>(children.front())) {
+        return {make<LoopItemsTypeStrict>(
+            context, schema_context, dynamic_context,
+            std::get<AssertionTypeStrict>(children.front()).value)};
+      } else if (std::holds_alternative<AssertionType>(children.front())) {
+        return {make<LoopItemsType>(
+            context, schema_context, dynamic_context,
+            std::get<AssertionType>(children.front()).value)};
+      } else if (std::holds_alternative<AssertionTypeStrictAny>(
+                     children.front())) {
+        return {make<LoopItemsTypeStrictAny>(
+            context, schema_context, dynamic_context,
+            std::get<AssertionTypeStrictAny>(children.front()).value)};
+      }
     }
 
     return {make<LoopItems>(context, schema_context, dynamic_context,

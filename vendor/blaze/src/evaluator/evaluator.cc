@@ -512,6 +512,40 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(assertion, AssertionPropertyTypeStrictEvaluate);
     }
 
+    case IS_STEP(AssertionPropertyTypeStrictAny): {
+      EVALUATE_BEGIN_TRY_TARGET(
+          assertion, AssertionPropertyTypeStrictAny,
+          // Note that here are are referring to the parent
+          // object that might hold the given property,
+          // before traversing into the actual property
+          target.is_object());
+      // Now here we refer to the actual property
+      result = (std::find(assertion.value.cbegin(), assertion.value.cend(),
+                          context.resolve_target().type()) !=
+                assertion.value.cend());
+      EVALUATE_END(assertion, AssertionPropertyTypeStrictAny);
+    }
+
+    case IS_STEP(AssertionPropertyTypeStrictAnyEvaluate): {
+      EVALUATE_BEGIN_TRY_TARGET(
+          assertion, AssertionPropertyTypeStrictAnyEvaluate,
+          // Note that here are are referring to the parent
+          // object that might hold the given property,
+          // before traversing into the actual property
+          target.is_object());
+      // Now here we refer to the actual property
+      result = (std::find(assertion.value.cbegin(), assertion.value.cend(),
+                          context.resolve_target().type()) !=
+                assertion.value.cend());
+
+      if (result) {
+        assert(track);
+        context.evaluate();
+      }
+
+      EVALUATE_END(assertion, AssertionPropertyTypeStrictAnyEvaluate);
+    }
+
     case IS_STEP(AssertionArrayPrefix): {
       EVALUATE_BEGIN(assertion, AssertionArrayPrefix, target.is_array());
       // Otherwise there is no point in emitting this step
@@ -524,10 +558,13 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
                                ? prefixes
                                : std::min(array_size, prefixes) - 1};
         const auto &entry{assertion.children[pointer]};
-        // TODO: Directly evaluate the control group entries
+        result = true;
         assert(std::holds_alternative<ControlGroup>(entry));
-        if (evaluate_step(entry, callback, context)) {
-          result = true;
+        for (const auto &child : std::get<ControlGroup>(entry).children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            break;
+          }
         }
       }
 
@@ -548,18 +585,24 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
                                ? prefixes
                                : std::min(array_size, prefixes) - 1};
         const auto &entry{assertion.children[pointer]};
-        // TODO: Directly evaluate the control group entries
+        result = true;
         assert(std::holds_alternative<ControlGroup>(entry));
-        if (evaluate_step(entry, callback, context)) {
-          result = true;
-          if (array_size == prefixes) {
-            context.evaluate();
-          } else {
-            context.evaluate(0, pointer);
+        for (const auto &child : std::get<ControlGroup>(entry).children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            goto evaluate_assertion_array_prefix_evaluate_end;
           }
+        }
+
+        assert(result);
+        if (array_size == prefixes) {
+          context.evaluate();
+        } else {
+          context.evaluate(0, pointer);
         }
       }
 
+    evaluate_assertion_array_prefix_evaluate_end:
       EVALUATE_END(assertion, AssertionArrayPrefixEvaluate);
     }
 
@@ -725,6 +768,7 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
     case IS_STEP(ControlGroupWhenDefines): {
       EVALUATE_BEGIN_PASS_THROUGH(control, ControlGroupWhenDefines);
       const auto &target{context.resolve_target()};
+      assert(!control.children.empty());
 
       if (target.is_object() && target.defines(control.value)) {
         for (const auto &child : control.children) {
@@ -740,6 +784,7 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(ControlLabel): {
       EVALUATE_BEGIN_NO_PRECONDITION(control, ControlLabel);
+      assert(!control.children.empty());
       context.labels.try_emplace(control.value, control.children);
       result = true;
       for (const auto &child : control.children) {
@@ -949,39 +994,6 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     evaluate_annotation_loop_properties_unevaluated_except_end:
       EVALUATE_END(loop, LoopPropertiesUnevaluatedExcept);
-    }
-
-    case IS_STEP(LoopItemsUnevaluated): {
-      EVALUATE_BEGIN(loop, LoopItemsUnevaluated, target.is_array());
-      assert(!loop.children.empty());
-      assert(track);
-      const auto &array{target.as_array()};
-      result = true;
-      for (auto iterator = array.cbegin(); iterator != array.cend();
-           ++iterator) {
-        const auto index{std::distance(array.cbegin(), iterator)};
-        if (context.is_evaluated(
-                static_cast<WeakPointer::Token::Index>(index))) {
-          continue;
-        }
-
-        context.enter(static_cast<Pointer::Token::Index>(index), true);
-        for (const auto &child : loop.children) {
-          if (!evaluate_step(child, callback, context)) {
-            result = false;
-            context.leave(true);
-            goto evaluate_compiler_annotation_loop_items_unevaluated_end;
-          }
-        }
-
-        context.leave(true);
-      }
-
-      // Mark the entire array as evaluated
-      context.evaluate();
-
-    evaluate_compiler_annotation_loop_items_unevaluated_end:
-      EVALUATE_END(loop, LoopItemsUnevaluated);
     }
 
     case IS_STEP(LoopPropertiesMatch): {
@@ -1231,6 +1243,39 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(loop, LoopPropertiesTypeStrictEvaluate);
     }
 
+    case IS_STEP(LoopPropertiesTypeStrictAny): {
+      EVALUATE_BEGIN(loop, LoopPropertiesTypeStrictAny, target.is_object());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        if (std::find(loop.value.cbegin(), loop.value.cend(),
+                      entry.second.type()) == loop.value.cend()) {
+          result = false;
+          break;
+        }
+      }
+
+      EVALUATE_END(loop, LoopPropertiesTypeStrictAny);
+    }
+
+    case IS_STEP(LoopPropertiesTypeStrictAnyEvaluate): {
+      EVALUATE_BEGIN(loop, LoopPropertiesTypeStrictAnyEvaluate,
+                     target.is_object());
+      result = true;
+      for (const auto &entry : target.as_object()) {
+        if (std::find(loop.value.cbegin(), loop.value.cend(),
+                      entry.second.type()) == loop.value.cend()) {
+          result = false;
+          goto evaluate_loop_properties_type_strict_any_evaluate_end;
+        }
+      }
+
+      assert(track);
+      context.evaluate();
+
+    evaluate_loop_properties_type_strict_any_evaluate_end:
+      EVALUATE_END(loop, LoopPropertiesTypeStrictAnyEvaluate);
+    }
+
     case IS_STEP(LoopKeys): {
       EVALUATE_BEGIN(loop, LoopKeys, target.is_object());
       assert(!loop.children.empty());
@@ -1285,6 +1330,85 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     evaluate_compiler_loop_items_end:
       EVALUATE_END(loop, LoopItems);
+    }
+
+    case IS_STEP(LoopItemsUnevaluated): {
+      EVALUATE_BEGIN(loop, LoopItemsUnevaluated, target.is_array());
+      assert(!loop.children.empty());
+      assert(track);
+      const auto &array{target.as_array()};
+      result = true;
+      for (auto iterator = array.cbegin(); iterator != array.cend();
+           ++iterator) {
+        const auto index{std::distance(array.cbegin(), iterator)};
+        if (context.is_evaluated(
+                static_cast<WeakPointer::Token::Index>(index))) {
+          continue;
+        }
+
+        context.enter(static_cast<Pointer::Token::Index>(index), true);
+        for (const auto &child : loop.children) {
+          if (!evaluate_step(child, callback, context)) {
+            result = false;
+            context.leave(true);
+            goto evaluate_compiler_annotation_loop_items_unevaluated_end;
+          }
+        }
+
+        context.leave(true);
+      }
+
+      // Mark the entire array as evaluated
+      context.evaluate();
+
+    evaluate_compiler_annotation_loop_items_unevaluated_end:
+      EVALUATE_END(loop, LoopItemsUnevaluated);
+    }
+
+    case IS_STEP(LoopItemsType): {
+      EVALUATE_BEGIN(loop, LoopItemsType, target.is_array());
+      result = true;
+      for (const auto &entry : target.as_array()) {
+        if (entry.type() != loop.value &&
+            // In non-strict mode, we consider a real number that represents an
+            // integer to be an integer
+            (loop.value != sourcemeta::jsontoolkit::JSON::Type::Integer ||
+             !entry.is_integer_real())) {
+          result = false;
+          break;
+        }
+      }
+
+      EVALUATE_END(loop, LoopItemsType);
+    }
+
+    case IS_STEP(LoopItemsTypeStrict): {
+      EVALUATE_BEGIN(loop, LoopItemsTypeStrict, target.is_array());
+      result = true;
+      for (const auto &entry : target.as_array()) {
+        if (entry.type() != loop.value) {
+          result = false;
+          break;
+        }
+      }
+
+      EVALUATE_END(loop, LoopItemsTypeStrict);
+    }
+
+    case IS_STEP(LoopItemsTypeStrictAny): {
+      EVALUATE_BEGIN(loop, LoopItemsTypeStrictAny, target.is_array());
+      // Otherwise we are we even emitting this instruction?
+      assert(loop.value.size() > 1);
+      result = true;
+      for (const auto &entry : target.as_array()) {
+        if (std::find(loop.value.cbegin(), loop.value.cend(), entry.type()) ==
+            loop.value.cend()) {
+          result = false;
+          break;
+        }
+      }
+
+      EVALUATE_END(loop, LoopItemsTypeStrictAny);
     }
 
     case IS_STEP(LoopContains): {

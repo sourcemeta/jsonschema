@@ -29,6 +29,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "if", Value)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "propertyNames", Value)
   WALK(HTTPS_BASE "2020-12/vocab/content", "contentSchema", Value)
+  WALK(HTTPS_BASE "2020-12/vocab/validation", "maximum", None, "type")
+  WALK(HTTPS_BASE "2020-12/vocab/validation", "minimum", None, "type")
 
   // See https://json-schema.org/blog/posts/schema-static-analysis for a study
   // of 2020-12 keyword dependency
@@ -50,10 +52,10 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
 
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/applicator", "properties",
-                       Members, HTTPS_BASE "2020-12/vocab/validation", "type",
+                       Members, HTTPS_BASE "2020-12/vocab/validation",
                        "required")
-  WALK(HTTPS_BASE "2020-12/vocab/validation", "maximum", None, "type")
-  WALK(HTTPS_BASE "2020-12/vocab/validation", "minimum", None, "type")
+  WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/validation", "type", None,
+                       HTTPS_BASE "2020-12/vocab/applicator", "properties")
 
   // JSON Schema still defines this for backwards-compatibility
   // See https://json-schema.org/draft/2020-12/schema
@@ -75,6 +77,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetSchema", Value)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "headerSchema", Value)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "submissionSchema", Value)
+  WALK(HTTPS_BASE "2019-09/vocab/validation", "maximum", None, "type")
+  WALK(HTTPS_BASE "2019-09/vocab/validation", "minimum", None, "type")
 
   // See
   // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.9.1
@@ -93,10 +97,10 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
 
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2019-09/vocab/applicator", "properties",
-                       Members, HTTPS_BASE "2019-09/vocab/validation", "type",
+                       Members, HTTPS_BASE "2019-09/vocab/validation",
                        "required")
-  WALK(HTTPS_BASE "2019-09/vocab/validation", "maximum", None, "type")
-  WALK(HTTPS_BASE "2019-09/vocab/validation", "minimum", None, "type")
+  WALK_MAYBE_DEPENDENT(HTTPS_BASE "2019-09/vocab/validation", "type", None,
+                       HTTPS_BASE "2019-09/vocab/applicator", "properties")
 
   // JSON Schema still defines this for backwards-compatibility
   // See https://json-schema.org/draft/2019-09/schema
@@ -117,6 +121,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTP_BASE "draft-07/schema#", "if", Value, "$ref")
   WALK(HTTP_BASE "draft-07/schema#", "contains", Value, "$ref")
   WALK(HTTP_BASE "draft-07/schema#", "propertyNames", Value, "$ref")
+  WALK(HTTP_BASE "draft-07/schema#", "maximum", None, "$ref")
+  WALK(HTTP_BASE "draft-07/schema#", "minimum", None, "$ref")
 
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "hrefSchema", Value,
                        HTTP_BASE "draft-07/schema#", "$ref")
@@ -136,10 +142,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTP_BASE "draft-07/schema#", "else", Value, "if")
 
   // For the purpose of compiler optimizations
-  WALK(HTTP_BASE "draft-07/schema#", "properties", Members, "$ref", "type",
-       "required")
-  WALK(HTTP_BASE "draft-07/schema#", "maximum", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-07/schema#", "minimum", None, "$ref", "type")
+  WALK(HTTP_BASE "draft-07/schema#", "properties", Members, "$ref", "required")
+  WALK(HTTP_BASE "draft-07/schema#", "type", None, "properties")
 
   // $ref also takes precedence over any unknown keyword
   if (vocabularies.contains(HTTP_BASE "draft-07/schema#") &&
@@ -158,6 +162,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTP_BASE "draft-06/schema#", "not", Value, "$ref")
   WALK(HTTP_BASE "draft-06/schema#", "contains", Value, "$ref")
   WALK(HTTP_BASE "draft-06/schema#", "propertyNames", Value, "$ref")
+  WALK(HTTP_BASE "draft-06/schema#", "maximum", None, "$ref")
+  WALK(HTTP_BASE "draft-06/schema#", "minimum", None, "$ref")
 
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "hrefSchema", Value,
                        HTTP_BASE "draft-06/schema#", "$ref")
@@ -172,10 +178,8 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
        "properties", "patternProperties")
 
   // For the purpose of compiler optimizations
-  WALK(HTTP_BASE "draft-06/schema#", "properties", Members, "$ref", "type",
-       "required")
-  WALK(HTTP_BASE "draft-06/schema#", "maximum", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-06/schema#", "minimum", None, "$ref", "type")
+  WALK(HTTP_BASE "draft-06/schema#", "properties", Members, "$ref", "required")
+  WALK(HTTP_BASE "draft-06/schema#", "type", None, "properties")
 
   // $ref also takes precedence over any unknown keyword
   if (vocabularies.contains(HTTP_BASE "draft-06/schema#") &&
@@ -191,23 +195,23 @@ auto sourcemeta::jsontoolkit::default_schema_walker(
   WALK(HTTP_BASE "draft-04/schema#", "anyOf", Elements, "$ref")
   WALK(HTTP_BASE "draft-04/schema#", "oneOf", Elements, "$ref")
   WALK(HTTP_BASE "draft-04/schema#", "not", Value, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "dependencies", Members, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "required", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "uniqueItems", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "pattern", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "format", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "maxLength", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "minLength", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "maxItems", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "minItems", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "maximum", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "minimum", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "maxProperties", None, "$ref")
+  WALK(HTTP_BASE "draft-04/schema#", "minProperties", None, "$ref")
 
   // These dependencies are only for the purpose of compiler optimizations
-  WALK(HTTP_BASE "draft-04/schema#", "dependencies", Members, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "required", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "uniqueItems", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "pattern", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "format", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "maxLength", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "minLength", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "maxItems", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "minItems", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "maximum", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "minimum", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "maxProperties", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "minProperties", None, "$ref", "type")
-  WALK(HTTP_BASE "draft-04/schema#", "properties", Members, "$ref", "type",
-       "required")
+  WALK(HTTP_BASE "draft-04/schema#", "properties", Members, "$ref", "required")
+  WALK(HTTP_BASE "draft-04/schema#", "type", None, "properties")
 
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-04/hyper-schema#", "targetSchema",
                        Value, HTTP_BASE "draft-04/schema#", "$ref")

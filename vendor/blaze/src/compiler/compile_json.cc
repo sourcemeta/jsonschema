@@ -245,6 +245,10 @@ struct StepVisitor {
   HANDLE_STEP("assertion", "property-type-strict", AssertionPropertyTypeStrict)
   HANDLE_STEP("assertion", "property-type-strict-evaluate",
               AssertionPropertyTypeStrictEvaluate)
+  HANDLE_STEP("assertion", "property-type-strict-any",
+              AssertionPropertyTypeStrictAny)
+  HANDLE_STEP("assertion", "property-type-strict-any-evaluate",
+              AssertionPropertyTypeStrictAnyEvaluate)
   HANDLE_STEP("assertion", "array-prefix", AssertionArrayPrefix)
   HANDLE_STEP("assertion", "array-prefix-evaluate",
               AssertionArrayPrefixEvaluate)
@@ -264,7 +268,6 @@ struct StepVisitor {
   HANDLE_STEP("loop", "properties-unevaluated", LoopPropertiesUnevaluated)
   HANDLE_STEP("loop", "properties-unevaluated-except",
               LoopPropertiesUnevaluatedExcept)
-  HANDLE_STEP("loop", "items-unevaluated", LoopItemsUnevaluated)
   HANDLE_STEP("loop", "properties-match", LoopPropertiesMatch)
   HANDLE_STEP("loop", "properties", LoopProperties)
   HANDLE_STEP("loop", "properties-evaluate", LoopPropertiesEvaluate)
@@ -276,8 +279,15 @@ struct StepVisitor {
   HANDLE_STEP("loop", "properties-type-strict", LoopPropertiesTypeStrict)
   HANDLE_STEP("loop", "properties-type-strict-evaluate",
               LoopPropertiesTypeStrictEvaluate)
+  HANDLE_STEP("loop", "properties-type-strict-any", LoopPropertiesTypeStrictAny)
+  HANDLE_STEP("loop", "properties-type-strict-evaluate-any",
+              LoopPropertiesTypeStrictAnyEvaluate)
   HANDLE_STEP("loop", "keys", LoopKeys)
   HANDLE_STEP("loop", "items", LoopItems)
+  HANDLE_STEP("loop", "items-unevaluated", LoopItemsUnevaluated)
+  HANDLE_STEP("loop", "items-type", LoopItemsType)
+  HANDLE_STEP("loop", "items-type-strict", LoopItemsTypeStrict)
+  HANDLE_STEP("loop", "items-type-strict-any", LoopItemsTypeStrictAny)
   HANDLE_STEP("loop", "contains", LoopContains)
   HANDLE_STEP("control", "group", ControlGroup)
   HANDLE_STEP("control", "group-when-defines", ControlGroupWhenDefines)

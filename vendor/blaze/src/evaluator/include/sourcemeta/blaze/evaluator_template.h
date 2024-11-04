@@ -45,6 +45,8 @@ struct AssertionPropertyType;
 struct AssertionPropertyTypeEvaluate;
 struct AssertionPropertyTypeStrict;
 struct AssertionPropertyTypeStrictEvaluate;
+struct AssertionPropertyTypeStrictAny;
+struct AssertionPropertyTypeStrictAnyEvaluate;
 struct AssertionArrayPrefix;
 struct AssertionArrayPrefixEvaluate;
 struct AnnotationEmit;
@@ -61,7 +63,6 @@ struct LogicalWhenDefines;
 struct LogicalWhenArraySizeGreater;
 struct LoopPropertiesUnevaluated;
 struct LoopPropertiesUnevaluatedExcept;
-struct LoopItemsUnevaluated;
 struct LoopPropertiesMatch;
 struct LoopProperties;
 struct LoopPropertiesEvaluate;
@@ -72,8 +73,14 @@ struct LoopPropertiesType;
 struct LoopPropertiesTypeEvaluate;
 struct LoopPropertiesTypeStrict;
 struct LoopPropertiesTypeStrictEvaluate;
+struct LoopPropertiesTypeStrictAny;
+struct LoopPropertiesTypeStrictAnyEvaluate;
 struct LoopKeys;
 struct LoopItems;
+struct LoopItemsUnevaluated;
+struct LoopItemsType;
+struct LoopItemsTypeStrict;
+struct LoopItemsTypeStrictAny;
 struct LoopContains;
 struct ControlGroup;
 struct ControlGroupWhenDefines;
@@ -98,16 +105,19 @@ using Template = std::vector<std::variant<
     AssertionUnique, AssertionDivisible, AssertionStringType,
     AssertionPropertyType, AssertionPropertyTypeEvaluate,
     AssertionPropertyTypeStrict, AssertionPropertyTypeStrictEvaluate,
+    AssertionPropertyTypeStrictAny, AssertionPropertyTypeStrictAnyEvaluate,
     AssertionArrayPrefix, AssertionArrayPrefixEvaluate, AnnotationEmit,
     AnnotationToParent, AnnotationBasenameToParent, LogicalNot,
     LogicalNotEvaluate, LogicalOr, LogicalAnd, LogicalXor, LogicalCondition,
     LogicalWhenType, LogicalWhenDefines, LogicalWhenArraySizeGreater,
     LoopPropertiesUnevaluated, LoopPropertiesUnevaluatedExcept,
-    LoopItemsUnevaluated, LoopPropertiesMatch, LoopProperties,
-    LoopPropertiesEvaluate, LoopPropertiesRegex, LoopPropertiesStartsWith,
-    LoopPropertiesExcept, LoopPropertiesType, LoopPropertiesTypeEvaluate,
-    LoopPropertiesTypeStrict, LoopPropertiesTypeStrictEvaluate, LoopKeys,
-    LoopItems, LoopContains, ControlGroup, ControlGroupWhenDefines,
+    LoopPropertiesMatch, LoopProperties, LoopPropertiesEvaluate,
+    LoopPropertiesRegex, LoopPropertiesStartsWith, LoopPropertiesExcept,
+    LoopPropertiesType, LoopPropertiesTypeEvaluate, LoopPropertiesTypeStrict,
+    LoopPropertiesTypeStrictEvaluate, LoopPropertiesTypeStrictAny,
+    LoopPropertiesTypeStrictAnyEvaluate, LoopKeys, LoopItems,
+    LoopItemsUnevaluated, LoopItemsType, LoopItemsTypeStrict,
+    LoopItemsTypeStrictAny, LoopContains, ControlGroup, ControlGroupWhenDefines,
     ControlLabel, ControlMark, ControlEvaluate, ControlJump,
     ControlDynamicAnchorJump>>;
 
@@ -146,6 +156,8 @@ enum class TemplateIndex : std::uint8_t {
   AssertionPropertyTypeEvaluate,
   AssertionPropertyTypeStrict,
   AssertionPropertyTypeStrictEvaluate,
+  AssertionPropertyTypeStrictAny,
+  AssertionPropertyTypeStrictAnyEvaluate,
   AssertionArrayPrefix,
   AssertionArrayPrefixEvaluate,
   AnnotationEmit,
@@ -162,7 +174,6 @@ enum class TemplateIndex : std::uint8_t {
   LogicalWhenArraySizeGreater,
   LoopPropertiesUnevaluated,
   LoopPropertiesUnevaluatedExcept,
-  LoopItemsUnevaluated,
   LoopPropertiesMatch,
   LoopProperties,
   LoopPropertiesEvaluate,
@@ -173,8 +184,14 @@ enum class TemplateIndex : std::uint8_t {
   LoopPropertiesTypeEvaluate,
   LoopPropertiesTypeStrict,
   LoopPropertiesTypeStrictEvaluate,
+  LoopPropertiesTypeStrictAny,
+  LoopPropertiesTypeStrictAnyEvaluate,
   LoopKeys,
   LoopItems,
+  LoopItemsUnevaluated,
+  LoopItemsType,
+  LoopItemsTypeStrict,
+  LoopItemsTypeStrictAny,
   LoopContains,
   ControlGroup,
   ControlGroupWhenDefines,
@@ -372,6 +389,17 @@ DEFINE_STEP_WITH_VALUE(Assertion, PropertyTypeStrict, ValueType)
 DEFINE_STEP_WITH_VALUE(Assertion, PropertyTypeStrictEvaluate, ValueType)
 
 /// @ingroup evaluator_instructions
+/// @brief Represents a compiler assertion step that checks that an instance
+/// property is of a given set of types if present (strict mode)
+DEFINE_STEP_WITH_VALUE(Assertion, PropertyTypeStrictAny, ValueTypes)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler assertion step that checks that an instance
+/// property is of a given set of types if present (strict mode) and marks
+/// evaluation
+DEFINE_STEP_WITH_VALUE(Assertion, PropertyTypeStrictAnyEvaluate, ValueTypes)
+
+/// @ingroup evaluator_instructions
 /// @brief Represents a compiler assertion step that applies substeps to the
 /// beginning of an array
 DEFINE_STEP_APPLICATOR(Assertion, ArrayPrefix, ValueNone)
@@ -446,10 +474,6 @@ DEFINE_STEP_APPLICATOR(Loop, PropertiesUnevaluated, ValueNone)
 DEFINE_STEP_APPLICATOR(Loop, PropertiesUnevaluatedExcept, ValuePropertyFilter)
 
 /// @ingroup evaluator_instructions
-/// @brief Represents a compiler step that loops over unevaluated array items
-DEFINE_STEP_APPLICATOR(Loop, ItemsUnevaluated, ValueNone)
-
-/// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that matches steps to object properties
 DEFINE_STEP_APPLICATOR(Loop, PropertiesMatch, ValueNamedIndexes)
 
@@ -498,6 +522,16 @@ DEFINE_STEP_WITH_VALUE(Loop, PropertiesTypeStrict, ValueType)
 DEFINE_STEP_WITH_VALUE(Loop, PropertiesTypeStrictEvaluate, ValueType)
 
 /// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that checks every object property is of a
+/// set of given types (strict mode)
+DEFINE_STEP_WITH_VALUE(Loop, PropertiesTypeStrictAny, ValueTypes)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that checks every object property is of a
+/// set of given types (strict mode) and marks evaluation
+DEFINE_STEP_WITH_VALUE(Loop, PropertiesTypeStrictAnyEvaluate, ValueTypes)
+
+/// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that loops over object property keys
 DEFINE_STEP_APPLICATOR(Loop, Keys, ValueNone)
 
@@ -505,6 +539,25 @@ DEFINE_STEP_APPLICATOR(Loop, Keys, ValueNone)
 /// @brief Represents a compiler step that loops over array items starting from
 /// a given index
 DEFINE_STEP_APPLICATOR(Loop, Items, ValueUnsignedInteger)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over unevaluated array items
+DEFINE_STEP_APPLICATOR(Loop, ItemsUnevaluated, ValueNone)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over array items checking their
+/// type
+DEFINE_STEP_WITH_VALUE(Loop, ItemsType, ValueType)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over array items checking their
+/// type (strict mode)
+DEFINE_STEP_WITH_VALUE(Loop, ItemsTypeStrict, ValueType)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that loops over array items checking their
+/// type (strict mode)
+DEFINE_STEP_WITH_VALUE(Loop, ItemsTypeStrictAny, ValueTypes)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that checks array items match a given
