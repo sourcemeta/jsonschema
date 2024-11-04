@@ -22,7 +22,8 @@ Global Options:
 Commands:
 
    validate <schema.json> <instance.json|.jsonl...> [--http/-h]
-            [--benchmark/-b]
+            [--benchmark/-b] [--extension/-e <extension>]
+            [--ignore/-i <schemas-or-directories>]
 
        Validate one of more instances against the given schema.
 
