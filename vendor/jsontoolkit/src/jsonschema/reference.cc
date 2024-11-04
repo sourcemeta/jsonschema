@@ -210,7 +210,7 @@ auto sourcemeta::jsontoolkit::frame(
           }
 
           const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
-          maybe_relative.resolve_from_if_absolute(base);
+          maybe_relative.try_resolve_from(base);
           const std::string new_id{maybe_relative.recompose()};
 
           if (!maybe_relative_is_absolute ||
@@ -238,7 +238,7 @@ auto sourcemeta::jsontoolkit::frame(
       const auto nearest_bases{
           find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
       if (!nearest_bases.first.empty()) {
-        metaschema.resolve_from_if_absolute(nearest_bases.first.front());
+        metaschema.try_resolve_from(nearest_bases.first.front());
       }
 
       metaschema.canonicalize();
@@ -358,7 +358,7 @@ auto sourcemeta::jsontoolkit::frame(
       auto relative_pointer_uri{
           sourcemeta::jsontoolkit::to_uri(pointer.resolve_from(base.second))};
       if (!base.first.empty()) {
-        relative_pointer_uri.resolve_from_if_absolute({base.first});
+        relative_pointer_uri.try_resolve_from({base.first});
       }
 
       relative_pointer_uri.canonicalize();
@@ -386,7 +386,7 @@ auto sourcemeta::jsontoolkit::frame(
         sourcemeta::jsontoolkit::URI ref{
             entry.common.value.at("$ref").to_string()};
         if (!nearest_bases.first.empty()) {
-          ref.resolve_from_if_absolute(nearest_bases.first.front());
+          ref.try_resolve_from(nearest_bases.first.front());
         }
 
         ref.canonicalize();

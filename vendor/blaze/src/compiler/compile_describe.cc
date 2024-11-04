@@ -193,7 +193,14 @@ struct DescribeVisitor {
 
     if (this->keyword == "properties") {
       assert(!step.children.empty());
-      assert(this->target.is_object());
+      if (!this->target.is_object()) {
+        std::ostringstream message;
+        describe_type_check(this->valid, this->target.type(),
+                            sourcemeta::jsontoolkit::JSON::Type::Object,
+                            message);
+        return message.str();
+      }
+
       std::ostringstream message;
       message << "The object value was expected to validate against the ";
       if (step.children.size() == 1) {
@@ -679,6 +686,38 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LoopPropertiesTypeStrictAny &step) const
+      -> std::string {
+    std::ostringstream message;
+    message << "The object properties were expected to be of type ";
+    const auto &types{step_value(step)};
+    for (auto iterator = types.cbegin(); iterator != types.cend(); ++iterator) {
+      if (std::next(iterator) == types.cend()) {
+        message << "or " << to_string(*iterator);
+      } else {
+        message << to_string(*iterator) << ", ";
+      }
+    }
+
+    return message.str();
+  }
+
+  auto operator()(const LoopPropertiesTypeStrictAnyEvaluate &step) const
+      -> std::string {
+    std::ostringstream message;
+    message << "The object properties were expected to be of type ";
+    const auto &types{step_value(step)};
+    for (auto iterator = types.cbegin(); iterator != types.cend(); ++iterator) {
+      if (std::next(iterator) == types.cend()) {
+        message << "or " << to_string(*iterator);
+      } else {
+        message << to_string(*iterator) << ", ";
+      }
+    }
+
+    return message.str();
+  }
+
   auto operator()(const LoopKeys &) const -> std::string {
     assert(this->keyword == "propertyNames");
     assert(this->target.is_object());
@@ -729,6 +768,35 @@ struct DescribeVisitor {
     std::ostringstream message;
     message << "The array items not covered by other array keywords, if any, "
                "were expected to validate against this subschema";
+    return message.str();
+  }
+
+  auto operator()(const LoopItemsType &step) const -> std::string {
+    std::ostringstream message;
+    message << "The array items were expected to be of type "
+            << to_string(step.value);
+    return message.str();
+  }
+
+  auto operator()(const LoopItemsTypeStrict &step) const -> std::string {
+    std::ostringstream message;
+    message << "The array items were expected to be of type "
+            << to_string(step.value);
+    return message.str();
+  }
+
+  auto operator()(const LoopItemsTypeStrictAny &step) const -> std::string {
+    std::ostringstream message;
+    message << "The array items were expected to be of type ";
+    const auto &types{step_value(step)};
+    for (auto iterator = types.cbegin(); iterator != types.cend(); ++iterator) {
+      if (std::next(iterator) == types.cend()) {
+        message << "or " << to_string(*iterator);
+      } else {
+        message << to_string(*iterator) << ", ";
+      }
+    }
+
     return message.str();
   }
 
@@ -1421,6 +1489,22 @@ struct DescribeVisitor {
       describe_type_check(this->valid, this->target.type(), value, message);
     }
 
+    return message.str();
+  }
+
+  auto operator()(const AssertionPropertyTypeStrictAny &step) const
+      -> std::string {
+    std::ostringstream message;
+    describe_types_check(this->valid, this->target.type(), step_value(step),
+                         message);
+    return message.str();
+  }
+
+  auto operator()(const AssertionPropertyTypeStrictAnyEvaluate &step) const
+      -> std::string {
+    std::ostringstream message;
+    describe_types_check(this->valid, this->target.type(), step_value(step),
+                         message);
     return message.str();
   }
 

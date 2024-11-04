@@ -9,6 +9,7 @@
 #include <iterator>  // std::distance
 #include <regex>     // std::regex, std::regex_match, std::smatch
 #include <utility>   // std::declval, std::move
+#include <variant>   // std::visit
 
 namespace sourcemeta::blaze {
 
@@ -174,7 +175,7 @@ inline auto find_adjacent(const Context &context,
         sourcemeta::jsontoolkit::to_uri(
             sourcemeta::jsontoolkit::to_pointer(reference.fragment.value_or(""))
                 .concat({keyword}))
-            .resolve_from_if_absolute(reference.base.value_or(""))};
+            .try_resolve_from(reference.base.value_or(""))};
 
     // TODO: When this logic is used by
     // `unevaluatedProperties`/`unevaluatedItems`, how can we let the
@@ -207,6 +208,21 @@ inline auto find_adjacent(const Context &context,
         subschema.type() == type) {
       result.emplace_back(subschema);
     }
+  }
+
+  return result;
+}
+
+inline auto recursive_template_size(const Template &steps) -> std::size_t {
+  std::size_t result{steps.size()};
+  for (const auto &variant : steps) {
+    std::visit(
+        [&result](const auto &step) {
+          if constexpr (requires { step.children; }) {
+            result += recursive_template_size(step.children);
+          }
+        },
+        variant);
   }
 
   return result;

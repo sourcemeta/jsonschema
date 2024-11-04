@@ -295,8 +295,8 @@ public:
   /// ```
   auto resolve_from(const URI &base) -> URI &;
 
-  /// Resolve a relative URI against an absolute base URI as established by RFC
-  /// 3986. If the base is not a relative URI, nothing happens. For example:
+  /// Resolve a relative URI against a base URI as established by RFC
+  /// 3986. If the resolution cannot happen, nothing happens. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/jsontoolkit/uri.h>
@@ -304,10 +304,10 @@ public:
   ///
   /// const sourcemeta::jsontoolkit::URI base{"bar"};
   /// sourcemeta::jsontoolkit::URI result{"foo"};
-  /// result.resolve_from_if_absolute(base);
+  /// result.try_resolve_from(base);
   /// assert(result.recompose() == "foo");
   /// ```
-  auto resolve_from_if_absolute(const URI &base) -> URI &;
+  auto try_resolve_from(const URI &base) -> URI &;
 
   /// Attempt to resolve a URI relative to another URI. If the latter URI is not
   /// a base for the former, leave the URI intact. For example:
