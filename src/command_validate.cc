@@ -72,7 +72,7 @@ auto sourcemeta::jsonschema::cli::validate(
         for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
-          sourcemeta::blaze::ErrorTraceOutput output{instance};
+          sourcemeta::blaze::ErrorOutput output{instance};
           bool subresult = true;
           if (benchmark) {
             const auto timestamp_start{
@@ -124,7 +124,7 @@ auto sourcemeta::jsonschema::cli::validate(
     } else {
       const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
       std::ostringstream error;
-      sourcemeta::blaze::ErrorTraceOutput output{instance};
+      sourcemeta::blaze::ErrorOutput output{instance};
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};

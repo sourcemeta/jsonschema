@@ -76,15 +76,11 @@ auto make(const Context &context, const SchemaContext &schema_context,
 }
 
 template <typename Type, typename Step>
-auto unroll(const DynamicContext &dynamic_context, const Step &step,
+auto unroll(const Step &step,
             const sourcemeta::jsontoolkit::Pointer &base_instance_location =
                 sourcemeta::jsontoolkit::empty_pointer) -> Type {
   assert(std::holds_alternative<Type>(step));
-  return {dynamic_context.keyword.empty()
-              ? std::get<Type>(step).relative_schema_location
-              : dynamic_context.base_schema_location
-                    .concat({dynamic_context.keyword})
-                    .concat(std::get<Type>(step).relative_schema_location),
+  return {std::get<Type>(step).relative_schema_location,
           base_instance_location.concat(
               std::get<Type>(step).relative_instance_location),
           std::get<Type>(step).keyword_location,
@@ -92,6 +88,17 @@ auto unroll(const DynamicContext &dynamic_context, const Step &step,
           std::get<Type>(step).dynamic,
           std::get<Type>(step).track,
           std::get<Type>(step).value};
+}
+
+template <typename Type, typename Step>
+auto rephrase(const Step &step) -> Type {
+  return {step.relative_schema_location,
+          step.relative_instance_location,
+          step.keyword_location,
+          step.schema_resource,
+          step.dynamic,
+          step.track,
+          step.value};
 }
 
 inline auto

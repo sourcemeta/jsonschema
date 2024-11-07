@@ -657,6 +657,11 @@ struct DescribeVisitor {
     return message.str();
   }
 
+  auto operator()(const LoopPropertiesWhitelist &) const -> std::string {
+    assert(this->keyword == "additionalProperties");
+    return "The object value was not expected to define additional properties";
+  }
+
   auto operator()(const LoopPropertiesType &step) const -> std::string {
     std::ostringstream message;
     message << "The object properties were expected to be of type "

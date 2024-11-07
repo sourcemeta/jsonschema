@@ -1174,6 +1174,28 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
       EVALUATE_END(loop, LoopPropertiesExcept);
     }
 
+    case IS_STEP(LoopPropertiesWhitelist): {
+      EVALUATE_BEGIN(loop, LoopPropertiesWhitelist, target.is_object());
+      // Otherwise why emit this instruction?
+      assert(!loop.value.empty());
+
+      // Otherwise if the number of properties in the instance
+      // is larger than the whitelist, then it already violated
+      // the whitelist?
+      if (target.size() <= loop.value.size()) {
+        result = true;
+        for (const auto &entry : target.as_object()) {
+          if (std::find(loop.value.cbegin(), loop.value.cend(), entry.first) ==
+              loop.value.cend()) {
+            result = false;
+            break;
+          }
+        }
+      }
+
+      EVALUATE_END(loop, LoopPropertiesWhitelist);
+    }
+
     case IS_STEP(LoopPropertiesType): {
       EVALUATE_BEGIN(loop, LoopPropertiesType, target.is_object());
       result = true;

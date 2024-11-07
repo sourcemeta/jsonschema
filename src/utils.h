@@ -29,8 +29,8 @@ auto for_each_json(const std::vector<std::string> &arguments,
     -> std::vector<
         std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
 
-auto print(const sourcemeta::blaze::ErrorTraceOutput &output,
-           std::ostream &stream) -> void;
+auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
+    -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote = false)
