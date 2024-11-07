@@ -23,13 +23,13 @@ Commands:
 
    validate <schema.json> <instance.json|.jsonl...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
-            [--ignore/-i <schemas-or-directories>]
+            [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
        Validate one of more instances against the given schema.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
-              [--ignore/-i <schemas-or-directories>]
+              [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.

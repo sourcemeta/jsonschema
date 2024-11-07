@@ -189,6 +189,37 @@ auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
   }
 }
 
+auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
+    -> void {
+  for (const auto &entry : output) {
+    if (entry.evaluate_path.empty()) {
+      continue;
+    }
+
+    switch (entry.type) {
+      case sourcemeta::blaze::TraceOutput::EntryType::Push:
+        stream << "-> (push) ";
+        break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Pass:
+        stream << "<- (pass) ";
+        break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Fail:
+        stream << "<- (fail) ";
+        break;
+      default:
+        assert(false);
+        break;
+    }
+
+    stream << "\"";
+    sourcemeta::jsontoolkit::stringify(entry.evaluate_path, stream);
+    stream << "\"\n";
+    stream << "   at \"";
+    sourcemeta::jsontoolkit::stringify(entry.instance_location, stream);
+    stream << "\"\n";
+  }
+}
+
 static auto fallback_resolver(
     const std::map<std::string, std::vector<std::string>> &options,
     std::string_view identifier)

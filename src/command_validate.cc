@@ -19,7 +19,8 @@
 // TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http", "b", "benchmark"})};
+  const auto options{
+      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace"})};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -51,6 +52,7 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
+  const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
@@ -73,6 +75,7 @@ auto sourcemeta::jsonschema::cli::validate(
           index += 1;
           std::ostringstream error;
           sourcemeta::blaze::ErrorOutput output{instance};
+          sourcemeta::blaze::TraceOutput trace_output;
           bool subresult = true;
           if (benchmark) {
             const auto timestamp_start{
@@ -87,12 +90,18 @@ auto sourcemeta::jsonschema::cli::validate(
             } else {
               error << "error: Schema validation failure\n";
             }
+          } else if (trace) {
+            subresult = sourcemeta::blaze::evaluate(schema_template, instance,
+                                                    std::ref(trace_output));
           } else {
             subresult = sourcemeta::blaze::evaluate(schema_template, instance,
                                                     std::ref(output));
           }
 
-          if (subresult) {
+          if (trace) {
+            print(trace_output, std::cout);
+            result = subresult;
+          } else if (subresult) {
             log_verbose(options)
                 << "ok: "
                 << std::filesystem::weakly_canonical(instance_path).string()
@@ -125,6 +134,7 @@ auto sourcemeta::jsonschema::cli::validate(
       const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::ErrorOutput output{instance};
+      sourcemeta::blaze::TraceOutput trace_output;
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};
@@ -139,12 +149,18 @@ auto sourcemeta::jsonschema::cli::validate(
           error << "error: Schema validation failure\n";
           result = false;
         }
+      } else if (trace) {
+        subresult = sourcemeta::blaze::evaluate(schema_template, instance,
+                                                std::ref(trace_output));
       } else {
         subresult = sourcemeta::blaze::evaluate(schema_template, instance,
                                                 std::ref(output));
       }
 
-      if (subresult) {
+      if (trace) {
+        print(trace_output, std::cout);
+        result = subresult;
+      } else if (subresult) {
         log_verbose(options)
             << "ok: "
             << std::filesystem::weakly_canonical(instance_path).string()
