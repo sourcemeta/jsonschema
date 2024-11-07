@@ -175,8 +175,8 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto print(const sourcemeta::blaze::ErrorTraceOutput &output,
-           std::ostream &stream) -> void {
+auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
+    -> void {
   stream << "error: Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";

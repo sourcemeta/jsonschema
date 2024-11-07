@@ -44,7 +44,7 @@ namespace sourcemeta::blaze {
 ///
 /// const sourcemeta::jsontoolkit::JSON instance{5};
 ///
-/// sourcemeta::blaze::ErrorTraceOutput output;
+/// sourcemeta::blaze::ErrorOutput output;
 /// const auto result{sourcemeta::blaze::evaluate(
 ///   schema_template, instance, std::ref(output))};
 ///
@@ -58,15 +58,15 @@ namespace sourcemeta::blaze {
 ///   }
 /// }
 /// ```
-class SOURCEMETA_BLAZE_COMPILER_EXPORT ErrorTraceOutput {
+class SOURCEMETA_BLAZE_COMPILER_EXPORT ErrorOutput {
 public:
-  ErrorTraceOutput(const sourcemeta::jsontoolkit::JSON &instance,
-                   const sourcemeta::jsontoolkit::WeakPointer &base =
-                       sourcemeta::jsontoolkit::empty_weak_pointer);
+  ErrorOutput(const sourcemeta::jsontoolkit::JSON &instance,
+              const sourcemeta::jsontoolkit::WeakPointer &base =
+                  sourcemeta::jsontoolkit::empty_weak_pointer);
 
   // Prevent accidental copies
-  ErrorTraceOutput(const ErrorTraceOutput &) = delete;
-  auto operator=(const ErrorTraceOutput &) -> ErrorTraceOutput & = delete;
+  ErrorOutput(const ErrorOutput &) = delete;
+  auto operator=(const ErrorOutput &) -> ErrorOutput & = delete;
 
   struct Entry {
     const std::string message;

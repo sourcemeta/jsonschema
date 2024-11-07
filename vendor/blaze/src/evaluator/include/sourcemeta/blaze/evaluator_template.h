@@ -69,6 +69,7 @@ struct LoopPropertiesEvaluate;
 struct LoopPropertiesRegex;
 struct LoopPropertiesStartsWith;
 struct LoopPropertiesExcept;
+struct LoopPropertiesWhitelist;
 struct LoopPropertiesType;
 struct LoopPropertiesTypeEvaluate;
 struct LoopPropertiesTypeStrict;
@@ -113,10 +114,10 @@ using Template = std::vector<std::variant<
     LoopPropertiesUnevaluated, LoopPropertiesUnevaluatedExcept,
     LoopPropertiesMatch, LoopProperties, LoopPropertiesEvaluate,
     LoopPropertiesRegex, LoopPropertiesStartsWith, LoopPropertiesExcept,
-    LoopPropertiesType, LoopPropertiesTypeEvaluate, LoopPropertiesTypeStrict,
-    LoopPropertiesTypeStrictEvaluate, LoopPropertiesTypeStrictAny,
-    LoopPropertiesTypeStrictAnyEvaluate, LoopKeys, LoopItems,
-    LoopItemsUnevaluated, LoopItemsType, LoopItemsTypeStrict,
+    LoopPropertiesWhitelist, LoopPropertiesType, LoopPropertiesTypeEvaluate,
+    LoopPropertiesTypeStrict, LoopPropertiesTypeStrictEvaluate,
+    LoopPropertiesTypeStrictAny, LoopPropertiesTypeStrictAnyEvaluate, LoopKeys,
+    LoopItems, LoopItemsUnevaluated, LoopItemsType, LoopItemsTypeStrict,
     LoopItemsTypeStrictAny, LoopContains, ControlGroup, ControlGroupWhenDefines,
     ControlLabel, ControlMark, ControlEvaluate, ControlJump,
     ControlDynamicAnchorJump>>;
@@ -180,6 +181,7 @@ enum class TemplateIndex : std::uint8_t {
   LoopPropertiesRegex,
   LoopPropertiesStartsWith,
   LoopPropertiesExcept,
+  LoopPropertiesWhitelist,
   LoopPropertiesType,
   LoopPropertiesTypeEvaluate,
   LoopPropertiesTypeStrict,
@@ -500,6 +502,11 @@ DEFINE_STEP_APPLICATOR(Loop, PropertiesStartsWith, ValueString)
 /// @brief Represents a compiler step that loops over object properties that
 /// do not match the given property filters
 DEFINE_STEP_APPLICATOR(Loop, PropertiesExcept, ValuePropertyFilter)
+
+/// @ingroup evaluator_instructions
+/// @brief Represents a compiler step that fails on properties that are not part
+/// of the given whitelist
+DEFINE_STEP_WITH_VALUE(Loop, PropertiesWhitelist, ValueStrings)
 
 /// @ingroup evaluator_instructions
 /// @brief Represents a compiler step that checks every object property is of a

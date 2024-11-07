@@ -4,12 +4,12 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator_context.h>
 
-#include <algorithm> // std::sort, std::any_of, std::all_of
-#include <cassert>   // assert
-#include <regex>     // std::regex, std::regex_error
-#include <set>       // std::set
-#include <sstream>   // std::ostringstream
-#include <utility>   // std::move
+#include <algorithm> // std::sort, std::any_of, std::all_of, std::find_if, std::none_of
+#include <cassert> // assert
+#include <regex>   // std::regex, std::regex_error
+#include <set>     // std::set
+#include <sstream> // std::ostringstream
+#include <utility> // std::move
 
 #include "compile_helpers.h"
 
@@ -43,12 +43,28 @@ static auto collect_jump_labels(const sourcemeta::blaze::Template &steps,
   }
 }
 
+static auto relative_schema_location_size(
+    const sourcemeta::blaze::Template::value_type &variant) -> std::size_t {
+  return std::visit(
+      [](const auto &step) { return step.relative_schema_location.size(); },
+      variant);
+}
+
 static auto defines_direct_enumeration(const sourcemeta::blaze::Template &steps)
-    -> bool {
-  return std::any_of(steps.cbegin(), steps.cend(), [](const auto &step) {
-    return std::holds_alternative<sourcemeta::blaze::AssertionEqual>(step) ||
-           std::holds_alternative<sourcemeta::blaze::AssertionEqualsAny>(step);
-  });
+    -> std::optional<std::size_t> {
+  const auto iterator{
+      std::find_if(steps.cbegin(), steps.cend(), [](const auto &step) {
+        return std::holds_alternative<sourcemeta::blaze::AssertionEqual>(
+                   step) ||
+               std::holds_alternative<sourcemeta::blaze::AssertionEqualsAny>(
+                   step);
+      })};
+
+  if (iterator == steps.cend()) {
+    return std::nullopt;
+  }
+
+  return std::distance(steps.cbegin(), iterator);
 }
 
 static auto
@@ -487,6 +503,55 @@ auto compiler_draft4_applicator_oneof(const Context &context,
                            std::move(disjunctors))};
 }
 
+static auto compile_properties(const Context &context,
+                               const SchemaContext &schema_context,
+                               const DynamicContext &dynamic_context)
+    -> std::vector<std::pair<std::string, Template>> {
+  std::vector<std::pair<std::string, Template>> properties;
+  for (const auto &entry : schema_context.schema.at("properties").as_object()) {
+    properties.push_back(
+        {entry.first, compile(context, schema_context, dynamic_context,
+                              {entry.first}, {entry.first})});
+  }
+
+  // In many cases, `properties` have some subschemas that are small
+  // and some subschemas that are large. To attempt to improve performance,
+  // we prefer to evaluate smaller subschemas first, in the hope of failing
+  // earlier without spending a lot of time on other subschemas
+  std::sort(properties.begin(), properties.end(),
+            [](const auto &left, const auto &right) {
+              const auto left_size{recursive_template_size(left.second)};
+              const auto right_size{recursive_template_size(right.second)};
+              if (left_size == right_size) {
+                const auto left_direct_enumeration{
+                    defines_direct_enumeration(left.second)};
+                const auto right_direct_enumeration{
+                    defines_direct_enumeration(right.second)};
+
+                // Enumerations always take precedence
+                if (left_direct_enumeration.has_value() &&
+                    right_direct_enumeration.has_value()) {
+                  // If both options have a direct enumeration, we choose
+                  // the one with the shorter relative schema location
+                  return relative_schema_location_size(
+                             left.second.at(left_direct_enumeration.value())) <
+                         relative_schema_location_size(
+                             right.second.at(right_direct_enumeration.value()));
+                } else if (left_direct_enumeration.has_value()) {
+                  return true;
+                } else if (right_direct_enumeration.has_value()) {
+                  return false;
+                }
+
+                return left.first < right.first;
+              } else {
+                return left_size < right_size;
+              }
+            });
+
+  return properties;
+}
+
 auto compiler_draft4_applicator_properties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
@@ -514,6 +579,15 @@ auto compiler_draft4_applicator_properties_with_options(
           "https://json-schema.org/draft/2019-09/vocab/validation") ||
       schema_context.vocabularies.contains(
           "https://json-schema.org/draft/2020-12/vocab/validation");
+  const auto imports_const =
+      schema_context.vocabularies.contains(
+          "http://json-schema.org/draft-06/schema#") ||
+      schema_context.vocabularies.contains(
+          "http://json-schema.org/draft-07/schema#") ||
+      schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2019-09/vocab/validation") ||
+      schema_context.vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/validation");
   std::set<std::string> required;
   if (imports_validation_vocabulary &&
       schema_context.schema.defines("required") &&
@@ -528,40 +602,6 @@ auto compiler_draft4_applicator_properties_with_options(
       }
     }
   }
-
-  std::size_t is_required = 0;
-  std::vector<std::pair<std::string, Template>> properties;
-  for (const auto &entry :
-       schema_context.schema.at(dynamic_context.keyword).as_object()) {
-    properties.push_back(
-        {entry.first, compile(context, schema_context, relative_dynamic_context,
-                              {entry.first}, {entry.first})});
-    if (required.contains(entry.first)) {
-      is_required += 1;
-    }
-  }
-
-  // In many cases, `properties` have some subschemas that are small
-  // and some subschemas that are large. To attempt to improve performance,
-  // we prefer to evaluate smaller subschemas first, in the hope of failing
-  // earlier without spending a lot of time on other subschemas
-  std::sort(properties.begin(), properties.end(),
-            [](const auto &left, const auto &right) {
-              // Enumerations always take precedence
-              if (defines_direct_enumeration(left.second)) {
-                return true;
-              } else if (defines_direct_enumeration(right.second)) {
-                return false;
-              }
-
-              const auto left_size{recursive_template_size(left.second)};
-              const auto right_size{recursive_template_size(right.second)};
-              if (left_size == right_size) {
-                return left.first < right.first;
-              } else {
-                return left_size < right_size;
-              }
-            });
 
   const auto &current_entry{static_frame_entry(context, schema_context)};
   const auto inside_disjunctor{
@@ -590,23 +630,32 @@ auto compiler_draft4_applicator_properties_with_options(
   // in the corresponding case.
   const auto prefer_loop_over_instance{
       // This strategy only makes sense if most of the properties are "optional"
-      is_required <= (size / 4) &&
+      required.size() <= (size / 4) &&
       // If `properties` only defines a relatively small amount of properties,
       // then its probably still faster to unroll
       size > 5 &&
-      // Unless the properties definition has a LOT of optional properties,
-      // we should unroll inside `oneOf` or `anyOf`, to have a better chance at
-      // short-circuiting quickly
-      // TODO: Maybe the proper middle ground here is to ONLY
-      // unroll properties with `const`/`enum`?
-      (!inside_disjunctor || (is_required == 0 && size > 20))};
+      // Always unroll inside `oneOf` or `anyOf`, to have a
+      // better chance at quickly short-circuiting
+      (!inside_disjunctor ||
+       std::none_of(
+           schema_context.schema.at(dynamic_context.keyword)
+               .as_object()
+               .cbegin(),
+           schema_context.schema.at(dynamic_context.keyword).as_object().cend(),
+           [&](const auto &pair) {
+             return pair.second.is_object() &&
+                    ((imports_validation_vocabulary &&
+                      pair.second.defines("enum")) ||
+                     (imports_const && pair.second.defines("const")));
+           }))};
 
   if (prefer_loop_over_instance) {
     ValueNamedIndexes indexes;
     Template children;
     std::size_t cursor = 0;
 
-    for (auto &&[name, substeps] : properties) {
+    for (auto &&[name, substeps] : compile_properties(
+             context, schema_context, relative_dynamic_context)) {
       indexes.emplace(name, cursor);
 
       if (track_evaluation) {
@@ -634,18 +683,17 @@ auto compiler_draft4_applicator_properties_with_options(
 
   Template children;
 
-  for (auto &&[name, substeps] : properties) {
+  const auto effective_dynamic_context{context.mode == Mode::FastValidation
+                                           ? dynamic_context
+                                           : relative_dynamic_context};
+
+  for (auto &&[name, substeps] :
+       compile_properties(context, schema_context, effective_dynamic_context)) {
     if (annotate) {
       substeps.push_back(make<AnnotationEmit>(
-          context, schema_context, relative_dynamic_context,
+          context, schema_context, effective_dynamic_context,
           sourcemeta::jsontoolkit::JSON{name}));
     }
-
-    const auto assume_object{imports_validation_vocabulary &&
-                             schema_context.schema.defines("type") &&
-                             schema_context.schema.at("type").is_string() &&
-                             schema_context.schema.at("type").to_string() ==
-                                 "object"};
 
     // Optimize `properties` where its subschemas just include a type check,
     // as that's a very common pattern
@@ -654,131 +702,87 @@ auto compiler_draft4_applicator_properties_with_options(
         std::holds_alternative<AssertionTypeStrict>(substeps.front())) {
       const auto &type_step{std::get<AssertionTypeStrict>(substeps.front())};
       if (track_evaluation) {
-        children.push_back(AssertionPropertyTypeStrictEvaluate{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(
+            rephrase<AssertionPropertyTypeStrictEvaluate>(type_step));
       } else {
-        children.push_back(AssertionPropertyTypeStrict{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(rephrase<AssertionPropertyTypeStrict>(type_step));
       }
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionType>(substeps.front())) {
       const auto &type_step{std::get<AssertionType>(substeps.front())};
       if (track_evaluation) {
-        children.push_back(AssertionPropertyTypeEvaluate{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(rephrase<AssertionPropertyTypeEvaluate>(type_step));
       } else {
-        children.push_back(AssertionPropertyType{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(rephrase<AssertionPropertyType>(type_step));
       }
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionTypeStrictAny>(
                    substeps.front())) {
       const auto &type_step{std::get<AssertionTypeStrictAny>(substeps.front())};
       if (track_evaluation) {
-        children.push_back(AssertionPropertyTypeStrictAnyEvaluate{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(
+            rephrase<AssertionPropertyTypeStrictAnyEvaluate>(type_step));
       } else {
-        children.push_back(AssertionPropertyTypeStrictAny{
-            type_step.relative_schema_location,
-            dynamic_context.base_instance_location.concat(
-                type_step.relative_instance_location),
-            type_step.keyword_location, type_step.schema_resource,
-            type_step.dynamic, type_step.track, type_step.value});
+        children.push_back(rephrase<AssertionPropertyTypeStrictAny>(type_step));
       }
 
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionPropertyTypeStrict>(
                    substeps.front())) {
       children.push_back(unroll<AssertionPropertyTypeStrict>(
-          relative_dynamic_context, substeps.front(),
-          dynamic_context.base_instance_location));
+          substeps.front(), effective_dynamic_context.base_instance_location));
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionPropertyType>(
                    substeps.front())) {
       children.push_back(unroll<AssertionPropertyType>(
-          relative_dynamic_context, substeps.front(),
-          dynamic_context.base_instance_location));
+          substeps.front(), effective_dynamic_context.base_instance_location));
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
                std::holds_alternative<AssertionPropertyTypeStrictAny>(
                    substeps.front())) {
       children.push_back(unroll<AssertionPropertyTypeStrictAny>(
-          relative_dynamic_context, substeps.front(),
-          dynamic_context.base_instance_location));
+          substeps.front(), effective_dynamic_context.base_instance_location));
 
     } else {
       if (track_evaluation) {
-        substeps.push_back(make<ControlEvaluate>(context, schema_context,
-                                                 relative_dynamic_context,
-                                                 ValuePointer{name}));
+        if (context.mode == Mode::FastValidation) {
+          // We need this wrapper as `ControlEvaluate` doesn't push to the stack
+          substeps.push_back(make<LogicalAnd>(
+              context, schema_context, effective_dynamic_context, ValueNone{},
+              {make<ControlEvaluate>(context, schema_context,
+                                     effective_dynamic_context,
+                                     ValuePointer{name})}));
+        } else {
+          substeps.push_back(make<ControlEvaluate>(context, schema_context,
+                                                   effective_dynamic_context,
+                                                   ValuePointer{name}));
+        }
       }
 
-      if (imports_validation_vocabulary && assume_object &&
-          schema_context.schema.defines("required") &&
-          schema_context.schema.at("required").is_array() &&
-          schema_context.schema.at("required")
-              .contains(sourcemeta::jsontoolkit::JSON{name})) {
+      if (imports_validation_vocabulary &&
+          schema_context.schema.defines("type") &&
+          schema_context.schema.at("type").is_string() &&
+          schema_context.schema.at("type").to_string() == "object" &&
+          required.contains(name)) {
         // We can avoid the container too and just inline these steps
         for (auto &&substep : substeps) {
           children.push_back(std::move(substep));
         }
       } else if (!substeps.empty()) {
         children.push_back(make<ControlGroupWhenDefines>(
-            context, schema_context, relative_dynamic_context,
+            context, schema_context, effective_dynamic_context,
             ValueString{name}, std::move(substeps)));
       }
     }
   }
 
-  // Optimize away the wrapper when emitting a single instruction
-  if (context.mode == Mode::FastValidation && children.size() == 1 &&
-      std::holds_alternative<AssertionPropertyTypeStrict>(children.front())) {
-    return {
-        unroll<AssertionPropertyTypeStrict>(dynamic_context, children.front())};
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             std::holds_alternative<AssertionPropertyTypeStrictEvaluate>(
-                 children.front())) {
-    return {unroll<AssertionPropertyTypeStrictEvaluate>(dynamic_context,
-                                                        children.front())};
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             std::holds_alternative<AssertionPropertyTypeStrictAny>(
-                 children.front())) {
-    return {unroll<AssertionPropertyTypeStrictAny>(dynamic_context,
-                                                   children.front())};
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             std::holds_alternative<AssertionPropertyTypeStrictAnyEvaluate>(
-                 children.front())) {
-    return {unroll<AssertionPropertyTypeStrictAnyEvaluate>(dynamic_context,
-                                                           children.front())};
-  }
-
-  if (children.empty()) {
+  if (context.mode == Mode::FastValidation) {
+    return children;
+  } else if (children.empty()) {
     return {};
+  } else {
+    return {make<LogicalAnd>(context, schema_context, dynamic_context,
+                             ValueNone{}, std::move(children))};
   }
-
-  // TODO: Should this be LogicalWhenType? If so, we can avoid evaluating
-  // every unrolled property against non-object instances
-  return {make<LogicalAnd>(context, schema_context, dynamic_context,
-                           ValueNone{}, std::move(children))};
 }
 
 auto compiler_draft4_applicator_properties(
@@ -910,6 +914,14 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
   // variants), we don't need to do anything
   if (!track_evaluation && children.empty()) {
     return {};
+  }
+
+  if (context.mode == Mode::FastValidation && children.size() == 1 &&
+      std::holds_alternative<AssertionFail>(children.front()) &&
+      !filter_strings.empty() && filter_prefixes.empty() &&
+      filter_regexes.empty()) {
+    return {make<LoopPropertiesWhitelist>(
+        context, schema_context, dynamic_context, std::move(filter_strings))};
   }
 
   if (!filter_strings.empty() || !filter_prefixes.empty() ||
