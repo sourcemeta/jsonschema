@@ -27,8 +27,11 @@ EOF
 cat << EOF > "$TMP/expected.txt"
 -> (push) "/properties/foo/type"
    at "/foo"
+   at keyword location "#/properties/foo/type"
+
 <- (pass) "/properties/foo/type"
    at "/foo"
+   at keyword location "#/properties/foo/type"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

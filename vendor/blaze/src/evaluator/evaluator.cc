@@ -767,8 +767,13 @@ auto evaluate_step(const sourcemeta::blaze::Template::value_type &step,
 
     case IS_STEP(ControlGroupWhenDefines): {
       EVALUATE_BEGIN_PASS_THROUGH(control, ControlGroupWhenDefines);
-      const auto &target{context.resolve_target()};
       assert(!control.children.empty());
+
+      // TODO: This is needed for nested `properties`, but can have a
+      // performance impact. Maybe we can be smarter about when we
+      // do this traversal?
+      const auto &target{
+          get(context.resolve_target(), control.relative_instance_location)};
 
       if (target.is_object() && target.defines(control.value)) {
         for (const auto &child : control.children) {
