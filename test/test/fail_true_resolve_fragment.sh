@@ -40,7 +40,7 @@ $(realpath "$TMP")/test.json:
   1/1 FAIL Fail
 
 error: Schema validation failure
-  The value was expected to be of type string but it was of type object
+  The value was expected to be of type string but it was of type integer
     at instance location ""
     at evaluate path "/type"
 EOF
