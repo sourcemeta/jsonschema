@@ -32,6 +32,9 @@ auto for_each_json(const std::vector<std::string> &arguments,
 auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
     -> void;
 
+auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
+    -> void;
+
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote = false)
     -> sourcemeta::jsontoolkit::SchemaResolver;

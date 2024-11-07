@@ -7,7 +7,7 @@ Metaschema
 ```sh
 jsonschema metaschema [schemas-or-directories...]
   [--verbose/-v] [--http/-h] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>]
+  [--ignore/-i <schemas-or-directories>] [--trace/-t]
 ```
 
 Ensure that a schema or a set of schemas are considered valid with regards to
@@ -75,4 +75,10 @@ jsonschema metaschema path/to/schemas/ --ignore path/to/schemas/nested
 
 ```sh
 jsonschema metaschema --extension .schema.json
+```
+
+### Validate the metaschema of a JSON Schema with trace information
+
+```sh
+jsonschema metaschema path/to/my/schema.json --trace
 ```

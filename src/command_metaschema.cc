@@ -16,7 +16,8 @@
 // TODO: Add a flag to emit output using the standard JSON Schema output format
 auto sourcemeta::jsonschema::cli::metaschema(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http"})};
+  const auto options{parse_options(arguments, {"h", "http", "t", "trace"})};
+  const auto trace{options.contains("t") || options.contains("trace")};
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
   bool result{true};
@@ -44,18 +45,25 @@ auto sourcemeta::jsonschema::cli::metaschema(
       cache.insert({dialect.value(), metaschema_template});
     }
 
-    sourcemeta::blaze::ErrorOutput output{entry.second};
-    if (sourcemeta::blaze::evaluate(cache.at(dialect.value()), entry.second,
-                                    std::ref(output))) {
-      log_verbose(options)
-          << "ok: " << std::filesystem::weakly_canonical(entry.first).string()
-          << "\n  matches " << dialect.value() << "\n";
+    if (trace) {
+      sourcemeta::blaze::TraceOutput output;
+      result = sourcemeta::blaze::evaluate(cache.at(dialect.value()),
+                                           entry.second, std::ref(output));
+      print(output, std::cout);
     } else {
-      std::cerr << "fail: "
-                << std::filesystem::weakly_canonical(entry.first).string()
-                << "\n";
-      print(output, std::cerr);
-      result = false;
+      sourcemeta::blaze::ErrorOutput output{entry.second};
+      if (sourcemeta::blaze::evaluate(cache.at(dialect.value()), entry.second,
+                                      std::ref(output))) {
+        log_verbose(options)
+            << "ok: " << std::filesystem::weakly_canonical(entry.first).string()
+            << "\n  matches " << dialect.value() << "\n";
+      } else {
+        std::cerr << "fail: "
+                  << std::filesystem::weakly_canonical(entry.first).string()
+                  << "\n";
+        print(output, std::cerr);
+        result = false;
+      }
     }
   }
 
