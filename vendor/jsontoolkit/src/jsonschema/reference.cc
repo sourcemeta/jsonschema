@@ -139,7 +139,9 @@ auto sourcemeta::jsontoolkit::frame(
 
   const std::optional<std::string> root_base_dialect{
       sourcemeta::jsontoolkit::base_dialect(schema, resolver, default_dialect)};
-  assert(root_base_dialect.has_value());
+  if (!root_base_dialect.has_value()) {
+    throw SchemaError("Cannot determine the base dialect of the schema");
+  }
 
   const std::optional<std::string> root_id{sourcemeta::jsontoolkit::identify(
       schema, root_base_dialect.value(), default_id)};

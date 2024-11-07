@@ -79,6 +79,7 @@ add_jsonschema_test_unix(metaschema/pass_single)
 add_jsonschema_test_unix(metaschema/pass_2020_12)
 
 # Test
+add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
 add_jsonschema_test_unix(test/fail_additional_properties)
 add_jsonschema_test_unix(test/fail_true_single_resolve)
 add_jsonschema_test_unix(test/fail_true_single_resolve_verbose)
