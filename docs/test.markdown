@@ -46,7 +46,7 @@ To create a test definition, you must write JSON documents that look like this:
       "description": "Load from an external file, relative to the test",
       "valid": true,
       "dataPath": "../my-data.json"
-    },
+    }
   ]
 }
 ```
