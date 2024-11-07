@@ -191,7 +191,9 @@ auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
 
 auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void {
-  for (const auto &entry : output) {
+  for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
+    const auto &entry{*iterator};
+
     if (entry.evaluate_path.empty()) {
       continue;
     }
@@ -217,6 +219,12 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     stream << "   at \"";
     sourcemeta::jsontoolkit::stringify(entry.instance_location, stream);
     stream << "\"\n";
+    stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
+
+    // To make it easier to read
+    if (std::next(iterator) != output.cend()) {
+      stream << "\n";
+    }
   }
 }
 

@@ -758,16 +758,7 @@ auto compiler_draft4_applicator_properties_with_options(
         }
       }
 
-      if (imports_validation_vocabulary &&
-          schema_context.schema.defines("type") &&
-          schema_context.schema.at("type").is_string() &&
-          schema_context.schema.at("type").to_string() == "object" &&
-          required.contains(name)) {
-        // We can avoid the container too and just inline these steps
-        for (auto &&substep : substeps) {
-          children.push_back(std::move(substep));
-        }
-      } else if (!substeps.empty()) {
+      if (!substeps.empty()) {
         children.push_back(make<ControlGroupWhenDefines>(
             context, schema_context, effective_dynamic_context,
             ValueString{name}, std::move(substeps)));

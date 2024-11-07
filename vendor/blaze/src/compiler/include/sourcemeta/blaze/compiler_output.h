@@ -149,6 +149,7 @@ private:
 //      }
 ///
 ///     std::cerr << entry.name << "\n";
+///     std::cerr << entry.keyword_location << "\n";
 ///     sourcemeta::jsontoolkit::stringify(entry.instance_location, std::cerr);
 ///     std::cerr << "\n";
 ///     sourcemeta::jsontoolkit::stringify(entry.evaluate_path, std::cerr);
@@ -172,6 +173,7 @@ public:
     const std::string name;
     const sourcemeta::jsontoolkit::WeakPointer instance_location;
     const sourcemeta::jsontoolkit::WeakPointer evaluate_path;
+    const std::string keyword_location;
   };
 
   auto operator()(const EvaluationType type, const bool result,
