@@ -162,10 +162,9 @@ Coming Soon
 This project is under heavy development, and we have a lot of cool things in
 the oven. In the mean-time, star the project to show your support!
 
-| Feature               | Description                                                                        | Status      |
-|-----------------------|------------------------------------------------------------------------------------|-------------|
-| Debugging             | Validate a JSON instance against a JSON Schema step by step, like LLDB and GDB     | Not started |
-| Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect                                | Not started |
+| Feature               | Description                                         | Status      |
+|-----------------------|-----------------------------------------------------|-------------|
+| Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect | Not started |
 
 License
 -------
