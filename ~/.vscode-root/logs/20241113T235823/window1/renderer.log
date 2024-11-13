@@ -1,0 +1,53 @@
+2024-11-13 23:58:26.985 [info] Started local extension host with pid 159604.
+2024-11-13 23:58:27.036 [info] Started initializing default profile extensions in extensions installation folder. file:///root/.vscode/extensions
+2024-11-13 23:58:27.405 [info] Completed initializing default profile extensions in extensions installation folder. file:///root/.vscode/extensions
+2024-11-13 23:58:28.026 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.027 [info] Settings Sync: Authentication providers updated []
+2024-11-13 23:58:28.082 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.082 [info] Settings Sync: Authentication providers updated ["github"]
+2024-11-13 23:58:28.082 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.083 [info] Settings Sync: Authentication providers updated ["github"]
+2024-11-13 23:58:28.083 [info] Settings Sync: Updating due to declared authentication providers changed
+2024-11-13 23:58:28.083 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.084 [info] Settings Sync: Authentication providers updated ["github"]
+2024-11-13 23:58:28.084 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.084 [info] Settings Sync: Authentication providers updated ["github","microsoft"]
+2024-11-13 23:58:28.084 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.085 [info] Settings Sync: Authentication providers updated ["github","microsoft"]
+2024-11-13 23:58:28.085 [info] Settings Sync: Updating due to declared authentication providers changed
+2024-11-13 23:58:28.085 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:28.085 [info] Settings Sync: Authentication providers updated ["github","microsoft"]
+2024-11-13 23:58:30.229 [info] [perf] Render performance baseline is 44ms
+2024-11-13 23:58:32.951 [info] Settings Sync: Updating authentication providers. Authentication Providers from store: [{"id":"github","scopes":["user:email"]},{"id":"microsoft","scopes":["openid","profile","email","offline_access"]}]
+2024-11-13 23:58:32.954 [info] Settings Sync: Authentication providers updated ["github","microsoft"]
+2024-11-13 23:59:00.463 [error] [network] #7: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Canceled
+2024-11-13 23:59:00.464 [error] [network] #6: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Canceled
+2024-11-13 23:59:12.724 [error] Unknown: Unknown error while installing extension ms-vscode.cmake-tools
+    at Jl.installFromGallery (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:8299)
+2024-11-13 23:59:12.737 [error] Unknown error while installing extension ms-vscode.cmake-tools: Unknown: Unknown error while installing extension ms-vscode.cmake-tools
+    at Jl.installFromGallery (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:8299)
+2024-11-13 23:59:13.324 [warning] [twxs.cmake]: Cannot register 'cmake.cmakePath'. This property is already registered.
+2024-11-14 00:02:12.149 [error] [network] #19: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Failed to fetch
+2024-11-14 00:02:12.153 [error] Failed: Failed to fetch
+    at n9e.E (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:39700)
+    at async n9e.C (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:36761)
+    at async n9e.C (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:37621)
+    at async o (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:35726)
+    at async n9e.query (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:36012)
+    at async kQe.queryGallery (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2433:14295)
+    at async DEs.Kc (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:21504)
+    at async DEs.uc (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:13731)
+    at async vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:12171
+2024-11-14 00:02:15.778 [error] [network] #20: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Canceled
+2024-11-14 00:02:18.641 [error] [network] #22: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Failed to fetch
+2024-11-14 00:02:18.643 [error] Failed: Failed to fetch
+    at n9e.E (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:39700)
+    at async n9e.C (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:36761)
+    at async n9e.C (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:37621)
+    at async o (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:35726)
+    at async n9e.query (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:1314:36012)
+    at async kQe.queryGallery (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2433:14295)
+    at async DEs.Kc (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:21504)
+    at async DEs.uc (vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:13731)
+    at async vscode-file://vscode-app/usr/share/code/resources/app/out/vs/workbench/workbench.desktop.main.js:2225:12171
+2024-11-14 00:02:54.620 [error] [network] #28: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery - error POST Canceled

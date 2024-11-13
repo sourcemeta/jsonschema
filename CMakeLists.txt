@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(jsonschema VERSION 4.3.0 LANGUAGES CXX)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(vendor/noa/cmake/noa.cmake)
+include_directories(vendor/termcolor/include)
 
 # Options
 option(JSONSCHEMA_TESTS "Build the JSON Schema CLI tests" OFF)

@@ -1,0 +1,41 @@
+2024-11-13 23:59:02.104 [info] Getting Manifest... ms-vscode.cmake-tools
+2024-11-13 23:59:02.215 [info] Getting Manifest... ms-vscode.cmake-tools
+2024-11-13 23:59:02.925 [info] Installing extension: ms-vscode.cmake-tools {"isMachineScoped":false,"profileLocation":{"$mid":1,"external":"vscode-userdata:/root/.vscode/extensions/extensions.json","path":"/root/.vscode/extensions/extensions.json","scheme":"vscode-userdata"},"installOnlyNewlyAddedFromExtensionPack":true,"isApplicationScoped":false,"productVersion":{"version":"1.95.2","date":"2024-11-07T11:07:22.054Z"}}
+2024-11-13 23:59:02.933 [info] Extension is already requested to install ms-vscode.cmake-tools vscode-userdata:/root/.vscode/extensions/extensions.json
+2024-11-13 23:59:03.793 [info] Getting Manifest... twxs.cmake
+2024-11-13 23:59:04.096 [info] Installing extension: twxs.cmake {"isMachineScoped":false,"profileLocation":{"$mid":1,"external":"vscode-userdata:/root/.vscode/extensions/extensions.json","path":"/root/.vscode/extensions/extensions.json","scheme":"vscode-userdata"},"installOnlyNewlyAddedFromExtensionPack":true,"isApplicationScoped":false,"productVersion":{"version":"1.95.2","date":"2024-11-07T11:07:22.054Z"},"context":{"dependecyOrPackExtensionInstall":true}}
+2024-11-13 23:59:12.424 [info] Extension signature verification result for ms-vscode.cmake-tools: Success. Executed: true. Duration: 3225ms.
+2024-11-13 23:59:12.688 [info] Extracted extension to file:///root/.vscode/extensions/ms-vscode.cmake-tools-1.19.52: ms-vscode.cmake-tools
+2024-11-13 23:59:12.696 [info] Renamed to /root/.vscode/extensions/ms-vscode.cmake-tools-1.19.52
+2024-11-13 23:59:12.796 [error] [uncaught exception in sharedProcess]: Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp': EntryNotFound (FileSystemError): Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp'
+    at hm.create (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39254)
+    at Es (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39361)
+    at Fr.ib (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:22677)
+    at Fr.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:16010)
+    at async Zl.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:84491)
+    at async Jl.yb (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:66605)
+2024-11-13 23:59:13.129 [info] Extension signature verification result for twxs.cmake: Success. Executed: true. Duration: 3027ms.
+2024-11-13 23:59:13.281 [info] Extracted extension to file:///root/.vscode/extensions/twxs.cmake-0.0.17: twxs.cmake
+2024-11-13 23:59:13.284 [info] Renamed to /root/.vscode/extensions/twxs.cmake-0.0.17
+2024-11-13 23:59:13.299 [info] Extension installed successfully: ms-vscode.cmake-tools vscode-userdata:/root/.vscode/extensions/extensions.json
+2024-11-13 23:59:13.300 [info] Extension installed successfully: twxs.cmake vscode-userdata:/root/.vscode/extensions/extensions.json
+2024-11-13 23:59:13.312 [error] [uncaught exception in sharedProcess]: Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp': EntryNotFound (FileSystemError): Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp'
+    at hm.create (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39254)
+    at Es (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39361)
+    at Fr.ib (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:22677)
+    at Fr.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:16010)
+    at async Zl.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:84491)
+    at async Jl.yb (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:66605)
+2024-11-14 00:03:00.268 [info] Getting Manifest... seaube.clangformat
+2024-11-14 00:03:01.078 [info] Installing extension: seaube.clangformat {"isMachineScoped":false,"installPreReleaseVersion":false,"pinned":false,"profileLocation":{"$mid":1,"external":"vscode-userdata:/root/.vscode/extensions/extensions.json","path":"/root/.vscode/extensions/extensions.json","scheme":"vscode-userdata"},"installOnlyNewlyAddedFromExtensionPack":true,"isApplicationScoped":false,"productVersion":{"version":"1.95.2","date":"2024-11-07T11:07:22.054Z"}}
+2024-11-14 00:03:05.509 [info] Extension signature verification result for seaube.clangformat: Success. Executed: true. Duration: 1462ms.
+2024-11-14 00:03:05.527 [info] Extracted extension to file:///root/.vscode/extensions/seaube.clangformat-2.0.2: seaube.clangformat
+2024-11-14 00:03:05.540 [info] Renamed to /root/.vscode/extensions/seaube.clangformat-2.0.2
+2024-11-14 00:03:05.559 [info] Extension installed successfully: seaube.clangformat vscode-userdata:/root/.vscode/extensions/extensions.json
+2024-11-14 00:03:05.624 [error] [uncaught exception in sharedProcess]: Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp': EntryNotFound (FileSystemError): Error: ENOENT: no such file or directory, stat '/root/.vscode/extensions/extensions.json.vsctmp'
+    at hm.create (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39254)
+    at Es (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:35:39361)
+    at Fr.ib (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:22677)
+    at Fr.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:71:16010)
+    at async Zl.stat (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:84491)
+    at async Jl.yb (file:///usr/share/code/resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js:70:66605)

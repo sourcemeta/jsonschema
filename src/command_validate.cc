@@ -105,8 +105,7 @@ auto sourcemeta::jsonschema::cli::validate(
             log_verbose(options)
                 << "ok: "
                 << std::filesystem::weakly_canonical(instance_path).string()
-                << " (entry #" << index << ")"
-                << "\n  matches "
+                << " (entry #" << index << ")" << "\n  matches "
                 << std::filesystem::weakly_canonical(schema_path).string()
                 << "\n";
           } else {

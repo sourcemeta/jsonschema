@@ -1,0 +1,60 @@
+[proc] Executing command: /usr/bin/cmake --version
+[proc] Executing command: /usr/bin/cmake -E capabilities
+[variant] Loaded new set of variants
+[kit] Detected kits definition version change from undefined to 2. Silently scanning for kits.
+[proc] Executing command: /bin/c89-gcc -v
+[proc] Executing command: /bin/c99-gcc -v
+[proc] Executing command: /bin/gcc -v
+[proc] Executing command: /bin/gcc-13 -v
+[proc] Executing command: /bin/x86_64-linux-gnu-gcc -v
+[proc] Executing command: /bin/x86_64-linux-gnu-gcc-13 -v
+[proc] Executing command: /usr/bin/c89-gcc -v
+[proc] Executing command: /usr/bin/c99-gcc -v
+[proc] Executing command: /usr/bin/gcc -v
+[proc] Executing command: /usr/bin/gcc-13 -v
+[proc] Executing command: /usr/bin/x86_64-linux-gnu-gcc -v
+[proc] Executing command: /usr/bin/x86_64-linux-gnu-gcc-13 -v
+[proc] Executing command: /usr/bin/c99-gcc -v
+[proc] Executing command: /usr/bin/c89-gcc -v
+[proc] Executing command: /bin/c99-gcc -v
+[proc] Executing command: /bin/c89-gcc -v
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[proc] Executing command: /usr/bin/c89-gcc -v
+[proc] Executing command: /usr/bin/c99-gcc -v
+[proc] Executing command: /usr/bin/gcc -v
+[proc] Executing command: /usr/bin/gcc-13 -v
+[proc] Executing command: /usr/bin/x86_64-linux-gnu-gcc -v
+[proc] Executing command: /usr/bin/x86_64-linux-gnu-gcc-13 -v
+[proc] Executing command: /bin/c89-gcc -v
+[proc] Executing command: /bin/c99-gcc -v
+[proc] Executing command: /bin/gcc -v
+[proc] Executing command: /bin/gcc-13 -v
+[proc] Executing command: /bin/x86_64-linux-gnu-gcc -v
+[proc] Executing command: /bin/x86_64-linux-gnu-gcc-13 -v
+[proc] Executing command: /bin/c99-gcc -v
+[proc] Executing command: /bin/c89-gcc -v
+[proc] Executing command: /usr/bin/c99-gcc -v
+[proc] Executing command: /usr/bin/c89-gcc -v
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
+[kit] Found Kit (trusted): GCC 13.2.0 x86_64-linux-gnu
