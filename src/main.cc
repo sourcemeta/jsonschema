@@ -8,9 +8,16 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
+#ifdef _WIN32
+#include <io.h>
+#define isatty _isatty
+#else
+#include <unistd.h>
+#endif
 
 #include "command.h"
 #include "configure.h"
+#include <termcolor/termcolor.hpp>
 
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
@@ -88,6 +95,14 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
+  bool use_colors = true;
+
+  if (std::find(arguments.begin(), arguments.end(), "--no-color") !=
+      arguments.end()) {
+    use_colors = false;
+  } else if (!isatty(fileno(stdout))) {
+    use_colors = false;
+  }
   if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
   } else if (command == "frame") {
@@ -117,7 +132,12 @@ auto jsonschema_main(const std::string &program, const std::string &command,
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
-    std::cout << USAGE_DETAILS;
+    if (use_colors) {
+      std::cout << termcolor::yellow << USAGE_DETAILS << termcolor::reset
+                << "\n";
+    } else {
+      std::cout << USAGE_DETAILS << "\n";
+    }
     return EXIT_SUCCESS;
   }
 }

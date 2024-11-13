@@ -8,9 +8,8 @@
 #include "command.h"
 #include "utils.h"
 
-static auto
-enum_to_string(const sourcemeta::jsontoolkit::ReferenceEntryType type)
-    -> std::string {
+static auto enum_to_string(
+    const sourcemeta::jsontoolkit::ReferenceEntryType type) -> std::string {
   switch (type) {
     case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
       return "resource";
