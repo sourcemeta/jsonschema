@@ -5,10 +5,10 @@
 #include <sourcemeta/jsontoolkit/uri_export.h>
 #endif
 
-#include <cstdint>   // std::uint64_t
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::string
+#include <cstdint>    // std::uint64_t
+#include <exception>  // std::exception
+#include <string>     // std::string
+#include <utility>    // std::string
 
 namespace sourcemeta::jsontoolkit {
 
@@ -22,10 +22,10 @@ namespace sourcemeta::jsontoolkit {
 /// @ingroup uri
 /// An error that represents a URI parsing failure
 class SOURCEMETA_JSONTOOLKIT_URI_EXPORT URIParseError : public std::exception {
-public:
+ public:
   URIParseError(const std::uint64_t column) : column_{column} {}
 
-  [[nodiscard]] auto what() const noexcept -> const char * override {
+  [[nodiscard]] auto what() const noexcept -> const char* override {
     return "The input is not a valid URI";
   }
 
@@ -34,20 +34,20 @@ public:
     return column_;
   }
 
-private:
+ private:
   std::uint64_t column_;
 };
 
 /// @ingroup uri
 /// An error that represents a general URI error event
 class SOURCEMETA_JSONTOOLKIT_URI_EXPORT URIError : public std::exception {
-public:
+ public:
   URIError(std::string message) : message_{std::move(message)} {}
-  [[nodiscard]] auto what() const noexcept -> const char * override {
+  [[nodiscard]] auto what() const noexcept -> const char* override {
     return this->message_.c_str();
   }
 
-private:
+ private:
   std::string message_;
 };
 
@@ -55,6 +55,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

@@ -1,20 +1,21 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSON_OBJECT_H_
 #define SOURCEMETA_JSONTOOLKIT_JSON_OBJECT_H_
 
-#include <functional>       // std::equal_to, std::less
-#include <initializer_list> // std::initializer_list
+#include <functional>        // std::equal_to, std::less
+#include <initializer_list>  // std::initializer_list
 
 #if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 12)
-#include <map> // std::map
+#include <map>  // std::map
 #else
-#include <unordered_map> // std::unordered_map
+#include <unordered_map>  // std::unordered_map
 #endif
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup json
-template <typename Key, typename Value> class JSONObject {
-public:
+template <typename Key, typename Value>
+class JSONObject {
+ public:
   // Constructors
 
   // Older versions of GCC don't allow `std::unordered_map` to incomplete
@@ -99,7 +100,7 @@ public:
   /// Get a constant end iterator on the object
   auto cend() const noexcept -> const_iterator { return this->data.cend(); }
 
-private:
+ private:
   friend Value;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -113,6 +114,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

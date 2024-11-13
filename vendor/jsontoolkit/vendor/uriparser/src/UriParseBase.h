@@ -40,16 +40,10 @@
 #ifndef URI_PARSE_BASE_H
 #define URI_PARSE_BASE_H 1
 
-
-
 #include <uriparser/UriBase.h>
 
-
-
-void uriWriteQuadToDoubleByte(const unsigned char * hexDigits, int digitCount,
-		unsigned char * output);
-unsigned char uriGetOctetValue(const unsigned char * digits, int digitCount);
-
-
+void uriWriteQuadToDoubleByte(const unsigned char* hexDigits, int digitCount,
+                              unsigned char* output);
+unsigned char uriGetOctetValue(const unsigned char* digits, int digitCount);
 
 #endif /* URI_PARSE_BASE_H */

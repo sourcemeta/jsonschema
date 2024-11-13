@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -109,7 +109,7 @@ extern "C" {
  *   - The multipliers (integers) MUST be lower than the subgroup order.
  *     If this property is not met, then the result is indeterminate,
  *     but an error value is not ncessearily returned.
- * 
+ *
  *
  * ## ECDSA
  *
@@ -146,105 +146,105 @@ extern "C" {
  */
 
 /** \brief Identifier for named curve sect163k1. */
-#define BR_EC_sect163k1           1
+#define BR_EC_sect163k1 1
 
 /** \brief Identifier for named curve sect163r1. */
-#define BR_EC_sect163r1           2
+#define BR_EC_sect163r1 2
 
 /** \brief Identifier for named curve sect163r2. */
-#define BR_EC_sect163r2           3
+#define BR_EC_sect163r2 3
 
 /** \brief Identifier for named curve sect193r1. */
-#define BR_EC_sect193r1           4
+#define BR_EC_sect193r1 4
 
 /** \brief Identifier for named curve sect193r2. */
-#define BR_EC_sect193r2           5
+#define BR_EC_sect193r2 5
 
 /** \brief Identifier for named curve sect233k1. */
-#define BR_EC_sect233k1           6
+#define BR_EC_sect233k1 6
 
 /** \brief Identifier for named curve sect233r1. */
-#define BR_EC_sect233r1           7
+#define BR_EC_sect233r1 7
 
 /** \brief Identifier for named curve sect239k1. */
-#define BR_EC_sect239k1           8
+#define BR_EC_sect239k1 8
 
 /** \brief Identifier for named curve sect283k1. */
-#define BR_EC_sect283k1           9
+#define BR_EC_sect283k1 9
 
 /** \brief Identifier for named curve sect283r1. */
-#define BR_EC_sect283r1          10
+#define BR_EC_sect283r1 10
 
 /** \brief Identifier for named curve sect409k1. */
-#define BR_EC_sect409k1          11
+#define BR_EC_sect409k1 11
 
 /** \brief Identifier for named curve sect409r1. */
-#define BR_EC_sect409r1          12
+#define BR_EC_sect409r1 12
 
 /** \brief Identifier for named curve sect571k1. */
-#define BR_EC_sect571k1          13
+#define BR_EC_sect571k1 13
 
 /** \brief Identifier for named curve sect571r1. */
-#define BR_EC_sect571r1          14
+#define BR_EC_sect571r1 14
 
 /** \brief Identifier for named curve secp160k1. */
-#define BR_EC_secp160k1          15
+#define BR_EC_secp160k1 15
 
 /** \brief Identifier for named curve secp160r1. */
-#define BR_EC_secp160r1          16
+#define BR_EC_secp160r1 16
 
 /** \brief Identifier for named curve secp160r2. */
-#define BR_EC_secp160r2          17
+#define BR_EC_secp160r2 17
 
 /** \brief Identifier for named curve secp192k1. */
-#define BR_EC_secp192k1          18
+#define BR_EC_secp192k1 18
 
 /** \brief Identifier for named curve secp192r1. */
-#define BR_EC_secp192r1          19
+#define BR_EC_secp192r1 19
 
 /** \brief Identifier for named curve secp224k1. */
-#define BR_EC_secp224k1          20
+#define BR_EC_secp224k1 20
 
 /** \brief Identifier for named curve secp224r1. */
-#define BR_EC_secp224r1          21
+#define BR_EC_secp224r1 21
 
 /** \brief Identifier for named curve secp256k1. */
-#define BR_EC_secp256k1          22
+#define BR_EC_secp256k1 22
 
 /** \brief Identifier for named curve secp256r1. */
-#define BR_EC_secp256r1          23
+#define BR_EC_secp256r1 23
 
 /** \brief Identifier for named curve secp384r1. */
-#define BR_EC_secp384r1          24
+#define BR_EC_secp384r1 24
 
 /** \brief Identifier for named curve secp521r1. */
-#define BR_EC_secp521r1          25
+#define BR_EC_secp521r1 25
 
 /** \brief Identifier for named curve brainpoolP256r1. */
-#define BR_EC_brainpoolP256r1    26
+#define BR_EC_brainpoolP256r1 26
 
 /** \brief Identifier for named curve brainpoolP384r1. */
-#define BR_EC_brainpoolP384r1    27
+#define BR_EC_brainpoolP384r1 27
 
 /** \brief Identifier for named curve brainpoolP512r1. */
-#define BR_EC_brainpoolP512r1    28
+#define BR_EC_brainpoolP512r1 28
 
 /** \brief Identifier for named curve Curve25519. */
-#define BR_EC_curve25519         29
+#define BR_EC_curve25519 29
 
 /** \brief Identifier for named curve Curve448. */
-#define BR_EC_curve448           30
+#define BR_EC_curve448 30
 
 /**
  * \brief Structure for an EC public key.
  */
 typedef struct {
-	/** \brief Identifier for the curve used by this key. */
-	int curve;
-	/** \brief Public curve point (uncompressed format). */
-	unsigned char *q;
-	/** \brief Length of public curve point (in bytes). */
-	size_t qlen;
+  /** \brief Identifier for the curve used by this key. */
+  int curve;
+  /** \brief Public curve point (uncompressed format). */
+  unsigned char *q;
+  /** \brief Length of public curve point (in bytes). */
+  size_t qlen;
 } br_ec_public_key;
 
 /**
@@ -256,162 +256,162 @@ typedef struct {
  * subgroup order.
  */
 typedef struct {
-	/** \brief Identifier for the curve used by this key. */
-	int curve;
-	/** \brief Private key (integer, unsigned big-endian encoding). */
-	unsigned char *x;
-	/** \brief Private key length (in bytes). */
-	size_t xlen;
+  /** \brief Identifier for the curve used by this key. */
+  int curve;
+  /** \brief Private key (integer, unsigned big-endian encoding). */
+  unsigned char *x;
+  /** \brief Private key length (in bytes). */
+  size_t xlen;
 } br_ec_private_key;
 
 /**
  * \brief Type for an EC implementation.
  */
 typedef struct {
-	/**
-	 * \brief Supported curves.
-	 *
-	 * This word is a bitfield: bit `x` is set if the curve of ID `x`
-	 * is supported. E.g. an implementation supporting both NIST P-256
-	 * (secp256r1, ID 23) and NIST P-384 (secp384r1, ID 24) will have
-	 * value `0x01800000` in this field.
-	 */
-	uint32_t supported_curves;
+  /**
+   * \brief Supported curves.
+   *
+   * This word is a bitfield: bit `x` is set if the curve of ID `x`
+   * is supported. E.g. an implementation supporting both NIST P-256
+   * (secp256r1, ID 23) and NIST P-384 (secp384r1, ID 24) will have
+   * value `0x01800000` in this field.
+   */
+  uint32_t supported_curves;
 
-	/**
-	 * \brief Get the conventional generator.
-	 *
-	 * This function returns the conventional generator (encoded
-	 * curve point) for the specified curve. This function MUST NOT
-	 * be called if the curve is not supported.
-	 *
-	 * \param curve   curve identifier.
-	 * \param len     receiver for the encoded generator length (in bytes).
-	 * \return  the encoded generator.
-	 */
-	const unsigned char *(*generator)(int curve, size_t *len);
+  /**
+   * \brief Get the conventional generator.
+   *
+   * This function returns the conventional generator (encoded
+   * curve point) for the specified curve. This function MUST NOT
+   * be called if the curve is not supported.
+   *
+   * \param curve   curve identifier.
+   * \param len     receiver for the encoded generator length (in bytes).
+   * \return  the encoded generator.
+   */
+  const unsigned char *(*generator)(int curve, size_t *len);
 
-	/**
-	 * \brief Get the subgroup order.
-	 *
-	 * This function returns the order of the subgroup generated by
-	 * the conventional generator, for the specified curve. Unsigned
-	 * big-endian encoding is used. This function MUST NOT be called
-	 * if the curve is not supported.
-	 *
-	 * \param curve   curve identifier.
-	 * \param len     receiver for the encoded order length (in bytes).
-	 * \return  the encoded order.
-	 */
-	const unsigned char *(*order)(int curve, size_t *len);
+  /**
+   * \brief Get the subgroup order.
+   *
+   * This function returns the order of the subgroup generated by
+   * the conventional generator, for the specified curve. Unsigned
+   * big-endian encoding is used. This function MUST NOT be called
+   * if the curve is not supported.
+   *
+   * \param curve   curve identifier.
+   * \param len     receiver for the encoded order length (in bytes).
+   * \return  the encoded order.
+   */
+  const unsigned char *(*order)(int curve, size_t *len);
 
-	/**
-	 * \brief Get the offset and length for the X coordinate.
-	 *
-	 * This function returns the offset and length (in bytes) of
-	 * the X coordinate in an encoded non-zero point.
-	 *
-	 * \param curve   curve identifier.
-	 * \param len     receiver for the X coordinate length (in bytes).
-	 * \return  the offset for the X coordinate (in bytes).
-	 */
-	size_t (*xoff)(int curve, size_t *len);
+  /**
+   * \brief Get the offset and length for the X coordinate.
+   *
+   * This function returns the offset and length (in bytes) of
+   * the X coordinate in an encoded non-zero point.
+   *
+   * \param curve   curve identifier.
+   * \param len     receiver for the X coordinate length (in bytes).
+   * \return  the offset for the X coordinate (in bytes).
+   */
+  size_t (*xoff)(int curve, size_t *len);
 
-	/**
-	 * \brief Multiply a curve point by an integer.
-	 *
-	 * The source point is provided in array `G` (of size `Glen` bytes);
-	 * the multiplication result is written over it. The multiplier
-	 * `x` (of size `xlen` bytes) uses unsigned big-endian encoding.
-	 *
-	 * Rules:
-	 *
-	 *   - The specified curve MUST be supported.
-	 *
-	 *   - The source point must be a valid point on the relevant curve
-	 *     subgroup (and not the "point at infinity" either). If this is
-	 *     not the case, then this function returns an error (0).
-	 *
-	 *   - The multiplier integer MUST be non-zero and less than the
-	 *     curve subgroup order. If this property does not hold, then
-	 *     the result is indeterminate and an error code is not
-	 *     guaranteed.
-	 *
-	 * Returned value is 1 on success, 0 on error. On error, the
-	 * contents of `G` are indeterminate.
-	 *
-	 * \param G       point to multiply.
-	 * \param Glen    length of the encoded point (in bytes).
-	 * \param x       multiplier (unsigned big-endian).
-	 * \param xlen    multiplier length (in bytes).
-	 * \param curve   curve identifier.
-	 * \return  1 on success, 0 on error.
-	 */
-	uint32_t (*mul)(unsigned char *G, size_t Glen,
-		const unsigned char *x, size_t xlen, int curve);
+  /**
+   * \brief Multiply a curve point by an integer.
+   *
+   * The source point is provided in array `G` (of size `Glen` bytes);
+   * the multiplication result is written over it. The multiplier
+   * `x` (of size `xlen` bytes) uses unsigned big-endian encoding.
+   *
+   * Rules:
+   *
+   *   - The specified curve MUST be supported.
+   *
+   *   - The source point must be a valid point on the relevant curve
+   *     subgroup (and not the "point at infinity" either). If this is
+   *     not the case, then this function returns an error (0).
+   *
+   *   - The multiplier integer MUST be non-zero and less than the
+   *     curve subgroup order. If this property does not hold, then
+   *     the result is indeterminate and an error code is not
+   *     guaranteed.
+   *
+   * Returned value is 1 on success, 0 on error. On error, the
+   * contents of `G` are indeterminate.
+   *
+   * \param G       point to multiply.
+   * \param Glen    length of the encoded point (in bytes).
+   * \param x       multiplier (unsigned big-endian).
+   * \param xlen    multiplier length (in bytes).
+   * \param curve   curve identifier.
+   * \return  1 on success, 0 on error.
+   */
+  uint32_t (*mul)(unsigned char *G, size_t Glen, const unsigned char *x,
+                  size_t xlen, int curve);
 
-	/**
-	 * \brief Multiply the generator by an integer.
-	 *
-	 * The multiplier MUST be non-zero and less than the curve
-	 * subgroup order. Results are indeterminate if this property
-	 * does not hold.
-	 *
-	 * \param R       output buffer for the point.
-	 * \param x       multiplier (unsigned big-endian).
-	 * \param xlen    multiplier length (in bytes).
-	 * \param curve   curve identifier.
-	 * \return  encoded result point length (in bytes).
-	 */
-	size_t (*mulgen)(unsigned char *R,
-		const unsigned char *x, size_t xlen, int curve);
+  /**
+   * \brief Multiply the generator by an integer.
+   *
+   * The multiplier MUST be non-zero and less than the curve
+   * subgroup order. Results are indeterminate if this property
+   * does not hold.
+   *
+   * \param R       output buffer for the point.
+   * \param x       multiplier (unsigned big-endian).
+   * \param xlen    multiplier length (in bytes).
+   * \param curve   curve identifier.
+   * \return  encoded result point length (in bytes).
+   */
+  size_t (*mulgen)(unsigned char *R, const unsigned char *x, size_t xlen,
+                   int curve);
 
-	/**
-	 * \brief Multiply two points by two integers and add the
-	 * results.
-	 *
-	 * The point `x*A + y*B` is computed and written back in the `A`
-	 * array.
-	 *
-	 * Rules:
-	 *
-	 *   - The specified curve MUST be supported.
-	 *
-	 *   - The source points (`A` and `B`)  must be valid points on
-	 *     the relevant curve subgroup (and not the "point at
-	 *     infinity" either). If this is not the case, then this
-	 *     function returns an error (0).
-	 *
-	 *   - If the `B` pointer is `NULL`, then the conventional
-	 *     subgroup generator is used. With some implementations,
-	 *     this may be faster than providing a pointer to the
-	 *     generator.
-	 *
-	 *   - The multiplier integers (`x` and `y`) MUST be non-zero
-	 *     and less than the curve subgroup order. If either integer
-	 *     is zero, then an error is reported, but if one of them is
-	 *     not lower than the subgroup order, then the result is
-	 *     indeterminate and an error code is not guaranteed.
-	 *
-	 *   - If the final result is the point at infinity, then an
-	 *     error is returned.
-	 *
-	 * Returned value is 1 on success, 0 on error. On error, the
-	 * contents of `A` are indeterminate.
-	 *
-	 * \param A       first point to multiply.
-	 * \param B       second point to multiply (`NULL` for the generator).
-	 * \param len     common length of the encoded points (in bytes).
-	 * \param x       multiplier for `A` (unsigned big-endian).
-	 * \param xlen    length of multiplier for `A` (in bytes).
-	 * \param y       multiplier for `A` (unsigned big-endian).
-	 * \param ylen    length of multiplier for `A` (in bytes).
-	 * \param curve   curve identifier.
-	 * \return  1 on success, 0 on error.
-	 */
-	uint32_t (*muladd)(unsigned char *A, const unsigned char *B, size_t len,
-		const unsigned char *x, size_t xlen,
-		const unsigned char *y, size_t ylen, int curve);
+  /**
+   * \brief Multiply two points by two integers and add the
+   * results.
+   *
+   * The point `x*A + y*B` is computed and written back in the `A`
+   * array.
+   *
+   * Rules:
+   *
+   *   - The specified curve MUST be supported.
+   *
+   *   - The source points (`A` and `B`)  must be valid points on
+   *     the relevant curve subgroup (and not the "point at
+   *     infinity" either). If this is not the case, then this
+   *     function returns an error (0).
+   *
+   *   - If the `B` pointer is `NULL`, then the conventional
+   *     subgroup generator is used. With some implementations,
+   *     this may be faster than providing a pointer to the
+   *     generator.
+   *
+   *   - The multiplier integers (`x` and `y`) MUST be non-zero
+   *     and less than the curve subgroup order. If either integer
+   *     is zero, then an error is reported, but if one of them is
+   *     not lower than the subgroup order, then the result is
+   *     indeterminate and an error code is not guaranteed.
+   *
+   *   - If the final result is the point at infinity, then an
+   *     error is returned.
+   *
+   * Returned value is 1 on success, 0 on error. On error, the
+   * contents of `A` are indeterminate.
+   *
+   * \param A       first point to multiply.
+   * \param B       second point to multiply (`NULL` for the generator).
+   * \param len     common length of the encoded points (in bytes).
+   * \param x       multiplier for `A` (unsigned big-endian).
+   * \param xlen    length of multiplier for `A` (in bytes).
+   * \param y       multiplier for `A` (unsigned big-endian).
+   * \param ylen    length of multiplier for `A` (in bytes).
+   * \param curve   curve identifier.
+   * \return  1 on success, 0 on error.
+   */
+  uint32_t (*muladd)(unsigned char *A, const unsigned char *B, size_t len,
+                     const unsigned char *x, size_t xlen,
+                     const unsigned char *y, size_t ylen, int curve);
 } br_ec_impl;
 
 /**
@@ -597,9 +597,9 @@ size_t br_ecdsa_asn1_to_raw(void *sig, size_t sig_len);
  * \param sig          destination buffer.
  * \return  the signature length (in bytes), or 0 on error.
  */
-typedef size_t (*br_ecdsa_sign)(const br_ec_impl *impl,
-	const br_hash_class *hf, const void *hash_value,
-	const br_ec_private_key *sk, void *sig);
+typedef size_t (*br_ecdsa_sign)(const br_ec_impl *impl, const br_hash_class *hf,
+                                const void *hash_value,
+                                const br_ec_private_key *sk, void *sig);
 
 /**
  * \brief Type for an ECDSA signature verification function.
@@ -623,9 +623,9 @@ typedef size_t (*br_ecdsa_sign)(const br_ec_impl *impl,
  * \param sig_len    signature length (in bytes).
  * \return  1 on success, 0 on error.
  */
-typedef uint32_t (*br_ecdsa_vrfy)(const br_ec_impl *impl,
-	const void *hash, size_t hash_len,
-	const br_ec_public_key *pk, const void *sig, size_t sig_len);
+typedef uint32_t (*br_ecdsa_vrfy)(const br_ec_impl *impl, const void *hash,
+                                  size_t hash_len, const br_ec_public_key *pk,
+                                  const void *sig, size_t sig_len);
 
 /**
  * \brief ECDSA signature generator, "i31" implementation, "asn1" format.
@@ -639,9 +639,9 @@ typedef uint32_t (*br_ecdsa_vrfy)(const br_ec_impl *impl,
  * \param sig          destination buffer.
  * \return  the signature length (in bytes), or 0 on error.
  */
-size_t br_ecdsa_i31_sign_asn1(const br_ec_impl *impl,
-	const br_hash_class *hf, const void *hash_value,
-	const br_ec_private_key *sk, void *sig);
+size_t br_ecdsa_i31_sign_asn1(const br_ec_impl *impl, const br_hash_class *hf,
+                              const void *hash_value,
+                              const br_ec_private_key *sk, void *sig);
 
 /**
  * \brief ECDSA signature generator, "i31" implementation, "raw" format.
@@ -655,9 +655,9 @@ size_t br_ecdsa_i31_sign_asn1(const br_ec_impl *impl,
  * \param sig          destination buffer.
  * \return  the signature length (in bytes), or 0 on error.
  */
-size_t br_ecdsa_i31_sign_raw(const br_ec_impl *impl,
-	const br_hash_class *hf, const void *hash_value,
-	const br_ec_private_key *sk, void *sig);
+size_t br_ecdsa_i31_sign_raw(const br_ec_impl *impl, const br_hash_class *hf,
+                             const void *hash_value,
+                             const br_ec_private_key *sk, void *sig);
 
 /**
  * \brief ECDSA signature verifier, "i31" implementation, "asn1" format.
@@ -672,9 +672,9 @@ size_t br_ecdsa_i31_sign_raw(const br_ec_impl *impl,
  * \param sig_len    signature length (in bytes).
  * \return  1 on success, 0 on error.
  */
-uint32_t br_ecdsa_i31_vrfy_asn1(const br_ec_impl *impl,
-	const void *hash, size_t hash_len,
-	const br_ec_public_key *pk, const void *sig, size_t sig_len);
+uint32_t br_ecdsa_i31_vrfy_asn1(const br_ec_impl *impl, const void *hash,
+                                size_t hash_len, const br_ec_public_key *pk,
+                                const void *sig, size_t sig_len);
 
 /**
  * \brief ECDSA signature verifier, "i31" implementation, "raw" format.
@@ -689,9 +689,9 @@ uint32_t br_ecdsa_i31_vrfy_asn1(const br_ec_impl *impl,
  * \param sig_len    signature length (in bytes).
  * \return  1 on success, 0 on error.
  */
-uint32_t br_ecdsa_i31_vrfy_raw(const br_ec_impl *impl,
-	const void *hash, size_t hash_len,
-	const br_ec_public_key *pk, const void *sig, size_t sig_len);
+uint32_t br_ecdsa_i31_vrfy_raw(const br_ec_impl *impl, const void *hash,
+                               size_t hash_len, const br_ec_public_key *pk,
+                               const void *sig, size_t sig_len);
 
 /**
  * \brief ECDSA signature generator, "i15" implementation, "asn1" format.
@@ -705,9 +705,9 @@ uint32_t br_ecdsa_i31_vrfy_raw(const br_ec_impl *impl,
  * \param sig          destination buffer.
  * \return  the signature length (in bytes), or 0 on error.
  */
-size_t br_ecdsa_i15_sign_asn1(const br_ec_impl *impl,
-	const br_hash_class *hf, const void *hash_value,
-	const br_ec_private_key *sk, void *sig);
+size_t br_ecdsa_i15_sign_asn1(const br_ec_impl *impl, const br_hash_class *hf,
+                              const void *hash_value,
+                              const br_ec_private_key *sk, void *sig);
 
 /**
  * \brief ECDSA signature generator, "i15" implementation, "raw" format.
@@ -721,9 +721,9 @@ size_t br_ecdsa_i15_sign_asn1(const br_ec_impl *impl,
  * \param sig          destination buffer.
  * \return  the signature length (in bytes), or 0 on error.
  */
-size_t br_ecdsa_i15_sign_raw(const br_ec_impl *impl,
-	const br_hash_class *hf, const void *hash_value,
-	const br_ec_private_key *sk, void *sig);
+size_t br_ecdsa_i15_sign_raw(const br_ec_impl *impl, const br_hash_class *hf,
+                             const void *hash_value,
+                             const br_ec_private_key *sk, void *sig);
 
 /**
  * \brief ECDSA signature verifier, "i15" implementation, "asn1" format.
@@ -738,9 +738,9 @@ size_t br_ecdsa_i15_sign_raw(const br_ec_impl *impl,
  * \param sig_len    signature length (in bytes).
  * \return  1 on success, 0 on error.
  */
-uint32_t br_ecdsa_i15_vrfy_asn1(const br_ec_impl *impl,
-	const void *hash, size_t hash_len,
-	const br_ec_public_key *pk, const void *sig, size_t sig_len);
+uint32_t br_ecdsa_i15_vrfy_asn1(const br_ec_impl *impl, const void *hash,
+                                size_t hash_len, const br_ec_public_key *pk,
+                                const void *sig, size_t sig_len);
 
 /**
  * \brief ECDSA signature verifier, "i15" implementation, "raw" format.
@@ -755,9 +755,9 @@ uint32_t br_ecdsa_i15_vrfy_asn1(const br_ec_impl *impl,
  * \param sig_len    signature length (in bytes).
  * \return  1 on success, 0 on error.
  */
-uint32_t br_ecdsa_i15_vrfy_raw(const br_ec_impl *impl,
-	const void *hash, size_t hash_len,
-	const br_ec_public_key *pk, const void *sig, size_t sig_len);
+uint32_t br_ecdsa_i15_vrfy_raw(const br_ec_impl *impl, const void *hash,
+                               size_t hash_len, const br_ec_public_key *pk,
+                               const void *sig, size_t sig_len);
 
 /**
  * \brief Get "default" ECDSA implementation (signer, asn1 format).
@@ -805,7 +805,7 @@ br_ecdsa_vrfy br_ecdsa_vrfy_raw_get_default(void);
  * This is the largest number of bytes that `br_ec_keygen()` may need or
  * ever return.
  */
-#define BR_EC_KBUF_PRIV_MAX_SIZE   72
+#define BR_EC_KBUF_PRIV_MAX_SIZE 72
 
 /**
  * \brief Maximum size for EC public key element buffer.
@@ -813,7 +813,7 @@ br_ecdsa_vrfy br_ecdsa_vrfy_raw_get_default(void);
  * This is the largest number of bytes that `br_ec_compute_public()` may
  * need or ever return.
  */
-#define BR_EC_KBUF_PUB_MAX_SIZE    145
+#define BR_EC_KBUF_PUB_MAX_SIZE 145
 
 /**
  * \brief Generate a new EC private key.
@@ -841,9 +841,8 @@ br_ecdsa_vrfy br_ecdsa_vrfy_raw_get_default(void);
  * \param curve     the curve identifier.
  * \return  the key data length (in bytes), or zero.
  */
-size_t br_ec_keygen(const br_prng_class **rng_ctx,
-	const br_ec_impl *impl, br_ec_private_key *sk,
-	void *kbuf, int curve);
+size_t br_ec_keygen(const br_prng_class **rng_ctx, const br_ec_impl *impl,
+                    br_ec_private_key *sk, void *kbuf, int curve);
 
 /**
  * \brief Compute EC public key from EC private key.
@@ -874,7 +873,7 @@ size_t br_ec_keygen(const br_prng_class **rng_ctx,
  * \return  the public key point length (in bytes), or zero.
  */
 size_t br_ec_compute_pub(const br_ec_impl *impl, br_ec_public_key *pk,
-	void *kbuf, const br_ec_private_key *sk);
+                         void *kbuf, const br_ec_private_key *sk);
 
 #ifdef __cplusplus
 }

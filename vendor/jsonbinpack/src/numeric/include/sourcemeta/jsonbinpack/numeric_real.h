@@ -1,9 +1,9 @@
 #ifndef SOURCEMETA_JSONBINPACK_NUMERIC_REAL_H_
 #define SOURCEMETA_JSONBINPACK_NUMERIC_REAL_H_
 
-#include <cassert>  // assert
-#include <cmath>    // std::modf, std::floor, std::isfinite
-#include <concepts> // std::floating_point, std::integral
+#include <cassert>   // assert
+#include <cmath>     // std::modf, std::floor, std::isfinite
+#include <concepts>  // std::floating_point, std::integral
 
 namespace sourcemeta::jsonbinpack {
 
@@ -30,8 +30,8 @@ constexpr auto correct_ieee764(const Real value) -> Real {
 
 /// @ingroup numeric
 template <std::integral Integer, std::floating_point Real>
-constexpr auto real_digits(Real value, std::uint64_t *point_position)
-    -> Integer {
+constexpr auto real_digits(Real value,
+                           std::uint64_t *point_position) -> Integer {
   assert(std::isfinite(value));
   Real integral;
   std::uint64_t shifts{0};
@@ -49,6 +49,6 @@ constexpr auto real_digits(Real value, std::uint64_t *point_position)
   return static_cast<Integer>(std::floor(integral));
 }
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

@@ -1,15 +1,14 @@
 class DropNonNumericKeywordsFormat_2019_09 final : public Rule {
-public:
+ public:
   DropNonNumericKeywordsFormat_2019_09()
       : Rule{"drop_non_numeric_keywords_format_2019_09",
              "Keywords that don't apply to numbers will never match if the "
              "instance is guaranteed to be a number"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return vocabularies.contains(
                "https://json-schema.org/draft/2019-09/vocab/validation") &&
            schema.is_object() && schema.defines("type") &&
@@ -25,6 +24,6 @@ public:
     transformer.erase_keys(this->BLACKLIST.cbegin(), this->BLACKLIST.cend());
   }
 
-private:
+ private:
   const std::set<std::string> BLACKLIST{"format"};
 };

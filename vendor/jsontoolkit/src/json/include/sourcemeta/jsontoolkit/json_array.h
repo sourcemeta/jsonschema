@@ -1,14 +1,15 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSON_ARRAY_H_
 #define SOURCEMETA_JSONTOOLKIT_JSON_ARRAY_H_
 
-#include <initializer_list> // std::initializer_list
-#include <vector>           // std::vector
+#include <initializer_list>  // std::initializer_list
+#include <vector>            // std::vector
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup json
-template <typename Value> class JSONArray {
-public:
+template <typename Value>
+class JSONArray {
+ public:
   // Constructors
   using Container =
       std::vector<Value, typename Value::template Allocator<Value>>;
@@ -84,7 +85,7 @@ public:
     return this->data.crend();
   }
 
-private:
+ private:
   friend Value;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -98,6 +99,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

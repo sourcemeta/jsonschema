@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/httpserver_export.h>
 #endif
 
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <string>       // std::string
+#include <string_view>  // std::string_view
 
 namespace sourcemeta::hydra::http {
 
@@ -15,7 +15,7 @@ namespace sourcemeta::hydra::http {
 /// machinery in the HTTP server. Different instances of this logger (with
 /// different identifiers) will be created for global and per-request logging
 class SOURCEMETA_HYDRA_HTTPSERVER_EXPORT ServerLogger {
-public:
+ public:
 // These constructors are considered private. Do not use them directly.
 #if !defined(DOXYGEN)
   ServerLogger();
@@ -45,10 +45,10 @@ public:
   /// ```
   auto operator<<(std::string_view message) const -> void;
 
-private:
+ private:
   const std::string identifier;
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

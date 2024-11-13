@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -58,18 +58,18 @@ extern "C" {
  */
 
 /** \brief Optimal input buffer size. */
-#define BR_SSL_BUFSIZE_INPUT    (16384 + 325)
+#define BR_SSL_BUFSIZE_INPUT (16384 + 325)
 
 /** \brief Optimal output buffer size. */
-#define BR_SSL_BUFSIZE_OUTPUT   (16384 + 85)
+#define BR_SSL_BUFSIZE_OUTPUT (16384 + 85)
 
 /** \brief Optimal buffer size for monodirectional engine
     (shared input/output buffer). */
-#define BR_SSL_BUFSIZE_MONO     BR_SSL_BUFSIZE_INPUT
+#define BR_SSL_BUFSIZE_MONO BR_SSL_BUFSIZE_INPUT
 
 /** \brief Optimal buffer size for bidirectional engine
     (single buffer split into two separate input/output buffers). */
-#define BR_SSL_BUFSIZE_BIDI     (BR_SSL_BUFSIZE_INPUT + BR_SSL_BUFSIZE_OUTPUT)
+#define BR_SSL_BUFSIZE_BIDI (BR_SSL_BUFSIZE_INPUT + BR_SSL_BUFSIZE_OUTPUT)
 
 /*
  * Constants for known SSL/TLS protocol versions (SSL 3.0, TLS 1.0, TLS 1.1
@@ -78,13 +78,13 @@ extern "C" {
  */
 
 /** \brief Protocol version: SSL 3.0 (unsupported). */
-#define BR_SSL30   0x0300
+#define BR_SSL30 0x0300
 /** \brief Protocol version: TLS 1.0. */
-#define BR_TLS10   0x0301
+#define BR_TLS10 0x0301
 /** \brief Protocol version: TLS 1.1. */
-#define BR_TLS11   0x0302
+#define BR_TLS11 0x0302
 /** \brief Protocol version: TLS 1.2. */
-#define BR_TLS12   0x0303
+#define BR_TLS12 0x0303
 
 /*
  * Error constants. They are used to report the reason why a context has
@@ -96,133 +96,133 @@ extern "C" {
  */
 
 /** \brief SSL status: no error so far (0). */
-#define BR_ERR_OK                      0
+#define BR_ERR_OK 0
 
 /** \brief SSL status: caller-provided parameter is incorrect. */
-#define BR_ERR_BAD_PARAM               1
+#define BR_ERR_BAD_PARAM 1
 
 /** \brief SSL status: operation requested by the caller cannot be applied
     with the current context state (e.g. reading data while outgoing data
     is waiting to be sent). */
-#define BR_ERR_BAD_STATE               2
+#define BR_ERR_BAD_STATE 2
 
 /** \brief SSL status: incoming protocol or record version is unsupported. */
-#define BR_ERR_UNSUPPORTED_VERSION     3
+#define BR_ERR_UNSUPPORTED_VERSION 3
 
 /** \brief SSL status: incoming record version does not match the expected
     version. */
-#define BR_ERR_BAD_VERSION             4
+#define BR_ERR_BAD_VERSION 4
 
 /** \brief SSL status: incoming record length is invalid. */
-#define BR_ERR_BAD_LENGTH              5
+#define BR_ERR_BAD_LENGTH 5
 
 /** \brief SSL status: incoming record is too large to be processed, or
     buffer is too small for the handshake message to send. */
-#define BR_ERR_TOO_LARGE               6
+#define BR_ERR_TOO_LARGE 6
 
 /** \brief SSL status: decryption found an invalid padding, or the record
     MAC is not correct. */
-#define BR_ERR_BAD_MAC                 7
+#define BR_ERR_BAD_MAC 7
 
 /** \brief SSL status: no initial entropy was provided, and none can be
     obtained from the OS. */
-#define BR_ERR_NO_RANDOM               8
+#define BR_ERR_NO_RANDOM 8
 
 /** \brief SSL status: incoming record type is unknown. */
-#define BR_ERR_UNKNOWN_TYPE            9
+#define BR_ERR_UNKNOWN_TYPE 9
 
 /** \brief SSL status: incoming record or message has wrong type with
     regards to the current engine state. */
-#define BR_ERR_UNEXPECTED             10
+#define BR_ERR_UNEXPECTED 10
 
 /** \brief SSL status: ChangeCipherSpec message from the peer has invalid
     contents. */
-#define BR_ERR_BAD_CCS                12
+#define BR_ERR_BAD_CCS 12
 
 /** \brief SSL status: alert message from the peer has invalid contents
     (odd length). */
-#define BR_ERR_BAD_ALERT              13
+#define BR_ERR_BAD_ALERT 13
 
 /** \brief SSL status: incoming handshake message decoding failed. */
-#define BR_ERR_BAD_HANDSHAKE          14
+#define BR_ERR_BAD_HANDSHAKE 14
 
 /** \brief SSL status: ServerHello contains a session ID which is larger
     than 32 bytes. */
-#define BR_ERR_OVERSIZED_ID           15
+#define BR_ERR_OVERSIZED_ID 15
 
 /** \brief SSL status: server wants to use a cipher suite that we did
     not claim to support. This is also reported if we tried to advertise
     a cipher suite that we do not support. */
-#define BR_ERR_BAD_CIPHER_SUITE       16
+#define BR_ERR_BAD_CIPHER_SUITE 16
 
 /** \brief SSL status: server wants to use a compression that we did not
     claim to support. */
-#define BR_ERR_BAD_COMPRESSION        17
+#define BR_ERR_BAD_COMPRESSION 17
 
 /** \brief SSL status: server's max fragment length does not match
     client's. */
-#define BR_ERR_BAD_FRAGLEN            18
+#define BR_ERR_BAD_FRAGLEN 18
 
 /** \brief SSL status: secure renegotiation failed. */
-#define BR_ERR_BAD_SECRENEG           19
+#define BR_ERR_BAD_SECRENEG 19
 
 /** \brief SSL status: server sent an extension type that we did not
     announce, or used the same extension type several times in a single
     ServerHello. */
-#define BR_ERR_EXTRA_EXTENSION        20
+#define BR_ERR_EXTRA_EXTENSION 20
 
 /** \brief SSL status: invalid Server Name Indication contents (when
     used by the server, this extension shall be empty). */
-#define BR_ERR_BAD_SNI                21
+#define BR_ERR_BAD_SNI 21
 
 /** \brief SSL status: invalid ServerHelloDone from the server (length
     is not 0). */
-#define BR_ERR_BAD_HELLO_DONE         22
+#define BR_ERR_BAD_HELLO_DONE 22
 
 /** \brief SSL status: internal limit exceeded (e.g. server's public key
     is too large). */
-#define BR_ERR_LIMIT_EXCEEDED         23
+#define BR_ERR_LIMIT_EXCEEDED 23
 
 /** \brief SSL status: Finished message from peer does not match the
     expected value. */
-#define BR_ERR_BAD_FINISHED           24
+#define BR_ERR_BAD_FINISHED 24
 
 /** \brief SSL status: session resumption attempt with distinct version
     or cipher suite. */
-#define BR_ERR_RESUME_MISMATCH        25
+#define BR_ERR_RESUME_MISMATCH 25
 
 /** \brief SSL status: unsupported or invalid algorithm (ECDHE curve,
     signature algorithm, hash function). */
-#define BR_ERR_INVALID_ALGORITHM      26
+#define BR_ERR_INVALID_ALGORITHM 26
 
 /** \brief SSL status: invalid signature (on ServerKeyExchange from
     server, or in CertificateVerify from client). */
-#define BR_ERR_BAD_SIGNATURE          27
+#define BR_ERR_BAD_SIGNATURE 27
 
 /** \brief SSL status: peer's public key does not have the proper type
     or is not allowed for requested operation. */
-#define BR_ERR_WRONG_KEY_USAGE        28
+#define BR_ERR_WRONG_KEY_USAGE 28
 
 /** \brief SSL status: client did not send a certificate upon request,
     or the client certificate could not be validated. */
-#define BR_ERR_NO_CLIENT_AUTH         29
+#define BR_ERR_NO_CLIENT_AUTH 29
 
 /** \brief SSL status: I/O error or premature close on underlying
     transport stream. This error code is set only by the simplified
     I/O API ("br_sslio_*"). */
-#define BR_ERR_IO                     31
+#define BR_ERR_IO 31
 
 /** \brief SSL status: base value for a received fatal alert.
 
     When a fatal alert is received from the peer, the alert value
     is added to this constant. */
-#define BR_ERR_RECV_FATAL_ALERT      256
+#define BR_ERR_RECV_FATAL_ALERT 256
 
 /** \brief SSL status: base value for a sent fatal alert.
 
     When a fatal alert is sent to the peer, the alert value is added
     to this constant. */
-#define BR_ERR_SEND_FATAL_ALERT      512
+#define BR_ERR_SEND_FATAL_ALERT 512
 
 /* ===================================================================== */
 
@@ -238,46 +238,44 @@ extern "C" {
  */
 typedef struct br_sslrec_in_class_ br_sslrec_in_class;
 struct br_sslrec_in_class_ {
-	/**
-	 * \brief Context size (in bytes).
-	 */
-	size_t context_size;
+  /**
+   * \brief Context size (in bytes).
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Test validity of the incoming record length.
-	 *
-	 * This function returns 1 if the announced length for an
-	 * incoming record is valid, 0 otherwise,
-	 *
-	 * \param ctx          decryption engine context.
-	 * \param record_len   incoming record length.
-	 * \return  1 of a valid length, 0 otherwise.
-	 */
-	int (*check_length)(const br_sslrec_in_class *const *ctx,
-		size_t record_len);
+  /**
+   * \brief Test validity of the incoming record length.
+   *
+   * This function returns 1 if the announced length for an
+   * incoming record is valid, 0 otherwise,
+   *
+   * \param ctx          decryption engine context.
+   * \param record_len   incoming record length.
+   * \return  1 of a valid length, 0 otherwise.
+   */
+  int (*check_length)(const br_sslrec_in_class *const *ctx, size_t record_len);
 
-	/**
-	 * \brief Decrypt the incoming record.
-	 *
-	 * This function may assume that the record length is valid
-	 * (it has been previously tested with `check_length()`).
-	 * Decryption is done in place; `*len` is updated with the
-	 * cleartext length, and the address of the first plaintext
-	 * byte is returned. If the record is correct but empty, then
-	 * `*len` is set to 0 and a non-`NULL` pointer is returned.
-	 *
-	 * On decryption/MAC error, `NULL` is returned.
-	 *
-	 * \param ctx           decryption engine context.
-	 * \param record_type   record type (23 for application data, etc).
-	 * \param version       record version.
-	 * \param payload       address of encrypted payload.
-	 * \param len           pointer to payload length (updated).
-	 * \return  pointer to plaintext, or `NULL` on error.
-	 */
-	unsigned char *(*decrypt)(const br_sslrec_in_class **ctx,
-		int record_type, unsigned version,
-		void *payload, size_t *len);
+  /**
+   * \brief Decrypt the incoming record.
+   *
+   * This function may assume that the record length is valid
+   * (it has been previously tested with `check_length()`).
+   * Decryption is done in place; `*len` is updated with the
+   * cleartext length, and the address of the first plaintext
+   * byte is returned. If the record is correct but empty, then
+   * `*len` is set to 0 and a non-`NULL` pointer is returned.
+   *
+   * On decryption/MAC error, `NULL` is returned.
+   *
+   * \param ctx           decryption engine context.
+   * \param record_type   record type (23 for application data, etc).
+   * \param version       record version.
+   * \param payload       address of encrypted payload.
+   * \param len           pointer to payload length (updated).
+   * \return  pointer to plaintext, or `NULL` on error.
+   */
+  unsigned char *(*decrypt)(const br_sslrec_in_class **ctx, int record_type,
+                            unsigned version, void *payload, size_t *len);
 };
 
 /**
@@ -292,51 +290,50 @@ struct br_sslrec_in_class_ {
  */
 typedef struct br_sslrec_out_class_ br_sslrec_out_class;
 struct br_sslrec_out_class_ {
-	/**
-	 * \brief Context size (in bytes).
-	 */
-	size_t context_size;
+  /**
+   * \brief Context size (in bytes).
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Compute maximum plaintext sizes and offsets.
-	 *
-	 * When this function is called, the `*start` and `*end`
-	 * values contain offsets designating the free area in the
-	 * outgoing buffer for plaintext data; that free area is
-	 * preceded by a 5-byte space which will receive the record
-	 * header.
-	 *
-	 * The `max_plaintext()` function is responsible for adjusting
-	 * both `*start` and `*end` to make room for any record-specific
-	 * header, MAC, padding, and possible split.
-	 *
-	 * \param ctx     encryption engine context.
-	 * \param start   pointer to start of plaintext offset (updated).
-	 * \param end     pointer to start of plaintext offset (updated).
-	 */
-	void (*max_plaintext)(const br_sslrec_out_class *const *ctx,
-		size_t *start, size_t *end);
+  /**
+   * \brief Compute maximum plaintext sizes and offsets.
+   *
+   * When this function is called, the `*start` and `*end`
+   * values contain offsets designating the free area in the
+   * outgoing buffer for plaintext data; that free area is
+   * preceded by a 5-byte space which will receive the record
+   * header.
+   *
+   * The `max_plaintext()` function is responsible for adjusting
+   * both `*start` and `*end` to make room for any record-specific
+   * header, MAC, padding, and possible split.
+   *
+   * \param ctx     encryption engine context.
+   * \param start   pointer to start of plaintext offset (updated).
+   * \param end     pointer to start of plaintext offset (updated).
+   */
+  void (*max_plaintext)(const br_sslrec_out_class *const *ctx, size_t *start,
+                        size_t *end);
 
-	/**
-	 * \brief Perform record encryption.
-	 *
-	 * This function encrypts the record. The plaintext address and
-	 * length are provided. Returned value is the start of the
-	 * encrypted record (or sequence of records, if a split was
-	 * performed), _including_ the 5-byte header, and `*len` is
-	 * adjusted to the total size of the record(s), there again
-	 * including the header(s).
-	 *
-	 * \param ctx           decryption engine context.
-	 * \param record_type   record type (23 for application data, etc).
-	 * \param version       record version.
-	 * \param plaintext     address of plaintext.
-	 * \param len           pointer to plaintext length (updated).
-	 * \return  pointer to start of built record.
-	 */
-	unsigned char *(*encrypt)(const br_sslrec_out_class **ctx,
-		int record_type, unsigned version,
-		void *plaintext, size_t *len);
+  /**
+   * \brief Perform record encryption.
+   *
+   * This function encrypts the record. The plaintext address and
+   * length are provided. Returned value is the start of the
+   * encrypted record (or sequence of records, if a split was
+   * performed), _including_ the 5-byte header, and `*len` is
+   * adjusted to the total size of the record(s), there again
+   * including the header(s).
+   *
+   * \param ctx           decryption engine context.
+   * \param record_type   record type (23 for application data, etc).
+   * \param version       record version.
+   * \param plaintext     address of plaintext.
+   * \param len           pointer to plaintext length (updated).
+   * \return  pointer to start of built record.
+   */
+  unsigned char *(*encrypt)(const br_sslrec_out_class **ctx, int record_type,
+                            unsigned version, void *plaintext, size_t *len);
 };
 
 /**
@@ -346,8 +343,8 @@ struct br_sslrec_out_class_ {
  * handshake, before encryption is applied.
  */
 typedef struct {
-	/** \brief No-encryption engine vtable. */
-	const br_sslrec_out_class *vtable;
+  /** \brief No-encryption engine vtable. */
+  const br_sslrec_out_class *vtable;
 } br_sslrec_out_clear_context;
 
 /** \brief Static, constant vtable for the no-encryption engine. */
@@ -366,32 +363,31 @@ extern const br_sslrec_out_class br_sslrec_out_clear_vtable;
  */
 typedef struct br_sslrec_in_cbc_class_ br_sslrec_in_cbc_class;
 struct br_sslrec_in_cbc_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_in_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_in_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CBC decryption).
-	 * \param bc_key        block cipher key.
-	 * \param bc_key_len    block cipher key length (in bytes).
-	 * \param dig_impl      hash function for HMAC.
-	 * \param mac_key       HMAC key.
-	 * \param mac_key_len   HMAC key length (in bytes).
-	 * \param mac_out_len   HMAC output length (in bytes).
-	 * \param iv            initial IV (or `NULL`).
-	 */
-	void (*init)(const br_sslrec_in_cbc_class **ctx,
-		const br_block_cbcdec_class *bc_impl,
-		const void *bc_key, size_t bc_key_len,
-		const br_hash_class *dig_impl,
-		const void *mac_key, size_t mac_key_len, size_t mac_out_len,
-		const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CBC decryption).
+   * \param bc_key        block cipher key.
+   * \param bc_key_len    block cipher key length (in bytes).
+   * \param dig_impl      hash function for HMAC.
+   * \param mac_key       HMAC key.
+   * \param mac_key_len   HMAC key length (in bytes).
+   * \param mac_out_len   HMAC output length (in bytes).
+   * \param iv            initial IV (or `NULL`).
+   */
+  void (*init)(const br_sslrec_in_cbc_class **ctx,
+               const br_block_cbcdec_class *bc_impl, const void *bc_key,
+               size_t bc_key_len, const br_hash_class *dig_impl,
+               const void *mac_key, size_t mac_key_len, size_t mac_out_len,
+               const void *iv);
 };
 
 /**
@@ -405,32 +401,31 @@ struct br_sslrec_in_cbc_class_ {
  */
 typedef struct br_sslrec_out_cbc_class_ br_sslrec_out_cbc_class;
 struct br_sslrec_out_cbc_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_out_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_out_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CBC encryption).
-	 * \param bc_key        block cipher key.
-	 * \param bc_key_len    block cipher key length (in bytes).
-	 * \param dig_impl      hash function for HMAC.
-	 * \param mac_key       HMAC key.
-	 * \param mac_key_len   HMAC key length (in bytes).
-	 * \param mac_out_len   HMAC output length (in bytes).
-	 * \param iv            initial IV (or `NULL`).
-	 */
-	void (*init)(const br_sslrec_out_cbc_class **ctx,
-		const br_block_cbcenc_class *bc_impl,
-		const void *bc_key, size_t bc_key_len,
-		const br_hash_class *dig_impl,
-		const void *mac_key, size_t mac_key_len, size_t mac_out_len,
-		const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CBC encryption).
+   * \param bc_key        block cipher key.
+   * \param bc_key_len    block cipher key length (in bytes).
+   * \param dig_impl      hash function for HMAC.
+   * \param mac_key       HMAC key.
+   * \param mac_key_len   HMAC key length (in bytes).
+   * \param mac_out_len   HMAC output length (in bytes).
+   * \param iv            initial IV (or `NULL`).
+   */
+  void (*init)(const br_sslrec_out_cbc_class **ctx,
+               const br_block_cbcenc_class *bc_impl, const void *bc_key,
+               size_t bc_key_len, const br_hash_class *dig_impl,
+               const void *mac_key, size_t mac_key_len, size_t mac_out_len,
+               const void *iv);
 };
 
 /**
@@ -441,19 +436,19 @@ struct br_sslrec_out_cbc_class_ {
  * and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_sslrec_in_cbc_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_sslrec_in_cbc_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	uint64_t seq;
-	union {
-		const br_block_cbcdec_class *vtable;
-		br_aes_gen_cbcdec_keys aes;
-		br_des_gen_cbcdec_keys des;
-	} bc;
-	br_hmac_key_context mac;
-	size_t mac_len;
-	unsigned char iv[16];
-	int explicit_IV;
+  uint64_t seq;
+  union {
+    const br_block_cbcdec_class *vtable;
+    br_aes_gen_cbcdec_keys aes;
+    br_des_gen_cbcdec_keys des;
+  } bc;
+  br_hmac_key_context mac;
+  size_t mac_len;
+  unsigned char iv[16];
+  int explicit_IV;
 #endif
 } br_sslrec_in_cbc_context;
 
@@ -470,19 +465,19 @@ extern const br_sslrec_in_cbc_class br_sslrec_in_cbc_vtable;
  * and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_sslrec_out_cbc_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_sslrec_out_cbc_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	uint64_t seq;
-	union {
-		const br_block_cbcenc_class *vtable;
-		br_aes_gen_cbcenc_keys aes;
-		br_des_gen_cbcenc_keys des;
-	} bc;
-	br_hmac_key_context mac;
-	size_t mac_len;
-	unsigned char iv[16];
-	int explicit_IV;
+  uint64_t seq;
+  union {
+    const br_block_cbcenc_class *vtable;
+    br_aes_gen_cbcenc_keys aes;
+    br_des_gen_cbcenc_keys des;
+  } bc;
+  br_hmac_key_context mac;
+  size_t mac_len;
+  unsigned char iv[16];
+  int explicit_IV;
 #endif
 } br_sslrec_out_cbc_context;
 
@@ -503,28 +498,26 @@ extern const br_sslrec_out_cbc_class br_sslrec_out_cbc_vtable;
  */
 typedef struct br_sslrec_in_gcm_class_ br_sslrec_in_gcm_class;
 struct br_sslrec_in_gcm_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_in_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_in_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CTR).
-	 * \param key           block cipher key.
-	 * \param key_len       block cipher key length (in bytes).
-	 * \param gh_impl       GHASH implementation.
-	 * \param iv            static IV (4 bytes).
-	 */
-	void (*init)(const br_sslrec_in_gcm_class **ctx,
-		const br_block_ctr_class *bc_impl,
-		const void *key, size_t key_len,
-		br_ghash gh_impl,
-		const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CTR).
+   * \param key           block cipher key.
+   * \param key_len       block cipher key length (in bytes).
+   * \param gh_impl       GHASH implementation.
+   * \param iv            static IV (4 bytes).
+   */
+  void (*init)(const br_sslrec_in_gcm_class **ctx,
+               const br_block_ctr_class *bc_impl, const void *key,
+               size_t key_len, br_ghash gh_impl, const void *iv);
 };
 
 /**
@@ -537,28 +530,26 @@ struct br_sslrec_in_gcm_class_ {
  */
 typedef struct br_sslrec_out_gcm_class_ br_sslrec_out_gcm_class;
 struct br_sslrec_out_gcm_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_out_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_out_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CTR).
-	 * \param key           block cipher key.
-	 * \param key_len       block cipher key length (in bytes).
-	 * \param gh_impl       GHASH implementation.
-	 * \param iv            static IV (4 bytes).
-	 */
-	void (*init)(const br_sslrec_out_gcm_class **ctx,
-		const br_block_ctr_class *bc_impl,
-		const void *key, size_t key_len,
-		br_ghash gh_impl,
-		const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CTR).
+   * \param key           block cipher key.
+   * \param key_len       block cipher key length (in bytes).
+   * \param gh_impl       GHASH implementation.
+   * \param iv            static IV (4 bytes).
+   */
+  void (*init)(const br_sslrec_out_gcm_class **ctx,
+               const br_block_ctr_class *bc_impl, const void *key,
+               size_t key_len, br_ghash gh_impl, const void *iv);
 };
 
 /**
@@ -570,21 +561,21 @@ struct br_sslrec_out_gcm_class_ {
  * and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	union {
-		const void *gen;
-		const br_sslrec_in_gcm_class *in;
-		const br_sslrec_out_gcm_class *out;
-	} vtable;
+  /** \brief Pointer to vtable. */
+  union {
+    const void *gen;
+    const br_sslrec_in_gcm_class *in;
+    const br_sslrec_out_gcm_class *out;
+  } vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	uint64_t seq;
-	union {
-		const br_block_ctr_class *vtable;
-		br_aes_gen_ctr_keys aes;
-	} bc;
-	br_ghash gh;
-	unsigned char iv[4];
-	unsigned char h[16];
+  uint64_t seq;
+  union {
+    const br_block_ctr_class *vtable;
+    br_aes_gen_ctr_keys aes;
+  } bc;
+  br_ghash gh;
+  unsigned char iv[4];
+  unsigned char h[16];
 #endif
 } br_sslrec_gcm_context;
 
@@ -610,26 +601,24 @@ extern const br_sslrec_out_gcm_class br_sslrec_out_gcm_vtable;
  */
 typedef struct br_sslrec_in_chapol_class_ br_sslrec_in_chapol_class;
 struct br_sslrec_in_chapol_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_in_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_in_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param ichacha       ChaCha20 implementation.
-	 * \param ipoly         Poly1305 implementation.
-	 * \param key           secret key (32 bytes).
-	 * \param iv            static IV (12 bytes).
-	 */
-	void (*init)(const br_sslrec_in_chapol_class **ctx,
-		br_chacha20_run ichacha,
-		br_poly1305_run ipoly,
-		const void *key, const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param ichacha       ChaCha20 implementation.
+   * \param ipoly         Poly1305 implementation.
+   * \param key           secret key (32 bytes).
+   * \param iv            static IV (12 bytes).
+   */
+  void (*init)(const br_sslrec_in_chapol_class **ctx, br_chacha20_run ichacha,
+               br_poly1305_run ipoly, const void *key, const void *iv);
 };
 
 /**
@@ -642,26 +631,24 @@ struct br_sslrec_in_chapol_class_ {
  */
 typedef struct br_sslrec_out_chapol_class_ br_sslrec_out_chapol_class;
 struct br_sslrec_out_chapol_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_out_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_out_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param ichacha       ChaCha20 implementation.
-	 * \param ipoly         Poly1305 implementation.
-	 * \param key           secret key (32 bytes).
-	 * \param iv            static IV (12 bytes).
-	 */
-	void (*init)(const br_sslrec_out_chapol_class **ctx,
-		br_chacha20_run ichacha,
-		br_poly1305_run ipoly,
-		const void *key, const void *iv);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param ichacha       ChaCha20 implementation.
+   * \param ipoly         Poly1305 implementation.
+   * \param key           secret key (32 bytes).
+   * \param iv            static IV (12 bytes).
+   */
+  void (*init)(const br_sslrec_out_chapol_class **ctx, br_chacha20_run ichacha,
+               br_poly1305_run ipoly, const void *key, const void *iv);
 };
 
 /**
@@ -673,18 +660,18 @@ struct br_sslrec_out_chapol_class_ {
  * and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	union {
-		const void *gen;
-		const br_sslrec_in_chapol_class *in;
-		const br_sslrec_out_chapol_class *out;
-	} vtable;
+  /** \brief Pointer to vtable. */
+  union {
+    const void *gen;
+    const br_sslrec_in_chapol_class *in;
+    const br_sslrec_out_chapol_class *out;
+  } vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	uint64_t seq;
-	unsigned char key[32];
-	unsigned char iv[12];
-	br_chacha20_run ichacha;
-	br_poly1305_run ipoly;
+  uint64_t seq;
+  unsigned char key[32];
+  unsigned char iv[12];
+  br_chacha20_run ichacha;
+  br_poly1305_run ipoly;
 #endif
 } br_sslrec_chapol_context;
 
@@ -710,27 +697,26 @@ extern const br_sslrec_out_chapol_class br_sslrec_out_chapol_vtable;
  */
 typedef struct br_sslrec_in_ccm_class_ br_sslrec_in_ccm_class;
 struct br_sslrec_in_ccm_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_in_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_in_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CTR+CBC).
-	 * \param key           block cipher key.
-	 * \param key_len       block cipher key length (in bytes).
-	 * \param iv            static IV (4 bytes).
-	 * \param tag_len       tag length (in bytes)
-	 */
-	void (*init)(const br_sslrec_in_ccm_class **ctx,
-		const br_block_ctrcbc_class *bc_impl,
-		const void *key, size_t key_len,
-		const void *iv, size_t tag_len);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CTR+CBC).
+   * \param key           block cipher key.
+   * \param key_len       block cipher key length (in bytes).
+   * \param iv            static IV (4 bytes).
+   * \param tag_len       tag length (in bytes)
+   */
+  void (*init)(const br_sslrec_in_ccm_class **ctx,
+               const br_block_ctrcbc_class *bc_impl, const void *key,
+               size_t key_len, const void *iv, size_t tag_len);
 };
 
 /**
@@ -743,27 +729,26 @@ struct br_sslrec_in_ccm_class_ {
  */
 typedef struct br_sslrec_out_ccm_class_ br_sslrec_out_ccm_class;
 struct br_sslrec_out_ccm_class_ {
-	/**
-	 * \brief Superclass, as first vtable field.
-	 */
-	br_sslrec_out_class inner;
+  /**
+   * \brief Superclass, as first vtable field.
+   */
+  br_sslrec_out_class inner;
 
-	/**
-	 * \brief Engine initialisation method.
-	 *
-	 * This method sets the vtable field in the context.
-	 *
-	 * \param ctx           context to initialise.
-	 * \param bc_impl       block cipher implementation (CTR+CBC).
-	 * \param key           block cipher key.
-	 * \param key_len       block cipher key length (in bytes).
-	 * \param iv            static IV (4 bytes).
-	 * \param tag_len       tag length (in bytes)
-	 */
-	void (*init)(const br_sslrec_out_ccm_class **ctx,
-		const br_block_ctrcbc_class *bc_impl,
-		const void *key, size_t key_len,
-		const void *iv, size_t tag_len);
+  /**
+   * \brief Engine initialisation method.
+   *
+   * This method sets the vtable field in the context.
+   *
+   * \param ctx           context to initialise.
+   * \param bc_impl       block cipher implementation (CTR+CBC).
+   * \param key           block cipher key.
+   * \param key_len       block cipher key length (in bytes).
+   * \param iv            static IV (4 bytes).
+   * \param tag_len       tag length (in bytes)
+   */
+  void (*init)(const br_sslrec_out_ccm_class **ctx,
+               const br_block_ctrcbc_class *bc_impl, const void *key,
+               size_t key_len, const void *iv, size_t tag_len);
 };
 
 /**
@@ -775,20 +760,20 @@ struct br_sslrec_out_ccm_class_ {
  * and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	union {
-		const void *gen;
-		const br_sslrec_in_ccm_class *in;
-		const br_sslrec_out_ccm_class *out;
-	} vtable;
+  /** \brief Pointer to vtable. */
+  union {
+    const void *gen;
+    const br_sslrec_in_ccm_class *in;
+    const br_sslrec_out_ccm_class *out;
+  } vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	uint64_t seq;
-	union {
-		const br_block_ctrcbc_class *vtable;
-		br_aes_gen_ctrcbc_keys aes;
-	} bc;
-	unsigned char iv[4];
-	size_t tag_len;
+  uint64_t seq;
+  union {
+    const br_block_ctrcbc_class *vtable;
+    br_aes_gen_ctrcbc_keys aes;
+  } bc;
+  unsigned char iv[4];
+  size_t tag_len;
 #endif
 } br_sslrec_ccm_context;
 
@@ -808,23 +793,23 @@ extern const br_sslrec_out_ccm_class br_sslrec_out_ccm_vtable;
  * \brief Type for session parameters, to be saved for session resumption.
  */
 typedef struct {
-	/** \brief Session ID buffer. */
-	unsigned char session_id[32];
-	/** \brief Session ID length (in bytes, at most 32). */
-	unsigned char session_id_len;
-	/** \brief Protocol version. */
-	uint16_t version;
-	/** \brief Cipher suite. */
-	uint16_t cipher_suite;
-	/** \brief Master secret. */
-	unsigned char master_secret[48];
+  /** \brief Session ID buffer. */
+  unsigned char session_id[32];
+  /** \brief Session ID length (in bytes, at most 32). */
+  unsigned char session_id_len;
+  /** \brief Protocol version. */
+  uint16_t version;
+  /** \brief Cipher suite. */
+  uint16_t cipher_suite;
+  /** \brief Master secret. */
+  unsigned char master_secret[48];
 } br_ssl_session_parameters;
 
 #ifndef BR_DOXYGEN_IGNORE
 /*
  * Maximum number of cipher suites supported by a client or server.
  */
-#define BR_MAX_CIPHER_SUITES   48
+#define BR_MAX_CIPHER_SUITES 48
 #endif
 
 /**
@@ -844,277 +829,277 @@ typedef struct {
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	/*
-	 * The error code. When non-zero, then the state is "failed" and
-	 * no I/O may occur until reset.
-	 */
-	int err;
+  /*
+   * The error code. When non-zero, then the state is "failed" and
+   * no I/O may occur until reset.
+   */
+  int err;
 
-	/*
-	 * Configured I/O buffers. They are either disjoint, or identical.
-	 */
-	unsigned char *ibuf, *obuf;
-	size_t ibuf_len, obuf_len;
+  /*
+   * Configured I/O buffers. They are either disjoint, or identical.
+   */
+  unsigned char *ibuf, *obuf;
+  size_t ibuf_len, obuf_len;
 
-	/*
-	 * Maximum fragment length applies to outgoing records; incoming
-	 * records can be processed as long as they fit in the input
-	 * buffer. It is guaranteed that incoming records at least as big
-	 * as max_frag_len can be processed.
-	 */
-	uint16_t max_frag_len;
-	unsigned char log_max_frag_len;
-	unsigned char peer_log_max_frag_len;
+  /*
+   * Maximum fragment length applies to outgoing records; incoming
+   * records can be processed as long as they fit in the input
+   * buffer. It is guaranteed that incoming records at least as big
+   * as max_frag_len can be processed.
+   */
+  uint16_t max_frag_len;
+  unsigned char log_max_frag_len;
+  unsigned char peer_log_max_frag_len;
 
-	/*
-	 * Buffering management registers.
-	 */
-	size_t ixa, ixb, ixc;
-	size_t oxa, oxb, oxc;
-	unsigned char iomode;
-	unsigned char incrypt;
+  /*
+   * Buffering management registers.
+   */
+  size_t ixa, ixb, ixc;
+  size_t oxa, oxb, oxc;
+  unsigned char iomode;
+  unsigned char incrypt;
 
-	/*
-	 * Shutdown flag: when set to non-zero, incoming record bytes
-	 * will not be accepted anymore. This is used after a close_notify
-	 * has been received: afterwards, the engine no longer claims that
-	 * it could receive bytes from the transport medium.
-	 */
-	unsigned char shutdown_recv;
+  /*
+   * Shutdown flag: when set to non-zero, incoming record bytes
+   * will not be accepted anymore. This is used after a close_notify
+   * has been received: afterwards, the engine no longer claims that
+   * it could receive bytes from the transport medium.
+   */
+  unsigned char shutdown_recv;
 
-	/*
-	 * 'record_type_in' is set to the incoming record type when the
-	 * record header has been received.
-	 * 'record_type_out' is used to make the next outgoing record
-	 * header when it is ready to go.
-	 */
-	unsigned char record_type_in, record_type_out;
+  /*
+   * 'record_type_in' is set to the incoming record type when the
+   * record header has been received.
+   * 'record_type_out' is used to make the next outgoing record
+   * header when it is ready to go.
+   */
+  unsigned char record_type_in, record_type_out;
 
-	/*
-	 * When a record is received, its version is extracted:
-	 * -- if 'version_in' is 0, then it is set to the received version;
-	 * -- otherwise, if the received version is not identical to
-	 *    the 'version_in' contents, then a failure is reported.
-	 *
-	 * This implements the SSL requirement that all records shall
-	 * use the negotiated protocol version, once decided (in the
-	 * ServerHello). It is up to the handshake handler to adjust this
-	 * field when necessary.
-	 */
-	uint16_t version_in;
+  /*
+   * When a record is received, its version is extracted:
+   * -- if 'version_in' is 0, then it is set to the received version;
+   * -- otherwise, if the received version is not identical to
+   *    the 'version_in' contents, then a failure is reported.
+   *
+   * This implements the SSL requirement that all records shall
+   * use the negotiated protocol version, once decided (in the
+   * ServerHello). It is up to the handshake handler to adjust this
+   * field when necessary.
+   */
+  uint16_t version_in;
 
-	/*
-	 * 'version_out' is used when the next outgoing record is ready
-	 * to go.
-	 */
-	uint16_t version_out;
+  /*
+   * 'version_out' is used when the next outgoing record is ready
+   * to go.
+   */
+  uint16_t version_out;
 
-	/*
-	 * Record handler contexts.
-	 */
-	union {
-		const br_sslrec_in_class *vtable;
-		br_sslrec_in_cbc_context cbc;
-		br_sslrec_gcm_context gcm;
-		br_sslrec_chapol_context chapol;
-		br_sslrec_ccm_context ccm;
-	} in;
-	union {
-		const br_sslrec_out_class *vtable;
-		br_sslrec_out_clear_context clear;
-		br_sslrec_out_cbc_context cbc;
-		br_sslrec_gcm_context gcm;
-		br_sslrec_chapol_context chapol;
-		br_sslrec_ccm_context ccm;
-	} out;
+  /*
+   * Record handler contexts.
+   */
+  union {
+    const br_sslrec_in_class *vtable;
+    br_sslrec_in_cbc_context cbc;
+    br_sslrec_gcm_context gcm;
+    br_sslrec_chapol_context chapol;
+    br_sslrec_ccm_context ccm;
+  } in;
+  union {
+    const br_sslrec_out_class *vtable;
+    br_sslrec_out_clear_context clear;
+    br_sslrec_out_cbc_context cbc;
+    br_sslrec_gcm_context gcm;
+    br_sslrec_chapol_context chapol;
+    br_sslrec_ccm_context ccm;
+  } out;
 
-	/*
-	 * The "application data" flag. Value:
-	 *   0   handshake is in process, no application data acceptable
-	 *   1   application data can be sent and received
-	 *   2   closing, no application data can be sent, but some
-	 *       can still be received (and discarded)
-	 */
-	unsigned char application_data;
+  /*
+   * The "application data" flag. Value:
+   *   0   handshake is in process, no application data acceptable
+   *   1   application data can be sent and received
+   *   2   closing, no application data can be sent, but some
+   *       can still be received (and discarded)
+   */
+  unsigned char application_data;
 
-	/*
-	 * Context RNG.
-	 *
-	 *   rng_init_done is initially 0. It is set to 1 when the
-	 *   basic structure of the RNG is set, and 2 when some
-	 *   entropy has been pushed in. The value 2 marks the RNG
-	 *   as "properly seeded".
-	 *
-	 *   rng_os_rand_done is initially 0. It is set to 1 when
-	 *   some seeding from the OS or hardware has been attempted.
-	 */
-	br_hmac_drbg_context rng;
-	int rng_init_done;
-	int rng_os_rand_done;
+  /*
+   * Context RNG.
+   *
+   *   rng_init_done is initially 0. It is set to 1 when the
+   *   basic structure of the RNG is set, and 2 when some
+   *   entropy has been pushed in. The value 2 marks the RNG
+   *   as "properly seeded".
+   *
+   *   rng_os_rand_done is initially 0. It is set to 1 when
+   *   some seeding from the OS or hardware has been attempted.
+   */
+  br_hmac_drbg_context rng;
+  int rng_init_done;
+  int rng_os_rand_done;
 
-	/*
-	 * Supported minimum and maximum versions, and cipher suites.
-	 */
-	uint16_t version_min;
-	uint16_t version_max;
-	uint16_t suites_buf[BR_MAX_CIPHER_SUITES];
-	unsigned char suites_num;
+  /*
+   * Supported minimum and maximum versions, and cipher suites.
+   */
+  uint16_t version_min;
+  uint16_t version_max;
+  uint16_t suites_buf[BR_MAX_CIPHER_SUITES];
+  unsigned char suites_num;
 
-	/*
-	 * For clients, the server name to send as a SNI extension. For
-	 * servers, the name received in the SNI extension (if any).
-	 */
-	char server_name[256];
+  /*
+   * For clients, the server name to send as a SNI extension. For
+   * servers, the name received in the SNI extension (if any).
+   */
+  char server_name[256];
 
-	/*
-	 * "Security parameters". These are filled by the handshake
-	 * handler, and used when switching encryption state.
-	 */
-	unsigned char client_random[32];
-	unsigned char server_random[32];
-	br_ssl_session_parameters session;
+  /*
+   * "Security parameters". These are filled by the handshake
+   * handler, and used when switching encryption state.
+   */
+  unsigned char client_random[32];
+  unsigned char server_random[32];
+  br_ssl_session_parameters session;
 
-	/*
-	 * ECDHE elements: curve and point from the peer. The server also
-	 * uses that buffer for the point to send to the client.
-	 */
-	unsigned char ecdhe_curve;
-	unsigned char ecdhe_point[133];
-	unsigned char ecdhe_point_len;
+  /*
+   * ECDHE elements: curve and point from the peer. The server also
+   * uses that buffer for the point to send to the client.
+   */
+  unsigned char ecdhe_curve;
+  unsigned char ecdhe_point[133];
+  unsigned char ecdhe_point_len;
 
-	/*
-	 * Secure renegotiation (RFC 5746): 'reneg' can be:
-	 *   0   first handshake (server support is not known)
-	 *   1   peer does not support secure renegotiation
-	 *   2   peer supports secure renegotiation
-	 *
-	 * The saved_finished buffer contains the client and the
-	 * server "Finished" values from the last handshake, in
-	 * that order (12 bytes each).
-	 */
-	unsigned char reneg;
-	unsigned char saved_finished[24];
+  /*
+   * Secure renegotiation (RFC 5746): 'reneg' can be:
+   *   0   first handshake (server support is not known)
+   *   1   peer does not support secure renegotiation
+   *   2   peer supports secure renegotiation
+   *
+   * The saved_finished buffer contains the client and the
+   * server "Finished" values from the last handshake, in
+   * that order (12 bytes each).
+   */
+  unsigned char reneg;
+  unsigned char saved_finished[24];
 
-	/*
-	 * Behavioural flags.
-	 */
-	uint32_t flags;
+  /*
+   * Behavioural flags.
+   */
+  uint32_t flags;
 
-	/*
-	 * Context variables for the handshake processor. The 'pad' must
-	 * be large enough to accommodate an RSA-encrypted pre-master
-	 * secret, or an RSA signature; since we want to support up to
-	 * RSA-4096, this means at least 512 bytes. (Other pad usages
-	 * require its length to be at least 256.)
-	 */
-	struct {
-		uint32_t *dp;
-		uint32_t *rp;
-		const unsigned char *ip;
-	} cpu;
-	uint32_t dp_stack[32];
-	uint32_t rp_stack[32];
-	unsigned char pad[512];
-	unsigned char *hbuf_in, *hbuf_out, *saved_hbuf_out;
-	size_t hlen_in, hlen_out;
-	void (*hsrun)(void *ctx);
+  /*
+   * Context variables for the handshake processor. The 'pad' must
+   * be large enough to accommodate an RSA-encrypted pre-master
+   * secret, or an RSA signature; since we want to support up to
+   * RSA-4096, this means at least 512 bytes. (Other pad usages
+   * require its length to be at least 256.)
+   */
+  struct {
+    uint32_t *dp;
+    uint32_t *rp;
+    const unsigned char *ip;
+  } cpu;
+  uint32_t dp_stack[32];
+  uint32_t rp_stack[32];
+  unsigned char pad[512];
+  unsigned char *hbuf_in, *hbuf_out, *saved_hbuf_out;
+  size_t hlen_in, hlen_out;
+  void (*hsrun)(void *ctx);
 
-	/*
-	 * The 'action' value communicates OOB information between the
-	 * engine and the handshake processor.
-	 *
-	 * From the engine:
-	 *   0  invocation triggered by I/O
-	 *   1  invocation triggered by explicit close
-	 *   2  invocation triggered by explicit renegotiation
-	 */
-	unsigned char action;
+  /*
+   * The 'action' value communicates OOB information between the
+   * engine and the handshake processor.
+   *
+   * From the engine:
+   *   0  invocation triggered by I/O
+   *   1  invocation triggered by explicit close
+   *   2  invocation triggered by explicit renegotiation
+   */
+  unsigned char action;
 
-	/*
-	 * State for alert messages. Value is either 0, or the value of
-	 * the alert level byte (level is either 1 for warning, or 2 for
-	 * fatal; we convert all other values to 'fatal').
-	 */
-	unsigned char alert;
+  /*
+   * State for alert messages. Value is either 0, or the value of
+   * the alert level byte (level is either 1 for warning, or 2 for
+   * fatal; we convert all other values to 'fatal').
+   */
+  unsigned char alert;
 
-	/*
-	 * Closure flags. This flag is set when a close_notify has been
-	 * received from the peer.
-	 */
-	unsigned char close_received;
+  /*
+   * Closure flags. This flag is set when a close_notify has been
+   * received from the peer.
+   */
+  unsigned char close_received;
 
-	/*
-	 * Multi-hasher for the handshake messages. The handshake handler
-	 * is responsible for resetting it when appropriate.
-	 */
-	br_multihash_context mhash;
+  /*
+   * Multi-hasher for the handshake messages. The handshake handler
+   * is responsible for resetting it when appropriate.
+   */
+  br_multihash_context mhash;
 
-	/*
-	 * Pointer to the X.509 engine. The engine is supposed to be
-	 * already initialized. It is used to validate the peer's
-	 * certificate.
-	 */
-	const br_x509_class **x509ctx;
+  /*
+   * Pointer to the X.509 engine. The engine is supposed to be
+   * already initialized. It is used to validate the peer's
+   * certificate.
+   */
+  const br_x509_class **x509ctx;
 
-	/*
-	 * Certificate chain to send. This is used by both client and
-	 * server, when they send their respective Certificate messages.
-	 * If chain_len is 0, then chain may be NULL.
-	 */
-	const br_x509_certificate *chain;
-	size_t chain_len;
-	const unsigned char *cert_cur;
-	size_t cert_len;
+  /*
+   * Certificate chain to send. This is used by both client and
+   * server, when they send their respective Certificate messages.
+   * If chain_len is 0, then chain may be NULL.
+   */
+  const br_x509_certificate *chain;
+  size_t chain_len;
+  const unsigned char *cert_cur;
+  size_t cert_len;
 
-	/*
-	 * List of supported protocol names (ALPN extension). If unset,
-	 * (number of names is 0), then:
-	 *  - the client sends no ALPN extension;
-	 *  - the server ignores any incoming ALPN extension.
-	 *
-	 * Otherwise:
-	 *  - the client sends an ALPN extension with all the names;
-	 *  - the server selects the first protocol in its list that
-	 *    the client also supports, or fails (fatal alert 120)
-	 *    if the client sends an ALPN extension and there is no
-	 *    match.
-	 *
-	 * The 'selected_protocol' field contains 1+n if the matching
-	 * name has index n in the list (the value is 0 if no match was
-	 * performed, e.g. the peer did not send an ALPN extension).
-	 */
-	const char **protocol_names;
-	uint16_t protocol_names_num;
-	uint16_t selected_protocol;
+  /*
+   * List of supported protocol names (ALPN extension). If unset,
+   * (number of names is 0), then:
+   *  - the client sends no ALPN extension;
+   *  - the server ignores any incoming ALPN extension.
+   *
+   * Otherwise:
+   *  - the client sends an ALPN extension with all the names;
+   *  - the server selects the first protocol in its list that
+   *    the client also supports, or fails (fatal alert 120)
+   *    if the client sends an ALPN extension and there is no
+   *    match.
+   *
+   * The 'selected_protocol' field contains 1+n if the matching
+   * name has index n in the list (the value is 0 if no match was
+   * performed, e.g. the peer did not send an ALPN extension).
+   */
+  const char **protocol_names;
+  uint16_t protocol_names_num;
+  uint16_t selected_protocol;
 
-	/*
-	 * Pointers to implementations; left to NULL for unsupported
-	 * functions. For the raw hash functions, implementations are
-	 * referenced from the multihasher (mhash field).
-	 */
-	br_tls_prf_impl prf10;
-	br_tls_prf_impl prf_sha256;
-	br_tls_prf_impl prf_sha384;
-	const br_block_cbcenc_class *iaes_cbcenc;
-	const br_block_cbcdec_class *iaes_cbcdec;
-	const br_block_ctr_class *iaes_ctr;
-	const br_block_ctrcbc_class *iaes_ctrcbc;
-	const br_block_cbcenc_class *ides_cbcenc;
-	const br_block_cbcdec_class *ides_cbcdec;
-	br_ghash ighash;
-	br_chacha20_run ichacha;
-	br_poly1305_run ipoly;
-	const br_sslrec_in_cbc_class *icbc_in;
-	const br_sslrec_out_cbc_class *icbc_out;
-	const br_sslrec_in_gcm_class *igcm_in;
-	const br_sslrec_out_gcm_class *igcm_out;
-	const br_sslrec_in_chapol_class *ichapol_in;
-	const br_sslrec_out_chapol_class *ichapol_out;
-	const br_sslrec_in_ccm_class *iccm_in;
-	const br_sslrec_out_ccm_class *iccm_out;
-	const br_ec_impl *iec;
-	br_rsa_pkcs1_vrfy irsavrfy;
-	br_ecdsa_vrfy iecdsa;
+  /*
+   * Pointers to implementations; left to NULL for unsupported
+   * functions. For the raw hash functions, implementations are
+   * referenced from the multihasher (mhash field).
+   */
+  br_tls_prf_impl prf10;
+  br_tls_prf_impl prf_sha256;
+  br_tls_prf_impl prf_sha384;
+  const br_block_cbcenc_class *iaes_cbcenc;
+  const br_block_cbcdec_class *iaes_cbcdec;
+  const br_block_ctr_class *iaes_ctr;
+  const br_block_ctrcbc_class *iaes_ctrcbc;
+  const br_block_cbcenc_class *ides_cbcenc;
+  const br_block_cbcdec_class *ides_cbcdec;
+  br_ghash ighash;
+  br_chacha20_run ichacha;
+  br_poly1305_run ipoly;
+  const br_sslrec_in_cbc_class *icbc_in;
+  const br_sslrec_out_cbc_class *icbc_out;
+  const br_sslrec_in_gcm_class *igcm_in;
+  const br_sslrec_out_gcm_class *igcm_out;
+  const br_sslrec_in_chapol_class *ichapol_in;
+  const br_sslrec_out_chapol_class *ichapol_out;
+  const br_sslrec_in_ccm_class *iccm_in;
+  const br_sslrec_out_ccm_class *iccm_out;
+  const br_ec_impl *iec;
+  br_rsa_pkcs1_vrfy irsavrfy;
+  br_ecdsa_vrfy iecdsa;
 #endif
 } br_ssl_engine_context;
 
@@ -1124,10 +1109,8 @@ typedef struct {
  * \param cc   SSL engine context.
  * \return  the flags.
  */
-static inline uint32_t
-br_ssl_engine_get_flags(br_ssl_engine_context *cc)
-{
-	return cc->flags;
+static inline uint32_t br_ssl_engine_get_flags(br_ssl_engine_context *cc) {
+  return cc->flags;
 }
 
 /**
@@ -1136,10 +1119,9 @@ br_ssl_engine_get_flags(br_ssl_engine_context *cc)
  * \param cc      SSL engine context.
  * \param flags   new value for all flags.
  */
-static inline void
-br_ssl_engine_set_all_flags(br_ssl_engine_context *cc, uint32_t flags)
-{
-	cc->flags = flags;
+static inline void br_ssl_engine_set_all_flags(br_ssl_engine_context *cc,
+                                               uint32_t flags) {
+  cc->flags = flags;
 }
 
 /**
@@ -1151,10 +1133,9 @@ br_ssl_engine_set_all_flags(br_ssl_engine_context *cc, uint32_t flags)
  * \param cc      SSL engine context.
  * \param flags   additional set flags.
  */
-static inline void
-br_ssl_engine_add_flags(br_ssl_engine_context *cc, uint32_t flags)
-{
-	cc->flags |= flags;
+static inline void br_ssl_engine_add_flags(br_ssl_engine_context *cc,
+                                           uint32_t flags) {
+  cc->flags |= flags;
 }
 
 /**
@@ -1166,10 +1147,9 @@ br_ssl_engine_add_flags(br_ssl_engine_context *cc, uint32_t flags)
  * \param cc      SSL engine context.
  * \param flags   flags to remove.
  */
-static inline void
-br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
-{
-	cc->flags &= ~flags;
+static inline void br_ssl_engine_remove_flags(br_ssl_engine_context *cc,
+                                              uint32_t flags) {
+  cc->flags &= ~flags;
 }
 
 /**
@@ -1178,7 +1158,7 @@ br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
  * If this flag is set, then the server will enforce its own cipher suite
  * preference order; otherwise, it follows the client preferences.
  */
-#define BR_OPT_ENFORCE_SERVER_PREFERENCES      ((uint32_t)1 << 0)
+#define BR_OPT_ENFORCE_SERVER_PREFERENCES ((uint32_t)1 << 0)
 
 /**
  * \brief Behavioural flag: disable renegotiation.
@@ -1187,7 +1167,7 @@ br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
  * they won't be honoured if asked for programmatically, and requests from
  * the peer are rejected.
  */
-#define BR_OPT_NO_RENEGOTIATION                ((uint32_t)1 << 1)
+#define BR_OPT_NO_RENEGOTIATION ((uint32_t)1 << 1)
 
 /**
  * \brief Behavioural flag: tolerate lack of client authentication.
@@ -1207,7 +1187,7 @@ br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
  *   - If using full-static ECDH, then a failure to validate the client's
  *     certificate prevents the handshake from succeeding.
  */
-#define BR_OPT_TOLERATE_NO_CLIENT_AUTH         ((uint32_t)1 << 2)
+#define BR_OPT_TOLERATE_NO_CLIENT_AUTH ((uint32_t)1 << 2)
 
 /**
  * \brief Behavioural flag: fail on application protocol mismatch.
@@ -1233,7 +1213,7 @@ br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
  * may still return `NULL` if the client or the server does not send an
  * ALPN extension at all.
  */
-#define BR_OPT_FAIL_ON_ALPN_MISMATCH           ((uint32_t)1 << 3)
+#define BR_OPT_FAIL_ON_ALPN_MISMATCH ((uint32_t)1 << 3)
 
 /**
  * \brief Set the minimum and maximum supported protocol versions.
@@ -1246,12 +1226,11 @@ br_ssl_engine_remove_flags(br_ssl_engine_context *cc, uint32_t flags)
  * \param version_min   minimum supported TLS version.
  * \param version_max   maximum supported TLS version.
  */
-static inline void
-br_ssl_engine_set_versions(br_ssl_engine_context *cc,
-	unsigned version_min, unsigned version_max)
-{
-	cc->version_min = version_min;
-	cc->version_max = version_max;
+static inline void br_ssl_engine_set_versions(br_ssl_engine_context *cc,
+                                              unsigned version_min,
+                                              unsigned version_max) {
+  cc->version_min = version_min;
+  cc->version_max = version_max;
 }
 
 /**
@@ -1273,8 +1252,8 @@ br_ssl_engine_set_versions(br_ssl_engine_context *cc,
  * \param suites       cipher suites.
  * \param suites_num   number of cipher suites.
  */
-void br_ssl_engine_set_suites(br_ssl_engine_context *cc,
-	const uint16_t *suites, size_t suites_num);
+void br_ssl_engine_set_suites(br_ssl_engine_context *cc, const uint16_t *suites,
+                              size_t suites_num);
 
 /**
  * \brief Set the X.509 engine.
@@ -1284,10 +1263,9 @@ void br_ssl_engine_set_suites(br_ssl_engine_context *cc,
  * \param cc        SSL engine context.
  * \param x509ctx   X.509 certificate validation context.
  */
-static inline void
-br_ssl_engine_set_x509(br_ssl_engine_context *cc, const br_x509_class **x509ctx)
-{
-	cc->x509ctx = x509ctx;
+static inline void br_ssl_engine_set_x509(br_ssl_engine_context *cc,
+                                          const br_x509_class **x509ctx) {
+  cc->x509ctx = x509ctx;
 }
 
 /**
@@ -1319,12 +1297,11 @@ br_ssl_engine_set_x509(br_ssl_engine_context *cc, const br_x509_class **x509ctx)
  * \param names   list of protocol names (zero-terminated).
  * \param num     number of protocol names (MUST be 1 or more).
  */
-static inline void
-br_ssl_engine_set_protocol_names(br_ssl_engine_context *ctx,
-	const char **names, size_t num)
-{
-	ctx->protocol_names = names;
-	ctx->protocol_names_num = num;
+static inline void br_ssl_engine_set_protocol_names(br_ssl_engine_context *ctx,
+                                                    const char **names,
+                                                    size_t num) {
+  ctx->protocol_names = names;
+  ctx->protocol_names_num = num;
 }
 
 /**
@@ -1340,13 +1317,12 @@ br_ssl_engine_set_protocol_names(br_ssl_engine_context *ctx,
  *
  * \return  the selected protocol, or `NULL`.
  */
-static inline const char *
-br_ssl_engine_get_selected_protocol(br_ssl_engine_context *ctx)
-{
-	unsigned k;
+static inline const char *br_ssl_engine_get_selected_protocol(
+    br_ssl_engine_context *ctx) {
+  unsigned k;
 
-	k = ctx->selected_protocol;
-	return (k == 0 || k == 0xFFFF) ? NULL : ctx->protocol_names[k - 1];
+  k = ctx->selected_protocol;
+  return (k == 0 || k == 0xFFFF) ? NULL : ctx->protocol_names[k - 1];
 }
 
 /**
@@ -1361,11 +1337,9 @@ br_ssl_engine_get_selected_protocol(br_ssl_engine_context *ctx)
  * \param id     hash function identifier.
  * \param impl   hash function implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_hash(br_ssl_engine_context *ctx,
-	int id, const br_hash_class *impl)
-{
-	br_multihash_setimpl(&ctx->mhash, id, impl);
+static inline void br_ssl_engine_set_hash(br_ssl_engine_context *ctx, int id,
+                                          const br_hash_class *impl) {
+  br_multihash_setimpl(&ctx->mhash, id, impl);
 }
 
 /**
@@ -1378,10 +1352,9 @@ br_ssl_engine_set_hash(br_ssl_engine_context *ctx,
  * \param id    hash function identifier.
  * \return  the hash function implementation (or `NULL`).
  */
-static inline const br_hash_class *
-br_ssl_engine_get_hash(br_ssl_engine_context *ctx, int id)
-{
-	return br_multihash_getimpl(&ctx->mhash, id);
+static inline const br_hash_class *br_ssl_engine_get_hash(
+    br_ssl_engine_context *ctx, int id) {
+  return br_multihash_getimpl(&ctx->mhash, id);
 }
 
 /**
@@ -1393,10 +1366,9 @@ br_ssl_engine_get_hash(br_ssl_engine_context *ctx, int id)
  * \param cc     SSL engine context.
  * \param impl   PRF implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_prf10(br_ssl_engine_context *cc, br_tls_prf_impl impl)
-{
-	cc->prf10 = impl;
+static inline void br_ssl_engine_set_prf10(br_ssl_engine_context *cc,
+                                           br_tls_prf_impl impl) {
+  cc->prf10 = impl;
 }
 
 /**
@@ -1408,10 +1380,9 @@ br_ssl_engine_set_prf10(br_ssl_engine_context *cc, br_tls_prf_impl impl)
  * \param cc     SSL engine context.
  * \param impl   PRF implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_prf_sha256(br_ssl_engine_context *cc, br_tls_prf_impl impl)
-{
-	cc->prf_sha256 = impl;
+static inline void br_ssl_engine_set_prf_sha256(br_ssl_engine_context *cc,
+                                                br_tls_prf_impl impl) {
+  cc->prf_sha256 = impl;
 }
 
 /**
@@ -1423,10 +1394,9 @@ br_ssl_engine_set_prf_sha256(br_ssl_engine_context *cc, br_tls_prf_impl impl)
  * \param cc     SSL engine context.
  * \param impl   PRF implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_prf_sha384(br_ssl_engine_context *cc, br_tls_prf_impl impl)
-{
-	cc->prf_sha384 = impl;
+static inline void br_ssl_engine_set_prf_sha384(br_ssl_engine_context *cc,
+                                                br_tls_prf_impl impl) {
+  cc->prf_sha384 = impl;
 }
 
 /**
@@ -1436,13 +1406,11 @@ br_ssl_engine_set_prf_sha384(br_ssl_engine_context *cc, br_tls_prf_impl impl)
  * \param impl_enc   AES/CBC encryption implementation (or `NULL`).
  * \param impl_dec   AES/CBC decryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_aes_cbc(br_ssl_engine_context *cc,
-	const br_block_cbcenc_class *impl_enc,
-	const br_block_cbcdec_class *impl_dec)
-{
-	cc->iaes_cbcenc = impl_enc;
-	cc->iaes_cbcdec = impl_dec;
+static inline void br_ssl_engine_set_aes_cbc(
+    br_ssl_engine_context *cc, const br_block_cbcenc_class *impl_enc,
+    const br_block_cbcdec_class *impl_dec) {
+  cc->iaes_cbcenc = impl_enc;
+  cc->iaes_cbcdec = impl_dec;
 }
 
 /**
@@ -1463,11 +1431,9 @@ void br_ssl_engine_set_default_aes_cbc(br_ssl_engine_context *cc);
  * \param cc     SSL engine context.
  * \param impl   AES/CTR encryption/decryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_aes_ctr(br_ssl_engine_context *cc,
-	const br_block_ctr_class *impl)
-{
-	cc->iaes_ctr = impl;
+static inline void br_ssl_engine_set_aes_ctr(br_ssl_engine_context *cc,
+                                             const br_block_ctr_class *impl) {
+  cc->iaes_ctr = impl;
 }
 
 /**
@@ -1489,13 +1455,11 @@ void br_ssl_engine_set_default_aes_gcm(br_ssl_engine_context *cc);
  * \param impl_enc   DES/CBC encryption implementation (or `NULL`).
  * \param impl_dec   DES/CBC decryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_des_cbc(br_ssl_engine_context *cc,
-	const br_block_cbcenc_class *impl_enc,
-	const br_block_cbcdec_class *impl_dec)
-{
-	cc->ides_cbcenc = impl_enc;
-	cc->ides_cbcdec = impl_dec;
+static inline void br_ssl_engine_set_des_cbc(
+    br_ssl_engine_context *cc, const br_block_cbcenc_class *impl_enc,
+    const br_block_cbcdec_class *impl_dec) {
+  cc->ides_cbcenc = impl_enc;
+  cc->ides_cbcdec = impl_dec;
 }
 
 /**
@@ -1516,10 +1480,9 @@ void br_ssl_engine_set_default_des_cbc(br_ssl_engine_context *cc);
  * \param cc     SSL engine context.
  * \param impl   GHASH implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_ghash(br_ssl_engine_context *cc, br_ghash impl)
-{
-	cc->ighash = impl;
+static inline void br_ssl_engine_set_ghash(br_ssl_engine_context *cc,
+                                           br_ghash impl) {
+  cc->ighash = impl;
 }
 
 /**
@@ -1528,11 +1491,9 @@ br_ssl_engine_set_ghash(br_ssl_engine_context *cc, br_ghash impl)
  * \param cc        SSL engine context.
  * \param ichacha   ChaCha20 implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_chacha20(br_ssl_engine_context *cc,
-	br_chacha20_run ichacha)
-{
-	cc->ichacha = ichacha;
+static inline void br_ssl_engine_set_chacha20(br_ssl_engine_context *cc,
+                                              br_chacha20_run ichacha) {
+  cc->ichacha = ichacha;
 }
 
 /**
@@ -1541,11 +1502,9 @@ br_ssl_engine_set_chacha20(br_ssl_engine_context *cc,
  * \param cc      SSL engine context.
  * \param ipoly   Poly1305 implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_poly1305(br_ssl_engine_context *cc,
-	br_poly1305_run ipoly)
-{
-	cc->ipoly = ipoly;
+static inline void br_ssl_engine_set_poly1305(br_ssl_engine_context *cc,
+                                              br_poly1305_run ipoly) {
+  cc->ipoly = ipoly;
 }
 
 /**
@@ -1566,11 +1525,9 @@ void br_ssl_engine_set_default_chapol(br_ssl_engine_context *cc);
  * \param cc     SSL engine context.
  * \param impl   AES/CTR+CBC encryption/decryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_aes_ctrcbc(br_ssl_engine_context *cc,
-	const br_block_ctrcbc_class *impl)
-{
-	cc->iaes_ctrcbc = impl;
+static inline void br_ssl_engine_set_aes_ctrcbc(
+    br_ssl_engine_context *cc, const br_block_ctrcbc_class *impl) {
+  cc->iaes_ctrcbc = impl;
 }
 
 /**
@@ -1592,13 +1549,11 @@ void br_ssl_engine_set_default_aes_ccm(br_ssl_engine_context *cc);
  * \param impl_in    record CBC decryption implementation (or `NULL`).
  * \param impl_out   record CBC encryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_cbc(br_ssl_engine_context *cc,
-	const br_sslrec_in_cbc_class *impl_in,
-	const br_sslrec_out_cbc_class *impl_out)
-{
-	cc->icbc_in = impl_in;
-	cc->icbc_out = impl_out;
+static inline void br_ssl_engine_set_cbc(
+    br_ssl_engine_context *cc, const br_sslrec_in_cbc_class *impl_in,
+    const br_sslrec_out_cbc_class *impl_out) {
+  cc->icbc_in = impl_in;
+  cc->icbc_out = impl_out;
 }
 
 /**
@@ -1608,13 +1563,11 @@ br_ssl_engine_set_cbc(br_ssl_engine_context *cc,
  * \param impl_in    record GCM decryption implementation (or `NULL`).
  * \param impl_out   record GCM encryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_gcm(br_ssl_engine_context *cc,
-	const br_sslrec_in_gcm_class *impl_in,
-	const br_sslrec_out_gcm_class *impl_out)
-{
-	cc->igcm_in = impl_in;
-	cc->igcm_out = impl_out;
+static inline void br_ssl_engine_set_gcm(
+    br_ssl_engine_context *cc, const br_sslrec_in_gcm_class *impl_in,
+    const br_sslrec_out_gcm_class *impl_out) {
+  cc->igcm_in = impl_in;
+  cc->igcm_out = impl_out;
 }
 
 /**
@@ -1624,13 +1577,11 @@ br_ssl_engine_set_gcm(br_ssl_engine_context *cc,
  * \param impl_in    record CCM decryption implementation (or `NULL`).
  * \param impl_out   record CCM encryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_ccm(br_ssl_engine_context *cc,
-	const br_sslrec_in_ccm_class *impl_in,
-	const br_sslrec_out_ccm_class *impl_out)
-{
-	cc->iccm_in = impl_in;
-	cc->iccm_out = impl_out;
+static inline void br_ssl_engine_set_ccm(
+    br_ssl_engine_context *cc, const br_sslrec_in_ccm_class *impl_in,
+    const br_sslrec_out_ccm_class *impl_out) {
+  cc->iccm_in = impl_in;
+  cc->iccm_out = impl_out;
 }
 
 /**
@@ -1641,13 +1592,11 @@ br_ssl_engine_set_ccm(br_ssl_engine_context *cc,
  * \param impl_in    record ChaCha20 decryption implementation (or `NULL`).
  * \param impl_out   record ChaCha20 encryption implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_chapol(br_ssl_engine_context *cc,
-	const br_sslrec_in_chapol_class *impl_in,
-	const br_sslrec_out_chapol_class *impl_out)
-{
-	cc->ichapol_in = impl_in;
-	cc->ichapol_out = impl_out;
+static inline void br_ssl_engine_set_chapol(
+    br_ssl_engine_context *cc, const br_sslrec_in_chapol_class *impl_in,
+    const br_sslrec_out_chapol_class *impl_out) {
+  cc->ichapol_in = impl_in;
+  cc->ichapol_out = impl_out;
 }
 
 /**
@@ -1659,10 +1608,9 @@ br_ssl_engine_set_chapol(br_ssl_engine_context *cc,
  * \param cc    SSL engine context.
  * \param iec   EC implementation (or `NULL`).
  */
-static inline void
-br_ssl_engine_set_ec(br_ssl_engine_context *cc, const br_ec_impl *iec)
-{
-	cc->iec = iec;
+static inline void br_ssl_engine_set_ec(br_ssl_engine_context *cc,
+                                        const br_ec_impl *iec) {
+  cc->iec = iec;
 }
 
 /**
@@ -1682,10 +1630,9 @@ void br_ssl_engine_set_default_ec(br_ssl_engine_context *cc);
  * \param cc   SSL engine context.
  * \return  the EC implementation.
  */
-static inline const br_ec_impl *
-br_ssl_engine_get_ec(br_ssl_engine_context *cc)
-{
-	return cc->iec;
+static inline const br_ec_impl *br_ssl_engine_get_ec(
+    br_ssl_engine_context *cc) {
+  return cc->iec;
 }
 
 /**
@@ -1699,10 +1646,9 @@ br_ssl_engine_get_ec(br_ssl_engine_context *cc)
  * \param cc         SSL engine context.
  * \param irsavrfy   RSA signature verification implementation.
  */
-static inline void
-br_ssl_engine_set_rsavrfy(br_ssl_engine_context *cc, br_rsa_pkcs1_vrfy irsavrfy)
-{
-	cc->irsavrfy = irsavrfy;
+static inline void br_ssl_engine_set_rsavrfy(br_ssl_engine_context *cc,
+                                             br_rsa_pkcs1_vrfy irsavrfy) {
+  cc->irsavrfy = irsavrfy;
 }
 
 /**
@@ -1722,10 +1668,9 @@ void br_ssl_engine_set_default_rsavrfy(br_ssl_engine_context *cc);
  * \param cc   SSL engine context.
  * \return  the RSA signature verification implementation.
  */
-static inline br_rsa_pkcs1_vrfy
-br_ssl_engine_get_rsavrfy(br_ssl_engine_context *cc)
-{
-	return cc->irsavrfy;
+static inline br_rsa_pkcs1_vrfy br_ssl_engine_get_rsavrfy(
+    br_ssl_engine_context *cc) {
+  return cc->irsavrfy;
 }
 
 /*
@@ -1743,10 +1688,9 @@ br_ssl_engine_get_rsavrfy(br_ssl_engine_context *cc)
  * \param cc       client context.
  * \param iecdsa   ECDSA verification implementation.
  */
-static inline void
-br_ssl_engine_set_ecdsa(br_ssl_engine_context *cc, br_ecdsa_vrfy iecdsa)
-{
-	cc->iecdsa = iecdsa;
+static inline void br_ssl_engine_set_ecdsa(br_ssl_engine_context *cc,
+                                           br_ecdsa_vrfy iecdsa) {
+  cc->iecdsa = iecdsa;
 }
 
 /**
@@ -1768,10 +1712,8 @@ void br_ssl_engine_set_default_ecdsa(br_ssl_engine_context *cc);
  * \param cc   SSL engine context.
  * \return  the ECDSA signature verification implementation.
  */
-static inline br_ecdsa_vrfy
-br_ssl_engine_get_ecdsa(br_ssl_engine_context *cc)
-{
-	return cc->iecdsa;
+static inline br_ecdsa_vrfy br_ssl_engine_get_ecdsa(br_ssl_engine_context *cc) {
+  return cc->iecdsa;
 }
 
 /**
@@ -1804,8 +1746,8 @@ br_ssl_engine_get_ecdsa(br_ssl_engine_context *cc)
  * \param iobuf_len   I/O buffer length (in bytes).
  * \param bidi        non-zero for full-duplex mode.
  */
-void br_ssl_engine_set_buffer(br_ssl_engine_context *cc,
-	void *iobuf, size_t iobuf_len, int bidi);
+void br_ssl_engine_set_buffer(br_ssl_engine_context *cc, void *iobuf,
+                              size_t iobuf_len, int bidi);
 
 /**
  * \brief Set the I/O buffers for the SSL engine.
@@ -1827,8 +1769,9 @@ void br_ssl_engine_set_buffer(br_ssl_engine_context *cc,
  * \param obuf       output buffer.
  * \param obuf_len   output buffer length (in bytes).
  */
-void br_ssl_engine_set_buffers_bidi(br_ssl_engine_context *cc,
-	void *ibuf, size_t ibuf_len, void *obuf, size_t obuf_len);
+void br_ssl_engine_set_buffers_bidi(br_ssl_engine_context *cc, void *ibuf,
+                                    size_t ibuf_len, void *obuf,
+                                    size_t obuf_len);
 
 /**
  * \brief Inject some "initial entropy" in the context.
@@ -1861,8 +1804,8 @@ void br_ssl_engine_set_buffers_bidi(br_ssl_engine_context *cc,
  * \param data   extra entropy to inject.
  * \param len    length of the extra data (in bytes).
  */
-void br_ssl_engine_inject_entropy(br_ssl_engine_context *cc,
-	const void *data, size_t len);
+void br_ssl_engine_inject_entropy(br_ssl_engine_context *cc, const void *data,
+                                  size_t len);
 
 /**
  * \brief Get the "server name" in this engine.
@@ -1880,10 +1823,9 @@ void br_ssl_engine_inject_entropy(br_ssl_engine_context *cc,
  * \param cc   SSL engine context.
  * \return  the server name (possibly empty).
  */
-static inline const char *
-br_ssl_engine_get_server_name(const br_ssl_engine_context *cc)
-{
-	return cc->server_name;
+static inline const char *br_ssl_engine_get_server_name(
+    const br_ssl_engine_context *cc) {
+  return cc->server_name;
 }
 
 /**
@@ -1896,10 +1838,9 @@ br_ssl_engine_get_server_name(const br_ssl_engine_context *cc)
  * \param cc   SSL engine context.
  * \return  the protocol version.
  */
-static inline unsigned
-br_ssl_engine_get_version(const br_ssl_engine_context *cc)
-{
-	return cc->session.version;
+static inline unsigned br_ssl_engine_get_version(
+    const br_ssl_engine_context *cc) {
+  return cc->session.version;
 }
 
 /**
@@ -1917,11 +1858,9 @@ br_ssl_engine_get_version(const br_ssl_engine_context *cc)
  * \param cc   SSL engine context.
  * \param pp   destination structure for the session parameters.
  */
-static inline void
-br_ssl_engine_get_session_parameters(const br_ssl_engine_context *cc,
-	br_ssl_session_parameters *pp)
-{
-	memcpy(pp, &cc->session, sizeof *pp);
+static inline void br_ssl_engine_get_session_parameters(
+    const br_ssl_engine_context *cc, br_ssl_session_parameters *pp) {
+  memcpy(pp, &cc->session, sizeof *pp);
 }
 
 /**
@@ -1934,11 +1873,9 @@ br_ssl_engine_get_session_parameters(const br_ssl_engine_context *cc,
  * \param cc   SSL engine context.
  * \param pp   source structure for the session parameters.
  */
-static inline void
-br_ssl_engine_set_session_parameters(br_ssl_engine_context *cc,
-	const br_ssl_session_parameters *pp)
-{
-	memcpy(&cc->session, pp, sizeof *pp);
+static inline void br_ssl_engine_set_session_parameters(
+    br_ssl_engine_context *cc, const br_ssl_session_parameters *pp) {
+  memcpy(&cc->session, pp, sizeof *pp);
 }
 
 /**
@@ -1954,10 +1891,8 @@ br_ssl_engine_set_session_parameters(br_ssl_engine_context *cc,
  * @param cc   SSL engine context.
  * @return  the ECDHE curve identifier.
  */
-static inline int
-br_ssl_engine_get_ecdhe_curve(br_ssl_engine_context *cc)
-{
-	return cc->ecdhe_curve;
+static inline int br_ssl_engine_get_ecdhe_curve(br_ssl_engine_context *cc) {
+  return cc->ecdhe_curve;
 }
 
 /**
@@ -2006,15 +1941,15 @@ br_ssl_engine_get_ecdhe_curve(br_ssl_engine_context *cc)
 unsigned br_ssl_engine_current_state(const br_ssl_engine_context *cc);
 
 /** \brief SSL engine state: closed or failed. */
-#define BR_SSL_CLOSED    0x0001
+#define BR_SSL_CLOSED 0x0001
 /** \brief SSL engine state: record data is ready to be sent to the peer. */
-#define BR_SSL_SENDREC   0x0002
+#define BR_SSL_SENDREC 0x0002
 /** \brief SSL engine state: engine may receive records from the peer. */
-#define BR_SSL_RECVREC   0x0004
+#define BR_SSL_RECVREC 0x0004
 /** \brief SSL engine state: engine may accept application data to send. */
-#define BR_SSL_SENDAPP   0x0008
+#define BR_SSL_SENDAPP 0x0008
 /** \brief SSL engine state: engine has received application data. */
-#define BR_SSL_RECVAPP   0x0010
+#define BR_SSL_RECVAPP 0x0010
 
 /**
  * \brief Get the engine error indicator.
@@ -2028,10 +1963,8 @@ unsigned br_ssl_engine_current_state(const br_ssl_engine_context *cc);
  * \param cc   SSL engine context.
  * \return  0, or a non-zero error code.
  */
-static inline int
-br_ssl_engine_last_error(const br_ssl_engine_context *cc)
-{
-	return cc->err;
+static inline int br_ssl_engine_last_error(const br_ssl_engine_context *cc) {
+  return cc->err;
 }
 
 /*
@@ -2082,8 +2015,8 @@ br_ssl_engine_last_error(const br_ssl_engine_context *cc)
  * \param len   receives the application data output buffer length, or 0.
  * \return  the application data output buffer, or `NULL`.
  */
-unsigned char *br_ssl_engine_sendapp_buf(
-	const br_ssl_engine_context *cc, size_t *len);
+unsigned char *br_ssl_engine_sendapp_buf(const br_ssl_engine_context *cc,
+                                         size_t *len);
 
 /**
  * \brief Inform the engine of some new application data.
@@ -2111,8 +2044,8 @@ void br_ssl_engine_sendapp_ack(br_ssl_engine_context *cc, size_t len);
  * \param len   receives the application data input buffer length, or 0.
  * \return  the application data input buffer, or `NULL`.
  */
-unsigned char *br_ssl_engine_recvapp_buf(
-	const br_ssl_engine_context *cc, size_t *len);
+unsigned char *br_ssl_engine_recvapp_buf(const br_ssl_engine_context *cc,
+                                         size_t *len);
 
 /**
  * \brief Acknowledge some received application data.
@@ -2140,8 +2073,8 @@ void br_ssl_engine_recvapp_ack(br_ssl_engine_context *cc, size_t len);
  * \param len   receives the record data output buffer length, or 0.
  * \return  the record data output buffer, or `NULL`.
  */
-unsigned char *br_ssl_engine_sendrec_buf(
-	const br_ssl_engine_context *cc, size_t *len);
+unsigned char *br_ssl_engine_sendrec_buf(const br_ssl_engine_context *cc,
+                                         size_t *len);
 
 /**
  * \brief Acknowledge some sent record data.
@@ -2169,8 +2102,8 @@ void br_ssl_engine_sendrec_ack(br_ssl_engine_context *cc, size_t len);
  * \param len   receives the record data input buffer length, or 0.
  * \return  the record data input buffer, or `NULL`.
  */
-unsigned char *br_ssl_engine_recvrec_buf(
-	const br_ssl_engine_context *cc, size_t *len);
+unsigned char *br_ssl_engine_recvrec_buf(const br_ssl_engine_context *cc,
+                                         size_t *len);
 
 /**
  * \brief Inform the engine of some new record data.
@@ -2265,9 +2198,9 @@ int br_ssl_engine_renegotiate(br_ssl_engine_context *cc);
  * \param context_len   context length (in bytes).
  * \return  1 on success, 0 on error.
  */
-int br_ssl_key_export(br_ssl_engine_context *cc,
-	void *dst, size_t len, const char *label,
-	const void *context, size_t context_len);
+int br_ssl_key_export(br_ssl_engine_context *cc, void *dst, size_t len,
+                      const char *label, const void *context,
+                      size_t context_len);
 
 /*
  * Pre-declaration for the SSL client context.
@@ -2278,48 +2211,48 @@ typedef struct br_ssl_client_context_ br_ssl_client_context;
  * \brief Type for the client certificate, if requested by the server.
  */
 typedef struct {
-	/**
-	 * \brief Authentication type.
-	 *
-	 * This is either `BR_AUTH_RSA` (RSA signature), `BR_AUTH_ECDSA`
-	 * (ECDSA signature), or `BR_AUTH_ECDH` (static ECDH key exchange).
-	 */
-	int auth_type;
+  /**
+   * \brief Authentication type.
+   *
+   * This is either `BR_AUTH_RSA` (RSA signature), `BR_AUTH_ECDSA`
+   * (ECDSA signature), or `BR_AUTH_ECDH` (static ECDH key exchange).
+   */
+  int auth_type;
 
-	/**
-	 * \brief Hash function for computing the CertificateVerify.
-	 *
-	 * This is the symbolic identifier for the hash function that
-	 * will be used to produce the hash of handshake messages, to
-	 * be signed into the CertificateVerify. For full static ECDH
-	 * (client and server certificates are both EC in the same
-	 * curve, and static ECDH is used), this value is set to -1.
-	 *
-	 * Take care that with TLS 1.0 and 1.1, that value MUST match
-	 * the protocol requirements: value must be 0 (MD5+SHA-1) for
-	 * a RSA signature, or 2 (SHA-1) for an ECDSA signature. Only
-	 * TLS 1.2 allows for other hash functions.
-	 */
-	int hash_id;
+  /**
+   * \brief Hash function for computing the CertificateVerify.
+   *
+   * This is the symbolic identifier for the hash function that
+   * will be used to produce the hash of handshake messages, to
+   * be signed into the CertificateVerify. For full static ECDH
+   * (client and server certificates are both EC in the same
+   * curve, and static ECDH is used), this value is set to -1.
+   *
+   * Take care that with TLS 1.0 and 1.1, that value MUST match
+   * the protocol requirements: value must be 0 (MD5+SHA-1) for
+   * a RSA signature, or 2 (SHA-1) for an ECDSA signature. Only
+   * TLS 1.2 allows for other hash functions.
+   */
+  int hash_id;
 
-	/**
-	 * \brief Certificate chain to send to the server.
-	 *
-	 * This is an array of `br_x509_certificate` objects, each
-	 * normally containing a DER-encoded certificate. The client
-	 * code does not try to decode these elements. If there is no
-	 * chain to send to the server, then this pointer shall be
-	 * set to `NULL`.
-	 */
-	const br_x509_certificate *chain;
+  /**
+   * \brief Certificate chain to send to the server.
+   *
+   * This is an array of `br_x509_certificate` objects, each
+   * normally containing a DER-encoded certificate. The client
+   * code does not try to decode these elements. If there is no
+   * chain to send to the server, then this pointer shall be
+   * set to `NULL`.
+   */
+  const br_x509_certificate *chain;
 
-	/**
-	 * \brief Certificate chain length (number of certificates).
-	 *
-	 * If there is no chain to send to the server, then this value
-	 * shall be set to 0.
-	 */
-	size_t chain_len;
+  /**
+   * \brief Certificate chain length (number of certificates).
+   *
+   * If there is no chain to send to the server, then this value
+   * shall be set to 0.
+   */
+  size_t chain_len;
 
 } br_ssl_client_certificate;
 
@@ -2328,11 +2261,11 @@ typedef struct {
  */
 
 /** \brief Client authentication type: static ECDH. */
-#define BR_AUTH_ECDH    0
+#define BR_AUTH_ECDH 0
 /** \brief Client authentication type: RSA signature. */
-#define BR_AUTH_RSA     1
+#define BR_AUTH_RSA 1
 /** \brief Client authentication type: ECDSA signature. */
-#define BR_AUTH_ECDSA   3
+#define BR_AUTH_ECDSA 3
 
 /**
  * \brief Class type for a certificate handler (client side).
@@ -2352,195 +2285,194 @@ typedef struct {
  */
 typedef struct br_ssl_client_certificate_class_ br_ssl_client_certificate_class;
 struct br_ssl_client_certificate_class_ {
-	/**
-	 * \brief Context size (in bytes).
-	 */
-	size_t context_size;
+  /**
+   * \brief Context size (in bytes).
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Begin reception of a list of trust anchor names. This
-	 * is called while parsing the incoming CertificateRequest.
-	 *
-	 * \param pctx   certificate handler context.
-	 */
-	void (*start_name_list)(const br_ssl_client_certificate_class **pctx);
+  /**
+   * \brief Begin reception of a list of trust anchor names. This
+   * is called while parsing the incoming CertificateRequest.
+   *
+   * \param pctx   certificate handler context.
+   */
+  void (*start_name_list)(const br_ssl_client_certificate_class **pctx);
 
-	/**
-	 * \brief Begin reception of a new trust anchor name.
-	 *
-	 * The total encoded name length is provided; it is less than
-	 * 65535 bytes.
-	 *
-	 * \param pctx   certificate handler context.
-	 * \param len    encoded name length (in bytes).
-	 */
-	void (*start_name)(const br_ssl_client_certificate_class **pctx,
-		size_t len);
+  /**
+   * \brief Begin reception of a new trust anchor name.
+   *
+   * The total encoded name length is provided; it is less than
+   * 65535 bytes.
+   *
+   * \param pctx   certificate handler context.
+   * \param len    encoded name length (in bytes).
+   */
+  void (*start_name)(const br_ssl_client_certificate_class **pctx, size_t len);
 
-	/**
-	 * \brief Receive some more bytes for the current trust anchor name.
-	 *
-	 * The provided reference (`data`) points to a transient buffer
-	 * they may be reused as soon as this function returns. The chunk
-	 * length (`len`) is never zero.
-	 *
-	 * \param pctx   certificate handler context.
-	 * \param data   anchor name chunk.
-	 * \param len    anchor name chunk length (in bytes).
-	 */
-	void (*append_name)(const br_ssl_client_certificate_class **pctx,
-		const unsigned char *data, size_t len);
+  /**
+   * \brief Receive some more bytes for the current trust anchor name.
+   *
+   * The provided reference (`data`) points to a transient buffer
+   * they may be reused as soon as this function returns. The chunk
+   * length (`len`) is never zero.
+   *
+   * \param pctx   certificate handler context.
+   * \param data   anchor name chunk.
+   * \param len    anchor name chunk length (in bytes).
+   */
+  void (*append_name)(const br_ssl_client_certificate_class **pctx,
+                      const unsigned char *data, size_t len);
 
-	/**
-	 * \brief End current trust anchor name.
-	 *
-	 * This function is called when all the encoded anchor name data
-	 * has been provided.
-	 *
-	 * \param pctx   certificate handler context.
-	 */
-	void (*end_name)(const br_ssl_client_certificate_class **pctx);
+  /**
+   * \brief End current trust anchor name.
+   *
+   * This function is called when all the encoded anchor name data
+   * has been provided.
+   *
+   * \param pctx   certificate handler context.
+   */
+  void (*end_name)(const br_ssl_client_certificate_class **pctx);
 
-	/**
-	 * \brief End list of trust anchor names.
-	 *
-	 * This function is called when all the anchor names in the
-	 * CertificateRequest message have been obtained.
-	 *
-	 * \param pctx   certificate handler context.
-	 */
-	void (*end_name_list)(const br_ssl_client_certificate_class **pctx);
+  /**
+   * \brief End list of trust anchor names.
+   *
+   * This function is called when all the anchor names in the
+   * CertificateRequest message have been obtained.
+   *
+   * \param pctx   certificate handler context.
+   */
+  void (*end_name_list)(const br_ssl_client_certificate_class **pctx);
 
-	/**
-	 * \brief Select client certificate and algorithms.
-	 *
-	 * This callback function shall fill the provided `choices`
-	 * structure with the selected algorithms and certificate chain.
-	 * The `hash_id`, `chain` and `chain_len` fields must be set. If
-	 * the client cannot or does not wish to send a certificate,
-	 * then it shall set `chain` to `NULL` and `chain_len` to 0.
-	 *
-	 * The `auth_types` parameter describes the authentication types,
-	 * signature algorithms and hash functions that are supported by
-	 * both the client context and the server, and compatible with
-	 * the current protocol version. This is a bit field with the
-	 * following contents:
-	 *
-	 *   - If RSA signatures with hash function x are supported, then
-	 *     bit x is set.
-	 *
-	 *   - If ECDSA signatures with hash function x are supported,
-	 *     then bit 8+x is set.
-	 *
-	 *   - If static ECDH is supported, with a RSA-signed certificate,
-	 *     then bit 16 is set.
-	 *
-	 *   - If static ECDH is supported, with an ECDSA-signed certificate,
-	 *     then bit 17 is set.
-	 *
-	 * Notes:
-	 *
-	 *   - When using TLS 1.0 or 1.1, the hash function for RSA
-	 *     signatures is always the special MD5+SHA-1 (id 0), and the
-	 *     hash function for ECDSA signatures is always SHA-1 (id 2).
-	 *
-	 *   - When using TLS 1.2, the list of hash functions is trimmed
-	 *     down to include only hash functions that the client context
-	 *     can support. The actual server list can be obtained with
-	 *     `br_ssl_client_get_server_hashes()`; that list may be used
-	 *     to select the certificate chain to send to the server.
-	 *
-	 * \param pctx         certificate handler context.
-	 * \param cc           SSL client context.
-	 * \param auth_types   supported authentication types and algorithms.
-	 * \param choices      destination structure for the policy choices.
-	 */
-	void (*choose)(const br_ssl_client_certificate_class **pctx,
-		const br_ssl_client_context *cc, uint32_t auth_types,
-		br_ssl_client_certificate *choices);
+  /**
+   * \brief Select client certificate and algorithms.
+   *
+   * This callback function shall fill the provided `choices`
+   * structure with the selected algorithms and certificate chain.
+   * The `hash_id`, `chain` and `chain_len` fields must be set. If
+   * the client cannot or does not wish to send a certificate,
+   * then it shall set `chain` to `NULL` and `chain_len` to 0.
+   *
+   * The `auth_types` parameter describes the authentication types,
+   * signature algorithms and hash functions that are supported by
+   * both the client context and the server, and compatible with
+   * the current protocol version. This is a bit field with the
+   * following contents:
+   *
+   *   - If RSA signatures with hash function x are supported, then
+   *     bit x is set.
+   *
+   *   - If ECDSA signatures with hash function x are supported,
+   *     then bit 8+x is set.
+   *
+   *   - If static ECDH is supported, with a RSA-signed certificate,
+   *     then bit 16 is set.
+   *
+   *   - If static ECDH is supported, with an ECDSA-signed certificate,
+   *     then bit 17 is set.
+   *
+   * Notes:
+   *
+   *   - When using TLS 1.0 or 1.1, the hash function for RSA
+   *     signatures is always the special MD5+SHA-1 (id 0), and the
+   *     hash function for ECDSA signatures is always SHA-1 (id 2).
+   *
+   *   - When using TLS 1.2, the list of hash functions is trimmed
+   *     down to include only hash functions that the client context
+   *     can support. The actual server list can be obtained with
+   *     `br_ssl_client_get_server_hashes()`; that list may be used
+   *     to select the certificate chain to send to the server.
+   *
+   * \param pctx         certificate handler context.
+   * \param cc           SSL client context.
+   * \param auth_types   supported authentication types and algorithms.
+   * \param choices      destination structure for the policy choices.
+   */
+  void (*choose)(const br_ssl_client_certificate_class **pctx,
+                 const br_ssl_client_context *cc, uint32_t auth_types,
+                 br_ssl_client_certificate *choices);
 
-	/**
-	 * \brief Perform key exchange (client part).
-	 *
-	 * This callback is invoked in case of a full static ECDH key
-	 * exchange:
-	 *
-	 *   - the cipher suite uses `ECDH_RSA` or `ECDH_ECDSA`;
-	 *
-	 *   - the server requests a client certificate;
-	 *
-	 *   - the client has, and sends, a client certificate that
-	 *     uses an EC key in the same curve as the server's key,
-	 *     and chooses static ECDH (the `hash_id` field in the choice
-	 *     structure was set to -1).
-	 *
-	 * In that situation, this callback is invoked to compute the
-	 * client-side ECDH: the provided `data` (of length `*len` bytes)
-	 * is the server's public key point (as decoded from its
-	 * certificate), and the client shall multiply that point with
-	 * its own private key, and write back the X coordinate of the
-	 * resulting point in the same buffer, starting at offset 0.
-	 * The `*len` value shall be modified to designate the actual
-	 * length of the X coordinate.
-	 *
-	 * The callback must uphold the following:
-	 *
-	 *   - If the input array does not have the proper length for
-	 *     an encoded curve point, then an error (0) shall be reported.
-	 *
-	 *   - If the input array has the proper length, then processing
-	 *     MUST be constant-time, even if the data is not a valid
-	 *     encoded point.
-	 *
-	 *   - This callback MUST check that the input point is valid.
-	 *
-	 * Returned value is 1 on success, 0 on error.
-	 *
-	 * \param pctx   certificate handler context.
-	 * \param data   server public key point.
-	 * \param len    public key point length / X coordinate length.
-	 * \return  1 on success, 0 on error.
-	 */
-	uint32_t (*do_keyx)(const br_ssl_client_certificate_class **pctx,
-		unsigned char *data, size_t *len);
+  /**
+   * \brief Perform key exchange (client part).
+   *
+   * This callback is invoked in case of a full static ECDH key
+   * exchange:
+   *
+   *   - the cipher suite uses `ECDH_RSA` or `ECDH_ECDSA`;
+   *
+   *   - the server requests a client certificate;
+   *
+   *   - the client has, and sends, a client certificate that
+   *     uses an EC key in the same curve as the server's key,
+   *     and chooses static ECDH (the `hash_id` field in the choice
+   *     structure was set to -1).
+   *
+   * In that situation, this callback is invoked to compute the
+   * client-side ECDH: the provided `data` (of length `*len` bytes)
+   * is the server's public key point (as decoded from its
+   * certificate), and the client shall multiply that point with
+   * its own private key, and write back the X coordinate of the
+   * resulting point in the same buffer, starting at offset 0.
+   * The `*len` value shall be modified to designate the actual
+   * length of the X coordinate.
+   *
+   * The callback must uphold the following:
+   *
+   *   - If the input array does not have the proper length for
+   *     an encoded curve point, then an error (0) shall be reported.
+   *
+   *   - If the input array has the proper length, then processing
+   *     MUST be constant-time, even if the data is not a valid
+   *     encoded point.
+   *
+   *   - This callback MUST check that the input point is valid.
+   *
+   * Returned value is 1 on success, 0 on error.
+   *
+   * \param pctx   certificate handler context.
+   * \param data   server public key point.
+   * \param len    public key point length / X coordinate length.
+   * \return  1 on success, 0 on error.
+   */
+  uint32_t (*do_keyx)(const br_ssl_client_certificate_class **pctx,
+                      unsigned char *data, size_t *len);
 
-	/**
-	 * \brief Perform a signature (client authentication).
-	 *
-	 * This callback is invoked when a client certificate was sent,
-	 * and static ECDH is not used. It shall compute a signature,
-	 * using the client's private key, over the provided hash value
-	 * (which is the hash of all previous handshake messages).
-	 *
-	 * On input, the hash value to sign is in `data`, of size
-	 * `hv_len`; the involved hash function is identified by
-	 * `hash_id`. The signature shall be computed and written
-	 * back into `data`; the total size of that buffer is `len`
-	 * bytes.
-	 *
-	 * This callback shall verify that the signature length does not
-	 * exceed `len` bytes, and abstain from writing the signature if
-	 * it does not fit.
-	 *
-	 * For RSA signatures, the `hash_id` may be 0, in which case
-	 * this is the special header-less signature specified in TLS 1.0
-	 * and 1.1, with a 36-byte hash value. Otherwise, normal PKCS#1
-	 * v1.5 signatures shall be computed.
-	 *
-	 * For ECDSA signatures, the signature value shall use the ASN.1
-	 * based encoding.
-	 *
-	 * Returned value is the signature length (in bytes), or 0 on error.
-	 *
-	 * \param pctx      certificate handler context.
-	 * \param hash_id   hash function identifier.
-	 * \param hv_len    hash value length (in bytes).
-	 * \param data      input/output buffer (hash value, then signature).
-	 * \param len       total buffer length (in bytes).
-	 * \return  signature length (in bytes) on success, or 0 on error.
-	 */
-	size_t (*do_sign)(const br_ssl_client_certificate_class **pctx,
-		int hash_id, size_t hv_len, unsigned char *data, size_t len);
+  /**
+   * \brief Perform a signature (client authentication).
+   *
+   * This callback is invoked when a client certificate was sent,
+   * and static ECDH is not used. It shall compute a signature,
+   * using the client's private key, over the provided hash value
+   * (which is the hash of all previous handshake messages).
+   *
+   * On input, the hash value to sign is in `data`, of size
+   * `hv_len`; the involved hash function is identified by
+   * `hash_id`. The signature shall be computed and written
+   * back into `data`; the total size of that buffer is `len`
+   * bytes.
+   *
+   * This callback shall verify that the signature length does not
+   * exceed `len` bytes, and abstain from writing the signature if
+   * it does not fit.
+   *
+   * For RSA signatures, the `hash_id` may be 0, in which case
+   * this is the special header-less signature specified in TLS 1.0
+   * and 1.1, with a 36-byte hash value. Otherwise, normal PKCS#1
+   * v1.5 signatures shall be computed.
+   *
+   * For ECDSA signatures, the signature value shall use the ASN.1
+   * based encoding.
+   *
+   * Returned value is the signature length (in bytes), or 0 on error.
+   *
+   * \param pctx      certificate handler context.
+   * \param hash_id   hash function identifier.
+   * \param hv_len    hash value length (in bytes).
+   * \param data      input/output buffer (hash value, then signature).
+   * \param len       total buffer length (in bytes).
+   * \return  signature length (in bytes) on success, or 0 on error.
+   */
+  size_t (*do_sign)(const br_ssl_client_certificate_class **pctx, int hash_id,
+                    size_t hv_len, unsigned char *data, size_t len);
 };
 
 /**
@@ -2553,13 +2485,13 @@ struct br_ssl_client_certificate_class_ {
  * opaque and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_ssl_client_certificate_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_ssl_client_certificate_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	const br_x509_certificate *chain;
-	size_t chain_len;
-	const br_rsa_private_key *sk;
-	br_rsa_pkcs1_sign irsasign;
+  const br_x509_certificate *chain;
+  size_t chain_len;
+  const br_rsa_private_key *sk;
+  br_rsa_pkcs1_sign irsasign;
 #endif
 } br_ssl_client_certificate_rsa_context;
 
@@ -2576,17 +2508,17 @@ typedef struct {
  * opaque and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_ssl_client_certificate_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_ssl_client_certificate_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	const br_x509_certificate *chain;
-	size_t chain_len;
-	const br_ec_private_key *sk;
-	unsigned allowed_usages;
-	unsigned issuer_key_type;
-	const br_multihash_context *mhash;
-	const br_ec_impl *iec;
-	br_ecdsa_sign iecdsa;
+  const br_x509_certificate *chain;
+  size_t chain_len;
+  const br_ec_private_key *sk;
+  unsigned allowed_usages;
+  unsigned issuer_key_type;
+  const br_multihash_context *mhash;
+  const br_ec_impl *iec;
+  br_ecdsa_sign iecdsa;
 #endif
 } br_ssl_client_certificate_ec_context;
 
@@ -2599,61 +2531,61 @@ typedef struct {
  * must not be accessed directly.
  */
 struct br_ssl_client_context_ {
-	/**
-	 * \brief The encapsulated engine context.
-	 */
-	br_ssl_engine_context eng;
+  /**
+   * \brief The encapsulated engine context.
+   */
+  br_ssl_engine_context eng;
 
 #ifndef BR_DOXYGEN_IGNORE
-	/*
-	 * Minimum ClientHello length; padding with an extension (RFC
-	 * 7685) is added if necessary to match at least that length.
-	 * Such padding is nominally unnecessary, but it has been used
-	 * to work around some server implementation bugs.
-	 */
-	uint16_t min_clienthello_len;
+  /*
+   * Minimum ClientHello length; padding with an extension (RFC
+   * 7685) is added if necessary to match at least that length.
+   * Such padding is nominally unnecessary, but it has been used
+   * to work around some server implementation bugs.
+   */
+  uint16_t min_clienthello_len;
 
-	/*
-	 * Bit field for algoithms (hash + signature) supported by the
-	 * server when requesting a client certificate.
-	 */
-	uint32_t hashes;
+  /*
+   * Bit field for algoithms (hash + signature) supported by the
+   * server when requesting a client certificate.
+   */
+  uint32_t hashes;
 
-	/*
-	 * Server's public key curve.
-	 */
-	int server_curve;
+  /*
+   * Server's public key curve.
+   */
+  int server_curve;
 
-	/*
-	 * Context for certificate handler.
-	 */
-	const br_ssl_client_certificate_class **client_auth_vtable;
+  /*
+   * Context for certificate handler.
+   */
+  const br_ssl_client_certificate_class **client_auth_vtable;
 
-	/*
-	 * Client authentication type.
-	 */
-	unsigned char auth_type;
+  /*
+   * Client authentication type.
+   */
+  unsigned char auth_type;
 
-	/*
-	 * Hash function to use for the client signature. This is 0xFF
-	 * if static ECDH is used.
-	 */
-	unsigned char hash_id;
+  /*
+   * Hash function to use for the client signature. This is 0xFF
+   * if static ECDH is used.
+   */
+  unsigned char hash_id;
 
-	/*
-	 * For the core certificate handlers, thus avoiding (in most
-	 * cases) the need for an externally provided policy context.
-	 */
-	union {
-		const br_ssl_client_certificate_class *vtable;
-		br_ssl_client_certificate_rsa_context single_rsa;
-		br_ssl_client_certificate_ec_context single_ec;
-	} client_auth;
+  /*
+   * For the core certificate handlers, thus avoiding (in most
+   * cases) the need for an externally provided policy context.
+   */
+  union {
+    const br_ssl_client_certificate_class *vtable;
+    br_ssl_client_certificate_rsa_context single_rsa;
+    br_ssl_client_certificate_ec_context single_ec;
+  } client_auth;
 
-	/*
-	 * Implementations.
-	 */
-	br_rsa_public irsapub;
+  /*
+   * Implementations.
+   */
+  br_rsa_public irsapub;
 #endif
 };
 
@@ -2687,10 +2619,9 @@ struct br_ssl_client_context_ {
  * \param cc   client context.
  * \return  the server-supported hash functions and signature algorithms.
  */
-static inline uint32_t
-br_ssl_client_get_server_hashes(const br_ssl_client_context *cc)
-{
-	return cc->hashes;
+static inline uint32_t br_ssl_client_get_server_hashes(
+    const br_ssl_client_context *cc) {
+  return cc->hashes;
 }
 
 /**
@@ -2702,10 +2633,9 @@ br_ssl_client_get_server_hashes(const br_ssl_client_context *cc)
  *
  * \return  the server's public key curve ID, or 0.
  */
-static inline int
-br_ssl_client_get_server_curve(const br_ssl_client_context *cc)
-{
-	return cc->server_curve;
+static inline int br_ssl_client_get_server_curve(
+    const br_ssl_client_context *cc) {
+  return cc->server_curve;
 }
 
 /*
@@ -2732,8 +2662,9 @@ br_ssl_client_get_server_curve(const br_ssl_client_context *cc)
  * \param trust_anchors_num   number of trust anchors.
  */
 void br_ssl_client_init_full(br_ssl_client_context *cc,
-	br_x509_minimal_context *xc,
-	const br_x509_trust_anchor *trust_anchors, size_t trust_anchors_num);
+                             br_x509_minimal_context *xc,
+                             const br_x509_trust_anchor *trust_anchors,
+                             size_t trust_anchors_num);
 
 /**
  * \brief Clear the complete contents of a SSL client context.
@@ -2755,11 +2686,9 @@ void br_ssl_client_zero(br_ssl_client_context *cc);
  * \param cc     client context.
  * \param pctx   certificate handler context (pointer to its vtable field).
  */
-static inline void
-br_ssl_client_set_client_certificate(br_ssl_client_context *cc,
-	const br_ssl_client_certificate_class **pctx)
-{
-	cc->client_auth_vtable = pctx;
+static inline void br_ssl_client_set_client_certificate(
+    br_ssl_client_context *cc, const br_ssl_client_certificate_class **pctx) {
+  cc->client_auth_vtable = pctx;
 }
 
 /**
@@ -2771,10 +2700,9 @@ br_ssl_client_set_client_certificate(br_ssl_client_context *cc,
  * \param cc        client context.
  * \param irsapub   RSA public-key encryption implementation.
  */
-static inline void
-br_ssl_client_set_rsapub(br_ssl_client_context *cc, br_rsa_public irsapub)
-{
-	cc->irsapub = irsapub;
+static inline void br_ssl_client_set_rsapub(br_ssl_client_context *cc,
+                                            br_rsa_public irsapub) {
+  cc->irsapub = irsapub;
 }
 
 /**
@@ -2805,10 +2733,9 @@ void br_ssl_client_set_default_rsapub(br_ssl_client_context *cc);
  * \param cc    client context.
  * \param len   minimum ClientHello length (in bytes).
  */
-static inline void
-br_ssl_client_set_min_clienthello_len(br_ssl_client_context *cc, uint16_t len)
-{
-	cc->min_clienthello_len = len;
+static inline void br_ssl_client_set_min_clienthello_len(
+    br_ssl_client_context *cc, uint16_t len) {
+  cc->min_clienthello_len = len;
 }
 
 /**
@@ -2841,8 +2768,8 @@ br_ssl_client_set_min_clienthello_len(br_ssl_client_context *cc, uint16_t len)
  * \param resume_session   non-zero to try session resumption.
  * \return  0 on failure, 1 on success.
  */
-int br_ssl_client_reset(br_ssl_client_context *cc,
-	const char *server_name, int resume_session);
+int br_ssl_client_reset(br_ssl_client_context *cc, const char *server_name,
+                        int resume_session);
 
 /**
  * \brief Forget any session in the context.
@@ -2853,10 +2780,8 @@ int br_ssl_client_reset(br_ssl_client_context *cc,
  *
  * \param cc   client context.
  */
-static inline void
-br_ssl_client_forget_session(br_ssl_client_context *cc)
-{
-	cc->eng.session.session_id_len = 0;
+static inline void br_ssl_client_forget_session(br_ssl_client_context *cc) {
+  cc->eng.session.session_id_len = 0;
 }
 
 /**
@@ -2880,8 +2805,10 @@ br_ssl_client_forget_session(br_ssl_client_context *cc)
  * \param irsasign    RSA signature implementation (PKCS#1 v1.5).
  */
 void br_ssl_client_set_single_rsa(br_ssl_client_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk, br_rsa_pkcs1_sign irsasign);
+                                  const br_x509_certificate *chain,
+                                  size_t chain_len,
+                                  const br_rsa_private_key *sk,
+                                  br_rsa_pkcs1_sign irsasign);
 
 /*
  * \brief Set the client certificate chain and key (single EC case).
@@ -2921,10 +2848,11 @@ void br_ssl_client_set_single_rsa(br_ssl_client_context *cc,
  * \param iecdsa                 ECDSA signature implementation ("asn1" format).
  */
 void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk, unsigned allowed_usages,
-	unsigned cert_issuer_key_type,
-	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
+                                 const br_x509_certificate *chain,
+                                 size_t chain_len, const br_ec_private_key *sk,
+                                 unsigned allowed_usages,
+                                 unsigned cert_issuer_key_type,
+                                 const br_ec_impl *iec, br_ecdsa_sign iecdsa);
 
 /**
  * \brief Type for a "translated cipher suite", as an array of two
@@ -2937,40 +2865,45 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
  *
  *   - Bits 12 to 15: key exchange + server key type
  *
- *     | val | symbolic constant        | suite type  | details                                          |
- *     | :-- | :----------------------- | :---------- | :----------------------------------------------- |
- *     |  0  | `BR_SSLKEYX_RSA`         | RSA         | RSA key exchange, key is RSA (encryption)        |
- *     |  1  | `BR_SSLKEYX_ECDHE_RSA`   | ECDHE_RSA   | ECDHE key exchange, key is RSA (signature)       |
- *     |  2  | `BR_SSLKEYX_ECDHE_ECDSA` | ECDHE_ECDSA | ECDHE key exchange, key is EC (signature)        |
- *     |  3  | `BR_SSLKEYX_ECDH_RSA`    | ECDH_RSA    | Key is EC (key exchange), cert signed with RSA   |
- *     |  4  | `BR_SSLKEYX_ECDH_ECDSA`  | ECDH_ECDSA  | Key is EC (key exchange), cert signed with ECDSA |
+ *     | val | symbolic constant        | suite type  | details | | :-- |
+ * :----------------------- | :---------- |
+ * :----------------------------------------------- | |  0  | `BR_SSLKEYX_RSA`
+ * | RSA         | RSA key exchange, key is RSA (encryption)        | |  1  |
+ * `BR_SSLKEYX_ECDHE_RSA`   | ECDHE_RSA   | ECDHE key exchange, key is RSA
+ * (signature)       | |  2  | `BR_SSLKEYX_ECDHE_ECDSA` | ECDHE_ECDSA | ECDHE
+ * key exchange, key is EC (signature)        | |  3  | `BR_SSLKEYX_ECDH_RSA` |
+ * ECDH_RSA    | Key is EC (key exchange), cert signed with RSA   | |  4  |
+ * `BR_SSLKEYX_ECDH_ECDSA`  | ECDH_ECDSA  | Key is EC (key exchange), cert
+ * signed with ECDSA |
  *
  *   - Bits 8 to 11: symmetric encryption algorithm
  *
- *     | val | symbolic constant      | symmetric encryption | key strength (bits) |
- *     | :-- | :--------------------- | :------------------- | :------------------ |
- *     |  0  | `BR_SSLENC_3DES_CBC`   | 3DES/CBC             | 168                 |
- *     |  1  | `BR_SSLENC_AES128_CBC` | AES-128/CBC          | 128                 |
- *     |  2  | `BR_SSLENC_AES256_CBC` | AES-256/CBC          | 256                 |
- *     |  3  | `BR_SSLENC_AES128_GCM` | AES-128/GCM          | 128                 |
- *     |  4  | `BR_SSLENC_AES256_GCM` | AES-256/GCM          | 256                 |
- *     |  5  | `BR_SSLENC_CHACHA20`   | ChaCha20/Poly1305    | 256                 |
+ *     | val | symbolic constant      | symmetric encryption | key strength
+ * (bits) | | :-- | :--------------------- | :------------------- |
+ * :------------------ | |  0  | `BR_SSLENC_3DES_CBC`   | 3DES/CBC             |
+ * 168                 | |  1  | `BR_SSLENC_AES128_CBC` | AES-128/CBC          |
+ * 128                 | |  2  | `BR_SSLENC_AES256_CBC` | AES-256/CBC          |
+ * 256                 | |  3  | `BR_SSLENC_AES128_GCM` | AES-128/GCM          |
+ * 128                 | |  4  | `BR_SSLENC_AES256_GCM` | AES-256/GCM          |
+ * 256                 | |  5  | `BR_SSLENC_CHACHA20`   | ChaCha20/Poly1305    |
+ * 256                 |
  *
  *   - Bits 4 to 7: MAC algorithm
  *
- *     | val | symbolic constant  | MAC type     | details                               |
- *     | :-- | :----------------- | :----------- | :------------------------------------ |
- *     |  0  | `BR_SSLMAC_AEAD`   | AEAD         | No dedicated MAC (encryption is AEAD) |
- *     |  2  | `BR_SSLMAC_SHA1`   | HMAC/SHA-1   | Value matches `br_sha1_ID`            |
- *     |  4  | `BR_SSLMAC_SHA256` | HMAC/SHA-256 | Value matches `br_sha256_ID`          |
- *     |  5  | `BR_SSLMAC_SHA384` | HMAC/SHA-384 | Value matches `br_sha384_ID`          |
+ *     | val | symbolic constant  | MAC type     | details | | :-- |
+ * :----------------- | :----------- | :------------------------------------ |
+ *     |  0  | `BR_SSLMAC_AEAD`   | AEAD         | No dedicated MAC (encryption
+ * is AEAD) | |  2  | `BR_SSLMAC_SHA1`   | HMAC/SHA-1   | Value matches
+ * `br_sha1_ID`            | |  4  | `BR_SSLMAC_SHA256` | HMAC/SHA-256 | Value
+ * matches `br_sha256_ID`          | |  5  | `BR_SSLMAC_SHA384` | HMAC/SHA-384 |
+ * Value matches `br_sha384_ID`          |
  *
  *   - Bits 0 to 3: hash function for PRF when used with TLS-1.2
  *
- *     | val | symbolic constant  | hash function | details                              |
- *     | :-- | :----------------- | :------------ | :----------------------------------- |
- *     |  4  | `BR_SSLPRF_SHA256` | SHA-256       | Value matches `br_sha256_ID`         |
- *     |  5  | `BR_SSLPRF_SHA384` | SHA-384       | Value matches `br_sha384_ID`         |
+ *     | val | symbolic constant  | hash function | details | | :-- |
+ * :----------------- | :------------ | :----------------------------------- |
+ *     |  4  | `BR_SSLPRF_SHA256` | SHA-256       | Value matches `br_sha256_ID`
+ * | |  5  | `BR_SSLPRF_SHA384` | SHA-384       | Value matches `br_sha384_ID` |
  *
  * For instance, cipher suite `TLS_RSA_WITH_AES_128_GCM_SHA256` has
  * standard identifier 0x009C, and is translated to 0x0304, for, in
@@ -2984,26 +2917,26 @@ typedef uint16_t br_suite_translated[2];
  * Constants are already documented in the br_suite_translated type.
  */
 
-#define BR_SSLKEYX_RSA           0
-#define BR_SSLKEYX_ECDHE_RSA     1
-#define BR_SSLKEYX_ECDHE_ECDSA   2
-#define BR_SSLKEYX_ECDH_RSA      3
-#define BR_SSLKEYX_ECDH_ECDSA    4
+#define BR_SSLKEYX_RSA 0
+#define BR_SSLKEYX_ECDHE_RSA 1
+#define BR_SSLKEYX_ECDHE_ECDSA 2
+#define BR_SSLKEYX_ECDH_RSA 3
+#define BR_SSLKEYX_ECDH_ECDSA 4
 
-#define BR_SSLENC_3DES_CBC       0
-#define BR_SSLENC_AES128_CBC     1
-#define BR_SSLENC_AES256_CBC     2
-#define BR_SSLENC_AES128_GCM     3
-#define BR_SSLENC_AES256_GCM     4
-#define BR_SSLENC_CHACHA20       5
+#define BR_SSLENC_3DES_CBC 0
+#define BR_SSLENC_AES128_CBC 1
+#define BR_SSLENC_AES256_CBC 2
+#define BR_SSLENC_AES128_GCM 3
+#define BR_SSLENC_AES256_GCM 4
+#define BR_SSLENC_CHACHA20 5
 
-#define BR_SSLMAC_AEAD           0
-#define BR_SSLMAC_SHA1           br_sha1_ID
-#define BR_SSLMAC_SHA256         br_sha256_ID
-#define BR_SSLMAC_SHA384         br_sha384_ID
+#define BR_SSLMAC_AEAD 0
+#define BR_SSLMAC_SHA1 br_sha1_ID
+#define BR_SSLMAC_SHA256 br_sha256_ID
+#define BR_SSLMAC_SHA384 br_sha384_ID
 
-#define BR_SSLPRF_SHA256         br_sha256_ID
-#define BR_SSLPRF_SHA384         br_sha384_ID
+#define BR_SSLPRF_SHA256 br_sha256_ID
+#define BR_SSLPRF_SHA384 br_sha384_ID
 
 #endif
 
@@ -3017,67 +2950,67 @@ typedef struct br_ssl_server_context_ br_ssl_server_context;
  * the client message (ClientHello).
  */
 typedef struct {
-	/**
-	 * \brief Cipher suite to use with that client.
-	 */
-	uint16_t cipher_suite;
+  /**
+   * \brief Cipher suite to use with that client.
+   */
+  uint16_t cipher_suite;
 
-	/**
-	 * \brief Hash function or algorithm for signing the ServerKeyExchange.
-	 *
-	 * This parameter is ignored for `TLS_RSA_*` and `TLS_ECDH_*`
-	 * cipher suites; it is used only for `TLS_ECDHE_*` suites, in
-	 * which the server _signs_ the ephemeral EC Diffie-Hellman
-	 * parameters sent to the client.
-	 *
-	 * This identifier must be one of the following values:
-	 *
-	 *   - `0xFF00 + id`, where `id` is a hash function identifier
-	 *     (0 for MD5+SHA-1, or 2 to 6 for one of the SHA functions);
-	 *
-	 *   - a full 16-bit identifier, lower than `0xFF00`.
-	 *
-	 * If the first option is used, then the SSL engine will
-	 * compute the hash of the data that is to be signed, with the
-	 * designated hash function. The `do_sign()` method will be
-	 * invoked with that hash value provided in the the `data`
-	 * buffer.
-	 *
-	 * If the second option is used, then the SSL engine will NOT
-	 * compute a hash on the data; instead, it will provide the
-	 * to-be-signed data itself in `data`, i.e. the concatenation of
-	 * the client random, server random, and encoded ECDH
-	 * parameters. Furthermore, with TLS-1.2 and later, the 16-bit
-	 * identifier will be used "as is" in the protocol, in the
-	 * SignatureAndHashAlgorithm; for instance, `0x0401` stands for
-	 * RSA PKCS#1 v1.5 signature (the `01`) with SHA-256 as hash
-	 * function (the `04`).
-	 *
-	 * Take care that with TLS 1.0 and 1.1, the hash function is
-	 * constrainted by the protocol: RSA signature must use
-	 * MD5+SHA-1 (so use `0xFF00`), while ECDSA must use SHA-1
-	 * (`0xFF02`). Since TLS 1.0 and 1.1 don't include a
-	 * SignatureAndHashAlgorithm field in their ServerKeyExchange
-	 * messages, any value below `0xFF00` will be usable to send the
-	 * raw ServerKeyExchange data to the `do_sign()` callback, but
-	 * that callback must still follow the protocol requirements
-	 * when generating the signature.
-	 */
-	unsigned algo_id;
+  /**
+   * \brief Hash function or algorithm for signing the ServerKeyExchange.
+   *
+   * This parameter is ignored for `TLS_RSA_*` and `TLS_ECDH_*`
+   * cipher suites; it is used only for `TLS_ECDHE_*` suites, in
+   * which the server _signs_ the ephemeral EC Diffie-Hellman
+   * parameters sent to the client.
+   *
+   * This identifier must be one of the following values:
+   *
+   *   - `0xFF00 + id`, where `id` is a hash function identifier
+   *     (0 for MD5+SHA-1, or 2 to 6 for one of the SHA functions);
+   *
+   *   - a full 16-bit identifier, lower than `0xFF00`.
+   *
+   * If the first option is used, then the SSL engine will
+   * compute the hash of the data that is to be signed, with the
+   * designated hash function. The `do_sign()` method will be
+   * invoked with that hash value provided in the the `data`
+   * buffer.
+   *
+   * If the second option is used, then the SSL engine will NOT
+   * compute a hash on the data; instead, it will provide the
+   * to-be-signed data itself in `data`, i.e. the concatenation of
+   * the client random, server random, and encoded ECDH
+   * parameters. Furthermore, with TLS-1.2 and later, the 16-bit
+   * identifier will be used "as is" in the protocol, in the
+   * SignatureAndHashAlgorithm; for instance, `0x0401` stands for
+   * RSA PKCS#1 v1.5 signature (the `01`) with SHA-256 as hash
+   * function (the `04`).
+   *
+   * Take care that with TLS 1.0 and 1.1, the hash function is
+   * constrainted by the protocol: RSA signature must use
+   * MD5+SHA-1 (so use `0xFF00`), while ECDSA must use SHA-1
+   * (`0xFF02`). Since TLS 1.0 and 1.1 don't include a
+   * SignatureAndHashAlgorithm field in their ServerKeyExchange
+   * messages, any value below `0xFF00` will be usable to send the
+   * raw ServerKeyExchange data to the `do_sign()` callback, but
+   * that callback must still follow the protocol requirements
+   * when generating the signature.
+   */
+  unsigned algo_id;
 
-	/**
-	 * \brief Certificate chain to send to the client.
-	 *
-	 * This is an array of `br_x509_certificate` objects, each
-	 * normally containing a DER-encoded certificate. The server
-	 * code does not try to decode these elements.
-	 */
-	const br_x509_certificate *chain;
+  /**
+   * \brief Certificate chain to send to the client.
+   *
+   * This is an array of `br_x509_certificate` objects, each
+   * normally containing a DER-encoded certificate. The server
+   * code does not try to decode these elements.
+   */
+  const br_x509_certificate *chain;
 
-	/**
-	 * \brief Certificate chain length (number of certificates).
-	 */
-	size_t chain_len;
+  /**
+   * \brief Certificate chain length (number of certificates).
+   */
+  size_t chain_len;
 
 } br_ssl_server_choices;
 
@@ -3095,142 +3028,141 @@ typedef struct {
  */
 typedef struct br_ssl_server_policy_class_ br_ssl_server_policy_class;
 struct br_ssl_server_policy_class_ {
-	/**
-	 * \brief Context size (in bytes).
-	 */
-	size_t context_size;
+  /**
+   * \brief Context size (in bytes).
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Select algorithms and certificates for this connection.
-	 *
-	 * This callback function shall fill the provided `choices`
-	 * structure with the policy choices for this connection. This
-	 * entails selecting the cipher suite, hash function for signing
-	 * the ServerKeyExchange (applicable only to ECDHE cipher suites),
-	 * and certificate chain to send.
-	 *
-	 * The callback receives a pointer to the server context that
-	 * contains the relevant data. In particular, the functions
-	 * `br_ssl_server_get_client_suites()`,
-	 * `br_ssl_server_get_client_hashes()` and
-	 * `br_ssl_server_get_client_curves()` can be used to obtain
-	 * the cipher suites, hash functions and elliptic curves
-	 * supported by both the client and server, respectively. The
-	 * `br_ssl_engine_get_version()` and `br_ssl_engine_get_server_name()`
-	 * functions yield the protocol version and requested server name
-	 * (SNI), respectively.
-	 *
-	 * This function may modify its context structure (`pctx`) in
-	 * arbitrary ways to keep track of its own choices.
-	 *
-	 * This function shall return 1 if appropriate policy choices
-	 * could be made, or 0 if this connection cannot be pursued.
-	 *
-	 * \param pctx      policy context.
-	 * \param cc        SSL server context.
-	 * \param choices   destination structure for the policy choices.
-	 * \return  1 on success, 0 on error.
-	 */
-	int (*choose)(const br_ssl_server_policy_class **pctx,
-		const br_ssl_server_context *cc,
-		br_ssl_server_choices *choices);
+  /**
+   * \brief Select algorithms and certificates for this connection.
+   *
+   * This callback function shall fill the provided `choices`
+   * structure with the policy choices for this connection. This
+   * entails selecting the cipher suite, hash function for signing
+   * the ServerKeyExchange (applicable only to ECDHE cipher suites),
+   * and certificate chain to send.
+   *
+   * The callback receives a pointer to the server context that
+   * contains the relevant data. In particular, the functions
+   * `br_ssl_server_get_client_suites()`,
+   * `br_ssl_server_get_client_hashes()` and
+   * `br_ssl_server_get_client_curves()` can be used to obtain
+   * the cipher suites, hash functions and elliptic curves
+   * supported by both the client and server, respectively. The
+   * `br_ssl_engine_get_version()` and `br_ssl_engine_get_server_name()`
+   * functions yield the protocol version and requested server name
+   * (SNI), respectively.
+   *
+   * This function may modify its context structure (`pctx`) in
+   * arbitrary ways to keep track of its own choices.
+   *
+   * This function shall return 1 if appropriate policy choices
+   * could be made, or 0 if this connection cannot be pursued.
+   *
+   * \param pctx      policy context.
+   * \param cc        SSL server context.
+   * \param choices   destination structure for the policy choices.
+   * \return  1 on success, 0 on error.
+   */
+  int (*choose)(const br_ssl_server_policy_class **pctx,
+                const br_ssl_server_context *cc,
+                br_ssl_server_choices *choices);
 
-	/**
-	 * \brief Perform key exchange (server part).
-	 *
-	 * This callback is invoked to perform the server-side cryptographic
-	 * operation for a key exchange that is not ECDHE. This callback
-	 * uses the private key.
-	 *
-	 * **For RSA key exchange**, the provided `data` (of length `*len`
-	 * bytes) shall be decrypted with the server's private key, and
-	 * the 48-byte premaster secret copied back to the first 48 bytes
-	 * of `data`.
-	 *
-	 *   - The caller makes sure that `*len` is at least 59 bytes.
-	 *
-	 *   - This callback MUST check that the provided length matches
-	 *     that of the key modulus; it shall report an error otherwise.
-	 *
-	 *   - If the length matches that of the RSA key modulus, then
-	 *     processing MUST be constant-time, even if decryption fails,
-	 *     or the padding is incorrect, or the plaintext message length
-	 *     is not exactly 48 bytes.
-	 *
-	 *   - This callback needs not check the two first bytes of the
-	 *     obtained pre-master secret (the caller will do that).
-	 *
-	 *   - If an error is reported (0), then what the callback put
-	 *     in the first 48 bytes of `data` is unimportant (the caller
-	 *     will use random bytes instead).
-	 *
-	 * **For ECDH key exchange**, the provided `data` (of length `*len`
-	 * bytes) is the elliptic curve point from the client. The
-	 * callback shall multiply it with its private key, and store
-	 * the resulting X coordinate in `data`, starting at offset 0,
-	 * and set `*len` to the length of the X coordinate.
-	 *
-	 *   - If the input array does not have the proper length for
-	 *     an encoded curve point, then an error (0) shall be reported.
-	 *
-	 *   - If the input array has the proper length, then processing
-	 *     MUST be constant-time, even if the data is not a valid
-	 *     encoded point.
-	 *
-	 *   - This callback MUST check that the input point is valid.
-	 *
-	 * Returned value is 1 on success, 0 on error.
-	 *
-	 * \param pctx   policy context.
-	 * \param data   key exchange data from the client.
-	 * \param len    key exchange data length (in bytes).
-	 * \return  1 on success, 0 on error.
-	 */
-	uint32_t (*do_keyx)(const br_ssl_server_policy_class **pctx,
-		unsigned char *data, size_t *len);
+  /**
+   * \brief Perform key exchange (server part).
+   *
+   * This callback is invoked to perform the server-side cryptographic
+   * operation for a key exchange that is not ECDHE. This callback
+   * uses the private key.
+   *
+   * **For RSA key exchange**, the provided `data` (of length `*len`
+   * bytes) shall be decrypted with the server's private key, and
+   * the 48-byte premaster secret copied back to the first 48 bytes
+   * of `data`.
+   *
+   *   - The caller makes sure that `*len` is at least 59 bytes.
+   *
+   *   - This callback MUST check that the provided length matches
+   *     that of the key modulus; it shall report an error otherwise.
+   *
+   *   - If the length matches that of the RSA key modulus, then
+   *     processing MUST be constant-time, even if decryption fails,
+   *     or the padding is incorrect, or the plaintext message length
+   *     is not exactly 48 bytes.
+   *
+   *   - This callback needs not check the two first bytes of the
+   *     obtained pre-master secret (the caller will do that).
+   *
+   *   - If an error is reported (0), then what the callback put
+   *     in the first 48 bytes of `data` is unimportant (the caller
+   *     will use random bytes instead).
+   *
+   * **For ECDH key exchange**, the provided `data` (of length `*len`
+   * bytes) is the elliptic curve point from the client. The
+   * callback shall multiply it with its private key, and store
+   * the resulting X coordinate in `data`, starting at offset 0,
+   * and set `*len` to the length of the X coordinate.
+   *
+   *   - If the input array does not have the proper length for
+   *     an encoded curve point, then an error (0) shall be reported.
+   *
+   *   - If the input array has the proper length, then processing
+   *     MUST be constant-time, even if the data is not a valid
+   *     encoded point.
+   *
+   *   - This callback MUST check that the input point is valid.
+   *
+   * Returned value is 1 on success, 0 on error.
+   *
+   * \param pctx   policy context.
+   * \param data   key exchange data from the client.
+   * \param len    key exchange data length (in bytes).
+   * \return  1 on success, 0 on error.
+   */
+  uint32_t (*do_keyx)(const br_ssl_server_policy_class **pctx,
+                      unsigned char *data, size_t *len);
 
-	/**
-	 * \brief Perform a signature (for a ServerKeyExchange message).
-	 *
-	 * This callback function is invoked for ECDHE cipher suites. On
-	 * input, the hash value or message to sign is in `data`, of
-	 * size `hv_len`; the involved hash function or algorithm is
-	 * identified by `algo_id`. The signature shall be computed and
-	 * written back into `data`; the total size of that buffer is
-	 * `len` bytes.
-	 *
-	 * This callback shall verify that the signature length does not
-	 * exceed `len` bytes, and abstain from writing the signature if
-	 * it does not fit.
-	 *
-	 * The `algo_id` value matches that which was written in the
-	 * `choices` structures by the `choose()` callback. This will be
-	 * one of the following:
-	 *
-	 *   - `0xFF00 + id` for a hash function identifier `id`. In
-	 *     that case, the `data` buffer contains a hash value
-	 *     already computed over the data that is to be signed,
-	 *     of length `hv_len`. The `id` may be 0 to designate the
-	 *     special MD5+SHA-1 concatenation (old-style RSA signing).
-	 *
-	 *   - Another value, lower than `0xFF00`. The `data` buffer
-	 *     then contains the raw, non-hashed data to be signed
-	 *     (concatenation of the client and server randoms and
-	 *     ECDH parameters). The callback is responsible to apply
-	 *     any relevant hashing as part of the signing process.
-	 *
-	 * Returned value is the signature length (in bytes), or 0 on error.
-	 *
-	 * \param pctx      policy context.
-	 * \param algo_id   hash function / algorithm identifier.
-	 * \param data      input/output buffer (message/hash, then signature).
-	 * \param hv_len    hash value or message length (in bytes).
-	 * \param len       total buffer length (in bytes).
-	 * \return  signature length (in bytes) on success, or 0 on error.
-	 */
-	size_t (*do_sign)(const br_ssl_server_policy_class **pctx,
-		unsigned algo_id,
-		unsigned char *data, size_t hv_len, size_t len);
+  /**
+   * \brief Perform a signature (for a ServerKeyExchange message).
+   *
+   * This callback function is invoked for ECDHE cipher suites. On
+   * input, the hash value or message to sign is in `data`, of
+   * size `hv_len`; the involved hash function or algorithm is
+   * identified by `algo_id`. The signature shall be computed and
+   * written back into `data`; the total size of that buffer is
+   * `len` bytes.
+   *
+   * This callback shall verify that the signature length does not
+   * exceed `len` bytes, and abstain from writing the signature if
+   * it does not fit.
+   *
+   * The `algo_id` value matches that which was written in the
+   * `choices` structures by the `choose()` callback. This will be
+   * one of the following:
+   *
+   *   - `0xFF00 + id` for a hash function identifier `id`. In
+   *     that case, the `data` buffer contains a hash value
+   *     already computed over the data that is to be signed,
+   *     of length `hv_len`. The `id` may be 0 to designate the
+   *     special MD5+SHA-1 concatenation (old-style RSA signing).
+   *
+   *   - Another value, lower than `0xFF00`. The `data` buffer
+   *     then contains the raw, non-hashed data to be signed
+   *     (concatenation of the client and server randoms and
+   *     ECDH parameters). The callback is responsible to apply
+   *     any relevant hashing as part of the signing process.
+   *
+   * Returned value is the signature length (in bytes), or 0 on error.
+   *
+   * \param pctx      policy context.
+   * \param algo_id   hash function / algorithm identifier.
+   * \param data      input/output buffer (message/hash, then signature).
+   * \param hv_len    hash value or message length (in bytes).
+   * \param len       total buffer length (in bytes).
+   * \return  signature length (in bytes) on success, or 0 on error.
+   */
+  size_t (*do_sign)(const br_ssl_server_policy_class **pctx, unsigned algo_id,
+                    unsigned char *data, size_t hv_len, size_t len);
 };
 
 /**
@@ -3244,15 +3176,15 @@ struct br_ssl_server_policy_class_ {
  * opaque and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_ssl_server_policy_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_ssl_server_policy_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	const br_x509_certificate *chain;
-	size_t chain_len;
-	const br_rsa_private_key *sk;
-	unsigned allowed_usages;
-	br_rsa_private irsacore;
-	br_rsa_pkcs1_sign irsasign;
+  const br_x509_certificate *chain;
+  size_t chain_len;
+  const br_rsa_private_key *sk;
+  unsigned allowed_usages;
+  br_rsa_private irsacore;
+  br_rsa_pkcs1_sign irsasign;
 #endif
 } br_ssl_server_policy_rsa_context;
 
@@ -3271,17 +3203,17 @@ typedef struct {
  * opaque and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_ssl_server_policy_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_ssl_server_policy_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	const br_x509_certificate *chain;
-	size_t chain_len;
-	const br_ec_private_key *sk;
-	unsigned allowed_usages;
-	unsigned cert_issuer_key_type;
-	const br_multihash_context *mhash;
-	const br_ec_impl *iec;
-	br_ecdsa_sign iecdsa;
+  const br_x509_certificate *chain;
+  size_t chain_len;
+  const br_ec_private_key *sk;
+  unsigned allowed_usages;
+  unsigned cert_issuer_key_type;
+  const br_multihash_context *mhash;
+  const br_ec_impl *iec;
+  br_ecdsa_sign iecdsa;
 #endif
 } br_ssl_server_policy_ec_context;
 
@@ -3297,44 +3229,44 @@ typedef struct {
  */
 typedef struct br_ssl_session_cache_class_ br_ssl_session_cache_class;
 struct br_ssl_session_cache_class_ {
-	/**
-	 * \brief Context size (in bytes).
-	 */
-	size_t context_size;
+  /**
+   * \brief Context size (in bytes).
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Record a session.
-	 *
-	 * This callback should record the provided session parameters.
-	 * The `params` structure is transient, so its contents shall
-	 * be copied into the cache. The session ID has been randomly
-	 * generated and always has length exactly 32 bytes.
-	 *
-	 * \param ctx          session cache context.
-	 * \param server_ctx   SSL server context.
-	 * \param params       session parameters to save.
-	 */
-	void (*save)(const br_ssl_session_cache_class **ctx,
-		br_ssl_server_context *server_ctx,
-		const br_ssl_session_parameters *params);
+  /**
+   * \brief Record a session.
+   *
+   * This callback should record the provided session parameters.
+   * The `params` structure is transient, so its contents shall
+   * be copied into the cache. The session ID has been randomly
+   * generated and always has length exactly 32 bytes.
+   *
+   * \param ctx          session cache context.
+   * \param server_ctx   SSL server context.
+   * \param params       session parameters to save.
+   */
+  void (*save)(const br_ssl_session_cache_class **ctx,
+               br_ssl_server_context *server_ctx,
+               const br_ssl_session_parameters *params);
 
-	/**
-	 * \brief Lookup a session in the cache.
-	 *
-	 * The session ID to lookup is in `params` and always has length
-	 * exactly 32 bytes. If the session parameters are found in the
-	 * cache, then the parameters shall be copied into the `params`
-	 * structure. Returned value is 1 on successful lookup, 0
-	 * otherwise.
-	 *
-	 * \param ctx          session cache context.
-	 * \param server_ctx   SSL server context.
-	 * \param params       destination for session parameters.
-	 * \return  1 if found, 0 otherwise.
-	 */
-	int (*load)(const br_ssl_session_cache_class **ctx,
-		br_ssl_server_context *server_ctx,
-		br_ssl_session_parameters *params);
+  /**
+   * \brief Lookup a session in the cache.
+   *
+   * The session ID to lookup is in `params` and always has length
+   * exactly 32 bytes. If the session parameters are found in the
+   * cache, then the parameters shall be copied into the `params`
+   * structure. Returned value is 1 on successful lookup, 0
+   * otherwise.
+   *
+   * \param ctx          session cache context.
+   * \param server_ctx   SSL server context.
+   * \param params       destination for session parameters.
+   * \return  1 if found, 0 otherwise.
+   */
+  int (*load)(const br_ssl_session_cache_class **ctx,
+              br_ssl_server_context *server_ctx,
+              br_ssl_session_parameters *params);
 };
 
 /**
@@ -3352,15 +3284,15 @@ struct br_ssl_session_cache_class_ {
  * contents are opaque and shall not be accessed directly.
  */
 typedef struct {
-	/** \brief Pointer to vtable. */
-	const br_ssl_session_cache_class *vtable;
+  /** \brief Pointer to vtable. */
+  const br_ssl_session_cache_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	unsigned char *store;
-	size_t store_len, store_ptr;
-	unsigned char index_key[32];
-	const br_hash_class *hash;
-	int init_done;
-	uint32_t head, tail, root;
+  unsigned char *store;
+  size_t store_len, store_ptr;
+  unsigned char index_key[32];
+  const br_hash_class *hash;
+  int init_done;
+  uint32_t head, tail, root;
 #endif
 } br_ssl_session_cache_lru;
 
@@ -3376,7 +3308,7 @@ typedef struct {
  * \param store_len   storage space length (in bytes).
  */
 void br_ssl_session_cache_lru_init(br_ssl_session_cache_lru *cc,
-	unsigned char *store, size_t store_len);
+                                   unsigned char *store, size_t store_len);
 
 /**
  * \brief Forget an entry in an LRU session cache.
@@ -3388,8 +3320,8 @@ void br_ssl_session_cache_lru_init(br_ssl_session_cache_lru *cc,
  * \param cc   session cache context.
  * \param id   session ID to forget.
  */
-void br_ssl_session_cache_lru_forget(
-	br_ssl_session_cache_lru *cc, const unsigned char *id);
+void br_ssl_session_cache_lru_forget(br_ssl_session_cache_lru *cc,
+                                     const unsigned char *id);
 
 /**
  * \brief Context structure for a SSL server.
@@ -3400,89 +3332,89 @@ void br_ssl_session_cache_lru_forget(
  * must not be accessed directly.
  */
 struct br_ssl_server_context_ {
-	/**
-	 * \brief The encapsulated engine context.
-	 */
-	br_ssl_engine_context eng;
+  /**
+   * \brief The encapsulated engine context.
+   */
+  br_ssl_engine_context eng;
 
 #ifndef BR_DOXYGEN_IGNORE
-	/*
-	 * Maximum version from the client.
-	 */
-	uint16_t client_max_version;
+  /*
+   * Maximum version from the client.
+   */
+  uint16_t client_max_version;
 
-	/*
-	 * Session cache.
-	 */
-	const br_ssl_session_cache_class **cache_vtable;
+  /*
+   * Session cache.
+   */
+  const br_ssl_session_cache_class **cache_vtable;
 
-	/*
-	 * Translated cipher suites supported by the client. The list
-	 * is trimmed to include only the cipher suites that the
-	 * server also supports; they are in the same order as in the
-	 * client message.
-	 */
-	br_suite_translated client_suites[BR_MAX_CIPHER_SUITES];
-	unsigned char client_suites_num;
+  /*
+   * Translated cipher suites supported by the client. The list
+   * is trimmed to include only the cipher suites that the
+   * server also supports; they are in the same order as in the
+   * client message.
+   */
+  br_suite_translated client_suites[BR_MAX_CIPHER_SUITES];
+  unsigned char client_suites_num;
 
-	/*
-	 * Hash functions supported by the client, with ECDSA and RSA
-	 * (bit mask). For hash function with id 'x', set bit index is
-	 * x for RSA, x+8 for ECDSA. For newer algorithms, with ID
-	 * 0x08**, bit 16+k is set for algorithm 0x0800+k.
-	 */
-	uint32_t hashes;
+  /*
+   * Hash functions supported by the client, with ECDSA and RSA
+   * (bit mask). For hash function with id 'x', set bit index is
+   * x for RSA, x+8 for ECDSA. For newer algorithms, with ID
+   * 0x08**, bit 16+k is set for algorithm 0x0800+k.
+   */
+  uint32_t hashes;
 
-	/*
-	 * Curves supported by the client (bit mask, for named curves).
-	 */
-	uint32_t curves;
+  /*
+   * Curves supported by the client (bit mask, for named curves).
+   */
+  uint32_t curves;
 
-	/*
-	 * Context for chain handler.
-	 */
-	const br_ssl_server_policy_class **policy_vtable;
-	uint16_t sign_hash_id;
+  /*
+   * Context for chain handler.
+   */
+  const br_ssl_server_policy_class **policy_vtable;
+  uint16_t sign_hash_id;
 
-	/*
-	 * For the core handlers, thus avoiding (in most cases) the
-	 * need for an externally provided policy context.
-	 */
-	union {
-		const br_ssl_server_policy_class *vtable;
-		br_ssl_server_policy_rsa_context single_rsa;
-		br_ssl_server_policy_ec_context single_ec;
-	} chain_handler;
+  /*
+   * For the core handlers, thus avoiding (in most cases) the
+   * need for an externally provided policy context.
+   */
+  union {
+    const br_ssl_server_policy_class *vtable;
+    br_ssl_server_policy_rsa_context single_rsa;
+    br_ssl_server_policy_ec_context single_ec;
+  } chain_handler;
 
-	/*
-	 * Buffer for the ECDHE private key.
-	 */
-	unsigned char ecdhe_key[70];
-	size_t ecdhe_key_len;
+  /*
+   * Buffer for the ECDHE private key.
+   */
+  unsigned char ecdhe_key[70];
+  size_t ecdhe_key_len;
 
-	/*
-	 * Trust anchor names for client authentication. "ta_names" and
-	 * "tas" cannot be both non-NULL.
-	 */
-	const br_x500_name *ta_names;
-	const br_x509_trust_anchor *tas;
-	size_t num_tas;
-	size_t cur_dn_index;
-	const unsigned char *cur_dn;
-	size_t cur_dn_len;
+  /*
+   * Trust anchor names for client authentication. "ta_names" and
+   * "tas" cannot be both non-NULL.
+   */
+  const br_x500_name *ta_names;
+  const br_x509_trust_anchor *tas;
+  size_t num_tas;
+  size_t cur_dn_index;
+  const unsigned char *cur_dn;
+  size_t cur_dn_len;
 
-	/*
-	 * Buffer for the hash value computed over all handshake messages
-	 * prior to CertificateVerify, and identifier for the hash function.
-	 */
-	unsigned char hash_CV[64];
-	size_t hash_CV_len;
-	int hash_CV_id;
+  /*
+   * Buffer for the hash value computed over all handshake messages
+   * prior to CertificateVerify, and identifier for the hash function.
+   */
+  unsigned char hash_CV[64];
+  size_t hash_CV_len;
+  int hash_CV_id;
 
-	/*
-	 * Server-specific implementations.
-	 * (none for now)
-	 */
+  /*
+   * Server-specific implementations.
+   * (none for now)
+   */
 #endif
 };
 
@@ -3527,8 +3459,9 @@ struct br_ssl_server_context_ {
  * \param sk          RSA private key.
  */
 void br_ssl_server_init_full_rsa(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk);
+                                 const br_x509_certificate *chain,
+                                 size_t chain_len,
+                                 const br_rsa_private_key *sk);
 
 /**
  * \brief SSL server profile: full_ec.
@@ -3549,8 +3482,9 @@ void br_ssl_server_init_full_rsa(br_ssl_server_context *cc,
  * \param sk                     EC private key.
  */
 void br_ssl_server_init_full_ec(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	unsigned cert_issuer_key_type, const br_ec_private_key *sk);
+                                const br_x509_certificate *chain,
+                                size_t chain_len, unsigned cert_issuer_key_type,
+                                const br_ec_private_key *sk);
 
 /**
  * \brief SSL server profile: minr2g.
@@ -3565,8 +3499,8 @@ void br_ssl_server_init_full_ec(br_ssl_server_context *cc,
  * \param sk          RSA private key.
  */
 void br_ssl_server_init_minr2g(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_rsa_private_key *sk);
 
 /**
  * \brief SSL server profile: mine2g.
@@ -3582,8 +3516,8 @@ void br_ssl_server_init_minr2g(br_ssl_server_context *cc,
  * \param sk          RSA private key.
  */
 void br_ssl_server_init_mine2g(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_rsa_private_key *sk);
 
 /**
  * \brief SSL server profile: minf2g.
@@ -3600,8 +3534,8 @@ void br_ssl_server_init_mine2g(br_ssl_server_context *cc,
  * \param sk          EC private key.
  */
 void br_ssl_server_init_minf2g(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_ec_private_key *sk);
 
 /**
  * \brief SSL server profile: minu2g.
@@ -3620,8 +3554,8 @@ void br_ssl_server_init_minf2g(br_ssl_server_context *cc,
  * \param sk          EC private key.
  */
 void br_ssl_server_init_minu2g(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_ec_private_key *sk);
 
 /**
  * \brief SSL server profile: minv2g.
@@ -3640,8 +3574,8 @@ void br_ssl_server_init_minu2g(br_ssl_server_context *cc,
  * \param sk          EC private key.
  */
 void br_ssl_server_init_minv2g(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_ec_private_key *sk);
 
 /**
  * \brief SSL server profile: mine2c.
@@ -3656,8 +3590,8 @@ void br_ssl_server_init_minv2g(br_ssl_server_context *cc,
  * \param sk          RSA private key.
  */
 void br_ssl_server_init_mine2c(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_rsa_private_key *sk);
 
 /**
  * \brief SSL server profile: minf2c.
@@ -3672,8 +3606,8 @@ void br_ssl_server_init_mine2c(br_ssl_server_context *cc,
  * \param sk          EC private key.
  */
 void br_ssl_server_init_minf2c(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk);
+                               const br_x509_certificate *chain,
+                               size_t chain_len, const br_ec_private_key *sk);
 
 /**
  * \brief Get the supported client suites.
@@ -3697,11 +3631,10 @@ void br_ssl_server_init_minf2c(br_ssl_server_context *cc,
  * \param num   receives the array size (number of suites).
  * \return  the translated common cipher suites, in preference order.
  */
-static inline const br_suite_translated *
-br_ssl_server_get_client_suites(const br_ssl_server_context *cc, size_t *num)
-{
-	*num = cc->client_suites_num;
-	return cc->client_suites;
+static inline const br_suite_translated *br_ssl_server_get_client_suites(
+    const br_ssl_server_context *cc, size_t *num) {
+  *num = cc->client_suites_num;
+  return cc->client_suites;
 }
 
 /**
@@ -3734,10 +3667,9 @@ br_ssl_server_get_client_suites(const br_ssl_server_context *cc, size_t *num)
  * \param cc   server context.
  * \return  the client-supported hash functions and signature algorithms.
  */
-static inline uint32_t
-br_ssl_server_get_client_hashes(const br_ssl_server_context *cc)
-{
-	return cc->hashes;
+static inline uint32_t br_ssl_server_get_client_hashes(
+    const br_ssl_server_context *cc) {
+  return cc->hashes;
 }
 
 /**
@@ -3748,10 +3680,9 @@ br_ssl_server_get_client_hashes(const br_ssl_server_context *cc)
  * \param cc   server context.
  * \return  the client-supported elliptic curves.
  */
-static inline uint32_t
-br_ssl_server_get_client_curves(const br_ssl_server_context *cc)
-{
-	return cc->curves;
+static inline uint32_t br_ssl_server_get_client_curves(
+    const br_ssl_server_context *cc) {
+  return cc->curves;
 }
 
 /**
@@ -3775,11 +3706,9 @@ void br_ssl_server_zero(br_ssl_server_context *cc);
  * \param cc     server context.
  * \param pctx   policy context (pointer to its vtable field).
  */
-static inline void
-br_ssl_server_set_policy(br_ssl_server_context *cc,
-	const br_ssl_server_policy_class **pctx)
-{
-	cc->policy_vtable = pctx;
+static inline void br_ssl_server_set_policy(
+    br_ssl_server_context *cc, const br_ssl_server_policy_class **pctx) {
+  cc->policy_vtable = pctx;
 }
 
 /**
@@ -3800,10 +3729,10 @@ br_ssl_server_set_policy(br_ssl_server_context *cc,
  * \param irsacore         RSA core implementation.
  * \param irsasign         RSA signature implementation (PKCS#1 v1.5).
  */
-void br_ssl_server_set_single_rsa(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_rsa_private_key *sk, unsigned allowed_usages,
-	br_rsa_private irsacore, br_rsa_pkcs1_sign irsasign);
+void br_ssl_server_set_single_rsa(
+    br_ssl_server_context *cc, const br_x509_certificate *chain,
+    size_t chain_len, const br_rsa_private_key *sk, unsigned allowed_usages,
+    br_rsa_private irsacore, br_rsa_pkcs1_sign irsasign);
 
 /**
  * \brief Set the server certificate chain and key (single EC case).
@@ -3830,10 +3759,11 @@ void br_ssl_server_set_single_rsa(br_ssl_server_context *cc,
  * \param iecdsa                 ECDSA signature implementation ("asn1" format).
  */
 void br_ssl_server_set_single_ec(br_ssl_server_context *cc,
-	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk, unsigned allowed_usages,
-	unsigned cert_issuer_key_type,
-	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
+                                 const br_x509_certificate *chain,
+                                 size_t chain_len, const br_ec_private_key *sk,
+                                 unsigned allowed_usages,
+                                 unsigned cert_issuer_key_type,
+                                 const br_ec_impl *iec, br_ecdsa_sign iecdsa);
 
 /**
  * \brief Activate client certificate authentication.
@@ -3854,13 +3784,11 @@ void br_ssl_server_set_single_ec(br_ssl_server_context *cc,
  * \param ta_names   encoded trust anchor names.
  * \param num        number of encoded trust anchor names.
  */
-static inline void
-br_ssl_server_set_trust_anchor_names(br_ssl_server_context *cc,
-	const br_x500_name *ta_names, size_t num)
-{
-	cc->ta_names = ta_names;
-	cc->tas = NULL;
-	cc->num_tas = num;
+static inline void br_ssl_server_set_trust_anchor_names(
+    br_ssl_server_context *cc, const br_x500_name *ta_names, size_t num) {
+  cc->ta_names = ta_names;
+  cc->tas = NULL;
+  cc->num_tas = num;
 }
 
 /**
@@ -3881,13 +3809,11 @@ br_ssl_server_set_trust_anchor_names(br_ssl_server_context *cc,
  * \param tas   trust anchors (only names are used).
  * \param num   number of trust anchors.
  */
-static inline void
-br_ssl_server_set_trust_anchor_names_alt(br_ssl_server_context *cc,
-	const br_x509_trust_anchor *tas, size_t num)
-{
-	cc->ta_names = NULL;
-	cc->tas = tas;
-	cc->num_tas = num;
+static inline void br_ssl_server_set_trust_anchor_names_alt(
+    br_ssl_server_context *cc, const br_x509_trust_anchor *tas, size_t num) {
+  cc->ta_names = NULL;
+  cc->tas = tas;
+  cc->num_tas = num;
 }
 
 /**
@@ -3899,11 +3825,9 @@ br_ssl_server_set_trust_anchor_names_alt(br_ssl_server_context *cc,
  * \param cc       server context.
  * \param vtable   session cache context.
  */
-static inline void
-br_ssl_server_set_cache(br_ssl_server_context *cc,
-	const br_ssl_session_cache_class **vtable)
-{
-	cc->cache_vtable = vtable;
+static inline void br_ssl_server_set_cache(
+    br_ssl_server_context *cc, const br_ssl_session_cache_class **vtable) {
+  cc->cache_vtable = vtable;
 }
 
 /**
@@ -3950,13 +3874,11 @@ int br_ssl_server_reset(br_ssl_server_context *cc);
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	br_ssl_engine_context *engine;
-	int (*low_read)(void *read_context,
-		unsigned char *data, size_t len);
-	void *read_context;
-	int (*low_write)(void *write_context,
-		const unsigned char *data, size_t len);
-	void *write_context;
+  br_ssl_engine_context *engine;
+  int (*low_read)(void *read_context, unsigned char *data, size_t len);
+  void *read_context;
+  int (*low_write)(void *write_context, const unsigned char *data, size_t len);
+  void *write_context;
 #endif
 } br_sslio_context;
 
@@ -4007,14 +3929,13 @@ typedef struct {
  * \param low_write       callback for writing data on the transport.
  * \param write_context   context pointer for `low_write()`.
  */
-void br_sslio_init(br_sslio_context *ctx,
-	br_ssl_engine_context *engine,
-	int (*low_read)(void *read_context,
-		unsigned char *data, size_t len),
-	void *read_context,
-	int (*low_write)(void *write_context,
-		const unsigned char *data, size_t len),
-	void *write_context);
+void br_sslio_init(br_sslio_context *ctx, br_ssl_engine_context *engine,
+                   int (*low_read)(void *read_context, unsigned char *data,
+                                   size_t len),
+                   void *read_context,
+                   int (*low_write)(void *write_context,
+                                    const unsigned char *data, size_t len),
+                   void *write_context);
 
 /**
  * \brief Read some application data from a SSL connection.
@@ -4143,151 +4064,151 @@ int br_sslio_close(br_sslio_context *cc);
  */
 
 /* From RFC 5246 */
-#define BR_TLS_NULL_WITH_NULL_NULL                   0x0000
-#define BR_TLS_RSA_WITH_NULL_MD5                     0x0001
-#define BR_TLS_RSA_WITH_NULL_SHA                     0x0002
-#define BR_TLS_RSA_WITH_NULL_SHA256                  0x003B
-#define BR_TLS_RSA_WITH_RC4_128_MD5                  0x0004
-#define BR_TLS_RSA_WITH_RC4_128_SHA                  0x0005
-#define BR_TLS_RSA_WITH_3DES_EDE_CBC_SHA             0x000A
-#define BR_TLS_RSA_WITH_AES_128_CBC_SHA              0x002F
-#define BR_TLS_RSA_WITH_AES_256_CBC_SHA              0x0035
-#define BR_TLS_RSA_WITH_AES_128_CBC_SHA256           0x003C
-#define BR_TLS_RSA_WITH_AES_256_CBC_SHA256           0x003D
-#define BR_TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA          0x000D
-#define BR_TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA          0x0010
-#define BR_TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA         0x0013
-#define BR_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA         0x0016
-#define BR_TLS_DH_DSS_WITH_AES_128_CBC_SHA           0x0030
-#define BR_TLS_DH_RSA_WITH_AES_128_CBC_SHA           0x0031
-#define BR_TLS_DHE_DSS_WITH_AES_128_CBC_SHA          0x0032
-#define BR_TLS_DHE_RSA_WITH_AES_128_CBC_SHA          0x0033
-#define BR_TLS_DH_DSS_WITH_AES_256_CBC_SHA           0x0036
-#define BR_TLS_DH_RSA_WITH_AES_256_CBC_SHA           0x0037
-#define BR_TLS_DHE_DSS_WITH_AES_256_CBC_SHA          0x0038
-#define BR_TLS_DHE_RSA_WITH_AES_256_CBC_SHA          0x0039
-#define BR_TLS_DH_DSS_WITH_AES_128_CBC_SHA256        0x003E
-#define BR_TLS_DH_RSA_WITH_AES_128_CBC_SHA256        0x003F
-#define BR_TLS_DHE_DSS_WITH_AES_128_CBC_SHA256       0x0040
-#define BR_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256       0x0067
-#define BR_TLS_DH_DSS_WITH_AES_256_CBC_SHA256        0x0068
-#define BR_TLS_DH_RSA_WITH_AES_256_CBC_SHA256        0x0069
-#define BR_TLS_DHE_DSS_WITH_AES_256_CBC_SHA256       0x006A
-#define BR_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256       0x006B
-#define BR_TLS_DH_anon_WITH_RC4_128_MD5              0x0018
-#define BR_TLS_DH_anon_WITH_3DES_EDE_CBC_SHA         0x001B
-#define BR_TLS_DH_anon_WITH_AES_128_CBC_SHA          0x0034
-#define BR_TLS_DH_anon_WITH_AES_256_CBC_SHA          0x003A
-#define BR_TLS_DH_anon_WITH_AES_128_CBC_SHA256       0x006C
-#define BR_TLS_DH_anon_WITH_AES_256_CBC_SHA256       0x006D
+#define BR_TLS_NULL_WITH_NULL_NULL 0x0000
+#define BR_TLS_RSA_WITH_NULL_MD5 0x0001
+#define BR_TLS_RSA_WITH_NULL_SHA 0x0002
+#define BR_TLS_RSA_WITH_NULL_SHA256 0x003B
+#define BR_TLS_RSA_WITH_RC4_128_MD5 0x0004
+#define BR_TLS_RSA_WITH_RC4_128_SHA 0x0005
+#define BR_TLS_RSA_WITH_3DES_EDE_CBC_SHA 0x000A
+#define BR_TLS_RSA_WITH_AES_128_CBC_SHA 0x002F
+#define BR_TLS_RSA_WITH_AES_256_CBC_SHA 0x0035
+#define BR_TLS_RSA_WITH_AES_128_CBC_SHA256 0x003C
+#define BR_TLS_RSA_WITH_AES_256_CBC_SHA256 0x003D
+#define BR_TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA 0x000D
+#define BR_TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA 0x0010
+#define BR_TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA 0x0013
+#define BR_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA 0x0016
+#define BR_TLS_DH_DSS_WITH_AES_128_CBC_SHA 0x0030
+#define BR_TLS_DH_RSA_WITH_AES_128_CBC_SHA 0x0031
+#define BR_TLS_DHE_DSS_WITH_AES_128_CBC_SHA 0x0032
+#define BR_TLS_DHE_RSA_WITH_AES_128_CBC_SHA 0x0033
+#define BR_TLS_DH_DSS_WITH_AES_256_CBC_SHA 0x0036
+#define BR_TLS_DH_RSA_WITH_AES_256_CBC_SHA 0x0037
+#define BR_TLS_DHE_DSS_WITH_AES_256_CBC_SHA 0x0038
+#define BR_TLS_DHE_RSA_WITH_AES_256_CBC_SHA 0x0039
+#define BR_TLS_DH_DSS_WITH_AES_128_CBC_SHA256 0x003E
+#define BR_TLS_DH_RSA_WITH_AES_128_CBC_SHA256 0x003F
+#define BR_TLS_DHE_DSS_WITH_AES_128_CBC_SHA256 0x0040
+#define BR_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256 0x0067
+#define BR_TLS_DH_DSS_WITH_AES_256_CBC_SHA256 0x0068
+#define BR_TLS_DH_RSA_WITH_AES_256_CBC_SHA256 0x0069
+#define BR_TLS_DHE_DSS_WITH_AES_256_CBC_SHA256 0x006A
+#define BR_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256 0x006B
+#define BR_TLS_DH_anon_WITH_RC4_128_MD5 0x0018
+#define BR_TLS_DH_anon_WITH_3DES_EDE_CBC_SHA 0x001B
+#define BR_TLS_DH_anon_WITH_AES_128_CBC_SHA 0x0034
+#define BR_TLS_DH_anon_WITH_AES_256_CBC_SHA 0x003A
+#define BR_TLS_DH_anon_WITH_AES_128_CBC_SHA256 0x006C
+#define BR_TLS_DH_anon_WITH_AES_256_CBC_SHA256 0x006D
 
 /* From RFC 4492 */
-#define BR_TLS_ECDH_ECDSA_WITH_NULL_SHA              0xC001
-#define BR_TLS_ECDH_ECDSA_WITH_RC4_128_SHA           0xC002
-#define BR_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA      0xC003
-#define BR_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA       0xC004
-#define BR_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA       0xC005
-#define BR_TLS_ECDHE_ECDSA_WITH_NULL_SHA             0xC006
-#define BR_TLS_ECDHE_ECDSA_WITH_RC4_128_SHA          0xC007
-#define BR_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA     0xC008
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA      0xC009
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA      0xC00A
-#define BR_TLS_ECDH_RSA_WITH_NULL_SHA                0xC00B
-#define BR_TLS_ECDH_RSA_WITH_RC4_128_SHA             0xC00C
-#define BR_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA        0xC00D
-#define BR_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA         0xC00E
-#define BR_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA         0xC00F
-#define BR_TLS_ECDHE_RSA_WITH_NULL_SHA               0xC010
-#define BR_TLS_ECDHE_RSA_WITH_RC4_128_SHA            0xC011
-#define BR_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA       0xC012
-#define BR_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA        0xC013
-#define BR_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA        0xC014
-#define BR_TLS_ECDH_anon_WITH_NULL_SHA               0xC015
-#define BR_TLS_ECDH_anon_WITH_RC4_128_SHA            0xC016
-#define BR_TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA       0xC017
-#define BR_TLS_ECDH_anon_WITH_AES_128_CBC_SHA        0xC018
-#define BR_TLS_ECDH_anon_WITH_AES_256_CBC_SHA        0xC019
+#define BR_TLS_ECDH_ECDSA_WITH_NULL_SHA 0xC001
+#define BR_TLS_ECDH_ECDSA_WITH_RC4_128_SHA 0xC002
+#define BR_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA 0xC003
+#define BR_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA 0xC004
+#define BR_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA 0xC005
+#define BR_TLS_ECDHE_ECDSA_WITH_NULL_SHA 0xC006
+#define BR_TLS_ECDHE_ECDSA_WITH_RC4_128_SHA 0xC007
+#define BR_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA 0xC008
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA 0xC009
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA 0xC00A
+#define BR_TLS_ECDH_RSA_WITH_NULL_SHA 0xC00B
+#define BR_TLS_ECDH_RSA_WITH_RC4_128_SHA 0xC00C
+#define BR_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA 0xC00D
+#define BR_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA 0xC00E
+#define BR_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA 0xC00F
+#define BR_TLS_ECDHE_RSA_WITH_NULL_SHA 0xC010
+#define BR_TLS_ECDHE_RSA_WITH_RC4_128_SHA 0xC011
+#define BR_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA 0xC012
+#define BR_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA 0xC013
+#define BR_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA 0xC014
+#define BR_TLS_ECDH_anon_WITH_NULL_SHA 0xC015
+#define BR_TLS_ECDH_anon_WITH_RC4_128_SHA 0xC016
+#define BR_TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA 0xC017
+#define BR_TLS_ECDH_anon_WITH_AES_128_CBC_SHA 0xC018
+#define BR_TLS_ECDH_anon_WITH_AES_256_CBC_SHA 0xC019
 
 /* From RFC 5288 */
-#define BR_TLS_RSA_WITH_AES_128_GCM_SHA256           0x009C
-#define BR_TLS_RSA_WITH_AES_256_GCM_SHA384           0x009D
-#define BR_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256       0x009E
-#define BR_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384       0x009F
-#define BR_TLS_DH_RSA_WITH_AES_128_GCM_SHA256        0x00A0
-#define BR_TLS_DH_RSA_WITH_AES_256_GCM_SHA384        0x00A1
-#define BR_TLS_DHE_DSS_WITH_AES_128_GCM_SHA256       0x00A2
-#define BR_TLS_DHE_DSS_WITH_AES_256_GCM_SHA384       0x00A3
-#define BR_TLS_DH_DSS_WITH_AES_128_GCM_SHA256        0x00A4
-#define BR_TLS_DH_DSS_WITH_AES_256_GCM_SHA384        0x00A5
-#define BR_TLS_DH_anon_WITH_AES_128_GCM_SHA256       0x00A6
-#define BR_TLS_DH_anon_WITH_AES_256_GCM_SHA384       0x00A7
+#define BR_TLS_RSA_WITH_AES_128_GCM_SHA256 0x009C
+#define BR_TLS_RSA_WITH_AES_256_GCM_SHA384 0x009D
+#define BR_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256 0x009E
+#define BR_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 0x009F
+#define BR_TLS_DH_RSA_WITH_AES_128_GCM_SHA256 0x00A0
+#define BR_TLS_DH_RSA_WITH_AES_256_GCM_SHA384 0x00A1
+#define BR_TLS_DHE_DSS_WITH_AES_128_GCM_SHA256 0x00A2
+#define BR_TLS_DHE_DSS_WITH_AES_256_GCM_SHA384 0x00A3
+#define BR_TLS_DH_DSS_WITH_AES_128_GCM_SHA256 0x00A4
+#define BR_TLS_DH_DSS_WITH_AES_256_GCM_SHA384 0x00A5
+#define BR_TLS_DH_anon_WITH_AES_128_GCM_SHA256 0x00A6
+#define BR_TLS_DH_anon_WITH_AES_256_GCM_SHA384 0x00A7
 
 /* From RFC 5289 */
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256   0xC023
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384   0xC024
-#define BR_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256    0xC025
-#define BR_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384    0xC026
-#define BR_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256     0xC027
-#define BR_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384     0xC028
-#define BR_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256      0xC029
-#define BR_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384      0xC02A
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256   0xC02B
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384   0xC02C
-#define BR_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256    0xC02D
-#define BR_TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384    0xC02E
-#define BR_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256     0xC02F
-#define BR_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384     0xC030
-#define BR_TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256      0xC031
-#define BR_TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384      0xC032
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256 0xC023
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384 0xC024
+#define BR_TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256 0xC025
+#define BR_TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384 0xC026
+#define BR_TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256 0xC027
+#define BR_TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384 0xC028
+#define BR_TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256 0xC029
+#define BR_TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384 0xC02A
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 0xC02B
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 0xC02C
+#define BR_TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256 0xC02D
+#define BR_TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384 0xC02E
+#define BR_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 0xC02F
+#define BR_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 0xC030
+#define BR_TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256 0xC031
+#define BR_TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384 0xC032
 
 /* From RFC 6655 and 7251 */
-#define BR_TLS_RSA_WITH_AES_128_CCM                  0xC09C
-#define BR_TLS_RSA_WITH_AES_256_CCM                  0xC09D
-#define BR_TLS_RSA_WITH_AES_128_CCM_8                0xC0A0
-#define BR_TLS_RSA_WITH_AES_256_CCM_8                0xC0A1
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CCM          0xC0AC
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CCM          0xC0AD
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8        0xC0AE
-#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8        0xC0AF
+#define BR_TLS_RSA_WITH_AES_128_CCM 0xC09C
+#define BR_TLS_RSA_WITH_AES_256_CCM 0xC09D
+#define BR_TLS_RSA_WITH_AES_128_CCM_8 0xC0A0
+#define BR_TLS_RSA_WITH_AES_256_CCM_8 0xC0A1
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CCM 0xC0AC
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CCM 0xC0AD
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 0xC0AE
+#define BR_TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8 0xC0AF
 
 /* From RFC 7905 */
-#define BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256     0xCCA8
-#define BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256   0xCCA9
-#define BR_TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256       0xCCAA
-#define BR_TLS_PSK_WITH_CHACHA20_POLY1305_SHA256           0xCCAB
-#define BR_TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256     0xCCAC
-#define BR_TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256       0xCCAD
-#define BR_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256       0xCCAE
+#define BR_TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 0xCCA8
+#define BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 0xCCA9
+#define BR_TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256 0xCCAA
+#define BR_TLS_PSK_WITH_CHACHA20_POLY1305_SHA256 0xCCAB
+#define BR_TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256 0xCCAC
+#define BR_TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256 0xCCAD
+#define BR_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256 0xCCAE
 
 /* From RFC 7507 */
-#define BR_TLS_FALLBACK_SCSV                         0x5600
+#define BR_TLS_FALLBACK_SCSV 0x5600
 
 /*
  * Symbolic constants for alerts.
  */
-#define BR_ALERT_CLOSE_NOTIFY                0
-#define BR_ALERT_UNEXPECTED_MESSAGE         10
-#define BR_ALERT_BAD_RECORD_MAC             20
-#define BR_ALERT_RECORD_OVERFLOW            22
-#define BR_ALERT_DECOMPRESSION_FAILURE      30
-#define BR_ALERT_HANDSHAKE_FAILURE          40
-#define BR_ALERT_BAD_CERTIFICATE            42
-#define BR_ALERT_UNSUPPORTED_CERTIFICATE    43
-#define BR_ALERT_CERTIFICATE_REVOKED        44
-#define BR_ALERT_CERTIFICATE_EXPIRED        45
-#define BR_ALERT_CERTIFICATE_UNKNOWN        46
-#define BR_ALERT_ILLEGAL_PARAMETER          47
-#define BR_ALERT_UNKNOWN_CA                 48
-#define BR_ALERT_ACCESS_DENIED              49
-#define BR_ALERT_DECODE_ERROR               50
-#define BR_ALERT_DECRYPT_ERROR              51
-#define BR_ALERT_PROTOCOL_VERSION           70
-#define BR_ALERT_INSUFFICIENT_SECURITY      71
-#define BR_ALERT_INTERNAL_ERROR             80
-#define BR_ALERT_USER_CANCELED              90
-#define BR_ALERT_NO_RENEGOTIATION          100
-#define BR_ALERT_UNSUPPORTED_EXTENSION     110
-#define BR_ALERT_NO_APPLICATION_PROTOCOL   120
+#define BR_ALERT_CLOSE_NOTIFY 0
+#define BR_ALERT_UNEXPECTED_MESSAGE 10
+#define BR_ALERT_BAD_RECORD_MAC 20
+#define BR_ALERT_RECORD_OVERFLOW 22
+#define BR_ALERT_DECOMPRESSION_FAILURE 30
+#define BR_ALERT_HANDSHAKE_FAILURE 40
+#define BR_ALERT_BAD_CERTIFICATE 42
+#define BR_ALERT_UNSUPPORTED_CERTIFICATE 43
+#define BR_ALERT_CERTIFICATE_REVOKED 44
+#define BR_ALERT_CERTIFICATE_EXPIRED 45
+#define BR_ALERT_CERTIFICATE_UNKNOWN 46
+#define BR_ALERT_ILLEGAL_PARAMETER 47
+#define BR_ALERT_UNKNOWN_CA 48
+#define BR_ALERT_ACCESS_DENIED 49
+#define BR_ALERT_DECODE_ERROR 50
+#define BR_ALERT_DECRYPT_ERROR 51
+#define BR_ALERT_PROTOCOL_VERSION 70
+#define BR_ALERT_INSUFFICIENT_SECURITY 71
+#define BR_ALERT_INTERNAL_ERROR 80
+#define BR_ALERT_USER_CANCELED 90
+#define BR_ALERT_NO_RENEGOTIATION 100
+#define BR_ALERT_UNSUPPORTED_EXTENSION 110
+#define BR_ALERT_NO_APPLICATION_PROTOCOL 120
 
 #ifdef __cplusplus
 }

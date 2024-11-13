@@ -2,15 +2,14 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_LOADER_V1_ARRAY_H_
 
 #include <sourcemeta/jsonbinpack/runtime.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <algorithm> // std::transform
-#include <cassert>   // assert
-#include <cstdint>   // std::uint64_t
-#include <iterator>  // std::back_inserter
-#include <memory>    // std::make_shared
-#include <vector>    // std::vector
+#include <algorithm>  // std::transform
+#include <cassert>    // assert
+#include <cstdint>    // std::uint64_t
+#include <iterator>   // std::back_inserter
+#include <memory>     // std::make_shared
+#include <vector>     // std::vector
 
 namespace sourcemeta::jsonbinpack::v1 {
 
@@ -111,6 +110,6 @@ auto ROOF_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
       std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
 }
 
-} // namespace sourcemeta::jsonbinpack::v1
+}  // namespace sourcemeta::jsonbinpack::v1
 
 #endif

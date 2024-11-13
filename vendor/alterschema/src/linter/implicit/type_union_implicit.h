@@ -1,14 +1,13 @@
 class TypeUnionImplicit final : public sourcemeta::alterschema::Rule {
-public:
+ public:
   TypeUnionImplicit()
       : Rule{"type_union_implicit",
              "Not setting `type` is equivalent to accepting any type"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     if (!schema.is_object()) {
       return false;
     }

@@ -43,9 +43,9 @@
  */
 
 typedef enum {
-  CURL_OFFT_OK,    /* parsed fine */
-  CURL_OFFT_FLOW,  /* over or underflow */
-  CURL_OFFT_INVAL  /* nothing was parsed */
+  CURL_OFFT_OK,   /* parsed fine */
+  CURL_OFFT_FLOW, /* over or underflow */
+  CURL_OFFT_INVAL /* nothing was parsed */
 } CURLofft;
 
 CURLofft curlx_strtoofft(const char *str, char **endp, int base,

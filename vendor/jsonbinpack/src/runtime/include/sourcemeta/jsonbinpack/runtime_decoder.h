@@ -7,20 +7,19 @@
 
 #include <sourcemeta/jsonbinpack/runtime_encoding.h>
 #include <sourcemeta/jsonbinpack/runtime_input_stream.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
 namespace sourcemeta::jsonbinpack {
 
 /// @ingroup runtime
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT Decoder : private InputStream {
-public:
+ public:
   Decoder(Stream &input);
   auto read(const Encoding &encoding) -> sourcemeta::jsontoolkit::JSON;
 
 // The methods that implement individual encodings as considered private
 #ifndef DOXYGEN
-#define DECLARE_ENCODING(name)                                                 \
+#define DECLARE_ENCODING(name) \
   auto name(const name &) -> sourcemeta::jsontoolkit::JSON;
 
   // Integer
@@ -65,6 +64,6 @@ public:
 #endif
 };
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

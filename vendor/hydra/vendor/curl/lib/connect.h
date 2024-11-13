@@ -24,7 +24,6 @@
  *
  ***************************************************************************/
 #include "curl_setup.h"
-
 #include "nonblock.h" /* for curlx_nonblock(), formerly Curl_nonblock() */
 #include "sockaddr.h"
 #include "timeval.h"
@@ -34,13 +33,12 @@ struct ip_quadruple;
 
 /* generic function that returns how much time there is left to run, according
    to the timeouts set */
-timediff_t Curl_timeleft(struct Curl_easy *data,
-                         struct curltime *nowp,
+timediff_t Curl_timeleft(struct Curl_easy *data, struct curltime *nowp,
                          bool duringconnect);
 
 #define DEFAULT_CONNECT_TIMEOUT 300000 /* milliseconds == five minutes */
 
-#define DEFAULT_SHUTDOWN_TIMEOUT_MS   (2 * 1000)
+#define DEFAULT_SHUTDOWN_TIMEOUT_MS (2 * 1000)
 
 void Curl_shutdown_start(struct Curl_easy *data, int sockindex,
                          struct curltime *nowp);
@@ -69,8 +67,8 @@ bool Curl_shutdown_started(struct Curl_easy *data, int sockindex);
 curl_socket_t Curl_getconnectinfo(struct Curl_easy *data,
                                   struct connectdata **connp);
 
-bool Curl_addr2string(struct sockaddr *sa, curl_socklen_t salen,
-                      char *addr, int *port);
+bool Curl_addr2string(struct sockaddr *sa, curl_socklen_t salen, char *addr,
+                      int *port);
 
 /*
  * Curl_conncontrol() marks the end of a connection/stream. The 'closeit'
@@ -88,21 +86,21 @@ bool Curl_addr2string(struct sockaddr *sa, curl_socklen_t salen,
 #define CONNCTRL_CONNECTION 1
 #define CONNCTRL_STREAM 2
 
-void Curl_conncontrol(struct connectdata *conn,
-                      int closeit
+void Curl_conncontrol(struct connectdata *conn, int closeit
 #if defined(DEBUGBUILD) && !defined(CURL_DISABLE_VERBOSE_STRINGS)
-                      , const char *reason
+                      ,
+                      const char *reason
 #endif
-  );
+);
 
 #if defined(DEBUGBUILD) && !defined(CURL_DISABLE_VERBOSE_STRINGS)
-#define streamclose(x,y) Curl_conncontrol(x, CONNCTRL_STREAM, y)
-#define connclose(x,y) Curl_conncontrol(x, CONNCTRL_CONNECTION, y)
-#define connkeep(x,y) Curl_conncontrol(x, CONNCTRL_KEEP, y)
+#define streamclose(x, y) Curl_conncontrol(x, CONNCTRL_STREAM, y)
+#define connclose(x, y) Curl_conncontrol(x, CONNCTRL_CONNECTION, y)
+#define connkeep(x, y) Curl_conncontrol(x, CONNCTRL_KEEP, y)
 #else /* if !DEBUGBUILD || CURL_DISABLE_VERBOSE_STRINGS */
-#define streamclose(x,y) Curl_conncontrol(x, CONNCTRL_STREAM)
-#define connclose(x,y) Curl_conncontrol(x, CONNCTRL_CONNECTION)
-#define connkeep(x,y) Curl_conncontrol(x, CONNCTRL_KEEP)
+#define streamclose(x, y) Curl_conncontrol(x, CONNCTRL_STREAM)
+#define connclose(x, y) Curl_conncontrol(x, CONNCTRL_CONNECTION)
+#define connkeep(x, y) Curl_conncontrol(x, CONNCTRL_KEEP)
 #endif
 
 /**
@@ -125,18 +123,15 @@ typedef CURLcode cf_ip_connect_create(struct Curl_cfilter **pcf,
 CURLcode Curl_cf_setup_insert_after(struct Curl_cfilter *cf_at,
                                     struct Curl_easy *data,
                                     const struct Curl_dns_entry *remotehost,
-                                    int transport,
-                                    int ssl_mode);
+                                    int transport, int ssl_mode);
 
 /**
  * Setup the cfilters at `sockindex` in connection `conn`.
  * If no filter chain is installed yet, inspects the configuration
  * in `data` and `conn? to install a suitable filter chain.
  */
-CURLcode Curl_conn_setup(struct Curl_easy *data,
-                         struct connectdata *conn,
-                         int sockindex,
-                         const struct Curl_dns_entry *remotehost,
+CURLcode Curl_conn_setup(struct Curl_easy *data, struct connectdata *conn,
+                         int sockindex, const struct Curl_dns_entry *remotehost,
                          int ssl_mode);
 
 extern struct Curl_cftype Curl_cft_happy_eyeballs;

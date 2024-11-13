@@ -5,16 +5,15 @@
 #include <sourcemeta/alterschema/engine_export.h>
 #endif
 
+#include <sourcemeta/alterschema/engine_transformer.h>
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <sourcemeta/alterschema/engine_transformer.h>
-
-#include <optional> // std::optional, std::nullopt
-#include <set>      // std::set
-#include <string>   // std::string
-#include <vector>   // std::vector
+#include <optional>  // std::optional, std::nullopt
+#include <set>       // std::set
+#include <string>    // std::string
+#include <vector>    // std::vector
 
 namespace sourcemeta::alterschema {
 /// @ingroup engine
@@ -50,7 +49,7 @@ namespace sourcemeta::alterschema {
 /// };
 /// ```
 class SOURCEMETA_ALTERSCHEMA_ENGINE_EXPORT Rule {
-public:
+ public:
   /// Create a transformation rule. Each rule must have a unique name.
   Rule(std::string &&name, std::string &&message);
 
@@ -73,28 +72,25 @@ public:
   [[nodiscard]] auto message() const -> const std::string &;
 
   /// Apply the rule to a schema
-  auto
-  apply(sourcemeta::jsontoolkit::JSON &schema,
-        const sourcemeta::jsontoolkit::Pointer &pointer,
-        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> std::vector<Operation>;
+  auto apply(sourcemeta::jsontoolkit::JSON &schema,
+             const sourcemeta::jsontoolkit::Pointer &pointer,
+             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+             const std::optional<std::string> &default_dialect =
+                 std::nullopt) const -> std::vector<Operation>;
 
   /// Check if the rule applies to a schema
-  auto
-  check(const sourcemeta::jsontoolkit::JSON &schema,
-        const sourcemeta::jsontoolkit::Pointer &pointer,
-        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> bool;
+  auto check(const sourcemeta::jsontoolkit::JSON &schema,
+             const sourcemeta::jsontoolkit::Pointer &pointer,
+             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+             const std::optional<std::string> &default_dialect =
+                 std::nullopt) const -> bool;
 
-private:
+ private:
   /// The rule condition
-  [[nodiscard]] virtual auto
-  condition(const sourcemeta::jsontoolkit::JSON &schema,
-            const std::string &dialect,
-            const std::set<std::string> &vocabularies,
-            const sourcemeta::jsontoolkit::Pointer &pointer) const -> bool = 0;
+  [[nodiscard]] virtual auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &dialect,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &pointer) const -> bool = 0;
 
   /// The rule transformation
   virtual auto transform(Transformer &transformer) const -> void = 0;
@@ -111,6 +107,6 @@ private:
 #pragma warning(default : 4251)
 #endif
 };
-} // namespace sourcemeta::alterschema
+}  // namespace sourcemeta::alterschema
 
 #endif

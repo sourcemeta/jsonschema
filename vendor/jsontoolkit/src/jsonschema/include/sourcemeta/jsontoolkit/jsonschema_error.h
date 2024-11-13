@@ -8,9 +8,9 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>  // std::exception
+#include <string>     // std::string
+#include <utility>    // std::move
 
 namespace sourcemeta::jsontoolkit {
 
@@ -25,13 +25,13 @@ namespace sourcemeta::jsontoolkit {
 /// An error that represents a general schema error event
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaError
     : public std::exception {
-public:
+ public:
   SchemaError(std::string message) : message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_.c_str();
   }
 
-private:
+ private:
   std::string message_;
 };
 
@@ -39,7 +39,7 @@ private:
 /// An error that represents a schema resolution failure event
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaResolutionError
     : public std::exception {
-public:
+ public:
   SchemaResolutionError(std::string identifier, std::string message)
       : identifier_{std::move(identifier)}, message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -50,7 +50,7 @@ public:
     return this->identifier_;
   }
 
-private:
+ private:
   std::string identifier_;
   std::string message_;
 };
@@ -59,7 +59,7 @@ private:
 /// An error that represents a schema vocabulary error
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaVocabularyError
     : public std::exception {
-public:
+ public:
   SchemaVocabularyError(std::string uri, std::string message)
       : uri_{std::move(uri)}, message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -70,7 +70,7 @@ public:
     return this->uri_;
   }
 
-private:
+ private:
   std::string uri_;
   std::string message_;
 };
@@ -79,10 +79,11 @@ private:
 /// An error that represents a schema resolution failure event
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaReferenceError
     : public std::exception {
-public:
+ public:
   SchemaReferenceError(std::string identifier, const Pointer &schema_location,
                        std::string message)
-      : identifier_{std::move(identifier)}, schema_location_{schema_location},
+      : identifier_{std::move(identifier)},
+        schema_location_{schema_location},
         message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_.c_str();
@@ -96,7 +97,7 @@ public:
     return this->schema_location_;
   }
 
-private:
+ private:
   std::string identifier_;
   Pointer schema_location_;
   std::string message_;
@@ -106,6 +107,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

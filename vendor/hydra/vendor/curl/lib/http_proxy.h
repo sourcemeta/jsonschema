@@ -31,8 +31,8 @@
 #include "urldata.h"
 
 CURLcode Curl_http_proxy_get_destination(struct Curl_cfilter *cf,
-                                         const char **phostname,
-                                         int *pport, bool *pipv6_ip);
+                                         const char **phostname, int *pport,
+                                         bool *pipv6_ip);
 
 CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
                                         struct Curl_cfilter *cf,
@@ -40,13 +40,11 @@ CURLcode Curl_http_proxy_create_CONNECT(struct httpreq **preq,
                                         int http_version_major);
 
 /* Default proxy timeout in milliseconds */
-#define PROXY_TIMEOUT (3600*1000)
+#define PROXY_TIMEOUT (3600 * 1000)
 
 void Curl_cf_http_proxy_get_host(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data,
-                                 const char **phost,
-                                 const char **pdisplay_host,
-                                 int *pport);
+                                 struct Curl_easy *data, const char **phost,
+                                 const char **pdisplay_host, int *pport);
 
 CURLcode Curl_cf_http_proxy_insert_after(struct Curl_cfilter *cf_at,
                                          struct Curl_easy *data);
@@ -55,7 +53,7 @@ extern struct Curl_cftype Curl_cft_http_proxy;
 
 #endif /* !CURL_DISABLE_PROXY  && !CURL_DISABLE_HTTP */
 
-#define IS_HTTPS_PROXY(t) (((t) == CURLPROXY_HTTPS) ||  \
-                           ((t) == CURLPROXY_HTTPS2))
+#define IS_HTTPS_PROXY(t) \
+  (((t) == CURLPROXY_HTTPS) || ((t) == CURLPROXY_HTTPS2))
 
 #endif /* HEADER_CURL_HTTP_PROXY_H */

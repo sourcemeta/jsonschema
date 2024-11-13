@@ -24,18 +24,19 @@
  *
  ***************************************************************************/
 
-#include "curl_setup.h"
 #include <curl/curl.h>
+
+#include "conncache.h"
 #include "cookie.h"
+#include "curl_setup.h"
 #include "psl.h"
 #include "urldata.h"
-#include "conncache.h"
 
 #define CURL_GOOD_SHARE 0x7e117a1e
 #define GOOD_SHARE_HANDLE(x) ((x) && (x)->magic == CURL_GOOD_SHARE)
 
-#define CURL_SHARE_KEEP_CONNECT(s)    \
-        ((s) && ((s)->specifier & (1<< CURL_LOCK_DATA_CONNECT)))
+#define CURL_SHARE_KEEP_CONNECT(s) \
+  ((s) && ((s)->specifier & (1 << CURL_LOCK_DATA_CONNECT)))
 
 /* this struct is libcurl-private, do not export details */
 struct Curl_share {

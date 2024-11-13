@@ -23,9 +23,9 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "curl_setup.h"
-
 #include <curl/curl.h>
+
+#include "curl_setup.h"
 
 /**
  * A chunk of bytes for reading and writing.
@@ -33,10 +33,10 @@
  * for where unread content is.
  */
 struct buf_chunk {
-  struct buf_chunk *next;  /* to keep it in a list */
-  size_t dlen;             /* the amount of allocated x.data[] */
-  size_t r_offset;         /* first unread bytes */
-  size_t w_offset;         /* one after last written byte */
+  struct buf_chunk *next; /* to keep it in a list */
+  size_t dlen;            /* the amount of allocated x.data[] */
+  size_t r_offset;        /* first unread bytes */
+  size_t w_offset;        /* one after last written byte */
   union {
     unsigned char data[1]; /* the buffer for `dlen` bytes */
     void *dummy;           /* alignment */
@@ -51,14 +51,14 @@ struct buf_chunk {
  * same thread.
  */
 struct bufc_pool {
-  struct buf_chunk *spare;  /* list of available spare chunks */
-  size_t chunk_size;        /* the size of chunks in this pool */
-  size_t spare_count;       /* current number of spare chunks in list */
-  size_t spare_max;         /* max number of spares to keep */
+  struct buf_chunk *spare; /* list of available spare chunks */
+  size_t chunk_size;       /* the size of chunks in this pool */
+  size_t spare_count;      /* current number of spare chunks in list */
+  size_t spare_max;        /* max number of spares to keep */
 };
 
-void Curl_bufcp_init(struct bufc_pool *pool,
-                     size_t chunk_size, size_t spare_max);
+void Curl_bufcp_init(struct bufc_pool *pool, size_t chunk_size,
+                     size_t spare_max);
 
 void Curl_bufcp_free(struct bufc_pool *pool);
 
@@ -92,30 +92,30 @@ void Curl_bufcp_free(struct bufc_pool *pool);
  * will be delegated to that pool.
  */
 struct bufq {
-  struct buf_chunk *head;       /* chunk with bytes to read from */
-  struct buf_chunk *tail;       /* chunk to write to */
-  struct buf_chunk *spare;      /* list of free chunks, unless `pool` */
-  struct bufc_pool *pool;       /* optional pool for free chunks */
-  size_t chunk_count;           /* current number of chunks in `head+spare` */
-  size_t max_chunks;            /* max `head` chunks to use */
-  size_t chunk_size;            /* size of chunks to manage */
-  int opts;                     /* options for handling queue, see below */
+  struct buf_chunk *head;  /* chunk with bytes to read from */
+  struct buf_chunk *tail;  /* chunk to write to */
+  struct buf_chunk *spare; /* list of free chunks, unless `pool` */
+  struct bufc_pool *pool;  /* optional pool for free chunks */
+  size_t chunk_count;      /* current number of chunks in `head+spare` */
+  size_t max_chunks;       /* max `head` chunks to use */
+  size_t chunk_size;       /* size of chunks to manage */
+  int opts;                /* options for handling queue, see below */
 };
 
 /**
  * Default behaviour: chunk limit is "hard", meaning attempts to write
  * more bytes than can be hold in `max_chunks` is refused and will return
  * -1, CURLE_AGAIN. */
-#define BUFQ_OPT_NONE        (0)
+#define BUFQ_OPT_NONE (0)
 /**
  * Make `max_chunks` a "soft" limit. A bufq will report that it is "full"
  * when `max_chunks` are used, but allows writing beyond this limit.
  */
-#define BUFQ_OPT_SOFT_LIMIT  (1 << 0)
+#define BUFQ_OPT_SOFT_LIMIT (1 << 0)
 /**
  * Do not keep spare chunks.
  */
-#define BUFQ_OPT_NO_SPARES   (1 << 1)
+#define BUFQ_OPT_NO_SPARES (1 << 1)
 
 /**
  * Initialize a buffer queue that can hold up to `max_chunks` buffers
@@ -128,11 +128,11 @@ void Curl_bufq_init(struct bufq *q, size_t chunk_size, size_t max_chunks);
  * Initialize a buffer queue that can hold up to `max_chunks` buffers
  * each of size `chunk_size` with the given options. See `BUFQ_OPT_*`.
  */
-void Curl_bufq_init2(struct bufq *q, size_t chunk_size,
-                     size_t max_chunks, int opts);
+void Curl_bufq_init2(struct bufq *q, size_t chunk_size, size_t max_chunks,
+                     int opts);
 
-void Curl_bufq_initp(struct bufq *q, struct bufc_pool *pool,
-                     size_t max_chunks, int opts);
+void Curl_bufq_initp(struct bufq *q, struct bufc_pool *pool, size_t max_chunks,
+                     int opts);
 
 /**
  * Reset the buffer queue to be empty. Will keep any allocated buffer
@@ -174,13 +174,11 @@ bool Curl_bufq_is_full(const struct bufq *q);
  * A return code of -1 indicates an error, setting `err` to the
  * cause. An err of CURLE_AGAIN is returned if the buffer queue is full.
  */
-ssize_t Curl_bufq_write(struct bufq *q,
-                        const unsigned char *buf, size_t len,
+ssize_t Curl_bufq_write(struct bufq *q, const unsigned char *buf, size_t len,
                         CURLcode *err);
 
-CURLcode Curl_bufq_cwrite(struct bufq *q,
-                         const char *buf, size_t len,
-                         size_t *pnwritten);
+CURLcode Curl_bufq_cwrite(struct bufq *q, const char *buf, size_t len,
+                          size_t *pnwritten);
 
 /**
  * Remove `len` bytes from the end of the buffer queue again.
@@ -195,10 +193,9 @@ CURLcode Curl_bufq_unwrite(struct bufq *q, size_t len);
  * cause. An err of CURLE_AGAIN is returned if the buffer queue is empty.
  */
 ssize_t Curl_bufq_read(struct bufq *q, unsigned char *buf, size_t len,
-                        CURLcode *err);
+                       CURLcode *err);
 
-CURLcode Curl_bufq_cread(struct bufq *q, char *buf, size_t len,
-                         size_t *pnread);
+CURLcode Curl_bufq_cread(struct bufq *q, char *buf, size_t len, size_t *pnread);
 
 /**
  * Peek at the head chunk in the buffer queue. Returns a pointer to
@@ -209,8 +206,7 @@ CURLcode Curl_bufq_cread(struct bufq *q, char *buf, size_t len,
  * Repeated calls return the same information until the buffer queue
  * is modified, see `Curl_bufq_skip()``
  */
-bool Curl_bufq_peek(struct bufq *q,
-                    const unsigned char **pbuf, size_t *plen);
+bool Curl_bufq_peek(struct bufq *q, const unsigned char **pbuf, size_t *plen);
 
 bool Curl_bufq_peek_at(struct bufq *q, size_t offset,
                        const unsigned char **pbuf, size_t *plen);
@@ -222,9 +218,8 @@ bool Curl_bufq_peek_at(struct bufq *q, size_t offset,
  */
 void Curl_bufq_skip(struct bufq *q, size_t amount);
 
-typedef ssize_t Curl_bufq_writer(void *writer_ctx,
-                                 const unsigned char *buf, size_t len,
-                                 CURLcode *err);
+typedef ssize_t Curl_bufq_writer(void *writer_ctx, const unsigned char *buf,
+                                 size_t len, CURLcode *err);
 /**
  * Passes the chunks in the buffer queue to the writer and returns
  * the amount of buf written. A writer may return -1 and CURLE_AGAIN
@@ -237,9 +232,8 @@ typedef ssize_t Curl_bufq_writer(void *writer_ctx,
 ssize_t Curl_bufq_pass(struct bufq *q, Curl_bufq_writer *writer,
                        void *writer_ctx, CURLcode *err);
 
-typedef ssize_t Curl_bufq_reader(void *reader_ctx,
-                                 unsigned char *buf, size_t len,
-                                 CURLcode *err);
+typedef ssize_t Curl_bufq_reader(void *reader_ctx, unsigned char *buf,
+                                 size_t len, CURLcode *err);
 
 /**
  * Read date and append it to the end of the buffer queue until the
@@ -259,9 +253,8 @@ ssize_t Curl_bufq_slurp(struct bufq *q, Curl_bufq_reader *reader,
  * Returns the total amount of buf read (may be 0) or -1 on other
  * reader errors.
  */
-ssize_t Curl_bufq_sipn(struct bufq *q, size_t max_len,
-                       Curl_bufq_reader *reader, void *reader_ctx,
-                       CURLcode *err);
+ssize_t Curl_bufq_sipn(struct bufq *q, size_t max_len, Curl_bufq_reader *reader,
+                       void *reader_ctx, CURLcode *err);
 
 /**
  * Write buf to the end of the buffer queue.
@@ -270,9 +263,8 @@ ssize_t Curl_bufq_sipn(struct bufq *q, size_t max_len,
  * on or is placed into the buffer, depending on `len` and current
  * amount buffered, chunk size, etc.
  */
-ssize_t Curl_bufq_write_pass(struct bufq *q,
-                             const unsigned char *buf, size_t len,
-                             Curl_bufq_writer *writer, void *writer_ctx,
-                             CURLcode *err);
+ssize_t Curl_bufq_write_pass(struct bufq *q, const unsigned char *buf,
+                             size_t len, Curl_bufq_writer *writer,
+                             void *writer_ctx, CURLcode *err);
 
 #endif /* HEADER_CURL_BUFQ_H */

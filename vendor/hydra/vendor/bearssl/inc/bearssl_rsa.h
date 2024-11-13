@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -159,14 +159,14 @@ extern "C" {
  * of value 0 are allowed.
  */
 typedef struct {
-	/** \brief Modulus. */
-	unsigned char *n;
-	/** \brief Modulus length (in bytes). */
-	size_t nlen;
-	/** \brief Public exponent. */
-	unsigned char *e;
-	/** \brief Public exponent length (in bytes). */
-	size_t elen;
+  /** \brief Modulus. */
+  unsigned char *n;
+  /** \brief Modulus length (in bytes). */
+  size_t nlen;
+  /** \brief Public exponent. */
+  unsigned char *e;
+  /** \brief Public exponent length (in bytes). */
+  size_t elen;
 } br_rsa_public_key;
 
 /**
@@ -179,28 +179,28 @@ typedef struct {
  * length (`n_bitlen`) MUST be exact.
  */
 typedef struct {
-	/** \brief Modulus bit length (in bits, exact value). */
-	uint32_t n_bitlen;
-	/** \brief First prime factor. */
-	unsigned char *p;
-	/** \brief First prime factor length (in bytes). */
-	size_t plen;
-	/** \brief Second prime factor. */
-	unsigned char *q;
-	/** \brief Second prime factor length (in bytes). */
-	size_t qlen;
-	/** \brief First reduced private exponent. */
-	unsigned char *dp;
-	/** \brief First reduced private exponent length (in bytes). */
-	size_t dplen;
-	/** \brief Second reduced private exponent. */
-	unsigned char *dq;
-	/** \brief Second reduced private exponent length (in bytes). */
-	size_t dqlen;
-	/** \brief CRT coefficient. */
-	unsigned char *iq;
-	/** \brief CRT coefficient length (in bytes). */
-	size_t iqlen;
+  /** \brief Modulus bit length (in bits, exact value). */
+  uint32_t n_bitlen;
+  /** \brief First prime factor. */
+  unsigned char *p;
+  /** \brief First prime factor length (in bytes). */
+  size_t plen;
+  /** \brief Second prime factor. */
+  unsigned char *q;
+  /** \brief Second prime factor length (in bytes). */
+  size_t qlen;
+  /** \brief First reduced private exponent. */
+  unsigned char *dp;
+  /** \brief First reduced private exponent length (in bytes). */
+  size_t dplen;
+  /** \brief Second reduced private exponent. */
+  unsigned char *dq;
+  /** \brief Second reduced private exponent length (in bytes). */
+  size_t dqlen;
+  /** \brief CRT coefficient. */
+  unsigned char *iq;
+  /** \brief CRT coefficient length (in bytes). */
+  size_t iqlen;
 } br_rsa_private_key;
 
 /**
@@ -214,7 +214,7 @@ typedef struct {
  * length as the modulus (actual modulus length, without extra leading
  * zeros in the modulus representation in memory). If the length does
  * not match, then this function returns 0 and `x[]` is unmodified.
- * 
+ *
  * It `xlen` is correct, then `x[]` is modified. Returned value is 1
  * on success, 0 on error. Error conditions include an oversized `x[]`
  * (the array has the same length as the modulus, but the numerical value
@@ -228,7 +228,7 @@ typedef struct {
  * \return  1 on success, 0 on error.
  */
 typedef uint32_t (*br_rsa_public)(unsigned char *x, size_t xlen,
-	const br_rsa_public_key *pk);
+                                  const br_rsa_public_key *pk);
 
 /**
  * \brief Type for a RSA signature verification engine (PKCS#1 v1.5).
@@ -276,8 +276,10 @@ typedef uint32_t (*br_rsa_public)(unsigned char *x, size_t xlen,
  * \return  1 on success, 0 on error.
  */
 typedef uint32_t (*br_rsa_pkcs1_vrfy)(const unsigned char *x, size_t xlen,
-	const unsigned char *hash_oid, size_t hash_len,
-	const br_rsa_public_key *pk, unsigned char *hash_out);
+                                      const unsigned char *hash_oid,
+                                      size_t hash_len,
+                                      const br_rsa_public_key *pk,
+                                      unsigned char *hash_out);
 
 /**
  * \brief Type for a RSA encryption engine (OAEP).
@@ -323,12 +325,12 @@ typedef uint32_t (*br_rsa_pkcs1_vrfy)(const unsigned char *x, size_t xlen,
  * \param src_len       source message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
-typedef size_t (*br_rsa_oaep_encrypt)(
-	const br_prng_class **rnd, const br_hash_class *dig,
-	const void *label, size_t label_len,
-	const br_rsa_public_key *pk,
-	void *dst, size_t dst_max_len,
-	const void *src, size_t src_len);
+typedef size_t (*br_rsa_oaep_encrypt)(const br_prng_class **rnd,
+                                      const br_hash_class *dig,
+                                      const void *label, size_t label_len,
+                                      const br_rsa_public_key *pk, void *dst,
+                                      size_t dst_max_len, const void *src,
+                                      size_t src_len);
 
 /**
  * \brief Type for a RSA private key engine.
@@ -344,7 +346,7 @@ typedef size_t (*br_rsa_oaep_encrypt)(
  * \return  1 on success, 0 on error.
  */
 typedef uint32_t (*br_rsa_private)(unsigned char *x,
-	const br_rsa_private_key *sk);
+                                   const br_rsa_private_key *sk);
 
 /**
  * \brief Type for a RSA signature generation engine (PKCS#1 v1.5).
@@ -382,38 +384,39 @@ typedef uint32_t (*br_rsa_private)(unsigned char *x,
  * \return  1 on success, 0 on error.
  */
 typedef uint32_t (*br_rsa_pkcs1_sign)(const unsigned char *hash_oid,
-	const unsigned char *hash, size_t hash_len,
-	const br_rsa_private_key *sk, unsigned char *x);
+                                      const unsigned char *hash,
+                                      size_t hash_len,
+                                      const br_rsa_private_key *sk,
+                                      unsigned char *x);
 
 /**
  * \brief Encoded OID for SHA-1 (in RSA PKCS#1 signatures).
  */
-#define BR_HASH_OID_SHA1     \
-	((const unsigned char *)"\x05\x2B\x0E\x03\x02\x1A")
+#define BR_HASH_OID_SHA1 ((const unsigned char *)"\x05\x2B\x0E\x03\x02\x1A")
 
 /**
  * \brief Encoded OID for SHA-224 (in RSA PKCS#1 signatures).
  */
-#define BR_HASH_OID_SHA224   \
-	((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04")
+#define BR_HASH_OID_SHA224 \
+  ((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x04")
 
 /**
  * \brief Encoded OID for SHA-256 (in RSA PKCS#1 signatures).
  */
-#define BR_HASH_OID_SHA256   \
-	((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01")
+#define BR_HASH_OID_SHA256 \
+  ((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01")
 
 /**
  * \brief Encoded OID for SHA-384 (in RSA PKCS#1 signatures).
  */
-#define BR_HASH_OID_SHA384   \
-	((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02")
+#define BR_HASH_OID_SHA384 \
+  ((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02")
 
 /**
  * \brief Encoded OID for SHA-512 (in RSA PKCS#1 signatures).
  */
-#define BR_HASH_OID_SHA512   \
-	((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03")
+#define BR_HASH_OID_SHA512 \
+  ((const unsigned char *)"\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03")
 
 /**
  * \brief Type for a RSA decryption engine (OAEP).
@@ -452,9 +455,10 @@ typedef uint32_t (*br_rsa_pkcs1_sign)(const unsigned char *hash_oid,
  * \param len         encrypted/decrypted message length.
  * \return  1 on success, 0 on error.
  */
-typedef uint32_t (*br_rsa_oaep_decrypt)(
-	const br_hash_class *dig, const void *label, size_t label_len,
-	const br_rsa_private_key *sk, void *data, size_t *len);
+typedef uint32_t (*br_rsa_oaep_decrypt)(const br_hash_class *dig,
+                                        const void *label, size_t label_len,
+                                        const br_rsa_private_key *sk,
+                                        void *data, size_t *len);
 
 /*
  * RSA "i32" engine. Integers are internally represented as arrays of
@@ -473,7 +477,7 @@ typedef uint32_t (*br_rsa_oaep_decrypt)(
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i32_public(unsigned char *x, size_t xlen,
-	const br_rsa_public_key *pk);
+                           const br_rsa_public_key *pk);
 
 /**
  * \brief RSA signature verification engine "i32".
@@ -489,8 +493,9 @@ uint32_t br_rsa_i32_public(unsigned char *x, size_t xlen,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i32_pkcs1_vrfy(const unsigned char *x, size_t xlen,
-	const unsigned char *hash_oid, size_t hash_len,
-	const br_rsa_public_key *pk, unsigned char *hash_out);
+                               const unsigned char *hash_oid, size_t hash_len,
+                               const br_rsa_public_key *pk,
+                               unsigned char *hash_out);
 
 /**
  * \brief RSA private key engine "i32".
@@ -501,8 +506,7 @@ uint32_t br_rsa_i32_pkcs1_vrfy(const unsigned char *x, size_t xlen,
  * \param sk   RSA private key.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i32_private(unsigned char *x,
-	const br_rsa_private_key *sk);
+uint32_t br_rsa_i32_private(unsigned char *x, const br_rsa_private_key *sk);
 
 /**
  * \brief RSA signature generation engine "i32".
@@ -517,8 +521,8 @@ uint32_t br_rsa_i32_private(unsigned char *x,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i32_pkcs1_sign(const unsigned char *hash_oid,
-	const unsigned char *hash, size_t hash_len,
-	const br_rsa_private_key *sk, unsigned char *x);
+                               const unsigned char *hash, size_t hash_len,
+                               const br_rsa_private_key *sk, unsigned char *x);
 
 /*
  * RSA "i31" engine. Similar to i32, but only 31 bits are used per 32-bit
@@ -537,7 +541,7 @@ uint32_t br_rsa_i32_pkcs1_sign(const unsigned char *hash_oid,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i31_public(unsigned char *x, size_t xlen,
-	const br_rsa_public_key *pk);
+                           const br_rsa_public_key *pk);
 
 /**
  * \brief RSA signature verification engine "i31".
@@ -553,8 +557,9 @@ uint32_t br_rsa_i31_public(unsigned char *x, size_t xlen,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i31_pkcs1_vrfy(const unsigned char *x, size_t xlen,
-	const unsigned char *hash_oid, size_t hash_len,
-	const br_rsa_public_key *pk, unsigned char *hash_out);
+                               const unsigned char *hash_oid, size_t hash_len,
+                               const br_rsa_public_key *pk,
+                               unsigned char *hash_out);
 
 /**
  * \brief RSA private key engine "i31".
@@ -565,8 +570,7 @@ uint32_t br_rsa_i31_pkcs1_vrfy(const unsigned char *x, size_t xlen,
  * \param sk   RSA private key.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i31_private(unsigned char *x,
-	const br_rsa_private_key *sk);
+uint32_t br_rsa_i31_private(unsigned char *x, const br_rsa_private_key *sk);
 
 /**
  * \brief RSA signature generation engine "i31".
@@ -581,8 +585,8 @@ uint32_t br_rsa_i31_private(unsigned char *x,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i31_pkcs1_sign(const unsigned char *hash_oid,
-	const unsigned char *hash, size_t hash_len,
-	const br_rsa_private_key *sk, unsigned char *x);
+                               const unsigned char *hash, size_t hash_len,
+                               const br_rsa_private_key *sk, unsigned char *x);
 
 /*
  * RSA "i62" engine. Similar to i31, but internal multiplication use
@@ -605,7 +609,7 @@ uint32_t br_rsa_i31_pkcs1_sign(const unsigned char *hash_oid,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i62_public(unsigned char *x, size_t xlen,
-	const br_rsa_public_key *pk);
+                           const br_rsa_public_key *pk);
 
 /**
  * \brief RSA signature verification engine "i62".
@@ -625,8 +629,9 @@ uint32_t br_rsa_i62_public(unsigned char *x, size_t xlen,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i62_pkcs1_vrfy(const unsigned char *x, size_t xlen,
-	const unsigned char *hash_oid, size_t hash_len,
-	const br_rsa_public_key *pk, unsigned char *hash_out);
+                               const unsigned char *hash_oid, size_t hash_len,
+                               const br_rsa_public_key *pk,
+                               unsigned char *hash_out);
 
 /**
  * \brief RSA private key engine "i62".
@@ -641,8 +646,7 @@ uint32_t br_rsa_i62_pkcs1_vrfy(const unsigned char *x, size_t xlen,
  * \param sk   RSA private key.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i62_private(unsigned char *x,
-	const br_rsa_private_key *sk);
+uint32_t br_rsa_i62_private(unsigned char *x, const br_rsa_private_key *sk);
 
 /**
  * \brief RSA signature generation engine "i62".
@@ -661,8 +665,8 @@ uint32_t br_rsa_i62_private(unsigned char *x,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i62_pkcs1_sign(const unsigned char *hash_oid,
-	const unsigned char *hash, size_t hash_len,
-	const br_rsa_private_key *sk, unsigned char *x);
+                               const unsigned char *hash, size_t hash_len,
+                               const br_rsa_private_key *sk, unsigned char *x);
 
 /**
  * \brief Get the RSA "i62" implementation (public key operations),
@@ -729,7 +733,7 @@ br_rsa_oaep_decrypt br_rsa_i62_oaep_decrypt_get(void);
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i15_public(unsigned char *x, size_t xlen,
-	const br_rsa_public_key *pk);
+                           const br_rsa_public_key *pk);
 
 /**
  * \brief RSA signature verification engine "i15".
@@ -745,8 +749,9 @@ uint32_t br_rsa_i15_public(unsigned char *x, size_t xlen,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i15_pkcs1_vrfy(const unsigned char *x, size_t xlen,
-	const unsigned char *hash_oid, size_t hash_len,
-	const br_rsa_public_key *pk, unsigned char *hash_out);
+                               const unsigned char *hash_oid, size_t hash_len,
+                               const br_rsa_public_key *pk,
+                               unsigned char *hash_out);
 
 /**
  * \brief RSA private key engine "i15".
@@ -757,8 +762,7 @@ uint32_t br_rsa_i15_pkcs1_vrfy(const unsigned char *x, size_t xlen,
  * \param sk   RSA private key.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i15_private(unsigned char *x,
-	const br_rsa_private_key *sk);
+uint32_t br_rsa_i15_private(unsigned char *x, const br_rsa_private_key *sk);
 
 /**
  * \brief RSA signature generation engine "i15".
@@ -773,8 +777,8 @@ uint32_t br_rsa_i15_private(unsigned char *x,
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_i15_pkcs1_sign(const unsigned char *hash_oid,
-	const unsigned char *hash, size_t hash_len,
-	const br_rsa_private_key *sk, unsigned char *x);
+                               const unsigned char *hash, size_t hash_len,
+                               const br_rsa_private_key *sk, unsigned char *x);
 
 /**
  * \brief Get "default" RSA implementation (public-key operations).
@@ -864,7 +868,7 @@ br_rsa_oaep_decrypt br_rsa_oaep_decrypt_get_default(void);
  * \return  1 on success, 0 on error.
  */
 uint32_t br_rsa_ssl_decrypt(br_rsa_private core, const br_rsa_private_key *sk,
-	unsigned char *data, size_t len);
+                            unsigned char *data, size_t len);
 
 /**
  * \brief RSA encryption (OAEP) with the "i15" engine.
@@ -882,12 +886,11 @@ uint32_t br_rsa_ssl_decrypt(br_rsa_private core, const br_rsa_private_key *sk,
  * \param src_len       source message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
-size_t br_rsa_i15_oaep_encrypt(
-	const br_prng_class **rnd, const br_hash_class *dig,
-	const void *label, size_t label_len,
-	const br_rsa_public_key *pk,
-	void *dst, size_t dst_max_len,
-	const void *src, size_t src_len);
+size_t br_rsa_i15_oaep_encrypt(const br_prng_class **rnd,
+                               const br_hash_class *dig, const void *label,
+                               size_t label_len, const br_rsa_public_key *pk,
+                               void *dst, size_t dst_max_len, const void *src,
+                               size_t src_len);
 
 /**
  * \brief RSA decryption (OAEP) with the "i15" engine.
@@ -902,9 +905,9 @@ size_t br_rsa_i15_oaep_encrypt(
  * \param len         encrypted/decrypted message length.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i15_oaep_decrypt(
-	const br_hash_class *dig, const void *label, size_t label_len,
-	const br_rsa_private_key *sk, void *data, size_t *len);
+uint32_t br_rsa_i15_oaep_decrypt(const br_hash_class *dig, const void *label,
+                                 size_t label_len, const br_rsa_private_key *sk,
+                                 void *data, size_t *len);
 
 /**
  * \brief RSA encryption (OAEP) with the "i31" engine.
@@ -922,12 +925,11 @@ uint32_t br_rsa_i15_oaep_decrypt(
  * \param src_len       source message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
-size_t br_rsa_i31_oaep_encrypt(
-	const br_prng_class **rnd, const br_hash_class *dig,
-	const void *label, size_t label_len,
-	const br_rsa_public_key *pk,
-	void *dst, size_t dst_max_len,
-	const void *src, size_t src_len);
+size_t br_rsa_i31_oaep_encrypt(const br_prng_class **rnd,
+                               const br_hash_class *dig, const void *label,
+                               size_t label_len, const br_rsa_public_key *pk,
+                               void *dst, size_t dst_max_len, const void *src,
+                               size_t src_len);
 
 /**
  * \brief RSA decryption (OAEP) with the "i31" engine.
@@ -942,9 +944,9 @@ size_t br_rsa_i31_oaep_encrypt(
  * \param len         encrypted/decrypted message length.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i31_oaep_decrypt(
-	const br_hash_class *dig, const void *label, size_t label_len,
-	const br_rsa_private_key *sk, void *data, size_t *len);
+uint32_t br_rsa_i31_oaep_decrypt(const br_hash_class *dig, const void *label,
+                                 size_t label_len, const br_rsa_private_key *sk,
+                                 void *data, size_t *len);
 
 /**
  * \brief RSA encryption (OAEP) with the "i32" engine.
@@ -962,12 +964,11 @@ uint32_t br_rsa_i31_oaep_decrypt(
  * \param src_len       source message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
-size_t br_rsa_i32_oaep_encrypt(
-	const br_prng_class **rnd, const br_hash_class *dig,
-	const void *label, size_t label_len,
-	const br_rsa_public_key *pk,
-	void *dst, size_t dst_max_len,
-	const void *src, size_t src_len);
+size_t br_rsa_i32_oaep_encrypt(const br_prng_class **rnd,
+                               const br_hash_class *dig, const void *label,
+                               size_t label_len, const br_rsa_public_key *pk,
+                               void *dst, size_t dst_max_len, const void *src,
+                               size_t src_len);
 
 /**
  * \brief RSA decryption (OAEP) with the "i32" engine.
@@ -982,9 +983,9 @@ size_t br_rsa_i32_oaep_encrypt(
  * \param len         encrypted/decrypted message length.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i32_oaep_decrypt(
-	const br_hash_class *dig, const void *label, size_t label_len,
-	const br_rsa_private_key *sk, void *data, size_t *len);
+uint32_t br_rsa_i32_oaep_decrypt(const br_hash_class *dig, const void *label,
+                                 size_t label_len, const br_rsa_private_key *sk,
+                                 void *data, size_t *len);
 
 /**
  * \brief RSA encryption (OAEP) with the "i62" engine.
@@ -1006,12 +1007,11 @@ uint32_t br_rsa_i32_oaep_decrypt(
  * \param src_len       source message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
-size_t br_rsa_i62_oaep_encrypt(
-	const br_prng_class **rnd, const br_hash_class *dig,
-	const void *label, size_t label_len,
-	const br_rsa_public_key *pk,
-	void *dst, size_t dst_max_len,
-	const void *src, size_t src_len);
+size_t br_rsa_i62_oaep_encrypt(const br_prng_class **rnd,
+                               const br_hash_class *dig, const void *label,
+                               size_t label_len, const br_rsa_public_key *pk,
+                               void *dst, size_t dst_max_len, const void *src,
+                               size_t src_len);
 
 /**
  * \brief RSA decryption (OAEP) with the "i62" engine.
@@ -1030,9 +1030,9 @@ size_t br_rsa_i62_oaep_encrypt(
  * \param len         encrypted/decrypted message length.
  * \return  1 on success, 0 on error.
  */
-uint32_t br_rsa_i62_oaep_decrypt(
-	const br_hash_class *dig, const void *label, size_t label_len,
-	const br_rsa_private_key *sk, void *data, size_t *len);
+uint32_t br_rsa_i62_oaep_decrypt(const br_hash_class *dig, const void *label,
+                                 size_t label_len, const br_rsa_private_key *sk,
+                                 void *data, size_t *len);
 
 /**
  * \brief Get buffer size to hold RSA private key elements.
@@ -1045,7 +1045,7 @@ uint32_t br_rsa_i62_oaep_decrypt(
  * \param size   target key size (modulus size, in bits)
  * \return  the length of the private key buffer, in bytes.
  */
-#define BR_RSA_KBUF_PRIV_SIZE(size)    (5 * (((size) + 15) >> 4))
+#define BR_RSA_KBUF_PRIV_SIZE(size) (5 * (((size) + 15) >> 4))
 
 /**
  * \brief Get buffer size to hold RSA public key elements.
@@ -1058,7 +1058,7 @@ uint32_t br_rsa_i62_oaep_decrypt(
  * \param size   target key size (modulus size, in bits)
  * \return  the length of the public key buffer, in bytes.
  */
-#define BR_RSA_KBUF_PUB_SIZE(size)     (4 + (((size) + 7) >> 3))
+#define BR_RSA_KBUF_PUB_SIZE(size) (4 + (((size) + 7) >> 3))
 
 /**
  * \brief Type for RSA key pair generator implementation.
@@ -1098,11 +1098,10 @@ uint32_t br_rsa_i62_oaep_decrypt(
  * \param pubexp      public exponent to use, or zero
  * \return  1 on success, 0 on error (invalid parameters)
  */
-typedef uint32_t (*br_rsa_keygen)(
-	const br_prng_class **rng_ctx,
-	br_rsa_private_key *sk, void *kbuf_priv,
-	br_rsa_public_key *pk, void *kbuf_pub,
-	unsigned size, uint32_t pubexp);
+typedef uint32_t (*br_rsa_keygen)(const br_prng_class **rng_ctx,
+                                  br_rsa_private_key *sk, void *kbuf_priv,
+                                  br_rsa_public_key *pk, void *kbuf_pub,
+                                  unsigned size, uint32_t pubexp);
 
 /**
  * \brief RSA key pair generation with the "i15" engine.
@@ -1118,11 +1117,10 @@ typedef uint32_t (*br_rsa_keygen)(
  * \param pubexp      public exponent to use, or zero
  * \return  1 on success, 0 on error (invalid parameters)
  */
-uint32_t br_rsa_i15_keygen(
-	const br_prng_class **rng_ctx,
-	br_rsa_private_key *sk, void *kbuf_priv,
-	br_rsa_public_key *pk, void *kbuf_pub,
-	unsigned size, uint32_t pubexp);
+uint32_t br_rsa_i15_keygen(const br_prng_class **rng_ctx,
+                           br_rsa_private_key *sk, void *kbuf_priv,
+                           br_rsa_public_key *pk, void *kbuf_pub, unsigned size,
+                           uint32_t pubexp);
 
 /**
  * \brief RSA key pair generation with the "i31" engine.
@@ -1138,11 +1136,10 @@ uint32_t br_rsa_i15_keygen(
  * \param pubexp      public exponent to use, or zero
  * \return  1 on success, 0 on error (invalid parameters)
  */
-uint32_t br_rsa_i31_keygen(
-	const br_prng_class **rng_ctx,
-	br_rsa_private_key *sk, void *kbuf_priv,
-	br_rsa_public_key *pk, void *kbuf_pub,
-	unsigned size, uint32_t pubexp);
+uint32_t br_rsa_i31_keygen(const br_prng_class **rng_ctx,
+                           br_rsa_private_key *sk, void *kbuf_priv,
+                           br_rsa_public_key *pk, void *kbuf_pub, unsigned size,
+                           uint32_t pubexp);
 
 /**
  * \brief RSA key pair generation with the "i62" engine.
@@ -1162,11 +1159,10 @@ uint32_t br_rsa_i31_keygen(
  * \param pubexp      public exponent to use, or zero
  * \return  1 on success, 0 on error (invalid parameters)
  */
-uint32_t br_rsa_i62_keygen(
-	const br_prng_class **rng_ctx,
-	br_rsa_private_key *sk, void *kbuf_priv,
-	br_rsa_public_key *pk, void *kbuf_pub,
-	unsigned size, uint32_t pubexp);
+uint32_t br_rsa_i62_keygen(const br_prng_class **rng_ctx,
+                           br_rsa_private_key *sk, void *kbuf_priv,
+                           br_rsa_public_key *pk, void *kbuf_pub, unsigned size,
+                           uint32_t pubexp);
 
 /**
  * \brief Get the RSA "i62" implementation (key pair generation),
@@ -1320,8 +1316,8 @@ br_rsa_compute_pubexp br_rsa_compute_pubexp_get_default(void);
  * \param pubexp   the public exponent.
  * \return  the private exponent length (in bytes), or 0.
  */
-typedef size_t (*br_rsa_compute_privexp)(void *d,
-	const br_rsa_private_key *sk, uint32_t pubexp);
+typedef size_t (*br_rsa_compute_privexp)(void *d, const br_rsa_private_key *sk,
+                                         uint32_t pubexp);
 
 /**
  * \brief Recompute RSA private exponent ("i15" engine).
@@ -1333,8 +1329,8 @@ typedef size_t (*br_rsa_compute_privexp)(void *d,
  * \param pubexp   the public exponent.
  * \return  the private exponent length (in bytes), or 0.
  */
-size_t br_rsa_i15_compute_privexp(void *d,
-	const br_rsa_private_key *sk, uint32_t pubexp);
+size_t br_rsa_i15_compute_privexp(void *d, const br_rsa_private_key *sk,
+                                  uint32_t pubexp);
 
 /**
  * \brief Recompute RSA private exponent ("i31" engine).
@@ -1346,8 +1342,8 @@ size_t br_rsa_i15_compute_privexp(void *d,
  * \param pubexp   the public exponent.
  * \return  the private exponent length (in bytes), or 0.
  */
-size_t br_rsa_i31_compute_privexp(void *d,
-	const br_rsa_private_key *sk, uint32_t pubexp);
+size_t br_rsa_i31_compute_privexp(void *d, const br_rsa_private_key *sk,
+                                  uint32_t pubexp);
 
 /**
  * \brief Get "default" RSA implementation (recompute private exponent).

@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/http_export.h>
 #endif
 
-#include <exception> // std::exception
-#include <string>    // std::string
+#include <exception>  // std::exception
+#include <string>     // std::string
 
 namespace sourcemeta::hydra::http {
 
@@ -20,16 +20,16 @@ namespace sourcemeta::hydra::http {
 /// @ingroup http
 /// This class represents a general HTTP error.
 class SOURCEMETA_HYDRA_HTTP_EXPORT Error : public std::exception {
-public:
+ public:
   // We don't want to document this internal constructor
 #if !defined(DOXYGEN)
   Error(std::string message);
 #endif
 
   /// Get the error message
-  [[nodiscard]] auto what() const noexcept -> const char * override;
+  [[nodiscard]] auto what() const noexcept -> const char* override;
 
-private:
+ private:
   std::string message_;
 };
 
@@ -37,6 +37,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

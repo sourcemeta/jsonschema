@@ -19,20 +19,20 @@
 #include <sourcemeta/hydra/httpserver_request.h>
 #include <sourcemeta/hydra/httpserver_response.h>
 
-#include <cstdint>    // std::uint32_t
-#include <exception>  // std::exception_ptr
-#include <filesystem> // std::filesystem::path
-#include <functional> // std::function
-#include <string>     // std::string
-#include <tuple>      // std::tuple
-#include <vector>     // std::vector
+#include <cstdint>     // std::uint32_t
+#include <exception>   // std::exception_ptr
+#include <filesystem>  // std::filesystem::path
+#include <functional>  // std::function
+#include <string>      // std::string
+#include <tuple>       // std::tuple
+#include <vector>      // std::vector
 
 namespace sourcemeta::hydra::http {
 
 /// @ingroup httpserver
 /// This class represents an HTTP server
 class SOURCEMETA_HYDRA_HTTPSERVER_EXPORT Server {
-public:
+ public:
   /// Create a server instance. For example:
   ///
   /// ```cpp
@@ -78,8 +78,8 @@ public:
   ///
   /// server.run(3000);
   /// ```
-  auto route(const Method method, std::string &&path, RouteCallback &&callback)
-      -> void;
+  auto route(const Method method, std::string &&path,
+             RouteCallback &&callback) -> void;
 
   /// Set a handler that responds to HTTP requests that do not match any other
   /// registered routes. For example:
@@ -190,7 +190,7 @@ public:
   /// ```
   auto run(const std::uint32_t port) const -> int;
 
-private:
+ private:
   std::vector<std::tuple<Method, std::string, RouteCallback>> routes;
   RouteCallback fallback;
   ErrorCallback error_handler;
@@ -228,6 +228,6 @@ auto SOURCEMETA_HYDRA_HTTPSERVER_EXPORT
 serve_file(const std::filesystem::path &file_path, const ServerRequest &request,
            ServerResponse &response) -> void;
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

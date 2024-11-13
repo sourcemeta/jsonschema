@@ -1,5 +1,5 @@
 class Enum8BitTopLevel final : public sourcemeta::alterschema::Rule {
-public:
+ public:
   Enum8BitTopLevel()
       : sourcemeta::alterschema::Rule{"enum_8_bit_top_level", ""} {};
 

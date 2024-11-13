@@ -1,11 +1,10 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
+#include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
-
-#include <sourcemeta/blaze/compiler.h>
 
 #include <filesystem> // std::filesystem
 #include <map>        // std::map

@@ -24,8 +24,8 @@
  *
  ***************************************************************************/
 
-#include "pingpong.h"
 #include "curl_sasl.h"
+#include "pingpong.h"
 
 /****************************************************************************
  * SMTP unique setup
@@ -37,16 +37,16 @@ typedef enum {
   SMTP_EHLO,
   SMTP_HELO,
   SMTP_STARTTLS,
-  SMTP_UPGRADETLS,  /* asynchronously upgrade the connection to SSL/TLS
-                       (multi mode only) */
+  SMTP_UPGRADETLS, /* asynchronously upgrade the connection to SSL/TLS
+                      (multi mode only) */
   SMTP_AUTH,
-  SMTP_COMMAND,     /* VRFY, EXPN, NOOP, RSET and HELP */
-  SMTP_MAIL,        /* MAIL FROM */
-  SMTP_RCPT,        /* RCPT TO */
+  SMTP_COMMAND, /* VRFY, EXPN, NOOP, RSET and HELP */
+  SMTP_MAIL,    /* MAIL FROM */
+  SMTP_RCPT,    /* RCPT TO */
   SMTP_DATA,
   SMTP_POSTDATA,
   SMTP_QUIT,
-  SMTP_LAST         /* never used */
+  SMTP_LAST /* never used */
 } smtpstate;
 
 /* This SMTP struct is used in the Curl_easy. All SMTP data that is
@@ -69,16 +69,16 @@ struct SMTP {
    struct */
 struct smtp_conn {
   struct pingpong pp;
-  struct SASL sasl;        /* SASL-related storage */
-  smtpstate state;         /* Always use smtp.c:state() to change state! */
-  char *domain;            /* Client address/name to send in the EHLO */
-  BIT(ssldone);            /* Is connect() over SSL done? */
-  BIT(tls_supported);      /* StartTLS capability supported by server */
-  BIT(size_supported);     /* If server supports SIZE extension according to
-                              RFC 1870 */
-  BIT(utf8_supported);     /* If server supports SMTPUTF8 extension according
-                              to RFC 6531 */
-  BIT(auth_supported);     /* AUTH capability supported by server */
+  struct SASL sasl;    /* SASL-related storage */
+  smtpstate state;     /* Always use smtp.c:state() to change state! */
+  char *domain;        /* Client address/name to send in the EHLO */
+  BIT(ssldone);        /* Is connect() over SSL done? */
+  BIT(tls_supported);  /* StartTLS capability supported by server */
+  BIT(size_supported); /* If server supports SIZE extension according to
+                          RFC 1870 */
+  BIT(utf8_supported); /* If server supports SMTPUTF8 extension according
+                          to RFC 6531 */
+  BIT(auth_supported); /* AUTH capability supported by server */
 };
 
 extern const struct Curl_handler Curl_handler_smtp;

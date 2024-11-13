@@ -1,31 +1,30 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_PARSER_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_PARSER_H_
 
-#include "grammar.h"
-
 #include <sourcemeta/jsontoolkit/jsonpointer_error.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_pointer.h>
 
-#include <istream>   // std::basic_istream
-#include <sstream>   // std::basic_stringstream
-#include <stdexcept> // std::out_of_range
-#include <string>    // std::stoi
+#include <istream>    // std::basic_istream
+#include <sstream>    // std::basic_stringstream
+#include <stdexcept>  // std::out_of_range
+#include <string>     // std::stoi
+
+#include "grammar.h"
 
 namespace sourcemeta::jsontoolkit::internal {
 template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
-inline auto
-reset(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream)
-    -> void {
+inline auto reset(
+    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream) -> void {
   stream.str("");
   stream.clear();
 }
 
 template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
-inline auto
-parse_index(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
-            const std::uint64_t column) -> decltype(auto) {
+inline auto parse_index(
+    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
+    const std::uint64_t column) -> decltype(auto) {
   try {
     return std::stoul(stream.str());
   } catch (const std::out_of_range &) {
@@ -33,7 +32,7 @@ parse_index(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
   }
 }
 
-} // namespace sourcemeta::jsontoolkit::internal
+}  // namespace sourcemeta::jsontoolkit::internal
 
 // We use "goto" for performance reasons
 // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
@@ -209,6 +208,6 @@ done:
 
 // NOLINTEND(cppcoreguidelines-avoid-goto)
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

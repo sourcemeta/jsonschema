@@ -184,7 +184,7 @@
 #define RECV_TYPE_ARG1 SOCKET
 
 /* Define to the type of arg 2 for recv. */
-#define RECV_TYPE_ARG2 char *
+#define RECV_TYPE_ARG2 char*
 
 /* Define to the type of arg 3 for recv. */
 #define RECV_TYPE_ARG3 int
@@ -205,7 +205,7 @@
 #define SEND_QUAL_ARG2 const
 
 /* Define to the type of arg 2 for send. */
-#define SEND_TYPE_ARG2 char *
+#define SEND_TYPE_ARG2 char*
 
 /* Define to the type of arg 3 for send. */
 #define SEND_TYPE_ARG3 int
@@ -221,7 +221,7 @@
 #define HAVE_SNPRINTF 1
 #endif
 
-#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x600  /* Vista */
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x600 /* Vista */
 /* Define to 1 if you have a IPv6 capable working inet_ntop function. */
 #define HAVE_INET_NTOP 1
 /* Define to 1 if you have a IPv6 capable working inet_pton function. */
@@ -250,14 +250,14 @@
 
 /* Define if ssize_t is not an available 'typedefed' type. */
 #ifndef _SSIZE_T_DEFINED
-#  if defined(__MINGW32__)
-#  elif defined(_WIN64)
-#    define _SSIZE_T_DEFINED
-#    define ssize_t __int64
-#  else
-#    define _SSIZE_T_DEFINED
-#    define ssize_t int
-#  endif
+#if defined(__MINGW32__)
+#elif defined(_WIN64)
+#define _SSIZE_T_DEFINED
+#define ssize_t __int64
+#else
+#define _SSIZE_T_DEFINED
+#define ssize_t int
+#endif
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -275,9 +275,9 @@
 
 /* Define to the size of `size_t', as computed by sizeof. */
 #if defined(_WIN64)
-#  define SIZEOF_SIZE_T 8
+#define SIZEOF_SIZE_T 8
 #else
-#  define SIZEOF_SIZE_T 4
+#define SIZEOF_SIZE_T 4
 #endif
 
 /* Define to the size of `curl_off_t', as computed by sizeof. */
@@ -310,78 +310,78 @@
 /* mingw-w64 and visual studio >= 2005 (MSVCR80)
    all default to 64-bit time_t unless _USE_32BIT_TIME_T is defined */
 #if (defined(_MSC_VER) && (_MSC_VER >= 1400)) || defined(__MINGW32__)
-#  ifndef _USE_32BIT_TIME_T
-#    define SIZEOF_TIME_T 8
-#  else
-#    define SIZEOF_TIME_T 4
-#  endif
+#ifndef _USE_32BIT_TIME_T
+#define SIZEOF_TIME_T 8
+#else
+#define SIZEOF_TIME_T 4
+#endif
 #endif
 
 /* Define some minimum and default build targets for Visual Studio */
 #if defined(_MSC_VER)
-   /* Officially, Microsoft's Windows SDK versions 6.X does not support Windows
-      2000 as a supported build target. VS2008 default installations provides
-      an embedded Windows SDK v6.0A along with the claim that Windows 2000 is a
-      valid build target for VS2008. Popular belief is that binaries built with
-      VS2008 using Windows SDK versions v6.X and Windows 2000 as a build target
-      are functional. */
-#  define VS2008_MIN_TARGET 0x0500
+/* Officially, Microsoft's Windows SDK versions 6.X does not support Windows
+   2000 as a supported build target. VS2008 default installations provides
+   an embedded Windows SDK v6.0A along with the claim that Windows 2000 is a
+   valid build target for VS2008. Popular belief is that binaries built with
+   VS2008 using Windows SDK versions v6.X and Windows 2000 as a build target
+   are functional. */
+#define VS2008_MIN_TARGET 0x0500
 
-   /* The minimum build target for VS2012 is Vista unless Update 1 is installed
-      and the v110_xp toolset is chosen. */
-#  if defined(_USING_V110_SDK71_)
-#    define VS2012_MIN_TARGET 0x0501
-#  else
-#    define VS2012_MIN_TARGET 0x0600
-#  endif
+/* The minimum build target for VS2012 is Vista unless Update 1 is installed
+   and the v110_xp toolset is chosen. */
+#if defined(_USING_V110_SDK71_)
+#define VS2012_MIN_TARGET 0x0501
+#else
+#define VS2012_MIN_TARGET 0x0600
+#endif
 
-   /* VS2008 default build target is Windows Vista. We override default target
-      to be Windows XP. */
-#  define VS2008_DEF_TARGET 0x0501
+/* VS2008 default build target is Windows Vista. We override default target
+   to be Windows XP. */
+#define VS2008_DEF_TARGET 0x0501
 
-   /* VS2012 default build target is Windows Vista unless Update 1 is installed
-      and the v110_xp toolset is chosen. */
-#  if defined(_USING_V110_SDK71_)
-#    define VS2012_DEF_TARGET 0x0501
-#  else
-#    define VS2012_DEF_TARGET 0x0600
-#  endif
+/* VS2012 default build target is Windows Vista unless Update 1 is installed
+   and the v110_xp toolset is chosen. */
+#if defined(_USING_V110_SDK71_)
+#define VS2012_DEF_TARGET 0x0501
+#else
+#define VS2012_DEF_TARGET 0x0600
+#endif
 #endif
 
 /* VS2008 default target settings and minimum build target check. */
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
-#  ifndef _WIN32_WINNT
-#    define _WIN32_WINNT VS2008_DEF_TARGET
-#  endif
-#  ifndef WINVER
-#    define WINVER VS2008_DEF_TARGET
-#  endif
-#  if (_WIN32_WINNT < VS2008_MIN_TARGET) || (WINVER < VS2008_MIN_TARGET)
-#    error VS2008 does not support Windows build targets prior to Windows 2000
-#  endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT VS2008_DEF_TARGET
+#endif
+#ifndef WINVER
+#define WINVER VS2008_DEF_TARGET
+#endif
+#if (_WIN32_WINNT < VS2008_MIN_TARGET) || (WINVER < VS2008_MIN_TARGET)
+#error VS2008 does not support Windows build targets prior to Windows 2000
+#endif
 #endif
 
 /* VS2012 default target settings and minimum build target check. */
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#  ifndef _WIN32_WINNT
-#    define _WIN32_WINNT VS2012_DEF_TARGET
-#  endif
-#  ifndef WINVER
-#    define WINVER VS2012_DEF_TARGET
-#  endif
-#  if (_WIN32_WINNT < VS2012_MIN_TARGET) || (WINVER < VS2012_MIN_TARGET)
-#    if defined(_USING_V110_SDK71_)
-#      error VS2012 does not support Windows build targets prior to Windows XP
-#    else
-#      error VS2012 does not support Windows build targets prior to Windows \
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT VS2012_DEF_TARGET
+#endif
+#ifndef WINVER
+#define WINVER VS2012_DEF_TARGET
+#endif
+#if (_WIN32_WINNT < VS2012_MIN_TARGET) || (WINVER < VS2012_MIN_TARGET)
+#if defined(_USING_V110_SDK71_)
+#error VS2012 does not support Windows build targets prior to Windows XP
+#else
+#error VS2012 does not support Windows build targets prior to Windows \
 Vista
-#    endif
-#  endif
+#endif
+#endif
 #endif
 
 /* Windows XP is required for freeaddrinfo, getaddrinfo */
-#define HAVE_FREEADDRINFO           1
-#define HAVE_GETADDRINFO            1
+#define HAVE_FREEADDRINFO 1
+#define HAVE_GETADDRINFO 1
 #define HAVE_GETADDRINFO_THREADSAFE 1
 
 /* ---------------------------------------------------------------- */
@@ -402,26 +402,26 @@ Vista
 /* ---------------------------------------------------------------- */
 
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
-#  if (_MSC_VER >= 900) && (_INTEGRAL_MAX_BITS >= 64)
-#    define USE_WIN32_LARGE_FILES
-#  else
-#    define USE_WIN32_SMALL_FILES
-#  endif
+#if (_MSC_VER >= 900) && (_INTEGRAL_MAX_BITS >= 64)
+#define USE_WIN32_LARGE_FILES
+#else
+#define USE_WIN32_SMALL_FILES
+#endif
 #endif
 
 #if defined(__MINGW32__) && !defined(USE_WIN32_LARGE_FILES)
-#  define USE_WIN32_LARGE_FILES
+#define USE_WIN32_LARGE_FILES
 #endif
 
 #if !defined(USE_WIN32_LARGE_FILES) && !defined(USE_WIN32_SMALL_FILES)
-#  define USE_WIN32_SMALL_FILES
+#define USE_WIN32_SMALL_FILES
 #endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #if defined(USE_WIN32_LARGE_FILES) && defined(__MINGW32__)
-#  ifndef _FILE_OFFSET_BITS
-#  define _FILE_OFFSET_BITS 64
-#  endif
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
 #endif
 
 #ifdef USE_WIN32_LARGE_FILES
@@ -429,11 +429,11 @@ Vista
 #endif
 
 /* Define to the size of `off_t', as computed by sizeof. */
-#if defined(__MINGW32__) && \
-  defined(_FILE_OFFSET_BITS) && (_FILE_OFFSET_BITS == 64)
-#  define SIZEOF_OFF_T 8
+#if defined(__MINGW32__) && defined(_FILE_OFFSET_BITS) && \
+    (_FILE_OFFSET_BITS == 64)
+#define SIZEOF_OFF_T 8
 #else
-#  define SIZEOF_OFF_T 4
+#define SIZEOF_OFF_T 4
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -448,13 +448,12 @@ Vista
 /* #define USE_ARES 1 */
 
 /* Default define to enable threaded asynchronous DNS lookups. */
-#if !defined(USE_SYNC_DNS) && !defined(USE_ARES) && \
-    !defined(USE_THREADS_WIN32)
-#  define USE_THREADS_WIN32 1
+#if !defined(USE_SYNC_DNS) && !defined(USE_ARES) && !defined(USE_THREADS_WIN32)
+#define USE_THREADS_WIN32 1
 #endif
 
 #if defined(USE_ARES) && defined(USE_THREADS_WIN32)
-#  error "Only one DNS lookup specialty may be defined at most"
+#error "Only one DNS lookup specialty may be defined at most"
 #endif
 
 /* ---------------------------------------------------------------- */

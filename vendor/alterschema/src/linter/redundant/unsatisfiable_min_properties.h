@@ -1,15 +1,14 @@
 class UnsatisfiableMinProperties final : public Rule {
-public:
+ public:
   UnsatisfiableMinProperties()
       : Rule{"unsatisfiable_min_properties",
              "Setting `minProperties` to a number less than `required` does "
              "not add any further constraint"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

@@ -44,48 +44,43 @@
  * NOTE: This header includes itself twice.
  */
 
-#if (defined(URI_PASS_ANSI) && !defined(URI_H_ANSI)) \
-	|| (defined(URI_PASS_UNICODE) && !defined(URI_H_UNICODE)) \
-	|| (!defined(URI_PASS_ANSI) && !defined(URI_PASS_UNICODE))
+#if (defined(URI_PASS_ANSI) && !defined(URI_H_ANSI)) ||       \
+    (defined(URI_PASS_UNICODE) && !defined(URI_H_UNICODE)) || \
+    (!defined(URI_PASS_ANSI) && !defined(URI_PASS_UNICODE))
 /* What encodings are enabled? */
 #include "UriDefsConfig.h"
 #if (!defined(URI_PASS_ANSI) && !defined(URI_PASS_UNICODE))
 /* Include SELF twice */
-# ifdef URI_ENABLE_ANSI
-#  define URI_PASS_ANSI 1
-#  include "Uri.h"
-#  undef URI_PASS_ANSI
-# endif
-# ifdef URI_ENABLE_UNICODE
-#  define URI_PASS_UNICODE 1
-#  include "Uri.h"
-#  undef URI_PASS_UNICODE
-# endif
+#ifdef URI_ENABLE_ANSI
+#define URI_PASS_ANSI 1
+#include "Uri.h"
+#undef URI_PASS_ANSI
+#endif
+#ifdef URI_ENABLE_UNICODE
+#define URI_PASS_UNICODE 1
+#include "Uri.h"
+#undef URI_PASS_UNICODE
+#endif
 /* Only one pass for each encoding */
-#elif (defined(URI_PASS_ANSI) && !defined(URI_H_ANSI) \
-	&& defined(URI_ENABLE_ANSI)) || (defined(URI_PASS_UNICODE) \
-	&& !defined(URI_H_UNICODE) && defined(URI_ENABLE_UNICODE))
-# ifdef URI_PASS_ANSI
-#  define URI_H_ANSI 1
-#  include "UriDefsAnsi.h"
-# else
-#  define URI_H_UNICODE 1
-#  include "UriDefsUnicode.h"
-# endif
-
-
+#elif (defined(URI_PASS_ANSI) && !defined(URI_H_ANSI) &&     \
+       defined(URI_ENABLE_ANSI)) ||                          \
+    (defined(URI_PASS_UNICODE) && !defined(URI_H_UNICODE) && \
+     defined(URI_ENABLE_UNICODE))
+#ifdef URI_PASS_ANSI
+#define URI_H_ANSI 1
+#include "UriDefsAnsi.h"
+#else
+#define URI_H_UNICODE 1
+#include "UriDefsUnicode.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-
 #ifndef URI_DOXYGEN
-# include "UriBase.h"
+#include "UriBase.h"
 #endif
-
-
 
 /**
  * Specifies a range of characters within a string.
@@ -99,11 +94,10 @@ extern "C" {
  * @since 0.3.0
  */
 typedef struct URI_TYPE(TextRangeStruct) {
-	const URI_CHAR * first; /**< Pointer to first character */
-	const URI_CHAR * afterLast; /**< Pointer to character after the last one still in */
+  const URI_CHAR* first; /**< Pointer to first character */
+  const URI_CHAR*
+      afterLast;       /**< Pointer to character after the last one still in */
 } URI_TYPE(TextRange); /**< @copydoc UriTextRangeStructA */
-
-
 
 /**
  * Represents a path segment within a %URI path.
@@ -114,13 +108,13 @@ typedef struct URI_TYPE(TextRangeStruct) {
  * @since 0.3.0
  */
 typedef struct URI_TYPE(PathSegmentStruct) {
-	URI_TYPE(TextRange) text; /**< Path segment name */
-	struct URI_TYPE(PathSegmentStruct) * next; /**< Pointer to the next path segment in the list, can be NULL if last already */
+  URI_TYPE(TextRange) text; /**< Path segment name */
+  struct URI_TYPE(PathSegmentStruct) *
+      next; /**< Pointer to the next path segment in the list, can be NULL if
+               last already */
 
-	void * reserved; /**< Reserved to the parser */
+  void* reserved;        /**< Reserved to the parser */
 } URI_TYPE(PathSegment); /**< @copydoc UriPathSegmentStructA */
-
-
 
 /**
  * Holds structured host information.
@@ -132,12 +126,10 @@ typedef struct URI_TYPE(PathSegmentStruct) {
  * @since 0.3.0
  */
 typedef struct URI_TYPE(HostDataStruct) {
-	UriIp4 * ip4; /**< IPv4 address */
-	UriIp6 * ip6; /**< IPv6 address */
-	URI_TYPE(TextRange) ipFuture; /**< IPvFuture address */
-} URI_TYPE(HostData); /**< @copydoc UriHostDataStructA */
-
-
+  UriIp4* ip4;                  /**< IPv4 address */
+  UriIp6* ip6;                  /**< IPv6 address */
+  URI_TYPE(TextRange) ipFuture; /**< IPvFuture address */
+} URI_TYPE(HostData);           /**< @copydoc UriHostDataStructA */
 
 /**
  * Represents an RFC 3986 %URI.
@@ -149,23 +141,24 @@ typedef struct URI_TYPE(HostDataStruct) {
  * @since 0.3.0
  */
 typedef struct URI_TYPE(UriStruct) {
-	URI_TYPE(TextRange) scheme; /**< Scheme (e.g. "http") */
-	URI_TYPE(TextRange) userInfo; /**< User info (e.g. "user:pass") */
-	URI_TYPE(TextRange) hostText; /**< Host text (set for all hosts, excluding square brackets) */
-	URI_TYPE(HostData) hostData; /**< Structured host type specific data */
-	URI_TYPE(TextRange) portText; /**< Port (e.g. "80") */
-	URI_TYPE(PathSegment) * pathHead; /**< Head of a linked list of path segments */
-	URI_TYPE(PathSegment) * pathTail; /**< Tail of the list behind pathHead */
-	URI_TYPE(TextRange) query; /**< Query without leading "?" */
-	URI_TYPE(TextRange) fragment; /**< Query without leading "#" */
-	UriBool absolutePath; /**< Absolute path flag, distincting "a" and "/a";
-								always <c>URI_FALSE</c> for URIs with host */
-	UriBool owner; /**< Memory owner flag */
+  URI_TYPE(TextRange) scheme;   /**< Scheme (e.g. "http") */
+  URI_TYPE(TextRange) userInfo; /**< User info (e.g. "user:pass") */
+  URI_TYPE(TextRange)
+  hostText; /**< Host text (set for all hosts, excluding square brackets) */
+  URI_TYPE(HostData) hostData;  /**< Structured host type specific data */
+  URI_TYPE(TextRange) portText; /**< Port (e.g. "80") */
+  URI_TYPE(PathSegment) *
+      pathHead; /**< Head of a linked list of path segments */
+  URI_TYPE(PathSegment) * pathTail; /**< Tail of the list behind pathHead */
+  URI_TYPE(TextRange) query;        /**< Query without leading "?" */
+  URI_TYPE(TextRange) fragment;     /**< Query without leading "#" */
+  UriBool absolutePath; /**< Absolute path flag, distincting "a" and "/a";
+                                                          always
+                           <c>URI_FALSE</c> for URIs with host */
+  UriBool owner;        /**< Memory owner flag */
 
-	void * reserved; /**< Reserved to the parser */
-} URI_TYPE(Uri); /**< @copydoc UriUriStructA */
-
-
+  void* reserved; /**< Reserved to the parser */
+} URI_TYPE(Uri);  /**< @copydoc UriUriStructA */
 
 /**
  * Represents a state of the %URI parser.
@@ -177,14 +170,14 @@ typedef struct URI_TYPE(UriStruct) {
  * @since 0.3.0
  */
 typedef struct URI_TYPE(ParserStateStruct) {
-	URI_TYPE(Uri) * uri; /**< Plug in the %URI structure to be filled while parsing here */
-	int errorCode; /**< Code identifying the error which occurred */
-	const URI_CHAR * errorPos; /**< Pointer to position in case of a syntax error */
+  URI_TYPE(Uri) *
+      uri; /**< Plug in the %URI structure to be filled while parsing here */
+  int errorCode; /**< Code identifying the error which occurred */
+  const URI_CHAR*
+      errorPos; /**< Pointer to position in case of a syntax error */
 
-	void * reserved; /**< Reserved to the parser */
+  void* reserved;        /**< Reserved to the parser */
 } URI_TYPE(ParserState); /**< @copydoc UriParserStateStructA */
-
-
 
 /**
  * Represents a query element.
@@ -194,21 +187,24 @@ typedef struct URI_TYPE(ParserStateStruct) {
  * @since 0.7.0
  */
 typedef struct URI_TYPE(QueryListStruct) {
-	const URI_CHAR * key; /**< Key of the query element */
-	const URI_CHAR * value; /**< Value of the query element, can be NULL */
+  const URI_CHAR* key;   /**< Key of the query element */
+  const URI_CHAR* value; /**< Value of the query element, can be NULL */
 
-	struct URI_TYPE(QueryListStruct) * next; /**< Pointer to the next key/value pair in the list, can be NULL if last already */
+  struct URI_TYPE(QueryListStruct) *
+      next; /**< Pointer to the next key/value pair in the list, can be NULL if
+               last already */
 } URI_TYPE(QueryList); /**< @copydoc UriQueryListStructA */
-
-
 
 /**
  * Parses a RFC 3986 %URI.
  * Uses default libc-based memory manager.
  *
- * @param state       <b>INOUT</b>: Parser state with set output %URI, must not be NULL
- * @param first       <b>IN</b>: Pointer to the first character to parse, must not be NULL
- * @param afterLast   <b>IN</b>: Pointer to the character after the last to parse, must not be NULL
+ * @param state       <b>INOUT</b>: Parser state with set output %URI, must not
+ * be NULL
+ * @param first       <b>IN</b>: Pointer to the first character to parse, must
+ * not be NULL
+ * @param afterLast   <b>IN</b>: Pointer to the character after the last to
+ * parse, must not be NULL
  * @return            0 on success, error code otherwise
  *
  * @see uriParseUriA
@@ -216,18 +212,19 @@ typedef struct URI_TYPE(QueryListStruct) {
  * @see uriParseSingleUriExA
  * @see uriToStringA
  * @since 0.3.0
- * @deprecated Deprecated since 0.9.0, please migrate to uriParseSingleUriExA (with "Single").
+ * @deprecated Deprecated since 0.9.0, please migrate to uriParseSingleUriExA
+ * (with "Single").
  */
 URI_PUBLIC int URI_FUNC(ParseUriEx)(URI_TYPE(ParserState) * state,
-		const URI_CHAR * first, const URI_CHAR * afterLast);
-
-
+                                    const URI_CHAR* first,
+                                    const URI_CHAR* afterLast);
 
 /**
  * Parses a RFC 3986 %URI.
  * Uses default libc-based memory manager.
  *
- * @param state   <b>INOUT</b>: Parser state with set output %URI, must not be NULL
+ * @param state   <b>INOUT</b>: Parser state with set output %URI, must not be
+ * NULL
  * @param text    <b>IN</b>: Text to parse, must not be NULL
  * @return        0 on success, error code otherwise
  *
@@ -236,12 +233,11 @@ URI_PUBLIC int URI_FUNC(ParseUriEx)(URI_TYPE(ParserState) * state,
  * @see uriParseSingleUriExA
  * @see uriToStringA
  * @since 0.3.0
- * @deprecated Deprecated since 0.9.0, please migrate to uriParseSingleUriA (with "Single").
+ * @deprecated Deprecated since 0.9.0, please migrate to uriParseSingleUriA
+ * (with "Single").
  */
 URI_PUBLIC int URI_FUNC(ParseUri)(URI_TYPE(ParserState) * state,
-		const URI_CHAR * text);
-
-
+                                  const URI_CHAR* text);
 
 /**
  * Parses a single RFC 3986 %URI.
@@ -261,9 +257,8 @@ URI_PUBLIC int URI_FUNC(ParseUri)(URI_TYPE(ParserState) * state,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(ParseSingleUri)(URI_TYPE(Uri) * uri,
-		const URI_CHAR * text, const URI_CHAR ** errorPos);
-
-
+                                        const URI_CHAR* text,
+                                        const URI_CHAR** errorPos);
 
 /**
  * Parses a single RFC 3986 %URI.
@@ -286,10 +281,9 @@ URI_PUBLIC int URI_FUNC(ParseSingleUri)(URI_TYPE(Uri) * uri,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(ParseSingleUriEx)(URI_TYPE(Uri) * uri,
-		const URI_CHAR * first, const URI_CHAR * afterLast,
-		const URI_CHAR ** errorPos);
-
-
+                                          const URI_CHAR* first,
+                                          const URI_CHAR* afterLast,
+                                          const URI_CHAR** errorPos);
 
 /**
  * Parses a single RFC 3986 %URI.
@@ -312,10 +306,10 @@ URI_PUBLIC int URI_FUNC(ParseSingleUriEx)(URI_TYPE(Uri) * uri,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(ParseSingleUriExMm)(URI_TYPE(Uri) * uri,
-		const URI_CHAR * first, const URI_CHAR * afterLast,
-		const URI_CHAR ** errorPos, UriMemoryManager * memory);
-
-
+                                            const URI_CHAR* first,
+                                            const URI_CHAR* afterLast,
+                                            const URI_CHAR** errorPos,
+                                            UriMemoryManager* memory);
 
 /**
  * Frees all memory associated with the members
@@ -330,8 +324,6 @@ URI_PUBLIC int URI_FUNC(ParseSingleUriExMm)(URI_TYPE(Uri) * uri,
  */
 URI_PUBLIC void URI_FUNC(FreeUriMembers)(URI_TYPE(Uri) * uri);
 
-
-
 /**
  * Frees all memory associated with the members
  * of the %URI structure. Note that the structure
@@ -345,9 +337,7 @@ URI_PUBLIC void URI_FUNC(FreeUriMembers)(URI_TYPE(Uri) * uri);
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(FreeUriMembersMm)(URI_TYPE(Uri) * uri,
-		UriMemoryManager * memory);
-
-
+                                          UriMemoryManager* memory);
 
 /**
  * Percent-encodes all unreserved characters from the input string and
@@ -359,29 +349,31 @@ URI_PUBLIC int URI_FUNC(FreeUriMembersMm)(URI_TYPE(Uri) * uri,
  * (since e.g. "\x0d" becomes "%0D%0A" in that case).
  *
  * NOTE: The implementation treats (both <c>char</c> and) <c>wchar_t</c> units
- * as code point integers, which works well for code points <c>U+0001</c> to <c>U+00ff</c>
- * in host-native endianness but nothing more;
- * in particular, using <c>uriEscapeExW</c> with arbitrary Unicode input will
- * not produce healthy results.
- * Passing UTF-8 input to <c>uriEscapeExA</c> may be useful in some scenarios.
- * Keep in mind that uriparser is about %URI (RFC 3986) not %IRI (RFC 3987).
+ * as code point integers, which works well for code points <c>U+0001</c> to
+ * <c>U+00ff</c> in host-native endianness but nothing more; in particular,
+ * using <c>uriEscapeExW</c> with arbitrary Unicode input will not produce
+ * healthy results. Passing UTF-8 input to <c>uriEscapeExA</c> may be useful in
+ * some scenarios. Keep in mind that uriparser is about %URI (RFC 3986) not %IRI
+ * (RFC 3987).
  *
- * @param inFirst           <b>IN</b>: Pointer to first character of the input text
- * @param inAfterLast       <b>IN</b>: Pointer after the last character of the input text
+ * @param inFirst           <b>IN</b>: Pointer to first character of the input
+ * text
+ * @param inAfterLast       <b>IN</b>: Pointer after the last character of the
+ * input text
  * @param out               <b>OUT</b>: Encoded text destination
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
  * @return                  Position of terminator in output string
  *
  * @see uriEscapeA
  * @see uriUnescapeInPlaceExA
  * @since 0.5.2
  */
-URI_PUBLIC URI_CHAR * URI_FUNC(EscapeEx)(const URI_CHAR * inFirst,
-		const URI_CHAR * inAfterLast, URI_CHAR * out,
-		UriBool spaceToPlus, UriBool normalizeBreaks);
-
-
+URI_PUBLIC URI_CHAR* URI_FUNC(EscapeEx)(const URI_CHAR* inFirst,
+                                        const URI_CHAR* inAfterLast,
+                                        URI_CHAR* out, UriBool spaceToPlus,
+                                        UriBool normalizeBreaks);
 
 /**
  * Percent-encodes all unreserved characters from the input string and
@@ -393,27 +385,27 @@ URI_PUBLIC URI_CHAR * URI_FUNC(EscapeEx)(const URI_CHAR * inFirst,
  * (since e.g. "\x0d" becomes "%0D%0A" in that case).
  *
  * NOTE: The implementation treats (both <c>char</c> and) <c>wchar_t</c> units
- * as code point integers, which works well for code points <c>U+0001</c> to <c>U+00ff</c>
- * in host-native endianness but nothing more;
- * in particular, using <c>uriEscapeW</c> with arbitrary Unicode input will
- * not produce healthy results.
- * Passing UTF-8 input to <c>uriEscapeA</c> may be useful in some scenarios.
- * Keep in mind that uriparser is about %URI (RFC 3986) not %IRI (RFC 3987).
+ * as code point integers, which works well for code points <c>U+0001</c> to
+ * <c>U+00ff</c> in host-native endianness but nothing more; in particular,
+ * using <c>uriEscapeW</c> with arbitrary Unicode input will not produce healthy
+ * results. Passing UTF-8 input to <c>uriEscapeA</c> may be useful in some
+ * scenarios. Keep in mind that uriparser is about %URI (RFC 3986) not %IRI (RFC
+ * 3987).
  *
  * @param in                <b>IN</b>: Text source
  * @param out               <b>OUT</b>: Encoded text destination
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
  * @return                  Position of terminator in output string
  *
  * @see uriEscapeExA
  * @see uriUnescapeInPlaceA
  * @since 0.5.0
  */
-URI_PUBLIC URI_CHAR * URI_FUNC(Escape)(const URI_CHAR * in, URI_CHAR * out,
-		UriBool spaceToPlus, UriBool normalizeBreaks);
-
-
+URI_PUBLIC URI_CHAR* URI_FUNC(Escape)(const URI_CHAR* in, URI_CHAR* out,
+                                      UriBool spaceToPlus,
+                                      UriBool normalizeBreaks);
 
 /**
  * Unescapes percent-encoded groups in a given string.
@@ -432,10 +424,8 @@ URI_PUBLIC URI_CHAR * URI_FUNC(Escape)(const URI_CHAR * in, URI_CHAR * out,
  * @see uriEscapeExA
  * @since 0.5.0
  */
-URI_PUBLIC const URI_CHAR * URI_FUNC(UnescapeInPlaceEx)(URI_CHAR * inout,
-		UriBool plusToSpace, UriBreakConversion breakConversion);
-
-
+URI_PUBLIC const URI_CHAR* URI_FUNC(UnescapeInPlaceEx)(
+    URI_CHAR* inout, UriBool plusToSpace, UriBreakConversion breakConversion);
 
 /**
  * Unescapes percent-encoded groups in a given string.
@@ -455,15 +445,13 @@ URI_PUBLIC const URI_CHAR * URI_FUNC(UnescapeInPlaceEx)(URI_CHAR * inout,
  * @see uriEscapeA
  * @since 0.3.0
  */
-URI_PUBLIC const URI_CHAR * URI_FUNC(UnescapeInPlace)(URI_CHAR * inout);
-
-
+URI_PUBLIC const URI_CHAR* URI_FUNC(UnescapeInPlace)(URI_CHAR* inout);
 
 /**
  * Performs reference resolution as described in
- * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of RFC 3986</a>.
- * Uses default libc-based memory manager.
- * NOTE: On success you have to call uriFreeUriMembersA on \p absoluteDest manually later.
+ * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of
+ * RFC 3986</a>. Uses default libc-based memory manager. NOTE: On success you
+ * have to call uriFreeUriMembersA on \p absoluteDest manually later.
  *
  * @param absoluteDest     <b>OUT</b>: Result %URI
  * @param relativeSource   <b>IN</b>: Reference to resolve
@@ -477,16 +465,14 @@ URI_PUBLIC const URI_CHAR * URI_FUNC(UnescapeInPlace)(URI_CHAR * inout);
  * @since 0.4.0
  */
 URI_PUBLIC int URI_FUNC(AddBaseUri)(URI_TYPE(Uri) * absoluteDest,
-		const URI_TYPE(Uri) * relativeSource,
-		const URI_TYPE(Uri) * absoluteBase);
-
-
+                                    const URI_TYPE(Uri) * relativeSource,
+                                    const URI_TYPE(Uri) * absoluteBase);
 
 /**
  * Performs reference resolution as described in
- * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of RFC 3986</a>.
- * Uses default libc-based memory manager.
- * NOTE: On success you have to call uriFreeUriMembersA on \p absoluteDest manually later.
+ * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of
+ * RFC 3986</a>. Uses default libc-based memory manager. NOTE: On success you
+ * have to call uriFreeUriMembersA on \p absoluteDest manually later.
  *
  * @param absoluteDest     <b>OUT</b>: Result %URI
  * @param relativeSource   <b>IN</b>: Reference to resolve
@@ -500,22 +486,22 @@ URI_PUBLIC int URI_FUNC(AddBaseUri)(URI_TYPE(Uri) * absoluteDest,
  * @since 0.8.1
  */
 URI_PUBLIC int URI_FUNC(AddBaseUriEx)(URI_TYPE(Uri) * absoluteDest,
-		const URI_TYPE(Uri) * relativeSource,
-		const URI_TYPE(Uri) * absoluteBase,
-		UriResolutionOptions options);
-
-
+                                      const URI_TYPE(Uri) * relativeSource,
+                                      const URI_TYPE(Uri) * absoluteBase,
+                                      UriResolutionOptions options);
 
 /**
  * Performs reference resolution as described in
- * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of RFC 3986</a>.
- * NOTE: On success you have to call uriFreeUriMembersMmA on \p absoluteDest manually later.
+ * <a href="http://tools.ietf.org/html/rfc3986#section-5.2.2">section 5.2.2 of
+ * RFC 3986</a>. NOTE: On success you have to call uriFreeUriMembersMmA on \p
+ * absoluteDest manually later.
  *
  * @param absoluteDest     <b>OUT</b>: Result %URI
  * @param relativeSource   <b>IN</b>: Reference to resolve
  * @param absoluteBase     <b>IN</b>: Base %URI to apply
  * @param options          <b>IN</b>: Configuration to apply
- * @param memory           <b>IN</b>: Memory manager to use, NULL for default libc
+ * @param memory           <b>IN</b>: Memory manager to use, NULL for default
+ * libc
  * @return                 Error code or 0 on success
  *
  * @see uriRemoveBaseUriA
@@ -525,11 +511,10 @@ URI_PUBLIC int URI_FUNC(AddBaseUriEx)(URI_TYPE(Uri) * absoluteDest,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(AddBaseUriExMm)(URI_TYPE(Uri) * absoluteDest,
-		const URI_TYPE(Uri) * relativeSource,
-		const URI_TYPE(Uri) * absoluteBase,
-		UriResolutionOptions options, UriMemoryManager * memory);
-
-
+                                        const URI_TYPE(Uri) * relativeSource,
+                                        const URI_TYPE(Uri) * absoluteBase,
+                                        UriResolutionOptions options,
+                                        UriMemoryManager* memory);
 
 /**
  * Tries to make a relative %URI (a reference) from an
@@ -544,7 +529,8 @@ URI_PUBLIC int URI_FUNC(AddBaseUriExMm)(URI_TYPE(Uri) * absoluteDest,
  * @param dest             <b>OUT</b>: Result %URI
  * @param absoluteSource   <b>IN</b>: Absolute %URI to make relative
  * @param absoluteBase     <b>IN</b>: Base %URI
- * @param domainRootMode   <b>IN</b>: Create %URI with path relative to domain root
+ * @param domainRootMode   <b>IN</b>: Create %URI with path relative to domain
+ * root
  * @return                 Error code or 0 on success
  *
  * @see uriRemoveBaseUriMmA
@@ -554,11 +540,9 @@ URI_PUBLIC int URI_FUNC(AddBaseUriExMm)(URI_TYPE(Uri) * absoluteDest,
  * @since 0.5.2
  */
 URI_PUBLIC int URI_FUNC(RemoveBaseUri)(URI_TYPE(Uri) * dest,
-		const URI_TYPE(Uri) * absoluteSource,
-		const URI_TYPE(Uri) * absoluteBase,
-		UriBool domainRootMode);
-
-
+                                       const URI_TYPE(Uri) * absoluteSource,
+                                       const URI_TYPE(Uri) * absoluteBase,
+                                       UriBool domainRootMode);
 
 /**
  * Tries to make a relative %URI (a reference) from an
@@ -572,8 +556,10 @@ URI_PUBLIC int URI_FUNC(RemoveBaseUri)(URI_TYPE(Uri) * dest,
  * @param dest             <b>OUT</b>: Result %URI
  * @param absoluteSource   <b>IN</b>: Absolute %URI to make relative
  * @param absoluteBase     <b>IN</b>: Base %URI
- * @param domainRootMode   <b>IN</b>: Create %URI with path relative to domain root
- * @param memory           <b>IN</b>: Memory manager to use, NULL for default libc
+ * @param domainRootMode   <b>IN</b>: Create %URI with path relative to domain
+ * root
+ * @param memory           <b>IN</b>: Memory manager to use, NULL for default
+ * libc
  * @return                 Error code or 0 on success
  *
  * @see uriRemoveBaseUriA
@@ -583,11 +569,10 @@ URI_PUBLIC int URI_FUNC(RemoveBaseUri)(URI_TYPE(Uri) * dest,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(RemoveBaseUriMm)(URI_TYPE(Uri) * dest,
-		const URI_TYPE(Uri) * absoluteSource,
-		const URI_TYPE(Uri) * absoluteBase,
-		UriBool domainRootMode, UriMemoryManager * memory);
-
-
+                                         const URI_TYPE(Uri) * absoluteSource,
+                                         const URI_TYPE(Uri) * absoluteBase,
+                                         UriBool domainRootMode,
+                                         UriMemoryManager* memory);
 
 /**
  * Checks two URIs for equivalence. Comparison is done
@@ -601,9 +586,7 @@ URI_PUBLIC int URI_FUNC(RemoveBaseUriMm)(URI_TYPE(Uri) * dest,
  * @since 0.4.0
  */
 URI_PUBLIC UriBool URI_FUNC(EqualsUri)(const URI_TYPE(Uri) * a,
-		const URI_TYPE(Uri) * b);
-
-
+                                       const URI_TYPE(Uri) * b);
 
 /**
  * Calculates the number of characters needed to store the
@@ -611,38 +594,39 @@ URI_PUBLIC UriBool URI_FUNC(EqualsUri)(const URI_TYPE(Uri) * a,
  * terminator.
  *
  * @param uri             <b>IN</b>: %URI to measure
- * @param charsRequired   <b>OUT</b>: Length of the string representation in characters <b>excluding</b> terminator
+ * @param charsRequired   <b>OUT</b>: Length of the string representation in
+ * characters <b>excluding</b> terminator
  * @return                Error code or 0 on success
  *
  * @see uriToStringA
  * @since 0.5.0
  */
 URI_PUBLIC int URI_FUNC(ToStringCharsRequired)(const URI_TYPE(Uri) * uri,
-		int * charsRequired);
-
-
+                                               int* charsRequired);
 
 /**
  * Converts a %URI structure back to text as described in
- * <a href="http://tools.ietf.org/html/rfc3986#section-5.3">section 5.3 of RFC 3986</a>.
+ * <a href="http://tools.ietf.org/html/rfc3986#section-5.3">section 5.3 of RFC
+ * 3986</a>.
  *
  * NOTE: Scheme-based normalization
- * (<a href="http://tools.ietf.org/html/rfc3986#section-6.2.3">section 6.2.3 of RFC 3986</a>)
- * is not applied and is considered a responsibility of the application using uriparser.
+ * (<a href="http://tools.ietf.org/html/rfc3986#section-6.2.3">section 6.2.3 of
+ * RFC 3986</a>) is not applied and is considered a responsibility of the
+ * application using uriparser.
  *
  * @param dest           <b>OUT</b>: Output destination
  * @param uri            <b>IN</b>: %URI to convert
- * @param maxChars       <b>IN</b>: Maximum number of characters to copy <b>including</b> terminator
- * @param charsWritten   <b>OUT</b>: Number of characters written, can be lower than maxChars even if the %URI is too long!
+ * @param maxChars       <b>IN</b>: Maximum number of characters to copy
+ * <b>including</b> terminator
+ * @param charsWritten   <b>OUT</b>: Number of characters written, can be lower
+ * than maxChars even if the %URI is too long!
  * @return               Error code or 0 on success
  *
  * @see uriToStringCharsRequiredA
  * @since 0.4.0
  */
-URI_PUBLIC int URI_FUNC(ToString)(URI_CHAR * dest, const URI_TYPE(Uri) * uri,
-		int maxChars, int * charsWritten);
-
-
+URI_PUBLIC int URI_FUNC(ToString)(URI_CHAR* dest, const URI_TYPE(Uri) * uri,
+                                  int maxChars, int* charsWritten);
 
 /**
  * Determines the components of a %URI that are not normalized.
@@ -655,12 +639,11 @@ URI_PUBLIC int URI_FUNC(ToString)(URI_CHAR * dest, const URI_TYPE(Uri) * uri,
  * @see uriNormalizeSyntaxExMmA
  * @see uriNormalizeSyntaxMaskRequiredExA
  * @since 0.5.0
- * @deprecated Deprecated since 0.9.0, please migrate to uriNormalizeSyntaxMaskRequiredExA (with "Ex").
+ * @deprecated Deprecated since 0.9.0, please migrate to
+ * uriNormalizeSyntaxMaskRequiredExA (with "Ex").
  */
 URI_PUBLIC unsigned int URI_FUNC(NormalizeSyntaxMaskRequired)(
-		const URI_TYPE(Uri) * uri);
-
-
+    const URI_TYPE(Uri) * uri);
 
 /**
  * Determines the components of a %URI that are not normalized.
@@ -675,10 +658,9 @@ URI_PUBLIC unsigned int URI_FUNC(NormalizeSyntaxMaskRequired)(
  * @see uriNormalizeSyntaxMaskRequiredA
  * @since 0.9.0
  */
-URI_PUBLIC int URI_FUNC(NormalizeSyntaxMaskRequiredEx)(
-		const URI_TYPE(Uri) * uri, unsigned int * outMask);
-
-
+URI_PUBLIC int URI_FUNC(NormalizeSyntaxMaskRequiredEx)(const URI_TYPE(Uri) *
+                                                           uri,
+                                                       unsigned int* outMask);
 
 /**
  * Normalizes a %URI using a normalization mask.
@@ -698,9 +680,7 @@ URI_PUBLIC int URI_FUNC(NormalizeSyntaxMaskRequiredEx)(
  * @since 0.5.0
  */
 URI_PUBLIC int URI_FUNC(NormalizeSyntaxEx)(URI_TYPE(Uri) * uri,
-		unsigned int mask);
-
-
+                                           unsigned int mask);
 
 /**
  * Normalizes a %URI using a normalization mask.
@@ -720,9 +700,8 @@ URI_PUBLIC int URI_FUNC(NormalizeSyntaxEx)(URI_TYPE(Uri) * uri,
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(NormalizeSyntaxExMm)(URI_TYPE(Uri) * uri,
-		unsigned int mask, UriMemoryManager * memory);
-
-
+                                             unsigned int mask,
+                                             UriMemoryManager* memory);
 
 /**
  * Normalizes all components of a %URI.
@@ -740,8 +719,6 @@ URI_PUBLIC int URI_FUNC(NormalizeSyntaxExMm)(URI_TYPE(Uri) * uri,
  * @since 0.5.0
  */
 URI_PUBLIC int URI_FUNC(NormalizeSyntax)(URI_TYPE(Uri) * uri);
-
-
 
 /**
  * Converts a Unix filename to a %URI string.
@@ -761,10 +738,8 @@ URI_PUBLIC int URI_FUNC(NormalizeSyntax)(URI_TYPE(Uri) * uri);
  * @see uriWindowsFilenameToUriStringA
  * @since 0.5.2
  */
-URI_PUBLIC int URI_FUNC(UnixFilenameToUriString)(const URI_CHAR * filename,
-		URI_CHAR * uriString);
-
-
+URI_PUBLIC int URI_FUNC(UnixFilenameToUriString)(const URI_CHAR* filename,
+                                                 URI_CHAR* uriString);
 
 /**
  * Converts a Windows filename to a %URI string.
@@ -784,10 +759,8 @@ URI_PUBLIC int URI_FUNC(UnixFilenameToUriString)(const URI_CHAR * filename,
  * @see uriUnixFilenameToUriStringA
  * @since 0.5.2
  */
-URI_PUBLIC int URI_FUNC(WindowsFilenameToUriString)(const URI_CHAR * filename,
-		URI_CHAR * uriString);
-
-
+URI_PUBLIC int URI_FUNC(WindowsFilenameToUriString)(const URI_CHAR* filename,
+                                                    URI_CHAR* uriString);
 
 /**
  * Extracts a Unix filename from a %URI string.
@@ -803,10 +776,8 @@ URI_PUBLIC int URI_FUNC(WindowsFilenameToUriString)(const URI_CHAR * filename,
  * @see uriUriStringToWindowsFilenameA
  * @since 0.5.2
  */
-URI_PUBLIC int URI_FUNC(UriStringToUnixFilename)(const URI_CHAR * uriString,
-		URI_CHAR * filename);
-
-
+URI_PUBLIC int URI_FUNC(UriStringToUnixFilename)(const URI_CHAR* uriString,
+                                                 URI_CHAR* filename);
 
 /**
  * Extracts a Windows filename from a %URI string.
@@ -822,10 +793,8 @@ URI_PUBLIC int URI_FUNC(UriStringToUnixFilename)(const URI_CHAR * uriString,
  * @see uriUriStringToUnixFilenameA
  * @since 0.5.2
  */
-URI_PUBLIC int URI_FUNC(UriStringToWindowsFilename)(const URI_CHAR * uriString,
-		URI_CHAR * filename);
-
-
+URI_PUBLIC int URI_FUNC(UriStringToWindowsFilename)(const URI_CHAR* uriString,
+                                                    URI_CHAR* filename);
 
 /**
  * Calculates the number of characters needed to store the
@@ -834,17 +803,17 @@ URI_PUBLIC int URI_FUNC(UriStringToWindowsFilename)(const URI_CHAR * uriString,
  * normalized to "%0D%0A".
  *
  * @param queryList         <b>IN</b>: Query list to measure
- * @param charsRequired     <b>OUT</b>: Length of the string representation in characters <b>excluding</b> terminator
+ * @param charsRequired     <b>OUT</b>: Length of the string representation in
+ * characters <b>excluding</b> terminator
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryCharsRequiredExA
  * @see uriComposeQueryA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQueryCharsRequired)(
-		const URI_TYPE(QueryList) * queryList, int * charsRequired);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryCharsRequired)(const URI_TYPE(QueryList) *
+                                                       queryList,
+                                                   int* charsRequired);
 
 /**
  * Calculates the number of characters needed to store the
@@ -852,20 +821,22 @@ URI_PUBLIC int URI_FUNC(ComposeQueryCharsRequired)(
  * terminator.
  *
  * @param queryList         <b>IN</b>: Query list to measure
- * @param charsRequired     <b>OUT</b>: Length of the string representation in characters <b>excluding</b> terminator
+ * @param charsRequired     <b>OUT</b>: Length of the string representation in
+ * characters <b>excluding</b> terminator
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryCharsRequiredA
  * @see uriComposeQueryExA
  * @since 0.7.0
  */
-URI_PUBLIC  int URI_FUNC(ComposeQueryCharsRequiredEx)(
-		const URI_TYPE(QueryList) * queryList,
-		int * charsRequired, UriBool spaceToPlus, UriBool normalizeBreaks);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryCharsRequiredEx)(const URI_TYPE(QueryList) *
+                                                         queryList,
+                                                     int* charsRequired,
+                                                     UriBool spaceToPlus,
+                                                     UriBool normalizeBreaks);
 
 /**
  * Converts a query list structure back to a query string.
@@ -875,8 +846,10 @@ URI_PUBLIC  int URI_FUNC(ComposeQueryCharsRequiredEx)(
  *
  * @param dest              <b>OUT</b>: Output destination
  * @param queryList         <b>IN</b>: Query list to convert
- * @param maxChars          <b>IN</b>: Maximum number of characters to copy <b>including</b> terminator
- * @param charsWritten      <b>OUT</b>: Number of characters written, can be lower than maxChars even if the query list is too long!
+ * @param maxChars          <b>IN</b>: Maximum number of characters to copy
+ * <b>including</b> terminator
+ * @param charsWritten      <b>OUT</b>: Number of characters written, can be
+ * lower than maxChars even if the query list is too long!
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryExA
@@ -889,10 +862,9 @@ URI_PUBLIC  int URI_FUNC(ComposeQueryCharsRequiredEx)(
  * @see uriDissectQueryMallocExMmA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQuery)(URI_CHAR * dest,
-		const URI_TYPE(QueryList) * queryList, int maxChars, int * charsWritten);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQuery)(URI_CHAR* dest,
+                                      const URI_TYPE(QueryList) * queryList,
+                                      int maxChars, int* charsWritten);
 
 /**
  * Converts a query list structure back to a query string.
@@ -900,10 +872,13 @@ URI_PUBLIC int URI_FUNC(ComposeQuery)(URI_CHAR * dest,
  *
  * @param dest              <b>OUT</b>: Output destination
  * @param queryList         <b>IN</b>: Query list to convert
- * @param maxChars          <b>IN</b>: Maximum number of characters to copy <b>including</b> terminator
- * @param charsWritten      <b>OUT</b>: Number of characters written, can be lower than maxChars even if the query list is too long!
+ * @param maxChars          <b>IN</b>: Maximum number of characters to copy
+ * <b>including</b> terminator
+ * @param charsWritten      <b>OUT</b>: Number of characters written, can be
+ * lower than maxChars even if the query list is too long!
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryA
@@ -916,11 +891,11 @@ URI_PUBLIC int URI_FUNC(ComposeQuery)(URI_CHAR * dest,
  * @see uriDissectQueryMallocExMmA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQueryEx)(URI_CHAR * dest,
-		const URI_TYPE(QueryList) * queryList, int maxChars, int * charsWritten,
-		UriBool spaceToPlus, UriBool normalizeBreaks);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryEx)(URI_CHAR* dest,
+                                        const URI_TYPE(QueryList) * queryList,
+                                        int maxChars, int* charsWritten,
+                                        UriBool spaceToPlus,
+                                        UriBool normalizeBreaks);
 
 /**
  * Converts a query list structure back to a query string.
@@ -942,10 +917,9 @@ URI_PUBLIC int URI_FUNC(ComposeQueryEx)(URI_CHAR * dest,
  * @see uriDissectQueryMallocExMmA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQueryMalloc)(URI_CHAR ** dest,
-		const URI_TYPE(QueryList) * queryList);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryMalloc)(URI_CHAR** dest,
+                                            const URI_TYPE(QueryList) *
+                                                queryList);
 
 /**
  * Converts a query list structure back to a query string.
@@ -956,7 +930,8 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMalloc)(URI_CHAR ** dest,
  * @param dest              <b>OUT</b>: Output destination
  * @param queryList         <b>IN</b>: Query list to convert
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryMallocA
@@ -967,11 +942,11 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMalloc)(URI_CHAR ** dest,
  * @see uriDissectQueryMallocExMmA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQueryMallocEx)(URI_CHAR ** dest,
-		const URI_TYPE(QueryList) * queryList,
-		UriBool spaceToPlus, UriBool normalizeBreaks);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryMallocEx)(URI_CHAR** dest,
+                                              const URI_TYPE(QueryList) *
+                                                  queryList,
+                                              UriBool spaceToPlus,
+                                              UriBool normalizeBreaks);
 
 /**
  * Converts a query list structure back to a query string.
@@ -981,8 +956,10 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMallocEx)(URI_CHAR ** dest,
  * @param dest              <b>OUT</b>: Output destination
  * @param queryList         <b>IN</b>: Query list to convert
  * @param spaceToPlus       <b>IN</b>: Whether to convert ' ' to '+' or not
- * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or not.
- * @param memory            <b>IN</b>: Memory manager to use, NULL for default libc
+ * @param normalizeBreaks   <b>IN</b>: Whether to convert CR and LF to CR-LF or
+ * not.
+ * @param memory            <b>IN</b>: Memory manager to use, NULL for default
+ * libc
  * @return                  Error code or 0 on success
  *
  * @see uriComposeQueryMallocA
@@ -993,12 +970,9 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMallocEx)(URI_CHAR ** dest,
  * @see uriDissectQueryMallocExMmA
  * @since 0.9.0
  */
-URI_PUBLIC int URI_FUNC(ComposeQueryMallocExMm)(URI_CHAR ** dest,
-		const URI_TYPE(QueryList) * queryList,
-		UriBool spaceToPlus, UriBool normalizeBreaks,
-		UriMemoryManager * memory);
-
-
+URI_PUBLIC int URI_FUNC(ComposeQueryMallocExMm)(
+    URI_CHAR** dest, const URI_TYPE(QueryList) * queryList, UriBool spaceToPlus,
+    UriBool normalizeBreaks, UriMemoryManager* memory);
 
 /**
  * Constructs a query list from the raw query string of a given URI.
@@ -1007,8 +981,10 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMallocExMm)(URI_CHAR ** dest,
  *
  * @param dest              <b>OUT</b>: Output destination
  * @param itemCount         <b>OUT</b>: Number of items found, can be NULL
- * @param first             <b>IN</b>: Pointer to first character <b>after</b> '?'
- * @param afterLast         <b>IN</b>: Pointer to character after the last one still in
+ * @param first             <b>IN</b>: Pointer to first character <b>after</b>
+ * '?'
+ * @param afterLast         <b>IN</b>: Pointer to character after the last one
+ * still in
  * @return                  Error code or 0 on success
  *
  * @see uriDissectQueryMallocExA
@@ -1018,10 +994,10 @@ URI_PUBLIC int URI_FUNC(ComposeQueryMallocExMm)(URI_CHAR ** dest,
  * @see uriFreeQueryListMmA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(DissectQueryMalloc)(URI_TYPE(QueryList) ** dest,
-		int * itemCount, const URI_CHAR * first, const URI_CHAR * afterLast);
-
-
+URI_PUBLIC int URI_FUNC(DissectQueryMalloc)(URI_TYPE(QueryList) * *dest,
+                                            int* itemCount,
+                                            const URI_CHAR* first,
+                                            const URI_CHAR* afterLast);
 
 /**
  * Constructs a query list from the raw query string of a given URI.
@@ -1029,8 +1005,10 @@ URI_PUBLIC int URI_FUNC(DissectQueryMalloc)(URI_TYPE(QueryList) ** dest,
  *
  * @param dest              <b>OUT</b>: Output destination
  * @param itemCount         <b>OUT</b>: Number of items found, can be NULL
- * @param first             <b>IN</b>: Pointer to first character <b>after</b> '?'
- * @param afterLast         <b>IN</b>: Pointer to character after the last one still in
+ * @param first             <b>IN</b>: Pointer to first character <b>after</b>
+ * '?'
+ * @param afterLast         <b>IN</b>: Pointer to character after the last one
+ * still in
  * @param plusToSpace       <b>IN</b>: Whether to convert '+' to ' ' or not
  * @param breakConversion   <b>IN</b>: Line break conversion mode
  * @return                  Error code or 0 on success
@@ -1041,22 +1019,24 @@ URI_PUBLIC int URI_FUNC(DissectQueryMalloc)(URI_TYPE(QueryList) ** dest,
  * @see uriFreeQueryListA
  * @since 0.7.0
  */
-URI_PUBLIC int URI_FUNC(DissectQueryMallocEx)(URI_TYPE(QueryList) ** dest,
-		int * itemCount, const URI_CHAR * first, const URI_CHAR * afterLast,
-		UriBool plusToSpace, UriBreakConversion breakConversion);
-
-
+URI_PUBLIC int URI_FUNC(DissectQueryMallocEx)(
+    URI_TYPE(QueryList) * *dest, int* itemCount, const URI_CHAR* first,
+    const URI_CHAR* afterLast, UriBool plusToSpace,
+    UriBreakConversion breakConversion);
 
 /**
  * Constructs a query list from the raw query string of a given URI.
  *
  * @param dest              <b>OUT</b>: Output destination
  * @param itemCount         <b>OUT</b>: Number of items found, can be NULL
- * @param first             <b>IN</b>: Pointer to first character <b>after</b> '?'
- * @param afterLast         <b>IN</b>: Pointer to character after the last one still in
+ * @param first             <b>IN</b>: Pointer to first character <b>after</b>
+ * '?'
+ * @param afterLast         <b>IN</b>: Pointer to character after the last one
+ * still in
  * @param plusToSpace       <b>IN</b>: Whether to convert '+' to ' ' or not
  * @param breakConversion   <b>IN</b>: Line break conversion mode
- * @param memory            <b>IN</b>: Memory manager to use, NULL for default libc
+ * @param memory            <b>IN</b>: Memory manager to use, NULL for default
+ * libc
  * @return                  Error code or 0 on success
  *
  * @see uriDissectQueryMallocA
@@ -1066,12 +1046,10 @@ URI_PUBLIC int URI_FUNC(DissectQueryMallocEx)(URI_TYPE(QueryList) ** dest,
  * @see uriFreeQueryListMmA
  * @since 0.9.0
  */
-URI_PUBLIC int URI_FUNC(DissectQueryMallocExMm)(URI_TYPE(QueryList) ** dest,
-		int * itemCount, const URI_CHAR * first, const URI_CHAR * afterLast,
-		UriBool plusToSpace, UriBreakConversion breakConversion,
-		UriMemoryManager * memory);
-
-
+URI_PUBLIC int URI_FUNC(DissectQueryMallocExMm)(
+    URI_TYPE(QueryList) * *dest, int* itemCount, const URI_CHAR* first,
+    const URI_CHAR* afterLast, UriBool plusToSpace,
+    UriBreakConversion breakConversion, UriMemoryManager* memory);
 
 /**
  * Frees all memory associated with the given query list.
@@ -1083,8 +1061,6 @@ URI_PUBLIC int URI_FUNC(DissectQueryMallocExMm)(URI_TYPE(QueryList) ** dest,
  * @since 0.7.0
  */
 URI_PUBLIC void URI_FUNC(FreeQueryList)(URI_TYPE(QueryList) * queryList);
-
-
 
 /**
  * Frees all memory associated with the given query list.
@@ -1098,9 +1074,7 @@ URI_PUBLIC void URI_FUNC(FreeQueryList)(URI_TYPE(QueryList) * queryList);
  * @since 0.9.0
  */
 URI_PUBLIC int URI_FUNC(FreeQueryListMm)(URI_TYPE(QueryList) * queryList,
-		UriMemoryManager * memory);
-
-
+                                         UriMemoryManager* memory);
 
 /**
  * Makes the %URI hold copies of strings so that it no longer depends
@@ -1117,8 +1091,6 @@ URI_PUBLIC int URI_FUNC(FreeQueryListMm)(URI_TYPE(QueryList) * queryList,
  */
 URI_PUBLIC int URI_FUNC(MakeOwner)(URI_TYPE(Uri) * uri);
 
-
-
 /**
  * Makes the %URI hold copies of strings so that it no longer depends
  * on the original %URI string.  If the %URI is already owner of copies,
@@ -1132,15 +1104,11 @@ URI_PUBLIC int URI_FUNC(MakeOwner)(URI_TYPE(Uri) * uri);
  * @since 0.9.4
  */
 URI_PUBLIC int URI_FUNC(MakeOwnerMm)(URI_TYPE(Uri) * uri,
-                                     UriMemoryManager * memory);
-
-
+                                     UriMemoryManager* memory);
 
 #ifdef __cplusplus
 }
 #endif
-
-
 
 #endif
 #endif

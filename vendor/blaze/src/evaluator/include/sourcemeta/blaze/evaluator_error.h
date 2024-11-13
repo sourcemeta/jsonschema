@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/evaluator_export.h>
 #endif
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>  // std::exception
+#include <string>     // std::string
+#include <utility>    // std::move
 
 namespace sourcemeta::blaze {
 
@@ -22,13 +22,13 @@ namespace sourcemeta::blaze {
 /// An error that represents a schema evaluation error event
 class SOURCEMETA_BLAZE_EVALUATOR_EXPORT EvaluationError
     : public std::exception {
-public:
+ public:
   EvaluationError(std::string message) : message_{std::move(message)} {}
-  [[nodiscard]] auto what() const noexcept -> const char * override {
+  [[nodiscard]] auto what() const noexcept -> const char* override {
     return this->message_.c_str();
   }
 
-private:
+ private:
   std::string message_;
 };
 
@@ -36,6 +36,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

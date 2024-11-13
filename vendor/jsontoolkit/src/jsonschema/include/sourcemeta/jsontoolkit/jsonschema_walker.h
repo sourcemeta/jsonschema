@@ -9,14 +9,14 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
-#include <cstdint>     // std::uint8_t
-#include <functional>  // std::function
-#include <map>         // std::map
-#include <optional>    // std::optional
-#include <set>         // std::set
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <vector>      // std::vector
+#include <cstdint>      // std::uint8_t
+#include <functional>   // std::function
+#include <map>          // std::map
+#include <optional>     // std::optional
+#include <set>          // std::set
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <vector>       // std::vector
 
 namespace sourcemeta::jsontoolkit {
 
@@ -146,10 +146,10 @@ struct SchemaIteratorEntry {
 /// }
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaIterator {
-private:
+ private:
   using internal = typename std::vector<SchemaIteratorEntry>;
 
-public:
+ public:
   using const_iterator = typename internal::const_iterator;
   SchemaIterator(
       const JSON &input, const SchemaWalker &walker,
@@ -160,7 +160,7 @@ public:
   auto cbegin() const -> const_iterator;
   auto cend() const -> const_iterator;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -213,10 +213,10 @@ private:
 /// }
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaIteratorFlat {
-private:
+ private:
   using internal = typename std::vector<SchemaIteratorEntry>;
 
-public:
+ public:
   using const_iterator = typename internal::const_iterator;
   SchemaIteratorFlat(
       const JSON &input, const SchemaWalker &walker,
@@ -227,7 +227,7 @@ public:
   auto cbegin() const -> const_iterator;
   auto cend() const -> const_iterator;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -309,10 +309,10 @@ auto SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT keyword_priority(
 /// }
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT SchemaKeywordIterator {
-private:
+ private:
   using internal = typename std::vector<SchemaIteratorEntry>;
 
-public:
+ public:
   using const_iterator = typename internal::const_iterator;
   SchemaKeywordIterator(
       const JSON &input, const SchemaWalker &walker,
@@ -323,7 +323,7 @@ public:
   auto cbegin() const -> const_iterator;
   auto cend() const -> const_iterator;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -336,6 +336,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

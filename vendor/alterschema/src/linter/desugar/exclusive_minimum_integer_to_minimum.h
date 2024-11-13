@@ -1,15 +1,14 @@
 class ExclusiveMinimumIntegerToMinimum final : public Rule {
-public:
+ public:
   ExclusiveMinimumIntegerToMinimum()
       : Rule("exclusive_minimum_integer_to_minimum",
              "Setting `exclusiveMinimum` when `type` is `integer` is syntax "
-             "sugar for `minimum`") {};
+             "sugar for `minimum`"){};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

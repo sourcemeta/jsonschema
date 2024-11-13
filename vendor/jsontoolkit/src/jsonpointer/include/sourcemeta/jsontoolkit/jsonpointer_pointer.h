@@ -3,22 +3,23 @@
 
 #include <sourcemeta/jsontoolkit/jsonpointer_token.h>
 
-#include <algorithm>        // std::copy, std::equal
-#include <cassert>          // assert
-#include <functional>       // std::reference_wrapper
-#include <initializer_list> // std::initializer_list
-#include <iterator>         // std::advance, std::back_inserter
-#include <sstream>          // std::basic_ostringstream
-#include <stdexcept>        // std::runtime_error
-#include <type_traits>      // std::enable_if_t, std::is_same_v
-#include <utility>          // std::move
-#include <vector>           // std::vector
+#include <algorithm>         // std::copy, std::equal
+#include <cassert>           // assert
+#include <functional>        // std::reference_wrapper
+#include <initializer_list>  // std::initializer_list
+#include <iterator>          // std::advance, std::back_inserter
+#include <sstream>           // std::basic_ostringstream
+#include <stdexcept>         // std::runtime_error
+#include <type_traits>       // std::enable_if_t, std::is_same_v
+#include <utility>           // std::move
+#include <vector>            // std::vector
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-template <typename PropertyT> class GenericPointer {
-public:
+template <typename PropertyT>
+class GenericPointer {
+ public:
   using Token = GenericToken<PropertyT>;
   using Value = typename Token::Value;
   using Container = std::vector<Token>;
@@ -170,7 +171,8 @@ public:
   /// assert(!pointer.empty());
   /// assert(token.is_property());
   /// ```
-  template <class... Args> auto emplace_back(Args &&...args) -> reference {
+  template <class... Args>
+  auto emplace_back(Args &&...args) -> reference {
     return this->data.emplace_back(args...);
   }
 
@@ -577,10 +579,10 @@ public:
     return this->data < other.data;
   }
 
-private:
+ private:
   Container data;
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

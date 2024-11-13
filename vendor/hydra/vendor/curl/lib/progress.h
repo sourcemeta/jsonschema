@@ -26,7 +26,6 @@
 
 #include "timeval.h"
 
-
 typedef enum {
   TIMER_NONE,
   TIMER_STARTOP,
@@ -58,8 +57,7 @@ void Curl_pgrsUpdate_nometer(struct Curl_easy *data);
 
 void Curl_pgrsResetTransferSizes(struct Curl_easy *data);
 struct curltime Curl_pgrsTime(struct Curl_easy *data, timerid timer);
-timediff_t Curl_pgrsLimitWaitTime(struct pgrs_dir *d,
-                                  curl_off_t speed_limit,
+timediff_t Curl_pgrsLimitWaitTime(struct pgrs_dir *d, curl_off_t speed_limit,
                                   struct curltime now);
 /**
  * Update progress timer with the elapsed time from its start to `timestamp`.
@@ -69,9 +67,9 @@ timediff_t Curl_pgrsLimitWaitTime(struct pgrs_dir *d,
 void Curl_pgrsTimeWas(struct Curl_easy *data, timerid timer,
                       struct curltime timestamp);
 
-#define PGRS_HIDE    (1<<4)
-#define PGRS_UL_SIZE_KNOWN (1<<5)
-#define PGRS_DL_SIZE_KNOWN (1<<6)
-#define PGRS_HEADERS_OUT (1<<7) /* set when the headers have been written */
+#define PGRS_HIDE (1 << 4)
+#define PGRS_UL_SIZE_KNOWN (1 << 5)
+#define PGRS_DL_SIZE_KNOWN (1 << 6)
+#define PGRS_HEADERS_OUT (1 << 7) /* set when the headers have been written */
 
 #endif /* HEADER_CURL_PROGRESS_H */

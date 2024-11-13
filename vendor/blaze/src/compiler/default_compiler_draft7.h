@@ -9,10 +9,9 @@ namespace internal {
 using namespace sourcemeta::blaze;
 
 // TODO: Don't generate `if` if neither `then` nor `else` is defined
-auto compiler_draft7_applicator_if(const Context &context,
-                                   const SchemaContext &schema_context,
-                                   const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_draft7_applicator_if(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   // `if`
   Template children{compile(context, schema_context, relative_dynamic_context,
                             sourcemeta::jsontoolkit::empty_pointer,
@@ -78,5 +77,5 @@ auto compiler_draft7_applicator_else(const Context &, const SchemaContext &,
   return {};
 }
 
-} // namespace internal
+}  // namespace internal
 #endif

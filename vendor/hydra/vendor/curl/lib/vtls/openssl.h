@@ -39,18 +39,18 @@
 /* Struct to hold a Curl OpenSSL instance */
 struct ossl_ctx {
   /* these ones requires specific SSL-types */
-  SSL_CTX* ssl_ctx;
-  SSL*     ssl;
-  X509*    server_cert;
+  SSL_CTX *ssl_ctx;
+  SSL *ssl;
+  X509 *server_cert;
   BIO_METHOD *bio_method;
-  CURLcode io_result;       /* result of last BIO cfilter operation */
+  CURLcode io_result; /* result of last BIO cfilter operation */
 #ifndef HAVE_KEYLOG_CALLBACK
   /* Set to true once a valid keylog entry has been created to avoid dupes.
      This is a bool and not a bitfield because it is passed by address. */
   bool keylog_done;
 #endif
-  BIT(x509_store_setup);            /* x509 store has been set up */
-  BIT(reused_session);              /* session-ID was reused for this */
+  BIT(x509_store_setup); /* x509 store has been set up */
+  BIT(reused_session);   /* session-ID was reused for this */
 };
 
 typedef CURLcode Curl_ossl_ctx_setup_cb(struct Curl_cfilter *cf,
@@ -59,10 +59,8 @@ typedef CURLcode Curl_ossl_ctx_setup_cb(struct Curl_cfilter *cf,
 
 typedef int Curl_ossl_new_session_cb(SSL *ssl, SSL_SESSION *ssl_sessionid);
 
-CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx,
-                            struct Curl_cfilter *cf,
-                            struct Curl_easy *data,
-                            struct ssl_peer *peer,
+CURLcode Curl_ossl_ctx_init(struct ossl_ctx *octx, struct Curl_cfilter *cf,
+                            struct Curl_easy *data, struct ssl_peer *peer,
                             int transport, /* TCP or QUIC */
                             const unsigned char *alpn, size_t alpn_len,
                             Curl_ossl_ctx_setup_cb *cb_setup,
@@ -82,18 +80,15 @@ extern const struct Curl_ssl Curl_ssl_openssl;
  * and configured.
  */
 CURLcode Curl_ssl_setup_x509_store(struct Curl_cfilter *cf,
-                                   struct Curl_easy *data,
-                                   SSL_CTX *ssl_ctx);
+                                   struct Curl_easy *data, SSL_CTX *ssl_ctx);
 
 CURLcode Curl_ossl_ctx_configure(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data,
-                                 SSL_CTX *ssl_ctx);
+                                 struct Curl_easy *data, SSL_CTX *ssl_ctx);
 
 /*
  * Add a new session to the cache. Takes ownership of the session.
  */
-CURLcode Curl_ossl_add_session(struct Curl_cfilter *cf,
-                               struct Curl_easy *data,
+CURLcode Curl_ossl_add_session(struct Curl_cfilter *cf, struct Curl_easy *data,
                                const struct ssl_peer *peer,
                                SSL_SESSION *ssl_sessionid);
 
@@ -103,8 +98,7 @@ CURLcode Curl_ossl_add_session(struct Curl_cfilter *cf,
  * informational purposes only!
  */
 CURLcode Curl_oss_check_peer_cert(struct Curl_cfilter *cf,
-                                  struct Curl_easy *data,
-                                  struct ossl_ctx *octx,
+                                  struct Curl_easy *data, struct ossl_ctx *octx,
                                   struct ssl_peer *peer);
 
 #endif /* USE_OPENSSL */

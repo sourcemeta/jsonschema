@@ -36,7 +36,7 @@ struct Curl_sockaddr_storage {
 #ifdef HAVE_STRUCT_SOCKADDR_STORAGE
     struct sockaddr_storage sa_stor;
 #else
-    char cbuf[256];   /* this should be big enough to fit a lot */
+    char cbuf[256]; /* this should be big enough to fit a lot */
 #endif
   } buffer;
 };

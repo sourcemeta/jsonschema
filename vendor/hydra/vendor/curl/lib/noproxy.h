@@ -32,8 +32,7 @@
 UNITTEST bool Curl_cidr4_match(const char *ipv4,    /* 1.2.3.4 address */
                                const char *network, /* 1.2.3.4 address */
                                unsigned int bits);
-UNITTEST bool Curl_cidr6_match(const char *ipv6,
-                               const char *network,
+UNITTEST bool Curl_cidr6_match(const char *ipv6, const char *network,
                                unsigned int bits);
 #endif
 

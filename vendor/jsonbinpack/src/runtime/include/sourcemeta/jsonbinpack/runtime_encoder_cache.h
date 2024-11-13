@@ -8,15 +8,15 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <functional> // std::reference_wrapper
-#include <map>        // std::map
-#include <optional>   // std::optional
-#include <utility>    // std::pair
+#include <functional>  // std::reference_wrapper
+#include <map>         // std::map
+#include <optional>    // std::optional
+#include <utility>     // std::pair
 
 namespace sourcemeta::jsonbinpack {
 
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT Cache {
-public:
+ public:
   enum class Type { Standalone, PrefixLengthVarintPlusOne };
   auto record(const sourcemeta::jsontoolkit::JSON::String &value,
               const std::uint64_t offset, const Type type) -> void;
@@ -28,7 +28,7 @@ public:
   auto remove_oldest() -> void;
 #endif
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -44,7 +44,7 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif
 #endif

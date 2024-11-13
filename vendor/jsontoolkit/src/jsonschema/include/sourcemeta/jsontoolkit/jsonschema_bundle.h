@@ -9,9 +9,9 @@
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
-#include <cstdint>  // std::uint8_t
-#include <optional> // std::optional, std::nullopt
-#include <string>   // std::string
+#include <cstdint>   // std::uint8_t
+#include <optional>  // std::optional, std::nullopt
+#include <string>    // std::string
 
 namespace sourcemeta::jsontoolkit {
 
@@ -145,6 +145,6 @@ auto bundle(const sourcemeta::jsontoolkit::JSON &schema,
             const std::optional<std::string> &default_dialect = std::nullopt)
     -> sourcemeta::jsontoolkit::JSON;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

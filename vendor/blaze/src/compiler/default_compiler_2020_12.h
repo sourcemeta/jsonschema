@@ -19,10 +19,9 @@ auto compiler_2020_12_applicator_prefixitems(
       !context.unevaluated_items_schemas.empty());
 }
 
-auto compiler_2020_12_applicator_items(const Context &context,
-                                       const SchemaContext &schema_context,
-                                       const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_2020_12_applicator_items(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   const auto cursor{(schema_context.schema.defines("prefixItems") &&
                      schema_context.schema.at("prefixItems").is_array())
                         ? schema_context.schema.at("prefixItems").size()
@@ -34,20 +33,18 @@ auto compiler_2020_12_applicator_items(const Context &context,
       !context.unevaluated_items_schemas.empty());
 }
 
-auto compiler_2020_12_applicator_contains(const Context &context,
-                                          const SchemaContext &schema_context,
-                                          const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_2020_12_applicator_contains(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   return compiler_2019_09_applicator_contains_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
       !context.unevaluated_items_schemas.empty());
 }
 
-auto compiler_2020_12_core_dynamicref(const Context &context,
-                                      const SchemaContext &schema_context,
-                                      const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_2020_12_core_dynamicref(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.references.contains(
@@ -76,5 +73,5 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
       std::string{reference.fragment().value()})};
 }
 
-} // namespace internal
+}  // namespace internal
 #endif

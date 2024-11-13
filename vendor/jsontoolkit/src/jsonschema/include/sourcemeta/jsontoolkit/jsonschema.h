@@ -13,9 +13,9 @@
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
-#include <map>      // std::map
-#include <optional> // std::optional
-#include <string>   // std::string
+#include <map>       // std::map
+#include <optional>  // std::optional
+#include <string>    // std::string
 
 /// @defgroup jsonschema JSON Schema
 /// @brief A set of JSON Schema utilities across draft versions.
@@ -293,8 +293,8 @@ auto vocabularies(const JSON &schema, const SchemaResolver &resolver,
 /// dialect and dialect URI.
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto vocabularies(const SchemaResolver &resolver,
-                  const std::string &base_dialect, const std::string &dialect)
-    -> std::map<std::string, bool>;
+                  const std::string &base_dialect,
+                  const std::string &dialect) -> std::map<std::string, bool>;
 
 /// @ingroup jsonschema
 ///
@@ -316,9 +316,9 @@ auto vocabularies(const SchemaResolver &resolver,
 /// std::cout << stream.str() << std::endl;
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
-auto schema_format_compare(const JSON::String &left, const JSON::String &right)
-    -> bool;
+auto schema_format_compare(const JSON::String &left,
+                           const JSON::String &right) -> bool;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

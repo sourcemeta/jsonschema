@@ -36,7 +36,7 @@ struct FormInfo {
   curl_off_t contentslength;
   char *contenttype;
   long flags;
-  char *buffer;      /* pointer to existing buffer used for file upload */
+  char *buffer; /* pointer to existing buffer used for file upload */
   size_t bufferlength;
   char *showfilename; /* The filename to show. If not set, the actual
                          filename will be used */
@@ -49,11 +49,9 @@ struct FormInfo {
   bool showfilename_alloc;
 };
 
-CURLcode Curl_getformdata(struct Curl_easy *data,
-                          curl_mimepart *,
+CURLcode Curl_getformdata(struct Curl_easy *data, curl_mimepart *,
                           struct curl_httppost *post,
                           curl_read_callback fread_func);
 #endif /* CURL_DISABLE_FORM_API */
-
 
 #endif /* HEADER_CURL_FORMDATA_H */

@@ -17,6 +17,6 @@ static constexpr CharT token_jsonl_whitespace_carriage_return{'\u000D'};
 template <typename CharT>
 static constexpr CharT token_jsonl_whitespace_space{'\u0020'};
 
-} // namespace sourcemeta::jsontoolkit::internal
+}  // namespace sourcemeta::jsontoolkit::internal
 
 #endif

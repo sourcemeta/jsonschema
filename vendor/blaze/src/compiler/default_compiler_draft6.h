@@ -3,17 +3,16 @@
 
 #include <sourcemeta/blaze/compiler.h>
 
-#include <algorithm> // std::all_of
+#include <algorithm>  // std::all_of
 
 #include "compile_helpers.h"
 
 namespace internal {
 using namespace sourcemeta::blaze;
 
-auto compiler_draft6_validation_type(const Context &context,
-                                     const SchemaContext &schema_context,
-                                     const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_draft6_validation_type(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   if (schema_context.schema.at(dynamic_context.keyword).is_string()) {
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).to_string()};
@@ -264,10 +263,9 @@ auto compiler_draft6_validation_type(const Context &context,
   return {};
 }
 
-auto compiler_draft6_validation_const(const Context &context,
-                                      const SchemaContext &schema_context,
-                                      const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_draft6_validation_const(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   return {make<AssertionEqual>(
       context, schema_context, dynamic_context,
       sourcemeta::jsontoolkit::JSON{
@@ -310,10 +308,9 @@ auto compiler_draft6_validation_exclusiveminimum(
           schema_context.schema.at(dynamic_context.keyword)})};
 }
 
-auto compiler_draft6_applicator_contains(const Context &context,
-                                         const SchemaContext &schema_context,
-                                         const DynamicContext &dynamic_context)
-    -> Template {
+auto compiler_draft6_applicator_contains(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context) -> Template {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
@@ -356,5 +353,5 @@ auto compiler_draft6_validation_propertynames(
                          std::move(children))};
 }
 
-} // namespace internal
+}  // namespace internal
 #endif

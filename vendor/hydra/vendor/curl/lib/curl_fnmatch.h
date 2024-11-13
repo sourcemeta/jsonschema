@@ -24,9 +24,9 @@
  *
  ***************************************************************************/
 
-#define CURL_FNMATCH_MATCH    0
-#define CURL_FNMATCH_NOMATCH  1
-#define CURL_FNMATCH_FAIL     2
+#define CURL_FNMATCH_MATCH 0
+#define CURL_FNMATCH_NOMATCH 1
+#define CURL_FNMATCH_FAIL 2
 
 /* default pattern matching function
  * =================================

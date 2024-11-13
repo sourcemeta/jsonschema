@@ -43,14 +43,12 @@ struct hyptransfer {
   struct hyp_io_ctx io_ctx;
 };
 
-size_t Curl_hyper_recv(void *userp, hyper_context *ctx,
-                       uint8_t *buf, size_t buflen);
-size_t Curl_hyper_send(void *userp, hyper_context *ctx,
-                       const uint8_t *buf, size_t buflen);
-CURLcode Curl_hyper_stream(struct Curl_easy *data,
-                           struct connectdata *conn,
-                           int *didwhat,
-                           int select_res);
+size_t Curl_hyper_recv(void *userp, hyper_context *ctx, uint8_t *buf,
+                       size_t buflen);
+size_t Curl_hyper_send(void *userp, hyper_context *ctx, const uint8_t *buf,
+                       size_t buflen);
+CURLcode Curl_hyper_stream(struct Curl_easy *data, struct connectdata *conn,
+                           int *didwhat, int select_res);
 
 CURLcode Curl_hyper_header(struct Curl_easy *data, hyper_headers *headers,
                            const char *line);

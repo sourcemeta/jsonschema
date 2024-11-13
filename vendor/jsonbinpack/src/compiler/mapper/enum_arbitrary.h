@@ -1,6 +1,6 @@
 // TODO: Unit test this mapping once we have container encodings
 class EnumArbitrary final : public sourcemeta::alterschema::Rule {
-public:
+ public:
   EnumArbitrary() : sourcemeta::alterschema::Rule{"enum_arbitrary", ""} {};
 
   [[nodiscard]] auto condition(

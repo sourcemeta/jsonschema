@@ -24,7 +24,6 @@
  *
  ***************************************************************************/
 #include "curl_setup.h"
-
 #include "nonblock.h" /* for curlx_nonblock(), formerly Curl_nonblock() */
 #include "sockaddr.h"
 
@@ -56,9 +55,9 @@ struct Curl_sockaddr_ex {
 
 /*
  * Parse interface option, and return the interface name and the host part.
-*/
-CURLcode Curl_parse_interface(const char *input,
-                              char **dev, char **iface, char **host);
+ */
+CURLcode Curl_parse_interface(const char *input, char **dev, char **iface,
+                              char **host);
 
 /*
  * Create a socket based on info from 'conn' and 'ai'.
@@ -68,10 +67,9 @@ CURLcode Curl_parse_interface(const char *input,
  *
  */
 CURLcode Curl_socket_open(struct Curl_easy *data,
-                            const struct Curl_addrinfo *ai,
-                            struct Curl_sockaddr_ex *addr,
-                            int transport,
-                            curl_socket_t *sockfd);
+                          const struct Curl_addrinfo *ai,
+                          struct Curl_sockaddr_ex *addr, int transport,
+                          curl_socket_t *sockfd);
 
 int Curl_socket_close(struct Curl_easy *data, struct connectdata *conn,
                       curl_socket_t sock);
@@ -96,8 +94,7 @@ void Curl_sndbuf_init(curl_socket_t sockfd);
  * set the transport used.
  */
 void Curl_sock_assign_addr(struct Curl_sockaddr_ex *dest,
-                           const struct Curl_addrinfo *ai,
-                           int transport);
+                           const struct Curl_addrinfo *ai, int transport);
 
 /**
  * Creates a cfilter that opens a TCP socket to the given address
@@ -106,11 +103,9 @@ void Curl_sock_assign_addr(struct Curl_sockaddr_ex *dest,
  * used in happy eyeballing. Once selected for use, its `_active()`
  * method needs to be called.
  */
-CURLcode Curl_cf_tcp_create(struct Curl_cfilter **pcf,
-                            struct Curl_easy *data,
+CURLcode Curl_cf_tcp_create(struct Curl_cfilter **pcf, struct Curl_easy *data,
                             struct connectdata *conn,
-                            const struct Curl_addrinfo *ai,
-                            int transport);
+                            const struct Curl_addrinfo *ai, int transport);
 
 /**
  * Creates a cfilter that opens a UDP socket to the given address
@@ -119,11 +114,9 @@ CURLcode Curl_cf_tcp_create(struct Curl_cfilter **pcf,
  * used in happy eyeballing. Once selected for use, its `_active()`
  * method needs to be called.
  */
-CURLcode Curl_cf_udp_create(struct Curl_cfilter **pcf,
-                            struct Curl_easy *data,
+CURLcode Curl_cf_udp_create(struct Curl_cfilter **pcf, struct Curl_easy *data,
                             struct connectdata *conn,
-                            const struct Curl_addrinfo *ai,
-                            int transport);
+                            const struct Curl_addrinfo *ai, int transport);
 
 /**
  * Creates a cfilter that opens a UNIX socket to the given address
@@ -132,26 +125,22 @@ CURLcode Curl_cf_udp_create(struct Curl_cfilter **pcf,
  * used in happy eyeballing. Once selected for use, its `_active()`
  * method needs to be called.
  */
-CURLcode Curl_cf_unix_create(struct Curl_cfilter **pcf,
-                             struct Curl_easy *data,
+CURLcode Curl_cf_unix_create(struct Curl_cfilter **pcf, struct Curl_easy *data,
                              struct connectdata *conn,
-                             const struct Curl_addrinfo *ai,
-                             int transport);
+                             const struct Curl_addrinfo *ai, int transport);
 
 /**
  * Creates a cfilter that keeps a listening socket.
  */
 CURLcode Curl_conn_tcp_listen_set(struct Curl_easy *data,
-                                  struct connectdata *conn,
-                                  int sockindex,
+                                  struct connectdata *conn, int sockindex,
                                   curl_socket_t *s);
 
 /**
  * Replace the listen socket with the accept()ed one.
  */
 CURLcode Curl_conn_tcp_accepted_set(struct Curl_easy *data,
-                                    struct connectdata *conn,
-                                    int sockindex,
+                                    struct connectdata *conn, int sockindex,
                                     curl_socket_t *s);
 
 /**
@@ -162,8 +151,7 @@ CURLcode Curl_conn_tcp_accepted_set(struct Curl_easy *data,
  * @param pip               pointer to get IP quadruple or NULL
  * Returns error if the filter is of invalid type.
  */
-CURLcode Curl_cf_socket_peek(struct Curl_cfilter *cf,
-                             struct Curl_easy *data,
+CURLcode Curl_cf_socket_peek(struct Curl_cfilter *cf, struct Curl_easy *data,
                              curl_socket_t *psock,
                              const struct Curl_sockaddr_ex **paddr,
                              struct ip_quadruple *pip);

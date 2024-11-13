@@ -5,14 +5,14 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <cstdint>       // std::uint8_t
-#include <optional>      // std::optional, std::nullopt
-#include <regex>         // std::regex
-#include <string>        // std::string
-#include <tuple>         // std::tuple
-#include <unordered_map> // std::unordered_map
-#include <utility>       // std::pair
-#include <vector>        // std::vector
+#include <cstdint>        // std::uint8_t
+#include <optional>       // std::optional, std::nullopt
+#include <regex>          // std::regex
+#include <string>         // std::string
+#include <tuple>          // std::tuple
+#include <unordered_map>  // std::unordered_map
+#include <utility>        // std::pair
+#include <vector>         // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -95,6 +95,6 @@ using ValueIndexPair = std::pair<std::size_t, std::size_t>;
 /// Represents a compiler step value that consists of a pointer
 using ValuePointer = sourcemeta::jsontoolkit::Pointer;
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

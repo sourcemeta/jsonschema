@@ -3,15 +3,16 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cassert> // assert
-#include <utility> // std::in_place_type
-#include <variant> // std::variant, std::holds_alternative, std::get
+#include <cassert>  // assert
+#include <utility>  // std::in_place_type
+#include <variant>  // std::variant, std::holds_alternative, std::get
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-template <typename PropertyT> class GenericToken {
-public:
+template <typename PropertyT>
+class GenericToken {
+ public:
   using Value = JSON;
   using Property = PropertyT;
   using Index = typename Value::Array::size_type;
@@ -236,10 +237,10 @@ public:
     return this->to_index() < other.to_index();
   }
 
-private:
+ private:
   std::variant<Property, Index> data;
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

@@ -2,11 +2,10 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_LOADER_V1_INTEGER_H_
 
 #include <sourcemeta/jsonbinpack/runtime.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cassert> // assert
-#include <cstdint> // std::uint64_t
+#include <cassert>  // assert
+#include <cstdint>  // std::uint64_t
 
 namespace sourcemeta::jsonbinpack::v1 {
 
@@ -65,6 +64,6 @@ auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(
       static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
-} // namespace sourcemeta::jsonbinpack::v1
+}  // namespace sourcemeta::jsonbinpack::v1
 
 #endif

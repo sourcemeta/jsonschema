@@ -1,8 +1,8 @@
 #ifndef SOURCEMETA_JSONBINPACK_NUMERIC_ZIGZAG_H_
 #define SOURCEMETA_JSONBINPACK_NUMERIC_ZIGZAG_H_
 
-#include <cmath>   // std::abs
-#include <cstdint> // std::uint64_t, std::int64_t
+#include <cmath>    // std::abs
+#include <cstdint>  // std::uint64_t, std::int64_t
 
 namespace sourcemeta::jsonbinpack {
 
@@ -26,6 +26,6 @@ constexpr auto zigzag_decode(const std::uint64_t value) noexcept
   return -(static_cast<std::int64_t>((value + 1) / 2));
 }
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

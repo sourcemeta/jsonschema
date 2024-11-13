@@ -7,19 +7,19 @@
 
 #include <sourcemeta/hydra/http.h>
 
-#include <chrono>      // std::chrono::system_clock::time_point
-#include <cstdint>     // std::uint8_t
-#include <memory>      // std::unique_ptr
-#include <optional>    // std::optional
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <chrono>       // std::chrono::system_clock::time_point
+#include <cstdint>      // std::uint8_t
+#include <memory>       // std::unique_ptr
+#include <optional>     // std::optional
+#include <string>       // std::string
+#include <string_view>  // std::string_view
 
 namespace sourcemeta::hydra::http {
 
 /// @ingroup httpserver
 /// This class encapsulates the incoming HTTP request
 class SOURCEMETA_HYDRA_HTTPSERVER_EXPORT ServerRequest {
-public:
+ public:
 // These constructors are considered private. Do not use them directly.
 #if !defined(DOXYGEN)
   ServerRequest(void *const handler);
@@ -276,12 +276,12 @@ public:
   /// ```
   auto parameter(const std::uint8_t index) const -> std::string;
 
-private:
+ private:
   // PIMPL idiom to hide uWebSockets
   struct Internal;
   std::unique_ptr<Internal> internal;
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

@@ -1,14 +1,14 @@
 class PropertiesImplicit final : public sourcemeta::alterschema::Rule {
-public:
+ public:
   PropertiesImplicit()
-      : Rule{"properties_implicit", "Every object has an implicit `properties` "
-                                    "that consists of the empty object"} {};
+      : Rule{"properties_implicit",
+             "Every object has an implicit `properties` "
+             "that consists of the empty object"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return ((vocabularies.contains(
                  "https://json-schema.org/draft/2020-12/vocab/validation") &&
              vocabularies.contains(

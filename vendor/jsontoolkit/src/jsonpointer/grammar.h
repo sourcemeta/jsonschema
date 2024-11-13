@@ -2,11 +2,16 @@
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_GRAMMAR_H_
 
 namespace sourcemeta::jsontoolkit::internal {
-template <typename CharT> static constexpr CharT token_pointer_slash{'\u002F'};
-template <typename CharT> static constexpr CharT token_pointer_tilde{'\u007E'};
-template <typename CharT> static constexpr CharT token_pointer_zero{'\u0030'};
-template <typename CharT> static constexpr CharT token_pointer_one{'\u0031'};
-template <typename CharT> static constexpr CharT token_pointer_quote{'\u0022'};
+template <typename CharT>
+static constexpr CharT token_pointer_slash{'\u002F'};
+template <typename CharT>
+static constexpr CharT token_pointer_tilde{'\u007E'};
+template <typename CharT>
+static constexpr CharT token_pointer_zero{'\u0030'};
+template <typename CharT>
+static constexpr CharT token_pointer_one{'\u0031'};
+template <typename CharT>
+static constexpr CharT token_pointer_quote{'\u0022'};
 template <typename CharT>
 static constexpr CharT token_pointer_escape_unicode{'\u0075'};
 template <typename CharT>
@@ -42,6 +47,6 @@ template <typename CharT>
 static constexpr CharT token_pointer_number_eight{'\u0038'};
 template <typename CharT>
 static constexpr CharT token_pointer_number_nine{'\u0039'};
-} // namespace sourcemeta::jsontoolkit::internal
+}  // namespace sourcemeta::jsontoolkit::internal
 
 #endif

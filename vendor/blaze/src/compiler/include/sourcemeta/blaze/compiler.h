@@ -7,21 +7,19 @@
 
 #include <sourcemeta/blaze/compiler_error.h>
 #include <sourcemeta/blaze/compiler_output.h>
-
 #include <sourcemeta/blaze/evaluator.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <cstdint>    // std::uint8_t
-#include <functional> // std::function
-#include <map>        // std::map
-#include <optional>   // std::optional, std::nullopt
-#include <set>        // std::set
-#include <string>     // std::string
-#include <vector>     // std::vector
+#include <cstdint>     // std::uint8_t
+#include <functional>  // std::function
+#include <map>         // std::map
+#include <optional>    // std::optional, std::nullopt
+#include <set>         // std::set
+#include <string>      // std::string
+#include <vector>      // std::vector
 
 /// @defgroup compiler Compiler
 /// @brief Compile a JSON Schema into a set of low-level instructions for fast
@@ -233,6 +231,6 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT template_format_compare(
     const sourcemeta::jsontoolkit::JSON::String &left,
     const sourcemeta::jsontoolkit::JSON::String &right) -> bool;
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

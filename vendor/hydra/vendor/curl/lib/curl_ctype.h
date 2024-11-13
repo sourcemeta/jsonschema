@@ -32,20 +32,19 @@
 
 #define ISLOWPRINT(x) (((x) >= 9) && ((x) <= 0x0d))
 
-#define ISPRINT(x)  (ISLOWPRINT(x) || (((x) >= ' ') && ((x) <= 0x7e)))
-#define ISGRAPH(x)  (ISLOWPRINT(x) || (((x) > ' ') && ((x) <= 0x7e)))
+#define ISPRINT(x) (ISLOWPRINT(x) || (((x) >= ' ') && ((x) <= 0x7e)))
+#define ISGRAPH(x) (ISLOWPRINT(x) || (((x) > ' ') && ((x) <= 0x7e)))
 #define ISCNTRL(x) (ISLOWCNTRL(x) || IS7F(x))
 #define ISALPHA(x) (ISLOWER(x) || ISUPPER(x))
 #define ISXDIGIT(x) (ISDIGIT(x) || ISLOWHEXALHA(x) || ISUPHEXALHA(x))
-#define ISALNUM(x)  (ISDIGIT(x) || ISLOWER(x) || ISUPPER(x))
-#define ISUPPER(x)  (((x) >= 'A') && ((x) <= 'Z'))
-#define ISLOWER(x)  (((x) >= 'a') && ((x) <= 'z'))
-#define ISDIGIT(x)  (((x) >= '0') && ((x) <= '9'))
-#define ISBLANK(x)  (((x) == ' ') || ((x) == '\t'))
-#define ISSPACE(x)  (ISBLANK(x) || (((x) >= 0xa) && ((x) <= 0x0d)))
-#define ISURLPUNTCS(x) (((x) == '-') || ((x) == '.') || ((x) == '_') || \
-                        ((x) == '~'))
+#define ISALNUM(x) (ISDIGIT(x) || ISLOWER(x) || ISUPPER(x))
+#define ISUPPER(x) (((x) >= 'A') && ((x) <= 'Z'))
+#define ISLOWER(x) (((x) >= 'a') && ((x) <= 'z'))
+#define ISDIGIT(x) (((x) >= '0') && ((x) <= '9'))
+#define ISBLANK(x) (((x) == ' ') || ((x) == '\t'))
+#define ISSPACE(x) (ISBLANK(x) || (((x) >= 0xa) && ((x) <= 0x0d)))
+#define ISURLPUNTCS(x) \
+  (((x) == '-') || ((x) == '.') || ((x) == '_') || ((x) == '~'))
 #define ISUNRESERVED(x) (ISALNUM(x) || ISURLPUNTCS(x))
-
 
 #endif /* HEADER_CURL_CTYPE_H */

@@ -1,6 +1,6 @@
 // TODO: Unit test this mapping once we have container encodings
 class Enum8Bit final : public sourcemeta::alterschema::Rule {
-public:
+ public:
   Enum8Bit() : sourcemeta::alterschema::Rule{"enum_8_bit", ""} {};
 
   [[nodiscard]] auto condition(

@@ -33,7 +33,6 @@
 
 /* map standard printf functions to curl implementations */
 #include "curl_printf.h"
-
 #include "strcase.h"
 /* "strcase.h" provides the strcasecompare protos */
 

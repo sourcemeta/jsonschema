@@ -2,13 +2,12 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_ENCODING_H_
 
 #include <sourcemeta/jsonbinpack/numeric.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cstdint> // std::int64_t, std::uint64_t
-#include <memory>  // std::shared_ptr
-#include <variant> // std::variant
-#include <vector>  // std::vector
+#include <cstdint>  // std::int64_t, std::uint64_t
+#include <memory>   // std::shared_ptr
+#include <variant>  // std::variant
+#include <vector>   // std::vector
 
 namespace sourcemeta::jsonbinpack {
 
@@ -452,7 +451,7 @@ static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_7 == 7);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_8 == 8);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_9 == 9);
 static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 == 10);
-} // namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX
+}  // namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX
 #endif
 
 /// @}
@@ -1041,6 +1040,6 @@ struct VARINT_TYPED_ARBITRARY_OBJECT {
 
 /// @}
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/http_export.h>
 #endif
 
-#include <chrono> // std::chrono::system_clock::time_point
-#include <string> // std::string
+#include <chrono>  // std::chrono::system_clock::time_point
+#include <string>  // std::string
 
 namespace sourcemeta::hydra::http {
 
@@ -69,6 +69,6 @@ auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string;
 SOURCEMETA_HYDRA_HTTP_EXPORT
 auto from_gmt(const std::string &time) -> std::chrono::system_clock::time_point;
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

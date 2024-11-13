@@ -7,14 +7,14 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cstdint> // std::uint8_t, std::uint16_t, std::uint64_t
-#include <istream> // std::basic_istream
+#include <cstdint>  // std::uint8_t, std::uint16_t, std::uint64_t
+#include <istream>  // std::basic_istream
 
 namespace sourcemeta::jsonbinpack {
 
 /// @ingroup runtime
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT InputStream {
-public:
+ public:
   using Stream = std::basic_istream<sourcemeta::jsontoolkit::JSON::Char,
                                     sourcemeta::jsontoolkit::JSON::CharTraits>;
   InputStream(Stream &input);
@@ -25,8 +25,8 @@ public:
   auto position() const noexcept -> std::uint64_t;
   auto seek(const std::uint64_t offset) -> void;
   // Seek backwards given a relative offset
-  auto rewind(const std::uint64_t relative_offset, const std::uint64_t position)
-      -> std::uint64_t;
+  auto rewind(const std::uint64_t relative_offset,
+              const std::uint64_t position) -> std::uint64_t;
   auto get_byte() -> std::uint8_t;
   // A "word" corresponds to two bytes
   // See https://stackoverflow.com/questions/28066462/how-many-bits-is-a-word
@@ -37,10 +37,10 @@ public:
   auto get_string_utf8(const std::uint64_t length)
       -> sourcemeta::jsontoolkit::JSON::String;
 
-private:
+ private:
   Stream &stream;
 };
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

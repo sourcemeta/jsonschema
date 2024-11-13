@@ -1,16 +1,16 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSON_STRINGIFY_H_
 #define SOURCEMETA_JSONTOOLKIT_JSON_STRINGIFY_H_
 
-#include "grammar.h"
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <algorithm> // std::transform, std::sort
-#include <iomanip>   // std::setprecision
-#include <ios>       // std::noshowpoint, std::fixed
-#include <iterator>  // std::next, std::cbegin, std::cend, std::back_inserter
-#include <ostream>   // std::basic_ostream
-#include <string>    // std::to_string
+#include <algorithm>  // std::transform, std::sort
+#include <iomanip>    // std::setprecision
+#include <ios>        // std::noshowpoint, std::fixed
+#include <iterator>   // std::next, std::cbegin, std::cend, std::back_inserter
+#include <ostream>    // std::basic_ostream
+#include <string>     // std::to_string
+
+#include "grammar.h"
 
 namespace sourcemeta::jsontoolkit::internal {
 template <typename CharT, typename Traits>
@@ -21,7 +21,7 @@ auto indent(std::basic_ostream<CharT, Traits> &stream,
     stream.put(internal::token_whitespace_space<CharT>);
   }
 }
-} // namespace sourcemeta::jsontoolkit::internal
+}  // namespace sourcemeta::jsontoolkit::internal
 
 namespace sourcemeta::jsontoolkit {
 
@@ -593,6 +593,6 @@ auto prettify(
   }
 }
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

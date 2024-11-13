@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -133,58 +133,57 @@ extern "C" {
  */
 typedef struct br_prng_class_ br_prng_class;
 struct br_prng_class_ {
-	/**
-	 * \brief Size (in bytes) of the context structure appropriate for
-	 * running this PRNG.
-	 */
-	size_t context_size;
+  /**
+   * \brief Size (in bytes) of the context structure appropriate for
+   * running this PRNG.
+   */
+  size_t context_size;
 
-	/**
-	 * \brief Initialisation method.
-	 *
-	 * The context to initialise is provided as a pointer to its
-	 * first field (the vtable pointer); this function sets that
-	 * first field to a pointer to the vtable.
-	 *
-	 * The extra parameters depend on the implementation; each
-	 * implementation defines what kind of extra parameters it
-	 * expects (if any).
-	 *
-	 * Requirements on the initial seed depend on the implemented
-	 * PRNG.
-	 *
-	 * \param ctx        PRNG context to initialise.
-	 * \param params     extra parameters for the PRNG.
-	 * \param seed       initial seed.
-	 * \param seed_len   initial seed length (in bytes).
-	 */
-	void (*init)(const br_prng_class **ctx, const void *params,
-		const void *seed, size_t seed_len);
+  /**
+   * \brief Initialisation method.
+   *
+   * The context to initialise is provided as a pointer to its
+   * first field (the vtable pointer); this function sets that
+   * first field to a pointer to the vtable.
+   *
+   * The extra parameters depend on the implementation; each
+   * implementation defines what kind of extra parameters it
+   * expects (if any).
+   *
+   * Requirements on the initial seed depend on the implemented
+   * PRNG.
+   *
+   * \param ctx        PRNG context to initialise.
+   * \param params     extra parameters for the PRNG.
+   * \param seed       initial seed.
+   * \param seed_len   initial seed length (in bytes).
+   */
+  void (*init)(const br_prng_class **ctx, const void *params, const void *seed,
+               size_t seed_len);
 
-	/**
-	 * \brief Random bytes generation.
-	 *
-	 * This method produces `len` pseudorandom bytes, in the `out`
-	 * buffer. The context is updated accordingly.
-	 *
-	 * \param ctx   PRNG context.
-	 * \param out   output buffer.
-	 * \param len   number of pseudorandom bytes to produce.
-	 */
-	void (*generate)(const br_prng_class **ctx, void *out, size_t len);
+  /**
+   * \brief Random bytes generation.
+   *
+   * This method produces `len` pseudorandom bytes, in the `out`
+   * buffer. The context is updated accordingly.
+   *
+   * \param ctx   PRNG context.
+   * \param out   output buffer.
+   * \param len   number of pseudorandom bytes to produce.
+   */
+  void (*generate)(const br_prng_class **ctx, void *out, size_t len);
 
-	/**
-	 * \brief Inject additional seed bytes.
-	 *
-	 * The provided seed bytes are added into the PRNG internal
-	 * entropy pool.
-	 *
-	 * \param ctx        PRNG context.
-	 * \param seed       additional seed.
-	 * \param seed_len   additional seed length (in bytes).
-	 */
-	void (*update)(const br_prng_class **ctx,
-		const void *seed, size_t seed_len);
+  /**
+   * \brief Inject additional seed bytes.
+   *
+   * The provided seed bytes are added into the PRNG internal
+   * entropy pool.
+   *
+   * \param ctx        PRNG context.
+   * \param seed       additional seed.
+   * \param seed_len   additional seed length (in bytes).
+   */
+  void (*update)(const br_prng_class **ctx, const void *seed, size_t seed_len);
 };
 
 /**
@@ -194,16 +193,16 @@ struct br_prng_class_ {
  * supports OOP.
  */
 typedef struct {
-	/**
-	 * \brief Pointer to the vtable.
-	 *
-	 * This field is set with the initialisation method/function.
-	 */
-	const br_prng_class *vtable;
+  /**
+   * \brief Pointer to the vtable.
+   *
+   * This field is set with the initialisation method/function.
+   */
+  const br_prng_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	unsigned char K[64];
-	unsigned char V[64];
-	const br_hash_class *digest_class;
+  unsigned char K[64];
+  unsigned char V[64];
+  const br_hash_class *digest_class;
 #endif
 } br_hmac_drbg_context;
 
@@ -235,7 +234,8 @@ extern const br_prng_class br_hmac_drbg_vtable;
  * \param seed_len       initial seed length (in bytes).
  */
 void br_hmac_drbg_init(br_hmac_drbg_context *ctx,
-	const br_hash_class *digest_class, const void *seed, size_t seed_len);
+                       const br_hash_class *digest_class, const void *seed,
+                       size_t seed_len);
 
 /**
  * \brief Random bytes generation with HMAC_DRBG.
@@ -263,8 +263,8 @@ void br_hmac_drbg_generate(br_hmac_drbg_context *ctx, void *out, size_t len);
  * \param seed       additional seed.
  * \param seed_len   additional seed length (in bytes).
  */
-void br_hmac_drbg_update(br_hmac_drbg_context *ctx,
-	const void *seed, size_t seed_len);
+void br_hmac_drbg_update(br_hmac_drbg_context *ctx, const void *seed,
+                         size_t seed_len);
 
 /**
  * \brief Get the hash function implementation used by a given instance of
@@ -276,10 +276,9 @@ void br_hmac_drbg_update(br_hmac_drbg_context *ctx,
  * \param ctx   HMAC_DRBG context.
  * \return  the hash function vtable.
  */
-static inline const br_hash_class *
-br_hmac_drbg_get_hash(const br_hmac_drbg_context *ctx)
-{
-	return ctx->digest_class;
+static inline const br_hash_class *br_hmac_drbg_get_hash(
+    const br_hmac_drbg_context *ctx) {
+  return ctx->digest_class;
 }
 
 /**
@@ -324,15 +323,15 @@ br_prng_seeder br_prng_seeder_system(const char **name);
  * supports OOP.
  */
 typedef struct {
-	/**
-	 * \brief Pointer to the vtable.
-	 *
-	 * This field is set with the initialisation method/function.
-	 */
-	const br_prng_class *vtable;
+  /**
+   * \brief Pointer to the vtable.
+   *
+   * This field is set with the initialisation method/function.
+   */
+  const br_prng_class *vtable;
 #ifndef BR_DOXYGEN_IGNORE
-	br_aes_gen_ctr_keys sk;
-	uint32_t cc;
+  br_aes_gen_ctr_keys sk;
+  uint32_t cc;
 #endif
 } br_aesctr_drbg_context;
 
@@ -360,7 +359,8 @@ extern const br_prng_class br_aesctr_drbg_vtable;
  * \param seed_len   initial seed length (in bytes).
  */
 void br_aesctr_drbg_init(br_aesctr_drbg_context *ctx,
-	const br_block_ctr_class *aesctr, const void *seed, size_t seed_len);
+                         const br_block_ctr_class *aesctr, const void *seed,
+                         size_t seed_len);
 
 /**
  * \brief Random bytes generation with AESCTR_DRBG.
@@ -372,8 +372,8 @@ void br_aesctr_drbg_init(br_aesctr_drbg_context *ctx,
  * \param out   output buffer.
  * \param len   number of pseudorandom bytes to produce.
  */
-void br_aesctr_drbg_generate(br_aesctr_drbg_context *ctx,
-	void *out, size_t len);
+void br_aesctr_drbg_generate(br_aesctr_drbg_context *ctx, void *out,
+                             size_t len);
 
 /**
  * \brief Inject additional seed bytes in AESCTR_DRBG.
@@ -387,8 +387,8 @@ void br_aesctr_drbg_generate(br_aesctr_drbg_context *ctx,
  * \param seed       additional seed.
  * \param seed_len   additional seed length (in bytes).
  */
-void br_aesctr_drbg_update(br_aesctr_drbg_context *ctx,
-	const void *seed, size_t seed_len);
+void br_aesctr_drbg_update(br_aesctr_drbg_context *ctx, const void *seed,
+                           size_t seed_len);
 
 #ifdef __cplusplus
 }

@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/http_export.h>
 #endif
 
-#include <filesystem> // std::filesystem
-#include <string>     // std::string
+#include <filesystem>  // std::filesystem
+#include <string>      // std::string
 
 namespace sourcemeta::hydra {
 
@@ -23,6 +23,6 @@ namespace sourcemeta::hydra {
 auto SOURCEMETA_HYDRA_HTTP_EXPORT
 mime_type(const std::filesystem::path &file_path) -> std::string;
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

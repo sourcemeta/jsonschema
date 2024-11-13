@@ -28,12 +28,11 @@
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_DIGEST_AUTH)
 
 /* this is for digest header input */
-CURLcode Curl_input_digest(struct Curl_easy *data,
-                           bool proxy, const char *header);
+CURLcode Curl_input_digest(struct Curl_easy *data, bool proxy,
+                           const char *header);
 
 /* this is for creating digest header output */
-CURLcode Curl_output_digest(struct Curl_easy *data,
-                            bool proxy,
+CURLcode Curl_output_digest(struct Curl_easy *data, bool proxy,
                             const unsigned char *request,
                             const unsigned char *uripath);
 

@@ -97,7 +97,7 @@ struct Curl_chunker {
   struct dynbuf trailer; /* for chunked-encoded trailer */
   unsigned char hexindex;
   char hexbuffer[CHUNK_MAXNUM_LEN + 1]; /* +1 for null-terminator */
-  BIT(ignore_body); /* never write response body data */
+  BIT(ignore_body);                     /* never write response body data */
 };
 
 /* The following functions are defined in http_chunks.c */

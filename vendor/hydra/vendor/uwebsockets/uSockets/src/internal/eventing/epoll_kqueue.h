@@ -22,8 +22,8 @@
 
 #ifdef LIBUS_USE_EPOLL
 #include <sys/epoll.h>
-#include <sys/timerfd.h>
 #include <sys/eventfd.h>
+#include <sys/timerfd.h>
 #define LIBUS_SOCKET_READABLE EPOLLIN
 #define LIBUS_SOCKET_WRITABLE EPOLLOUT
 #else
@@ -35,33 +35,34 @@
 #endif
 
 struct us_loop_t {
-    alignas(LIBUS_EXT_ALIGNMENT) struct us_internal_loop_data_t data;
+  alignas(LIBUS_EXT_ALIGNMENT) struct us_internal_loop_data_t data;
 
-    /* Number of non-fallthrough polls in the loop */
-    int num_polls;
+  /* Number of non-fallthrough polls in the loop */
+  int num_polls;
 
-    /* Number of ready polls this iteration */
-    int num_ready_polls;
+  /* Number of ready polls this iteration */
+  int num_ready_polls;
 
-    /* Current index in list of ready polls */
-    int current_ready_poll;
+  /* Current index in list of ready polls */
+  int current_ready_poll;
 
-    /* Loop's own file descriptor */
-    int fd;
+  /* Loop's own file descriptor */
+  int fd;
 
-    /* The list of ready polls */
+  /* The list of ready polls */
 #ifdef LIBUS_USE_EPOLL
-    struct epoll_event ready_polls[1024];
+  struct epoll_event ready_polls[1024];
 #else
-    struct kevent ready_polls[1024];
+  struct kevent ready_polls[1024];
 #endif
 };
 
 struct us_poll_t {
-    alignas(LIBUS_EXT_ALIGNMENT) struct {
-        signed int fd : 28; // we could have this unsigned if we wanted to, -1 should never be used
-        unsigned int poll_type : 4;
-    } state;
+  alignas(LIBUS_EXT_ALIGNMENT) struct {
+    signed int fd : 28;  // we could have this unsigned if we wanted to, -1
+                         // should never be used
+    unsigned int poll_type : 4;
+  } state;
 };
 
-#endif // EPOLL_KQUEUE_H
+#endif  // EPOLL_KQUEUE_H

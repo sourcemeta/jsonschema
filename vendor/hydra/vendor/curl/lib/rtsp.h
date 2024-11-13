@@ -35,7 +35,7 @@ CURLcode Curl_rtsp_parseheader(struct Curl_easy *data, const char *header);
 
 #else
 /* disabled */
-#define Curl_rtsp_parseheader(x,y) CURLE_NOT_BUILT_IN
+#define Curl_rtsp_parseheader(x, y) CURLE_NOT_BUILT_IN
 
 #endif /* CURL_DISABLE_RTSP */
 
@@ -65,6 +65,5 @@ struct RTSP {
   long CSeq_sent; /* CSeq of this request */
   long CSeq_recv; /* CSeq received */
 };
-
 
 #endif /* HEADER_CURL_RTSP_H */

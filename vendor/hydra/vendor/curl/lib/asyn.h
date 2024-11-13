@@ -24,8 +24,8 @@
  *
  ***************************************************************************/
 
-#include "curl_setup.h"
 #include "curl_addrinfo.h"
+#include "curl_setup.h"
 
 struct addrinfo;
 struct hostent;
@@ -81,8 +81,7 @@ void Curl_resolver_cleanup(void *resolver);
  * pointer. Returning anything else than CURLE_OK causes failed
  * curl_easy_duphandle() call.
  */
-CURLcode Curl_resolver_duphandle(struct Curl_easy *easy, void **to,
-                                 void *from);
+CURLcode Curl_resolver_duphandle(struct Curl_easy *easy, void **to, void *from);
 
 /*
  * Curl_resolver_cancel().
@@ -156,18 +155,17 @@ CURLcode Curl_resolver_wait_resolv(struct Curl_easy *data,
  * correct format to comply with this.
  */
 struct Curl_addrinfo *Curl_resolver_getaddrinfo(struct Curl_easy *data,
-                                                const char *hostname,
-                                                int port,
+                                                const char *hostname, int port,
                                                 int *waitp);
 
 #ifndef CURLRES_ASYNCH
 /* convert these functions if an asynch resolver is not used */
 #define Curl_resolver_cancel(x) Curl_nop_stmt
 #define Curl_resolver_kill(x) Curl_nop_stmt
-#define Curl_resolver_is_resolved(x,y) CURLE_COULDNT_RESOLVE_HOST
-#define Curl_resolver_wait_resolv(x,y) CURLE_COULDNT_RESOLVE_HOST
-#define Curl_resolver_duphandle(x,y,z) CURLE_OK
-#define Curl_resolver_init(x,y) CURLE_OK
+#define Curl_resolver_is_resolved(x, y) CURLE_COULDNT_RESOLVE_HOST
+#define Curl_resolver_wait_resolv(x, y) CURLE_COULDNT_RESOLVE_HOST
+#define Curl_resolver_duphandle(x, y, z) CURLE_OK
+#define Curl_resolver_init(x, y) CURLE_OK
 #define Curl_resolver_global_init() CURLE_OK
 #define Curl_resolver_global_cleanup() Curl_nop_stmt
 #define Curl_resolver_cleanup(x) Curl_nop_stmt
@@ -178,7 +176,6 @@ struct Curl_addrinfo *Curl_resolver_getaddrinfo(struct Curl_easy *data,
 #else
 #define Curl_resolver_asynch() 0
 #endif
-
 
 /********** end of generic resolver interface functions *****************/
 #endif /* HEADER_CURL_ASYN_H */

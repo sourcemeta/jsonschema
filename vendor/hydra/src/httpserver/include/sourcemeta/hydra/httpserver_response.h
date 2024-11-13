@@ -8,11 +8,11 @@
 #include <sourcemeta/hydra/http.h>
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <chrono>      // std::chrono::system_clock::time_point
-#include <map>         // std::map
-#include <memory>      // std::unique_ptr
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <chrono>       // std::chrono::system_clock::time_point
+#include <map>          // std::map
+#include <memory>       // std::unique_ptr
+#include <string>       // std::string
+#include <string_view>  // std::string_view
 
 namespace sourcemeta::hydra::http {
 
@@ -23,7 +23,7 @@ enum class ServerContentEncoding { Identity, GZIP };
 /// @ingroup httpserver
 /// This class encapsulates the HTTP response the server responds with
 class SOURCEMETA_HYDRA_HTTPSERVER_EXPORT ServerResponse {
-public:
+ public:
 // These constructors are considered private. Do not use them directly.
 #if !defined(DOXYGEN)
   ServerResponse(void *const handler);
@@ -285,7 +285,7 @@ public:
   /// incorrectly result in a `Content-Length` of `0`.
   auto end() -> void;
 
-private:
+ private:
   Status code{Status::OK};
   std::map<std::string, std::string> headers;
   ServerContentEncoding content_encoding = ServerContentEncoding::Identity;
@@ -294,6 +294,6 @@ private:
   std::unique_ptr<Internal> internal;
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

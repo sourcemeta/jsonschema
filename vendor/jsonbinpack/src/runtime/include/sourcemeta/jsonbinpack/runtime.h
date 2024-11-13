@@ -14,14 +14,13 @@
 #include <sourcemeta/jsonbinpack/runtime_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
-
 #include <sourcemeta/jsonbinpack/runtime_decoder.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
 #include <sourcemeta/jsonbinpack/runtime_encoding.h>
+#include <sourcemeta/jsontoolkit/json.h>
 
-#include <exception> // std::exception
-#include <utility>   // std::move
+#include <exception>  // std::exception
+#include <utility>    // std::move
 
 namespace sourcemeta::jsonbinpack {
 
@@ -40,7 +39,7 @@ auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding;
 /// This class represents an encoding error
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT EncodingError
     : public std::exception {
-public:
+ public:
   EncodingError(sourcemeta::jsontoolkit::JSON::String message)
       : message_{std::move(message)} {}
 
@@ -48,7 +47,7 @@ public:
     return this->message_.c_str();
   }
 
-private:
+ private:
   const sourcemeta::jsontoolkit::JSON::String message_;
 };
 
@@ -56,6 +55,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

@@ -1,15 +1,14 @@
 class MinimumRealForInteger final : public Rule {
-public:
+ public:
   MinimumRealForInteger()
       : Rule{"minimum_real_for_integer",
              "If an instance is guaranteed to be an integer, setting a real "
              "number lower bound is the same as a ceil of that lower bound"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

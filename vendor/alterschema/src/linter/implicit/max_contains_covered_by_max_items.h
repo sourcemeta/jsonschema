@@ -1,16 +1,15 @@
 class MaxContainsCoveredByMaxItems final : public Rule {
-public:
+ public:
   MaxContainsCoveredByMaxItems()
       : Rule{"max_contains_covered_by_max_items",
              "Setting the `maxContains` keyword to a number greater than or "
              "equal to the array upper bound does not add any further "
              "constraint"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

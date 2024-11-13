@@ -137,7 +137,6 @@
 /* Define if you have the `socket' function. */
 #define HAVE_SOCKET
 
-
 /* The following define is needed on OS400 to enable strcmpi(), stricmp() and
    strdup(). */
 #define __cplusplus__strings__
@@ -164,7 +163,7 @@
 #define HAVE_STRTOK_R
 
 /* Define if you have the `strtoll' function. */
-#undef HAVE_STRTOLL             /* Allows ASCII compile on V5R1. */
+#undef HAVE_STRTOLL /* Allows ASCII compile on V5R1. */
 
 /* Define if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H
@@ -206,22 +205,22 @@
 #undef PACKAGE
 
 /* The size of `int', as computed by sizeof. */
-#define SIZEOF_INT              4
+#define SIZEOF_INT 4
 
 /* Define if the compiler supports the 'long long' data type. */
 #define HAVE_LONGLONG
 
 /* The size of a `long long', as computed by sizeof. */
-#define SIZEOF_LONG_LONG        8
+#define SIZEOF_LONG_LONG 8
 
 /* The size of `long', as computed by sizeof. */
-#define SIZEOF_LONG             4
+#define SIZEOF_LONG 4
 
 /* The size of `size_t', as computed by sizeof. */
-#define SIZEOF_SIZE_T           4
+#define SIZEOF_SIZE_T 4
 
 /* The size of `curl_off_t', as computed by sizeof. */
-#define SIZEOF_CURL_OFF_T       8
+#define SIZEOF_CURL_OFF_T 8
 
 /* Define this if you have struct sockaddr_storage */
 #define HAVE_STRUCT_SOCKADDR_STORAGE
@@ -246,7 +245,7 @@
 #undef const
 
 /* type to use in place of in_addr_t if not defined */
-#define in_addr_t       unsigned long
+#define in_addr_t unsigned long
 
 /* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
@@ -264,7 +263,7 @@
 #define CURL_EXTERN_SYMBOL
 
 /* Define if you have the ldap_url_parse procedure. */
-/* #define HAVE_LDAP_URL_PARSE */    /* Disabled because of an IBM bug. */
+/* #define HAVE_LDAP_URL_PARSE */ /* Disabled because of an IBM bug. */
 
 /* Define if you have the recv function. */
 #define HAVE_RECV
@@ -273,7 +272,7 @@
 #define RECV_TYPE_ARG1 int
 
 /* Define to the type of arg 2 for recv. */
-#define RECV_TYPE_ARG2 char *
+#define RECV_TYPE_ARG2 char*
 
 /* Define to the type of arg 3 for recv. */
 #define RECV_TYPE_ARG3 int
@@ -294,7 +293,7 @@
 #define SEND_QUAL_ARG2
 
 /* Define to the type of arg 2 for send. */
-#define SEND_TYPE_ARG2 char *
+#define SEND_TYPE_ARG2 char*
 
 /* Define to the type of arg 3 for send. */
 #define SEND_TYPE_ARG3 int
@@ -312,7 +311,7 @@
 #define USE_UNIX_SOCKETS
 
 /* Use the system keyring as the default CA bundle. */
-#define CURL_CA_BUNDLE  "/QIBM/UserData/ICSS/Cert/Server/DEFAULT.KDB"
+#define CURL_CA_BUNDLE "/QIBM/UserData/ICSS/Cert/Server/DEFAULT.KDB"
 
 /* ---------------------------------------------------------------- */
 /*                       ADDITIONAL DEFINITIONS                     */
@@ -320,9 +319,9 @@
 
 /* The following must be defined BEFORE system header files inclusion. */
 
-#define __ptr128                       /* No teraspace. */
-#define qadrt_use_fputc_inline         /* Generate fputc() wrapper inline. */
-#define qadrt_use_fread_inline         /* Generate fread() wrapper inline. */
-#define qadrt_use_fwrite_inline        /* Generate fwrite() wrapper inline. */
+#define __ptr128                /* No teraspace. */
+#define qadrt_use_fputc_inline  /* Generate fputc() wrapper inline. */
+#define qadrt_use_fread_inline  /* Generate fread() wrapper inline. */
+#define qadrt_use_fwrite_inline /* Generate fwrite() wrapper inline. */
 
 #endif /* HEADER_CURL_CONFIG_OS400_H */

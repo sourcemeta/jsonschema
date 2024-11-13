@@ -24,8 +24,9 @@
  *
  ***************************************************************************/
 
-#include "curl_setup.h"
 #include <stddef.h>
+
+#include "curl_setup.h"
 
 typedef void (*Curl_llist_dtor)(void *user, void *elem);
 
@@ -38,7 +39,7 @@ struct Curl_llist {
   Curl_llist_dtor _dtor;
   size_t _size;
 #ifdef DEBUGBUILD
-  int _init;      /* detect API usage mistakes */
+  int _init; /* detect API usage mistakes */
 #endif
 };
 
@@ -48,15 +49,15 @@ struct Curl_llist_node {
   struct Curl_llist_node *_prev;
   struct Curl_llist_node *_next;
 #ifdef DEBUGBUILD
-  int _init;      /* detect API usage mistakes */
+  int _init; /* detect API usage mistakes */
 #endif
 };
 
 void Curl_llist_init(struct Curl_llist *, Curl_llist_dtor);
 void Curl_llist_insert_next(struct Curl_llist *, struct Curl_llist_node *,
                             const void *, struct Curl_llist_node *node);
-void Curl_llist_append(struct Curl_llist *,
-                       const void *, struct Curl_llist_node *node);
+void Curl_llist_append(struct Curl_llist *, const void *,
+                       struct Curl_llist_node *node);
 void Curl_node_uremove(struct Curl_llist_node *, void *);
 void Curl_node_remove(struct Curl_llist_node *);
 void Curl_llist_destroy(struct Curl_llist *, void *);

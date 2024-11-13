@@ -43,12 +43,12 @@
  * SSH unique setup
  ***************************************************************************/
 typedef enum {
-  SSH_NO_STATE = -1,  /* Used for "nextState" so say there is none */
-  SSH_STOP = 0,       /* do nothing state, stops the state machine */
+  SSH_NO_STATE = -1, /* Used for "nextState" so say there is none */
+  SSH_STOP = 0,      /* do nothing state, stops the state machine */
 
-  SSH_INIT,           /* First state in SSH-CONNECT */
-  SSH_S_STARTUP,      /* Session startup */
-  SSH_HOSTKEY,        /* verify hostkey */
+  SSH_INIT,      /* First state in SSH-CONNECT */
+  SSH_S_STARTUP, /* Session startup */
+  SSH_HOSTKEY,   /* verify hostkey */
   SSH_AUTHLIST,
   SSH_AUTH_PKEY_INIT,
   SSH_AUTH_PKEY,
@@ -64,9 +64,9 @@ typedef enum {
   SSH_AUTH_GSSAPI,
   SSH_AUTH_DONE,
   SSH_SFTP_INIT,
-  SSH_SFTP_REALPATH,   /* Last state in SSH-CONNECT */
+  SSH_SFTP_REALPATH, /* Last state in SSH-CONNECT */
 
-  SSH_SFTP_QUOTE_INIT, /* First state in SFTP-DO */
+  SSH_SFTP_QUOTE_INIT,     /* First state in SFTP-DO */
   SSH_SFTP_POSTQUOTE_INIT, /* (Possibly) First state in SFTP-DONE */
   SSH_SFTP_QUOTE,
   SSH_SFTP_NEXT_QUOTE,
@@ -92,9 +92,9 @@ typedef enum {
   SSH_SFTP_READDIR_DONE,
   SSH_SFTP_DOWNLOAD_INIT,
   SSH_SFTP_DOWNLOAD_STAT, /* Last state in SFTP-DO */
-  SSH_SFTP_CLOSE,    /* Last state in SFTP-DONE */
-  SSH_SFTP_SHUTDOWN, /* First state in SFTP-DISCONNECT */
-  SSH_SCP_TRANS_INIT, /* First state in SCP-DO */
+  SSH_SFTP_CLOSE,         /* Last state in SFTP-DONE */
+  SSH_SFTP_SHUTDOWN,      /* First state in SFTP-DISCONNECT */
+  SSH_SCP_TRANS_INIT,     /* First state in SCP-DO */
   SSH_SCP_UPLOAD_INIT,
   SSH_SCP_DOWNLOAD_INIT,
   SSH_SCP_DOWNLOAD,
@@ -106,7 +106,7 @@ typedef enum {
   SSH_SESSION_DISCONNECT, /* First state in SCP-DISCONNECT */
   SSH_SESSION_FREE,       /* Last state in SCP/SFTP-DISCONNECT */
   SSH_QUIT,
-  SSH_LAST  /* never used */
+  SSH_LAST /* never used */
 } sshstate;
 
 /* this struct is used in the HandleData struct which is part of the
@@ -114,7 +114,7 @@ typedef enum {
    Everything that is strictly related to a connection is banned from this
    struct. */
 struct SSHPROTO {
-  char *path;                  /* the path we operate on */
+  char *path; /* the path we operate on */
 #ifdef USE_LIBSSH2
   struct dynbuf readdir_link;
   struct dynbuf readdir;
@@ -131,37 +131,37 @@ struct SSHPROTO {
 /* ssh_conn is used for struct connection-oriented data in the connectdata
    struct */
 struct ssh_conn {
-  const char *authlist;       /* List of auth. methods, managed by libssh2 */
+  const char *authlist; /* List of auth. methods, managed by libssh2 */
 
   /* common */
-  const char *passphrase;     /* pass-phrase to use */
-  char *rsa_pub;              /* strdup'ed public key file */
-  char *rsa;                  /* strdup'ed private key file */
-  bool authed;                /* the connection has been authenticated fine */
-  bool acceptfail;            /* used by the SFTP_QUOTE (continue if
-                                 quote command fails) */
-  sshstate state;             /* always use ssh.c:state() to change state! */
-  sshstate nextstate;         /* the state to goto after stopping */
-  CURLcode actualcode;        /* the actual error code */
+  const char *passphrase; /* pass-phrase to use */
+  char *rsa_pub;          /* strdup'ed public key file */
+  char *rsa;              /* strdup'ed private key file */
+  bool authed;            /* the connection has been authenticated fine */
+  bool acceptfail;        /* used by the SFTP_QUOTE (continue if
+                             quote command fails) */
+  sshstate state;         /* always use ssh.c:state() to change state! */
+  sshstate nextstate;     /* the state to goto after stopping */
+  CURLcode actualcode;    /* the actual error code */
   struct curl_slist *quote_item; /* for the quote option */
-  char *quote_path1;          /* two generic pointers for the QUOTE stuff */
+  char *quote_path1;             /* two generic pointers for the QUOTE stuff */
   char *quote_path2;
 
-  char *homedir;              /* when doing SFTP we figure out home dir in the
-                                 connect phase */
+  char *homedir; /* when doing SFTP we figure out home dir in the
+                    connect phase */
   /* end of READDIR stuff */
 
-  int secondCreateDirs;         /* counter use by the code to see if the
-                                   second attempt has been made to change
-                                   to/create a directory */
-  int orig_waitfor;             /* default READ/WRITE bits wait for */
-  char *slash_pos;              /* used by the SFTP_CREATE_DIRS state */
+  int secondCreateDirs; /* counter use by the code to see if the
+                           second attempt has been made to change
+                           to/create a directory */
+  int orig_waitfor;     /* default READ/WRITE bits wait for */
+  char *slash_pos;      /* used by the SFTP_CREATE_DIRS state */
 
 #if defined(USE_LIBSSH)
   char *readdir_linkPath;
   size_t readdir_len;
   struct dynbuf readdir_buf;
-/* our variables */
+  /* our variables */
   unsigned kbd_state; /* 0 or 1 */
   ssh_key privkey;
   ssh_key pubkey;
@@ -172,11 +172,11 @@ struct ssh_conn {
   sftp_file sftp_file;
   sftp_dir sftp_dir;
 
-  unsigned sftp_recv_state; /* 0 or 1 */
-  int sftp_file_index; /* for async read */
-  sftp_attributes readdir_attrs; /* used by the SFTP readdir actions */
+  unsigned sftp_recv_state;           /* 0 or 1 */
+  int sftp_file_index;                /* for async read */
+  sftp_attributes readdir_attrs;      /* used by the SFTP readdir actions */
   sftp_attributes readdir_link_attrs; /* used by the SFTP readdir actions */
-  sftp_attributes quote_attrs; /* used by the SFTP_QUOTE state */
+  sftp_attributes quote_attrs;        /* used by the SFTP_QUOTE state */
 
   const char *readdir_filename; /* points within readdir_attrs */
   const char *readdir_longentry;
@@ -194,9 +194,8 @@ struct ssh_conn {
 #endif
 
 #ifdef HAVE_LIBSSH2_AGENT_API
-  LIBSSH2_AGENT *ssh_agent;     /* proxy to ssh-agent/pageant */
-  struct libssh2_agent_publickey *sshagent_identity,
-                                 *sshagent_prev_identity;
+  LIBSSH2_AGENT *ssh_agent; /* proxy to ssh-agent/pageant */
+  struct libssh2_agent_publickey *sshagent_identity, *sshagent_prev_identity;
 #endif
 
   /* note that HAVE_LIBSSH2_KNOWNHOST_API is a define set in the libssh2.h
@@ -219,7 +218,7 @@ struct ssh_conn {
    non-configure platforms */
 
 #if !defined(LIBSSH2_VERSION_NUM) || (LIBSSH2_VERSION_NUM < 0x001000)
-#  error "SCP/SFTP protocols require libssh2 0.16 or later"
+#error "SCP/SFTP protocols require libssh2 0.16 or later"
 #endif
 
 #if LIBSSH2_VERSION_NUM >= 0x010000
@@ -263,12 +262,11 @@ extern const struct Curl_handler Curl_handler_sftp;
 CURLcode Curl_ssh_init(void);
 void Curl_ssh_cleanup(void);
 void Curl_ssh_version(char *buffer, size_t buflen);
-void Curl_ssh_attach(struct Curl_easy *data,
-                     struct connectdata *conn);
+void Curl_ssh_attach(struct Curl_easy *data, struct connectdata *conn);
 #else
 /* for non-SSH builds */
 #define Curl_ssh_cleanup()
-#define Curl_ssh_attach(x,y)
+#define Curl_ssh_attach(x, y)
 #define Curl_ssh_init() 0
 #endif
 

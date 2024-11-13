@@ -28,15 +28,10 @@
 
 #include "curl_ctype.h"
 
-enum urlreject {
-  REJECT_NADA = 2,
-  REJECT_CTRL,
-  REJECT_ZERO
-};
+enum urlreject { REJECT_NADA = 2, REJECT_CTRL, REJECT_ZERO };
 
-CURLcode Curl_urldecode(const char *string, size_t length,
-                        char **ostring, size_t *olen,
-                        enum urlreject ctrl);
+CURLcode Curl_urldecode(const char *string, size_t length, char **ostring,
+                        size_t *olen, enum urlreject ctrl);
 
 void Curl_hexencode(const unsigned char *src, size_t len, /* input length */
                     unsigned char *out, size_t olen); /* output buffer size */

@@ -3,23 +3,24 @@
 
 #include <sourcemeta/hydra/bucket_error.h>
 
-#include <cassert>       // assert
-#include <cstdint>       // std::uint64_t
-#include <iterator>      // std::prev
-#include <list>          // std::list
-#include <optional>      // std::optional
-#include <string>        // std::string
-#include <tuple>         // std::tuple
-#include <unordered_map> // std::unordered_map
-#include <utility>       // std::move
+#include <cassert>        // assert
+#include <cstdint>        // std::uint64_t
+#include <iterator>       // std::prev
+#include <list>           // std::list
+#include <optional>       // std::optional
+#include <string>         // std::string
+#include <tuple>          // std::tuple
+#include <unordered_map>  // std::unordered_map
+#include <utility>        // std::move
 
 namespace sourcemeta::hydra {
 
 // This entire class is considered to be private and should not be directly used
 // by consumers of this project
 #if !defined(DOXYGEN)
-template <typename Value> class BucketCache {
-public:
+template <typename Value>
+class BucketCache {
+ public:
   // No logical size limit means no cache
   BucketCache() : logical_size_limit{0} {}
   BucketCache(const std::uint64_t limit) : logical_size_limit{limit} {}
@@ -70,7 +71,7 @@ public:
     return std::get<2>(this->index.at(this->queue.front()));
   }
 
-private:
+ private:
   auto remove_entry(const std::string &key) -> void {
     assert(!this->queue.empty());
     assert(this->queue.size() == this->index.size());
@@ -97,6 +98,6 @@ private:
 };
 #endif
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

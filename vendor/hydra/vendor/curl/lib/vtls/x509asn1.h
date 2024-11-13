@@ -27,9 +27,8 @@
 
 #include "curl_setup.h"
 
-#if defined(USE_GNUTLS) || defined(USE_WOLFSSL) || \
-  defined(USE_SCHANNEL) || defined(USE_SECTRANSP) || \
-  defined(USE_MBEDTLS)
+#if defined(USE_GNUTLS) || defined(USE_WOLFSSL) || defined(USE_SCHANNEL) || \
+    defined(USE_SECTRANSP) || defined(USE_MBEDTLS)
 
 #include "cfilters.h"
 #include "urldata.h"
@@ -40,12 +39,12 @@
 
 /* ASN.1 parsed element. */
 struct Curl_asn1Element {
-  const char *header;         /* Pointer to header byte. */
-  const char *beg;            /* Pointer to element data. */
-  const char *end;            /* Pointer to 1st byte after element. */
-  unsigned char class;        /* ASN.1 element class. */
-  unsigned char tag;          /* ASN.1 element tag. */
-  bool          constructed;  /* Element is constructed. */
+  const char *header;  /* Pointer to header byte. */
+  const char *beg;     /* Pointer to element data. */
+  const char *end;     /* Pointer to 1st byte after element. */
+  unsigned char class; /* ASN.1 element class. */
+  unsigned char tag;   /* ASN.1 element tag. */
+  bool constructed;    /* Element is constructed. */
 };
 
 /* X509 certificate: RFC 5280. */
@@ -71,8 +70,8 @@ struct Curl_X509certificate {
  * Prototypes.
  */
 
-int Curl_parseX509(struct Curl_X509certificate *cert,
-                   const char *beg, const char *end);
+int Curl_parseX509(struct Curl_X509certificate *cert, const char *beg,
+                   const char *end);
 CURLcode Curl_extract_certinfo(struct Curl_easy *data, int certnum,
                                const char *beg, const char *end);
 CURLcode Curl_verifyhost(struct Curl_cfilter *cf, struct Curl_easy *data,
@@ -80,11 +79,11 @@ CURLcode Curl_verifyhost(struct Curl_cfilter *cf, struct Curl_easy *data,
 
 #ifdef UNITTESTS
 #if defined(USE_GNUTLS) || defined(USE_SCHANNEL) || defined(USE_SECTRANSP) || \
-  defined(USE_MBEDTLS)
+    defined(USE_MBEDTLS)
 
 /* used by unit1656.c */
-CURLcode Curl_x509_GTime2str(struct dynbuf *store,
-                             const char *beg, const char *end);
+CURLcode Curl_x509_GTime2str(struct dynbuf *store, const char *beg,
+                             const char *end);
 #endif
 #endif
 

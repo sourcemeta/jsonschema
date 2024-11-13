@@ -1,5 +1,5 @@
 class DuplicateAllOfBranches final : public Rule {
-public:
+ public:
   DuplicateAllOfBranches()
       : Rule{"duplicate_allof_branches",
              "Setting duplicate subschemas in `allOf` is redundant, as it "
@@ -7,11 +7,10 @@ public:
              "unnecessary additional validation that is guaranteed to not "
              "affect the validation result"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/applicator",

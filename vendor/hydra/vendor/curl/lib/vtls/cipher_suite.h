@@ -26,8 +26,8 @@
 
 #include "curl_setup.h"
 
-#if defined(USE_SECTRANSP) || defined(USE_MBEDTLS) || \
-    defined(USE_BEARSSL) || defined(USE_RUSTLS)
+#if defined(USE_SECTRANSP) || defined(USE_MBEDTLS) || defined(USE_BEARSSL) || \
+    defined(USE_RUSTLS)
 #include <stdint.h>
 
 /* Lookup IANA id for cipher suite string, returns 0 if not recognized */

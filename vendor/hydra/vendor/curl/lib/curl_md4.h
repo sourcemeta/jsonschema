@@ -24,8 +24,9 @@
  *
  ***************************************************************************/
 
-#include "curl_setup.h"
 #include <curl/curl.h>
+
+#include "curl_setup.h"
 
 #if defined(USE_CURL_NTLM_CORE)
 

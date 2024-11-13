@@ -1,15 +1,16 @@
 #ifndef SOURCEMETA_JSONBINPACK_NUMERIC_INTEGRAL_H_
 #define SOURCEMETA_JSONBINPACK_NUMERIC_INTEGRAL_H_
 
-#include <cassert> // assert
-#include <cmath>   // std::abs
-#include <cstdint> // std::uint8_t, std::int64_t, std::uint64_t
-#include <limits>  // std::numeric_limits
+#include <cassert>  // assert
+#include <cmath>    // std::abs
+#include <cstdint>  // std::uint8_t, std::int64_t, std::uint64_t
+#include <limits>   // std::numeric_limits
 
 namespace sourcemeta::jsonbinpack {
 
 /// @ingroup numeric
-template <typename T> constexpr auto is_byte(const T value) noexcept -> bool {
+template <typename T>
+constexpr auto is_byte(const T value) noexcept -> bool {
   return value <= std::numeric_limits<std::uint8_t>::max();
 }
 
@@ -24,7 +25,8 @@ constexpr auto count_multiples(const std::int64_t minimum,
 }
 
 /// @ingroup numeric
-template <unsigned int T> constexpr auto uint_max = (2 << (T - 1)) - 1;
+template <unsigned int T>
+constexpr auto uint_max = (2 << (T - 1)) - 1;
 
 /// @ingroup numeric
 template <typename T>
@@ -104,11 +106,10 @@ constexpr auto divide_floor(const std::int64_t dividend,
 }
 
 /// @ingroup numeric
-constexpr auto closest_smallest_exponent(const std::uint64_t value,
-                                         const std::uint8_t base,
-                                         const std::uint8_t exponent_start,
-                                         const std::uint8_t exponent_end)
-    -> std::uint8_t {
+constexpr auto closest_smallest_exponent(
+    const std::uint64_t value, const std::uint8_t base,
+    const std::uint8_t exponent_start,
+    const std::uint8_t exponent_end) -> std::uint8_t {
   assert(exponent_start <= exponent_end);
   std::uint64_t result{base};
   for (std::uint8_t exponent = 1; exponent < exponent_end; exponent++) {
@@ -125,6 +126,6 @@ constexpr auto closest_smallest_exponent(const std::uint64_t value,
   return exponent_end;
 }
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

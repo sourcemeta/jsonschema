@@ -28,8 +28,8 @@
 
 #ifdef USE_QUICHE
 
-#include <quiche.h>
 #include <openssl/ssl.h>
+#include <quiche.h>
 
 struct Curl_cfilter;
 struct Curl_easy;
@@ -37,13 +37,11 @@ struct Curl_easy;
 void Curl_quiche_ver(char *p, size_t len);
 
 CURLcode Curl_cf_quiche_create(struct Curl_cfilter **pcf,
-                               struct Curl_easy *data,
-                               struct connectdata *conn,
+                               struct Curl_easy *data, struct connectdata *conn,
                                const struct Curl_addrinfo *ai);
 
 bool Curl_conn_is_quiche(const struct Curl_easy *data,
-                         const struct connectdata *conn,
-                         int sockindex);
+                         const struct connectdata *conn, int sockindex);
 
 #endif
 

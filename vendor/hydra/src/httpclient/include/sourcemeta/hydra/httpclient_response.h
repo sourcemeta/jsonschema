@@ -7,19 +7,19 @@
 
 #include <sourcemeta/hydra/http.h>
 
-#include <chrono>   // std::chrono::system_clock::time_point
-#include <map>      // std::map
-#include <optional> // std::optional
-#include <sstream>  // std::ostringstream, std::istringstream
-#include <string>   // std::string
-#include <vector>   // std::vector
+#include <chrono>    // std::chrono::system_clock::time_point
+#include <map>       // std::map
+#include <optional>  // std::optional
+#include <sstream>   // std::ostringstream, std::istringstream
+#include <string>    // std::string
+#include <vector>    // std::vector
 
 namespace sourcemeta::hydra::http {
 
 /// @ingroup httpclient
 /// This class represents a non-streaming HTTP response.
 class SOURCEMETA_HYDRA_HTTPCLIENT_EXPORT ClientResponse {
-public:
+ public:
   // We don't want to document this internal constructor
 #if !defined(DOXYGEN)
   ClientResponse(const Status status,
@@ -164,7 +164,7 @@ public:
   /// ```
   auto body() -> std::istringstream &;
 
-private:
+ private:
   Status status_;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -179,6 +179,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

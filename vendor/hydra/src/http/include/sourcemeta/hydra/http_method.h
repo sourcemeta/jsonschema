@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/http_export.h>
 #endif
 
-#include <ostream>     // std::ostream
-#include <string_view> // std::string_view
+#include <ostream>      // std::ostream
+#include <string_view>  // std::string_view
 
 namespace sourcemeta::hydra::http {
 
@@ -36,9 +36,8 @@ enum class Method {
 /// output << sourcemeta::hydra::http::Method::GET;
 /// assert(output.str() == "GET");
 /// ```
-auto SOURCEMETA_HYDRA_HTTP_EXPORT operator<<(std::ostream &stream,
-                                             const Method method)
-    -> std::ostream &;
+auto SOURCEMETA_HYDRA_HTTP_EXPORT
+operator<<(std::ostream &stream, const Method method) -> std::ostream &;
 
 /// @ingroup http
 /// Construct a HTTP method from a string. Note that casing is not supported.
@@ -54,6 +53,6 @@ auto SOURCEMETA_HYDRA_HTTP_EXPORT operator<<(std::ostream &stream,
 /// ```
 auto SOURCEMETA_HYDRA_HTTP_EXPORT to_method(std::string_view method) -> Method;
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

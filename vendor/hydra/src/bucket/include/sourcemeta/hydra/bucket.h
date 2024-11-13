@@ -19,14 +19,13 @@
 #include <sourcemeta/hydra/bucket_cache_policy.h>
 #include <sourcemeta/hydra/bucket_error.h>
 #include <sourcemeta/hydra/bucket_response.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cstdint>    // std::uint64_t
-#include <functional> // std::function
-#include <future>     // std::future
-#include <optional>   // std::optional
-#include <string>     // std::string
+#include <cstdint>     // std::uint64_t
+#include <functional>  // std::function
+#include <future>      // std::future
+#include <optional>    // std::optional
+#include <string>      // std::string
 
 namespace sourcemeta::hydra {
 
@@ -36,7 +35,7 @@ namespace sourcemeta::hydra {
 /// concurrent context, make use of `std::mutex` or similar techniques to
 /// control access to it.
 class SOURCEMETA_HYDRA_BUCKET_EXPORT Bucket {
-public:
+ public:
   /// Create an instance of this class. This class supports automatically
   /// caching responses in an LRU fashion based on a byte-size limit. If you set
   /// the cache byte limit to 0, then caching is effectively disabled.
@@ -173,7 +172,7 @@ public:
                        std::function<sourcemeta::jsontoolkit::JSON()> callback)
       -> std::future<ResponseJSON>;
 
-private:
+ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
@@ -188,6 +187,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

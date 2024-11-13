@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2018 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -94,14 +94,14 @@ extern "C" {
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	union {
-		br_hmac_context hmac_ctx;
-		br_hmac_key_context prk_ctx;
-	} u;
-	unsigned char buf[64];
-	size_t ptr;
-	size_t dig_len;
-	unsigned chunk_num;
+  union {
+    br_hmac_context hmac_ctx;
+    br_hmac_key_context prk_ctx;
+  } u;
+  unsigned char buf[64];
+  size_t ptr;
+  size_t dig_len;
+  unsigned chunk_num;
 #endif
 } br_hkdf_context;
 
@@ -124,12 +124,12 @@ typedef struct {
  * \param salt_len        HKDF-Extract salt length (in bytes).
  */
 void br_hkdf_init(br_hkdf_context *hc, const br_hash_class *digest_vtable,
-	const void *salt, size_t salt_len);
+                  const void *salt, size_t salt_len);
 
 /**
  * \brief The special "absent salt" value for HKDF.
  */
-#define BR_HKDF_NO_SALT   (&br_hkdf_no_salt)
+#define BR_HKDF_NO_SALT (&br_hkdf_no_salt)
 
 #ifndef BR_DOXYGEN_IGNORE
 extern const unsigned char br_hkdf_no_salt;
@@ -175,8 +175,8 @@ void br_hkdf_flip(br_hkdf_context *hc);
  * \param out_len    the length of the requested output (in bytes).
  * \return  the produced output length (in bytes).
  */
-size_t br_hkdf_produce(br_hkdf_context *hc,
-	const void *info, size_t info_len, void *out, size_t out_len);
+size_t br_hkdf_produce(br_hkdf_context *hc, const void *info, size_t info_len,
+                       void *out, size_t out_len);
 
 #ifdef __cplusplus
 }

@@ -1,16 +1,15 @@
 class DependentRequiredTautology final : public Rule {
-public:
+ public:
   DependentRequiredTautology()
       : Rule{"dependent_required_tautology",
              "Defining requirements for a property using `dependentRequired` "
              "that is already marked as required is an unnecessarily complex "
              "use of `dependentRequired`"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

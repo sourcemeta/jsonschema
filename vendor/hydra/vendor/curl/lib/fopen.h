@@ -24,7 +24,7 @@
  *
  ***************************************************************************/
 
-CURLcode Curl_fopen(struct Curl_easy *data, const char *filename,
-                    FILE **fh, char **tempname);
+CURLcode Curl_fopen(struct Curl_easy *data, const char *filename, FILE **fh,
+                    char **tempname);
 
 #endif

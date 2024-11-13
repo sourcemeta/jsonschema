@@ -82,6 +82,6 @@ enum class LinterCategory {
 SOURCEMETA_ALTERSCHEMA_LINTER_EXPORT
 auto add(Bundle &bundle, const LinterCategory category) -> void;
 
-} // namespace sourcemeta::alterschema
+}  // namespace sourcemeta::alterschema
 
 #endif

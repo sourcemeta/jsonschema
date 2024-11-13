@@ -55,7 +55,7 @@ struct smb_conn {
 extern const struct Curl_handler Curl_handler_smb;
 extern const struct Curl_handler Curl_handler_smbs;
 
-#endif /* CURL_DISABLE_SMB && USE_CURL_NTLM_CORE &&
+#endif /* CURL_DISABLE_SMB && USE_CURL_NTLM_CORE && \
           SIZEOF_CURL_OFF_T > 4 */
 
 #endif /* HEADER_CURL_SMB_H */

@@ -8,7 +8,7 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonl_iterator.h>
 
-#include <istream> // std::basic_istream
+#include <istream>  // std::basic_istream
 
 /// @defgroup jsonl JSONL
 /// @brief A JSON Lines implementation with iterators support.
@@ -23,7 +23,7 @@ namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonl
 class SOURCEMETA_JSONTOOLKIT_JSONL_EXPORT JSONL {
-public:
+ public:
   /// Parse a JSONL document from a C++ standard input stream using a standard
   /// read-only C++ forward iterator interface. For example, you can parse a
   /// JSONL document and prettify each of its rows as follows:
@@ -53,10 +53,10 @@ public:
   auto cbegin() -> const_iterator;
   auto cend() -> const_iterator;
 
-private:
+ private:
   std::basic_istream<JSON::Char, JSON::CharTraits> &data;
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

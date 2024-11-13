@@ -6,25 +6,24 @@
 #endif
 
 #include <sourcemeta/blaze/evaluator_template.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 
-#include <cassert>    // assert
-#include <cstdint>    // std::uint8_t
-#include <functional> // std::reference_wrapper
-#include <map>        // std::map
-#include <optional>   // std::optional
-#include <set>        // std::set
-#include <string>     // std::string
-#include <vector>     // std::vector
+#include <cassert>     // assert
+#include <cstdint>     // std::uint8_t
+#include <functional>  // std::reference_wrapper
+#include <map>         // std::map
+#include <optional>    // std::optional
+#include <set>         // std::set
+#include <string>      // std::string
+#include <vector>      // std::vector
 
 namespace sourcemeta::blaze {
 
 /// @ingroup evaluator
 /// Represents a stateful schema evaluation context
 class SOURCEMETA_BLAZE_EVALUATOR_EXPORT EvaluationContext {
-public:
+ public:
   /// Prepare the schema evaluation context with a given instance.
   /// Performing evaluation on a context without preparing it with
   /// an instance is undefined behavior.
@@ -51,25 +50,26 @@ public:
             std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>
                 &&new_instance) -> void;
   auto pop(const bool dynamic, const bool track) -> void;
-  auto
-  enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property,
-        const bool track) -> void;
+  auto enter(
+      const sourcemeta::jsontoolkit::WeakPointer::Token::Property &property,
+      const bool track) -> void;
   auto enter(const sourcemeta::jsontoolkit::WeakPointer::Token::Index &index,
              const bool track) -> void;
   auto leave(const bool track) -> void;
   auto push_without_traverse(
       const sourcemeta::jsontoolkit::Pointer &relative_schema_location,
       const sourcemeta::jsontoolkit::Pointer &relative_instance_location,
-      const std::size_t &schema_resource, const bool dynamic, const bool track)
-      -> void;
+      const std::size_t &schema_resource, const bool dynamic,
+      const bool track) -> void;
 
   ///////////////////////////////////////////////
   // Target resolution
   ///////////////////////////////////////////////
 
   auto resolve_target() -> const sourcemeta::jsontoolkit::JSON &;
-  auto resolve_string_target() -> std::optional<
-      std::reference_wrapper<const sourcemeta::jsontoolkit::JSON::String>>;
+  auto resolve_string_target()
+      -> std::optional<
+          std::reference_wrapper<const sourcemeta::jsontoolkit::JSON::String>>;
 
   ///////////////////////////////////////////////
   // References and anchors
@@ -86,12 +86,10 @@ public:
   auto evaluate(const sourcemeta::jsontoolkit::WeakPointer::Token::Index from,
                 const sourcemeta::jsontoolkit::WeakPointer::Token::Index to)
       -> void;
-  auto
-  evaluate(const sourcemeta::jsontoolkit::Pointer &relative_instance_location)
-      -> void;
-  auto
-  is_evaluated(const sourcemeta::jsontoolkit::WeakPointer::Token &tail) const
-      -> bool;
+  auto evaluate(const sourcemeta::jsontoolkit::Pointer
+                    &relative_instance_location) -> void;
+  auto is_evaluated(
+      const sourcemeta::jsontoolkit::WeakPointer::Token &tail) const -> bool;
   auto unevaluate() -> void;
 
   // TODO: Remove this
@@ -132,6 +130,6 @@ public:
 #endif
 };
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

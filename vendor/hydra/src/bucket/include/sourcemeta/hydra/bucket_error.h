@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/bucket_export.h>
 #endif
 
-#include <exception> // std::exception
-#include <string>    // std::string
+#include <exception>  // std::exception
+#include <string>     // std::string
 
 namespace sourcemeta::hydra {
 
@@ -20,16 +20,16 @@ namespace sourcemeta::hydra {
 /// @ingroup bucket
 /// This class represents a general Bucket error.
 class SOURCEMETA_HYDRA_BUCKET_EXPORT BucketError : public std::exception {
-public:
+ public:
   // We don't want to document this internal constructor
 #if !defined(DOXYGEN)
   BucketError(std::string message);
 #endif
 
   /// Get the error message
-  [[nodiscard]] auto what() const noexcept -> const char * override;
+  [[nodiscard]] auto what() const noexcept -> const char* override;
 
-private:
+ private:
   std::string message_;
 };
 
@@ -37,6 +37,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

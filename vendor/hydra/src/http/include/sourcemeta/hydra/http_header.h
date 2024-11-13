@@ -5,10 +5,10 @@
 #include <sourcemeta/hydra/http_export.h>
 #endif
 
-#include <chrono>  // std::chrono::system_clock::time_point
-#include <string>  // std::string
-#include <utility> // std::pair
-#include <vector>  // std::vector
+#include <chrono>   // std::chrono::system_clock::time_point
+#include <string>   // std::string
+#include <utility>  // std::pair
+#include <vector>   // std::vector
 
 namespace sourcemeta::hydra::http {
 
@@ -46,6 +46,6 @@ using HeaderListElement = std::pair<std::string, float>;
 auto SOURCEMETA_HYDRA_HTTP_EXPORT header_list(const std::string &value)
     -> std::vector<HeaderListElement>;
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

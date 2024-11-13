@@ -25,7 +25,6 @@
  ***************************************************************************/
 
 #include "curl_setup.h"
-
 #include "pingpong.h"
 
 #ifndef CURL_DISABLE_FTP
@@ -60,26 +59,26 @@ enum {
   FTP_RETR_PREQUOTE,
   FTP_STOR_PREQUOTE,
   FTP_POSTQUOTE,
-  FTP_CWD,  /* change dir */
-  FTP_MKD,  /* if the dir did not exist */
-  FTP_MDTM, /* to figure out the datestamp */
-  FTP_TYPE, /* to set type when doing a head-like request */
+  FTP_CWD,       /* change dir */
+  FTP_MKD,       /* if the dir did not exist */
+  FTP_MDTM,      /* to figure out the datestamp */
+  FTP_TYPE,      /* to set type when doing a head-like request */
   FTP_LIST_TYPE, /* set type when about to do a dir list */
   FTP_RETR_TYPE, /* set type when about to RETR a file */
   FTP_STOR_TYPE, /* set type when about to STOR a file */
-  FTP_SIZE, /* get the remote file's size for head-like request */
+  FTP_SIZE,      /* get the remote file's size for head-like request */
   FTP_RETR_SIZE, /* get the remote file's size for RETR */
   FTP_STOR_SIZE, /* get the size for STOR */
-  FTP_REST, /* when used to check if the server supports it in head-like */
+  FTP_REST,      /* when used to check if the server supports it in head-like */
   FTP_RETR_REST, /* when asking for "resume" in for RETR */
-  FTP_PORT, /* generic state for PORT, LPRT and EPRT, check count1 */
-  FTP_PRET, /* generic state for PRET RETR, PRET STOR and PRET LIST/NLST */
-  FTP_PASV, /* generic state for PASV and EPSV, check count1 */
-  FTP_LIST, /* generic state for LIST, NLST or a custom list command */
+  FTP_PORT,      /* generic state for PORT, LPRT and EPRT, check count1 */
+  FTP_PRET,      /* generic state for PRET RETR, PRET STOR and PRET LIST/NLST */
+  FTP_PASV,      /* generic state for PASV and EPSV, check count1 */
+  FTP_LIST,      /* generic state for LIST, NLST or a custom list command */
   FTP_RETR,
   FTP_STOR, /* generic state for STOR and APPE */
   FTP_QUIT,
-  FTP_LAST  /* never used */
+  FTP_LAST /* never used */
 };
 typedef unsigned char ftpstate; /* use the enum values */
 
@@ -95,10 +94,10 @@ struct ftp_wc {
 };
 
 typedef enum {
-  FTPFILE_MULTICWD  = 1, /* as defined by RFC1738 */
-  FTPFILE_NOCWD     = 2, /* use SIZE / RETR / STOR on the full path */
-  FTPFILE_SINGLECWD = 3  /* make one CWD, then SIZE / RETR / STOR on the
-                            file */
+  FTPFILE_MULTICWD = 1, /* as defined by RFC1738 */
+  FTPFILE_NOCWD = 2,    /* use SIZE / RETR / STOR on the full path */
+  FTPFILE_SINGLECWD = 3 /* make one CWD, then SIZE / RETR / STOR on the
+                           file */
 } curl_ftpfile;
 
 /* This FTP struct is used in the Curl_easy. All FTP data that is
@@ -106,7 +105,7 @@ typedef enum {
    perhaps the Curl_easy is changed between the times the connection is
    used. */
 struct FTP {
-  char *path;    /* points to the urlpieces struct field */
+  char *path;      /* points to the urlpieces struct field */
   char *pathalloc; /* if non-NULL a pointer to an allocated path */
 
   /* transfer a file/body or not, done as a typedefed enum just to make
@@ -115,7 +114,6 @@ struct FTP {
   curl_off_t downloadsize;
 };
 
-
 /* ftp_conn is used for struct connection-oriented data in the connectdata
    struct */
 struct ftp_conn {
@@ -123,45 +121,45 @@ struct ftp_conn {
   char *account;
   char *alternative_to_user;
   char *entrypath; /* the PWD reply when we logged on */
-  char *file;    /* url-decoded filename (or path) */
-  char **dirs;   /* realloc()ed array for path components */
+  char *file;      /* url-decoded filename (or path) */
+  char **dirs;     /* realloc()ed array for path components */
   char *newhost;
-  char *prevpath;   /* url-decoded conn->path from the previous transfer */
+  char *prevpath;    /* url-decoded conn->path from the previous transfer */
   char transfertype; /* set by ftp_transfertype for use by Curl_client_write()a
                         and others (A/I or zero) */
   curl_off_t retr_size_saved; /* Size of retrieved file saved */
-  char *server_os;     /* The target server operating system. */
-  curl_off_t known_filesize; /* file size is different from -1, if wildcard
-                                LIST parsing was done and wc_statemach set
-                                it */
-  int dirdepth;  /* number of entries used in the 'dirs' array */
-  int cwdcount;     /* number of CWD commands issued */
+  char *server_os;            /* The target server operating system. */
+  curl_off_t known_filesize;  /* file size is different from -1, if wildcard
+                                 LIST parsing was done and wc_statemach set
+                                 it */
+  int dirdepth;               /* number of entries used in the 'dirs' array */
+  int cwdcount;               /* number of CWD commands issued */
   int count1; /* general purpose counter for the state machine */
   int count2; /* general purpose counter for the state machine */
   int count3; /* general purpose counter for the state machine */
   /* newhost is the (allocated) IP addr or hostname to connect the data
      connection to */
   unsigned short newport;
-  ftpstate state; /* always use ftp.c:state() to change state! */
-  ftpstate state_saved; /* transfer type saved to be reloaded after data
-                           connection is established */
-  unsigned char use_ssl;   /* if AUTH TLS is to be attempted etc, for FTP or
-                              IMAP or POP3 or others! (type: curl_usessl)*/
-  unsigned char ccc;       /* ccc level for this connection */
+  ftpstate state;        /* always use ftp.c:state() to change state! */
+  ftpstate state_saved;  /* transfer type saved to be reloaded after data
+                            connection is established */
+  unsigned char use_ssl; /* if AUTH TLS is to be attempted etc, for FTP or
+                            IMAP or POP3 or others! (type: curl_usessl)*/
+  unsigned char ccc;     /* ccc level for this connection */
   BIT(ftp_trying_alternative);
-  BIT(dont_check);  /* Set to TRUE to prevent the final (post-transfer)
-                       file size and 226/250 status check. It should still
-                       read the line, just ignore the result. */
-  BIT(ctl_valid);   /* Tells Curl_ftp_quit() whether or not to do anything. If
-                       the connection has timed out or been closed, this
-                       should be FALSE when it gets to Curl_ftp_quit() */
-  BIT(cwddone);     /* if it has been determined that the proper CWD combo
-                       already has been done */
-  BIT(cwdfail);     /* set TRUE if a CWD command fails, as then we must prevent
-                       caching the current directory */
+  BIT(dont_check); /* Set to TRUE to prevent the final (post-transfer)
+                      file size and 226/250 status check. It should still
+                      read the line, just ignore the result. */
+  BIT(ctl_valid);  /* Tells Curl_ftp_quit() whether or not to do anything. If
+                      the connection has timed out or been closed, this
+                      should be FALSE when it gets to Curl_ftp_quit() */
+  BIT(cwddone);    /* if it has been determined that the proper CWD combo
+                      already has been done */
+  BIT(cwdfail);    /* set TRUE if a CWD command fails, as then we must prevent
+                      caching the current directory */
   BIT(wait_data_conn); /* this is set TRUE if data connection is waited */
 };
 
-#define DEFAULT_ACCEPT_TIMEOUT   60000 /* milliseconds == one minute */
+#define DEFAULT_ACCEPT_TIMEOUT 60000 /* milliseconds == one minute */
 
 #endif /* HEADER_CURL_FTP_H */

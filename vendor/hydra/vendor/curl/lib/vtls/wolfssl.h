@@ -26,10 +26,10 @@
 #include "curl_setup.h"
 
 #ifdef USE_WOLFSSL
-#include <wolfssl/version.h>
+#include <wolfssl/error-ssl.h>
 #include <wolfssl/options.h>
 #include <wolfssl/ssl.h>
-#include <wolfssl/error-ssl.h>
+#include <wolfssl/version.h>
 
 #include "urldata.h"
 
@@ -37,8 +37,8 @@ extern const struct Curl_ssl Curl_ssl_wolfssl;
 
 struct wolfssl_ctx {
   WOLFSSL_CTX *ctx;
-  WOLFSSL     *handle;
-  CURLcode    io_result;   /* result of last BIO cfilter operation */
+  WOLFSSL *handle;
+  CURLcode io_result;      /* result of last BIO cfilter operation */
   int io_send_blocked_len; /* length of last BIO write that EAGAINed */
   BIT(x509_store_setup);   /* x509 store has been set up */
   BIT(shutting_down);      /* TLS is being shut down */

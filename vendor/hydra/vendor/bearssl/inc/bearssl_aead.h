@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -179,152 +179,149 @@ extern "C" {
  */
 typedef struct br_aead_class_ br_aead_class;
 struct br_aead_class_ {
+  /**
+   * \brief Size (in bytes) of authentication tags created by
+   * this AEAD algorithm.
+   */
+  size_t tag_size;
 
-	/**
-	 * \brief Size (in bytes) of authentication tags created by
-	 * this AEAD algorithm.
-	 */
-	size_t tag_size;
+  /**
+   * \brief Reset an AEAD context.
+   *
+   * This function resets an already initialised AEAD context for
+   * a new computation run. Implementations and keys are
+   * conserved. This function can be called at any time; it
+   * cancels any ongoing AEAD computation that uses the provided
+   * context structure.
 
-	/**
-	 * \brief Reset an AEAD context.
-	 *
-	 * This function resets an already initialised AEAD context for
-	 * a new computation run. Implementations and keys are
-	 * conserved. This function can be called at any time; it
-	 * cancels any ongoing AEAD computation that uses the provided
-	 * context structure.
+   * The provided IV is a _nonce_. Each AEAD algorithm has its
+   * own requirements on IV size and contents; for most of them,
+   * it is crucial to security that each nonce value is used
+   * only once for a given secret key.
+   *
+   * \param cc    AEAD context structure.
+   * \param iv    AEAD nonce to use.
+   * \param len   AEAD nonce length (in bytes).
+   */
+  void (*reset)(const br_aead_class **cc, const void *iv, size_t len);
 
-	 * The provided IV is a _nonce_. Each AEAD algorithm has its
-	 * own requirements on IV size and contents; for most of them,
-	 * it is crucial to security that each nonce value is used
-	 * only once for a given secret key.
-	 *
-	 * \param cc    AEAD context structure.
-	 * \param iv    AEAD nonce to use.
-	 * \param len   AEAD nonce length (in bytes).
-	 */
-	void (*reset)(const br_aead_class **cc, const void *iv, size_t len);
+  /**
+   * \brief Inject additional authenticated data.
+   *
+   * The provided data is injected into a running AEAD
+   * computation. Additional data must be injected _before_ the
+   * call to `flip()`. Additional data can be injected in several
+   * chunks of arbitrary length.
+   *
+   * \param cc     AEAD context structure.
+   * \param data   pointer to additional authenticated data.
+   * \param len    length of additional authenticated data (in bytes).
+   */
+  void (*aad_inject)(const br_aead_class **cc, const void *data, size_t len);
 
-	/**
-	 * \brief Inject additional authenticated data.
-	 *
-	 * The provided data is injected into a running AEAD
-	 * computation. Additional data must be injected _before_ the
-	 * call to `flip()`. Additional data can be injected in several
-	 * chunks of arbitrary length.
-	 *
-	 * \param cc     AEAD context structure.
-	 * \param data   pointer to additional authenticated data.
-	 * \param len    length of additional authenticated data (in bytes).
-	 */
-	void (*aad_inject)(const br_aead_class **cc,
-		const void *data, size_t len);
+  /**
+   * \brief Finish injection of additional authenticated data.
+   *
+   * This function MUST be called before beginning the actual
+   * encryption or decryption (with `run()`), even if no
+   * additional authenticated data was injected. No additional
+   * authenticated data may be injected after this function call.
+   *
+   * \param cc   AEAD context structure.
+   */
+  void (*flip)(const br_aead_class **cc);
 
-	/**
-	 * \brief Finish injection of additional authenticated data.
-	 *
-	 * This function MUST be called before beginning the actual
-	 * encryption or decryption (with `run()`), even if no
-	 * additional authenticated data was injected. No additional
-	 * authenticated data may be injected after this function call.
-	 *
-	 * \param cc   AEAD context structure.
-	 */
-	void (*flip)(const br_aead_class **cc);
+  /**
+   * \brief Encrypt or decrypt some data.
+   *
+   * Data encryption or decryption can be done after `flip()` has
+   * been called on the context. If `encrypt` is non-zero, then
+   * the provided data shall be plaintext, and it is encrypted in
+   * place. Otherwise, the data shall be ciphertext, and it is
+   * decrypted in place.
+   *
+   * Data may be provided in several chunks of arbitrary length.
+   *
+   * \param cc        AEAD context structure.
+   * \param encrypt   non-zero for encryption, zero for decryption.
+   * \param data      data to encrypt or decrypt.
+   * \param len       data length (in bytes).
+   */
+  void (*run)(const br_aead_class **cc, int encrypt, void *data, size_t len);
 
-	/**
-	 * \brief Encrypt or decrypt some data.
-	 *
-	 * Data encryption or decryption can be done after `flip()` has
-	 * been called on the context. If `encrypt` is non-zero, then
-	 * the provided data shall be plaintext, and it is encrypted in
-	 * place. Otherwise, the data shall be ciphertext, and it is
-	 * decrypted in place.
-	 *
-	 * Data may be provided in several chunks of arbitrary length.
-	 *
-	 * \param cc        AEAD context structure.
-	 * \param encrypt   non-zero for encryption, zero for decryption.
-	 * \param data      data to encrypt or decrypt.
-	 * \param len       data length (in bytes).
-	 */
-	void (*run)(const br_aead_class **cc, int encrypt,
-		void *data, size_t len);
+  /**
+   * \brief Compute authentication tag.
+   *
+   * Compute the AEAD authentication tag. The tag length depends
+   * on the AEAD algorithm; it is written in the provided `tag`
+   * buffer. This call terminates the AEAD run: no data may be
+   * processed with that AEAD context afterwards, until `reset()`
+   * is called to initiate a new AEAD run.
+   *
+   * The tag value must normally be sent along with the encrypted
+   * data. When decrypting, the tag value must be recomputed and
+   * compared with the received tag: if the two tag values differ,
+   * then either the tag or the encrypted data was altered in
+   * transit. As an alternative to this function, the
+   * `check_tag()` function may be used to compute and check the
+   * tag value.
+   *
+   * Tag length depends on the AEAD algorithm.
+   *
+   * \param cc    AEAD context structure.
+   * \param tag   destination buffer for the tag.
+   */
+  void (*get_tag)(const br_aead_class **cc, void *tag);
 
-	/**
-	 * \brief Compute authentication tag.
-	 *
-	 * Compute the AEAD authentication tag. The tag length depends
-	 * on the AEAD algorithm; it is written in the provided `tag`
-	 * buffer. This call terminates the AEAD run: no data may be
-	 * processed with that AEAD context afterwards, until `reset()`
-	 * is called to initiate a new AEAD run.
-	 *
-	 * The tag value must normally be sent along with the encrypted
-	 * data. When decrypting, the tag value must be recomputed and
-	 * compared with the received tag: if the two tag values differ,
-	 * then either the tag or the encrypted data was altered in
-	 * transit. As an alternative to this function, the
-	 * `check_tag()` function may be used to compute and check the
-	 * tag value.
-	 *
-	 * Tag length depends on the AEAD algorithm.
-	 *
-	 * \param cc    AEAD context structure.
-	 * \param tag   destination buffer for the tag.
-	 */
-	void (*get_tag)(const br_aead_class **cc, void *tag);
+  /**
+   * \brief Compute and check authentication tag.
+   *
+   * This function is an alternative to `get_tag()`, and is
+   * normally used on the receiving end (i.e. when decrypting
+   * messages). The tag value is recomputed and compared with the
+   * provided tag value. If they match, 1 is returned; on
+   * mismatch, 0 is returned. A returned value of 0 means that the
+   * data or the tag was altered in transit, normally leading to
+   * wholesale rejection of the complete message.
+   *
+   * Tag length depends on the AEAD algorithm.
+   *
+   * \param cc    AEAD context structure.
+   * \param tag   tag value to compare with.
+   * \return  1 on success (exact match of tag value), 0 otherwise.
+   */
+  uint32_t (*check_tag)(const br_aead_class **cc, const void *tag);
 
-	/**
-	 * \brief Compute and check authentication tag.
-	 *
-	 * This function is an alternative to `get_tag()`, and is
-	 * normally used on the receiving end (i.e. when decrypting
-	 * messages). The tag value is recomputed and compared with the
-	 * provided tag value. If they match, 1 is returned; on
-	 * mismatch, 0 is returned. A returned value of 0 means that the
-	 * data or the tag was altered in transit, normally leading to
-	 * wholesale rejection of the complete message.
-	 *
-	 * Tag length depends on the AEAD algorithm.
-	 *
-	 * \param cc    AEAD context structure.
-	 * \param tag   tag value to compare with.
-	 * \return  1 on success (exact match of tag value), 0 otherwise.
-	 */
-	uint32_t (*check_tag)(const br_aead_class **cc, const void *tag);
+  /**
+   * \brief Compute authentication tag (with truncation).
+   *
+   * This function is similar to `get_tag()`, except that the tag
+   * length is provided. Some AEAD algorithms allow several tag
+   * lengths, usually by truncating the normal tag. Shorter tags
+   * mechanically increase success probability of forgeries.
+   * The range of allowed tag lengths depends on the algorithm.
+   *
+   * \param cc    AEAD context structure.
+   * \param tag   destination buffer for the tag.
+   * \param len   tag length (in bytes).
+   */
+  void (*get_tag_trunc)(const br_aead_class **cc, void *tag, size_t len);
 
-	/**
-	 * \brief Compute authentication tag (with truncation).
-	 *
-	 * This function is similar to `get_tag()`, except that the tag
-	 * length is provided. Some AEAD algorithms allow several tag
-	 * lengths, usually by truncating the normal tag. Shorter tags
-	 * mechanically increase success probability of forgeries.
-	 * The range of allowed tag lengths depends on the algorithm.
-	 *
-	 * \param cc    AEAD context structure.
-	 * \param tag   destination buffer for the tag.
-	 * \param len   tag length (in bytes).
-	 */
-	void (*get_tag_trunc)(const br_aead_class **cc, void *tag, size_t len);
-
-	/**
-	 * \brief Compute and check authentication tag (with truncation).
-	 *
-	 * This function is similar to `check_tag()` except that it
-	 * works over an explicit tag length. See `get_tag()` for a
-	 * discussion of explicit tag lengths; the range of allowed tag
-	 * lengths depends on the algorithm.
-	 *
-	 * \param cc    AEAD context structure.
-	 * \param tag   tag value to compare with.
-	 * \param len   tag length (in bytes).
-	 * \return  1 on success (exact match of tag value), 0 otherwise.
-	 */
-	uint32_t (*check_tag_trunc)(const br_aead_class **cc,
-		const void *tag, size_t len);
+  /**
+   * \brief Compute and check authentication tag (with truncation).
+   *
+   * This function is similar to `check_tag()` except that it
+   * works over an explicit tag length. See `get_tag()` for a
+   * discussion of explicit tag lengths; the range of allowed tag
+   * lengths depends on the algorithm.
+   *
+   * \param cc    AEAD context structure.
+   * \param tag   tag value to compare with.
+   * \param len   tag length (in bytes).
+   * \return  1 on success (exact match of tag value), 0 otherwise.
+   */
+  uint32_t (*check_tag_trunc)(const br_aead_class **cc, const void *tag,
+                              size_t len);
 };
 
 /**
@@ -353,18 +350,18 @@ struct br_aead_class_ {
  * initialise that block cipher context.
  */
 typedef struct {
-	/** \brief Pointer to vtable for this context. */
-	const br_aead_class *vtable;
+  /** \brief Pointer to vtable for this context. */
+  const br_aead_class *vtable;
 
 #ifndef BR_DOXYGEN_IGNORE
-	const br_block_ctr_class **bctx;
-	br_ghash gh;
-	unsigned char h[16];
-	unsigned char j0_1[12];
-	unsigned char buf[16];
-	unsigned char y[16];
-	uint32_t j0_2, jc;
-	uint64_t count_aad, count_ctr;
+  const br_block_ctr_class **bctx;
+  br_ghash gh;
+  unsigned char h[16];
+  unsigned char j0_1[12];
+  unsigned char buf[16];
+  unsigned char y[16];
+  uint32_t j0_2, jc;
+  uint64_t count_aad, count_ctr;
 #endif
 } br_gcm_context;
 
@@ -384,8 +381,8 @@ typedef struct {
  * \param bctx   block cipher context (already initialised with secret key).
  * \param gh     GHASH implementation.
  */
-void br_gcm_init(br_gcm_context *ctx,
-	const br_block_ctr_class **bctx, br_ghash gh);
+void br_gcm_init(br_gcm_context *ctx, const br_block_ctr_class **bctx,
+                 br_ghash gh);
 
 /**
  * \brief Reset a GCM context.
@@ -539,8 +536,8 @@ void br_gcm_get_tag_trunc(br_gcm_context *ctx, void *tag, size_t len);
  * \param len   tag length (in bytes).
  * \return  1 on success (exact match of tag value), 0 otherwise.
  */
-uint32_t br_gcm_check_tag_trunc(br_gcm_context *ctx,
-	const void *tag, size_t len);
+uint32_t br_gcm_check_tag_trunc(br_gcm_context *ctx, const void *tag,
+                                size_t len);
 
 /**
  * \brief Class instance for GCM.
@@ -576,19 +573,19 @@ extern const br_aead_class br_gcm_vtable;
  * initialise that block cipher context.
  */
 typedef struct {
-	/** \brief Pointer to vtable for this context. */
-	const br_aead_class *vtable;
+  /** \brief Pointer to vtable for this context. */
+  const br_aead_class *vtable;
 
 #ifndef BR_DOXYGEN_IGNORE
-	const br_block_ctrcbc_class **bctx;
-	unsigned char L2[16];
-	unsigned char L4[16];
-	unsigned char nonce[16];
-	unsigned char head[16];
-	unsigned char ctr[16];
-	unsigned char cbcmac[16];
-	unsigned char buf[16];
-	size_t ptr;
+  const br_block_ctrcbc_class **bctx;
+  unsigned char L2[16];
+  unsigned char L4[16];
+  unsigned char nonce[16];
+  unsigned char head[16];
+  unsigned char ctr[16];
+  unsigned char cbcmac[16];
+  unsigned char buf[16];
+  size_t ptr;
 #endif
 } br_eax_context;
 
@@ -602,7 +599,7 @@ typedef struct {
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	unsigned char st[3][16];
+  unsigned char st[3][16];
 #endif
 } br_eax_state;
 
@@ -680,7 +677,7 @@ void br_eax_reset(br_eax_context *ctx, const void *nonce, size_t len);
  * \param len     EAX nonce length (in bytes).
  */
 void br_eax_reset_pre_aad(br_eax_context *ctx, const br_eax_state *st,
-	const void *nonce, size_t len);
+                          const void *nonce, size_t len);
 
 /**
  * \brief Reset an EAX context with a post-AAD captured state.
@@ -701,7 +698,7 @@ void br_eax_reset_pre_aad(br_eax_context *ctx, const br_eax_state *st,
  * \param len     EAX nonce length (in bytes).
  */
 void br_eax_reset_post_aad(br_eax_context *ctx, const br_eax_state *st,
-	const void *nonce, size_t len);
+                           const void *nonce, size_t len);
 
 /**
  * \brief Inject additional authenticated data into EAX.
@@ -741,10 +738,9 @@ void br_eax_flip(br_eax_context *ctx);
  * \param ctx   EAX context structure.
  * \param st    captured state to update.
  */
-static inline void
-br_eax_get_aad_mac(const br_eax_context *ctx, br_eax_state *st)
-{
-	memcpy(st->st[1], ctx->head, sizeof ctx->head);
+static inline void br_eax_get_aad_mac(const br_eax_context *ctx,
+                                      br_eax_state *st) {
+  memcpy(st->st[1], ctx->head, sizeof ctx->head);
 }
 
 /**
@@ -852,8 +848,8 @@ void br_eax_get_tag_trunc(br_eax_context *ctx, void *tag, size_t len);
  * \param len   tag length (in bytes).
  * \return  1 on success (exact match of tag value), 0 otherwise.
  */
-uint32_t br_eax_check_tag_trunc(br_eax_context *ctx,
-	const void *tag, size_t len);
+uint32_t br_eax_check_tag_trunc(br_eax_context *ctx, const void *tag,
+                                size_t len);
 
 /**
  * \brief Class instance for EAX.
@@ -895,13 +891,13 @@ extern const br_aead_class br_eax_vtable;
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	const br_block_ctrcbc_class **bctx;
-	unsigned char ctr[16];
-	unsigned char cbcmac[16];
-	unsigned char tagmask[16];
-	unsigned char buf[16];
-	size_t ptr;
-	size_t tag_len;
+  const br_block_ctrcbc_class **bctx;
+  unsigned char ctr[16];
+  unsigned char cbcmac[16];
+  unsigned char tagmask[16];
+  unsigned char buf[16];
+  size_t ptr;
+  size_t tag_len;
 #endif
 } br_ccm_context;
 
@@ -963,7 +959,7 @@ void br_ccm_init(br_ccm_context *ctx, const br_block_ctrcbc_class **bctx);
  * \return  1 on success, 0 on error.
  */
 int br_ccm_reset(br_ccm_context *ctx, const void *nonce, size_t nonce_len,
-	uint64_t aad_len, uint64_t data_len, size_t tag_len);
+                 uint64_t aad_len, uint64_t data_len, size_t tag_len);
 
 /**
  * \brief Inject additional authenticated data into CCM.

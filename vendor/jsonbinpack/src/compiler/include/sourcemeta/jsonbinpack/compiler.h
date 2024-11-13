@@ -17,8 +17,8 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <optional> // std::optional
-#include <string>   // std::string
+#include <optional>  // std::optional
+#include <string>    // std::string
 
 namespace sourcemeta::jsonbinpack {
 
@@ -86,6 +86,6 @@ auto canonicalize(
     const sourcemeta::jsontoolkit::SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect = std::nullopt) -> void;
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

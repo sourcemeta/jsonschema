@@ -27,12 +27,12 @@
 #ifdef USE_LIBPSL
 #include <libpsl.h>
 
-#define PSL_TTL (72 * 3600)     /* PSL time to live before a refresh. */
+#define PSL_TTL (72 * 3600) /* PSL time to live before a refresh. */
 
 struct PslCache {
   const psl_ctx_t *psl; /* The PSL. */
-  time_t expires; /* Time this PSL life expires. */
-  bool dynamic; /* PSL should be released when no longer needed. */
+  time_t expires;       /* Time this PSL life expires. */
+  bool dynamic;         /* PSL should be released when no longer needed. */
 };
 
 const psl_ctx_t *Curl_psl_use(struct Curl_easy *easy);

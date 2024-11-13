@@ -25,7 +25,6 @@
  ***************************************************************************/
 
 #include "curl_setup.h"
-
 #include "timediff.h"
 
 struct curltime {

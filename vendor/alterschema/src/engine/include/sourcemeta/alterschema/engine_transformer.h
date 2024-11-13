@@ -8,8 +8,8 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 
-#include <variant> // std::variant
-#include <vector>  // std::vector
+#include <variant>  // std::variant
+#include <vector>   // std::vector
 
 namespace sourcemeta::alterschema {
 
@@ -43,7 +43,7 @@ using Operation =
 /// This is a proxy class to intercept transformations applied to a schema. We
 /// use it to keep track of what changed to fix up schema references.
 class SOURCEMETA_ALTERSCHEMA_ENGINE_EXPORT Transformer {
-public:
+ public:
   /// Construct a transformer given a schema
   Transformer(sourcemeta::jsontoolkit::JSON &schema);
 
@@ -98,7 +98,7 @@ public:
     this->erase_keys(sourcemeta::jsontoolkit::empty_pointer, first, last);
   }
 
-private:
+ private:
   sourcemeta::jsontoolkit::JSON &data;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -111,6 +111,6 @@ private:
 #pragma warning(default : 4251)
 #endif
 };
-} // namespace sourcemeta::alterschema
+}  // namespace sourcemeta::alterschema
 
 #endif

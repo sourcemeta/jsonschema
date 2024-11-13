@@ -7,18 +7,18 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cstddef>  // std::ptrdiff_t
-#include <cstdint>  // std::uint64_t
-#include <istream>  // std::basic_istream
-#include <iterator> // std::forward_iterator_tag
-#include <memory>   // std::unique_ptr
+#include <cstddef>   // std::ptrdiff_t
+#include <cstdint>   // std::uint64_t
+#include <istream>   // std::basic_istream
+#include <iterator>  // std::forward_iterator_tag
+#include <memory>    // std::unique_ptr
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonl
 /// A forward iterator to parse JSON documents out of a JSON Lines stream.
 class SOURCEMETA_JSONTOOLKIT_JSONL_EXPORT ConstJSONLIterator {
-public:
+ public:
   ConstJSONLIterator(std::basic_istream<JSON::Char, JSON::CharTraits> *stream);
   ~ConstJSONLIterator();
   using iterator_category = std::forward_iterator_tag;
@@ -31,11 +31,10 @@ public:
   auto operator->() const -> pointer;
   auto operator++() -> ConstJSONLIterator &;
 
-  SOURCEMETA_JSONTOOLKIT_JSONL_EXPORT friend auto
-  operator==(const ConstJSONLIterator &left, const ConstJSONLIterator &right)
-      -> bool;
+  SOURCEMETA_JSONTOOLKIT_JSONL_EXPORT friend auto operator==(
+      const ConstJSONLIterator &left, const ConstJSONLIterator &right) -> bool;
 
-private:
+ private:
   std::uint64_t line{1};
   std::uint64_t column{0};
   auto parse_next() -> JSON;
@@ -56,6 +55,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

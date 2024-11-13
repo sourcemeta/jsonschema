@@ -5,14 +5,13 @@
 #include <sourcemeta/blaze/compiler_export.h>
 #endif
 
+#include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 
-#include <sourcemeta/blaze/evaluator.h>
-
-#include <set>    // std::set
-#include <string> // std::string
-#include <vector> // std::vector
+#include <set>     // std::set
+#include <string>  // std::string
+#include <vector>  // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -59,7 +58,7 @@ namespace sourcemeta::blaze {
 /// }
 /// ```
 class SOURCEMETA_BLAZE_COMPILER_EXPORT ErrorOutput {
-public:
+ public:
   ErrorOutput(const sourcemeta::jsontoolkit::JSON &instance,
               const sourcemeta::jsontoolkit::WeakPointer &base =
                   sourcemeta::jsontoolkit::empty_weak_pointer);
@@ -87,7 +86,7 @@ public:
   auto cbegin() const -> const_iterator;
   auto cend() const -> const_iterator;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -158,7 +157,7 @@ private:
 /// }
 /// ```
 class SOURCEMETA_BLAZE_COMPILER_EXPORT TraceOutput {
-public:
+ public:
   TraceOutput(const sourcemeta::jsontoolkit::WeakPointer &base =
                   sourcemeta::jsontoolkit::empty_weak_pointer);
 
@@ -189,7 +188,7 @@ public:
   auto cbegin() const -> const_iterator;
   auto cend() const -> const_iterator;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -214,6 +213,6 @@ describe(const bool valid, const Template::value_type &step,
          const sourcemeta::jsontoolkit::JSON &instance,
          const sourcemeta::jsontoolkit::JSON &annotation) -> std::string;
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

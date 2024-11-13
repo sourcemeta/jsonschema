@@ -5,9 +5,9 @@
 #include <sourcemeta/hydra/crypto_export.h>
 #endif
 
-#include <ostream>     // std::ostream
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <ostream>      // std::ostream
+#include <string>       // std::string
+#include <string_view>  // std::string_view
 
 /// @defgroup crypto Crypto
 /// @brief This module offers a collection of cryptographic utilities for use in
@@ -93,6 +93,6 @@ auto SOURCEMETA_HYDRA_CRYPTO_EXPORT hmac_sha256(std::string_view secret,
                                                 std::string_view value,
                                                 std::ostream &output) -> void;
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

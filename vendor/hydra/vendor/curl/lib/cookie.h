@@ -23,23 +23,23 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-#include "curl_setup.h"
-
 #include <curl/curl.h>
 
+#include "curl_setup.h"
+
 struct Cookie {
-  struct Cookie *next; /* next in the chain */
-  char *name;        /* <this> = value */
-  char *value;       /* name = <this> */
-  char *path;         /* path = <this> which is in Set-Cookie: */
-  char *spath;        /* sanitized cookie path */
-  char *domain;      /* domain = <this> */
-  curl_off_t expires;  /* expires = <this> */
-  bool tailmatch;    /* whether we do tail-matching of the domain name */
-  bool secure;       /* whether the 'secure' keyword was used */
-  bool livecookie;   /* updated from a server, not a stored file */
-  bool httponly;     /* true if the httponly directive is present */
-  int creationtime;  /* time when the cookie was written */
+  struct Cookie *next;  /* next in the chain */
+  char *name;           /* <this> = value */
+  char *value;          /* name = <this> */
+  char *path;           /* path = <this> which is in Set-Cookie: */
+  char *spath;          /* sanitized cookie path */
+  char *domain;         /* domain = <this> */
+  curl_off_t expires;   /* expires = <this> */
+  bool tailmatch;       /* whether we do tail-matching of the domain name */
+  bool secure;          /* whether the 'secure' keyword was used */
+  bool livecookie;      /* updated from a server, not a stored file */
+  bool httponly;        /* true if the httponly directive is present */
+  int creationtime;     /* time when the cookie was written */
   unsigned char prefix; /* bitmap fields indicating which prefix are set */
 };
 
@@ -47,8 +47,8 @@ struct Cookie {
  * Available cookie prefixes, as defined in
  * draft-ietf-httpbis-rfc6265bis-02
  */
-#define COOKIE_PREFIX__SECURE (1<<0)
-#define COOKIE_PREFIX__HOST (1<<1)
+#define COOKIE_PREFIX__SECURE (1 << 0)
+#define COOKIE_PREFIX__HOST (1 << 1)
 
 #define COOKIE_HASH_SIZE 63
 
@@ -56,10 +56,10 @@ struct CookieInfo {
   /* linked list of cookies we know of */
   struct Cookie *cookies[COOKIE_HASH_SIZE];
   curl_off_t next_expiration; /* the next time at which expiration happens */
-  int numcookies;  /* number of cookies in the "jar" */
-  int lastct;      /* last creation-time used in the jar */
-  bool running;    /* state info, for cookie adding information */
-  bool newsession; /* new session, discard session cookies on load */
+  int numcookies;             /* number of cookies in the "jar" */
+  int lastct;                 /* last creation-time used in the jar */
+  bool running;               /* state info, for cookie adding information */
+  bool newsession;            /* new session, discard session cookies on load */
 };
 
 /* The maximum sizes we accept for cookies. RFC 6265 section 6.1 says
@@ -106,15 +106,14 @@ struct Curl_easy;
  * are only used if the header boolean is TRUE.
  */
 
-struct Cookie *Curl_cookie_add(struct Curl_easy *data,
-                               struct CookieInfo *c, bool header,
-                               bool noexpiry, const char *lineptr,
+struct Cookie *Curl_cookie_add(struct Curl_easy *data, struct CookieInfo *c,
+                               bool header, bool noexpiry, const char *lineptr,
                                const char *domain, const char *path,
                                bool secure);
 
-struct Cookie *Curl_cookie_getlist(struct Curl_easy *data,
-                                   struct CookieInfo *c, const char *host,
-                                   const char *path, bool secure);
+struct Cookie *Curl_cookie_getlist(struct Curl_easy *data, struct CookieInfo *c,
+                                   const char *host, const char *path,
+                                   bool secure);
 void Curl_cookie_freelist(struct Cookie *cookies);
 void Curl_cookie_clearall(struct CookieInfo *cookies);
 void Curl_cookie_clearsess(struct CookieInfo *cookies);
@@ -122,15 +121,14 @@ void Curl_cookie_clearsess(struct CookieInfo *cookies);
 #if defined(CURL_DISABLE_HTTP) || defined(CURL_DISABLE_COOKIES)
 #define Curl_cookie_list(x) NULL
 #define Curl_cookie_loadfiles(x) Curl_nop_stmt
-#define Curl_cookie_init(x,y,z,w) NULL
+#define Curl_cookie_init(x, y, z, w) NULL
 #define Curl_cookie_cleanup(x) Curl_nop_stmt
-#define Curl_flush_cookies(x,y) Curl_nop_stmt
+#define Curl_flush_cookies(x, y) Curl_nop_stmt
 #else
 void Curl_flush_cookies(struct Curl_easy *data, bool cleanup);
 void Curl_cookie_cleanup(struct CookieInfo *c);
-struct CookieInfo *Curl_cookie_init(struct Curl_easy *data,
-                                    const char *file, struct CookieInfo *inc,
-                                    bool newsession);
+struct CookieInfo *Curl_cookie_init(struct Curl_easy *data, const char *file,
+                                    struct CookieInfo *inc, bool newsession);
 struct curl_slist *Curl_cookie_list(struct Curl_easy *data);
 void Curl_cookie_loadfiles(struct Curl_easy *data);
 #endif

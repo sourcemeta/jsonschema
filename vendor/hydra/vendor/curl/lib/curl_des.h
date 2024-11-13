@@ -26,11 +26,9 @@
 
 #include "curl_setup.h"
 
-#if defined(USE_CURL_NTLM_CORE) && \
-  (defined(USE_GNUTLS) ||          \
-   defined(USE_SECTRANSP) ||       \
-   defined(USE_OS400CRYPTO) ||     \
-   defined(USE_WIN32_CRYPTO))
+#if defined(USE_CURL_NTLM_CORE) &&                    \
+    (defined(USE_GNUTLS) || defined(USE_SECTRANSP) || \
+     defined(USE_OS400CRYPTO) || defined(USE_WIN32_CRYPTO))
 
 /* Applies odd parity to the given byte array */
 void Curl_des_set_odd_parity(unsigned char *bytes, size_t length);

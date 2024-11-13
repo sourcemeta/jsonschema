@@ -35,7 +35,6 @@ struct curl_slist *Curl_slist_duplicate(struct curl_slist *inlist);
  * Curl_slist_append_nodup() takes ownership of the given string and appends
  * it to the list.
  */
-struct curl_slist *Curl_slist_append_nodup(struct curl_slist *list,
-                                           char *data);
+struct curl_slist *Curl_slist_append_nodup(struct curl_slist *list, char *data);
 
 #endif /* HEADER_CURL_SLIST_H */

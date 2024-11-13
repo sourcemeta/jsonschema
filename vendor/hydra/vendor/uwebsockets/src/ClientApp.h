@@ -1,36 +1,32 @@
+#include <string>
+
 #include "MoveOnlyFunction.h"
 #include "WebSocketContext.h"
-#include <string>
 
 namespace uWS {
 
-    struct WebSocketClientBehavior {
-        MoveOnlyFunction<void()> open;
-        MoveOnlyFunction<void()> message;
-        MoveOnlyFunction<void()> close;
-        //MoveOnlyFunction<void()> failed;
+struct WebSocketClientBehavior {
+  MoveOnlyFunction<void()> open;
+  MoveOnlyFunction<void()> message;
+  MoveOnlyFunction<void()> close;
+  // MoveOnlyFunction<void()> failed;
+};
 
-    };
+struct ClientApp {
+  WebSocketContext<0, false, int> *webSocketContext;
+  // behöver ett nytt http context med minimal klient, som slår om till den
+  // riktiga websocketcontext om samma storlek på httpsocket och websocket blir
+  // det enkel övergång
 
-    struct ClientApp {
+  ClientApp(WebSocketClientBehavior &&behavior) {
+    // webSocketContext = WebSocketContext<0, false, int>::create();
+  }
 
-        WebSocketContext<0, false, int> *webSocketContext;
-        // behöver ett nytt http context med minimal klient, som slår om till den riktiga websocketcontext
-        // om samma storlek på httpsocket och websocket blir det enkel övergång
+  ClientApp &&connect(std::string url, std::string protocol = "") {
+    return std::move(*this);
+  }
 
-        ClientApp(WebSocketClientBehavior &&behavior) {
-            //webSocketContext = WebSocketContext<0, false, int>::create();
-        }
+  void run() {}
+};
 
-        ClientApp &&connect(std::string url, std::string protocol = "") {
-
-            return std::move(*this);
-        }
-
-        void run() {
-
-        }
-
-    };
-
-}
+}  // namespace uWS

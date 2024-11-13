@@ -58,7 +58,7 @@
 
 #define HAVE_RECV 1
 #define RECV_TYPE_ARG1 int
-#define RECV_TYPE_ARG2 void *
+#define RECV_TYPE_ARG2 void*
 #define RECV_TYPE_ARG3 int
 #define RECV_TYPE_ARG4 int
 #define RECV_TYPE_RETV int
@@ -67,7 +67,7 @@
 
 #define HAVE_SEND 1
 #define SEND_TYPE_ARG1 int
-#define SEND_TYPE_ARG2 void *
+#define SEND_TYPE_ARG2 void*
 #define SEND_QUAL_ARG2
 #define SEND_TYPE_ARG3 int
 #define SEND_TYPE_ARG4 int

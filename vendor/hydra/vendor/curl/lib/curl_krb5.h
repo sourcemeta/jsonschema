@@ -35,9 +35,9 @@ struct Curl_sec_client_mech {
   int (*decode)(void *, void *, int, int, struct connectdata *);
 };
 
-#define AUTH_OK         0
-#define AUTH_CONTINUE   1
-#define AUTH_ERROR      2
+#define AUTH_OK 0
+#define AUTH_CONTINUE 1
+#define AUTH_ERROR 2
 
 #ifdef HAVE_GSSAPI
 int Curl_sec_read_msg(struct Curl_easy *data, struct connectdata *conn, char *,

@@ -8,26 +8,26 @@
 #include <sourcemeta/jsontoolkit/json_array.h>
 #include <sourcemeta/jsontoolkit/json_object.h>
 
-#include <algorithm>        // std::any_of
-#include <cassert>          // assert
-#include <cstdint>          // std::int64_t, std::uint8_t
-#include <functional>       // std::less, std::reference_wrapper
-#include <initializer_list> // std::initializer_list
-#include <memory>           // std::allocator
-#include <optional>         // std::optional
-#include <set>              // std::set
-#include <sstream>          // std::basic_istringstream
-#include <string>           // std::basic_string, std::char_traits
-#include <string_view>      // std::basic_string_view
-#include <type_traits>      // std::enable_if_t, std::is_same_v
-#include <utility>          // std::in_place_type, std::pair
-#include <variant>          // std::variant
+#include <algorithm>         // std::any_of
+#include <cassert>           // assert
+#include <cstdint>           // std::int64_t, std::uint8_t
+#include <functional>        // std::less, std::reference_wrapper
+#include <initializer_list>  // std::initializer_list
+#include <memory>            // std::allocator
+#include <optional>          // std::optional
+#include <set>               // std::set
+#include <sstream>           // std::basic_istringstream
+#include <string>            // std::basic_string, std::char_traits
+#include <string_view>       // std::basic_string_view
+#include <type_traits>       // std::enable_if_t, std::is_same_v
+#include <utility>           // std::in_place_type, std::pair
+#include <variant>           // std::variant
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup json
 class SOURCEMETA_JSONTOOLKIT_JSON_EXPORT JSON {
-public:
+ public:
   /// The character type used by the JSON document.
   using Char = char;
   /// The character traits used by the JSON document.
@@ -37,7 +37,8 @@ public:
   /// The real type used by the JSON document.
   using Real = double;
   /// The allocator used by the JSON document.
-  template <typename T> using Allocator = std::allocator<T>;
+  template <typename T>
+  using Allocator = std::allocator<T>;
   /// The string type used by the JSON document.
   using String = std::basic_string<Char, CharTraits, Allocator<Char>>;
   /// The array type used by the JSON document.
@@ -1356,7 +1357,7 @@ public:
   /// ```
   auto into_object() -> void;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -1369,6 +1370,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

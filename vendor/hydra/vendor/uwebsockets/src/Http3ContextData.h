@@ -5,17 +5,17 @@ struct Http3Request;
 
 namespace uWS {
 
-    struct Http3ContextData {
-        struct RouterData {
-            Http3Response *res;
-            Http3Request *req;
-        };
+struct Http3ContextData {
+  struct RouterData {
+    Http3Response *res;
+    Http3Request *req;
+  };
 
-        HttpRouter<RouterData> router;
+  HttpRouter<RouterData> router;
 
-        Http3ContextData() {
-            //printf("Constructing http3contextdata: %p\n", this);
-        }
-    };
-    
-}
+  Http3ContextData() {
+    // printf("Constructing http3contextdata: %p\n", this);
+  }
+};
+
+}  // namespace uWS

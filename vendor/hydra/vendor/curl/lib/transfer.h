@@ -24,9 +24,8 @@
  *
  ***************************************************************************/
 
-#define Curl_headersep(x) ((((x)==':') || ((x)==';')))
-char *Curl_checkheaders(const struct Curl_easy *data,
-                        const char *thisheader,
+#define Curl_headersep(x) ((((x) == ':') || ((x) == ';')))
+char *Curl_checkheaders(const struct Curl_easy *data, const char *thisheader,
                         const size_t thislen);
 
 void Curl_init_CONNECT(struct Curl_easy *data);
@@ -39,14 +38,13 @@ typedef enum {
   FOLLOW_FAKE,  /* only records stuff, not actually following */
   FOLLOW_RETRY, /* set if this is a request retry as opposed to a real
                    redirect following */
-  FOLLOW_REDIR /* a full true redirect */
+  FOLLOW_REDIR  /* a full true redirect */
 } followtype;
 
-CURLcode Curl_follow(struct Curl_easy *data, char *newurl,
-                     followtype type);
+CURLcode Curl_follow(struct Curl_easy *data, char *newurl, followtype type);
 CURLcode Curl_sendrecv(struct Curl_easy *data, struct curltime *nowp);
-int Curl_single_getsock(struct Curl_easy *data,
-                        struct connectdata *conn, curl_socket_t *socks);
+int Curl_single_getsock(struct Curl_easy *data, struct connectdata *conn,
+                        curl_socket_t *socks);
 CURLcode Curl_retry_request(struct Curl_easy *data, char **url);
 bool Curl_meets_timecondition(struct Curl_easy *data, time_t timeofdoc);
 
@@ -62,9 +60,8 @@ bool Curl_meets_timecondition(struct Curl_easy *data, time_t timeofdoc);
  * @param is_eos   TRUE iff the connection indicates this to be the last
  *                 bytes of the response
  */
-CURLcode Curl_xfer_write_resp(struct Curl_easy *data,
-                              const char *buf, size_t blen,
-                              bool is_eos);
+CURLcode Curl_xfer_write_resp(struct Curl_easy *data, const char *buf,
+                              size_t blen, bool is_eos);
 
 /**
  * Write a single "header" line from a server response.
@@ -72,13 +69,13 @@ CURLcode Curl_xfer_write_resp(struct Curl_easy *data,
  * @param hdlen    the length of the header line
  * @param is_eos   TRUE iff this is the end of the response
  */
-CURLcode Curl_xfer_write_resp_hd(struct Curl_easy *data,
-                                 const char *hd0, size_t hdlen, bool is_eos);
+CURLcode Curl_xfer_write_resp_hd(struct Curl_easy *data, const char *hd0,
+                                 size_t hdlen, bool is_eos);
 
-#define CURL_XFER_NOP     (0)
-#define CURL_XFER_RECV    (1<<(0))
-#define CURL_XFER_SEND    (1<<(1))
-#define CURL_XFER_SENDRECV (CURL_XFER_RECV|CURL_XFER_SEND)
+#define CURL_XFER_NOP (0)
+#define CURL_XFER_RECV (1 << (0))
+#define CURL_XFER_SEND (1 << (1))
+#define CURL_XFER_SENDRECV (CURL_XFER_RECV | CURL_XFER_SEND)
 
 /**
  * The transfer is neither receiving nor sending now.
@@ -90,10 +87,8 @@ void Curl_xfer_setup_nop(struct Curl_easy *data);
  * the amount to receive or -1 if unknown. `getheader` indicates
  * response header processing is expected.
  */
-void Curl_xfer_setup1(struct Curl_easy *data,
-                      int send_recv,
-                      curl_off_t recv_size,
-                      bool getheader);
+void Curl_xfer_setup1(struct Curl_easy *data, int send_recv,
+                      curl_off_t recv_size, bool getheader);
 
 /**
  * The transfer will use socket 2 to send/recv. `recv_size` is
@@ -102,10 +97,8 @@ void Curl_xfer_setup1(struct Curl_easy *data,
  * and the socket 2 connection will be shutdown at the end of
  * the transfer. An unclean shutdown will fail the transfer.
  */
-void Curl_xfer_setup2(struct Curl_easy *data,
-                      int send_recv,
-                      curl_off_t recv_size,
-                      bool shutdown);
+void Curl_xfer_setup2(struct Curl_easy *data, int send_recv,
+                      curl_off_t recv_size, bool shutdown);
 
 /**
  * Multi has set transfer to DONE. Last chance to trigger
@@ -129,17 +122,15 @@ CURLcode Curl_xfer_flush(struct Curl_easy *data);
  * for transfer's outgoing data.
  * Will return CURLE_OK on blocking with (*pnwritten == 0).
  */
-CURLcode Curl_xfer_send(struct Curl_easy *data,
-                        const void *buf, size_t blen, bool eos,
-                        size_t *pnwritten);
+CURLcode Curl_xfer_send(struct Curl_easy *data, const void *buf, size_t blen,
+                        bool eos, size_t *pnwritten);
 
 /**
  * Receive data on the socket/connection filter designated
  * for transfer's incoming data.
  * Will return CURLE_AGAIN on blocking with (*pnrcvd == 0).
  */
-CURLcode Curl_xfer_recv(struct Curl_easy *data,
-                        char *buf, size_t blen,
+CURLcode Curl_xfer_recv(struct Curl_easy *data, char *buf, size_t blen,
                         ssize_t *pnrcvd);
 
 CURLcode Curl_xfer_send_close(struct Curl_easy *data);

@@ -6,23 +6,22 @@
 #endif
 
 #include <sourcemeta/hydra/http.h>
-
 #include <sourcemeta/hydra/httpclient_response.h>
 #include <sourcemeta/hydra/httpclient_stream.h>
 
-#include <future>           // std::future
-#include <initializer_list> // std::initializer_list
-#include <istream>          // std::istream
-#include <set>              // std::set
-#include <string>           // std::string
-#include <string_view>      // std::string_view
+#include <future>            // std::future
+#include <initializer_list>  // std::initializer_list
+#include <istream>           // std::istream
+#include <set>               // std::set
+#include <string>            // std::string
+#include <string_view>       // std::string_view
 
 namespace sourcemeta::hydra::http {
 
 /// @ingroup httpclient
 /// This class is used to perform a non-streaming HTTP request.
 class SOURCEMETA_HYDRA_HTTPCLIENT_EXPORT ClientRequest {
-public:
+ public:
   /// Construct an HTTP request to a given URL. For example:
   ///
   /// ```cpp
@@ -181,7 +180,7 @@ public:
   /// ```
   auto send(std::istream &body) -> std::future<ClientResponse>;
 
-private:
+ private:
   ClientStream stream;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -196,6 +195,6 @@ private:
   bool capture_all_{false};
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

@@ -7,14 +7,14 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cstdint> // std::uint8_t, std::uint16_t, std::uint64_t
-#include <ostream> // std::basic_ostream
+#include <cstdint>  // std::uint8_t, std::uint16_t, std::uint64_t
+#include <ostream>  // std::basic_ostream
 
 namespace sourcemeta::jsonbinpack {
 
 /// @ingroup runtime
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT OutputStream {
-public:
+ public:
   using Stream = std::basic_ostream<sourcemeta::jsontoolkit::JSON::Char,
                                     sourcemeta::jsontoolkit::JSON::CharTraits>;
   OutputStream(Stream &output);
@@ -31,10 +31,10 @@ public:
   auto put_string_utf8(const sourcemeta::jsontoolkit::JSON::String &string,
                        const std::uint64_t length) -> void;
 
-private:
+ private:
   Stream &stream;
 };
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

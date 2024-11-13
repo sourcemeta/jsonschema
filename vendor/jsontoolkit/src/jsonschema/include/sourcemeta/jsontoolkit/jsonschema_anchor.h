@@ -8,10 +8,10 @@
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
-#include <cstdint>  // std::uint8_t
-#include <map>      // std::map
-#include <optional> // std::optional
-#include <string>   // std::string
+#include <cstdint>   // std::uint8_t
+#include <map>       // std::map
+#include <optional>  // std::optional
+#include <string>    // std::string
 
 namespace sourcemeta::jsontoolkit {
 
@@ -59,6 +59,6 @@ auto anchors(const JSON &schema,
              const std::map<std::string, bool> &vocabularies)
     -> std::map<std::string, AnchorType>;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

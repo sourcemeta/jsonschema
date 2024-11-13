@@ -24,15 +24,14 @@
  *
  ***************************************************************************/
 
-
 /****************************************************************************
  * FILE unique setup
  ***************************************************************************/
 struct FILEPROTO {
-  char *path; /* the path we operate on */
+  char *path;     /* the path we operate on */
   char *freepath; /* pointer to the allocated block we must free, this might
                      differ from the 'path' pointer */
-  int fd;     /* open file descriptor to read from! */
+  int fd;         /* open file descriptor to read from! */
 };
 
 #ifndef CURL_DISABLE_FILE

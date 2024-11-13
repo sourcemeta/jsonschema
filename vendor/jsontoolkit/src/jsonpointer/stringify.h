@@ -1,21 +1,20 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_STRINGIFY_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_STRINGIFY_H_
 
-#include "grammar.h"
-
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_pointer.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <ostream> // std::basic_ostream
-#include <sstream> // std::basic_istringstream
-#include <string>  // std::to_string, std::basic_string
+#include <ostream>  // std::basic_ostream
+#include <sstream>  // std::basic_istringstream
+#include <string>   // std::to_string, std::basic_string
+
+#include "grammar.h"
 
 namespace sourcemeta::jsontoolkit::internal {
-inline auto
-write_character(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-                const JSON::Char character, const bool perform_uri_escaping)
-    -> void {
+inline auto write_character(
+    std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
+    const JSON::Char character, const bool perform_uri_escaping) -> void {
   // The dollar sign does not need to be encoded in URI fragments
   // See `fragment` in https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   if (perform_uri_escaping && character != '$') {
@@ -28,7 +27,7 @@ write_character(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
     stream.put(character);
   }
 }
-} // namespace sourcemeta::jsontoolkit::internal
+}  // namespace sourcemeta::jsontoolkit::internal
 
 namespace sourcemeta::jsontoolkit {
 
@@ -435,6 +434,6 @@ auto stringify(const PointerT &pointer,
   }
 }
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

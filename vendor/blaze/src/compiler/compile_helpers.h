@@ -4,12 +4,12 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <algorithm> // std::find
-#include <cassert>   // assert
-#include <iterator>  // std::distance
-#include <regex>     // std::regex, std::regex_match, std::smatch
-#include <utility>   // std::declval, std::move
-#include <variant>   // std::visit
+#include <algorithm>  // std::find
+#include <cassert>    // assert
+#include <iterator>   // std::distance
+#include <regex>      // std::regex, std::regex_match, std::smatch
+#include <utility>    // std::declval, std::move
+#include <variant>    // std::visit
 
 namespace sourcemeta::blaze {
 
@@ -57,8 +57,8 @@ template <typename Step>
 auto make(const Context &context, const SchemaContext &schema_context,
           const DynamicContext &dynamic_context,
           // Take the value type from the "value" property of the step struct
-          decltype(std::declval<Step>().value) &&value, Template &&children)
-    -> Step {
+          decltype(std::declval<Step>().value) &&value,
+          Template &&children) -> Step {
   return {
       dynamic_context.keyword.empty()
           ? dynamic_context.base_schema_location
@@ -101,9 +101,9 @@ auto rephrase(const Step &step) -> Type {
           step.value};
 }
 
-inline auto
-unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
-                          const sourcemeta::jsontoolkit::JSON::String &property)
+inline auto unsigned_integer_property(
+    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::jsontoolkit::JSON::String &property)
     -> std::optional<std::size_t> {
   if (document.defines(property) && document.at(property).is_integer()) {
     const auto value{document.at(property).to_integer()};
@@ -114,10 +114,10 @@ unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
   return std::nullopt;
 }
 
-inline auto
-unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
-                          const sourcemeta::jsontoolkit::JSON::String &property,
-                          const std::size_t otherwise) -> std::size_t {
+inline auto unsigned_integer_property(
+    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::jsontoolkit::JSON::String &property,
+    const std::size_t otherwise) -> std::size_t {
   return unsigned_integer_property(document, property).value_or(otherwise);
 }
 
@@ -151,12 +151,10 @@ inline auto pattern_as_prefix(const std::string &pattern)
   }
 }
 
-inline auto find_adjacent(const Context &context,
-                          const SchemaContext &schema_context,
-                          const std::set<std::string> &vocabularies,
-                          const std::string &keyword,
-                          const sourcemeta::jsontoolkit::JSON::Type type)
-    -> auto {
+inline auto find_adjacent(
+    const Context &context, const SchemaContext &schema_context,
+    const std::set<std::string> &vocabularies, const std::string &keyword,
+    const sourcemeta::jsontoolkit::JSON::Type type) -> auto {
   std::vector<std::string> possible_keyword_uris;
   possible_keyword_uris.push_back(
       to_uri(schema_context.relative_pointer.initial().concat({keyword}),
@@ -235,6 +233,6 @@ inline auto recursive_template_size(const Template &steps) -> std::size_t {
   return result;
 }
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

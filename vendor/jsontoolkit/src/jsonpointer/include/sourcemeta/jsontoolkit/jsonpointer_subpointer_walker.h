@@ -1,17 +1,18 @@
 #ifndef SOURCEMETA_JSONTOOLKIT_JSONPOINTER_SUBPOINTER_WALKER_H_
 #define SOURCEMETA_JSONTOOLKIT_JSONPOINTER_SUBPOINTER_WALKER_H_
 
-#include <cstddef>  // std::ptrdiff_t
-#include <iterator> // std::forward_iterator_tag
-
 #include <sourcemeta/jsontoolkit/jsonpointer_pointer.h>
+
+#include <cstddef>   // std::ptrdiff_t
+#include <iterator>  // std::forward_iterator_tag
 
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
 /// A forward iterator to traverse all subpointers of a given JSON Pointer.
-template <typename PointerT> class GenericSubPointerIterator {
-public:
+template <typename PointerT>
+class GenericSubPointerIterator {
+ public:
   using iterator_category = std::forward_iterator_tag;
   using difference_type = std::ptrdiff_t;
   using value_type = PointerT;
@@ -45,14 +46,15 @@ public:
            (left.data && right.data && *(left.data) == *(right.data));
   };
 
-private:
+ private:
   pointer data;
 };
 
 /// @ingroup jsonpointer
 /// A walker to traverse all subpointers of a given JSON Pointer.
-template <typename PointerT> class GenericSubPointerWalker {
-public:
+template <typename PointerT>
+class GenericSubPointerWalker {
+ public:
   using const_iterator = GenericSubPointerIterator<PointerT>;
   GenericSubPointerWalker(const PointerT &pointer) : data{pointer} {}
 
@@ -61,10 +63,10 @@ public:
   const_iterator cbegin() { return {&this->data}; }
   const_iterator cend() { return {nullptr}; }
 
-private:
+ private:
   PointerT data;
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

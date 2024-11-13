@@ -1,10 +1,10 @@
 #ifndef SOURCEMETA_JSONBINPACK_RUNTIME_VARINT_H_
 #define SOURCEMETA_JSONBINPACK_RUNTIME_VARINT_H_
 
-#include <cassert> // assert
-#include <cstdint> // std::uint8_t, std::uint64_t
-#include <istream> // std::basic_istream
-#include <ostream> // std::basic_ostream
+#include <cassert>  // assert
+#include <cstdint>  // std::uint8_t, std::uint64_t
+#include <istream>  // std::basic_istream
+#include <ostream>  // std::basic_ostream
 
 namespace sourcemeta::jsonbinpack {
 
@@ -55,6 +55,6 @@ auto varint_decode(std::basic_istream<CharT, Traits> &stream) -> std::uint64_t {
   return result;
 }
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif

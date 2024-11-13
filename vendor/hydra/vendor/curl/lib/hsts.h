@@ -27,6 +27,7 @@
 
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_HSTS)
 #include <curl/curl.h>
+
 #include "llist.h"
 
 #if defined(DEBUGBUILD) || defined(UNITTESTS)
@@ -49,21 +50,19 @@ struct hsts {
 
 struct hsts *Curl_hsts_init(void);
 void Curl_hsts_cleanup(struct hsts **hp);
-CURLcode Curl_hsts_parse(struct hsts *h, const char *hostname,
-                         const char *sts);
+CURLcode Curl_hsts_parse(struct hsts *h, const char *hostname, const char *sts);
 struct stsentry *Curl_hsts(struct hsts *h, const char *hostname,
                            bool subdomain);
 CURLcode Curl_hsts_save(struct Curl_easy *data, struct hsts *h,
                         const char *file);
-CURLcode Curl_hsts_loadfile(struct Curl_easy *data,
-                            struct hsts *h, const char *file);
-CURLcode Curl_hsts_loadcb(struct Curl_easy *data,
-                          struct hsts *h);
+CURLcode Curl_hsts_loadfile(struct Curl_easy *data, struct hsts *h,
+                            const char *file);
+CURLcode Curl_hsts_loadcb(struct Curl_easy *data, struct hsts *h);
 void Curl_hsts_loadfiles(struct Curl_easy *data);
 #else
 #define Curl_hsts_cleanup(x)
-#define Curl_hsts_loadcb(x,y) CURLE_OK
-#define Curl_hsts_save(x,y,z)
+#define Curl_hsts_loadcb(x, y) CURLE_OK
+#define Curl_hsts_save(x, y, z)
 #define Curl_hsts_loadfiles(x)
 #endif /* CURL_DISABLE_HTTP || CURL_DISABLE_HSTS */
 #endif /* HEADER_CURL_HSTS_H */

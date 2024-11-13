@@ -36,19 +36,15 @@ struct Curl_tree {
   void *ptr;                 /* data the splay code does not care about */
 };
 
-struct Curl_tree *Curl_splay(struct curltime i,
-                             struct Curl_tree *t);
+struct Curl_tree *Curl_splay(struct curltime i, struct Curl_tree *t);
 
-struct Curl_tree *Curl_splayinsert(struct curltime key,
-                                   struct Curl_tree *t,
+struct Curl_tree *Curl_splayinsert(struct curltime key, struct Curl_tree *t,
                                    struct Curl_tree *newnode);
 
-struct Curl_tree *Curl_splaygetbest(struct curltime key,
-                                    struct Curl_tree *t,
+struct Curl_tree *Curl_splaygetbest(struct curltime key, struct Curl_tree *t,
                                     struct Curl_tree **removed);
 
-int Curl_splayremove(struct Curl_tree *t,
-                     struct Curl_tree *removenode,
+int Curl_splayremove(struct Curl_tree *t, struct Curl_tree *removenode,
                      struct Curl_tree **newroot);
 
 /* set and get the custom payload for this tree node */

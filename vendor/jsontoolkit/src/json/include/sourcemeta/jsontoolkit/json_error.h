@@ -5,9 +5,9 @@
 #include <sourcemeta/jsontoolkit/json_export.h>
 #endif
 
-#include <cstdint>    // std::uint64_t
-#include <exception>  // std::exception
-#include <filesystem> // std::filesystem::path
+#include <cstdint>     // std::uint64_t
+#include <exception>   // std::exception
+#include <filesystem>  // std::filesystem::path
 
 namespace sourcemeta::jsontoolkit {
 
@@ -21,7 +21,7 @@ namespace sourcemeta::jsontoolkit {
 /// @ingroup json
 /// This class represents a parsing error
 class SOURCEMETA_JSONTOOLKIT_JSON_EXPORT ParseError : public std::exception {
-public:
+ public:
   /// Create a parsing error
   ParseError(const std::uint64_t line, const std::uint64_t column)
       : line_{line}, column_{column} {}
@@ -38,7 +38,7 @@ public:
     return column_;
   }
 
-private:
+ private:
   std::uint64_t line_;
   std::uint64_t column_;
 };
@@ -46,7 +46,7 @@ private:
 /// @ingroup json
 /// This class represents a parsing error occurring from parsing a file
 class SOURCEMETA_JSONTOOLKIT_JSON_EXPORT FileParseError : public ParseError {
-public:
+ public:
   /// Create a file parsing error
   FileParseError(const std::filesystem::path &path, const std::uint64_t line,
                  const std::uint64_t column)
@@ -61,7 +61,7 @@ public:
     return path_;
   }
 
-private:
+ private:
   std::filesystem::path path_;
 };
 
@@ -69,6 +69,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

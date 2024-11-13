@@ -8,12 +8,12 @@
 #include <sourcemeta/jsontoolkit/json_error.h>
 #include <sourcemeta/jsontoolkit/json_value.h>
 
-#include <cstdint>    // std::uint64_t
-#include <filesystem> // std::filesystem
-#include <fstream>    // std::basic_ifstream
-#include <istream>    // std::basic_istream
-#include <ostream>    // std::basic_ostream
-#include <string>     // std::basic_string
+#include <cstdint>     // std::uint64_t
+#include <filesystem>  // std::filesystem
+#include <fstream>     // std::basic_ifstream
+#include <istream>     // std::basic_istream
+#include <ostream>     // std::basic_ostream
+#include <string>      // std::basic_string
 
 /// @defgroup json JSON
 /// @brief A full-blown ECMA-404 implementation with read, write, and iterators
@@ -286,6 +286,6 @@ auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
                 const JSON::Type type)
     -> std::basic_ostream<JSON::Char, JSON::CharTraits> &;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

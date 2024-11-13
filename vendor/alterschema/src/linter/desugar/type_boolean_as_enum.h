@@ -1,15 +1,14 @@
 class TypeBooleanAsEnum final : public Rule {
-public:
+ public:
   TypeBooleanAsEnum()
       : Rule{"type_boolean_as_enum",
              "Setting `type` to `boolean` is syntax sugar for an enumeration "
              "of two values: `false` and `true`"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

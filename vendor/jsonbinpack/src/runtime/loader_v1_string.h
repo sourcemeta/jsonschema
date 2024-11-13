@@ -2,11 +2,10 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_LOADER_V1_STRING_H_
 
 #include <sourcemeta/jsonbinpack/runtime.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cassert> // assert
-#include <cstdint> // std::uint64_t
+#include <cassert>  // assert
+#include <cstdint>  // std::uint64_t
 
 namespace sourcemeta::jsonbinpack::v1 {
 
@@ -65,6 +64,6 @@ auto PREFIX_VARINT_LENGTH_STRING_SHARED(const sourcemeta::jsontoolkit::JSON &)
   return sourcemeta::jsonbinpack::PREFIX_VARINT_LENGTH_STRING_SHARED{};
 }
 
-} // namespace sourcemeta::jsonbinpack::v1
+}  // namespace sourcemeta::jsonbinpack::v1
 
 #endif

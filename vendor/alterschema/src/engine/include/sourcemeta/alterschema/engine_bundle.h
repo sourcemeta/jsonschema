@@ -5,21 +5,20 @@
 #include <sourcemeta/alterschema/engine_export.h>
 #endif
 
+#include <sourcemeta/alterschema/engine_rule.h>
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
-#include <sourcemeta/alterschema/engine_rule.h>
-
-#include <cassert>     // assert
-#include <concepts>    // std::derived_from
-#include <functional>  // std::function
-#include <map>         // std::map
-#include <memory>      // std::make_unique, std::unique_ptr
-#include <optional>    // std::optional, std::nullopt
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move
+#include <cassert>      // assert
+#include <concepts>     // std::derived_from
+#include <functional>   // std::function
+#include <map>          // std::map
+#include <memory>       // std::make_unique, std::unique_ptr
+#include <optional>     // std::optional, std::nullopt
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <utility>      // std::move
 
 namespace sourcemeta::alterschema {
 /// @ingroup engine
@@ -81,7 +80,7 @@ namespace sourcemeta::alterschema {
 /// Every registered rule is applied to every subschema of the passed schema
 /// until no longer of them applies.
 class SOURCEMETA_ALTERSCHEMA_ENGINE_EXPORT Bundle {
-public:
+ public:
   /// Create a transform bundle
   Bundle() = default;
 
@@ -97,7 +96,8 @@ public:
 #endif
 
   /// Add a rule to the bundle
-  template <std::derived_from<Rule> T> auto add() -> void {
+  template <std::derived_from<Rule> T>
+  auto add() -> void {
     auto rule{std::make_unique<T>()};
     // Rules must only be defined once
     assert(!this->rules.contains(rule->name()));
@@ -105,14 +105,13 @@ public:
   }
 
   /// Apply the bundle of rules to a schema
-  auto
-  apply(sourcemeta::jsontoolkit::JSON &schema,
-        const sourcemeta::jsontoolkit::SchemaWalker &walker,
-        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-        const sourcemeta::jsontoolkit::Pointer &pointer =
-            sourcemeta::jsontoolkit::empty_pointer,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> void;
+  auto apply(sourcemeta::jsontoolkit::JSON &schema,
+             const sourcemeta::jsontoolkit::SchemaWalker &walker,
+             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+             const sourcemeta::jsontoolkit::Pointer &pointer =
+                 sourcemeta::jsontoolkit::empty_pointer,
+             const std::optional<std::string> &default_dialect =
+                 std::nullopt) const -> void;
 
   /// The callback that is called whenever the "check" functionality reports a
   /// rule whose condition holds true. The arguments are as follows:
@@ -125,17 +124,16 @@ public:
                          const std::string_view, const std::string_view)>;
 
   /// Report back the rules from the bundle that need to be applied to a schema
-  auto
-  check(const sourcemeta::jsontoolkit::JSON &schema,
-        const sourcemeta::jsontoolkit::SchemaWalker &walker,
-        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
-        const CheckCallback &callback,
-        const sourcemeta::jsontoolkit::Pointer &pointer =
-            sourcemeta::jsontoolkit::empty_pointer,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> bool;
+  auto check(const sourcemeta::jsontoolkit::JSON &schema,
+             const sourcemeta::jsontoolkit::SchemaWalker &walker,
+             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+             const CheckCallback &callback,
+             const sourcemeta::jsontoolkit::Pointer &pointer =
+                 sourcemeta::jsontoolkit::empty_pointer,
+             const std::optional<std::string> &default_dialect =
+                 std::nullopt) const -> bool;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -147,6 +145,6 @@ private:
 #pragma warning(default : 4251)
 #endif
 };
-} // namespace sourcemeta::alterschema
+}  // namespace sourcemeta::alterschema
 
 #endif

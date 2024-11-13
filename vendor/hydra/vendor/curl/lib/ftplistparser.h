@@ -57,10 +57,10 @@ typedef void (*wildcard_dtor)(void *ptr);
 
 /* struct keeping information about wildcard download process */
 struct WildcardData {
-  char *path; /* path to the directory, where we trying wildcard-match */
+  char *path;    /* path to the directory, where we trying wildcard-match */
   char *pattern; /* wildcard pattern */
   struct Curl_llist filelist; /* llist with struct Curl_fileinfo */
-  struct ftp_wc *ftpwc; /* pointer to FTP wildcard data */
+  struct ftp_wc *ftpwc;       /* pointer to FTP wildcard data */
   wildcard_dtor dtor;
   unsigned char state; /* wildcard_states */
 };

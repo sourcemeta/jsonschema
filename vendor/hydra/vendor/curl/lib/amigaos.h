@@ -26,7 +26,7 @@
 #include "curl_setup.h"
 
 #if defined(__AMIGA__) && defined(HAVE_PROTO_BSDSOCKET_H) && \
-  (!defined(USE_AMISSL) || defined(__amigaos4__))
+    (!defined(USE_AMISSL) || defined(__amigaos4__))
 
 CURLcode Curl_amiga_init(void);
 void Curl_amiga_cleanup(void);

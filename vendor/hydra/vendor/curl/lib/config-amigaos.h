@@ -95,24 +95,24 @@
 #define in_addr_t int
 
 #ifndef F_OK
-#  define F_OK 0
+#define F_OK 0
 #endif
 
 #ifndef O_RDONLY
-#  define O_RDONLY 0x0000
+#define O_RDONLY 0x0000
 #endif
 
 #ifndef LONG_MAX
-#  define LONG_MAX 0x7fffffffL
+#define LONG_MAX 0x7fffffffL
 #endif
 
 #ifndef LONG_MIN
-#  define LONG_MIN (-0x7fffffffL-1)
+#define LONG_MIN (-0x7fffffffL - 1)
 #endif
 
 #define HAVE_RECV 1
 #define RECV_TYPE_ARG1 long
-#define RECV_TYPE_ARG2 char *
+#define RECV_TYPE_ARG2 char*
 #define RECV_TYPE_ARG3 long
 #define RECV_TYPE_ARG4 long
 #define RECV_TYPE_RETV long
@@ -120,7 +120,7 @@
 #define HAVE_SEND 1
 #define SEND_TYPE_ARG1 int
 #define SEND_QUAL_ARG2 const
-#define SEND_TYPE_ARG2 char *
+#define SEND_TYPE_ARG2 char*
 #define SEND_TYPE_ARG3 int
 #define SEND_TYPE_ARG4 int
 #define SEND_TYPE_RETV int

@@ -2,12 +2,11 @@
 #define SOURCEMETA_JSONBINPACK_RUNTIME_LOADER_V1_ANY_H_
 
 #include <sourcemeta/jsonbinpack/runtime.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <cassert> // assert
-#include <utility> // std::move
-#include <vector>  // std::vector
+#include <cassert>  // assert
+#include <utility>  // std::move
+#include <vector>   // std::vector
 
 namespace sourcemeta::jsonbinpack::v1 {
 
@@ -55,6 +54,6 @@ auto ANY_PACKED_TYPE_TAG_BYTE_PREFIX(const sourcemeta::jsontoolkit::JSON &)
   return sourcemeta::jsonbinpack::ANY_PACKED_TYPE_TAG_BYTE_PREFIX{};
 }
 
-} // namespace sourcemeta::jsonbinpack::v1
+}  // namespace sourcemeta::jsonbinpack::v1
 
 #endif

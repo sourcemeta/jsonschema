@@ -30,8 +30,9 @@
 
 /* Helpers to generate function byte arguments in little endian order */
 #define SHORTPAIR(x) ((int)((x) & 0xff)), ((int)(((x) >> 8) & 0xff))
-#define LONGQUARTET(x) ((int)((x) & 0xff)), ((int)(((x) >> 8) & 0xff)), \
-  ((int)(((x) >> 16) & 0xff)), ((int)(((x) >> 24) & 0xff))
+#define LONGQUARTET(x)                             \
+  ((int)((x) & 0xff)), ((int)(((x) >> 8) & 0xff)), \
+      ((int)(((x) >> 16) & 0xff)), ((int)(((x) >> 24) & 0xff))
 
 void Curl_ntlm_core_lm_resp(const unsigned char *keys,
                             const unsigned char *plaintext,
@@ -54,16 +55,16 @@ CURLcode Curl_ntlm_core_mk_ntlmv2_hash(const char *user, size_t userlen,
                                        unsigned char *ntlmhash,
                                        unsigned char *ntlmv2hash);
 
-CURLcode  Curl_ntlm_core_mk_ntlmv2_resp(unsigned char *ntlmv2hash,
-                                        unsigned char *challenge_client,
-                                        struct ntlmdata *ntlm,
-                                        unsigned char **ntresp,
-                                        unsigned int *ntresp_len);
+CURLcode Curl_ntlm_core_mk_ntlmv2_resp(unsigned char *ntlmv2hash,
+                                       unsigned char *challenge_client,
+                                       struct ntlmdata *ntlm,
+                                       unsigned char **ntresp,
+                                       unsigned int *ntresp_len);
 
-CURLcode  Curl_ntlm_core_mk_lmv2_resp(unsigned char *ntlmv2hash,
-                                      unsigned char *challenge_client,
-                                      unsigned char *challenge_server,
-                                      unsigned char *lmresp);
+CURLcode Curl_ntlm_core_mk_lmv2_resp(unsigned char *ntlmv2hash,
+                                     unsigned char *challenge_client,
+                                     unsigned char *challenge_server,
+                                     unsigned char *lmresp);
 
 #endif /* !USE_WINDOWS_SSPI */
 

@@ -8,12 +8,11 @@
 #include <sourcemeta/blaze/evaluator_context.h>
 #include <sourcemeta/blaze/evaluator_error.h>
 #include <sourcemeta/blaze/evaluator_template.h>
-
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 
-#include <cstdint>    // std::uint8_t
-#include <functional> // std::function
+#include <cstdint>     // std::uint8_t
+#include <functional>  // std::function
 
 /// @defgroup evaluator Evaluator
 /// @brief A high-performance JSON Schema evaluator
@@ -80,8 +79,8 @@ using Callback =
 /// assert(result);
 /// ```
 auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT
-evaluate(const Template &steps, const sourcemeta::jsontoolkit::JSON &instance)
-    -> bool;
+evaluate(const Template &steps,
+         const sourcemeta::jsontoolkit::JSON &instance) -> bool;
 
 /// @ingroup evaluator
 ///
@@ -173,10 +172,9 @@ evaluate(const Template &steps, const sourcemeta::jsontoolkit::JSON &instance,
 ///   schema_template, context)};
 /// assert(result);
 /// ```
-auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT evaluate(const Template &steps,
-                                                EvaluationContext &context)
-    -> bool;
+auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT
+evaluate(const Template &steps, EvaluationContext &context) -> bool;
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

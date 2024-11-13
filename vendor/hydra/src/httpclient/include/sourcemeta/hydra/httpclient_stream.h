@@ -7,21 +7,21 @@
 
 #include <sourcemeta/hydra/http.h>
 
-#include <cstdint>     // std::uint8_t
-#include <functional>  // std::function
-#include <future>      // std::future
-#include <memory>      // std::unique_ptr
-#include <span>        // std::span
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <vector>      // std::vector
+#include <cstdint>      // std::uint8_t
+#include <functional>   // std::function
+#include <future>       // std::future
+#include <memory>       // std::unique_ptr
+#include <span>         // std::span
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <vector>       // std::vector
 
 namespace sourcemeta::hydra::http {
 
 /// @ingroup httpclient
 /// This class is used to perform a streaming HTTP request.
 class SOURCEMETA_HYDRA_HTTPCLIENT_EXPORT ClientStream {
-public:
+ public:
   /// Construct a streaming HTTP request to a given URL. For example:
   ///
   /// ```cpp
@@ -304,12 +304,12 @@ public:
   /// ```
   auto on_body(BodyCallback callback) noexcept -> void;
 
-private:
+ private:
   struct Internal;
 
   // No need to make this private, as the contents of `Internal`
   // are already hidden with the PIMPL idiom.
-public:
+ public:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -322,6 +322,6 @@ public:
 #endif
 };
 
-} // namespace sourcemeta::hydra::http
+}  // namespace sourcemeta::hydra::http
 
 #endif

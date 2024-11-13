@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -111,26 +111,26 @@ extern "C" {
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	/* CPU for the T0 virtual machine. */
-	struct {
-		uint32_t *dp;
-		uint32_t *rp;
-		const unsigned char *ip;
-	} cpu;
-	uint32_t dp_stack[32];
-	uint32_t rp_stack[32];
-	int err;
+  /* CPU for the T0 virtual machine. */
+  struct {
+    uint32_t *dp;
+    uint32_t *rp;
+    const unsigned char *ip;
+  } cpu;
+  uint32_t dp_stack[32];
+  uint32_t rp_stack[32];
+  int err;
 
-	const unsigned char *hbuf;
-	size_t hlen;
+  const unsigned char *hbuf;
+  size_t hlen;
 
-	void (*dest)(void *dest_ctx, const void *src, size_t len);
-	void *dest_ctx;
+  void (*dest)(void *dest_ctx, const void *src, size_t len);
+  void *dest_ctx;
 
-	unsigned char event;
-	char name[128];
-	unsigned char buf[255];
-	size_t ptr;
+  unsigned char event;
+  char name[128];
+  unsigned char buf[255];
+  size_t ptr;
 #endif
 } br_pem_decoder_context;
 
@@ -154,8 +154,8 @@ void br_pem_decoder_init(br_pem_decoder_context *ctx);
  * \param len    number of new data bytes.
  * \return  the number of bytes actually received (may be less than `len`).
  */
-size_t br_pem_decoder_push(br_pem_decoder_context *ctx,
-	const void *data, size_t len);
+size_t br_pem_decoder_push(br_pem_decoder_context *ctx, const void *data,
+                           size_t len);
 
 /**
  * \brief Set the receiver for decoded data.
@@ -171,13 +171,11 @@ size_t br_pem_decoder_push(br_pem_decoder_context *ctx,
  * \param dest       callback for receiving decoded data.
  * \param dest_ctx   opaque context pointer for the `dest` callback.
  */
-static inline void
-br_pem_decoder_setdest(br_pem_decoder_context *ctx,
-	void (*dest)(void *dest_ctx, const void *src, size_t len),
-	void *dest_ctx)
-{
-	ctx->dest = dest;
-	ctx->dest_ctx = dest_ctx;
+static inline void br_pem_decoder_setdest(
+    br_pem_decoder_context *ctx,
+    void (*dest)(void *dest_ctx, const void *src, size_t len), void *dest_ctx) {
+  ctx->dest = dest;
+  ctx->dest_ctx = dest_ctx;
 }
 
 /**
@@ -200,7 +198,7 @@ int br_pem_decoder_event(br_pem_decoder_context *ctx);
  * The object name (normalised to uppercase) can be accessed with
  * `br_pem_decoder_name()`.
  */
-#define BR_PEM_BEGIN_OBJ   1
+#define BR_PEM_BEGIN_OBJ 1
 
 /**
  * \brief Event: end of object.
@@ -208,7 +206,7 @@ int br_pem_decoder_event(br_pem_decoder_context *ctx);
  * This event is raised when the end of the current object is reached
  * (normally, i.e. with no decoding error).
  */
-#define BR_PEM_END_OBJ     2
+#define BR_PEM_END_OBJ 2
 
 /**
  * \brief Event: decoding error.
@@ -218,7 +216,7 @@ int br_pem_decoder_event(br_pem_decoder_context *ctx);
  * to the "out of any object" state. The offending line in the source
  * is consumed.
  */
-#define BR_PEM_ERROR       3
+#define BR_PEM_ERROR 3
 
 /**
  * \brief Get the name of the encountered object.
@@ -230,10 +228,8 @@ int br_pem_decoder_event(br_pem_decoder_context *ctx);
  * \param ctx   decoder context.
  * \return  the current object name.
  */
-static inline const char *
-br_pem_decoder_name(br_pem_decoder_context *ctx)
-{
-	return ctx->name;
+static inline const char *br_pem_decoder_name(br_pem_decoder_context *ctx) {
+  return ctx->name;
 }
 
 /**
@@ -275,17 +271,17 @@ br_pem_decoder_name(br_pem_decoder_context *ctx)
  * \return  the PEM object length (in characters), EXCLUDING the final zero.
  */
 size_t br_pem_encode(void *dest, const void *data, size_t len,
-	const char *banner, unsigned flags);
+                     const char *banner, unsigned flags);
 
 /**
  * \brief PEM encoding flag: split lines at 64 characters.
  */
-#define BR_PEM_LINE64   0x0001
+#define BR_PEM_LINE64 0x0001
 
 /**
  * \brief PEM encoding flag: use CR+LF line endings.
  */
-#define BR_PEM_CRLF     0x0002
+#define BR_PEM_CRLF 0x0002
 
 #ifdef __cplusplus
 }

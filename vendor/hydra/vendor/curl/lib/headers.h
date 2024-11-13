@@ -29,11 +29,11 @@
 
 struct Curl_header_store {
   struct Curl_llist_node node;
-  char *name; /* points into 'buffer' */
-  char *value; /* points into 'buffer */
-  int request; /* 0 is the first request, then 1.. 2.. */
+  char *name;         /* points into 'buffer' */
+  char *value;        /* points into 'buffer */
+  int request;        /* 0 is the first request, then 1.. 2.. */
   unsigned char type; /* CURLH_* defines */
-  char buffer[1]; /* this is the raw header blob */
+  char buffer[1];     /* this is the raw header blob */
 };
 
 /*
@@ -55,7 +55,7 @@ CURLcode Curl_headers_cleanup(struct Curl_easy *data);
 
 #else
 #define Curl_headers_init(x) CURLE_OK
-#define Curl_headers_push(x,y,z) CURLE_OK
+#define Curl_headers_push(x, y, z) CURLE_OK
 #define Curl_headers_cleanup(x) Curl_nop_stmt
 #endif
 

@@ -40,39 +40,29 @@
 #ifndef URI_MEMORY_H
 #define URI_MEMORY_H 1
 
-
-
 #ifndef URI_DOXYGEN
-# include <uriparser/Uri.h>
+#include <uriparser/Uri.h>
 #endif
 
-
-
-#define URI_CHECK_MEMORY_MANAGER(memory)  \
-	do { \
-		if (memory == NULL) { \
-			memory = &defaultMemoryManager; \
-		} else if (uriMemoryManagerIsComplete(memory) != URI_TRUE) { \
-			return URI_ERROR_MEMORY_MANAGER_INCOMPLETE; \
-		} \
-	} while (0)
-
-
+#define URI_CHECK_MEMORY_MANAGER(memory)                         \
+  do {                                                           \
+    if (memory == NULL) {                                        \
+      memory = &defaultMemoryManager;                            \
+    } else if (uriMemoryManagerIsComplete(memory) != URI_TRUE) { \
+      return URI_ERROR_MEMORY_MANAGER_INCOMPLETE;                \
+    }                                                            \
+  } while (0)
 
 #ifdef __cplusplus
-# define URIPARSER_EXTERN extern "C"
+#define URIPARSER_EXTERN extern "C"
 #else
-# define URIPARSER_EXTERN extern
+#define URIPARSER_EXTERN extern
 #endif
 
 URIPARSER_EXTERN UriMemoryManager defaultMemoryManager;
 
 #undef URIPARSER_EXTERN
 
-
-
-UriBool uriMemoryManagerIsComplete(const UriMemoryManager * memory);
-
-
+UriBool uriMemoryManagerIsComplete(const UriMemoryManager* memory);
 
 #endif /* URI_MEMORY_H */

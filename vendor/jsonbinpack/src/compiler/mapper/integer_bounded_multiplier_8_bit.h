@@ -1,15 +1,14 @@
 class IntegerBoundedMultiplier8Bit final
     : public sourcemeta::alterschema::Rule {
-public:
+ public:
   IntegerBoundedMultiplier8Bit()
-      : sourcemeta::alterschema::Rule{"integer_bounded_multiplier_8_bit", ""} {
-        };
+      : sourcemeta::alterschema::Rule{"integer_bounded_multiplier_8_bit",
+                                      ""} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &dialect,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &dialect,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     if (dialect != "https://json-schema.org/draft/2020-12/schema" ||
         !vocabularies.contains(
             "https://json-schema.org/draft/2020-12/vocab/validation") ||

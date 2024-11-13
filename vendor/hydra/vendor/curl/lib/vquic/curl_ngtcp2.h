@@ -32,14 +32,14 @@
 #include <netinet/udp.h>
 #endif
 
-#include <ngtcp2/ngtcp2_crypto.h>
 #include <nghttp3/nghttp3.h>
+#include <ngtcp2/ngtcp2_crypto.h>
 #ifdef USE_OPENSSL
 #include <openssl/ssl.h>
 #elif defined(USE_WOLFSSL)
 #include <wolfssl/options.h>
-#include <wolfssl/ssl.h>
 #include <wolfssl/quic.h>
+#include <wolfssl/ssl.h>
 #endif
 
 struct Curl_cfilter;
@@ -49,13 +49,11 @@ struct Curl_cfilter;
 void Curl_ngtcp2_ver(char *p, size_t len);
 
 CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
-                             struct Curl_easy *data,
-                             struct connectdata *conn,
-                             const struct Curl_addrinfo *ai);
+                               struct Curl_easy *data, struct connectdata *conn,
+                               const struct Curl_addrinfo *ai);
 
 bool Curl_conn_is_ngtcp2(const struct Curl_easy *data,
-                         const struct connectdata *conn,
-                         int sockindex);
+                         const struct connectdata *conn, int sockindex);
 #endif
 
 #endif /* HEADER_CURL_VQUIC_CURL_NGTCP2_H */

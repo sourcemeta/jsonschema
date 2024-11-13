@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
+ * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
@@ -9,12 +9,12 @@
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
  * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
  * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
@@ -65,8 +65,8 @@ extern "C" {
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	const br_hash_class *dig_vtable;
-	unsigned char ksi[64], kso[64];
+  const br_hash_class *dig_vtable;
+  unsigned char ksi[64], kso[64];
 #endif
 } br_hmac_key_context;
 
@@ -82,7 +82,8 @@ typedef struct {
  * \param key_len         HMAC secret key length (in bytes).
  */
 void br_hmac_key_init(br_hmac_key_context *kc,
-	const br_hash_class *digest_vtable, const void *key, size_t key_len);
+                      const br_hash_class *digest_vtable, const void *key,
+                      size_t key_len);
 
 /*
  * \brief Get the underlying hash function.
@@ -94,9 +95,8 @@ void br_hmac_key_init(br_hmac_key_context *kc,
  * \return  the hash function implementation.
  */
 static inline const br_hash_class *br_hmac_key_get_digest(
-	const br_hmac_key_context *kc)
-{
-	return kc->dig_vtable;
+    const br_hmac_key_context *kc) {
+  return kc->dig_vtable;
 }
 
 /**
@@ -109,9 +109,9 @@ static inline const br_hash_class *br_hmac_key_get_digest(
  */
 typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
-	br_hash_compat_context dig;
-	unsigned char kso[64];
-	size_t out_len;
+  br_hash_compat_context dig;
+  unsigned char kso[64];
+  size_t out_len;
 #endif
 } br_hmac_context;
 
@@ -133,8 +133,8 @@ typedef struct {
  * \param kc        HMAC key context (already initialised with the key).
  * \param out_len   HMAC output length (0 to select "natural length").
  */
-void br_hmac_init(br_hmac_context *ctx,
-	const br_hmac_key_context *kc, size_t out_len);
+void br_hmac_init(br_hmac_context *ctx, const br_hmac_key_context *kc,
+                  size_t out_len);
 
 /**
  * \brief Get the HMAC output size.
@@ -151,11 +151,7 @@ void br_hmac_init(br_hmac_context *ctx,
  * \param ctx   the (already initialised) HMAC computation context.
  * \return  the HMAC actual output size.
  */
-static inline size_t
-br_hmac_size(br_hmac_context *ctx)
-{
-	return ctx->out_len;
-}
+static inline size_t br_hmac_size(br_hmac_context *ctx) { return ctx->out_len; }
 
 /*
  * \brief Get the underlying hash function.
@@ -167,9 +163,8 @@ br_hmac_size(br_hmac_context *ctx)
  * \return  the hash function implementation.
  */
 static inline const br_hash_class *br_hmac_get_digest(
-	const br_hmac_context *hc)
-{
-	return hc->dig.vtable;
+    const br_hmac_context *hc) {
+  return hc->dig.vtable;
 }
 
 /**
@@ -230,9 +225,8 @@ size_t br_hmac_out(const br_hmac_context *ctx, void *out);
  * \param out       destination buffer for the HMAC output.
  * \return  the produced value length (in bytes).
  */
-size_t br_hmac_outCT(const br_hmac_context *ctx,
-	const void *data, size_t len, size_t min_len, size_t max_len,
-	void *out);
+size_t br_hmac_outCT(const br_hmac_context *ctx, const void *data, size_t len,
+                     size_t min_len, size_t max_len, void *out);
 
 #ifdef __cplusplus
 }

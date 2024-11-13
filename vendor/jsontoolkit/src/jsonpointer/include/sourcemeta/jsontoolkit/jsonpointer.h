@@ -13,11 +13,11 @@
 #include <sourcemeta/jsontoolkit/jsonpointer_walker.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
-#include <functional> // std::reference_wrapper
-#include <memory>     // std::allocator
-#include <optional>   // std::optional
-#include <ostream>    // std::basic_ostream
-#include <string>     // std::basic_string
+#include <functional>  // std::reference_wrapper
+#include <memory>      // std::allocator
+#include <optional>    // std::optional
+#include <ostream>     // std::basic_ostream
+#include <string>      // std::basic_string
 
 /// @defgroup jsonpointer JSON Pointer
 /// @brief An growing implementation of RFC 6901 JSON Pointer.
@@ -484,6 +484,6 @@ using PointerWalker = GenericPointerWalker<Pointer>;
 /// ```
 using SubPointerWalker = GenericSubPointerWalker<Pointer>;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

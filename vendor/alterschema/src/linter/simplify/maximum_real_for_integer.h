@@ -1,16 +1,15 @@
 class MaximumRealForInteger final : public Rule {
-public:
+ public:
   MaximumRealForInteger()
-      : Rule{"maximum_real_for_integer",
-             "If an instance is guaranteed to be an integer, setting a real "
-             "number upper bound is the same as a floor of that upper bound"} {
-        };
+      : Rule{
+            "maximum_real_for_integer",
+            "If an instance is guaranteed to be an integer, setting a real "
+            "number upper bound is the same as a floor of that upper bound"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

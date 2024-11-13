@@ -202,9 +202,9 @@
 
 /* The size of `size_t', as computed by sizeof. */
 #if defined(_WIN64)
-#  define SIZEOF_SIZE_T 8
+#define SIZEOF_SIZE_T 8
 #else
-#  define SIZEOF_SIZE_T 4
+#define SIZEOF_SIZE_T 4
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -236,11 +236,11 @@
 /* VS2005 and later default size for time_t is 64-bit, unless */
 /* _USE_32BIT_TIME_T has been defined to get a 32-bit time_t. */
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
-#  ifndef _USE_32BIT_TIME_T
-#    define SIZEOF_TIME_T 8
-#  else
-#    define SIZEOF_TIME_T 4
-#  endif
+#ifndef _USE_32BIT_TIME_T
+#define SIZEOF_TIME_T 8
+#else
+#define SIZEOF_TIME_T 4
+#endif
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -248,15 +248,15 @@
 /* ---------------------------------------------------------------- */
 
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
-#  if (_MSC_VER >= 900) && (_INTEGRAL_MAX_BITS >= 64)
-#    define USE_WIN32_LARGE_FILES
-#  else
-#    define USE_WIN32_SMALL_FILES
-#  endif
+#if (_MSC_VER >= 900) && (_INTEGRAL_MAX_BITS >= 64)
+#define USE_WIN32_LARGE_FILES
+#else
+#define USE_WIN32_SMALL_FILES
+#endif
 #endif
 
 #if !defined(USE_WIN32_LARGE_FILES) && !defined(USE_WIN32_SMALL_FILES)
-#  define USE_WIN32_SMALL_FILES
+#define USE_WIN32_SMALL_FILES
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -283,11 +283,11 @@
 /* ---------------------------------------------------------------- */
 
 #ifndef UNICODE
-#  define UNICODE
+#define UNICODE
 #endif
 
 #ifndef _UNICODE
-#  define _UNICODE
+#define _UNICODE
 #endif
 
 #define CURL_DISABLE_FILE 1

@@ -38,9 +38,9 @@
 #undef SECURITY_WIN32
 #undef SECURITY_KERNEL
 #define SECURITY_WIN32 1
+#include <rpc.h>
 #include <security.h>
 #include <sspi.h>
-#include <rpc.h>
 
 CURLcode Curl_sspi_global_init(void);
 void Curl_sspi_global_cleanup(void);
@@ -61,55 +61,54 @@ extern HMODULE Curl_hSecDll;
 extern PSecurityFunctionTable Curl_pSecFn;
 
 /* Provide some definitions missing in old headers */
-#define SP_NAME_DIGEST              "WDigest"
-#define SP_NAME_NTLM                "NTLM"
-#define SP_NAME_NEGOTIATE           "Negotiate"
-#define SP_NAME_KERBEROS            "Kerberos"
+#define SP_NAME_DIGEST "WDigest"
+#define SP_NAME_NTLM "NTLM"
+#define SP_NAME_NEGOTIATE "Negotiate"
+#define SP_NAME_KERBEROS "Kerberos"
 
 #ifndef ISC_REQ_USE_HTTP_STYLE
-#define ISC_REQ_USE_HTTP_STYLE                0x01000000
+#define ISC_REQ_USE_HTTP_STYLE 0x01000000
 #endif
 
 #ifndef SEC_E_INVALID_PARAMETER
-# define SEC_E_INVALID_PARAMETER              ((HRESULT)0x8009035DL)
+#define SEC_E_INVALID_PARAMETER ((HRESULT)0x8009035DL)
 #endif
 #ifndef SEC_E_DELEGATION_POLICY
-# define SEC_E_DELEGATION_POLICY              ((HRESULT)0x8009035EL)
+#define SEC_E_DELEGATION_POLICY ((HRESULT)0x8009035EL)
 #endif
 #ifndef SEC_E_POLICY_NLTM_ONLY
-# define SEC_E_POLICY_NLTM_ONLY               ((HRESULT)0x8009035FL)
+#define SEC_E_POLICY_NLTM_ONLY ((HRESULT)0x8009035FL)
 #endif
 
 #ifndef SEC_I_SIGNATURE_NEEDED
-# define SEC_I_SIGNATURE_NEEDED               ((HRESULT)0x0009035CL)
+#define SEC_I_SIGNATURE_NEEDED ((HRESULT)0x0009035CL)
 #endif
 
 #ifndef CRYPT_E_REVOKED
-# define CRYPT_E_REVOKED                      ((HRESULT)0x80092010L)
+#define CRYPT_E_REVOKED ((HRESULT)0x80092010L)
 #endif
 
 #ifndef CRYPT_E_NO_REVOCATION_DLL
-# define CRYPT_E_NO_REVOCATION_DLL            ((HRESULT)0x80092011L)
+#define CRYPT_E_NO_REVOCATION_DLL ((HRESULT)0x80092011L)
 #endif
 
 #ifndef CRYPT_E_NO_REVOCATION_CHECK
-# define CRYPT_E_NO_REVOCATION_CHECK          ((HRESULT)0x80092012L)
+#define CRYPT_E_NO_REVOCATION_CHECK ((HRESULT)0x80092012L)
 #endif
 
 #ifndef CRYPT_E_REVOCATION_OFFLINE
-# define CRYPT_E_REVOCATION_OFFLINE           ((HRESULT)0x80092013L)
+#define CRYPT_E_REVOCATION_OFFLINE ((HRESULT)0x80092013L)
 #endif
 
 #ifndef CRYPT_E_NOT_IN_REVOCATION_DATABASE
-# define CRYPT_E_NOT_IN_REVOCATION_DATABASE   ((HRESULT)0x80092014L)
+#define CRYPT_E_NOT_IN_REVOCATION_DATABASE ((HRESULT)0x80092014L)
 #endif
 
 #ifdef UNICODE
-#  define SECFLAG_WINNT_AUTH_IDENTITY \
-     (unsigned long)SEC_WINNT_AUTH_IDENTITY_UNICODE
+#define SECFLAG_WINNT_AUTH_IDENTITY \
+  (unsigned long)SEC_WINNT_AUTH_IDENTITY_UNICODE
 #else
-#  define SECFLAG_WINNT_AUTH_IDENTITY \
-     (unsigned long)SEC_WINNT_AUTH_IDENTITY_ANSI
+#define SECFLAG_WINNT_AUTH_IDENTITY (unsigned long)SEC_WINNT_AUTH_IDENTITY_ANSI
 #endif
 
 /*

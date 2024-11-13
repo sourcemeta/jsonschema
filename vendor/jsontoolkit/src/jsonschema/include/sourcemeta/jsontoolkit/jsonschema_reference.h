@@ -9,12 +9,12 @@
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
-#include <cstdint>  // std::uint8_t
-#include <map>      // std::map
-#include <optional> // std::optional
-#include <string>   // std::string
-#include <tuple>    // std::tuple
-#include <utility>  // std::pair
+#include <cstdint>   // std::uint8_t
+#include <map>       // std::map
+#include <optional>  // std::optional
+#include <string>    // std::string
+#include <tuple>     // std::tuple
+#include <utility>   // std::pair
 
 namespace sourcemeta::jsontoolkit {
 
@@ -160,6 +160,6 @@ auto frame(const JSON &schema, ReferenceFrame &frame, ReferenceMap &references,
            const std::optional<std::string> &default_dialect = std::nullopt,
            const std::optional<std::string> &default_id = std::nullopt) -> void;
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

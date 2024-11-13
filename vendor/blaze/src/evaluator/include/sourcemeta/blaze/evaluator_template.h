@@ -2,12 +2,11 @@
 #define SOURCEMETA_BLAZE_EVALUATOR_TEMPLATE_H
 
 #include <sourcemeta/blaze/evaluator_value.h>
-
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 
-#include <cstdint> // std::uint8_t
-#include <string>  // std::string
-#include <vector>  // std::vector
+#include <cstdint>  // std::uint8_t
+#include <string>   // std::string
+#include <vector>   // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -205,27 +204,27 @@ enum class TemplateIndex : std::uint8_t {
 };
 #endif
 
-#define DEFINE_STEP_WITH_VALUE(category, name, type)                           \
-  struct category##name {                                                      \
-    const sourcemeta::jsontoolkit::Pointer relative_schema_location;           \
-    const sourcemeta::jsontoolkit::Pointer relative_instance_location;         \
-    const std::string keyword_location;                                        \
-    const std::size_t schema_resource;                                         \
-    const bool dynamic;                                                        \
-    const bool track;                                                          \
-    const type value;                                                          \
+#define DEFINE_STEP_WITH_VALUE(category, name, type)                   \
+  struct category##name {                                              \
+    const sourcemeta::jsontoolkit::Pointer relative_schema_location;   \
+    const sourcemeta::jsontoolkit::Pointer relative_instance_location; \
+    const std::string keyword_location;                                \
+    const std::size_t schema_resource;                                 \
+    const bool dynamic;                                                \
+    const bool track;                                                  \
+    const type value;                                                  \
   };
 
-#define DEFINE_STEP_APPLICATOR(category, name, type)                           \
-  struct category##name {                                                      \
-    const sourcemeta::jsontoolkit::Pointer relative_schema_location;           \
-    const sourcemeta::jsontoolkit::Pointer relative_instance_location;         \
-    const std::string keyword_location;                                        \
-    const std::size_t schema_resource;                                         \
-    const bool dynamic;                                                        \
-    const bool track;                                                          \
-    const type value;                                                          \
-    const Template children;                                                   \
+#define DEFINE_STEP_APPLICATOR(category, name, type)                   \
+  struct category##name {                                              \
+    const sourcemeta::jsontoolkit::Pointer relative_schema_location;   \
+    const sourcemeta::jsontoolkit::Pointer relative_instance_location; \
+    const std::string keyword_location;                                \
+    const std::size_t schema_resource;                                 \
+    const bool dynamic;                                                \
+    const bool track;                                                  \
+    const type value;                                                  \
+    const Template children;                                           \
   };
 
 /// @defgroup evaluator_instructions Instruction Set
@@ -608,6 +607,6 @@ DEFINE_STEP_WITH_VALUE(Control, DynamicAnchorJump, ValueString)
 #undef DEFINE_STEP_WITH_VALUE
 #undef DEFINE_STEP_APPLICATOR
 
-} // namespace sourcemeta::blaze
+}  // namespace sourcemeta::blaze
 
 #endif

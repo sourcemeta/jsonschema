@@ -1,15 +1,14 @@
 class ExclusiveMaximumIntegerToMaximum final : public Rule {
-public:
+ public:
   ExclusiveMaximumIntegerToMaximum()
       : Rule("exclusive_maximum_integer_to_maximum",
              "Setting `exclusiveMaximum` when `type` is `integer` is syntax "
-             "sugar for `maximum`") {};
+             "sugar for `maximum`"){};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto condition(
+      const sourcemeta::jsontoolkit::JSON &schema, const std::string &,
+      const std::set<std::string> &vocabularies,
+      const sourcemeta::jsontoolkit::Pointer &) const -> bool override {
     return contains_any(
                vocabularies,
                {"https://json-schema.org/draft/2020-12/vocab/validation",

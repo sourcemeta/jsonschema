@@ -16,6 +16,6 @@ enum class BucketCachePolicy {
 
 };
 
-} // namespace sourcemeta::hydra
+}  // namespace sourcemeta::hydra
 
 #endif

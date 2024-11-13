@@ -7,15 +7,15 @@
 
 #include <sourcemeta/jsontoolkit/uri_error.h>
 
-#include <cstdint>     // std::uint32_t
-#include <istream>     // std::istream
-#include <memory>      // std::unique_ptr
-#include <optional>    // std::optional
-#include <ostream>     // std::ostream
-#include <span>        // std::span
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <vector>      // std::vector
+#include <cstdint>      // std::uint32_t
+#include <istream>      // std::istream
+#include <memory>       // std::unique_ptr
+#include <optional>     // std::optional
+#include <ostream>      // std::ostream
+#include <span>         // std::span
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <vector>       // std::vector
 
 /// @defgroup uri URI
 /// @brief A RFC 3986 URI implementation based on `uriparser`.
@@ -30,7 +30,7 @@ namespace sourcemeta::jsontoolkit {
 
 /// @ingroup uri
 class SOURCEMETA_JSONTOOLKIT_URI_EXPORT URI {
-public:
+ public:
   // TODO: Add a constructor that takes a C++ input stream
 
   /// This constructor creates a URI from a string type. For example:
@@ -381,7 +381,7 @@ public:
   /// colon. See https://tools.ietf.org/html/rfc3986#section-3.2.1
   [[nodiscard]] auto userinfo() const -> std::optional<std::string_view>;
 
-private:
+ private:
   bool parsed = false;
   auto parse() -> void;
 
@@ -413,6 +413,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

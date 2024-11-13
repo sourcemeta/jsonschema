@@ -7,10 +7,10 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 
-#include <functional>  // std::function
-#include <map>         // std::map
-#include <optional>    // std::optional
-#include <string_view> // std::string_view
+#include <functional>   // std::function
+#include <map>          // std::map
+#include <optional>     // std::optional
+#include <string_view>  // std::string_view
 
 namespace sourcemeta::jsontoolkit {
 
@@ -63,7 +63,7 @@ auto official_resolver(std::string_view identifier)
 /// assert(resolver("https://www.example.com").has_value());
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT MapSchemaResolver {
-public:
+ public:
   /// Construct an empty map resolver. If you don't add schemas to it, it will
   /// always resolve to nothing
   MapSchemaResolver();
@@ -80,7 +80,7 @@ public:
   /// Attempt to resolve a schema
   auto operator()(std::string_view identifier) const -> std::optional<JSON>;
 
-private:
+ private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -94,6 +94,6 @@ private:
 #endif
 };
 
-} // namespace sourcemeta::jsontoolkit
+}  // namespace sourcemeta::jsontoolkit
 
 #endif

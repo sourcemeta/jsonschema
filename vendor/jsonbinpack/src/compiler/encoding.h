@@ -8,8 +8,8 @@ namespace sourcemeta::jsonbinpack {
 
 constexpr auto ENCODING_V1{"tag:sourcemeta.com,2024:jsonbinpack/encoding/v1"};
 
-inline auto
-make_resolver(const sourcemeta::jsontoolkit::SchemaResolver &fallback) -> auto {
+inline auto make_resolver(
+    const sourcemeta::jsontoolkit::SchemaResolver &fallback) -> auto {
   return [&fallback](std::string_view identifier)
              -> std::optional<sourcemeta::jsontoolkit::JSON> {
     if (identifier == ENCODING_V1) {
@@ -27,6 +27,6 @@ make_resolver(const sourcemeta::jsontoolkit::SchemaResolver &fallback) -> auto {
   };
 }
 
-} // namespace sourcemeta::jsonbinpack
+}  // namespace sourcemeta::jsonbinpack
 
 #endif
