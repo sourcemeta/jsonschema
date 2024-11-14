@@ -5,3 +5,4 @@ hydra https://github.com/sourcemeta/hydra a4a74f3cabd32f2f829f449d67339dac33f991
 alterschema https://github.com/sourcemeta/alterschema 92e370ce9c1f0582014b54d43e388ee012dfe13d
 jsonbinpack https://github.com/sourcemeta/jsonbinpack d777179441d3c703e1fda1187742541aa26836b5
 blaze https://github.com/sourcemeta/blaze 4db8309470369332d3d0658ade9402a37abe418e
+termcolor https://github.com/ikalnytskyi/termcolor.git v2.1.0
