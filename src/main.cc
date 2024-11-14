@@ -145,12 +145,12 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   }
 }
 
-int main(int argc, char *argv[]) noexcept {
+auto main(int argc, char *argv[]) noexcept -> int {
   try {
-    std::string program{argv[0]};
-    std::string command = (argc > 1) ? argv[1] : "help";
-    std::vector<std::string> arguments{argv + std::min(2, argc), argv + argc};
-
+    const std::string program{argv[0]};
+    const std::string command{argc > 1 ? argv[1] : "help"};
+    const std::vector<std::string> arguments{argv + std::min(2, argc),
+                                             argv + argc};
     return jsonschema_main(program, command, arguments);
   } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) noexcept {
   } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
-              << "at\nhttps://github.com/sourcemeta/jsonschema\n";
+                 "at\nhttps://github.com/sourcemeta/jsonschema\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
     std::cerr << "error: " << error.what() << " at column " << error.column()
@@ -184,6 +184,7 @@ int main(int argc, char *argv[]) noexcept {
               << " and column " << error.column() << "\n";
     return EXIT_FAILURE;
   } catch (const std::filesystem::filesystem_error &error) {
+    // See https://en.cppreference.com/w/cpp/error/errc
     if (error.code() == std::errc::no_such_file_or_directory) {
       std::cerr << "error: " << error.code().message() << "\n  "
                 << std::filesystem::weakly_canonical(error.path1()).string()
@@ -196,6 +197,7 @@ int main(int argc, char *argv[]) noexcept {
     } else {
       std::cerr << "error: " << error.what() << "\n";
     }
+
     return EXIT_FAILURE;
   } catch (const std::runtime_error &error) {
     std::cerr << "error: " << error.what() << "\n";
