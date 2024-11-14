@@ -340,7 +340,7 @@ auto compiler_draft6_validation_propertynames(
     const DynamicContext &dynamic_context) -> Template {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "string") {
+      schema_context.schema.at("type").to_string() != "object") {
     return {};
   }
 
