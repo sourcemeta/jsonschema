@@ -15,6 +15,7 @@
 #ifdef _WIN32
 #include <io.h>
 #define isatty _isatty
+
 #define fileno _fileno
 #else
 
