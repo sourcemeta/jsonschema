@@ -145,52 +145,44 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   }
 }
 
-auto main(int argc, char *argv[]) noexcept -> int {
+int main(int argc, char *argv[]) noexcept {
   try {
-    const std::string program{argv[0]};
-    const std::string command{argc > 1 ? argv[1] : "help"};
-    const std::vector<std::string> arguments{argv + std::min(2, argc),
-                                             argv + argc};
-    return jsonschema_main(program, command, arguments);
+    std::string program{argv[0]};
+    std::string command = (argc > 1) ? argv[1] : "help";
+    std::vector<std::string> arguments{argv + std::min(2, argc), argv + argc};
 
+    return jsonschema_main(program, command, arguments);
   } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
               << "\n    at schema location \"";
     sourcemeta::jsontoolkit::stringify(error.location(), std::cerr);
     std::cerr << "\"\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  at " << error.id() << "\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
               << "at\nhttps://github.com/sourcemeta/jsonschema\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
     std::cerr << "error: " << error.what() << " at column " << error.column()
               << "\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::FileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n  "
               << std::filesystem::weakly_canonical(error.path()).string()
               << "\n";
     return EXIT_FAILURE;
-
   } catch (const sourcemeta::jsontoolkit::ParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n";
     return EXIT_FAILURE;
-
   } catch (const std::filesystem::filesystem_error &error) {
     if (error.code() == std::errc::no_such_file_or_directory) {
       std::cerr << "error: " << error.code().message() << "\n  "
@@ -205,11 +197,9 @@ auto main(int argc, char *argv[]) noexcept -> int {
       std::cerr << "error: " << error.what() << "\n";
     }
     return EXIT_FAILURE;
-
   } catch (const std::runtime_error &error) {
     std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
-
   } catch (const std::exception &error) {
     std::cerr << "unexpected error: " << error.what()
               << "\nPlease report it at "
