@@ -130,7 +130,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::encode(arguments);
   } else if (command == "decode") {
     return sourcemeta::jsonschema::cli::decode(arguments);
-  } else {
+  }
+  {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
