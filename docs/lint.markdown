@@ -16,6 +16,15 @@ like [ESLint](https://eslint.org),
 that can check your schemas against various common anti-patterns and
 automatically fix many of them.
 
+> [!TIP]
+> In comparison to [Spectral](https://github.com/stoplightio/spectral), this
+> CLI is exclusively focused on linting JSON Schema whereas Spectral focuses on
+> linting API specifications (OpenAPI, AsyncAPI, Arazzo, etc) touching on JSON
+> Schema as a byproduct. Therefore, this CLI is expected to have deeper
+> coverage of JSON Schema and be also usable in JSON Schema use cases that are
+> not related to APIs. If you are working with JSON Schema for API
+> specifications, you should make use of both linters together!
+
 Examples
 --------
 
