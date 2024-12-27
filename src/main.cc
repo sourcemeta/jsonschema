@@ -57,8 +57,8 @@ Commands:
 
    frame <schema.json> [--json/-j]
 
-       Frame a schema in-place, displaying schema locations and references
-       in a human-readable manner.
+       Statically analyse a schema to display schema locations and
+       references in a human-readable manner.
 
    compile <schema.json>
 
