@@ -60,16 +60,6 @@ Commands:
        Statically analyse a schema to display schema locations and
        references in a human-readable manner.
 
-   identify <schema.json> [--relative-to/-t <uri>]
-
-       Print the URI of the given schema to standard output, optionally
-       relative to a given base URI.
-
-   canonicalize <schema.json>
-
-       Pre-process a JSON Schema into JSON BinPack's canonical form
-       for static analysis.
-
    encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
@@ -97,10 +87,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::metaschema(arguments);
   } else if (command == "test") {
     return sourcemeta::jsonschema::cli::test(arguments);
-  } else if (command == "identify") {
-    return sourcemeta::jsonschema::cli::identify(arguments);
-  } else if (command == "canonicalize") {
-    return sourcemeta::jsonschema::cli::canonicalize(arguments);
   } else if (command == "encode") {
     return sourcemeta::jsonschema::cli::encode(arguments);
   } else if (command == "decode") {

@@ -144,31 +144,10 @@ add_jsonschema_test_unix(frame/fail_no_schema)
 add_jsonschema_test_unix(frame/fail_schema_invalid_json)
 add_jsonschema_test_unix(frame/fail_unknown_metaschema)
 
-# Identify
-add_jsonschema_test_unix(identify/fail_resolve_from_no_match)
-add_jsonschema_test_unix(identify/fail_resolve_from_equal)
-add_jsonschema_test_unix(identify/fail_invalid_id)
-add_jsonschema_test_unix(identify/fail_invalid_id_uri)
-add_jsonschema_test_unix(identify/fail_invalid_base_uri)
-add_jsonschema_test_unix(identify/fail_no_id)
-add_jsonschema_test_unix(identify/fail_no_schema)
-add_jsonschema_test_unix(identify/pass_with_official_dialect)
-add_jsonschema_test_unix(identify/pass_with_official_dialect_verbose)
-add_jsonschema_test_unix(identify/pass_with_resolve_from)
-add_jsonschema_test_unix(identify/pass_with_resolve_from_verbose)
-add_jsonschema_test_unix(identify/pass_with_unknown_dialect)
-add_jsonschema_test_unix(identify/pass_with_unknown_dialect_verbose)
-
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
 add_jsonschema_test_unix(lint/pass_lint_no_fix)
 add_jsonschema_test_unix(lint/fail_lint)
-
-# Canonicalize
-add_jsonschema_test_unix(canonicalize/pass_1)
-add_jsonschema_test_unix(canonicalize/fail_no_schema)
-add_jsonschema_test_unix(canonicalize/fail_schema_invalid_json)
-add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
