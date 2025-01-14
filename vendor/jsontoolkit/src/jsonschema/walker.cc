@@ -61,14 +61,22 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
   }
 
   for (auto &pair : subschema.as_object()) {
-    switch (walker(pair.first, vocabularies).strategy) {
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::Value: {
+    switch (walker(pair.first, vocabularies).type) {
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorValue:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorValueOther:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorValueInPlace: {
         sourcemeta::jsontoolkit::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
         walk(new_pointer, subschemas, pair.second, walker, resolver,
              new_dialect, type, level + 1);
       } break;
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::Elements:
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorElements:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorElementsInline:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorElementsInPlace:
         if (pair.second.is_array()) {
           for (std::size_t index = 0; index < pair.second.size(); index++) {
             sourcemeta::jsontoolkit::Pointer new_pointer{pointer};
@@ -80,7 +88,11 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
         }
 
         break;
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::Members:
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorMembers:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorMembersInPlace:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::LocationMembers:
         if (pair.second.is_object()) {
           for (auto &subpair : pair.second.as_object()) {
             sourcemeta::jsontoolkit::Pointer new_pointer{pointer};
@@ -92,7 +104,10 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
         }
 
         break;
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::ValueOrElements:
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorValueOrElements:
+        [[fallthrough]];
+      case sourcemeta::jsontoolkit::KeywordType::
+          ApplicatorValueOrElementsInPlace:
         if (pair.second.is_array()) {
           for (std::size_t index = 0; index < pair.second.size(); index++) {
             sourcemeta::jsontoolkit::Pointer new_pointer{pointer};
@@ -109,7 +124,7 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
         }
 
         break;
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::ElementsOrMembers:
+      case sourcemeta::jsontoolkit::KeywordType::ApplicatorElementsOrMembers:
         if (pair.second.is_array()) {
           for (std::size_t index = 0; index < pair.second.size(); index++) {
             sourcemeta::jsontoolkit::Pointer new_pointer{pointer};
@@ -129,7 +144,15 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
         }
 
         break;
-      case sourcemeta::jsontoolkit::SchemaWalkerStrategy::None:
+      case sourcemeta::jsontoolkit::KeywordType::Assertion:
+        break;
+      case sourcemeta::jsontoolkit::KeywordType::Annotation:
+        break;
+      case sourcemeta::jsontoolkit::KeywordType::Reference:
+        break;
+      case sourcemeta::jsontoolkit::KeywordType::Other:
+        break;
+      case sourcemeta::jsontoolkit::KeywordType::Unknown:
         break;
     }
   }
@@ -198,9 +221,9 @@ sourcemeta::jsontoolkit::SchemaKeywordIterator::SchemaKeywordIterator(
         resolver, base_dialect.value(), dialect.value()));
   }
 
-  for (const auto &[key, value] : schema.as_object()) {
+  for (const auto &entry : schema.as_object()) {
     this->entries.push_back(
-        {{key}, dialect, vocabularies, base_dialect, value});
+        {{entry.first}, dialect, vocabularies, base_dialect, entry.second});
   }
 
   // Sort keywords based on priority for correct evaluation

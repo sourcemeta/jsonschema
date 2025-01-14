@@ -73,22 +73,23 @@ endif()
 # Enable IPO/LTO to help the compiler optimize across modules.
 # Only do so in release, given these optimizations can significantly
 # increase build times.
-# See: https://cmake.org/cmake/help/latest/module/CheckIPOSupported.html
-if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT BUILD_SHARED_LIBS)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT ipo_supported OUTPUT ipo_supported_error)
-  if(ipo_supported)
-    # TODO: Make IPO/LTO work on Linux + LLVM
-    if(APPLE OR NOT NOA_COMPILER_LLVM)
-      message(STATUS "Enabling IPO")
-      cmake_policy(SET CMP0069 NEW)
-      set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-    else()
-      message(WARNING "Avoiding IPO on this configuration")
-    endif()
-  else()
-    message(WARNING "IPO not supported: ${ipo_supported_error}")
-  endif()
-  unset(ipo_supported)
-  unset(ipo_supported_error)
+
+# Note we don't use CheckIPOSupported and CMAKE_INTERPROCEDURAL_OPTIMIZATION,
+# as those CMake features can only enable thin LTO. For Fat LTO, see:
+# - https://gcc.gnu.org/onlinedocs/gccint/LTO-Overview.html
+# - https://llvm.org/docs/FatLTO.html
+
+if(NOA_COMPILER_GCC AND NOT BUILD_SHARED_LIBS)
+  message(STATUS "Enabling Fat LTO")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto -ffat-lto-objects")
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto")
+endif()
+
+# TODO: Make this work on Linux on LLVM
+if(NOA_COMPILER_LLVM AND NOT BUILD_SHARED_LIBS AND APPLE)
+  message(STATUS "Enabling Fat LTO")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto=full")
+  set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -flto=full")
+  set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -flto=full")
 endif()

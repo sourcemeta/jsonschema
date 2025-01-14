@@ -6,6 +6,7 @@
 #endif
 
 #include <sourcemeta/jsontoolkit/json_array.h>
+#include <sourcemeta/jsontoolkit/json_hash.h>
 #include <sourcemeta/jsontoolkit/json_object.h>
 
 #include <algorithm>        // std::any_of
@@ -20,8 +21,7 @@
 #include <string>           // std::basic_string, std::char_traits
 #include <string_view>      // std::basic_string_view
 #include <type_traits>      // std::enable_if_t, std::is_same_v
-#include <utility>          // std::in_place_type, std::pair
-#include <variant>          // std::variant
+#include <utility>          // std::pair
 
 namespace sourcemeta::jsontoolkit {
 
@@ -43,7 +43,7 @@ public:
   /// The array type used by the JSON document.
   using Array = JSONArray<JSON>;
   /// The object type used by the JSON document.
-  using Object = JSONObject<String, JSON>;
+  using Object = JSONObject<String, JSON, FastHash<JSON>>;
 
   /*
    * Constructors
@@ -82,7 +82,9 @@ public:
   // On some systems, `std::int64_t` might be equal to `long`
   template <typename T = std::int64_t,
             typename = std::enable_if_t<!std::is_same_v<T, std::int64_t>>>
-  explicit JSON(const long value) : data{std::in_place_type<Integer>, value} {}
+  explicit JSON(const long value) : current_type{Type::Integer} {
+    this->data_integer = value;
+  }
 
   /// This constructor creates a JSON document from an real number type. For
   /// example:
@@ -187,6 +189,15 @@ public:
 
   /// A copy constructor for the object type.
   explicit JSON(const Object &value);
+
+  /// Misc constructors
+  JSON(const JSON &);
+  JSON(JSON &&);
+  auto operator=(const JSON &) -> JSON &;
+  auto operator=(JSON &&) -> JSON &;
+
+  /// Destructor
+  ~JSON();
 
   /// This function creates an empty JSON array. For example:
   ///
@@ -702,6 +713,24 @@ public:
   /// ```
   [[nodiscard]] auto at(const String &key) const -> const JSON &;
 
+  /// This method retrieves an object element given a pre-calculated property
+  /// hash.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON my_object =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1, \"bar\": 2 }");
+  /// const sourcemeta::jsontoolkit::Hash hasher;
+  /// assert(my_object.at("bar", hasher("bar")).to_integer() == 2);
+  /// ```
+  [[nodiscard]] auto at(const String &key,
+                        const typename Object::Container::hash_type hash) const
+      -> const JSON &;
+
   /// This method retrieves an object element.
   ///
   /// For example:
@@ -715,6 +744,24 @@ public:
   /// assert(my_object.at("bar").to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key) -> JSON &;
+
+  /// This method retrieves an object element given a pre-calculated property
+  /// hash.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::jsontoolkit::JSON my_object =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1, \"bar\": 2 }");
+  /// const sourcemeta::jsontoolkit::Hash hasher;
+  /// assert(my_object.at("bar", hasher("bar")).to_integer() == 2);
+  /// ```
+  [[nodiscard]] auto at(const String &key,
+                        const typename Object::Container::hash_type hash)
+      -> JSON &;
 
   /// This method retrieves a reference to the first element of a JSON array.
   /// This method is undefined if the input JSON instance is an empty array. For
@@ -798,6 +845,47 @@ public:
   /// ```
   [[nodiscard]] auto size() const -> std::size_t;
 
+  /// If the input JSON instance is a string, return its logical length.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON my_string{"foo"};
+  /// assert(my_string.string_size() == 3);
+  /// ```
+  [[nodiscard]] auto string_size() const -> std::size_t;
+
+  /// If the input JSON instance is an array, return its number of elements.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON my_array =
+  ///   sourcemeta::jsontoolkit::parse("[ 1, 2 ]");
+  /// assert(my_array.array_size() == 2);
+  /// ```
+  [[nodiscard]] auto array_size() const -> std::size_t;
+
+  /// If the input JSON instance is an object, return its number of pairs.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON my_object =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  /// assert(my_object.object_size() == 1);
+  /// ```
+  [[nodiscard]] auto object_size() const -> std::size_t;
+
   /// If the input JSON instance is string, input JSON instance is a string,
   /// return its number of bytes. For example:
   ///
@@ -826,6 +914,23 @@ public:
   /// assert(value.estimated_byte_size() == 11);
   /// ```
   [[nodiscard]] auto estimated_byte_size() const -> std::uint64_t;
+
+  /// Produce a simple hash for the JSON value. Note the hash is fast to produce
+  /// but might have a higher chance of collisions. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON value_1 =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  ///
+  /// const sourcemeta::jsontoolkit::JSON value_2 =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  ///
+  /// assert(value_1.fast_hash() == value_2.fast_hash());
+  /// ```
+  [[nodiscard]] auto fast_hash() const -> std::uint64_t;
 
   /// Check whether a numeric instance is divisible by another numeric instance.
   /// For example:
@@ -873,10 +978,29 @@ public:
   ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
   /// EXPECT_TRUE(document.is_object());
   /// const auto result = document.try_at("foo");
-  /// EXPECT_TRUE(result.has_value());
-  /// EXPECT_EQ(result.value().get().to_integer(), 1);
-  [[nodiscard]] auto try_at(const String &key) const
-      -> std::optional<std::reference_wrapper<const JSON>>;
+  /// EXPECT_TRUE(result);
+  /// EXPECT_EQ(result->to_integer(), 1);
+  [[nodiscard]] auto try_at(const String &key) const -> const JSON *;
+
+  /// This method checks, given a pre-calculated hash, whether an input JSON
+  /// object defines a specific key and returns the value if it does. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  /// EXPECT_TRUE(document.is_object());
+  /// const sourcemeta::jsontoolkit::Hash hasher;
+  /// const auto result = document.try_at("foo", hasher("foo"));
+  /// EXPECT_TRUE(result);
+  /// EXPECT_EQ(result->to_integer(), 1);
+  [[nodiscard]] auto
+  try_at(const String &key,
+         const typename Object::Container::hash_type hash) const
+      -> const JSON *;
 
   /// This method checks whether an input JSON object defines a specific key.
   /// For example:
@@ -891,6 +1015,23 @@ public:
   /// assert(!document.defines("bar"));
   /// ```
   [[nodiscard]] auto defines(const String &key) const -> bool;
+
+  /// This method checks whether an input JSON object defines a specific key
+  /// given a pre-calculated property hash. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document =
+  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": 1 }");
+  /// const sourcemeta::jsontoolkit::Hash hasher;
+  /// assert(document.defines("foo", hasher("foo")));
+  /// assert(!document.defines("bar", hasher("bar")));
+  /// ```
+  [[nodiscard]] auto
+  defines(const String &key,
+          const typename Object::Container::hash_type hash) const -> bool;
 
   /// This method checks whether an input JSON object defines a specific integer
   /// key. For example:
@@ -957,6 +1098,32 @@ public:
   /// assert(!document.contains(sourcemeta::jsontoolkit::JSON{4}));
   /// ```
   [[nodiscard]] auto contains(const JSON &element) const -> bool;
+
+  /// This method checks if an JSON string contains a given string. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document{"foo bar baz"};
+  /// assert(document.contains("bar"));
+  /// assert(!document.contains("baz"));
+  /// ```
+  [[nodiscard]] auto contains(const String &input) const -> bool;
+
+  /// This method checks if an JSON string contains a given character. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::jsontoolkit::JSON document{"foo"};
+  /// assert(document.contains('f'));
+  /// assert(!document.contains('b'));
+  /// ```
+  [[nodiscard]] auto contains(const String::value_type input) const -> bool;
 
   /// This method checks if an JSON array does not contain duplicated items. For
   /// example:
@@ -1155,7 +1322,7 @@ public:
   auto erase_keys(Iterator first, Iterator last) -> void {
     assert(this->is_object());
     for (auto iterator = first; iterator != last; ++iterator) {
-      std::get<Object>(this->data).data.erase(*iterator);
+      this->data_object.data.erase(*iterator);
     }
   }
 
@@ -1357,16 +1524,26 @@ public:
   auto into_object() -> void;
 
 private:
+  Type current_type = Type::Null;
+
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::variant<std::nullptr_t, bool, Integer, Real, String, Array, Object> data;
+  union {
+    bool data_boolean;
+    Integer data_integer;
+    Real data_real;
+    String data_string;
+    Array data_array;
+    Object data_object;
+  };
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
+  auto maybe_destruct_union() -> void;
 };
 
 } // namespace sourcemeta::jsontoolkit

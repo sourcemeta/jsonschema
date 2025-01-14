@@ -52,11 +52,13 @@ struct SchemaContext {
 /// disposal to implement a keyword
 struct DynamicContext {
   /// The schema keyword
-  const std::string &keyword;
+  const std::string keyword;
   /// The schema base keyword path
   const sourcemeta::jsontoolkit::Pointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
   const sourcemeta::jsontoolkit::Pointer &base_instance_location;
+  /// Whether the instance location property acts as the target
+  const bool property_as_target;
 };
 
 #if !defined(DOXYGEN)
@@ -67,8 +69,9 @@ struct Context;
 /// A compiler is represented as a function that maps a keyword compiler
 /// contexts into a compiler template. You can provide your own to implement
 /// your own keywords
-using Compiler = std::function<Template(const Context &, const SchemaContext &,
-                                        const DynamicContext &)>;
+using Compiler =
+    std::function<Instructions(const Context &, const SchemaContext &,
+                               const DynamicContext &, const Instructions &)>;
 
 /// @ingroup evaluator
 /// Represents the mode of compilation
@@ -87,9 +90,7 @@ struct Context {
   /// The root schema resource
   const sourcemeta::jsontoolkit::JSON &root;
   /// The reference frame of the entire schema
-  const sourcemeta::jsontoolkit::ReferenceFrame &frame;
-  /// The references of the entire schema
-  const sourcemeta::jsontoolkit::ReferenceMap &references;
+  const sourcemeta::jsontoolkit::Frame &frame;
   /// The set of all schema resources in the schema without duplicates
   const std::vector<std::string> resources;
   /// The schema walker in use
@@ -102,12 +103,8 @@ struct Context {
   const Mode mode;
   /// Whether the schema makes use of dynamic scoping
   const bool uses_dynamic_scopes;
-  /// The list of subschemas that require keeping track of unevaluated
-  /// properties
-  const std::set<sourcemeta::jsontoolkit::Pointer>
-      unevaluated_properties_schemas;
-  /// The list of subschemas that require keeping track of unevaluated items
-  const std::set<sourcemeta::jsontoolkit::Pointer> unevaluated_items_schemas;
+  /// The list of unevaluated entries and their dependencies
+  const sourcemeta::jsontoolkit::UnevaluatedEntries unevaluated;
   /// The list of subschemas that are precompiled at the beginning of the
   /// instruction set
   const std::set<std::string> precompiled_static_schemas;
@@ -117,7 +114,8 @@ struct Context {
 /// A default compiler that aims to implement every keyword for official JSON
 /// Schema dialects.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
-    const Context &, const SchemaContext &, const DynamicContext &) -> Template;
+    const Context &, const SchemaContext &, const DynamicContext &,
+    const Instructions &) -> Instructions;
 
 /// @ingroup compiler
 ///
@@ -165,73 +163,7 @@ compile(const Context &context, const SchemaContext &schema_context,
         const sourcemeta::jsontoolkit::Pointer &schema_suffix,
         const sourcemeta::jsontoolkit::Pointer &instance_suffix =
             sourcemeta::jsontoolkit::empty_pointer,
-        const std::optional<std::string> &uri = std::nullopt) -> Template;
-
-/// @ingroup compiler
-///
-/// This function converts a compiler template into JSON. Convenient for storing
-/// it or sending it over the wire. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/blaze/compiler.h>
-///
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
-/// #include <iostream>
-///
-/// const sourcemeta::jsontoolkit::JSON schema =
-///     sourcemeta::jsontoolkit::parse(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "type": "string"
-/// })JSON");
-///
-/// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver,
-///     sourcemeta::jsontoolkit::default_schema_compiler)};
-///
-/// const sourcemeta::jsontoolkit::JSON result{
-///     sourcemeta::blaze::to_json(schema_template)};
-///
-/// sourcemeta::jsontoolkit::prettify(result, std::cout);
-/// std::cout << "\n";
-/// ```
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT to_json(const Template &steps)
-    -> sourcemeta::jsontoolkit::JSON;
-
-/// @ingroup compiler
-///
-/// An opinionated key comparison for printing JSON Schema compiler templates
-/// with sourcemeta::jsontoolkit::prettify or
-/// sourcemeta::jsontoolkit::stringify. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/blaze/compiler.h>
-///
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
-/// #include <iostream>
-///
-/// const sourcemeta::jsontoolkit::JSON schema =
-///     sourcemeta::jsontoolkit::parse(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "type": "string"
-/// })JSON");
-///
-/// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver,
-///     sourcemeta::jsontoolkit::default_schema_compiler)};
-///
-/// const sourcemeta::jsontoolkit::JSON result{
-///     sourcemeta::blaze::to_json(schema_template)};
-///
-/// sourcemeta::jsontoolkit::prettify(result, std::cout,
-/// template_format_compare); std::cout << "\n";
-/// ```
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT template_format_compare(
-    const sourcemeta::jsontoolkit::JSON::String &left,
-    const sourcemeta::jsontoolkit::JSON::String &right) -> bool;
+        const std::optional<std::string> &uri = std::nullopt) -> Instructions;
 
 } // namespace sourcemeta::blaze
 

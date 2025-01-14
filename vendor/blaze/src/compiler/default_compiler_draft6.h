@@ -12,8 +12,9 @@ using namespace sourcemeta::blaze;
 
 auto compiler_draft6_validation_type(const Context &context,
                                      const SchemaContext &schema_context,
-                                     const DynamicContext &dynamic_context)
-    -> Template {
+                                     const DynamicContext &dynamic_context,
+                                     const Instructions &current)
+    -> Instructions {
   if (schema_context.schema.at(dynamic_context.keyword).is_string()) {
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).to_string()};
@@ -33,9 +34,9 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {
-          make<AssertionTypeStrict>(context, schema_context, dynamic_context,
-                                    sourcemeta::jsontoolkit::JSON::Type::Null)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Null)};
     } else if (type == "boolean") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -52,19 +53,27 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Boolean)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Boolean)};
     } else if (type == "object") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minProperties", 0)};
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxProperties")};
-      if (context.mode == Mode::FastValidation &&
-          (minimum > 0 || maximum.has_value())) {
-        return {make<AssertionTypeObjectBounded>(context, schema_context,
-                                                 dynamic_context,
-                                                 {minimum, maximum, false})};
+
+      if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum == 0) {
+          return {make(
+              sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
+              context, schema_context, dynamic_context,
+              ValueUnsignedInteger{maximum.value()})};
+        } else if (minimum > 0 || maximum.has_value()) {
+          return {make(
+              sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded,
+              context, schema_context, dynamic_context,
+              ValueRange{minimum, maximum, false})};
+        }
       }
 
       if (context.mode == Mode::FastValidation &&
@@ -82,19 +91,40 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Object)};
+      if (context.mode == Mode::FastValidation &&
+          schema_context.schema.defines("required")) {
+        return {};
+      }
+
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Object)};
     } else if (type == "array") {
+      if (context.mode == Mode::FastValidation && !current.empty() &&
+          current.back().type == sourcemeta::blaze::InstructionIndex::
+                                     LoopItemsPropertiesExactlyTypeStrictHash &&
+          current.back().relative_instance_location ==
+              dynamic_context.base_instance_location) {
+        return {};
+      }
+
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minItems", 0)};
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxItems")};
-      if (context.mode == Mode::FastValidation &&
-          (minimum > 0 || maximum.has_value())) {
-        return {make<AssertionTypeArrayBounded>(context, schema_context,
-                                                dynamic_context,
-                                                {minimum, maximum, false})};
+
+      if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum == 0) {
+          return {
+              make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
+                   context, schema_context, dynamic_context,
+                   ValueUnsignedInteger{maximum.value()})};
+        } else if (minimum > 0 || maximum.has_value()) {
+          return {make(
+              sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded,
+              context, schema_context, dynamic_context,
+              ValueRange{minimum, maximum, false})};
+        }
       }
 
       if (context.mode == Mode::FastValidation &&
@@ -112,9 +142,9 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Array)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Array)};
     } else if (type == "number") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -131,11 +161,11 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {make<AssertionTypeStrictAny>(
-          context, schema_context, dynamic_context,
-          std::vector<sourcemeta::jsontoolkit::JSON::Type>{
-              sourcemeta::jsontoolkit::JSON::Type::Real,
-              sourcemeta::jsontoolkit::JSON::Type::Integer})};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
+                   context, schema_context, dynamic_context,
+                   std::vector<sourcemeta::jsontoolkit::JSON::Type>{
+                       sourcemeta::jsontoolkit::JSON::Type::Real,
+                       sourcemeta::jsontoolkit::JSON::Type::Integer})};
     } else if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -155,19 +185,31 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {
-          make<AssertionType>(context, schema_context, dynamic_context,
-                              sourcemeta::jsontoolkit::JSON::Type::Integer)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
+                   schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Integer)};
     } else if (type == "string") {
+      if (dynamic_context.property_as_target) {
+        return {};
+      }
+
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minLength", 0)};
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxLength")};
-      if (context.mode == Mode::FastValidation &&
-          (minimum > 0 || maximum.has_value())) {
-        return {make<AssertionTypeStringBounded>(context, schema_context,
-                                                 dynamic_context,
-                                                 {minimum, maximum, false})};
+
+      if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum == 0) {
+          return {make(
+              sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
+              context, schema_context, dynamic_context,
+              ValueUnsignedInteger{maximum.value()})};
+        } else if (minimum > 0 || maximum.has_value()) {
+          return {make(
+              sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded,
+              context, schema_context, dynamic_context,
+              ValueRange{minimum, maximum, false})};
+        }
       }
 
       if (context.mode == Mode::FastValidation &&
@@ -185,9 +227,9 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::String)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::String)};
     } else {
       return {};
     }
@@ -199,35 +241,39 @@ auto compiler_draft6_validation_type(const Context &context,
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).front().to_string()};
     if (type == "null") {
-      return {
-          make<AssertionTypeStrict>(context, schema_context, dynamic_context,
-                                    sourcemeta::jsontoolkit::JSON::Type::Null)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Null)};
     } else if (type == "boolean") {
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Boolean)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Boolean)};
     } else if (type == "object") {
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Object)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Object)};
     } else if (type == "array") {
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::Array)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Array)};
     } else if (type == "number") {
-      return {make<AssertionTypeStrictAny>(
-          context, schema_context, dynamic_context,
-          std::vector<sourcemeta::jsontoolkit::JSON::Type>{
-              sourcemeta::jsontoolkit::JSON::Type::Real,
-              sourcemeta::jsontoolkit::JSON::Type::Integer})};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
+                   context, schema_context, dynamic_context,
+                   std::vector<sourcemeta::jsontoolkit::JSON::Type>{
+                       sourcemeta::jsontoolkit::JSON::Type::Real,
+                       sourcemeta::jsontoolkit::JSON::Type::Integer})};
     } else if (type == "integer") {
-      return {
-          make<AssertionType>(context, schema_context, dynamic_context,
-                              sourcemeta::jsontoolkit::JSON::Type::Integer)};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
+                   schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::Integer)};
     } else if (type == "string") {
-      return {make<AssertionTypeStrict>(
-          context, schema_context, dynamic_context,
-          sourcemeta::jsontoolkit::JSON::Type::String)};
+      if (dynamic_context.property_as_target) {
+        return {};
+      }
+
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
+                   context, schema_context, dynamic_context,
+                   sourcemeta::jsontoolkit::JSON::Type::String)};
     } else {
       return {};
     }
@@ -251,14 +297,18 @@ auto compiler_draft6_validation_type(const Context &context,
       } else if (type_string == "integer") {
         types.push_back(sourcemeta::jsontoolkit::JSON::Type::Integer);
       } else if (type_string == "string") {
+        if (dynamic_context.property_as_target) {
+          continue;
+        }
+
         types.push_back(sourcemeta::jsontoolkit::JSON::Type::String);
       }
     }
 
     assert(types.size() >=
            schema_context.schema.at(dynamic_context.keyword).size());
-    return {make<AssertionTypeAny>(context, schema_context, dynamic_context,
-                                   std::move(types))};
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeAny, context,
+                 schema_context, dynamic_context, std::move(types))};
   }
 
   return {};
@@ -266,17 +316,18 @@ auto compiler_draft6_validation_type(const Context &context,
 
 auto compiler_draft6_validation_const(const Context &context,
                                       const SchemaContext &schema_context,
-                                      const DynamicContext &dynamic_context)
-    -> Template {
-  return {make<AssertionEqual>(
-      context, schema_context, dynamic_context,
-      sourcemeta::jsontoolkit::JSON{
-          schema_context.schema.at(dynamic_context.keyword)})};
+                                      const DynamicContext &dynamic_context,
+                                      const Instructions &) -> Instructions {
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionEqual, context,
+               schema_context, dynamic_context,
+               sourcemeta::jsontoolkit::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_draft6_validation_exclusivemaximum(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   assert(schema_context.schema.at(dynamic_context.keyword).is_number());
 
   if (schema_context.schema.defines("type") &&
@@ -286,15 +337,16 @@ auto compiler_draft6_validation_exclusivemaximum(
     return {};
   }
 
-  return {make<AssertionLess>(
-      context, schema_context, dynamic_context,
-      sourcemeta::jsontoolkit::JSON{
-          schema_context.schema.at(dynamic_context.keyword)})};
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionLess, context,
+               schema_context, dynamic_context,
+               sourcemeta::jsontoolkit::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_draft6_validation_exclusiveminimum(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   assert(schema_context.schema.at(dynamic_context.keyword).is_number());
 
   if (schema_context.schema.defines("type") &&
@@ -304,56 +356,61 @@ auto compiler_draft6_validation_exclusiveminimum(
     return {};
   }
 
-  return {make<AssertionGreater>(
-      context, schema_context, dynamic_context,
-      sourcemeta::jsontoolkit::JSON{
-          schema_context.schema.at(dynamic_context.keyword)})};
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionGreater, context,
+               schema_context, dynamic_context,
+               sourcemeta::jsontoolkit::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_draft6_applicator_contains(const Context &context,
                                          const SchemaContext &schema_context,
-                                         const DynamicContext &dynamic_context)
-    -> Template {
+                                         const DynamicContext &dynamic_context,
+                                         const Instructions &) -> Instructions {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
     return {};
   }
 
-  Template children{compile(context, schema_context, relative_dynamic_context,
-                            sourcemeta::jsontoolkit::empty_pointer,
-                            sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::jsontoolkit::empty_pointer,
+                                sourcemeta::jsontoolkit::empty_pointer)};
 
   if (children.empty()) {
     // We still need to check the instance is not empty
-    return {make<AssertionArraySizeGreater>(
-        context, schema_context, dynamic_context, ValueUnsignedInteger{0})};
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater,
+                 context, schema_context, dynamic_context,
+                 ValueUnsignedInteger{0})};
   }
 
-  return {make<LoopContains>(context, schema_context, dynamic_context,
-                             ValueRange{1, std::nullopt, false},
-                             std::move(children))};
+  return {make(sourcemeta::blaze::InstructionIndex::LoopContains, context,
+               schema_context, dynamic_context,
+               ValueRange{1, std::nullopt, false}, std::move(children))};
 }
 
 auto compiler_draft6_validation_propertynames(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "object") {
     return {};
   }
 
-  Template children{compile(context, schema_context, relative_dynamic_context,
-                            sourcemeta::jsontoolkit::empty_pointer,
-                            sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                property_relative_dynamic_context(),
+                                sourcemeta::jsontoolkit::empty_pointer,
+                                sourcemeta::jsontoolkit::empty_pointer)};
 
   if (children.empty()) {
     return {};
   }
 
-  return {make<LoopKeys>(context, schema_context, dynamic_context, ValueNone{},
-                         std::move(children))};
+  return {make(sourcemeta::blaze::InstructionIndex::LoopKeys, context,
+               schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 } // namespace internal

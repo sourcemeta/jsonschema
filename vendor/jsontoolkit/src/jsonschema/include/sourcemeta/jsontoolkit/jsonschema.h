@@ -9,8 +9,11 @@
 #include <sourcemeta/jsontoolkit/jsonschema_anchor.h>
 #include <sourcemeta/jsontoolkit/jsonschema_bundle.h>
 #include <sourcemeta/jsontoolkit/jsonschema_error.h>
+#include <sourcemeta/jsontoolkit/jsonschema_frame.h>
+#include <sourcemeta/jsontoolkit/jsonschema_keywords.h>
 #include <sourcemeta/jsontoolkit/jsonschema_reference.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
+#include <sourcemeta/jsontoolkit/jsonschema_unevaluated.h>
 #include <sourcemeta/jsontoolkit/jsonschema_walker.h>
 
 #include <map>      // std::map
@@ -318,6 +321,76 @@ auto vocabularies(const SchemaResolver &resolver,
 SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 auto schema_format_compare(const JSON::String &left, const JSON::String &right)
     -> bool;
+
+/// @ingroup jsonschema
+///
+/// Try to turn every possible absolute reference in a schema into a relative
+/// one. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <cassert>
+///
+/// sourcemeta::jsontoolkit::JSON schema =
+///   sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$id": "https://www.example.com/schema",
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "$ref": "https://www.example.com/another",
+/// })JSON");
+///
+/// sourcemeta::jsontoolkit::relativize(schema,
+///   sourcemeta::jsontoolkit::default_schema_walker,
+///   sourcemeta::jsontoolkit::official_resolver);
+///
+/// const sourcemeta::jsontoolkit::JSON expected =
+///   sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$id": "https://www.example.com/schema",
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "$ref": "another",
+/// })JSON");
+///
+/// assert(schema == expected);
+/// ```
+SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
+auto relativize(
+    JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect = std::nullopt,
+    const std::optional<std::string> &default_id = std::nullopt) -> void;
+
+/// @ingroup jsonschema
+///
+/// Remove every identifer from a schema, rephrasing references (if any) as
+/// needed. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/json.h>
+/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <cassert>
+///
+/// sourcemeta::jsontoolkit::JSON schema =
+///   sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$id": "https://www.example.com/schema",
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "$ref": "another",
+/// })JSON");
+///
+/// sourcemeta::jsontoolkit::unidentify(schema,
+///   sourcemeta::jsontoolkit::default_schema_walker,
+///   sourcemeta::jsontoolkit::official_resolver);
+///
+/// const sourcemeta::jsontoolkit::JSON expected =
+///   sourcemeta::jsontoolkit::parse(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "$ref": "https://www.example.com/another",
+/// })JSON");
+///
+/// assert(schema == expected);
+/// ```
+SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
+auto unidentify(
+    JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect = std::nullopt) -> void;
 
 } // namespace sourcemeta::jsontoolkit
 

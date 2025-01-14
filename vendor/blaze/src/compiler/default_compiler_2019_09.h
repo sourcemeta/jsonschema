@@ -11,7 +11,8 @@ using namespace sourcemeta::blaze;
 
 auto compiler_2019_09_applicator_dependentschemas(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   assert(schema_context.schema.at(dynamic_context.keyword).is_object());
 
   if (schema_context.schema.defines("type") &&
@@ -20,7 +21,7 @@ auto compiler_2019_09_applicator_dependentschemas(
     return {};
   }
 
-  Template children;
+  Instructions children;
 
   // To guarantee order
   std::vector<std::string> dependents;
@@ -38,23 +39,27 @@ auto compiler_2019_09_applicator_dependentschemas(
     }
 
     if (!dependency.is_boolean() || !dependency.to_boolean()) {
-      children.push_back(make<LogicalWhenDefines>(
-          context, schema_context, relative_dynamic_context,
-          ValueString{dependent},
-          compile(context, schema_context, relative_dynamic_context,
-                  {dependent}, sourcemeta::jsontoolkit::empty_pointer)));
+      children.push_back(
+          make(sourcemeta::blaze::InstructionIndex::LogicalWhenDefines, context,
+               schema_context, relative_dynamic_context(dynamic_context),
+               make_property(dependent),
+               compile(context, schema_context,
+                       relative_dynamic_context(dynamic_context), {dependent},
+                       sourcemeta::jsontoolkit::empty_pointer)));
     }
   }
 
   // TODO: Is this wrapper really necessary?
-  return {make<LogicalWhenType>(context, schema_context, dynamic_context,
-                                sourcemeta::jsontoolkit::JSON::Type::Object,
-                                std::move(children))};
+  return {make(sourcemeta::blaze::InstructionIndex::LogicalWhenType, context,
+               schema_context, dynamic_context,
+               sourcemeta::jsontoolkit::JSON::Type::Object,
+               std::move(children))};
 }
 
 auto compiler_2019_09_validation_dependentrequired(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
     return {};
   }
@@ -79,7 +84,7 @@ auto compiler_2019_09_validation_dependentrequired(
     }
 
     if (!properties.empty()) {
-      dependencies.emplace(entry.first, std::move(properties));
+      dependencies.assign(entry.first, std::move(properties));
     }
   }
 
@@ -87,24 +92,25 @@ auto compiler_2019_09_validation_dependentrequired(
     return {};
   }
 
-  return {make<AssertionPropertyDependencies>(
-      context, schema_context, dynamic_context, std::move(dependencies))};
+  return {
+      make(sourcemeta::blaze::InstructionIndex::AssertionPropertyDependencies,
+           context, schema_context, dynamic_context, std::move(dependencies))};
 }
 
 auto compiler_2019_09_core_annotation(const Context &context,
                                       const SchemaContext &schema_context,
-                                      const DynamicContext &dynamic_context)
-    -> Template {
-  return {make<AnnotationEmit>(
-      context, schema_context, dynamic_context,
-      sourcemeta::jsontoolkit::JSON{
-          schema_context.schema.at(dynamic_context.keyword)})};
+                                      const DynamicContext &dynamic_context,
+                                      const Instructions &) -> Instructions {
+  return {make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+               schema_context, dynamic_context,
+               sourcemeta::jsontoolkit::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
 }
 
 auto compiler_2019_09_applicator_contains_with_options(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context, const bool annotate,
-    const bool track_evaluation) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &,
+    const bool annotate, const bool track_evaluation) -> Instructions {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
@@ -136,21 +142,24 @@ auto compiler_2019_09_applicator_contains_with_options(
   }
 
   if (maximum.has_value() && minimum > maximum.value()) {
-    return {make<AssertionFail>(context, schema_context, dynamic_context,
-                                ValueNone{})};
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                 schema_context, dynamic_context, ValueNone{})};
   }
 
   if (minimum == 0 && !maximum.has_value()) {
     return {};
   }
 
-  Template children{compile(context, schema_context, relative_dynamic_context,
-                            sourcemeta::jsontoolkit::empty_pointer,
-                            sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::jsontoolkit::empty_pointer,
+                                sourcemeta::jsontoolkit::empty_pointer)};
 
   if (annotate) {
-    children.push_back(make<AnnotationBasenameToParent>(
-        context, schema_context, relative_dynamic_context, ValueNone{}));
+    children.push_back(
+        make(sourcemeta::blaze::InstructionIndex::AnnotationBasenameToParent,
+             context, schema_context, relative_dynamic_context(dynamic_context),
+             ValueNone{}));
 
     // TODO: If after emitting the above annotation, the number of annotations
     // for the current schema location + instance location is equal to the
@@ -159,219 +168,282 @@ auto compiler_2019_09_applicator_contains_with_options(
   }
 
   if (track_evaluation) {
-    children.push_back(make<ControlEvaluate>(
-        context, schema_context, relative_dynamic_context, ValuePointer{}));
+    children.push_back(
+        make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
+             schema_context, relative_dynamic_context(dynamic_context),
+             ValuePointer{}));
   }
 
   if (children.empty()) {
     // We still need to check the instance is not empty
-    return {make<AssertionArraySizeGreater>(
-        context, schema_context, dynamic_context, ValueUnsignedInteger{0})};
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater,
+                 context, schema_context, dynamic_context,
+                 ValueUnsignedInteger{0})};
   }
 
-  return {make<LoopContains>(
-      context, schema_context, dynamic_context,
-      ValueRange{minimum, maximum, annotate || track_evaluation},
-      std::move(children))};
+  return {make(sourcemeta::blaze::InstructionIndex::LoopContains, context,
+               schema_context, dynamic_context,
+               ValueRange{minimum, maximum, annotate || track_evaluation},
+               std::move(children))};
 }
 
 auto compiler_2019_09_applicator_contains(const Context &context,
                                           const SchemaContext &schema_context,
-                                          const DynamicContext &dynamic_context)
-    -> Template {
+                                          const DynamicContext &dynamic_context,
+                                          const Instructions &current)
+    -> Instructions {
   return compiler_2019_09_applicator_contains_with_options(
-      context, schema_context, dynamic_context, false, false);
+      context, schema_context, dynamic_context, current, false, false);
 }
 
 auto compiler_2019_09_applicator_additionalproperties(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+
+    -> Instructions {
   return compiler_draft4_applicator_additionalproperties_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
-      !context.unevaluated_properties_schemas.empty());
+      requires_evaluation(context, schema_context));
 }
 
 auto compiler_2019_09_applicator_items(const Context &context,
                                        const SchemaContext &schema_context,
-                                       const DynamicContext &dynamic_context)
-    -> Template {
+                                       const DynamicContext &dynamic_context,
+                                       const Instructions &) -> Instructions {
+  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
+  // `unevaluatedProperties`
+  const bool track{
+      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
+                  [](const auto &dependency) {
+                    return dependency.first.ends_with("unevaluatedItems");
+                  })};
+
+  if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return compiler_draft4_applicator_items_with_options(
+        context, schema_context, dynamic_context,
+        context.mode == Mode::Exhaustive, track);
+  }
+
   return compiler_draft4_applicator_items_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
-      !context.unevaluated_items_schemas.empty());
+      track && !schema_context.schema.defines("unevaluatedItems"));
 }
 
 auto compiler_2019_09_applicator_additionalitems(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
+  // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
+  // `unevaluatedProperties`
+  const bool track{
+      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
+                  [](const auto &dependency) {
+                    return dependency.first.ends_with("unevaluatedItems");
+                  })};
+
   return compiler_draft4_applicator_additionalitems_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
-      !context.unevaluated_items_schemas.empty());
+      track && !schema_context.schema.defines("unevaluatedItems"));
 }
 
 auto compiler_2019_09_applicator_unevaluateditems(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {
     return {};
   }
 
-  if (!context.unevaluated_items_schemas.contains(
-          static_frame_entry(context, schema_context).pointer.initial())) {
-    return {};
+  const auto current_uri{
+      to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
+  assert(context.unevaluated.contains(current_uri));
+  const auto &dependencies{context.unevaluated.at(current_uri)};
+
+  for (const auto &dependency : dependencies.static_dependencies) {
+    assert(!dependency.empty());
+    assert(dependency.back().is_property());
+    const auto &keyword{dependency.back().to_property()};
+    const auto &subschema{
+        sourcemeta::jsontoolkit::get(context.root, dependency)};
+    if (keyword == "items" && sourcemeta::jsontoolkit::is_schema(subschema)) {
+      return {};
+    } else if (keyword == "additionalItems" || keyword == "unevaluatedItems") {
+      return {};
+    }
   }
 
-  Template children{compile(context, schema_context, relative_dynamic_context,
-                            sourcemeta::jsontoolkit::empty_pointer,
-                            sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::jsontoolkit::empty_pointer,
+                                sourcemeta::jsontoolkit::empty_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
-    children.push_back(make<AnnotationToParent>(
-        context, schema_context, relative_dynamic_context,
-        sourcemeta::jsontoolkit::JSON{true}));
+    children.push_back(
+        make(sourcemeta::blaze::InstructionIndex::AnnotationToParent, context,
+             schema_context, relative_dynamic_context(dynamic_context),
+             sourcemeta::jsontoolkit::JSON{true}));
   }
 
   if (children.empty()) {
-    return {make<ControlEvaluate>(context, schema_context, dynamic_context,
-                                  ValuePointer{})};
+    if (dependencies.dynamic_dependencies.empty() && !dependencies.unresolved &&
+        !requires_evaluation(context, schema_context)) {
+      return {};
+    }
+
+    return {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
+                 schema_context, dynamic_context, ValuePointer{})};
   }
 
   // TODO: Attempt to short-circuit evaluation tracking by looking at sibling
   // and adjacent keywords like we do for `unevaluatedProperties`
 
-  return {make<LoopItemsUnevaluated>(context, schema_context, dynamic_context,
-                                     ValueNone{}, std::move(children))};
+  return {make(sourcemeta::blaze::InstructionIndex::LoopItemsUnevaluated,
+               context, schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto compiler_2019_09_applicator_unevaluatedproperties(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "object") {
     return {};
   }
 
-  if (!context.unevaluated_properties_schemas.contains(
-          static_frame_entry(context, schema_context).pointer.initial())) {
-    return {};
-  }
-
-  Template children{compile(context, schema_context, relative_dynamic_context,
-                            sourcemeta::jsontoolkit::empty_pointer,
-                            sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::jsontoolkit::empty_pointer,
+                                sourcemeta::jsontoolkit::empty_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
-    children.push_back(make<AnnotationBasenameToParent>(
-        context, schema_context, relative_dynamic_context, ValueNone{}));
+    children.push_back(
+        make(sourcemeta::blaze::InstructionIndex::AnnotationBasenameToParent,
+             context, schema_context, relative_dynamic_context(dynamic_context),
+             ValueNone{}));
   }
 
-  ValueStrings filter_strings;
+  ValueStringSet filter_strings;
   ValueStrings filter_prefixes;
   std::vector<ValueRegex> filter_regexes;
 
-  for (const auto &entry : find_adjacent(
-           context, schema_context,
-           {"https://json-schema.org/draft/2019-09/vocab/applicator",
-            "https://json-schema.org/draft/2020-12/vocab/applicator"},
-           "properties", sourcemeta::jsontoolkit::JSON::Type::Object)) {
-    for (const auto &property : entry.get().as_object()) {
-      filter_strings.push_back(property.first);
+  const auto current_uri{
+      to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
+  assert(context.unevaluated.contains(current_uri));
+  const auto &dependencies{context.unevaluated.at(current_uri)};
+
+  for (const auto &dependency : dependencies.static_dependencies) {
+    assert(!dependency.empty());
+    assert(dependency.back().is_property());
+    const auto &keyword{dependency.back().to_property()};
+    const auto &subschema{
+        sourcemeta::jsontoolkit::get(context.root, dependency)};
+    if (keyword == "properties") {
+      if (subschema.is_object()) {
+        for (const auto &property : subschema.as_object()) {
+          filter_strings.insert(property.first);
+        }
+      }
+    } else if (keyword == "patternProperties") {
+      if (subschema.is_object()) {
+        for (const auto &property : subschema.as_object()) {
+          const auto maybe_prefix{pattern_as_prefix(property.first)};
+          if (maybe_prefix.has_value()) {
+            filter_prefixes.push_back(maybe_prefix.value());
+          } else {
+            filter_regexes.push_back(
+                {parse_regex(property.first, schema_context.base,
+                             schema_context.relative_pointer.initial().concat(
+                                 {"patternProperties"})),
+                 property.first});
+          }
+        }
+      }
+    } else if (keyword == "additionalProperties" ||
+               keyword == "unevaluatedProperties") {
+      return {};
     }
   }
 
-  for (const auto &entry : find_adjacent(
-           context, schema_context,
-           {"https://json-schema.org/draft/2019-09/vocab/applicator",
-            "https://json-schema.org/draft/2020-12/vocab/applicator"},
-           "patternProperties", sourcemeta::jsontoolkit::JSON::Type::Object)) {
-    for (const auto &property : entry.get().as_object()) {
-      const auto maybe_prefix{pattern_as_prefix(property.first)};
-      if (maybe_prefix.has_value()) {
-        filter_prefixes.push_back(maybe_prefix.value());
-      } else {
-        filter_regexes.push_back(
-            {parse_regex(property.first, schema_context.base,
-                         schema_context.relative_pointer.initial().concat(
-                             {"patternProperties"})),
-             property.first});
-      }
+  if (dependencies.dynamic_dependencies.empty() && !dependencies.unresolved &&
+      !requires_evaluation(context, schema_context)) {
+    if (children.empty()) {
+      return {};
+    } else if (!filter_strings.empty() || !filter_prefixes.empty() ||
+               !filter_regexes.empty()) {
+      return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesExcept,
+                   context, schema_context, dynamic_context,
+                   ValuePropertyFilter{std::move(filter_strings),
+                                       std::move(filter_prefixes),
+                                       std::move(filter_regexes)},
+                   std::move(children))};
+    } else {
+      return {make(sourcemeta::blaze::InstructionIndex::LoopProperties, context,
+                   schema_context, dynamic_context, ValueNone{},
+                   std::move(children))};
     }
   }
 
   if (children.empty()) {
-    return {make<ControlEvaluate>(context, schema_context, dynamic_context,
-                                  ValuePointer{})};
+    return {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
+                 schema_context, dynamic_context, ValuePointer{})};
   } else if (!filter_strings.empty() || !filter_prefixes.empty() ||
              !filter_regexes.empty()) {
-    return {make<LoopPropertiesUnevaluatedExcept>(
+    return {make(
+        sourcemeta::blaze::InstructionIndex::LoopPropertiesUnevaluatedExcept,
         context, schema_context, dynamic_context,
         ValuePropertyFilter{std::move(filter_strings),
                             std::move(filter_prefixes),
                             std::move(filter_regexes)},
         std::move(children))};
   } else {
-    return {make<LoopPropertiesUnevaluated>(context, schema_context,
-                                            dynamic_context, ValueNone{},
-                                            std::move(children))};
+    return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesUnevaluated,
+                 context, schema_context, dynamic_context, ValueNone{},
+                 std::move(children))};
   }
 }
 
 auto compiler_2019_09_core_recursiveref(const Context &context,
                                         const SchemaContext &schema_context,
-                                        const DynamicContext &dynamic_context)
-    -> Template {
+                                        const DynamicContext &dynamic_context,
+                                        const Instructions &current)
+    -> Instructions {
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
-  if (!context.references.contains(
+  if (!context.frame.references().contains(
           {sourcemeta::jsontoolkit::ReferenceType::Dynamic, entry.pointer})) {
-    return compiler_draft4_core_ref(context, schema_context, dynamic_context);
+    return compiler_draft4_core_ref(context, schema_context, dynamic_context,
+                                    current);
   }
 
-  return {make<ControlDynamicAnchorJump>(context, schema_context,
-                                         dynamic_context, "")};
+  return {make(sourcemeta::blaze::InstructionIndex::ControlDynamicAnchorJump,
+               context, schema_context, dynamic_context, "")};
 }
 
 auto compiler_2019_09_applicator_properties(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
-  // If there is a sibling `unevaluatedProperties`, then no need
-  // to track evaluation, as that keyword will statically consider
-  // these properties through `ValuePropertyFilter`
-  if (context.unevaluated_properties_schemas.contains(
-          static_frame_entry(context, schema_context).pointer.initial())) {
-    return compiler_draft4_applicator_properties_with_options(
-        context, schema_context, dynamic_context,
-        context.mode == Mode::Exhaustive, false);
-  }
-
+    const DynamicContext &dynamic_context, const Instructions &current)
+    -> Instructions {
   return compiler_draft4_applicator_properties_with_options(
-      context, schema_context, dynamic_context,
+      context, schema_context, dynamic_context, current,
       context.mode == Mode::Exhaustive,
-      !context.unevaluated_properties_schemas.empty());
+      requires_evaluation(context, schema_context));
 }
 
 auto compiler_2019_09_applicator_patternproperties(
     const Context &context, const SchemaContext &schema_context,
-    const DynamicContext &dynamic_context) -> Template {
-  // If there is a sibling `unevaluatedProperties`, then no need
-  // to track evaluation, as that keyword will statically consider
-  // these properties through `ValuePropertyFilter`
-  if (context.unevaluated_properties_schemas.contains(
-          static_frame_entry(context, schema_context).pointer.initial())) {
-    return compiler_draft4_applicator_patternproperties_with_options(
-        context, schema_context, dynamic_context,
-        context.mode == Mode::Exhaustive, false);
-  }
-
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
   return compiler_draft4_applicator_patternproperties_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
-      !context.unevaluated_properties_schemas.empty());
+      requires_evaluation(context, schema_context));
 }
 
 } // namespace internal

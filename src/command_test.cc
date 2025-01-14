@@ -71,6 +71,7 @@ auto sourcemeta::jsonschema::cli::test(
   const auto test_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
   const auto verbose{options.contains("verbose") || options.contains("v")};
+  sourcemeta::blaze::Evaluator evaluator;
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
@@ -245,8 +246,8 @@ auto sourcemeta::jsonschema::cli::test(
           get_data(test_case, entry.first.parent_path(), verbose)};
       const std::string ref{"$ref"};
       sourcemeta::blaze::ErrorOutput output{instance, {std::cref(ref)}};
-      const auto case_result{sourcemeta::blaze::evaluate(
-          schema_template, instance, std::ref(output))};
+      const auto case_result{
+          evaluator.validate(schema_template, instance, std::ref(output))};
 
       std::ostringstream test_case_description;
       if (test_case.defines("description")) {

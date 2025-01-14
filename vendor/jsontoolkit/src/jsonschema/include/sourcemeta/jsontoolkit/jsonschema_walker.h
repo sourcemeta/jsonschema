@@ -7,9 +7,10 @@
 
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
+#include <sourcemeta/jsontoolkit/jsonschema_keywords.h>
 #include <sourcemeta/jsontoolkit/jsonschema_resolver.h>
 
-#include <cstdint>     // std::uint8_t
+#include <cstdint>     // std::uint64_t
 #include <functional>  // std::function
 #include <map>         // std::map
 #include <optional>    // std::optional
@@ -20,47 +21,13 @@
 
 namespace sourcemeta::jsontoolkit {
 
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-// For some strange reason, GCC on Debian 11 believes that a member of
-// an enum class (which is namespaced by definition), can shadow an
-// alias defined even on a different namespace.
-#pragma GCC diagnostic ignored "-Wshadow"
-#endif
-/// @ingroup jsonschema
-/// Determines the possible states of a schema walk strategy
-enum class SchemaWalkerStrategy : std::uint8_t {
-  /// The JSON Schema keyword is not an applicator
-  None,
-  /// The JSON Schema keyword is an applicator that potentially
-  /// takes a JSON Schema definition as an argument
-  Value,
-  /// The JSON Schema keyword is an applicator that potentially
-  /// takes an array of potentially JSON Schema definitions
-  /// as an argument
-  Elements,
-  /// The JSON Schema keyword is an applicator that potentially
-  /// takes an object as argument, whose values are potentially
-  /// JSON Schema definitions
-  Members,
-  /// The JSON Schema keyword is an applicator that may take a JSON Schema
-  /// definition or an array of potentially JSON Schema definitions
-  /// as an argument
-  ValueOrElements,
-  /// The JSON Schema keyword is an applicator that may take an array of
-  /// potentially JSON Schema definitions or an object whose values are
-  /// potentially JSON Schema definitions as an argument
-  ElementsOrMembers
-};
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
 /// @ingroup jsonschema
 /// A structure that encapsulates the result of walker over a specific keyword
 struct SchemaWalkerResult {
   /// The walker strategy to continue traversing across the schema
-  const SchemaWalkerStrategy strategy;
+  const KeywordType type;
+  /// The vocabulary associated with the keyword, if any
+  const std::optional<std::string> vocabulary;
   /// The keywords a given keyword depends on (if any) during the evaluation
   /// process
   const std::set<std::string> dependencies;
@@ -87,7 +54,7 @@ SOURCEMETA_JSONTOOLKIT_JSONSCHEMA_EXPORT
 inline auto schema_walker_none(std::string_view,
                                const std::map<std::string, bool> &)
     -> sourcemeta::jsontoolkit::SchemaWalkerResult {
-  return {SchemaWalkerStrategy::None, {}};
+  return {KeywordType::Unknown, std::nullopt, {}};
 }
 
 /// @ingroup jsonschema

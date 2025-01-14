@@ -10,9 +10,10 @@ auto Encoder::FIXED_TYPED_ARBITRARY_OBJECT(
   assert(document.is_object());
   assert(document.size() == options.size);
 
-  for (const auto &[key, value] : document.as_object()) {
-    this->write(sourcemeta::jsontoolkit::JSON{key}, *(options.key_encoding));
-    this->write(value, *(options.encoding));
+  for (const auto &entry : document.as_object()) {
+    this->write(sourcemeta::jsontoolkit::JSON{entry.first},
+                *(options.key_encoding));
+    this->write(entry.second, *(options.encoding));
   }
 }
 
@@ -23,9 +24,10 @@ auto Encoder::VARINT_TYPED_ARBITRARY_OBJECT(
   const auto size{document.size()};
   this->put_varint(size);
 
-  for (const auto &[key, value] : document.as_object()) {
-    this->write(sourcemeta::jsontoolkit::JSON{key}, *(options.key_encoding));
-    this->write(value, *(options.encoding));
+  for (const auto &entry : document.as_object()) {
+    this->write(sourcemeta::jsontoolkit::JSON{entry.first},
+                *(options.key_encoding));
+    this->write(entry.second, *(options.encoding));
   }
 }
 

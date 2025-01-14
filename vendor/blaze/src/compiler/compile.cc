@@ -1,5 +1,5 @@
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/evaluator_context.h>
+#include <sourcemeta/blaze/evaluator.h>
 
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 
@@ -16,7 +16,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::SchemaContext &schema_context,
                        const sourcemeta::blaze::DynamicContext &dynamic_context,
                        const std::optional<std::string> &default_dialect)
-    -> sourcemeta::blaze::Template {
+    -> sourcemeta::blaze::Instructions {
   using namespace sourcemeta::blaze;
   assert(is_schema(schema_context.schema));
 
@@ -26,12 +26,12 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     if (schema_context.schema.to_boolean()) {
       return {};
     } else {
-      return {make<AssertionFail>(context, schema_context, dynamic_context,
-                                  ValueNone{})};
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                   schema_context, dynamic_context, ValueNone{})};
     }
   }
 
-  Template steps;
+  Instructions steps;
   for (const auto &entry : sourcemeta::jsontoolkit::SchemaKeywordIterator{
            schema_context.schema, context.walker, context.resolver,
            default_dialect}) {
@@ -46,12 +46,13 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
               // TODO: This represents a copy
               schema_context.labels, schema_context.references},
              {keyword, dynamic_context.base_schema_location,
-              dynamic_context.base_instance_location})) {
+              dynamic_context.base_instance_location,
+              dynamic_context.property_as_target},
+             steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
-      assert(context.frame.contains(
+      assert(context.frame.locations().contains(
           {sourcemeta::jsontoolkit::ReferenceType::Static,
-           std::visit([](const auto &value) { return value.keyword_location; },
-                      step)}));
+           step.keyword_location}));
       steps.push_back(std::move(step));
     }
   }
@@ -63,10 +64,10 @@ auto precompile(
     const sourcemeta::blaze::Context &context,
     sourcemeta::blaze::SchemaContext &schema_context,
     const sourcemeta::blaze::DynamicContext &dynamic_context,
-    const sourcemeta::jsontoolkit::ReferenceFrame::value_type &entry)
-    -> sourcemeta::blaze::Template {
+    const sourcemeta::jsontoolkit::Frame::Locations::value_type &entry)
+    -> sourcemeta::blaze::Instructions {
   const sourcemeta::jsontoolkit::URI anchor_uri{entry.first.second};
-  const auto label{sourcemeta::blaze::EvaluationContext{}.hash(
+  const auto label{sourcemeta::blaze::Evaluator{}.hash(
       schema_resource_id(context,
                          anchor_uri.recompose_without_fragment().value_or("")),
       std::string{anchor_uri.fragment().value_or("")})};
@@ -86,11 +87,12 @@ auto precompile(
       {},
       {}};
 
-  return {make<sourcemeta::blaze::ControlMark>(
-      context, nested_schema_context, dynamic_context,
+  return {make(
+      sourcemeta::blaze::InstructionIndex::ControlMark, context,
+      nested_schema_context, dynamic_context,
       sourcemeta::blaze::ValueUnsignedInteger{label},
       sourcemeta::blaze::compile(context, nested_schema_context,
-                                 sourcemeta::blaze::relative_dynamic_context,
+                                 sourcemeta::blaze::relative_dynamic_context(),
                                  sourcemeta::jsontoolkit::empty_pointer,
                                  sourcemeta::jsontoolkit::empty_pointer,
                                  entry.first.second))};
@@ -110,14 +112,11 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here
   const sourcemeta::jsontoolkit::JSON result{sourcemeta::jsontoolkit::bundle(
-      schema, walker, resolver, sourcemeta::jsontoolkit::BundleOptions::Default,
-      default_dialect)};
+      schema, walker, resolver, default_dialect)};
 
   // Perform framing to resolve references later on
-  sourcemeta::jsontoolkit::ReferenceFrame frame;
-  sourcemeta::jsontoolkit::ReferenceMap references;
-  sourcemeta::jsontoolkit::frame(result, frame, references, walker, resolver,
-                                 default_dialect);
+  sourcemeta::jsontoolkit::Frame frame;
+  frame.analyse(result, walker, resolver, default_dialect);
 
   const std::string base{sourcemeta::jsontoolkit::URI{
       sourcemeta::jsontoolkit::identify(
@@ -128,15 +127,15 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
                              .canonicalize()
                              .recompose()};
 
-  assert(
-      frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static, base}));
-  const auto root_frame_entry{
-      frame.at({sourcemeta::jsontoolkit::ReferenceType::Static, base})};
+  assert(frame.locations().contains(
+      {sourcemeta::jsontoolkit::ReferenceType::Static, base}));
+  const auto root_frame_entry{frame.locations().at(
+      {sourcemeta::jsontoolkit::ReferenceType::Static, base})};
 
   // Check whether dynamic referencing takes places in this schema. If not,
   // we can avoid the overhead of keeping track of dynamics scopes, etc
   bool uses_dynamic_scopes{false};
-  for (const auto &reference : references) {
+  for (const auto &reference : frame.references()) {
     if (reference.first.first ==
         sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
       uses_dynamic_scopes = true;
@@ -154,84 +153,10 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
       {},
       {}};
 
-  std::set<sourcemeta::jsontoolkit::Pointer> unevaluated_properties_schemas;
-  std::set<sourcemeta::jsontoolkit::Pointer> unevaluated_items_schemas;
-
-  if (schema_context.vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core") ||
-      schema_context.vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/core")) {
-    for (const auto &entry : sourcemeta::jsontoolkit::SchemaIterator{
-             result, walker, resolver, default_dialect}) {
-      if (!entry.vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/applicator") &&
-          !entry.vocabularies.contains(
-              "https://json-schema.org/draft/2020-12/vocab/unevaluated")) {
-        continue;
-      }
-
-      const auto &subschema{
-          sourcemeta::jsontoolkit::get(result, entry.pointer)};
-      if (!subschema.is_object()) {
-        continue;
-      }
-
-      if (subschema.defines("unevaluatedProperties") &&
-          sourcemeta::jsontoolkit::is_schema(
-              subschema.at("unevaluatedProperties"))) {
-
-        // No need to consider `unevaluatedProperties` if it has a sibling
-        // `additionalProperties`. By definition, nothing could remain
-        // unevaluated.
-
-        if (entry.vocabularies.contains(
-                "https://json-schema.org/draft/2019-09/vocab/applicator") &&
-            subschema.defines("additionalProperties")) {
-          continue;
-        }
-
-        if (entry.vocabularies.contains(
-                "https://json-schema.org/draft/2020-12/vocab/applicator") &&
-            subschema.defines("additionalProperties")) {
-          continue;
-        }
-
-        unevaluated_properties_schemas.insert(entry.pointer);
-      }
-
-      if (subschema.defines("unevaluatedItems") &&
-          sourcemeta::jsontoolkit::is_schema(
-              subschema.at("unevaluatedItems"))) {
-
-        // No need to consider `unevaluatedItems` if it has a
-        // sibling `items` schema (or its older equivalents).
-        // By definition, nothing could remain unevaluated.
-
-        if (entry.vocabularies.contains(
-                "https://json-schema.org/draft/2020-12/vocab/applicator") &&
-            subschema.defines("items")) {
-          continue;
-        } else if (entry.vocabularies.contains("https://json-schema.org/draft/"
-                                               "2019-09/vocab/applicator")) {
-          if (subschema.defines("items") &&
-              sourcemeta::jsontoolkit::is_schema(subschema.at("items"))) {
-            continue;
-          } else if (subschema.defines("items") &&
-                     subschema.at("items").is_array() &&
-                     subschema.defines("additionalItems")) {
-            continue;
-          }
-        }
-
-        unevaluated_items_schemas.insert(entry.pointer);
-      }
-    }
-  }
-
   std::vector<std::string> resources;
-  for (const auto &entry : frame) {
+  for (const auto &entry : frame.locations()) {
     if (entry.second.type ==
-        sourcemeta::jsontoolkit::ReferenceEntryType::Resource) {
+        sourcemeta::jsontoolkit::Frame::LocationType::Resource) {
       resources.push_back(entry.first.second);
     }
   }
@@ -245,18 +170,21 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
          std::set<std::string>(resources.cbegin(), resources.cend()).size());
 
   // Calculate the top static reference destinations for precompilation purposes
+  // TODO: Replace this logic with `.frame()` `destination_of` information
   std::map<std::string, std::size_t> static_references_count;
-  for (const auto &reference : references) {
+  for (const auto &reference : frame.references()) {
     if (reference.first.first !=
             sourcemeta::jsontoolkit::ReferenceType::Static ||
-        !frame.contains({sourcemeta::jsontoolkit::ReferenceType::Static,
-                         reference.second.destination})) {
+        !frame.locations().contains(
+            {sourcemeta::jsontoolkit::ReferenceType::Static,
+             reference.second.destination})) {
       continue;
     }
 
-    const auto &entry{frame.at({sourcemeta::jsontoolkit::ReferenceType::Static,
-                                reference.second.destination})};
-    for (const auto &subreference : references) {
+    const auto &entry{
+        frame.locations().at({sourcemeta::jsontoolkit::ReferenceType::Static,
+                              reference.second.destination})};
+    for (const auto &subreference : frame.references()) {
       if (subreference.first.second.starts_with(entry.pointer)) {
         static_references_count[reference.second.destination] += 1;
       }
@@ -281,25 +209,26 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
     }
   }
 
+  auto unevaluated{
+      sourcemeta::jsontoolkit::unevaluated(result, frame, walker, resolver)};
+
   const Context context{result,
-                        frame,
-                        references,
+                        std::move(frame),
                         std::move(resources),
                         walker,
                         resolver,
                         compiler,
                         mode,
                         uses_dynamic_scopes,
-                        unevaluated_properties_schemas,
-                        unevaluated_items_schemas,
+                        std::move(unevaluated),
                         std::move(precompiled_static_schemas)};
-  const DynamicContext dynamic_context{relative_dynamic_context};
-  Template compiler_template;
+  const DynamicContext dynamic_context{relative_dynamic_context()};
+  Instructions compiler_template;
 
   for (const auto &destination : context.precompiled_static_schemas) {
-    assert(frame.contains(
+    assert(context.frame.locations().contains(
         {sourcemeta::jsontoolkit::ReferenceType::Static, destination}));
-    const auto match{frame.find(
+    const auto match{context.frame.locations().find(
         {sourcemeta::jsontoolkit::ReferenceType::Static, destination})};
     for (auto &&substep :
          precompile(context, schema_context, dynamic_context, *match)) {
@@ -312,10 +241,10 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
            "https://json-schema.org/draft/2019-09/vocab/core") ||
        schema_context.vocabularies.contains(
            "https://json-schema.org/draft/2020-12/vocab/core"))) {
-    for (const auto &entry : frame) {
+    for (const auto &entry : context.frame.locations()) {
       // We are only trying to find dynamic anchors
       if (entry.second.type !=
-              sourcemeta::jsontoolkit::ReferenceEntryType::Anchor ||
+              sourcemeta::jsontoolkit::Frame::LocationType::Anchor ||
           entry.first.first !=
               sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
         continue;
@@ -330,13 +259,23 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
 
   auto children{compile_subschema(context, schema_context, dynamic_context,
                                   root_frame_entry.dialect)};
+
+  const bool track{
+      context.mode != Mode::FastValidation ||
+      requires_evaluation(context, schema_context) ||
+      // TODO: This expression should go away if we start properly compiling
+      // `unevaluatedItems` like we compile `unevaluatedProperties`
+      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
+                  [](const auto &dependency) {
+                    return dependency.first.ends_with("unevaluatedItems");
+                  })};
   if (compiler_template.empty()) {
-    return children;
+    return {std::move(children), uses_dynamic_scopes, track};
   } else {
     compiler_template.reserve(compiler_template.size() + children.size());
     std::move(children.begin(), children.end(),
               std::back_inserter(compiler_template));
-    return compiler_template;
+    return {std::move(compiler_template), uses_dynamic_scopes, track};
   }
 }
 
@@ -344,7 +283,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
              const DynamicContext &dynamic_context,
              const sourcemeta::jsontoolkit::Pointer &schema_suffix,
              const sourcemeta::jsontoolkit::Pointer &instance_suffix,
-             const std::optional<std::string> &uri) -> Template {
+             const std::optional<std::string> &uri) -> Instructions {
   // Determine URI of the destination after recursion
   const std::string destination{
       uri.has_value()
@@ -355,14 +294,14 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                 .recompose()};
 
   // Otherwise the recursion attempt is non-sense
-  if (!context.frame.contains(
+  if (!context.frame.locations().contains(
           {sourcemeta::jsontoolkit::ReferenceType::Static, destination})) {
     throw sourcemeta::jsontoolkit::SchemaReferenceError(
         destination, schema_context.relative_pointer,
         "The target of the reference does not exist in the schema");
   }
 
-  const auto &entry{context.frame.at(
+  const auto &entry{context.frame.locations().at(
       {sourcemeta::jsontoolkit::ReferenceType::Static, destination})};
   const auto &new_schema{get(context.root, entry.pointer)};
 
@@ -389,7 +328,8 @@ auto compile(const Context &context, const SchemaContext &schema_context,
        // TODO: This represents a copy
        schema_context.labels, schema_context.references},
       {dynamic_context.keyword, destination_pointer,
-       dynamic_context.base_instance_location.concat(instance_suffix)},
+       dynamic_context.base_instance_location.concat(instance_suffix),
+       dynamic_context.property_as_target},
       entry.dialect);
 }
 

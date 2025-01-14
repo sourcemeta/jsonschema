@@ -21,6 +21,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
   bool result{true};
+  sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
@@ -47,13 +48,13 @@ auto sourcemeta::jsonschema::cli::metaschema(
 
     if (trace) {
       sourcemeta::blaze::TraceOutput output;
-      result = sourcemeta::blaze::evaluate(cache.at(dialect.value()),
-                                           entry.second, std::ref(output));
+      result = evaluator.validate(cache.at(dialect.value()), entry.second,
+                                  std::ref(output));
       print(output, std::cout);
     } else {
       sourcemeta::blaze::ErrorOutput output{entry.second};
-      if (sourcemeta::blaze::evaluate(cache.at(dialect.value()), entry.second,
-                                      std::ref(output))) {
+      if (evaluator.validate(cache.at(dialect.value()), entry.second,
+                             std::ref(output))) {
         log_verbose(options)
             << "ok: " << std::filesystem::weakly_canonical(entry.first).string()
             << "\n  matches " << dialect.value() << "\n";

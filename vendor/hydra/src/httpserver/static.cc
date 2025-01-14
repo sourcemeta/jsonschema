@@ -9,8 +9,8 @@
 namespace sourcemeta::hydra::http {
 
 auto serve_file(const std::filesystem::path &file_path,
-                const ServerRequest &request, ServerResponse &response)
-    -> void {
+                const ServerRequest &request, ServerResponse &response,
+                const Status code) -> void {
   assert(request.method() == sourcemeta::hydra::http::Method::GET ||
          request.method() == sourcemeta::hydra::http::Method::HEAD);
 
@@ -48,7 +48,7 @@ auto serve_file(const std::filesystem::path &file_path,
     return;
   }
 
-  response.status(sourcemeta::hydra::http::Status::OK);
+  response.status(code);
   response.header("Content-Type", sourcemeta::hydra::mime_type(file_path));
   response.header_etag(etag.str());
   response.header_last_modified(last_modified);

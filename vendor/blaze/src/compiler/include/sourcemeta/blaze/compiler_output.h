@@ -10,9 +10,10 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <set>    // std::set
-#include <string> // std::string
-#include <vector> // std::vector
+#include <set>         // std::set
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -45,7 +46,8 @@ namespace sourcemeta::blaze {
 /// const sourcemeta::jsontoolkit::JSON instance{5};
 ///
 /// sourcemeta::blaze::ErrorOutput output{instance};
-/// const auto result{sourcemeta::blaze::evaluate(
+/// sourcemeta::blaze::Evaluator evaluator;
+/// const auto result{evaluator.validate(
 ///   schema_template, instance, std::ref(output))};
 ///
 /// if (!result) {
@@ -75,7 +77,7 @@ public:
   };
 
   auto operator()(const EvaluationType type, const bool result,
-                  const Template::value_type &step,
+                  const Instruction &step,
                   const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
                   const sourcemeta::jsontoolkit::WeakPointer &instance_location,
                   const sourcemeta::jsontoolkit::JSON &annotation) -> void;
@@ -131,7 +133,8 @@ private:
 /// const sourcemeta::jsontoolkit::JSON instance{5};
 ///
 /// sourcemeta::blaze::TraceOutput output;
-/// const auto result{sourcemeta::blaze::evaluate(
+/// sourcemeta::blaze::Evaluator evaluator;
+/// const auto result{evaluator.validate(
 ///   schema_template, instance, std::ref(output))};
 ///
 /// if (!result) {
@@ -170,14 +173,14 @@ public:
 
   struct Entry {
     const EntryType type;
-    const std::string name;
+    const std::string_view name;
     const sourcemeta::jsontoolkit::WeakPointer instance_location;
     const sourcemeta::jsontoolkit::WeakPointer evaluate_path;
     const std::string keyword_location;
   };
 
   auto operator()(const EvaluationType type, const bool result,
-                  const Template::value_type &step,
+                  const Instruction &step,
                   const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
                   const sourcemeta::jsontoolkit::WeakPointer &instance_location,
                   const sourcemeta::jsontoolkit::JSON &annotation) -> void;
@@ -208,7 +211,7 @@ private:
 /// This function translates a step execution into a human-readable string.
 /// Useful as the building block for producing user-friendly evaluation results.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-describe(const bool valid, const Template::value_type &step,
+describe(const bool valid, const Instruction &step,
          const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
          const sourcemeta::jsontoolkit::WeakPointer &instance_location,
          const sourcemeta::jsontoolkit::JSON &instance,

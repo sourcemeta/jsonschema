@@ -32,7 +32,11 @@ function(noa_library)
   endif()
 
   foreach(private_header IN LISTS NOA_LIBRARY_PRIVATE_HEADERS)
-    list(APPEND ABSOLUTE_PRIVATE_HEADERS "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_${private_header}")
+    if(NOA_LIBRARY_VARIANT)
+      list(APPEND ABSOLUTE_PRIVATE_HEADERS "../${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_${private_header}")
+    else()
+      list(APPEND ABSOLUTE_PRIVATE_HEADERS "${INCLUDE_PREFIX}/${NOA_LIBRARY_NAME}_${private_header}")
+    endif()
   endforeach()
 
   if(NOA_LIBRARY_NAMESPACE)

@@ -26,8 +26,7 @@ auto ErrorOutput::cbegin() const -> const_iterator {
 auto ErrorOutput::cend() const -> const_iterator { return this->output.cend(); }
 
 auto ErrorOutput::operator()(
-    const EvaluationType type, const bool result,
-    const Template::value_type &step,
+    const EvaluationType type, const bool result, const Instruction &step,
     const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
     const sourcemeta::jsontoolkit::WeakPointer &instance_location,
     const sourcemeta::jsontoolkit::JSON &annotation) -> void {

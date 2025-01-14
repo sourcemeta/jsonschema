@@ -9,15 +9,17 @@
 #include "utils.h"
 
 static auto
-enum_to_string(const sourcemeta::jsontoolkit::ReferenceEntryType type)
+enum_to_string(const sourcemeta::jsontoolkit::Frame::LocationType type)
     -> std::string {
   switch (type) {
-    case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
+    case sourcemeta::jsontoolkit::Frame::LocationType::Resource:
       return "resource";
-    case sourcemeta::jsontoolkit::ReferenceEntryType::Anchor:
+    case sourcemeta::jsontoolkit::Frame::LocationType::Anchor:
       return "anchor";
-    case sourcemeta::jsontoolkit::ReferenceEntryType::Pointer:
+    case sourcemeta::jsontoolkit::Frame::LocationType::Pointer:
       return "pointer";
+    case sourcemeta::jsontoolkit::Frame::LocationType::Subschema:
+      return "subschema";
     default:
       return "unknown";
   }
@@ -36,11 +38,9 @@ auto sourcemeta::jsonschema::cli::frame(
   const sourcemeta::jsontoolkit::JSON schema{
       sourcemeta::jsontoolkit::from_file(options.at("").front())};
 
-  sourcemeta::jsontoolkit::ReferenceFrame frame;
-  sourcemeta::jsontoolkit::ReferenceMap references;
-  sourcemeta::jsontoolkit::frame(schema, frame, references,
-                                 sourcemeta::jsontoolkit::default_schema_walker,
-                                 resolver(options));
+  sourcemeta::jsontoolkit::Frame frame;
+  frame.analyse(schema, sourcemeta::jsontoolkit::default_schema_walker,
+                resolver(options));
 
   const auto output_json = options.contains("json") || options.contains("j");
   if (output_json) {
@@ -48,7 +48,7 @@ auto sourcemeta::jsonschema::cli::frame(
     auto frame_json = sourcemeta::jsontoolkit::JSON::make_object();
     auto references_json = sourcemeta::jsontoolkit::JSON::make_object();
 
-    for (const auto &[key, entry] : frame) {
+    for (const auto &[key, entry] : frame.locations()) {
       auto frame_entry = sourcemeta::jsontoolkit::JSON::make_object();
       if (entry.root.has_value()) {
         frame_entry.assign("root",
@@ -70,12 +70,14 @@ auto sourcemeta::jsonschema::cli::frame(
                          sourcemeta::jsontoolkit::JSON{reference_stream.str()});
       frame_entry.assign("dialect",
                          sourcemeta::jsontoolkit::JSON{entry.dialect});
+      frame_entry.assign("baseDialect",
+                         sourcemeta::jsontoolkit::JSON{entry.base_dialect});
       frame_json.assign(key.second, sourcemeta::jsontoolkit::JSON{frame_entry});
     }
     output_json_object.assign("frames",
                               sourcemeta::jsontoolkit::JSON{frame_json});
 
-    for (const auto &[pointer, entry] : references) {
+    for (const auto &[pointer, entry] : frame.references()) {
       auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
       ref_entry.assign(
           "type",
@@ -109,16 +111,19 @@ auto sourcemeta::jsonschema::cli::frame(
     sourcemeta::jsontoolkit::prettify(output_json_object, print_stream);
     std::cout << print_stream.str() << std::endl;
   } else {
-    for (const auto &[key, entry] : frame) {
+    for (const auto &[key, entry] : frame.locations()) {
       switch (entry.type) {
-        case sourcemeta::jsontoolkit::ReferenceEntryType::Resource:
+        case sourcemeta::jsontoolkit::Frame::LocationType::Resource:
           std::cout << "(LOCATION)";
           break;
-        case sourcemeta::jsontoolkit::ReferenceEntryType::Anchor:
+        case sourcemeta::jsontoolkit::Frame::LocationType::Anchor:
           std::cout << "(ANCHOR)";
           break;
-        case sourcemeta::jsontoolkit::ReferenceEntryType::Pointer:
+        case sourcemeta::jsontoolkit::Frame::LocationType::Pointer:
           std::cout << "(POINTER)";
+          break;
+        case sourcemeta::jsontoolkit::Frame::LocationType::Subschema:
+          std::cout << "(SUBSCHEMA)";
           break;
         default:
           // We should never get here
@@ -154,9 +159,10 @@ auto sourcemeta::jsonschema::cli::frame(
       sourcemeta::jsontoolkit::stringify(entry.relative_pointer, std::cout);
       std::cout << "\n";
       std::cout << "    Dialect          : " << entry.dialect << "\n";
+      std::cout << "    Base Dialect     : " << entry.base_dialect << "\n";
     }
 
-    for (const auto &[pointer, entry] : references) {
+    for (const auto &[pointer, entry] : frame.references()) {
       std::cout << "(REFERENCE) URI: ";
       sourcemeta::jsontoolkit::stringify(pointer.second, std::cout);
       std::cout << "\n";

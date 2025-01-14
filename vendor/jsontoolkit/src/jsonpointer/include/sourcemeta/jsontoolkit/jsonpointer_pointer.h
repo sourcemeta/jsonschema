@@ -19,7 +19,7 @@ namespace sourcemeta::jsontoolkit {
 /// @ingroup jsonpointer
 template <typename PropertyT> class GenericPointer {
 public:
-  using Token = GenericToken<PropertyT>;
+  using Token = GenericToken<PropertyT, Hash>;
   using Value = typename Token::Value;
   using Container = std::vector<Token>;
 
@@ -174,6 +174,18 @@ public:
     return this->data.emplace_back(args...);
   }
 
+  /// Reserve capacity for a JSON Pointer. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+  ///
+  /// sourcemeta::jsontoolkit::Pointer pointer;
+  /// pointer.reserve(1024);
+  /// ```
+  auto reserve(const typename Container::size_type capacity) -> void {
+    this->data.reserve(capacity);
+  }
+
   /// Push a copy of a JSON Pointer into the back of a JSON Pointer.
   /// For example:
   ///
@@ -202,7 +214,7 @@ public:
       return;
     }
 
-    this->data.reserve(this->data.size() + other.size());
+    this->reserve(this->data.size() + other.size());
     std::copy(other.data.cbegin(), other.data.cend(),
               std::back_inserter(this->data));
   }
@@ -235,7 +247,7 @@ public:
       return;
     }
 
-    this->data.reserve(this->data.size() + other.size());
+    this->reserve(this->data.size() + other.size());
     std::move(other.data.begin(), other.data.end(),
               std::back_inserter(this->data));
   }
@@ -271,15 +283,17 @@ public:
     } else if (other.size() == 1) {
       const auto &token{other.back()};
       if (token.is_property()) {
-        this->data.emplace_back(token.to_property());
+        // We should make sure to re-use the existing hash
+        this->data.emplace_back(token.to_property(), token.property_hash());
       } else {
         this->data.emplace_back(token.to_index());
       }
     } else {
-      this->data.reserve(this->data.size() + other.size());
+      this->reserve(this->data.size() + other.size());
       for (const auto &token : other) {
         if (token.is_property()) {
-          this->data.emplace_back(token.to_property());
+          // We should make sure to re-use the existing hash
+          this->data.emplace_back(token.to_property(), token.property_hash());
         } else {
           this->data.emplace_back(token.to_index());
         }
@@ -486,11 +500,16 @@ public:
   /// ```
   auto starts_with_initial(const GenericPointer<PropertyT> &other) const
       -> bool {
-    if (!other.empty()) {
-      for (std::size_t index = 0; index < other.size() - 1; index++) {
-        if (this->data[index] != other.data[index]) {
-          return false;
-        }
+    const auto prefix_size{other.size()};
+    if (prefix_size == 0) {
+      return true;
+    } else if (this->size() < prefix_size - 1) {
+      return false;
+    }
+
+    for (std::size_t index = 0; index < prefix_size - 1; index++) {
+      if (this->data[index] != other.data[index]) {
+        return false;
       }
     }
 
