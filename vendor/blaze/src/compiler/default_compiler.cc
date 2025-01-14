@@ -13,10 +13,12 @@
 auto sourcemeta::blaze::default_schema_compiler(
     const sourcemeta::blaze::Context &context,
     const sourcemeta::blaze::SchemaContext &schema_context,
-    const sourcemeta::blaze::DynamicContext &dynamic_context)
-    -> sourcemeta::blaze::Template {
+    const sourcemeta::blaze::DynamicContext &dynamic_context,
+    const sourcemeta::blaze::Instructions &current)
+    -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
+  // TODO: Support HyperSchema in Draft 7 and earlier
   static std::set<std::string> SUPPORTED_VOCABULARIES{
       "https://json-schema.org/draft/2020-12/vocab/core",
       "https://json-schema.org/draft/2020-12/vocab/applicator",
@@ -31,6 +33,7 @@ auto sourcemeta::blaze::default_schema_compiler(
       "https://json-schema.org/draft/2019-09/vocab/meta-data",
       "https://json-schema.org/draft/2019-09/vocab/format",
       "https://json-schema.org/draft/2019-09/vocab/content",
+      "https://json-schema.org/draft/2019-09/vocab/hyper-schema",
       "http://json-schema.org/draft-07/schema#",
       "http://json-schema.org/draft-06/schema#",
       "http://json-schema.org/draft-04/schema#"};
@@ -47,7 +50,8 @@ auto sourcemeta::blaze::default_schema_compiler(
 #define COMPILE(vocabulary, _keyword, handler)                                 \
   if (schema_context.vocabularies.contains(vocabulary) &&                      \
       dynamic_context.keyword == (_keyword)) {                                 \
-    return internal::handler(context, schema_context, dynamic_context);        \
+    return internal::handler(context, schema_context, dynamic_context,         \
+                             current);                                         \
   }
 
 #define STOP_IF_SIBLING_KEYWORD(vocabulary, _keyword)                          \
@@ -515,7 +519,7 @@ auto sourcemeta::blaze::default_schema_compiler(
     }
 
     return internal::compiler_2019_09_core_annotation(context, schema_context,
-                                                      dynamic_context);
+                                                      dynamic_context, current);
   }
 
   return {};

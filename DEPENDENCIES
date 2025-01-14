@@ -1,7 +1,7 @@
 vendorpull https://github.com/sourcemeta/vendorpull dea311b5bfb53b6926a4140267959ae334d3ecf4
-noa https://github.com/sourcemeta/noa caad2e1ceedf9fd1a18686a6a6d1e2b9757ead75
-jsontoolkit https://github.com/sourcemeta/jsontoolkit 7a398224cc2e76ea9ae8541a872b131c7c025267
-hydra https://github.com/sourcemeta/hydra a4a74f3cabd32f2f829f449d67339dac33f9910e
-alterschema https://github.com/sourcemeta/alterschema 92e370ce9c1f0582014b54d43e388ee012dfe13d
-jsonbinpack https://github.com/sourcemeta/jsonbinpack d777179441d3c703e1fda1187742541aa26836b5
-blaze https://github.com/sourcemeta/blaze 4990da88241847b561cf43efba2c0c7d2bfc9642
+noa https://github.com/sourcemeta/noa 924f5cc8549af7f12227869dcbab4259029ac650
+jsontoolkit https://github.com/sourcemeta/jsontoolkit 4b37450b287695fd0fa63f50c1fe6a43d2384c51
+hydra https://github.com/sourcemeta/hydra c31b5b612beb3e6a870deb2581ae437fc5183f47
+alterschema https://github.com/sourcemeta/alterschema 0fcd3b3b921bd47dc0867477619383f6519939fa
+jsonbinpack https://github.com/sourcemeta/jsonbinpack ea02b415f266c7529be13b9e2b26bc8d74b5e4a8
+blaze https://github.com/sourcemeta/blaze a906d6601bc5d7afd4ddb6cbf9f64326aeee1b0c

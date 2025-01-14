@@ -84,7 +84,6 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/easy.c"
     "${CURL_DIR}/lib/rename.c"
     "${CURL_DIR}/lib/pop3.h"
-    "${CURL_DIR}/lib/curl_path.h"
     "${CURL_DIR}/lib/share.c"
     "${CURL_DIR}/lib/slist.c"
     "${CURL_DIR}/lib/inet_pton.c"
@@ -199,7 +198,6 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/tftp.h"
     "${CURL_DIR}/lib/slist.h"
     "${CURL_DIR}/lib/share.h"
-    "${CURL_DIR}/lib/curl_path.c"
     "${CURL_DIR}/lib/rename.h"
     "${CURL_DIR}/lib/hostasyn.c"
     "${CURL_DIR}/lib/pop3.c"
@@ -315,6 +313,8 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/curl_trc.h"
     "${CURL_DIR}/lib/warnless.h"
     "${CURL_DIR}/lib/socks.h"
+    "${CURL_DIR}/lib/vssh/curl_path.c"
+    "${CURL_DIR}/lib/vssh/curl_path.h"
     "${CURL_DIR}/lib/vssh/libssh.c"
     "${CURL_DIR}/lib/vssh/libssh2.c"
     "${CURL_DIR}/lib/vssh/ssh.h"
@@ -360,6 +360,7 @@ if(NOT CURL_FOUND)
 
   if(NOT MSVC)
     target_compile_options(curl PRIVATE -Wno-enum-conversion)
+    target_compile_options(curl PRIVATE -Wno-implicit-function-declaration)
   endif()
 
   # General options
@@ -378,7 +379,7 @@ if(NOT CURL_FOUND)
 
   # Platform specific options
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    target_compile_definitions(curl PRIVATE OS="Linux")
+    target_compile_definitions(curl PRIVATE CURL_OS="Linux")
     target_compile_definitions(curl PRIVATE CURL_CA_BUNDLE="/etc/ssl/certs/ca-certificates.crt")
     target_compile_definitions(curl PRIVATE CURL_CA_PATH="/etc/ssl/certs")
     target_compile_definitions(curl PRIVATE HAVE_SYS_TIME_H)
@@ -400,7 +401,7 @@ if(NOT CURL_FOUND)
     # POSIX.1-2008
     target_compile_definitions(curl PRIVATE _POSIX_C_SOURCE=200809L)
   elseif(APPLE)
-    target_compile_definitions(curl PRIVATE OS="Darwin")
+    target_compile_definitions(curl PRIVATE CURL_OS="Darwin")
     target_compile_definitions(curl PRIVATE CURL_CA_BUNDLE="/etc/ssl/cert.pem")
     target_compile_definitions(curl PRIVATE CURL_CA_PATH="/etc/ssl/certs")
     target_compile_definitions(curl PRIVATE HAVE_RECV)
@@ -417,7 +418,7 @@ if(NOT CURL_FOUND)
     target_compile_definitions(curl PRIVATE HAVE_STRUCT_TIMEVAL)
     target_compile_definitions(curl PRIVATE HAVE_GETSOCKNAME)
   elseif(WIN32)
-    target_compile_definitions(curl PRIVATE OS="Windows")
+    target_compile_definitions(curl PRIVATE CURL_OS="Windows")
   endif()
 
   target_include_directories(curl PRIVATE "${CURL_DIR}/lib")

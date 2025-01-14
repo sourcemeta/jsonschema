@@ -28,6 +28,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer :
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (POINTER) URI: https://example.com#/$defs
     Type             : Static
     Schema           : https://example.com
@@ -35,13 +36,15 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer : /$defs
     Dialect          : https://json-schema.org/draft/2020-12/schema
-(POINTER) URI: https://example.com#/$defs/string
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
+(SUBSCHEMA) URI: https://example.com#/$defs/string
     Type             : Static
     Schema           : https://example.com
     Pointer          : /$defs/string
     Base URI         : https://example.com
     Relative Pointer : /$defs/string
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (POINTER) URI: https://example.com#/$defs/string/type
     Type             : Static
     Schema           : https://example.com
@@ -49,6 +52,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer : /$defs/string/type
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (POINTER) URI: https://example.com#/$id
     Type             : Static
     Schema           : https://example.com
@@ -56,6 +60,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer : /$id
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (POINTER) URI: https://example.com#/$ref
     Type             : Static
     Schema           : https://example.com
@@ -63,6 +68,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer : /$ref
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (POINTER) URI: https://example.com#/$schema
     Type             : Static
     Schema           : https://example.com
@@ -70,6 +76,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base URI         : https://example.com
     Relative Pointer : /$schema
     Dialect          : https://json-schema.org/draft/2020-12/schema
+    Base Dialect     : https://json-schema.org/draft/2020-12/schema
 (REFERENCE) URI: /$ref
     Type             : Static
     Destination      : https://example.com#/$defs/string

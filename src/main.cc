@@ -60,11 +60,6 @@ Commands:
        Statically analyse a schema to display schema locations and
        references in a human-readable manner.
 
-   compile <schema.json>
-
-       Pre-process a JSON Schema into JSON Toolkit's low-level JSON-based
-       compiled form for faster evaluation.
-
    identify <schema.json> [--relative-to/-t <uri>]
 
        Print the URI of the given schema to standard output, optionally
@@ -94,8 +89,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::frame(arguments);
   } else if (command == "bundle") {
     return sourcemeta::jsonschema::cli::bundle(arguments);
-  } else if (command == "compile") {
-    return sourcemeta::jsonschema::cli::compile(arguments);
   } else if (command == "lint") {
     return sourcemeta::jsonschema::cli::lint(arguments);
   } else if (command == "validate") {

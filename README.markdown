@@ -27,17 +27,17 @@ Version support
 
 We aim to fully support _every_ version of JSON Schema and combinations between them.
 
-| Dialect             | Support                                                          |
-|---------------------|------------------------------------------------------------------|
-| JSON Schema 2020-12 | **Full**                                                         |
-| JSON Schema 2019-09 | **Full**                                                         |
-| JSON Schema Draft 7 | **Full**                                                         |
-| JSON Schema Draft 6 | **Full**                                                         |
-| JSON Schema Draft 4 | **Full**                                                         |
-| JSON Schema Draft 3 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
-| JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
-| JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
-| JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, and `compile`) |
+| Dialect             | Support                                               |
+|---------------------|-------------------------------------------------------|
+| JSON Schema 2020-12 | **Full**                                              |
+| JSON Schema 2019-09 | **Full**                                              |
+| JSON Schema Draft 7 | **Full**                                              |
+| JSON Schema Draft 6 | **Full**                                              |
+| JSON Schema Draft 4 | **Full**                                              |
+| JSON Schema Draft 3 | Partial (except `validate`, `test`, and `metaschema`) |
+| JSON Schema Draft 2 | Partial (except `validate`, `test`, and `metaschema`) |
+| JSON Schema Draft 1 | Partial (except `validate`, `test`, and `metaschema`) |
+| JSON Schema Draft 0 | Partial (except `validate`, `test`, and `metaschema`) |
 
 What our users are saying
 -------------------------
@@ -63,7 +63,6 @@ documentation:
 - [`jsonschema lint`](./docs/lint.markdown)
 - [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
 - [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
-- [`jsonschema compile`](./docs/compile.markdown) (for internal debugging)
 - [`jsonschema identify`](./docs/identify.markdown)
 - [`jsonschema canonicalize`](./docs/canonicalize.markdown) (for static analysis)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)

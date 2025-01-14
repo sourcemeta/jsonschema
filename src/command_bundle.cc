@@ -21,17 +21,15 @@ auto sourcemeta::jsonschema::cli::bundle(
 
   auto schema{sourcemeta::jsontoolkit::from_file(options.at("").front())};
 
+  sourcemeta::jsontoolkit::bundle(
+      schema, sourcemeta::jsontoolkit::default_schema_walker,
+      resolver(options, options.contains("h") || options.contains("http")));
+
   if (options.contains("w") || options.contains("without-id")) {
-    log_verbose(options) << "Bundling without using identifiers\n";
-    sourcemeta::jsontoolkit::bundle(
+    log_verbose(options) << "Removing schema identifiers\n";
+    sourcemeta::jsontoolkit::unidentify(
         schema, sourcemeta::jsontoolkit::default_schema_walker,
-        resolver(options, options.contains("h") || options.contains("http")),
-        sourcemeta::jsontoolkit::BundleOptions::WithoutIdentifiers);
-  } else {
-    sourcemeta::jsontoolkit::bundle(
-        schema, sourcemeta::jsontoolkit::default_schema_walker,
-        resolver(options, options.contains("h") || options.contains("http")),
-        sourcemeta::jsontoolkit::BundleOptions::Default);
+        resolver(options, options.contains("h") || options.contains("http")));
   }
 
   sourcemeta::jsontoolkit::prettify(

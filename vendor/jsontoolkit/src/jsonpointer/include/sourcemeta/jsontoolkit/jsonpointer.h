@@ -9,13 +9,13 @@
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_error.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_pointer.h>
+#include <sourcemeta/jsontoolkit/jsonpointer_position.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_subpointer_walker.h>
 #include <sourcemeta/jsontoolkit/jsonpointer_walker.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
 #include <functional> // std::reference_wrapper
 #include <memory>     // std::allocator
-#include <optional>   // std::optional
 #include <ostream>    // std::basic_ostream
 #include <string>     // std::basic_string
 
@@ -104,12 +104,11 @@ auto get(const JSON &document, const WeakPointer &pointer) -> const JSON &;
 /// const auto document{sourcemeta::jsontoolkit::parse(stream)};
 /// const sourcemeta::jsontoolkit::Pointer pointer{1, "bar"};
 /// const auto result{sourcemeta::jsontoolkit::try_get(document, pointer)};
-/// assert(result.has_value());
-/// assert(result.value().get() == document.at(1).at("bar"));
+/// assert(result);
+/// assert(*result == document.at(1).at("bar"));
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
-auto try_get(const JSON &document, const Pointer &pointer)
-    -> std::optional<std::reference_wrapper<const JSON>>;
+auto try_get(const JSON &document, const Pointer &pointer) -> const JSON *;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a WeakPointer, returning an optional
@@ -126,12 +125,11 @@ auto try_get(const JSON &document, const Pointer &pointer)
 /// const std::string bar = "bar";
 /// const sourcemeta::jsontoolkit::WeakPointer pointer{1, std::cref(bar)};
 /// const auto result{sourcemeta::jsontoolkit::try_get(document, pointer)};
-/// assert(result.has_value());
-/// assert(result.value().get() == document.at(1).at("bar"));
+/// assert(result);
+/// assert(*result == document.at(1).at("bar"));
 /// ```
 SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
-auto try_get(const JSON &document, const WeakPointer &pointer)
-    -> std::optional<std::reference_wrapper<const JSON>>;
+auto try_get(const JSON &document, const WeakPointer &pointer) -> const JSON *;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a JSON Pointer (non-`const`
@@ -310,7 +308,23 @@ auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
                                         std::allocator<JSON::Char>> &input)
     -> Pointer;
 
-// TODO: Add an operator<< overload
+/// @ingroup jsonpointer
+/// Convert a JSON WeakPointer into a JSON Pointer. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/jsontoolkit/jsonpointer.h>
+/// #include <cassert>
+///
+/// const std::string foo = "foo";
+/// const sourcemeta::jsontoolkit::WeakPointer pointer{std::cref(foo)};
+/// const sourcemeta::jsontoolkit::Pointer result{
+///   sourcemeta::jsontoolkit::to_pointer(pointer)}:
+/// assert(pointer.size() == 1);
+/// assert(pointer.at(0).is_property());
+/// assert(pointer.at(0).to_property() == "foo");
+/// ```
+SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT
+auto to_pointer(const WeakPointer &pointer) -> Pointer;
 
 /// @ingroup jsonpointer
 ///

@@ -226,7 +226,7 @@ private:
 /// ```
 auto SOURCEMETA_HYDRA_HTTPSERVER_EXPORT
 serve_file(const std::filesystem::path &file_path, const ServerRequest &request,
-           ServerResponse &response) -> void;
+           ServerResponse &response, const Status code = Status::OK) -> void;
 
 } // namespace sourcemeta::hydra::http
 

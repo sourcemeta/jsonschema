@@ -2,7 +2,7 @@ noa_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   FOLDER "Blaze/Compiler"
   PRIVATE_HEADERS error.h output.h
   SOURCES
-    compile.cc compile_json.cc compile_describe.cc
+    compile.cc compile_describe.cc
     compile_output_error.cc compile_output_trace.cc
     compile_helpers.h default_compiler.cc
     default_compiler_2020_12.h
@@ -17,6 +17,8 @@ endif()
 
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::jsontoolkit::json)
+target_link_libraries(sourcemeta_blaze_compiler PRIVATE
+  sourcemeta::jsontoolkit::regex)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::jsontoolkit::jsonpointer)
 target_link_libraries(sourcemeta_blaze_compiler PRIVATE

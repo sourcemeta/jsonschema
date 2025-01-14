@@ -1,0 +1,12 @@
+build/
+doc/
+example/
+meta/
+performance/
+src/
+test/
+tools/
+CMakeLists.txt
+index.html
+README.md
+readme.txt

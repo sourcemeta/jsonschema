@@ -27,6 +27,7 @@ public:
   }
 
   auto transform(Transformer &transformer) const -> void override {
-    transformer.replace({"type"}, transformer.schema().at("type").front());
+    auto type{transformer.schema().at("type").front()};
+    transformer.replace({"type"}, std::move(type));
   }
 };

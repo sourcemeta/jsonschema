@@ -56,6 +56,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
+  sourcemeta::blaze::Evaluator evaluator;
 
   bool result{true};
 
@@ -68,7 +69,6 @@ auto sourcemeta::jsonschema::cli::validate(
           << "Interpreting input as JSONL: "
           << std::filesystem::weakly_canonical(instance_path).string() << "\n";
       std::size_t index{0};
-
       auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
       try {
         for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
@@ -80,7 +80,7 @@ auto sourcemeta::jsonschema::cli::validate(
           if (benchmark) {
             const auto timestamp_start{
                 std::chrono::high_resolution_clock::now()};
-            subresult = sourcemeta::blaze::evaluate(schema_template, instance);
+            subresult = evaluator.validate(schema_template, instance);
             const auto timestamp_end{std::chrono::high_resolution_clock::now()};
             const auto duration_us{
                 std::chrono::duration_cast<std::chrono::microseconds>(
@@ -91,11 +91,11 @@ auto sourcemeta::jsonschema::cli::validate(
               error << "error: Schema validation failure\n";
             }
           } else if (trace) {
-            subresult = sourcemeta::blaze::evaluate(schema_template, instance,
-                                                    std::ref(trace_output));
+            subresult = evaluator.validate(schema_template, instance,
+                                           std::ref(trace_output));
           } else {
-            subresult = sourcemeta::blaze::evaluate(schema_template, instance,
-                                                    std::ref(output));
+            subresult =
+                evaluator.validate(schema_template, instance, std::ref(output));
           }
 
           if (trace) {
@@ -138,7 +138,7 @@ auto sourcemeta::jsonschema::cli::validate(
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};
-        subresult = sourcemeta::blaze::evaluate(schema_template, instance);
+        subresult = evaluator.validate(schema_template, instance);
         const auto timestamp_end{std::chrono::high_resolution_clock::now()};
         const auto duration_us{
             std::chrono::duration_cast<std::chrono::microseconds>(
@@ -150,11 +150,11 @@ auto sourcemeta::jsonschema::cli::validate(
           result = false;
         }
       } else if (trace) {
-        subresult = sourcemeta::blaze::evaluate(schema_template, instance,
-                                                std::ref(trace_output));
+        subresult = evaluator.validate(schema_template, instance,
+                                       std::ref(trace_output));
       } else {
-        subresult = sourcemeta::blaze::evaluate(schema_template, instance,
-                                                std::ref(output));
+        subresult =
+            evaluator.validate(schema_template, instance, std::ref(output));
       }
 
       if (trace) {

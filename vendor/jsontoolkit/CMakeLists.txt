@@ -8,6 +8,7 @@ include(vendor/noa/cmake/noa.cmake)
 # Options
 option(JSONTOOLKIT_URI "Build the JSON Toolkit URI library" ON)
 option(JSONTOOLKIT_JSON "Build the JSON Toolkit JSON library" ON)
+option(JSONTOOLKIT_REGEX "Build the JSON Toolkit Regex library" ON)
 option(JSONTOOLKIT_JSONSCHEMA "Build the JSON Toolkit JSON Schema library" ON)
 option(JSONTOOLKIT_JSONPOINTER "Build the JSON Toolkit JSON Pointer library" ON)
 option(JSONTOOLKIT_JSONL "Build the JSON Toolkit JSONL library" ON)
@@ -42,6 +43,11 @@ endif()
 
 if(JSONTOOLKIT_JSON)
   add_subdirectory(src/json)
+endif()
+
+if(JSONTOOLKIT_JSON AND JSONTOOLKIT_REGEX)
+  find_package(BoostRegex REQUIRED)
+  add_subdirectory(src/regex)
 endif()
 
 if(JSONTOOLKIT_JSON AND JSONTOOLKIT_JSONPOINTER)
@@ -89,6 +95,10 @@ if(JSONTOOLKIT_TESTS)
 
   if(JSONTOOLKIT_JSON)
     add_subdirectory(test/json)
+  endif()
+
+  if(JSONTOOLKIT_JSON AND JSONTOOLKIT_REGEX)
+    add_subdirectory(test/regex)
   endif()
 
   if(JSONTOOLKIT_JSON AND JSONTOOLKIT_JSONPOINTER)

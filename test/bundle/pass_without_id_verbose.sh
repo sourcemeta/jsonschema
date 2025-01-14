@@ -27,7 +27,8 @@ EOF
 "$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --without-id --verbose 1> "$TMP/result.json" 2>&1
 
 cat << EOF > "$TMP/expected.json"
-Bundling without using identifiers
+Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.json
+Removing schema identifiers
 Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.json
 {
   "\$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -40,5 +41,7 @@ Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.
   }
 }
 EOF
+
+cat "$TMP/result.json"
 
 diff "$TMP/result.json" "$TMP/expected.json"

@@ -3,8 +3,7 @@
 
 #include "grammar.h"
 
-#include <sourcemeta/jsontoolkit/json_error.h>
-#include <sourcemeta/jsontoolkit/json_value.h>
+#include <sourcemeta/jsontoolkit/json.h>
 
 #include <cassert>    // assert
 #include <cctype>     // std::isxdigit
@@ -20,17 +19,16 @@
 namespace sourcemeta::jsontoolkit::internal {
 
 inline auto parse_null(
-    const std::uint64_t line, const std::uint64_t column,
+    const std::uint64_t line, std::uint64_t &column,
     std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream)
     -> JSON {
-  auto new_column{column};
   for (
       const auto character :
       internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.substr(
           1)) {
-    new_column += 1;
+    column += 1;
     if (stream.get() != character) {
-      throw ParseError(line, new_column);
+      throw ParseError(line, column);
     }
   }
 
@@ -648,10 +646,30 @@ auto parse_number(
 // We use "goto" to avoid recursion
 // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 
+#define CALLBACK_PRE(value_type, value)                                        \
+  if (callback) {                                                              \
+    assert(value.is_null() || value.is_string() || value.is_integer());        \
+    callback(CallbackPhase::Pre, JSON::Type::value_type, line, column, value); \
+  }
+
+#define CALLBACK_PRE_WITH_POSITION(value_type, line, column, value)            \
+  if (callback) {                                                              \
+    assert(value.is_null() || value.is_string() || value.is_integer());        \
+    callback(CallbackPhase::Pre, JSON::Type::value_type, line, column, value); \
+  }
+
+#define CALLBACK_POST(value_type, value)                                       \
+  if (callback) {                                                              \
+    assert(value.type() == JSON::Type::value_type);                            \
+    callback(CallbackPhase::Post, JSON::Type::value_type, line, column,        \
+             value);                                                           \
+  }
+
 namespace sourcemeta::jsontoolkit {
 auto internal_parse(
     std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    std::uint64_t &line, std::uint64_t &column) -> JSON {
+    std::uint64_t &line, std::uint64_t &column, const Callback &callback)
+    -> JSON {
   // Globals
   using Result = JSON;
   enum class Container : std::uint8_t { Array, Object };
@@ -674,20 +692,50 @@ do_parse:
   // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
   switch (character) {
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
-      return internal::parse_boolean_true(line, column, stream);
+      if (callback) {
+        CALLBACK_PRE(Boolean, JSON{nullptr});
+        const auto value{internal::parse_boolean_true(line, column, stream)};
+        CALLBACK_POST(Boolean, value);
+        return value;
+      } else {
+        return internal::parse_boolean_true(line, column, stream);
+      }
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
-      return internal::parse_boolean_false(line, column, stream);
+      if (callback) {
+        CALLBACK_PRE(Boolean, JSON{nullptr});
+        const auto value{internal::parse_boolean_false(line, column, stream)};
+        CALLBACK_POST(Boolean, value);
+        return value;
+      } else {
+        return internal::parse_boolean_false(line, column, stream);
+      }
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
-      return internal::parse_null(line, column, stream);
+      if (callback) {
+        CALLBACK_PRE(Null, JSON{nullptr});
+        const auto value{internal::parse_null(line, column, stream)};
+        CALLBACK_POST(Null, value);
+        return value;
+      } else {
+        return internal::parse_null(line, column, stream);
+      }
 
     // A string is a sequence of Unicode code points wrapped with quotation
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
-      return Result{internal::parse_string(line, column, stream)};
+      if (callback) {
+        CALLBACK_PRE(String, JSON{nullptr});
+        const Result value{internal::parse_string(line, column, stream)};
+        CALLBACK_POST(String, value);
+        return value;
+      } else {
+        return Result{internal::parse_string(line, column, stream)};
+      }
     case internal::token_array_begin<typename JSON::Char>:
+      CALLBACK_PRE(Array, JSON{nullptr});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      CALLBACK_PRE(Object, JSON{nullptr});
       goto do_parse_object;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -701,6 +749,24 @@ do_parse:
     case internal::token_number_seven<typename JSON::Char>:
     case internal::token_number_eight<typename JSON::Char>:
     case internal::token_number_nine<typename JSON::Char>:
+      if (callback) {
+        const auto current_line{line};
+        const auto current_column{column};
+        const auto value{
+            internal::parse_number(line, column, stream, character)};
+        if (value.is_integer()) {
+          CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
+                                     JSON{nullptr});
+          CALLBACK_POST(Integer, value);
+        } else {
+          CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
+                                     JSON{nullptr});
+          CALLBACK_POST(Real, value);
+        }
+
+        return value;
+      }
+
       return internal::parse_number(line, column, stream, character);
 
     // Insignificant whitespace is allowed before or after any token.
@@ -757,6 +823,7 @@ do_parse_array_item:
     // Positional
     case internal::token_array_end<typename JSON::Char>:
       if (frames.top().get().empty()) {
+        CALLBACK_POST(Array, frames.top().get());
         goto do_parse_container_end;
       } else {
         throw ParseError(line, column);
@@ -764,27 +831,37 @@ do_parse_array_item:
 
     // Values
     case internal::token_array_begin<typename JSON::Char>:
+      CALLBACK_PRE(Array, JSON{frames.top().get().size()});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      CALLBACK_PRE(Object, JSON{frames.top().get().size()});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           internal::parse_boolean_true(line, column, stream));
+      CALLBACK_POST(Boolean, frames.top().get().back());
       goto do_parse_array_item_separator;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           internal::parse_boolean_false(line, column, stream));
+      CALLBACK_POST(Boolean, frames.top().get().back());
       goto do_parse_array_item_separator;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Null, JSON{frames.top().get().size()});
       frames.top().get().push_back(internal::parse_null(line, column, stream));
+      CALLBACK_POST(Null, frames.top().get().back());
       goto do_parse_array_item_separator;
 
     // A string is a sequence of Unicode code points wrapped with quotation
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
+      CALLBACK_PRE(String, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           Result{internal::parse_string(line, column, stream)});
+      CALLBACK_POST(String, frames.top().get().back());
       goto do_parse_array_item_separator;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -798,8 +875,31 @@ do_parse_array_item:
     case internal::token_number_seven<typename JSON::Char>:
     case internal::token_number_eight<typename JSON::Char>:
     case internal::token_number_nine<typename JSON::Char>:
-      frames.top().get().push_back(
-          internal::parse_number(line, column, stream, character));
+      if (callback) {
+        const auto current_line{line};
+        const auto current_column{column};
+        const auto value{
+            internal::parse_number(line, column, stream, character)};
+        if (value.is_integer()) {
+          CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
+                                     JSON{frames.top().get().size()});
+        } else {
+          CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
+                                     JSON{frames.top().get().size()});
+        }
+
+        frames.top().get().push_back(value);
+
+        if (value.is_integer()) {
+          CALLBACK_POST(Integer, frames.top().get().back());
+        } else {
+          CALLBACK_POST(Real, frames.top().get().back());
+        }
+      } else {
+        frames.top().get().push_back(
+            internal::parse_number(line, column, stream, character));
+      }
+
       goto do_parse_array_item_separator;
 
     // Insignificant whitespace is allowed before or after any token.
@@ -826,6 +926,7 @@ do_parse_array_item_separator:
     case internal::token_array_delimiter<typename JSON::Char>:
       goto do_parse_array_item;
     case internal::token_array_end<typename JSON::Char>:
+      CALLBACK_POST(Array, frames.top().get());
       goto do_parse_container_end;
 
     // Insignificant whitespace is allowed before or after any token.
@@ -872,9 +973,8 @@ do_parse_object:
 
   // An object structure is represented as a pair of curly bracket tokens
   // surrounding zero or more name/value pairs. A name is a string. A single
-  // colon token follows each name, separating the name from the value. A single
-  // comma token separates a value from a following name.
-  // See
+  // colon token follows each name, separating the name from the value. A
+  // single comma token separates a value from a following name. See
   // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 
 do_parse_object_property_key:
@@ -884,6 +984,7 @@ do_parse_object_property_key:
   switch (character) {
     case internal::token_object_end<typename JSON::Char>:
       if (frames.top().get().empty()) {
+        CALLBACK_POST(Object, frames.top().get());
         goto do_parse_container_end;
       } else {
         goto error;
@@ -941,28 +1042,38 @@ do_parse_object_property_value:
   switch (character) {
     // Values
     case internal::token_array_begin<typename JSON::Char>:
+      CALLBACK_PRE(Array, JSON{key});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      CALLBACK_PRE(Object, JSON{key});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Boolean, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_true(line, column, stream));
+      CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Boolean, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_false(line, column, stream));
+      CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
+      CALLBACK_PRE(Null, JSON{key});
       frames.top().get().assign(key,
                                 internal::parse_null(line, column, stream));
+      CALLBACK_POST(Null, frames.top().get().at(key));
       goto do_parse_object_property_end;
 
     // A string is a sequence of Unicode code points wrapped with quotation
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
+      CALLBACK_PRE(String, JSON{key});
       frames.top().get().assign(
           key, Result{internal::parse_string(line, column, stream)});
+      CALLBACK_POST(String, frames.top().get().at(key));
       goto do_parse_object_property_end;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -976,8 +1087,31 @@ do_parse_object_property_value:
     case internal::token_number_seven<typename JSON::Char>:
     case internal::token_number_eight<typename JSON::Char>:
     case internal::token_number_nine<typename JSON::Char>:
-      frames.top().get().assign(
-          key, internal::parse_number(line, column, stream, character));
+      if (callback) {
+        const auto current_line{line};
+        const auto current_column{column};
+        const auto value{
+            internal::parse_number(line, column, stream, character)};
+        if (value.is_integer()) {
+          CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
+                                     JSON{key});
+        } else {
+          CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
+                                     JSON{key});
+        }
+
+        frames.top().get().assign(key, value);
+
+        if (value.is_integer()) {
+          CALLBACK_POST(Integer, frames.top().get().at(key));
+        } else {
+          CALLBACK_POST(Real, frames.top().get().at(key));
+        }
+      } else {
+        frames.top().get().assign(
+            key, internal::parse_number(line, column, stream, character));
+      }
+
       goto do_parse_object_property_end;
 
     // Insignificant whitespace is allowed before or after any token.
@@ -1003,6 +1137,7 @@ do_parse_object_property_end:
     case internal::token_object_delimiter<typename JSON::Char>:
       goto do_parse_object_property_key;
     case internal::token_object_end<typename JSON::Char>:
+      CALLBACK_POST(Object, frames.top().get());
       goto do_parse_container_end;
 
     // Insignificant whitespace is allowed before or after any token.
@@ -1056,13 +1191,18 @@ do_parse_container_end:
 
 auto internal_parse(const std::basic_string<typename JSON::Char,
                                             typename JSON::CharTraits> &input,
-                    std::uint64_t &line, std::uint64_t &column) -> JSON {
+                    std::uint64_t &line, std::uint64_t &column,
+                    const Callback &callback) -> JSON {
   std::basic_istringstream<typename JSON::Char, typename JSON::CharTraits,
                            typename JSON::Allocator<typename JSON::Char>>
       stream{input};
-  return internal_parse(stream, line, column);
+  return internal_parse(stream, line, column, callback);
 }
 
 } // namespace sourcemeta::jsontoolkit
+
+#undef CALLBACK_PRE
+#undef CALLBACK_PRE_WITH_POSITION
+#undef CALLBACK_POST
 
 #endif
