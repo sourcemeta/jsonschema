@@ -36,7 +36,7 @@ auto sourcemeta::jsonschema::cli::frame(
   }
 
   const sourcemeta::jsontoolkit::JSON schema{
-      sourcemeta::jsontoolkit::from_file(options.at("").front())};
+      sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
   sourcemeta::jsontoolkit::Frame frame;
   frame.analyse(schema, sourcemeta::jsontoolkit::default_schema_walker,
