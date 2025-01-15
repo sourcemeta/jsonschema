@@ -19,8 +19,7 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: 400 Bad Request
-  at https://example.com
+error: Failed to parse the JSON document at line 1 and column 1
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

@@ -19,6 +19,9 @@
 
 namespace sourcemeta::jsonschema::cli {
 
+auto read_file(const std::filesystem::path &path)
+    -> sourcemeta::jsontoolkit::JSON;
+
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>>;

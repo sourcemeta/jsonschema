@@ -57,7 +57,7 @@ static auto get_data(const sourcemeta::jsontoolkit::JSON &test_case,
   }
 
   try {
-    return sourcemeta::jsontoolkit::from_file(data_path);
+    return sourcemeta::jsonschema::cli::read_file(data_path);
   } catch (...) {
     std::cout << "\n";
     throw;
@@ -76,7 +76,7 @@ auto sourcemeta::jsonschema::cli::test(
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
     const sourcemeta::jsontoolkit::JSON test{
-        sourcemeta::jsontoolkit::from_file(entry.first)};
+        sourcemeta::jsonschema::cli::read_file(entry.first)};
     std::cout << entry.first.string() << ":";
 
     if (!test.is_object()) {

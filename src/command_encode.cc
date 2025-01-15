@@ -65,7 +65,7 @@ auto sourcemeta::jsonschema::cli::encode(
               << "%\n";
   } else {
     const auto entry{
-        sourcemeta::jsontoolkit::from_file(options.at("").front())};
+        sourcemeta::jsonschema::cli::read_file(options.at("").front())};
     std::ofstream output_stream(
         std::filesystem::weakly_canonical(options.at("").at(1)),
         std::ios::binary);

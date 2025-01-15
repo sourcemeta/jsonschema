@@ -59,7 +59,7 @@ auto handle_json_entry(
 
         // TODO: Print a verbose message for what is getting parsed
         result.emplace_back(canonical,
-                            sourcemeta::jsontoolkit::from_file(canonical));
+                            sourcemeta::jsonschema::cli::read_file(canonical));
       }
     }
   } else {
@@ -85,7 +85,7 @@ auto handle_json_entry(
 
       // TODO: Print a verbose message for what is getting parsed
       result.emplace_back(canonical,
-                          sourcemeta::jsontoolkit::from_file(canonical));
+                          sourcemeta::jsonschema::cli::read_file(canonical));
     }
   }
 }
@@ -103,6 +103,12 @@ auto normalize_extension(const std::string &extension) -> std::string {
 } // namespace
 
 namespace sourcemeta::jsonschema::cli {
+
+auto read_file(const std::filesystem::path &path)
+    -> sourcemeta::jsontoolkit::JSON {
+  // TODO: Extend to support YAML
+  return sourcemeta::jsontoolkit::from_file(path);
+}
 
 auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::filesystem::path> &blacklist,

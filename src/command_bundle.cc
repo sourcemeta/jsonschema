@@ -19,7 +19,7 @@ auto sourcemeta::jsonschema::cli::bundle(
     return EXIT_FAILURE;
   }
 
-  auto schema{sourcemeta::jsontoolkit::from_file(options.at("").front())};
+  auto schema{sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
   sourcemeta::jsontoolkit::bundle(
       schema, sourcemeta::jsontoolkit::default_schema_walker,

@@ -42,7 +42,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
-  const auto schema{sourcemeta::jsontoolkit::from_file(schema_path)};
+  const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
   if (!sourcemeta::jsontoolkit::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
@@ -131,7 +131,8 @@ auto sourcemeta::jsonschema::cli::validate(
         log_verbose(options) << "warning: The JSONL file is empty\n";
       }
     } else {
-      const auto instance{sourcemeta::jsontoolkit::from_file(instance_path)};
+      const auto instance{
+          sourcemeta::jsonschema::cli::read_file(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::ErrorOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output;
