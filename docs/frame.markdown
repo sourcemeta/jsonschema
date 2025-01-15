@@ -2,7 +2,7 @@ Framing
 =======
 
 ```sh
-jsonschema frame <schema.json> [--json/-j] [--verbose/-v]
+jsonschema frame <schema.json|.yaml> [--json/-j] [--verbose/-v]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the

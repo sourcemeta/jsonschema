@@ -33,6 +33,12 @@ auto sourcemeta::jsonschema::cli::lint(
          for_each_json(options.at(""), parse_ignore(options),
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
+      if (entry.first.extension() == ".yaml" ||
+          entry.first.extension() == ".yml") {
+        std::cerr << "The --fix option is not supported for YAML input files\n";
+        return EXIT_FAILURE;
+      }
+
       auto copy = entry.second;
       bundle.apply(copy, sourcemeta::jsontoolkit::default_schema_walker,
                    resolver(options));

@@ -66,6 +66,8 @@ documentation:
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
 
+Note that YAML is supported in most commands!
+
 Installation
 ------------
 
