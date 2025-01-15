@@ -79,6 +79,14 @@ if(NOT UriParser_FOUND)
       DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uriparser"
       NAMESPACE uriparser::
       COMPONENT sourcemeta_jsontoolkit_dev)
+
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/uriparser-config.cmake
+      "include(\"\${CMAKE_CURRENT_LIST_DIR}/uriparser.cmake\")\n"
+      "check_required_components(\"uriparser\")\n")
+    install(FILES
+      "${CMAKE_CURRENT_BINARY_DIR}/uriparser-config.cmake"
+      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/uriparser"
+      COMPONENT sourcemeta_jsontoolkit_dev)
   endif()
 
   set(UriParser_FOUND ON)
