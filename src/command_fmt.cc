@@ -15,6 +15,12 @@ auto sourcemeta::jsonschema::cli::fmt(
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
+    if (entry.first.extension() == ".yaml" ||
+        entry.first.extension() == ".yml") {
+      std::cerr << "This command does not support YAML input files yet\n";
+      return EXIT_FAILURE;
+    }
+
     if (options.contains("c") || options.contains("check")) {
       log_verbose(options) << "Checking: " << entry.first.string() << "\n";
       std::ifstream input{entry.first};

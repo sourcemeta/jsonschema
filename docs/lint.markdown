@@ -25,6 +25,8 @@ automatically fix many of them.
 > not related to APIs. If you are working with JSON Schema for API
 > specifications, you should make use of both linters together!
 
+**The `--fix/-f` option is not supported when passing YAML schemas.**
+
 Examples
 --------
 

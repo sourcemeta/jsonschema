@@ -1,7 +1,9 @@
 #include <sourcemeta/hydra/httpclient.h>
+
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonschema.h>
 #include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/jsontoolkit/yaml.h>
 
 #include "utils.h"
 
@@ -106,7 +108,10 @@ namespace sourcemeta::jsonschema::cli {
 
 auto read_file(const std::filesystem::path &path)
     -> sourcemeta::jsontoolkit::JSON {
-  // TODO: Extend to support YAML
+  if (path.extension() == ".yaml" || path.extension() == ".yml") {
+    return sourcemeta::jsontoolkit::from_yaml(path);
+  }
+
   return sourcemeta::jsontoolkit::from_file(path);
 }
 
@@ -329,6 +334,8 @@ auto parse_extensions(
 
   if (result.empty()) {
     result.insert({".json"});
+    result.insert({".yaml"});
+    result.insert({".yml"});
   }
 
   return result;

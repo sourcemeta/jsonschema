@@ -15,6 +15,8 @@ conventions.  Just as code-formatters like
 `fmt` command to format schemas based on industry-standard conventions and to
 check their adherence on a continuous integration environment.
 
+**This command does not support YAML schemas yet.**
+
 Examples
 --------
 

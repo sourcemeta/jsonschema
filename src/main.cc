@@ -21,7 +21,7 @@ Global Options:
 
 Commands:
 
-   validate <schema.json> <instance.json|.jsonl...> [--http/-h]
+   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
@@ -43,19 +43,21 @@ Commands:
        [--ignore/-i <schemas-or-directories>]
 
        Format the input schemas in-place or check they are formatted.
+       This command does not support YAML schemas yet.
 
    lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
 
        Lint the input schemas and potentially fix the reported issues.
+       The --fix/-f option is not supported when passing YAML schemas.
 
-   bundle <schema.json> [--http/-h] [--extension/-e <extension>]
+   bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
-   frame <schema.json> [--json/-j]
+   frame <schema.json|.yaml> [--json/-j]
 
        Statically analyse a schema to display schema locations and
        references in a human-readable manner.

@@ -2,7 +2,7 @@ Bundling
 ========
 
 ```sh
-jsonschema bundle <schema.json>
+jsonschema bundle <schema.json|.yaml>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--without-id/-w]
