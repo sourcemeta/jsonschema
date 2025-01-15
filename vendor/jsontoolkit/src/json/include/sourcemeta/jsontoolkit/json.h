@@ -36,6 +36,7 @@ using Hash = FastHash<JSON>;
 enum class CallbackPhase { Pre, Post };
 
 /// @ingroup json
+///
 /// An optional callback that can be passed to parsing functions to obtain
 /// metadata during the parsing process. Each subdocument will emit 2 events: a
 /// "pre" and a "post". When parsing object and arrays, during the "pre" event,
@@ -45,6 +46,7 @@ using Callback = std::function<void(
     const std::uint64_t column, const JSON &value)>;
 
 /// @ingroup json
+///
 /// Create a JSON document from a C++ standard input stream. For example, a JSON
 /// document that represents an array can be parsed as follows:
 ///
@@ -84,6 +86,7 @@ auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
            const Callback &callback = nullptr) -> JSON;
 
 /// @ingroup json
+///
 /// Create a JSON document from a C++ standard input stream, passing your own
 /// `line` and `column` read/write position indicators. For example:
 ///
@@ -105,6 +108,7 @@ auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
            const Callback &callback = nullptr) -> JSON;
 
 /// @ingroup json
+///
 /// Create a JSON document from a JSON string, passing your own
 /// `line` and `column` read/write position indicators. For example:
 ///
@@ -204,6 +208,7 @@ auto prettify(const JSON &document,
               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream) -> void;
 
 /// @ingroup json
+///
 /// A comparison function between object property keys.
 /// See https://en.cppreference.com/w/cpp/named_req/Compare
 using KeyComparison =
