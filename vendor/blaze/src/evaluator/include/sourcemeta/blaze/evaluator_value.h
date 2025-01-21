@@ -1,9 +1,11 @@
 #ifndef SOURCEMETA_BLAZE_EVALUATOR_VALUE_H
 #define SOURCEMETA_BLAZE_EVALUATOR_VALUE_H
 
+#include <sourcemeta/noa/flat_map.h>
+#include <sourcemeta/noa/regex.h>
+
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/regex.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
 #include <sourcemeta/blaze/evaluator_string_set.h>
@@ -62,7 +64,7 @@ using ValueType = sourcemeta::jsontoolkit::JSON::Type;
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
 /// purposes)
-using ValueRegex = std::pair<sourcemeta::jsontoolkit::Regex, std::string>;
+using ValueRegex = std::pair<sourcemeta::noa::Regex<ValueString>, std::string>;
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON unsigned integer value
@@ -81,8 +83,8 @@ using ValueBoolean = bool;
 /// @ingroup evaluator
 /// Represents a compiler step string to index map
 using ValueNamedIndexes =
-    sourcemeta::jsontoolkit::FlatMap<ValueString, ValueUnsignedInteger,
-                                     sourcemeta::jsontoolkit::Hash>;
+    sourcemeta::noa::FlatMap<ValueString, ValueUnsignedInteger,
+                             sourcemeta::jsontoolkit::KeyHash<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string logical type
@@ -91,8 +93,8 @@ enum class ValueStringType : std::uint8_t { URI };
 /// @ingroup evaluator
 /// Represents an compiler step that maps strings to strings
 using ValueStringMap =
-    sourcemeta::jsontoolkit::FlatMap<ValueString, ValueStrings,
-                                     sourcemeta::jsontoolkit::Hash>;
+    sourcemeta::noa::FlatMap<ValueString, ValueStrings,
+                             sourcemeta::jsontoolkit::KeyHash<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consist of object property filters

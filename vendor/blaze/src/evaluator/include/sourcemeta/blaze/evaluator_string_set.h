@@ -49,7 +49,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
-  sourcemeta::jsontoolkit::Hash hasher;
+  sourcemeta::jsontoolkit::KeyHash<value_type> hasher;
 };
 
 } // namespace sourcemeta::blaze

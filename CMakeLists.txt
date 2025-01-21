@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(jsonschema VERSION 5.0.0 LANGUAGES CXX)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(JSONSCHEMA_TESTS "Build the JSON Schema CLI tests" OFF)
@@ -9,6 +8,7 @@ option(JSONSCHEMA_TESTS_CI "Build the JSON Schema CLI CI tests" OFF)
 option(JSONSCHEMA_DEVELOPMENT "Build the JSON Schema CLI in development mode" OFF)
 option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 
+find_package(Noa REQUIRED)
 find_package(JSONToolkit REQUIRED)
 find_package(AlterSchema REQUIRED)
 find_package(Blaze REQUIRED)

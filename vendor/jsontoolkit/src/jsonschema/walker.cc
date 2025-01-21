@@ -152,6 +152,8 @@ auto walk(sourcemeta::jsontoolkit::Pointer &pointer,
         break;
       case sourcemeta::jsontoolkit::KeywordType::Other:
         break;
+      case sourcemeta::jsontoolkit::KeywordType::Comment:
+        break;
       case sourcemeta::jsontoolkit::KeywordType::Unknown:
         break;
     }

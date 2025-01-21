@@ -3,7 +3,8 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-#include <sourcemeta/jsontoolkit/regex.h>
+
+#include <sourcemeta/noa/regex.h>
 
 #include <algorithm> // std::sort, std::any_of, std::all_of, std::find_if, std::none_of
 #include <cassert> // assert
@@ -16,8 +17,8 @@
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::jsontoolkit::URI &base,
                         const sourcemeta::jsontoolkit::Pointer &schema_location)
-    -> sourcemeta::jsontoolkit::Regex {
-  const auto result{sourcemeta::jsontoolkit::to_regex(pattern)};
+    -> sourcemeta::noa::Regex<sourcemeta::jsontoolkit::JSON::String> {
+  const auto result{sourcemeta::noa::to_regex(pattern)};
   if (!result.has_value()) {
     std::ostringstream message;
     message << "Invalid regular expression: " << pattern;
@@ -944,14 +945,18 @@ auto compiler_draft4_applicator_properties_with_options(
         if (schema_context.schema.defines("required") &&
             !schema_context.schema.defines("patternProperties") &&
             assume_object) {
-          ValueStringSet required{
-              json_array_to_string_set(schema_context.schema.at("required"))};
+          auto required_copy = schema_context.schema.at("required");
+          std::sort(required_copy.as_array().begin(),
+                    required_copy.as_array().end());
+          ValueStringSet required{json_array_to_string_set(required_copy)};
           if (is_closed_properties_required(schema_context.schema, required)) {
-            std::vector<sourcemeta::jsontoolkit::Hash::property_hash_type>
+            sourcemeta::jsontoolkit::KeyHash<ValueString> hasher;
+            std::vector<
+                sourcemeta::jsontoolkit::KeyHash<ValueString>::hash_type>
                 perfect_hashes;
             for (const auto &entry : required) {
               assert(required.contains(entry.first, entry.second));
-              if (entry.second.is_perfect()) {
+              if (hasher.is_perfect(entry.second)) {
                 perfect_hashes.push_back(entry.second);
               }
             }

@@ -1,5 +1,3 @@
-set(NOA_TARGET_CLANG_TIDY_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-
 function(noa_target_clang_tidy)
   cmake_parse_arguments(NOA_TARGET_CLANG_TIDY "REQUIRED" "" "SOURCES" ${ARGN})
 
@@ -37,7 +35,7 @@ function(noa_target_clang_tidy)
   file(GLOB_RECURSE NOA_TARGET_CLANG_TIDY_FILES
     ${NOA_TARGET_CLANG_TIDY_SOURCES})
 
-  set(CLANG_TIDY_CONFIG "${NOA_TARGET_CLANG_TIDY_DIRECTORY}/clang-tidy.config")
+  set(CLANG_TIDY_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-tidy.config")
   if(CLANG_TIDY_BIN)
     add_custom_target(clang_tidy
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"

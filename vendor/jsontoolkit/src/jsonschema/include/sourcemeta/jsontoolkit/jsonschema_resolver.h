@@ -121,11 +121,16 @@ public:
   /// Construct an empty resolver that has another schema resolver as a fallback
   FlatFileSchemaResolver(const SchemaResolver &resolver);
 
+  /// Determines how to access the registered file entry, letting you hook
+  /// into how schemas are read to support other file formats, like YAML
+  using Reader = std::function<JSON(const std::filesystem::path &)>;
+
   /// Register a schema to the flat file resolver, returning the detected
   /// identifier for the schema
   auto add(const std::filesystem::path &path,
            const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt)
+           const std::optional<std::string> &default_id = std::nullopt,
+           const Reader &reader = sourcemeta::jsontoolkit::from_file)
       -> const std::string &;
 
   // Change the identifier of a registered schema
@@ -146,6 +151,7 @@ public:
     std::filesystem::path path;
     std::optional<std::string> default_dialect;
     std::string original_identifier;
+    Reader reader;
   };
 
 private:

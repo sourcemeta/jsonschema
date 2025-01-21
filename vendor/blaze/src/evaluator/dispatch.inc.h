@@ -178,7 +178,7 @@ INSTRUCTION_HANDLER(AssertionPropertyDependencies) {
   assert(!value.empty());
   result = true;
   const auto &object{target.as_object()};
-  const sourcemeta::jsontoolkit::Hash hasher;
+  const sourcemeta::jsontoolkit::KeyHash<ValueString> hasher;
   for (const auto &entry : value) {
     if (!object.defines(entry.first, entry.hash)) {
       continue;
@@ -2244,57 +2244,74 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
   EVALUATE_BEGIN_NO_PRECONDITION(LoopItemsPropertiesExactlyTypeStrictHash);
   const auto &target{get(instance, instruction.relative_instance_location)};
   const auto &value{*std::get_if<ValueTypedHashes>(&instruction.value)};
+  // Otherwise why emit this instruction?
+  assert(!value.second.empty());
 
   if (!target.is_array()) {
     EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
   }
 
-  if (target.array_size() == 0) {
-    result = true;
-    EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-  }
+  result = true;
 
+  const auto hashes_size{value.second.size()};
   for (const auto &item : target.as_array()) {
     if (!item.is_object()) {
+      result = false;
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
     }
 
     const auto &object{item.as_object()};
     const auto size{object.size()};
-    if (size == value.second.size()) {
-      // Otherwise why emit this instruction?
-      assert(!value.second.empty());
+    if (size != hashes_size) {
+      result = false;
+      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+    }
 
-      // The idea is to first assume the object property ordering and the
-      // hashes collection aligns. If they don't we do a full comparison
-      // from where we left of.
-
+    // Unroll, for performance reasons, for small collections
+    if (hashes_size == 3) {
+      for (const auto &entry : object) {
+        if (entry.second.type() != value.first) {
+          result = false;
+          EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+        } else if (entry.hash != value.second[0] &&
+                   entry.hash != value.second[1] &&
+                   entry.hash != value.second[2]) {
+          result = false;
+          EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+        }
+      }
+    } else if (hashes_size == 2) {
+      for (const auto &entry : object) {
+        if (entry.second.type() != value.first) {
+          result = false;
+          EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+        } else if (entry.hash != value.second[0] &&
+                   entry.hash != value.second[1]) {
+          result = false;
+          EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+        }
+      }
+    } else if (hashes_size == 1) {
+      const auto &entry{*object.cbegin()};
+      if (entry.second.type() != value.first || entry.hash != value.second[0]) {
+        result = false;
+        EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+      }
+    } else {
       std::size_t index{0};
       for (const auto &entry : object) {
         if (entry.second.type() != value.first) {
+          result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        }
-
-        if (entry.hash != value.second[index]) {
-          break;
-        }
-
-        index += 1;
-      }
-
-      result = true;
-      if (index < size) {
-        auto iterator = object.cbegin();
-        // Continue where we left
-        std::advance(iterator, index);
-        for (; iterator != object.cend(); ++iterator) {
-          if (std::none_of(value.second.cbegin(), value.second.cend(),
-                           [&iterator](const auto hash) {
-                             return hash == iterator->hash;
-                           })) {
-            result = false;
-            break;
-          }
+        } else if (entry.hash == value.second[index]) {
+          index += 1;
+          continue;
+        } else if (std::find(value.second.cbegin(), value.second.cend(),
+                             entry.hash) == value.second.cend()) {
+          result = false;
+          EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+        } else {
+          index += 1;
         }
       }
     }

@@ -43,7 +43,7 @@ public:
   /// The array type used by the JSON document.
   using Array = JSONArray<JSON>;
   /// The object type used by the JSON document.
-  using Object = JSONObject<String, JSON, FastHash<JSON>>;
+  using Object = JSONObject<String, JSON, KeyHash<JSON::String>>;
 
   /*
    * Constructors

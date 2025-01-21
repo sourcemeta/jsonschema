@@ -25,6 +25,9 @@ enum class KeywordType : std::uint8_t {
   Reference,
   /// The JSON Schema keyword is known but doesn't match any other type
   Other,
+  /// The JSON Schema keyword is considered to be a comment without any
+  /// additional meaning
+  Comment,
   /// The JSON Schema keyword is an applicator that potentially
   /// takes a JSON Schema definition as an argument
   ApplicatorValue,

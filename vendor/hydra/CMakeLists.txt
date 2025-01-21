@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.16)
 project(hydra VERSION 0.0.1 LANGUAGES C CXX
   DESCRIPTION "A convenience networking library for modern C++")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(HYDRA_CRYPTO "Build the Hydra crypto library" ON)
@@ -20,6 +19,8 @@ option(HYDRA_DOCS "Build the Hydra docs" OFF)
 option(HYDRA_INSTALL "Install the Hydra library" ON)
 option(HYDRA_ADDRESS_SANITIZER "Build Hydra with an address sanitizer" OFF)
 option(HYDRA_UNDEFINED_SANITIZER "Build Hydra with an undefined behavior sanitizer" OFF)
+
+find_package(Noa REQUIRED)
 
 if(HYDRA_INSTALL)
   include(GNUInstallDirs)
@@ -88,7 +89,6 @@ endif()
 
 # Testing
 if(HYDRA_TESTS)
-  find_package(GoogleTest REQUIRED)
   enable_testing()
 
   if(HYDRA_HTTPCLIENT OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)

@@ -17,7 +17,9 @@ endif()
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::jsontoolkit::json)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
-  sourcemeta::jsontoolkit::regex)
+  sourcemeta::noa::regex)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::noa::flat_map)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::jsontoolkit::jsonpointer)
 target_link_libraries(sourcemeta_blaze_evaluator PRIVATE

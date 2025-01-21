@@ -3,7 +3,6 @@ project(alterschema VERSION 0.0.1 LANGUAGES CXX
   DESCRIPTION "Perform advanced transformations on JSON Schemas"
   HOMEPAGE_URL "https://alterschema.sourcemeta.com")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(ALTERSCHEMA_ENGINE "Build the AlterSchema Engine library" ON)
@@ -13,6 +12,8 @@ option(ALTERSCHEMA_DOCS "Build the AlterSchema docs" OFF)
 option(ALTERSCHEMA_INSTALL "Install the AlterSchema library" ON)
 option(ALTERSCHEMA_ADDRESS_SANITIZER "Build AlterSchema with an address sanitizer" OFF)
 option(ALTERSCHEMA_UNDEFINED_SANITIZER "Build AlterSchema with an undefined behavior sanitizer" OFF)
+
+find_package(Noa REQUIRED)
 
 if(ALTERSCHEMA_INSTALL)
   include(GNUInstallDirs)
@@ -60,7 +61,6 @@ endif()
 
 # Testing
 if(ALTERSCHEMA_TESTS)
-  find_package(GoogleTest REQUIRED)
   enable_testing()
 
   if(ALTERSCHEMA_ENGINE)

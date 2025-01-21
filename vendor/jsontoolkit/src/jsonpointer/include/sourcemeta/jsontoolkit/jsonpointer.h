@@ -31,10 +31,11 @@
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-using Pointer = GenericPointer<JSON::String>;
+using Pointer = GenericPointer<JSON::String, KeyHash<JSON::String>>;
 
 /// @ingroup jsonpointer
-using WeakPointer = GenericPointer<std::reference_wrapper<const std::string>>;
+using WeakPointer = GenericPointer<std::reference_wrapper<const std::string>,
+                                   KeyHash<JSON::String>>;
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON Pointer.

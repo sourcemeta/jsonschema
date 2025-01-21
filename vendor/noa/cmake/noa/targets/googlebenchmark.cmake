@@ -1,0 +1,26 @@
+function(noa_googlebenchmark)
+  cmake_parse_arguments(NOA_GOOGLEBENCHMARK ""
+    "NAMESPACE;PROJECT;FOLDER" "SOURCES" ${ARGN})
+
+  if(NOT NOA_GOOGLEBENCHMARK_PROJECT)
+    message(FATAL_ERROR "You must pass the project name using the PROJECT option")
+  endif()
+  if(NOT NOA_GOOGLEBENCHMARK_FOLDER)
+    message(FATAL_ERROR "You must pass the folder name using the FOLDER option")
+  endif()
+  if(NOT NOA_GOOGLEBENCHMARK_SOURCES)
+    message(FATAL_ERROR "You must pass the sources list using the SOURCES option")
+  endif()
+
+  if(NOA_GOOGLEBENCHMARK_NAMESPACE)
+    set(TARGET_NAME "${NOA_GOOGLEBENCHMARK_NAMESPACE}_${NOA_GOOGLEBENCHMARK_PROJECT}_benchmark")
+  else()
+    set(TARGET_NAME "${NOA_GOOGLEBENCHMARK_PROJECT}_benchmark")
+  endif()
+
+  add_executable("${TARGET_NAME}" ${NOA_GOOGLEBENCHMARK_SOURCES})
+  noa_add_default_options(PRIVATE ${TARGET_NAME})
+  set_target_properties("${TARGET_NAME}" PROPERTIES FOLDER "${NOA_GOOGLEBENCHMARK_FOLDER}")
+  target_link_libraries("${TARGET_NAME}" PRIVATE benchmark::benchmark)
+  target_link_libraries("${TARGET_NAME}" PRIVATE benchmark::benchmark_main)
+endfunction()

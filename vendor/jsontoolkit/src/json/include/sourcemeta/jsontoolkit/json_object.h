@@ -4,7 +4,7 @@
 #include <functional>       // std::equal_to, std::less
 #include <initializer_list> // std::initializer_list
 
-#include <sourcemeta/jsontoolkit/json_flat_map.h>
+#include <sourcemeta/noa/flat_map.h>
 
 namespace sourcemeta::jsontoolkit {
 
@@ -12,7 +12,7 @@ namespace sourcemeta::jsontoolkit {
 template <typename Key, typename Value, typename Hash> class JSONObject {
 public:
   // Constructors
-  using Container = FlatMap<Key, Value, Hash>;
+  using Container = sourcemeta::noa::FlatMap<Key, Value, Hash>;
 
   JSONObject() : data{} {}
   JSONObject(std::initializer_list<typename Container::value_type> values)
