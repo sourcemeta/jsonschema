@@ -1,5 +1,3 @@
-set(NOA_TARGET_SHELLCHECK_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-
 function(noa_target_shellcheck)
   cmake_parse_arguments(NOA_TARGET_SHELLCHECK "REQUIRED" "" "SOURCES" ${ARGN})
 

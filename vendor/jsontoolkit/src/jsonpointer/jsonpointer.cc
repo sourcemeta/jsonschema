@@ -15,8 +15,9 @@
 namespace {
 
 template <template <typename T> typename Allocator, typename V,
-          typename PointerT =
-              sourcemeta::jsontoolkit::GenericPointer<typename V::String>>
+          typename PointerT = sourcemeta::jsontoolkit::GenericPointer<
+              typename V::String,
+              sourcemeta::jsontoolkit::KeyHash<typename V::String>>>
 auto traverse(V &document, typename PointerT::const_iterator begin,
               typename PointerT::const_iterator end) -> V & {
   // Make sure types match
@@ -62,8 +63,9 @@ auto traverse(V &document, typename PointerT::const_iterator begin,
 // A variant of the above function that assumes traversing of
 // the entire pointer and does not rely on iterators for performance reasons
 template <template <typename T> typename Allocator, typename V,
-          typename PointerT =
-              sourcemeta::jsontoolkit::GenericPointer<typename V::String>>
+          typename PointerT = sourcemeta::jsontoolkit::GenericPointer<
+              typename V::String,
+              sourcemeta::jsontoolkit::KeyHash<typename V::String>>>
 auto traverse_all(V &document, const PointerT &pointer) -> V & {
   // Make sure types match
   static_assert(

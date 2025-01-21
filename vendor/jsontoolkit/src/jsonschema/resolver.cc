@@ -93,9 +93,10 @@ static auto to_lowercase(const std::string_view input) -> std::string {
 auto FlatFileSchemaResolver::add(
     const std::filesystem::path &path,
     const std::optional<std::string> &default_dialect,
-    const std::optional<std::string> &default_id) -> const std::string & {
-  const auto canonical{std::filesystem::canonical(path)};
-  const auto schema{sourcemeta::jsontoolkit::from_file(canonical)};
+    const std::optional<std::string> &default_id, const Reader &reader)
+    -> const std::string & {
+  const auto canonical{std::filesystem::weakly_canonical(path)};
+  const auto schema{reader(canonical)};
   assert(sourcemeta::jsontoolkit::is_schema(schema));
   const auto identifier{sourcemeta::jsontoolkit::identify(
       schema, *this, IdentificationStrategy::Loose, default_dialect,
@@ -112,7 +113,7 @@ auto FlatFileSchemaResolver::add(
 
   const auto result{this->schemas.emplace(
       effective_identifier,
-      Entry{canonical, default_dialect, effective_identifier})};
+      Entry{canonical, default_dialect, effective_identifier, reader})};
   if (!result.second && result.first->second.path != canonical) {
     std::ostringstream error;
     error << "Cannot register the same identifier twice: "
@@ -138,7 +139,7 @@ auto FlatFileSchemaResolver::operator()(std::string_view identifier) const
   const std::string string_identifier{to_lowercase(identifier)};
   const auto result{this->schemas.find(string_identifier)};
   if (result != this->schemas.cend()) {
-    auto schema{sourcemeta::jsontoolkit::from_file(result->second.path)};
+    auto schema{result->second.reader(result->second.path)};
     assert(sourcemeta::jsontoolkit::is_schema(schema));
     if (schema.is_object() && !schema.defines("$schema") &&
         result->second.default_dialect.has_value()) {

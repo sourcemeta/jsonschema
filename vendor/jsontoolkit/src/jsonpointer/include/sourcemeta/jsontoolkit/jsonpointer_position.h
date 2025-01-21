@@ -43,7 +43,7 @@ namespace sourcemeta::jsontoolkit {
 /// ```
 class SOURCEMETA_JSONTOOLKIT_JSONPOINTER_EXPORT PositionTracker {
 public:
-  using Pointer = GenericPointer<JSON::String>;
+  using Pointer = GenericPointer<JSON::String, KeyHash<JSON::String>>;
   using Position =
       std::tuple<std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
   auto operator()(const CallbackPhase phase, const JSON::Type,

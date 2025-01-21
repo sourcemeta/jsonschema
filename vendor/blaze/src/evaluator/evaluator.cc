@@ -1,8 +1,9 @@
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <sourcemeta/noa/regex.h>
+
 #include <sourcemeta/jsontoolkit/json.h>
 #include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/regex.h>
 #include <sourcemeta/jsontoolkit/uri.h>
 
 #include <algorithm> // std::min, std::any_of, std::find

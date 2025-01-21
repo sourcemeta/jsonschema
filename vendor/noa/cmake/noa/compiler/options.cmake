@@ -8,7 +8,7 @@ function(noa_add_default_options visibility target)
       /WL
       /MP
       /sdl)
-  else()
+  elseif(NOA_COMPILER_LLVM OR NOA_COMPILER_GCC)
     target_compile_options("${target}" ${visibility}
       -Wall
       -Wextra

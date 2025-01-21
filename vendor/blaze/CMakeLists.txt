@@ -3,7 +3,6 @@ project(blaze VERSION 0.0.1 LANGUAGES CXX
   DESCRIPTION "The ultra high-performance JSON Schema evaluator"
   HOMEPAGE_URL "https://github.com/sourcemeta/blaze")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(BLAZE_COMPILER "Build the Blaze compiler library" ON)
@@ -15,6 +14,8 @@ option(BLAZE_DOCS "Build the Blaze docs" OFF)
 option(BLAZE_INSTALL "Install the Blaze library" ON)
 option(BLAZE_ADDRESS_SANITIZER "Build Blaze with an address sanitizer" OFF)
 option(BLAZE_UNDEFINED_SANITIZER "Build Blaze with an undefined behavior sanitizer" OFF)
+
+find_package(Noa REQUIRED)
 
 if(BLAZE_INSTALL)
   include(GNUInstallDirs)
@@ -72,7 +73,6 @@ endif()
 
 # Testing
 if(BLAZE_TESTS)
-  find_package(GoogleTest REQUIRED)
   enable_testing()
 
   if(BLAZE_COMPILER)
@@ -92,7 +92,6 @@ if(BLAZE_TESTS)
   endif()
 
   if(BLAZE_BENCHMARK)
-    find_package(GoogleBenchmark REQUIRED)
     add_subdirectory(benchmark)
   endif()
 endif()

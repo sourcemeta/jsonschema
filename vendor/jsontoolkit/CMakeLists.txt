@@ -3,12 +3,10 @@ project(jsontoolkit VERSION 2.0.0 LANGUAGES C CXX
   DESCRIPTION "The swiss-army knife for JSON programming in C++"
   HOMEPAGE_URL "https://jsontoolkit.sourcemeta.com")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(JSONTOOLKIT_URI "Build the JSON Toolkit URI library" ON)
 option(JSONTOOLKIT_JSON "Build the JSON Toolkit JSON library" ON)
-option(JSONTOOLKIT_REGEX "Build the JSON Toolkit Regex library" ON)
 option(JSONTOOLKIT_JSONSCHEMA "Build the JSON Toolkit JSON Schema library" ON)
 option(JSONTOOLKIT_JSONPOINTER "Build the JSON Toolkit JSON Pointer library" ON)
 option(JSONTOOLKIT_JSONL "Build the JSON Toolkit JSONL library" ON)
@@ -19,6 +17,8 @@ option(JSONTOOLKIT_DOCS "Build the JSON Toolkit docs" OFF)
 option(JSONTOOLKIT_INSTALL "Install the JSON Toolkit library" ON)
 option(JSONTOOLKIT_ADDRESS_SANITIZER "Build JSON Toolkit with an address sanitizer" OFF)
 option(JSONTOOLKIT_UNDEFINED_SANITIZER "Build JSON Toolkit with an undefined behavior sanitizer" OFF)
+
+find_package(Noa REQUIRED)
 
 if(JSONTOOLKIT_INSTALL)
   include(GNUInstallDirs)
@@ -44,11 +44,6 @@ endif()
 
 if(JSONTOOLKIT_JSON)
   add_subdirectory(src/json)
-endif()
-
-if(JSONTOOLKIT_JSON AND JSONTOOLKIT_REGEX)
-  find_package(BoostRegex REQUIRED)
-  add_subdirectory(src/regex)
 endif()
 
 if(JSONTOOLKIT_JSON AND JSONTOOLKIT_JSONPOINTER)
@@ -82,7 +77,6 @@ endif()
 
 if(PROJECT_IS_TOP_LEVEL)
   noa_target_clang_format(SOURCES
-    bindings/*.cc
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
     test/*.h test/*.cc)
@@ -92,7 +86,6 @@ endif()
 
 # Testing
 if(JSONTOOLKIT_TESTS)
-  find_package(GoogleTest REQUIRED)
   enable_testing()
 
   if(JSONTOOLKIT_URI)
@@ -101,10 +94,6 @@ if(JSONTOOLKIT_TESTS)
 
   if(JSONTOOLKIT_JSON)
     add_subdirectory(test/json)
-  endif()
-
-  if(JSONTOOLKIT_JSON AND JSONTOOLKIT_REGEX)
-    add_subdirectory(test/regex)
   endif()
 
   if(JSONTOOLKIT_JSON AND JSONTOOLKIT_JSONPOINTER)
@@ -133,7 +122,6 @@ if(JSONTOOLKIT_TESTS)
   endif()
 
   if(JSONTOOLKIT_BENCHMARK)
-    find_package(GoogleBenchmark REQUIRED)
     add_subdirectory(benchmark)
   endif()
 endif()

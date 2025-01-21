@@ -29,6 +29,12 @@ auto relativize(JSON &schema, const SchemaWalker &walker,
         continue;
       }
 
+      // In 2019-09, `$recursiveRef` can only be `#`, so there
+      // is nothing else we can possibly do
+      if (property.first == "$recursiveRef") {
+        continue;
+      }
+
       URI reference{property.second.to_string()};
       reference.relative_to(base);
       reference.canonicalize();

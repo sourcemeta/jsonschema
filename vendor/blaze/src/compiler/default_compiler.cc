@@ -18,7 +18,6 @@ auto sourcemeta::blaze::default_schema_compiler(
     -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
-  // TODO: Support HyperSchema in Draft 7 and earlier
   static std::set<std::string> SUPPORTED_VOCABULARIES{
       "https://json-schema.org/draft/2020-12/vocab/core",
       "https://json-schema.org/draft/2020-12/vocab/applicator",
@@ -35,8 +34,11 @@ auto sourcemeta::blaze::default_schema_compiler(
       "https://json-schema.org/draft/2019-09/vocab/content",
       "https://json-schema.org/draft/2019-09/vocab/hyper-schema",
       "http://json-schema.org/draft-07/schema#",
+      "http://json-schema.org/draft-07/hyper-schema#",
       "http://json-schema.org/draft-06/schema#",
-      "http://json-schema.org/draft-04/schema#"};
+      "http://json-schema.org/draft-06/hyper-schema#",
+      "http://json-schema.org/draft-04/schema#",
+      "http://json-schema.org/draft-04/hyper-schema#"};
   for (const auto &vocabulary : schema_context.vocabularies) {
     if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
         vocabulary.second) {
@@ -49,6 +51,14 @@ auto sourcemeta::blaze::default_schema_compiler(
 
 #define COMPILE(vocabulary, _keyword, handler)                                 \
   if (schema_context.vocabularies.contains(vocabulary) &&                      \
+      dynamic_context.keyword == (_keyword)) {                                 \
+    return internal::handler(context, schema_context, dynamic_context,         \
+                             current);                                         \
+  }
+
+#define COMPILE_ANY(vocabulary_1, vocabulary_2, _keyword, handler)             \
+  if ((schema_context.vocabularies.contains(vocabulary_1) ||                   \
+       schema_context.vocabularies.contains(vocabulary_2)) &&                  \
       dynamic_context.keyword == (_keyword)) {                                 \
     return internal::handler(context, schema_context, dynamic_context,         \
                              current);                                         \
@@ -263,238 +273,340 @@ auto sourcemeta::blaze::default_schema_compiler(
   // DRAFT 7
   // ********************************************
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "$ref",
-          compiler_draft4_core_ref);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "$ref",
+              compiler_draft4_core_ref);
   STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-07/schema#", "$ref");
+  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-07/hyper-schema#",
+                          "$ref");
 
   // Any
-  COMPILE("http://json-schema.org/draft-07/schema#", "if",
-          compiler_draft7_applicator_if);
-  COMPILE("http://json-schema.org/draft-07/schema#", "then",
-          compiler_draft7_applicator_then);
-  COMPILE("http://json-schema.org/draft-07/schema#", "else",
-          compiler_draft7_applicator_else);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "if",
+              compiler_draft7_applicator_if);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "then",
+              compiler_draft7_applicator_then);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "else",
+              compiler_draft7_applicator_else);
 
   // Same as Draft 6
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "type",
-          compiler_draft6_validation_type);
-  COMPILE("http://json-schema.org/draft-07/schema#", "const",
-          compiler_draft6_validation_const);
-  COMPILE("http://json-schema.org/draft-07/schema#", "contains",
-          compiler_draft6_applicator_contains);
-  COMPILE("http://json-schema.org/draft-07/schema#", "propertyNames",
-          compiler_draft6_validation_propertynames);
-  COMPILE("http://json-schema.org/draft-07/schema#", "exclusiveMaximum",
-          compiler_draft6_validation_exclusivemaximum);
-  COMPILE("http://json-schema.org/draft-07/schema#", "exclusiveMinimum",
-          compiler_draft6_validation_exclusiveminimum);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "type",
+              compiler_draft6_validation_type);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "const",
+              compiler_draft6_validation_const);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "contains",
+              compiler_draft6_applicator_contains);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "propertyNames",
+              compiler_draft6_validation_propertynames);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#",
+              "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#",
+              "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "allOf",
-          compiler_draft4_applicator_allof);
-  COMPILE("http://json-schema.org/draft-07/schema#", "anyOf",
-          compiler_draft4_applicator_anyof);
-  COMPILE("http://json-schema.org/draft-07/schema#", "oneOf",
-          compiler_draft4_applicator_oneof);
-  COMPILE("http://json-schema.org/draft-07/schema#", "not",
-          compiler_draft4_applicator_not);
-  COMPILE("http://json-schema.org/draft-07/schema#", "enum",
-          compiler_draft4_validation_enum);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "allOf",
+              compiler_draft4_applicator_allof);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "anyOf",
+              compiler_draft4_applicator_anyof);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "oneOf",
+              compiler_draft4_applicator_oneof);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "not",
+              compiler_draft4_applicator_not);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "enum",
+              compiler_draft4_validation_enum);
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "items",
-          compiler_draft4_applicator_items);
-  COMPILE("http://json-schema.org/draft-07/schema#", "additionalItems",
-          compiler_draft4_applicator_additionalitems);
-  COMPILE("http://json-schema.org/draft-07/schema#", "uniqueItems",
-          compiler_draft4_validation_uniqueitems);
-  COMPILE("http://json-schema.org/draft-07/schema#", "maxItems",
-          compiler_draft4_validation_maxitems);
-  COMPILE("http://json-schema.org/draft-07/schema#", "minItems",
-          compiler_draft4_validation_minitems);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "items",
+              compiler_draft4_applicator_items);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#",
+              "additionalItems", compiler_draft4_applicator_additionalitems);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "uniqueItems",
+              compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "maxItems",
+              compiler_draft4_validation_maxitems);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "minItems",
+              compiler_draft4_validation_minitems);
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "required",
-          compiler_draft4_validation_required);
-  COMPILE("http://json-schema.org/draft-07/schema#", "maxProperties",
-          compiler_draft4_validation_maxproperties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "minProperties",
-          compiler_draft4_validation_minproperties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "properties",
-          compiler_draft4_applicator_properties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "additionalProperties",
-          compiler_draft4_applicator_additionalproperties);
-  COMPILE("http://json-schema.org/draft-07/schema#", "dependencies",
-          compiler_draft4_applicator_dependencies);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "required",
+              compiler_draft4_validation_required);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "maxProperties",
+              compiler_draft4_validation_maxproperties);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "minProperties",
+              compiler_draft4_validation_minproperties);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "properties",
+              compiler_draft4_applicator_properties);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#",
+              "patternProperties",
+              compiler_draft4_applicator_patternproperties);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#",
+              "additionalProperties",
+              compiler_draft4_applicator_additionalproperties);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "dependencies",
+              compiler_draft4_applicator_dependencies);
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "maximum",
-          compiler_draft4_validation_maximum);
-  COMPILE("http://json-schema.org/draft-07/schema#", "minimum",
-          compiler_draft4_validation_minimum);
-  COMPILE("http://json-schema.org/draft-07/schema#", "multipleOf",
-          compiler_draft4_validation_multipleof);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "maximum",
+              compiler_draft4_validation_maximum);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "minimum",
+              compiler_draft4_validation_minimum);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "multipleOf",
+              compiler_draft4_validation_multipleof);
 
-  COMPILE("http://json-schema.org/draft-07/schema#", "maxLength",
-          compiler_draft4_validation_maxlength);
-  COMPILE("http://json-schema.org/draft-07/schema#", "minLength",
-          compiler_draft4_validation_minlength);
-  COMPILE("http://json-schema.org/draft-07/schema#", "pattern",
-          compiler_draft4_validation_pattern);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "maxLength",
+              compiler_draft4_validation_maxlength);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "minLength",
+              compiler_draft4_validation_minlength);
+  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
+              "http://json-schema.org/draft-07/hyper-schema#", "pattern",
+              compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 6
   // ********************************************
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "$ref",
-          compiler_draft4_core_ref);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "$ref",
+              compiler_draft4_core_ref);
   STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-06/schema#", "$ref");
+  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-06/hyper-schema#",
+                          "$ref");
 
   // Any
-  COMPILE("http://json-schema.org/draft-06/schema#", "type",
-          compiler_draft6_validation_type);
-  COMPILE("http://json-schema.org/draft-06/schema#", "const",
-          compiler_draft6_validation_const);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "type",
+              compiler_draft6_validation_type);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "const",
+              compiler_draft6_validation_const);
 
   // Array
-  COMPILE("http://json-schema.org/draft-06/schema#", "contains",
-          compiler_draft6_applicator_contains);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "contains",
+              compiler_draft6_applicator_contains);
 
   // Object
-  COMPILE("http://json-schema.org/draft-06/schema#", "propertyNames",
-          compiler_draft6_validation_propertynames);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "propertyNames",
+              compiler_draft6_validation_propertynames);
 
   // Number
-  COMPILE("http://json-schema.org/draft-06/schema#", "exclusiveMaximum",
-          compiler_draft6_validation_exclusivemaximum);
-  COMPILE("http://json-schema.org/draft-06/schema#", "exclusiveMinimum",
-          compiler_draft6_validation_exclusiveminimum);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#",
+              "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#",
+              "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "allOf",
-          compiler_draft4_applicator_allof);
-  COMPILE("http://json-schema.org/draft-06/schema#", "anyOf",
-          compiler_draft4_applicator_anyof);
-  COMPILE("http://json-schema.org/draft-06/schema#", "oneOf",
-          compiler_draft4_applicator_oneof);
-  COMPILE("http://json-schema.org/draft-06/schema#", "not",
-          compiler_draft4_applicator_not);
-  COMPILE("http://json-schema.org/draft-06/schema#", "enum",
-          compiler_draft4_validation_enum);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "allOf",
+              compiler_draft4_applicator_allof);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "anyOf",
+              compiler_draft4_applicator_anyof);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "oneOf",
+              compiler_draft4_applicator_oneof);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "not",
+              compiler_draft4_applicator_not);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "enum",
+              compiler_draft4_validation_enum);
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "items",
-          compiler_draft4_applicator_items);
-  COMPILE("http://json-schema.org/draft-06/schema#", "additionalItems",
-          compiler_draft4_applicator_additionalitems);
-  COMPILE("http://json-schema.org/draft-06/schema#", "uniqueItems",
-          compiler_draft4_validation_uniqueitems);
-  COMPILE("http://json-schema.org/draft-06/schema#", "maxItems",
-          compiler_draft4_validation_maxitems);
-  COMPILE("http://json-schema.org/draft-06/schema#", "minItems",
-          compiler_draft4_validation_minitems);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "items",
+              compiler_draft4_applicator_items);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#",
+              "additionalItems", compiler_draft4_applicator_additionalitems);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "uniqueItems",
+              compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "maxItems",
+              compiler_draft4_validation_maxitems);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "minItems",
+              compiler_draft4_validation_minitems);
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "required",
-          compiler_draft4_validation_required);
-  COMPILE("http://json-schema.org/draft-06/schema#", "maxProperties",
-          compiler_draft4_validation_maxproperties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "minProperties",
-          compiler_draft4_validation_minproperties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "properties",
-          compiler_draft4_applicator_properties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "additionalProperties",
-          compiler_draft4_applicator_additionalproperties);
-  COMPILE("http://json-schema.org/draft-06/schema#", "dependencies",
-          compiler_draft4_applicator_dependencies);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "required",
+              compiler_draft4_validation_required);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "maxProperties",
+              compiler_draft4_validation_maxproperties);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "minProperties",
+              compiler_draft4_validation_minproperties);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "properties",
+              compiler_draft4_applicator_properties);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#",
+              "patternProperties",
+              compiler_draft4_applicator_patternproperties);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#",
+              "additionalProperties",
+              compiler_draft4_applicator_additionalproperties);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "dependencies",
+              compiler_draft4_applicator_dependencies);
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "maximum",
-          compiler_draft4_validation_maximum);
-  COMPILE("http://json-schema.org/draft-06/schema#", "minimum",
-          compiler_draft4_validation_minimum);
-  COMPILE("http://json-schema.org/draft-06/schema#", "multipleOf",
-          compiler_draft4_validation_multipleof);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "maximum",
+              compiler_draft4_validation_maximum);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "minimum",
+              compiler_draft4_validation_minimum);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "multipleOf",
+              compiler_draft4_validation_multipleof);
 
-  COMPILE("http://json-schema.org/draft-06/schema#", "maxLength",
-          compiler_draft4_validation_maxlength);
-  COMPILE("http://json-schema.org/draft-06/schema#", "minLength",
-          compiler_draft4_validation_minlength);
-  COMPILE("http://json-schema.org/draft-06/schema#", "pattern",
-          compiler_draft4_validation_pattern);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "maxLength",
+              compiler_draft4_validation_maxlength);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "minLength",
+              compiler_draft4_validation_minlength);
+  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
+              "http://json-schema.org/draft-06/hyper-schema#", "pattern",
+              compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 4
   // ********************************************
 
-  COMPILE("http://json-schema.org/draft-04/schema#", "$ref",
-          compiler_draft4_core_ref);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "$ref",
+              compiler_draft4_core_ref);
   STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-04/schema#", "$ref");
+  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-04/hyper-schema#",
+                          "$ref");
 
   // Applicators
-  COMPILE("http://json-schema.org/draft-04/schema#", "allOf",
-          compiler_draft4_applicator_allof);
-  COMPILE("http://json-schema.org/draft-04/schema#", "anyOf",
-          compiler_draft4_applicator_anyof);
-  COMPILE("http://json-schema.org/draft-04/schema#", "oneOf",
-          compiler_draft4_applicator_oneof);
-  COMPILE("http://json-schema.org/draft-04/schema#", "not",
-          compiler_draft4_applicator_not);
-  COMPILE("http://json-schema.org/draft-04/schema#", "properties",
-          compiler_draft4_applicator_properties);
-  COMPILE("http://json-schema.org/draft-04/schema#", "patternProperties",
-          compiler_draft4_applicator_patternproperties);
-  COMPILE("http://json-schema.org/draft-04/schema#", "additionalProperties",
-          compiler_draft4_applicator_additionalproperties);
-  COMPILE("http://json-schema.org/draft-04/schema#", "items",
-          compiler_draft4_applicator_items);
-  COMPILE("http://json-schema.org/draft-04/schema#", "additionalItems",
-          compiler_draft4_applicator_additionalitems);
-  COMPILE("http://json-schema.org/draft-04/schema#", "dependencies",
-          compiler_draft4_applicator_dependencies);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "allOf",
+              compiler_draft4_applicator_allof);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "anyOf",
+              compiler_draft4_applicator_anyof);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "oneOf",
+              compiler_draft4_applicator_oneof);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "not",
+              compiler_draft4_applicator_not);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "properties",
+              compiler_draft4_applicator_properties);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#",
+              "patternProperties",
+              compiler_draft4_applicator_patternproperties);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#",
+              "additionalProperties",
+              compiler_draft4_applicator_additionalproperties);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "items",
+              compiler_draft4_applicator_items);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#",
+              "additionalItems", compiler_draft4_applicator_additionalitems);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "dependencies",
+              compiler_draft4_applicator_dependencies);
 
   // Any
-  COMPILE("http://json-schema.org/draft-04/schema#", "type",
-          compiler_draft4_validation_type);
-  COMPILE("http://json-schema.org/draft-04/schema#", "enum",
-          compiler_draft4_validation_enum);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "type",
+              compiler_draft4_validation_type);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "enum",
+              compiler_draft4_validation_enum);
 
   // Object
-  COMPILE("http://json-schema.org/draft-04/schema#", "required",
-          compiler_draft4_validation_required);
-  COMPILE("http://json-schema.org/draft-04/schema#", "maxProperties",
-          compiler_draft4_validation_maxproperties);
-  COMPILE("http://json-schema.org/draft-04/schema#", "minProperties",
-          compiler_draft4_validation_minproperties);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "required",
+              compiler_draft4_validation_required);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "maxProperties",
+              compiler_draft4_validation_maxproperties);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "minProperties",
+              compiler_draft4_validation_minproperties);
 
   // Array
-  COMPILE("http://json-schema.org/draft-04/schema#", "uniqueItems",
-          compiler_draft4_validation_uniqueitems);
-  COMPILE("http://json-schema.org/draft-04/schema#", "maxItems",
-          compiler_draft4_validation_maxitems);
-  COMPILE("http://json-schema.org/draft-04/schema#", "minItems",
-          compiler_draft4_validation_minitems);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "uniqueItems",
+              compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "maxItems",
+              compiler_draft4_validation_maxitems);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "minItems",
+              compiler_draft4_validation_minitems);
 
   // String
-  COMPILE("http://json-schema.org/draft-04/schema#", "pattern",
-          compiler_draft4_validation_pattern);
-  COMPILE("http://json-schema.org/draft-04/schema#", "maxLength",
-          compiler_draft4_validation_maxlength);
-  COMPILE("http://json-schema.org/draft-04/schema#", "minLength",
-          compiler_draft4_validation_minlength);
-  COMPILE("http://json-schema.org/draft-04/schema#", "format",
-          compiler_draft4_validation_format);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "pattern",
+              compiler_draft4_validation_pattern);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "maxLength",
+              compiler_draft4_validation_maxlength);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "minLength",
+              compiler_draft4_validation_minlength);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "format",
+              compiler_draft4_validation_format);
 
   // Number
-  COMPILE("http://json-schema.org/draft-04/schema#", "maximum",
-          compiler_draft4_validation_maximum);
-  COMPILE("http://json-schema.org/draft-04/schema#", "minimum",
-          compiler_draft4_validation_minimum);
-  COMPILE("http://json-schema.org/draft-04/schema#", "multipleOf",
-          compiler_draft4_validation_multipleof);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "maximum",
+              compiler_draft4_validation_maximum);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "minimum",
+              compiler_draft4_validation_minimum);
+  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
+              "http://json-schema.org/draft-04/hyper-schema#", "multipleOf",
+              compiler_draft4_validation_multipleof);
 
 #undef COMPILE
+#undef COMPILE_ANY
 #undef STOP_IF_SIBLING_KEYWORD
 
   if ((schema_context.vocabularies.contains(

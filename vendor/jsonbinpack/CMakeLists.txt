@@ -6,7 +6,6 @@ format based on JSON Schema with \
 both schema-driven and schema-less support."
   HOMEPAGE_URL "https://jsonbinpack.sourcemeta.com")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-include(vendor/noa/cmake/noa.cmake)
 
 # Options
 option(JSONBINPACK_NUMERIC "Build the JSON BinPack numeric library" ON)
@@ -18,6 +17,8 @@ option(JSONBINPACK_WEBSITE "Build the JSON BinPack website" OFF)
 option(JSONBINPACK_DOCS "Build the JSON BinPack documentation" OFF)
 option(JSONBINPACK_ADDRESS_SANITIZER "Build JSON BinPack with an address sanitizer" OFF)
 option(JSONBINPACK_UNDEFINED_SANITIZER "Build JSON BinPack with an undefined behavior sanitizer" OFF)
+
+find_package(Noa REQUIRED)
 
 if(JSONBINPACK_INSTALL)
   include(GNUInstallDirs)
@@ -80,7 +81,6 @@ endif()
 
 # Testing
 if(JSONBINPACK_TESTS)
-  find_package(GoogleTest REQUIRED)
   enable_testing()
 
   if(JSONBINPACK_NUMERIC)

@@ -237,7 +237,7 @@ inline auto recursive_template_size(const Instructions &steps) -> std::size_t {
 }
 
 inline auto make_property(const ValueString &property) -> ValueProperty {
-  static const sourcemeta::jsontoolkit::Hash hasher;
+  static const sourcemeta::jsontoolkit::KeyHash<ValueString> hasher;
   return {property, hasher(property)};
 }
 

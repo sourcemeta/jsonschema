@@ -6,6 +6,7 @@ if(NOT JSONToolkit_FOUND)
   endif()
 
   set(JSONTOOLKIT_JSONL OFF CACHE BOOL "disable JSONL support")
+  set(JSONTOOLKIT_YAML OFF CACHE BOOL "disable YAML support")
   add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/jsontoolkit")
   set(JSONToolkit_FOUND ON)
 endif()

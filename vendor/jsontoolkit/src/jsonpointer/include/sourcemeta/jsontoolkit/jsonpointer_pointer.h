@@ -17,7 +17,7 @@
 namespace sourcemeta::jsontoolkit {
 
 /// @ingroup jsonpointer
-template <typename PropertyT> class GenericPointer {
+template <typename PropertyT, typename Hash> class GenericPointer {
 public:
   using Token = GenericToken<PropertyT, Hash>;
   using Value = typename Token::Value;
@@ -206,7 +206,7 @@ public:
   /// assert(pointer.at(1).to_property() == "bar");
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
-  auto push_back(const GenericPointer<PropertyT> &other) -> void {
+  auto push_back(const GenericPointer<PropertyT, Hash> &other) -> void {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {
@@ -239,7 +239,7 @@ public:
   /// assert(pointer.at(1).to_property() == "bar");
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
-  auto push_back(GenericPointer<PropertyT> &&other) -> void {
+  auto push_back(GenericPointer<PropertyT, Hash> &&other) -> void {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {
@@ -277,7 +277,7 @@ public:
   template <typename OtherT,
             typename = std::enable_if_t<std::is_same_v<
                 PropertyT, std::reference_wrapper<const OtherT>>>>
-  auto push_back(const GenericPointer<OtherT> &other) -> void {
+  auto push_back(const GenericPointer<OtherT, Hash> &other) -> void {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {
@@ -422,9 +422,9 @@ public:
   /// assert(pointer.at(1).is_property());
   /// assert(pointer.at(1).to_property() == "bar");
   /// ```
-  [[nodiscard]] auto initial() const -> GenericPointer<PropertyT> {
+  [[nodiscard]] auto initial() const -> GenericPointer<PropertyT, Hash> {
     assert(!this->empty());
-    GenericPointer<PropertyT> result{*this};
+    GenericPointer<PropertyT, Hash> result{*this};
     result.pop_back();
     return result;
   }
@@ -441,9 +441,9 @@ public:
   /// assert(left.concat(right) ==
   ///   sourcemeta::jsontoolkit::Pointer{"foo", "bar", "baz"});
   /// ```
-  auto concat(const GenericPointer<PropertyT> &other) const
-      -> GenericPointer<PropertyT> {
-    GenericPointer<PropertyT> result{*this};
+  auto concat(const GenericPointer<PropertyT, Hash> &other) const
+      -> GenericPointer<PropertyT, Hash> {
+    GenericPointer<PropertyT, Hash> result{*this};
     result.push_back(other);
     return result;
   }
@@ -459,7 +459,7 @@ public:
   /// const sourcemeta::jsontoolkit::Pointer prefix{"foo", "bar"};
   /// assert(pointer.starts_with(prefix));
   /// ```
-  auto starts_with(const GenericPointer<PropertyT> &other) const -> bool {
+  auto starts_with(const GenericPointer<PropertyT, Hash> &other) const -> bool {
     return other.data.size() <= this->data.size() &&
            std::equal(other.data.cbegin(), other.data.cend(),
                       this->data.cbegin());
@@ -477,7 +477,7 @@ public:
   /// const sourcemeta::jsontoolkit::Pointer prefix{"foo", "bar", "baz"};
   /// assert(pointer.starts_with(prefix, tail));
   /// ```
-  auto starts_with(const GenericPointer<PropertyT> &other,
+  auto starts_with(const GenericPointer<PropertyT, Hash> &other,
                    const Token &tail) const -> bool {
     if (other.size() == this->size() + 1) {
       assert(!other.empty());
@@ -498,7 +498,7 @@ public:
   /// const sourcemeta::jsontoolkit::Pointer prefix{"foo", "bar", "qux"};
   /// assert(pointer.starts_with_initial(prefix));
   /// ```
-  auto starts_with_initial(const GenericPointer<PropertyT> &other) const
+  auto starts_with_initial(const GenericPointer<PropertyT, Hash> &other) const
       -> bool {
     const auto prefix_size{other.size()};
     if (prefix_size == 0) {
@@ -529,9 +529,9 @@ public:
   /// assert(pointer.rebase(prefix, replacement) ==
   ///   sourcemeta::jsontoolkit::Pointer{"qux", "baz"});
   /// ```
-  auto rebase(const GenericPointer<PropertyT> &prefix,
-              const GenericPointer<PropertyT> &replacement) const
-      -> GenericPointer<PropertyT> {
+  auto rebase(const GenericPointer<PropertyT, Hash> &prefix,
+              const GenericPointer<PropertyT, Hash> &replacement) const
+      -> GenericPointer<PropertyT, Hash> {
     typename Container::size_type index{0};
     while (index < prefix.size()) {
       if (index >= this->size() || prefix.data[index] != this->data[index]) {
@@ -545,7 +545,7 @@ public:
     assert(this->starts_with(prefix));
     auto new_begin{this->data.cbegin()};
     std::advance(new_begin, index);
-    GenericPointer<PropertyT> result{replacement};
+    GenericPointer<PropertyT, Hash> result{replacement};
     std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
     return result;
   }
@@ -564,8 +564,8 @@ public:
   ///
   /// If the JSON Pointer is not relative to the base, a copy of the original
   /// input pointer is returned.
-  auto resolve_from(const GenericPointer<PropertyT> &base) const
-      -> GenericPointer<PropertyT> {
+  auto resolve_from(const GenericPointer<PropertyT, Hash> &base) const
+      -> GenericPointer<PropertyT, Hash> {
     typename Container::size_type index{0};
     while (index < base.size()) {
       if (index >= this->size() || base.data[index] != this->data[index]) {
@@ -578,20 +578,20 @@ public:
     // Make a pointer from the remaining tokens
     auto new_begin{this->data.cbegin()};
     std::advance(new_begin, index);
-    GenericPointer<PropertyT> result;
+    GenericPointer<PropertyT, Hash> result;
     std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
     return result;
   }
 
   /// Compare JSON Pointer instances
-  auto operator==(const GenericPointer<PropertyT> &other) const noexcept
+  auto operator==(const GenericPointer<PropertyT, Hash> &other) const noexcept
       -> bool {
     return this->data == other.data;
   }
 
   /// Overload to support ordering of JSON Pointers. Typically for sorting
   /// reasons.
-  auto operator<(const GenericPointer<PropertyT> &other) const noexcept
+  auto operator<(const GenericPointer<PropertyT, Hash> &other) const noexcept
       -> bool {
     return this->data < other.data;
   }

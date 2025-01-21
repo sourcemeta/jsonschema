@@ -18,7 +18,7 @@ public:
   /// precomputed hash. This is advanced functionality that should be used with
   /// care.
   GenericToken(const Property &value,
-               const typename Hash::property_hash_type property_hash)
+               const typename Hash::hash_type property_hash)
       : as_property{true}, property{value}, hash{property_hash}, index{0} {}
 
   /// This constructor creates an JSON Pointer token from a string. For
@@ -172,7 +172,7 @@ public:
   /// assert(token.property_hash() >= 0);
   /// ```
   [[nodiscard]] auto property_hash() const noexcept ->
-      typename Hash::property_hash_type {
+      typename Hash::hash_type {
     assert(this->is_property());
     return this->hash;
   }
@@ -271,7 +271,7 @@ private:
 
   bool as_property;
   Property property;
-  typename Hash::property_hash_type hash;
+  typename Hash::hash_type hash;
   Index index;
 };
 

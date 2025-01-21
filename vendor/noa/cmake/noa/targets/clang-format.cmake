@@ -1,5 +1,3 @@
-set(NOA_TARGET_CLANG_FORMAT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
-
 function(noa_target_clang_format)
   cmake_parse_arguments(NOA_TARGET_CLANG_FORMAT "REQUIRED" "" "SOURCES" ${ARGN})
 
@@ -16,7 +14,7 @@ function(noa_target_clang_format)
   file(GLOB_RECURSE NOA_TARGET_CLANG_FORMAT_FILES
     ${NOA_TARGET_CLANG_FORMAT_SOURCES})
 
-  set(CLANG_FORMAT_CONFIG "${NOA_TARGET_CLANG_FORMAT_DIRECTORY}/clang-format.config")
+  set(CLANG_FORMAT_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-format.config")
   if(CLANG_FORMAT_BIN)
     add_custom_target(clang_format
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"

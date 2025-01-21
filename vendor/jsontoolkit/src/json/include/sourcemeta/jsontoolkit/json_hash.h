@@ -13,30 +13,29 @@ template <typename T> struct FastHash {
     return value.fast_hash();
   }
 
-  struct property_hash_type {
+  inline auto is_perfect(const hash_type) const noexcept -> bool {
+    return false;
+  }
+};
+
+/// @ingroup json
+template <typename T> struct KeyHash {
+  struct hash_type {
     using type = std::uint64_t;
     type a{0};
     type b{0};
     type c{0};
     type d{0};
 
-    inline auto operator==(const property_hash_type &other) const noexcept
-        -> bool {
+    inline auto operator==(const hash_type &other) const noexcept -> bool {
       return this->a == other.a && this->b == other.b && this->c == other.c &&
              this->d == other.d;
     }
-
-    inline auto is_perfect() const noexcept -> bool {
-      // If there is anything written past the first byte,
-      // then it is a perfect hash
-      return this->a > 255;
-    }
   };
 
-  inline auto operator()(const typename T::String &value) const noexcept
-      -> property_hash_type {
+  inline auto operator()(const T &value) const noexcept -> hash_type {
     const auto size{value.size()};
-    property_hash_type result;
+    hash_type result;
     if (size == 0) {
       return result;
     } else if (size <= 31) {
@@ -47,12 +46,17 @@ template <typename T> struct FastHash {
       // This case is specifically designed to be constant with regards to
       // string length, and to exploit the fact that most JSON objects don't
       // have a lot of entries, so hash collision is not as common
-      return {(size +
-               static_cast<typename property_hash_type::type>(value.front()) +
-               static_cast<typename property_hash_type::type>(value.back())) %
+      return {(size + static_cast<typename hash_type::type>(value.front()) +
+               static_cast<typename hash_type::type>(value.back())) %
               // Make sure the property hash can never exceed 8 bits
               256};
     }
+  }
+
+  inline auto is_perfect(const hash_type &hash) const noexcept -> bool {
+    // If there is anything written past the first byte,
+    // then it is a perfect hash
+    return hash.a > 255;
   }
 };
 
