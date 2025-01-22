@@ -13,7 +13,7 @@ type: 1
 EOF
 
 "$1" metaschema "$TMP/schema.yaml" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.yaml

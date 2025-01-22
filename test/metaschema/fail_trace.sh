@@ -16,7 +16,7 @@ EOF
 
 "$1" metaschema "$TMP/schema.json" --trace > "$TMP/output.txt" \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 # Order of execution can vary
 

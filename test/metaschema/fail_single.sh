@@ -15,7 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" metaschema "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.json
