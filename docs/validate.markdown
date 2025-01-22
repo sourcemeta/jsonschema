@@ -18,6 +18,9 @@ information on unsuccessful validation.
 **If you want to validate that a schema adheres to its metaschema, use the
 [`metaschema`](./metaschema.markdown) command instead.**
 
+To help scripts distinguish validation errors, these are reported using exit
+code 2.
+
 Examples
 --------
 

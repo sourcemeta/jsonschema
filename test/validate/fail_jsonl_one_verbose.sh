@@ -22,7 +22,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl" --verbose 2>"$TMP/stderr.txt" \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Interpreting input as JSONL: $(realpath "$TMP")/instance.jsonl
