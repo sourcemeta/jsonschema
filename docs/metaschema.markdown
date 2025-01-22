@@ -13,6 +13,9 @@ jsonschema metaschema [schemas-or-directories...]
 Ensure that a schema or a set of schemas are considered valid with regards to
 their metaschemas.
 
+To help scripts distinguish validation errors, these are reported using exit
+code 2.
+
 Examples
 --------
 
