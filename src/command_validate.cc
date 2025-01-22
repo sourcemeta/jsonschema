@@ -178,5 +178,8 @@ auto sourcemeta::jsonschema::cli::validate(
     }
   }
 
-  return result ? EXIT_SUCCESS : EXIT_FAILURE;
+  return result ? EXIT_SUCCESS
+                // Report a different exit code for validation failures, to
+                // distinguish them from other errors
+                : 2;
 }

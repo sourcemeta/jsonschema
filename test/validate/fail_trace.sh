@@ -24,7 +24,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace > "$TMP/output.txt" \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 -> (push) "/properties/foo/type"
