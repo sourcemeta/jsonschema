@@ -1,9 +1,9 @@
 #include <sourcemeta/hydra/httpclient.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
-#include <sourcemeta/jsontoolkit/uri.h>
-#include <sourcemeta/jsontoolkit/yaml.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/uri.h>
+#include <sourcemeta/core/yaml.h>
 
 #include "utils.h"
 
@@ -39,7 +39,7 @@ auto handle_json_entry(
     const std::filesystem::path &entry_path,
     const std::set<std::filesystem::path> &blacklist,
     const std::set<std::string> &extensions,
-    std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
+    std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>
         &result) -> void {
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
@@ -106,22 +106,19 @@ auto normalize_extension(const std::string &extension) -> std::string {
 
 namespace sourcemeta::jsonschema::cli {
 
-auto read_file(const std::filesystem::path &path)
-    -> sourcemeta::jsontoolkit::JSON {
+auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON {
   if (path.extension() == ".yaml" || path.extension() == ".yml") {
-    return sourcemeta::jsontoolkit::from_yaml(path);
+    return sourcemeta::core::from_yaml(path);
   }
 
-  return sourcemeta::jsontoolkit::from_file(path);
+  return sourcemeta::core::from_file(path);
 }
 
 auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
-    -> std::vector<
-        std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>> {
-  std::vector<std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>
-      result;
+    -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> {
+  std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> result;
 
   if (arguments.empty()) {
     handle_json_entry(std::filesystem::current_path(), blacklist, extensions,
@@ -192,10 +189,10 @@ auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
     stream << "    at instance location \"";
-    sourcemeta::jsontoolkit::stringify(entry.instance_location, stream);
+    sourcemeta::core::stringify(entry.instance_location, stream);
     stream << "\"\n";
     stream << "    at evaluate path \"";
-    sourcemeta::jsontoolkit::stringify(entry.evaluate_path, stream);
+    sourcemeta::core::stringify(entry.evaluate_path, stream);
     stream << "\"\n";
   }
 }
@@ -225,10 +222,10 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     }
 
     stream << "\"";
-    sourcemeta::jsontoolkit::stringify(entry.evaluate_path, stream);
+    sourcemeta::core::stringify(entry.evaluate_path, stream);
     stream << "\"\n";
     stream << "   at \"";
-    sourcemeta::jsontoolkit::stringify(entry.instance_location, stream);
+    sourcemeta::core::stringify(entry.instance_location, stream);
     stream << "\"\n";
     stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
 
@@ -241,15 +238,14 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
 
 static auto fallback_resolver(
     const std::map<std::string, std::vector<std::string>> &options,
-    std::string_view identifier)
-    -> std::optional<sourcemeta::jsontoolkit::JSON> {
-  auto official_result{sourcemeta::jsontoolkit::official_resolver(identifier)};
+    std::string_view identifier) -> std::optional<sourcemeta::core::JSON> {
+  auto official_result{sourcemeta::core::official_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
   }
 
   // If the URI is not an HTTP URL, then abort
-  const sourcemeta::jsontoolkit::URI uri{std::string{identifier}};
+  const sourcemeta::core::URI uri{std::string{identifier}};
   const auto maybe_scheme{uri.scheme()};
   if (uri.is_urn() || !maybe_scheme.has_value() ||
       (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
@@ -266,17 +262,17 @@ static auto fallback_resolver(
     throw std::runtime_error(error.str());
   }
 
-  return sourcemeta::jsontoolkit::parse(response.body());
+  return sourcemeta::core::parse(response.body());
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote) -> sourcemeta::jsontoolkit::SchemaResolver {
-  sourcemeta::jsontoolkit::MapSchemaResolver dynamic_resolver{
+              const bool remote) -> sourcemeta::core::SchemaResolver {
+  sourcemeta::core::MapSchemaResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
         if (remote) {
           return fallback_resolver(options, identifier);
         } else {
-          return sourcemeta::jsontoolkit::official_resolver(identifier);
+          return sourcemeta::core::official_resolver(identifier);
         }
       }};
 

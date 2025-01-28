@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_DEFAULT_COMPILER_2020_12_H_
 
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/uri.h>
 
 #include "compile_helpers.h"
 #include "default_compiler_draft4.h"
@@ -76,13 +76,13 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
-          {sourcemeta::jsontoolkit::ReferenceType::Dynamic, entry.pointer})) {
+          {sourcemeta::core::ReferenceType::Dynamic, entry.pointer})) {
     return compiler_draft4_core_ref(context, schema_context, dynamic_context,
                                     current);
   }
 
   assert(schema_context.schema.at(dynamic_context.keyword).is_string());
-  sourcemeta::jsontoolkit::URI reference{
+  sourcemeta::core::URI reference{
       schema_context.schema.at(dynamic_context.keyword).to_string()};
   reference.try_resolve_from(schema_context.base);
   reference.canonicalize();

@@ -5,8 +5,8 @@
 #include <sourcemeta/blaze/compiler_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
@@ -26,24 +26,24 @@ namespace sourcemeta::blaze {
 /// #include <sourcemeta/blaze/compiler.h>
 /// #include <sourcemeta/blaze/evaluator.h>
 ///
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <cassert>
 /// #include <functional>
 ///
-/// const sourcemeta::jsontoolkit::JSON schema =
-///     sourcemeta::jsontoolkit::parse(R"JSON({
+/// const sourcemeta::core::JSON schema =
+///     sourcemeta::core::parse(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver,
-///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///     schema, sourcemeta::core::default_schema_walker,
+///     sourcemeta::core::official_resolver,
+///     sourcemeta::core::default_schema_compiler)};
 ///
-/// const sourcemeta::jsontoolkit::JSON instance{5};
+/// const sourcemeta::core::JSON instance{5};
 ///
 /// sourcemeta::blaze::ErrorOutput output{instance};
 /// sourcemeta::blaze::Evaluator evaluator;
@@ -53,18 +53,18 @@ namespace sourcemeta::blaze {
 /// if (!result) {
 ///   for (const auto &entry : output) {
 ///     std::cerr << entry.message << "\n";
-///     sourcemeta::jsontoolkit::stringify(entry.instance_location, std::cerr);
+///     sourcemeta::core::stringify(entry.instance_location, std::cerr);
 ///     std::cerr << "\n";
-///     sourcemeta::jsontoolkit::stringify(entry.evaluate_path, std::cerr);
+///     sourcemeta::core::stringify(entry.evaluate_path, std::cerr);
 ///     std::cerr << "\n";
 ///   }
 /// }
 /// ```
 class SOURCEMETA_BLAZE_COMPILER_EXPORT ErrorOutput {
 public:
-  ErrorOutput(const sourcemeta::jsontoolkit::JSON &instance,
-              const sourcemeta::jsontoolkit::WeakPointer &base =
-                  sourcemeta::jsontoolkit::empty_weak_pointer);
+  ErrorOutput(const sourcemeta::core::JSON &instance,
+              const sourcemeta::core::WeakPointer &base =
+                  sourcemeta::core::empty_weak_pointer);
 
   // Prevent accidental copies
   ErrorOutput(const ErrorOutput &) = delete;
@@ -72,15 +72,15 @@ public:
 
   struct Entry {
     const std::string message;
-    const sourcemeta::jsontoolkit::WeakPointer instance_location;
-    const sourcemeta::jsontoolkit::WeakPointer evaluate_path;
+    const sourcemeta::core::WeakPointer instance_location;
+    const sourcemeta::core::WeakPointer evaluate_path;
   };
 
   auto operator()(const EvaluationType type, const bool result,
                   const Instruction &step,
-                  const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-                  const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-                  const sourcemeta::jsontoolkit::JSON &annotation) -> void;
+                  const sourcemeta::core::WeakPointer &evaluate_path,
+                  const sourcemeta::core::WeakPointer &instance_location,
+                  const sourcemeta::core::JSON &annotation) -> void;
 
   using container_type = typename std::vector<Entry>;
   using const_iterator = typename container_type::const_iterator;
@@ -96,10 +96,10 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  const sourcemeta::jsontoolkit::JSON &instance_;
-  const sourcemeta::jsontoolkit::WeakPointer base_;
+  const sourcemeta::core::JSON &instance_;
+  const sourcemeta::core::WeakPointer base_;
   container_type output;
-  std::set<sourcemeta::jsontoolkit::WeakPointer> mask;
+  std::set<sourcemeta::core::WeakPointer> mask;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
@@ -113,24 +113,24 @@ private:
 /// #include <sourcemeta/blaze/compiler.h>
 /// #include <sourcemeta/blaze/evaluator.h>
 ///
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <cassert>
 /// #include <functional>
 ///
-/// const sourcemeta::jsontoolkit::JSON schema =
-///     sourcemeta::jsontoolkit::parse(R"JSON({
+/// const sourcemeta::core::JSON schema =
+///     sourcemeta::core::parse(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver,
-///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///     schema, sourcemeta::core::default_schema_walker,
+///     sourcemeta::core::official_resolver,
+///     sourcemeta::core::default_schema_compiler)};
 ///
-/// const sourcemeta::jsontoolkit::JSON instance{5};
+/// const sourcemeta::core::JSON instance{5};
 ///
 /// sourcemeta::blaze::TraceOutput output;
 /// sourcemeta::blaze::Evaluator evaluator;
@@ -153,17 +153,17 @@ private:
 ///
 ///     std::cerr << entry.name << "\n";
 ///     std::cerr << entry.keyword_location << "\n";
-///     sourcemeta::jsontoolkit::stringify(entry.instance_location, std::cerr);
+///     sourcemeta::core::stringify(entry.instance_location, std::cerr);
 ///     std::cerr << "\n";
-///     sourcemeta::jsontoolkit::stringify(entry.evaluate_path, std::cerr);
+///     sourcemeta::core::stringify(entry.evaluate_path, std::cerr);
 ///     std::cerr << "\n";
 ///   }
 /// }
 /// ```
 class SOURCEMETA_BLAZE_COMPILER_EXPORT TraceOutput {
 public:
-  TraceOutput(const sourcemeta::jsontoolkit::WeakPointer &base =
-                  sourcemeta::jsontoolkit::empty_weak_pointer);
+  TraceOutput(const sourcemeta::core::WeakPointer &base =
+                  sourcemeta::core::empty_weak_pointer);
 
   // Prevent accidental copies
   TraceOutput(const ErrorOutput &) = delete;
@@ -174,16 +174,16 @@ public:
   struct Entry {
     const EntryType type;
     const std::string_view name;
-    const sourcemeta::jsontoolkit::WeakPointer instance_location;
-    const sourcemeta::jsontoolkit::WeakPointer evaluate_path;
+    const sourcemeta::core::WeakPointer instance_location;
+    const sourcemeta::core::WeakPointer evaluate_path;
     const std::string keyword_location;
   };
 
   auto operator()(const EvaluationType type, const bool result,
                   const Instruction &step,
-                  const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-                  const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-                  const sourcemeta::jsontoolkit::JSON &annotation) -> void;
+                  const sourcemeta::core::WeakPointer &evaluate_path,
+                  const sourcemeta::core::WeakPointer &instance_location,
+                  const sourcemeta::core::JSON &annotation) -> void;
 
   using container_type = typename std::vector<Entry>;
   using const_iterator = typename container_type::const_iterator;
@@ -199,7 +199,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  const sourcemeta::jsontoolkit::WeakPointer base_;
+  const sourcemeta::core::WeakPointer base_;
   container_type output;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
@@ -212,10 +212,10 @@ private:
 /// Useful as the building block for producing user-friendly evaluation results.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 describe(const bool valid, const Instruction &step,
-         const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-         const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-         const sourcemeta::jsontoolkit::JSON &instance,
-         const sourcemeta::jsontoolkit::JSON &annotation) -> std::string;
+         const sourcemeta::core::WeakPointer &evaluate_path,
+         const sourcemeta::core::WeakPointer &instance_location,
+         const sourcemeta::core::JSON &instance,
+         const sourcemeta::core::JSON &annotation) -> std::string;
 
 } // namespace sourcemeta::blaze
 

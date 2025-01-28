@@ -1,0 +1,5 @@
+if(NOT Benchmark_FOUND)
+  set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "enable testing of the benchmark library")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/googlebenchmark")
+  set(Benchmark_FOUND ON)
+endif()

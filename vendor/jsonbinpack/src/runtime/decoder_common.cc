@@ -9,7 +9,7 @@ namespace sourcemeta::jsonbinpack {
 
 Decoder::Decoder(Stream &input) : InputStream{input} {}
 
-auto Decoder::read(const Encoding &encoding) -> sourcemeta::jsontoolkit::JSON {
+auto Decoder::read(const Encoding &encoding) -> sourcemeta::core::JSON {
   switch (encoding.index()) {
 #define HANDLE_DECODING(index, name)                                           \
   case (index):                                                                \

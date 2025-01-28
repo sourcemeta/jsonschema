@@ -3,15 +3,14 @@
 
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint64_t
 
 namespace sourcemeta::jsonbinpack::v1 {
 
-auto UTF8_STRING_NO_LENGTH(const sourcemeta::jsontoolkit::JSON &options)
-    -> Encoding {
+auto UTF8_STRING_NO_LENGTH(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("size"));
   const auto &size{options.at("size")};
   assert(size.is_integer());
@@ -21,7 +20,7 @@ auto UTF8_STRING_NO_LENGTH(const sourcemeta::jsontoolkit::JSON &options)
 }
 
 auto FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+    const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("minimum"));
   const auto &minimum{options.at("minimum")};
   assert(minimum.is_integer());
@@ -31,7 +30,7 @@ auto FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+    const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("maximum"));
   const auto &maximum{options.at("maximum")};
   assert(maximum.is_integer());
@@ -41,7 +40,7 @@ auto ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+    const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("minimum"));
   assert(options.defines("maximum"));
   const auto &minimum{options.at("minimum")};
@@ -55,12 +54,11 @@ auto BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
       static_cast<std::uint64_t>(maximum.to_integer())};
 }
 
-auto RFC3339_DATE_INTEGER_TRIPLET(const sourcemeta::jsontoolkit::JSON &)
-    -> Encoding {
+auto RFC3339_DATE_INTEGER_TRIPLET(const sourcemeta::core::JSON &) -> Encoding {
   return sourcemeta::jsonbinpack::RFC3339_DATE_INTEGER_TRIPLET{};
 }
 
-auto PREFIX_VARINT_LENGTH_STRING_SHARED(const sourcemeta::jsontoolkit::JSON &)
+auto PREFIX_VARINT_LENGTH_STRING_SHARED(const sourcemeta::core::JSON &)
     -> Encoding {
   return sourcemeta::jsonbinpack::PREFIX_VARINT_LENGTH_STRING_SHARED{};
 }

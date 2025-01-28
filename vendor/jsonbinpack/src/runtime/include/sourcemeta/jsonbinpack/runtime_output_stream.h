@@ -5,7 +5,7 @@
 #include <sourcemeta/jsonbinpack/runtime_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cstdint> // std::uint8_t, std::uint16_t, std::uint64_t
 #include <ostream> // std::basic_ostream
@@ -15,8 +15,8 @@ namespace sourcemeta::jsonbinpack {
 /// @ingroup runtime
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT OutputStream {
 public:
-  using Stream = std::basic_ostream<sourcemeta::jsontoolkit::JSON::Char,
-                                    sourcemeta::jsontoolkit::JSON::CharTraits>;
+  using Stream = std::basic_ostream<sourcemeta::core::JSON::Char,
+                                    sourcemeta::core::JSON::CharTraits>;
   OutputStream(Stream &output);
 
   // Prevent copying, as this class is tied to a stream resource
@@ -28,7 +28,7 @@ public:
   auto put_bytes(const std::uint16_t bytes) -> void;
   auto put_varint(const std::uint64_t value) -> void;
   auto put_varint_zigzag(const std::int64_t value) -> void;
-  auto put_string_utf8(const sourcemeta::jsontoolkit::JSON::String &string,
+  auto put_string_utf8(const sourcemeta::core::JSON::String &string,
                        const std::uint64_t length) -> void;
 
 private:

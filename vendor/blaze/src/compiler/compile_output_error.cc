@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/compiler_output.h>
 
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm> // std::any_of, std::sort
 #include <cassert>   // assert
@@ -9,8 +9,8 @@
 
 namespace sourcemeta::blaze {
 
-ErrorOutput::ErrorOutput(const sourcemeta::jsontoolkit::JSON &instance,
-                         const sourcemeta::jsontoolkit::WeakPointer &base)
+ErrorOutput::ErrorOutput(const sourcemeta::core::JSON &instance,
+                         const sourcemeta::core::WeakPointer &base)
     : instance_{instance}, base_{base} {}
 
 auto ErrorOutput::begin() const -> const_iterator {
@@ -27,9 +27,9 @@ auto ErrorOutput::cend() const -> const_iterator { return this->output.cend(); }
 
 auto ErrorOutput::operator()(
     const EvaluationType type, const bool result, const Instruction &step,
-    const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-    const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-    const sourcemeta::jsontoolkit::JSON &annotation) -> void {
+    const sourcemeta::core::WeakPointer &evaluate_path,
+    const sourcemeta::core::WeakPointer &instance_location,
+    const sourcemeta::core::JSON &annotation) -> void {
   if (evaluate_path.empty()) {
     return;
   }

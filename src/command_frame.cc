@@ -1,5 +1,5 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cout
@@ -8,17 +8,16 @@
 #include "command.h"
 #include "utils.h"
 
-static auto
-enum_to_string(const sourcemeta::jsontoolkit::Frame::LocationType type)
+static auto enum_to_string(const sourcemeta::core::Frame::LocationType type)
     -> std::string {
   switch (type) {
-    case sourcemeta::jsontoolkit::Frame::LocationType::Resource:
+    case sourcemeta::core::Frame::LocationType::Resource:
       return "resource";
-    case sourcemeta::jsontoolkit::Frame::LocationType::Anchor:
+    case sourcemeta::core::Frame::LocationType::Anchor:
       return "anchor";
-    case sourcemeta::jsontoolkit::Frame::LocationType::Pointer:
+    case sourcemeta::core::Frame::LocationType::Pointer:
       return "pointer";
-    case sourcemeta::jsontoolkit::Frame::LocationType::Subschema:
+    case sourcemeta::core::Frame::LocationType::Subschema:
       return "subschema";
     default:
       return "unknown";
@@ -35,94 +34,88 @@ auto sourcemeta::jsonschema::cli::frame(
     return EXIT_FAILURE;
   }
 
-  const sourcemeta::jsontoolkit::JSON schema{
+  const sourcemeta::core::JSON schema{
       sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
-  sourcemeta::jsontoolkit::Frame frame;
-  frame.analyse(schema, sourcemeta::jsontoolkit::default_schema_walker,
+  sourcemeta::core::Frame frame;
+  frame.analyse(schema, sourcemeta::core::default_schema_walker,
                 resolver(options));
 
   const auto output_json = options.contains("json") || options.contains("j");
   if (output_json) {
-    auto output_json_object = sourcemeta::jsontoolkit::JSON::make_object();
-    auto frame_json = sourcemeta::jsontoolkit::JSON::make_object();
-    auto references_json = sourcemeta::jsontoolkit::JSON::make_object();
+    auto output_json_object = sourcemeta::core::JSON::make_object();
+    auto frame_json = sourcemeta::core::JSON::make_object();
+    auto references_json = sourcemeta::core::JSON::make_object();
 
     for (const auto &[key, entry] : frame.locations()) {
-      auto frame_entry = sourcemeta::jsontoolkit::JSON::make_object();
+      auto frame_entry = sourcemeta::core::JSON::make_object();
       if (entry.root.has_value()) {
-        frame_entry.assign("root",
-                           sourcemeta::jsontoolkit::JSON{entry.root.value()});
+        frame_entry.assign("root", sourcemeta::core::JSON{entry.root.value()});
       } else {
-        frame_entry.assign("root", sourcemeta::jsontoolkit::JSON{nullptr});
+        frame_entry.assign("root", sourcemeta::core::JSON{nullptr});
       }
       std::ostringstream pointer_stream;
-      sourcemeta::jsontoolkit::stringify(entry.pointer, pointer_stream);
+      sourcemeta::core::stringify(entry.pointer, pointer_stream);
       frame_entry.assign("pointer",
-                         sourcemeta::jsontoolkit::JSON{pointer_stream.str()});
-      frame_entry.assign("base", sourcemeta::jsontoolkit::JSON{entry.base});
-      frame_entry.assign(
-          "type", sourcemeta::jsontoolkit::JSON{enum_to_string(entry.type)});
+                         sourcemeta::core::JSON{pointer_stream.str()});
+      frame_entry.assign("base", sourcemeta::core::JSON{entry.base});
+      frame_entry.assign("type",
+                         sourcemeta::core::JSON{enum_to_string(entry.type)});
       std::ostringstream reference_stream;
-      sourcemeta::jsontoolkit::stringify(entry.relative_pointer,
-                                         reference_stream);
+      sourcemeta::core::stringify(entry.relative_pointer, reference_stream);
       frame_entry.assign("relativePointer",
-                         sourcemeta::jsontoolkit::JSON{reference_stream.str()});
-      frame_entry.assign("dialect",
-                         sourcemeta::jsontoolkit::JSON{entry.dialect});
+                         sourcemeta::core::JSON{reference_stream.str()});
+      frame_entry.assign("dialect", sourcemeta::core::JSON{entry.dialect});
       frame_entry.assign("baseDialect",
-                         sourcemeta::jsontoolkit::JSON{entry.base_dialect});
-      frame_json.assign(key.second, sourcemeta::jsontoolkit::JSON{frame_entry});
+                         sourcemeta::core::JSON{entry.base_dialect});
+      frame_json.assign(key.second, sourcemeta::core::JSON{frame_entry});
     }
-    output_json_object.assign("frames",
-                              sourcemeta::jsontoolkit::JSON{frame_json});
+    output_json_object.assign("frames", sourcemeta::core::JSON{frame_json});
 
     for (const auto &[pointer, entry] : frame.references()) {
-      auto ref_entry = sourcemeta::jsontoolkit::JSON::make_object();
+      auto ref_entry = sourcemeta::core::JSON::make_object();
       ref_entry.assign(
-          "type",
-          sourcemeta::jsontoolkit::JSON{
-              pointer.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic
-                  ? "dynamic"
-                  : "static"});
+          "type", sourcemeta::core::JSON{
+                      pointer.first == sourcemeta::core::ReferenceType::Dynamic
+                          ? "dynamic"
+                          : "static"});
       ref_entry.assign("destination",
-                       sourcemeta::jsontoolkit::JSON{entry.destination});
+                       sourcemeta::core::JSON{entry.destination});
       if (entry.base.has_value()) {
-        ref_entry.assign("base",
-                         sourcemeta::jsontoolkit::JSON{entry.base.value()});
+        ref_entry.assign("base", sourcemeta::core::JSON{entry.base.value()});
       } else {
-        ref_entry.assign("base", sourcemeta::jsontoolkit::JSON{nullptr});
+        ref_entry.assign("base", sourcemeta::core::JSON{nullptr});
       }
       if (entry.fragment.has_value()) {
         ref_entry.assign("fragment",
-                         sourcemeta::jsontoolkit::JSON{entry.fragment.value()});
+                         sourcemeta::core::JSON{entry.fragment.value()});
       } else {
-        ref_entry.assign("fragment", sourcemeta::jsontoolkit::JSON{nullptr});
+        ref_entry.assign("fragment", sourcemeta::core::JSON{nullptr});
       }
       std::ostringstream ref_entry_stream;
-      sourcemeta::jsontoolkit::stringify(pointer.second, ref_entry_stream);
+      sourcemeta::core::stringify(pointer.second, ref_entry_stream);
       references_json.assign(ref_entry_stream.str(),
-                             sourcemeta::jsontoolkit::JSON{ref_entry});
+                             sourcemeta::core::JSON{ref_entry});
     }
     output_json_object.assign("references",
-                              sourcemeta::jsontoolkit::JSON{references_json});
+                              sourcemeta::core::JSON{references_json});
 
     std::ostringstream print_stream;
-    sourcemeta::jsontoolkit::prettify(output_json_object, print_stream);
+    sourcemeta::core::prettify(output_json_object, print_stream);
     std::cout << print_stream.str() << std::endl;
   } else {
     for (const auto &[key, entry] : frame.locations()) {
       switch (entry.type) {
-        case sourcemeta::jsontoolkit::Frame::LocationType::Resource:
+        case sourcemeta::core::Frame::LocationType::Resource:
           std::cout << "(LOCATION)";
           break;
-        case sourcemeta::jsontoolkit::Frame::LocationType::Anchor:
+        case sourcemeta::core::Frame::LocationType::Anchor:
           std::cout << "(ANCHOR)";
           break;
-        case sourcemeta::jsontoolkit::Frame::LocationType::Pointer:
+        case sourcemeta::core::Frame::LocationType::Pointer:
           std::cout << "(POINTER)";
           break;
-        case sourcemeta::jsontoolkit::Frame::LocationType::Subschema:
+        case sourcemeta::core::Frame::LocationType::Subschema:
           std::cout << "(SUBSCHEMA)";
           break;
         default:
@@ -136,7 +129,7 @@ auto sourcemeta::jsonschema::cli::frame(
       std::cout << key.second << "\n";
 
       std::cout << "    Type             : ";
-      if (key.first == sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
+      if (key.first == sourcemeta::core::ReferenceType::Dynamic) {
         std::cout << "Dynamic";
       } else {
         std::cout << "Static";
@@ -149,14 +142,14 @@ auto sourcemeta::jsonschema::cli::frame(
       if (!entry.pointer.empty()) {
         std::cout << " ";
       }
-      sourcemeta::jsontoolkit::stringify(entry.pointer, std::cout);
+      sourcemeta::core::stringify(entry.pointer, std::cout);
       std::cout << "\n";
       std::cout << "    Base URI         : " << entry.base << "\n";
       std::cout << "    Relative Pointer :";
       if (!entry.relative_pointer.empty()) {
         std::cout << " ";
       }
-      sourcemeta::jsontoolkit::stringify(entry.relative_pointer, std::cout);
+      sourcemeta::core::stringify(entry.relative_pointer, std::cout);
       std::cout << "\n";
       std::cout << "    Dialect          : " << entry.dialect << "\n";
       std::cout << "    Base Dialect     : " << entry.base_dialect << "\n";
@@ -164,11 +157,10 @@ auto sourcemeta::jsonschema::cli::frame(
 
     for (const auto &[pointer, entry] : frame.references()) {
       std::cout << "(REFERENCE) URI: ";
-      sourcemeta::jsontoolkit::stringify(pointer.second, std::cout);
+      sourcemeta::core::stringify(pointer.second, std::cout);
       std::cout << "\n";
       std::cout << "    Type             : "
-                << (pointer.first ==
-                            sourcemeta::jsontoolkit::ReferenceType::Dynamic
+                << (pointer.first == sourcemeta::core::ReferenceType::Dynamic
                         ? "Dynamic"
                         : "Static")
                 << "\n";

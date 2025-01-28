@@ -3,7 +3,7 @@
 #include <sourcemeta/hydra/crypto.h>
 #include <sourcemeta/hydra/httpclient.h>
 
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/uri.h>
 
 #include <cassert> // assert
 #include <chrono>  // std::chrono::system_clock
@@ -58,7 +58,7 @@ auto Bucket::fetch_json(const std::string &key)
   for (auto &&[header, value] :
        aws_sigv4(request.method(),
                  // TODO: Support constructing a URL given a string_view
-                 sourcemeta::jsontoolkit::URI{std::string{request.url()}},
+                 sourcemeta::core::URI{std::string{request.url()}},
                  this->access_key, this->secret_key, this->region,
                  empty_content_checksum, std::chrono::system_clock::now())) {
     request.header(std::move(header), std::move(value));
@@ -84,7 +84,7 @@ auto Bucket::fetch_json(const std::string &key)
   assert(response.header("etag").has_value());
   assert(response.header("last-modified").has_value());
 
-  ResponseJSON result = {sourcemeta::jsontoolkit::parse(response.body()),
+  ResponseJSON result = {sourcemeta::core::parse(response.body()),
                          response.header("etag").value(),
                          response.header_gmt("last-modified").value(), false};
 
@@ -97,7 +97,7 @@ auto Bucket::fetch_json(const std::string &key)
 }
 
 auto Bucket::upsert_json(const std::string &key,
-                         const sourcemeta::jsontoolkit::JSON &document)
+                         const sourcemeta::core::JSON &document)
     -> std::future<void> {
   std::promise<void> promise;
   assert(key.front() == '/');
@@ -114,7 +114,7 @@ auto Bucket::upsert_json(const std::string &key,
   // TODO: Support chunked streaming uploads instead
   // See https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-streaming.html
   std::stringstream content;
-  sourcemeta::jsontoolkit::prettify(document, content);
+  sourcemeta::core::prettify(document, content);
   std::ostringstream content_checksum;
   sourcemeta::hydra::sha256(content.str(), content_checksum);
   request.header("content-length", std::to_string(content.str().size()));
@@ -123,7 +123,7 @@ auto Bucket::upsert_json(const std::string &key,
   for (auto &&[header, value] :
        aws_sigv4(request.method(),
                  // TODO: Support constructing a URL given a string_view
-                 sourcemeta::jsontoolkit::URI{std::string{request.url()}},
+                 sourcemeta::core::URI{std::string{request.url()}},
                  this->access_key, this->secret_key, this->region,
                  content_checksum.str(), std::chrono::system_clock::now())) {
     request.header(std::move(header), std::move(value));
@@ -140,9 +140,8 @@ auto Bucket::upsert_json(const std::string &key,
   return promise.get_future();
 }
 
-auto Bucket::fetch_or_upsert(
-    const std::string &key,
-    std::function<sourcemeta::jsontoolkit::JSON()> callback)
+auto Bucket::fetch_or_upsert(const std::string &key,
+                             std::function<sourcemeta::core::JSON()> callback)
     -> std::future<ResponseJSON> {
   std::promise<ResponseJSON> promise;
   auto maybe_response{this->fetch_json(key).get()};

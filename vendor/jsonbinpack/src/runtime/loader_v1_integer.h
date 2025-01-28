@@ -3,15 +3,15 @@
 
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint64_t
 
 namespace sourcemeta::jsonbinpack::v1 {
 
-auto BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+auto BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(const sourcemeta::core::JSON &options)
+    -> Encoding {
   assert(options.defines("minimum"));
   assert(options.defines("maximum"));
   assert(options.defines("multiplier"));
@@ -27,7 +27,7 @@ auto BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(
       static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
-auto FLOOR_MULTIPLE_ENUM_VARINT(const sourcemeta::jsontoolkit::JSON &options)
+auto FLOOR_MULTIPLE_ENUM_VARINT(const sourcemeta::core::JSON &options)
     -> Encoding {
   assert(options.defines("minimum"));
   assert(options.defines("multiplier"));
@@ -41,8 +41,8 @@ auto FLOOR_MULTIPLE_ENUM_VARINT(const sourcemeta::jsontoolkit::JSON &options)
       static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
-auto ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+auto ROOF_MULTIPLE_MIRROR_ENUM_VARINT(const sourcemeta::core::JSON &options)
+    -> Encoding {
   assert(options.defines("maximum"));
   assert(options.defines("multiplier"));
   const auto &maximum{options.at("maximum")};
@@ -55,8 +55,8 @@ auto ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
       static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
-auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(
-    const sourcemeta::jsontoolkit::JSON &options) -> Encoding {
+auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(const sourcemeta::core::JSON &options)
+    -> Encoding {
   assert(options.defines("multiplier"));
   const auto &multiplier{options.at("multiplier")};
   assert(multiplier.is_integer());

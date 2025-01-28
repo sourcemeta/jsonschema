@@ -18,12 +18,12 @@ auto OutputStream::position() const noexcept -> std::uint64_t {
 }
 
 auto OutputStream::put_byte(const std::uint8_t byte) -> void {
-  this->stream.put(static_cast<sourcemeta::jsontoolkit::JSON::Char>(byte));
+  this->stream.put(static_cast<sourcemeta::core::JSON::Char>(byte));
 }
 
 auto OutputStream::put_bytes(const std::uint16_t bytes) -> void {
   this->stream.write(
-      reinterpret_cast<const sourcemeta::jsontoolkit::JSON::Char *>(&bytes),
+      reinterpret_cast<const sourcemeta::core::JSON::Char *>(&bytes),
       sizeof bytes);
 }
 
@@ -35,9 +35,8 @@ auto OutputStream::put_varint_zigzag(const std::int64_t value) -> void {
   varint_encode(this->stream, zigzag_encode(value));
 }
 
-auto OutputStream::put_string_utf8(
-    const sourcemeta::jsontoolkit::JSON::String &string,
-    const std::uint64_t length) -> void {
+auto OutputStream::put_string_utf8(const sourcemeta::core::JSON::String &string,
+                                   const std::uint64_t length) -> void {
   assert(string.size() == length);
   // Do a manual for-loop based on the provided length instead of a range
   // loop based on the string value to avoid accidental overflows

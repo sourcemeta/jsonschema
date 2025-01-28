@@ -9,7 +9,7 @@ namespace sourcemeta::jsonbinpack {
 
 Encoder::Encoder(Stream &output) : OutputStream{output} {}
 
-auto Encoder::write(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::write(const sourcemeta::core::JSON &document,
                     const Encoding &encoding) -> void {
   switch (encoding.index()) {
 #define HANDLE_ENCODING(index, name)                                           \

@@ -12,7 +12,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding {
+auto load(const sourcemeta::core::JSON &input) -> Encoding {
   assert(input.defines("binpackEncoding"));
   assert(input.defines("binpackOptions"));
   const auto encoding{input.at("binpackEncoding").to_string()};

@@ -8,13 +8,13 @@
 namespace sourcemeta::jsonbinpack {
 
 auto Decoder::UTF8_STRING_NO_LENGTH(const struct UTF8_STRING_NO_LENGTH &options)
-    -> sourcemeta::jsontoolkit::JSON {
-  return sourcemeta::jsontoolkit::JSON{this->get_string_utf8(options.size)};
+    -> sourcemeta::core::JSON {
+  return sourcemeta::core::JSON{this->get_string_utf8(options.size)};
 }
 
 auto Decoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
     const struct FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t prefix{this->get_varint()};
   const bool is_shared{prefix == 0};
   const std::uint64_t length{(is_shared ? this->get_varint() : prefix) +
@@ -24,7 +24,7 @@ auto Decoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
   if (is_shared) {
     const std::uint64_t position{this->position()};
     const std::uint64_t current{this->rewind(this->get_varint(), position)};
-    const sourcemeta::jsontoolkit::JSON value{this->get_string_utf8(length)};
+    const sourcemeta::core::JSON value{this->get_string_utf8(length)};
     this->seek(current);
     return value;
   } else {
@@ -34,7 +34,7 @@ auto Decoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
 
 auto Decoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
     const struct ROOF_VARINT_PREFIX_UTF8_STRING_SHARED &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t prefix{this->get_varint()};
   const bool is_shared{prefix == 0};
   const std::uint64_t length{options.maximum -
@@ -44,7 +44,7 @@ auto Decoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
   if (is_shared) {
     const std::uint64_t position{this->position()};
     const std::uint64_t current{this->rewind(this->get_varint(), position)};
-    const sourcemeta::jsontoolkit::JSON value{UTF8_STRING_NO_LENGTH({length})};
+    const sourcemeta::core::JSON value{UTF8_STRING_NO_LENGTH({length})};
     this->seek(current);
     return value;
   } else {
@@ -54,7 +54,7 @@ auto Decoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
 
 auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
     const struct BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   assert(options.minimum <= options.maximum);
   assert(is_byte(options.maximum - options.minimum));
   const std::uint8_t prefix{this->get_byte()};
@@ -66,7 +66,7 @@ auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
   if (is_shared) {
     const std::uint64_t position{this->position()};
     const std::uint64_t current{this->rewind(this->get_varint(), position)};
-    const sourcemeta::jsontoolkit::JSON value{UTF8_STRING_NO_LENGTH({length})};
+    const sourcemeta::core::JSON value{UTF8_STRING_NO_LENGTH({length})};
     this->seek(current);
     return value;
   } else {
@@ -75,8 +75,7 @@ auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto Decoder::RFC3339_DATE_INTEGER_TRIPLET(
-    const struct RFC3339_DATE_INTEGER_TRIPLET &)
-    -> sourcemeta::jsontoolkit::JSON {
+    const struct RFC3339_DATE_INTEGER_TRIPLET &) -> sourcemeta::core::JSON {
   const std::uint16_t year{this->get_word()};
   const std::uint8_t month{this->get_byte()};
   const std::uint8_t day{this->get_byte()};
@@ -85,8 +84,8 @@ auto Decoder::RFC3339_DATE_INTEGER_TRIPLET(
   assert(month >= 1 && month <= 12);
   assert(day >= 1 && day <= 31);
 
-  std::basic_ostringstream<sourcemeta::jsontoolkit::JSON::Char,
-                           sourcemeta::jsontoolkit::JSON::CharTraits>
+  std::basic_ostringstream<sourcemeta::core::JSON::Char,
+                           sourcemeta::core::JSON::CharTraits>
       output;
   output << std::setfill('0');
   output << std::setw(4) << year;
@@ -97,22 +96,22 @@ auto Decoder::RFC3339_DATE_INTEGER_TRIPLET(
   output << "-";
   output << std::setw(2) << static_cast<std::uint16_t>(day);
 
-  return sourcemeta::jsontoolkit::JSON{output.str()};
+  return sourcemeta::core::JSON{output.str()};
 }
 
 auto Decoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
     const struct PREFIX_VARINT_LENGTH_STRING_SHARED &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t prefix{this->get_varint()};
   if (prefix == 0) {
     const std::uint64_t position{this->position()};
     const std::uint64_t current{this->rewind(this->get_varint(), position)};
-    const sourcemeta::jsontoolkit::JSON value{
+    const sourcemeta::core::JSON value{
         PREFIX_VARINT_LENGTH_STRING_SHARED(options)};
     this->seek(current);
     return value;
   } else {
-    return sourcemeta::jsontoolkit::JSON{this->get_string_utf8(prefix - 1)};
+    return sourcemeta::core::JSON{this->get_string_utf8(prefix - 1)};
   }
 }
 

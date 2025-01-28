@@ -1,34 +1,38 @@
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/numeric.h>
 
-#include <sourcemeta/alterschema/engine.h>
-#include <sourcemeta/alterschema/linter.h>
+#include <sourcemeta/core/alterschema.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include "encoding.h"
 
 namespace sourcemeta::jsonbinpack {
 
-auto canonicalize(sourcemeta::jsontoolkit::JSON &schema,
-                  const sourcemeta::jsontoolkit::SchemaWalker &walker,
-                  const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+auto canonicalize(sourcemeta::core::JSON &schema,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
                   const std::optional<std::string> &default_dialect) -> void {
-  namespace alterschema = sourcemeta::alterschema;
-  alterschema::Bundle canonicalizer;
-  alterschema::add(canonicalizer, alterschema::LinterCategory::AntiPattern);
-  alterschema::add(canonicalizer, alterschema::LinterCategory::Simplify);
-  alterschema::add(canonicalizer, alterschema::LinterCategory::Desugar);
-  alterschema::add(canonicalizer, alterschema::LinterCategory::Implicit);
-  alterschema::add(canonicalizer, alterschema::LinterCategory::Superfluous);
+  sourcemeta::core::SchemaTransformer canonicalizer;
+  sourcemeta::core::add(canonicalizer,
+                        sourcemeta::core::AlterSchemaCategory::AntiPattern);
+  sourcemeta::core::add(canonicalizer,
+                        sourcemeta::core::AlterSchemaCategory::Simplify);
+  sourcemeta::core::add(canonicalizer,
+                        sourcemeta::core::AlterSchemaCategory::Desugar);
+  sourcemeta::core::add(canonicalizer,
+                        sourcemeta::core::AlterSchemaCategory::Implicit);
+  sourcemeta::core::add(canonicalizer,
+                        sourcemeta::core::AlterSchemaCategory::Superfluous);
   canonicalizer.apply(schema, walker, make_resolver(resolver),
-                      sourcemeta::jsontoolkit::empty_pointer, default_dialect);
+                      sourcemeta::core::empty_pointer, default_dialect);
 }
 
-auto make_encoding(sourcemeta::alterschema::Transformer &document,
+auto make_encoding(sourcemeta::core::PointerProxy &document,
                    const std::string &encoding,
-                   const sourcemeta::jsontoolkit::JSON &options) -> void {
-  document.replace(sourcemeta::jsontoolkit::JSON::make_object());
-  document.assign("$schema", sourcemeta::jsontoolkit::JSON{ENCODING_V1});
-  document.assign("binpackEncoding", sourcemeta::jsontoolkit::JSON{encoding});
+                   const sourcemeta::core::JSON &options) -> void {
+  document.replace(sourcemeta::core::JSON::make_object());
+  document.assign("$schema", sourcemeta::core::JSON{ENCODING_V1});
+  document.assign("binpackEncoding", sourcemeta::core::JSON{encoding});
   document.assign("binpackOptions", options);
 }
 
@@ -48,13 +52,13 @@ auto make_encoding(sourcemeta::alterschema::Transformer &document,
 #include "mapper/integer_upper_bound_multiplier.h"
 #include "mapper/number_arbitrary.h"
 
-auto compile(sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::SchemaWalker &walker,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+auto compile(sourcemeta::core::JSON &schema,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
              const std::optional<std::string> &default_dialect) -> void {
   canonicalize(schema, walker, resolver, default_dialect);
 
-  sourcemeta::alterschema::Bundle mapper;
+  sourcemeta::core::SchemaTransformer mapper;
 
   // Enums
   mapper.add<Enum8Bit>();
@@ -78,14 +82,14 @@ auto compile(sourcemeta::jsontoolkit::JSON &schema,
   mapper.add<NumberArbitrary>();
 
   mapper.apply(schema, walker, make_resolver(resolver),
-               sourcemeta::jsontoolkit::empty_pointer, default_dialect);
+               sourcemeta::core::empty_pointer, default_dialect);
 
   // The "any" encoding is always the last resort
-  const auto dialect{sourcemeta::jsontoolkit::dialect(schema)};
+  const auto dialect{sourcemeta::core::dialect(schema)};
   if (!dialect.has_value() || dialect.value() != ENCODING_V1) {
-    sourcemeta::alterschema::Transformer transformer{schema};
+    sourcemeta::core::PointerProxy transformer{schema};
     make_encoding(transformer, "ANY_PACKED_TYPE_TAG_BYTE_PREFIX",
-                  sourcemeta::jsontoolkit::JSON::make_object());
+                  sourcemeta::core::JSON::make_object());
   }
 }
 

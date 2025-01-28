@@ -7,7 +7,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto Encoder::FIXED_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &document,
                                 const struct FIXED_TYPED_ARRAY &options)
     -> void {
   assert(document.is_array());
@@ -23,7 +23,7 @@ auto Encoder::FIXED_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &document,
 }
 
 auto Encoder::BOUNDED_8BITS_TYPED_ARRAY(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct BOUNDED_8BITS_TYPED_ARRAY &options) -> void {
   assert(options.maximum >= options.minimum);
   const auto size{document.size()};
@@ -34,7 +34,7 @@ auto Encoder::BOUNDED_8BITS_TYPED_ARRAY(
                                      std::move(options.prefix_encodings)});
 }
 
-auto Encoder::FLOOR_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &document,
                                 const struct FLOOR_TYPED_ARRAY &options)
     -> void {
   const auto size{document.size()};
@@ -44,7 +44,7 @@ auto Encoder::FLOOR_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &document,
                                      std::move(options.prefix_encodings)});
 }
 
-auto Encoder::ROOF_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &document,
                                const struct ROOF_TYPED_ARRAY &options) -> void {
   const auto size{document.size()};
   assert(size <= options.maximum);

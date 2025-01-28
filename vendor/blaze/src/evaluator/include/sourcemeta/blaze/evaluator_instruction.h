@@ -3,7 +3,7 @@
 
 #include <sourcemeta/blaze/evaluator_value.h>
 
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <cstdint>     // std::uint8_t
 #include <string>      // std::string
@@ -23,6 +23,7 @@ enum class InstructionIndex : std::uint8_t {
   AssertionDefinesAllStrict,
   AssertionDefinesExactly,
   AssertionDefinesExactlyStrict,
+  AssertionDefinesExactlyStrictHash3,
   AssertionPropertyDependencies,
   AssertionType,
   AssertionTypeAny,
@@ -43,6 +44,7 @@ enum class InstructionIndex : std::uint8_t {
   AssertionObjectSizeGreater,
   AssertionEqual,
   AssertionEqualsAny,
+  AssertionEqualsAnyStringHash,
   AssertionGreaterEqual,
   AssertionLessEqual,
   AssertionGreater,
@@ -97,6 +99,7 @@ enum class InstructionIndex : std::uint8_t {
   LoopItemsTypeStrict,
   LoopItemsTypeStrictAny,
   LoopItemsPropertiesExactlyTypeStrictHash,
+  LoopItemsPropertiesExactlyTypeStrictHash3,
   LoopContains,
   ControlGroup,
   ControlGroupWhenDefines,
@@ -117,6 +120,7 @@ constexpr std::string_view InstructionNames[] = {
     "AssertionDefinesAllStrict",
     "AssertionDefinesExactly",
     "AssertionDefinesExactlyStrict",
+    "AssertionDefinesExactlyStrictHash3",
     "AssertionPropertyDependencies",
     "AssertionType",
     "AssertionTypeAny",
@@ -137,6 +141,7 @@ constexpr std::string_view InstructionNames[] = {
     "AssertionObjectSizeGreater",
     "AssertionEqual",
     "AssertionEqualsAny",
+    "AssertionEqualsAnyStringHash",
     "AssertionGreaterEqual",
     "AssertionLessEqual",
     "AssertionGreater",
@@ -191,6 +196,7 @@ constexpr std::string_view InstructionNames[] = {
     "LoopItemsTypeStrict",
     "LoopItemsTypeStrictAny",
     "LoopItemsPropertiesExactlyTypeStrictHash",
+    "LoopItemsPropertiesExactlyTypeStrictHash3",
     "LoopContains",
     "ControlGroup",
     "ControlGroupWhenDefines",
@@ -214,8 +220,8 @@ using Instructions = std::vector<Instruction>;
 /// Represents a single instruction to be evaluated
 struct Instruction {
   const InstructionIndex type;
-  const sourcemeta::jsontoolkit::Pointer relative_schema_location;
-  const sourcemeta::jsontoolkit::Pointer relative_instance_location;
+  const sourcemeta::core::Pointer relative_schema_location;
+  const sourcemeta::core::Pointer relative_instance_location;
   const std::string keyword_location;
   const std::size_t schema_resource;
   const Value value;

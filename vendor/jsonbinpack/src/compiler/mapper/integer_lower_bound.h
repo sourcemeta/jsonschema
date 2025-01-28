@@ -1,12 +1,12 @@
-class IntegerLowerBound final : public sourcemeta::alterschema::Rule {
+class IntegerLowerBound final : public sourcemeta::core::SchemaTransformRule {
 public:
   IntegerLowerBound()
-      : sourcemeta::alterschema::Rule{"integer_lower_bound", ""} {};
+      : sourcemeta::core::SchemaTransformRule{"integer_lower_bound", ""} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const std::string &dialect,
                                const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
+                               const sourcemeta::core::Pointer &) const
       -> bool override {
     return dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(
@@ -17,12 +17,12 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::alterschema::Transformer &transformer) const
+  auto transform(sourcemeta::core::PointerProxy &transformer) const
       -> void override {
-    auto minimum = transformer.schema().at("minimum");
-    auto options = sourcemeta::jsontoolkit::JSON::make_object();
+    auto minimum = transformer.value().at("minimum");
+    auto options = sourcemeta::core::JSON::make_object();
     options.assign("minimum", std::move(minimum));
-    options.assign("multiplier", sourcemeta::jsontoolkit::JSON{1});
+    options.assign("multiplier", sourcemeta::core::JSON{1});
     make_encoding(transformer, "FLOOR_MULTIPLE_ENUM_VARINT", options);
   }
 };

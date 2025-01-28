@@ -1,0 +1,5 @@
+# The PROJECT_IS_TOP_LEVEL handy variable is only
+# available on CMake >=3.21.
+if(NOT DEFINED PROJECT_IS_TOP_LEVEL AND "${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
+  set(PROJECT_IS_TOP_LEVEL YES)
+endif()

@@ -3,11 +3,11 @@
 
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 namespace sourcemeta::jsonbinpack::v1 {
 
-auto DOUBLE_VARINT_TUPLE(const sourcemeta::jsontoolkit::JSON &) -> Encoding {
+auto DOUBLE_VARINT_TUPLE(const sourcemeta::core::JSON &) -> Encoding {
   return sourcemeta::jsonbinpack::DOUBLE_VARINT_TUPLE{};
 }
 

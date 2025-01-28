@@ -1,6 +1,6 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonl.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonl.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -44,7 +44,7 @@ auto sourcemeta::jsonschema::cli::validate(
 
   const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
-  if (!sourcemeta::jsontoolkit::is_schema(schema)) {
+  if (!sourcemeta::core::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
                  "valid JSON Schema\n  "
               << std::filesystem::canonical(schema_path).string() << "\n";
@@ -54,7 +54,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::jsontoolkit::default_schema_walker, custom_resolver,
+      schema, sourcemeta::core::default_schema_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
   sourcemeta::blaze::Evaluator evaluator;
 
@@ -69,9 +69,9 @@ auto sourcemeta::jsonschema::cli::validate(
           << "Interpreting input as JSONL: "
           << std::filesystem::weakly_canonical(instance_path).string() << "\n";
       std::size_t index{0};
-      auto stream{sourcemeta::jsontoolkit::read_file(instance_path)};
+      auto stream{sourcemeta::core::read_file(instance_path)};
       try {
-        for (const auto &instance : sourcemeta::jsontoolkit::JSONL{stream}) {
+        for (const auto &instance : sourcemeta::core::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
           sourcemeta::blaze::ErrorOutput output{instance};
@@ -114,7 +114,7 @@ auto sourcemeta::jsonschema::cli::validate(
                 << "fail: "
                 << std::filesystem::weakly_canonical(instance_path).string()
                 << " (entry #" << index << ")\n\n";
-            sourcemeta::jsontoolkit::prettify(instance, std::cerr);
+            sourcemeta::core::prettify(instance, std::cerr);
             std::cerr << "\n\n";
             std::cerr << error.str();
             print(output, std::cerr);
@@ -122,9 +122,9 @@ auto sourcemeta::jsonschema::cli::validate(
             break;
           }
         }
-      } catch (const sourcemeta::jsontoolkit::ParseError &error) {
+      } catch (const sourcemeta::core::ParseError &error) {
         // For producing better error messages
-        throw sourcemeta::jsontoolkit::FileParseError(instance_path, error);
+        throw sourcemeta::core::FileParseError(instance_path, error);
       }
 
       if (index == 0) {

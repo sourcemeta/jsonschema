@@ -1,7 +1,0 @@
-if(NOT Noa_FOUND)
-  set(NOA_GOOGLETEST OFF CACHE BOOL "GoogleTest")
-  set(NOA_GOOGLEBENCHMARK OFF CACHE BOOL "GoogleBenchmark")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/noa")
-  include("${PROJECT_SOURCE_DIR}/vendor/noa/cmake/noa.cmake")
-  set(Noa_FOUND ON)
-endif()

@@ -1,7 +1,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm> // std::move, std::sort, std::unique
 #include <cassert>   // assert
@@ -32,7 +32,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   }
 
   Instructions steps;
-  for (const auto &entry : sourcemeta::jsontoolkit::SchemaKeywordIterator{
+  for (const auto &entry : sourcemeta::core::SchemaKeywordIterator{
            schema_context.schema, context.walker, context.resolver,
            default_dialect}) {
     assert(entry.pointer.back().is_property());
@@ -51,8 +51,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
       assert(context.frame.locations().contains(
-          {sourcemeta::jsontoolkit::ReferenceType::Static,
-           step.keyword_location}));
+          {sourcemeta::core::ReferenceType::Static, step.keyword_location}));
       steps.push_back(std::move(step));
     }
   }
@@ -60,13 +59,12 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   return steps;
 }
 
-auto precompile(
-    const sourcemeta::blaze::Context &context,
-    sourcemeta::blaze::SchemaContext &schema_context,
-    const sourcemeta::blaze::DynamicContext &dynamic_context,
-    const sourcemeta::jsontoolkit::Frame::Locations::value_type &entry)
+auto precompile(const sourcemeta::blaze::Context &context,
+                sourcemeta::blaze::SchemaContext &schema_context,
+                const sourcemeta::blaze::DynamicContext &dynamic_context,
+                const sourcemeta::core::Frame::Locations::value_type &entry)
     -> sourcemeta::blaze::Instructions {
-  const sourcemeta::jsontoolkit::URI anchor_uri{entry.first.second};
+  const sourcemeta::core::URI anchor_uri{entry.first.second};
   const auto label{sourcemeta::blaze::Evaluator{}.hash(
       schema_resource_id(context,
                          anchor_uri.recompose_without_fragment().value_or("")),
@@ -75,9 +73,8 @@ auto precompile(
 
   // Configure a schema context that corresponds to the
   // schema resource that we are precompiling
-  auto subschema{
-      sourcemeta::jsontoolkit::get(context.root, entry.second.pointer)};
-  auto nested_vocabularies{sourcemeta::jsontoolkit::vocabularies(
+  auto subschema{sourcemeta::core::get(context.root, entry.second.pointer)};
+  auto nested_vocabularies{sourcemeta::core::vocabularies(
       subschema, context.resolver, entry.second.dialect)};
   const sourcemeta::blaze::SchemaContext nested_schema_context{
       entry.second.relative_pointer,
@@ -87,76 +84,70 @@ auto precompile(
       {},
       {}};
 
-  return {make(
-      sourcemeta::blaze::InstructionIndex::ControlMark, context,
-      nested_schema_context, dynamic_context,
-      sourcemeta::blaze::ValueUnsignedInteger{label},
-      sourcemeta::blaze::compile(context, nested_schema_context,
-                                 sourcemeta::blaze::relative_dynamic_context(),
-                                 sourcemeta::jsontoolkit::empty_pointer,
-                                 sourcemeta::jsontoolkit::empty_pointer,
-                                 entry.first.second))};
+  return {make(sourcemeta::blaze::InstructionIndex::ControlMark, context,
+               nested_schema_context, dynamic_context,
+               sourcemeta::blaze::ValueUnsignedInteger{label},
+               sourcemeta::blaze::compile(
+                   context, nested_schema_context,
+                   sourcemeta::blaze::relative_dynamic_context(),
+                   sourcemeta::core::empty_pointer,
+                   sourcemeta::core::empty_pointer, entry.first.second))};
 }
 
 } // namespace
 
 namespace sourcemeta::blaze {
 
-auto compile(const sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::SchemaWalker &walker,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+auto compile(const sourcemeta::core::JSON &schema,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler, const Mode mode,
              const std::optional<std::string> &default_dialect) -> Template {
   assert(is_schema(schema));
 
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here
-  const sourcemeta::jsontoolkit::JSON result{sourcemeta::jsontoolkit::bundle(
-      schema, walker, resolver, default_dialect)};
+  const sourcemeta::core::JSON result{
+      sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
 
   // Perform framing to resolve references later on
-  sourcemeta::jsontoolkit::Frame frame;
+  sourcemeta::core::Frame frame;
   frame.analyse(result, walker, resolver, default_dialect);
 
-  const std::string base{sourcemeta::jsontoolkit::URI{
-      sourcemeta::jsontoolkit::identify(
-          schema, resolver,
-          sourcemeta::jsontoolkit::IdentificationStrategy::Strict,
+  const std::string base{sourcemeta::core::URI{
+      sourcemeta::core::identify(
+          schema, resolver, sourcemeta::core::IdentificationStrategy::Strict,
           default_dialect)
           .value_or("")}
                              .canonicalize()
                              .recompose()};
 
   assert(frame.locations().contains(
-      {sourcemeta::jsontoolkit::ReferenceType::Static, base}));
-  const auto root_frame_entry{frame.locations().at(
-      {sourcemeta::jsontoolkit::ReferenceType::Static, base})};
+      {sourcemeta::core::ReferenceType::Static, base}));
+  const auto root_frame_entry{
+      frame.locations().at({sourcemeta::core::ReferenceType::Static, base})};
 
   // Check whether dynamic referencing takes places in this schema. If not,
   // we can avoid the overhead of keeping track of dynamics scopes, etc
   bool uses_dynamic_scopes{false};
   for (const auto &reference : frame.references()) {
-    if (reference.first.first ==
-        sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
+    if (reference.first.first == sourcemeta::core::ReferenceType::Dynamic) {
       uses_dynamic_scopes = true;
       break;
     }
   }
 
   SchemaContext schema_context{
-      sourcemeta::jsontoolkit::empty_pointer,
+      sourcemeta::core::empty_pointer,
       result,
       vocabularies(schema, resolver, root_frame_entry.dialect),
-      sourcemeta::jsontoolkit::URI{root_frame_entry.base}
-          .canonicalize()
-          .recompose(),
+      sourcemeta::core::URI{root_frame_entry.base}.canonicalize().recompose(),
       {},
       {}};
 
   std::vector<std::string> resources;
   for (const auto &entry : frame.locations()) {
-    if (entry.second.type ==
-        sourcemeta::jsontoolkit::Frame::LocationType::Resource) {
+    if (entry.second.type == sourcemeta::core::Frame::LocationType::Resource) {
       resources.push_back(entry.first.second);
     }
   }
@@ -173,16 +164,14 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
   // TODO: Replace this logic with `.frame()` `destination_of` information
   std::map<std::string, std::size_t> static_references_count;
   for (const auto &reference : frame.references()) {
-    if (reference.first.first !=
-            sourcemeta::jsontoolkit::ReferenceType::Static ||
-        !frame.locations().contains(
-            {sourcemeta::jsontoolkit::ReferenceType::Static,
-             reference.second.destination})) {
+    if (reference.first.first != sourcemeta::core::ReferenceType::Static ||
+        !frame.locations().contains({sourcemeta::core::ReferenceType::Static,
+                                     reference.second.destination})) {
       continue;
     }
 
     const auto &entry{
-        frame.locations().at({sourcemeta::jsontoolkit::ReferenceType::Static,
+        frame.locations().at({sourcemeta::core::ReferenceType::Static,
                               reference.second.destination})};
     for (const auto &subreference : frame.references()) {
       if (subreference.first.second.starts_with(entry.pointer)) {
@@ -210,7 +199,7 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
   }
 
   auto unevaluated{
-      sourcemeta::jsontoolkit::unevaluated(result, frame, walker, resolver)};
+      sourcemeta::core::unevaluated(result, frame, walker, resolver)};
 
   const Context context{result,
                         std::move(frame),
@@ -227,9 +216,9 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
 
   for (const auto &destination : context.precompiled_static_schemas) {
     assert(context.frame.locations().contains(
-        {sourcemeta::jsontoolkit::ReferenceType::Static, destination}));
+        {sourcemeta::core::ReferenceType::Static, destination}));
     const auto match{context.frame.locations().find(
-        {sourcemeta::jsontoolkit::ReferenceType::Static, destination})};
+        {sourcemeta::core::ReferenceType::Static, destination})};
     for (auto &&substep :
          precompile(context, schema_context, dynamic_context, *match)) {
       compiler_template.push_back(std::move(substep));
@@ -243,10 +232,8 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
            "https://json-schema.org/draft/2020-12/vocab/core"))) {
     for (const auto &entry : context.frame.locations()) {
       // We are only trying to find dynamic anchors
-      if (entry.second.type !=
-              sourcemeta::jsontoolkit::Frame::LocationType::Anchor ||
-          entry.first.first !=
-              sourcemeta::jsontoolkit::ReferenceType::Dynamic) {
+      if (entry.second.type != sourcemeta::core::Frame::LocationType::Anchor ||
+          entry.first.first != sourcemeta::core::ReferenceType::Dynamic) {
         continue;
       }
 
@@ -281,13 +268,13 @@ auto compile(const sourcemeta::jsontoolkit::JSON &schema,
 
 auto compile(const Context &context, const SchemaContext &schema_context,
              const DynamicContext &dynamic_context,
-             const sourcemeta::jsontoolkit::Pointer &schema_suffix,
-             const sourcemeta::jsontoolkit::Pointer &instance_suffix,
+             const sourcemeta::core::Pointer &schema_suffix,
+             const sourcemeta::core::Pointer &instance_suffix,
              const std::optional<std::string> &uri) -> Instructions {
   // Determine URI of the destination after recursion
   const std::string destination{
       uri.has_value()
-          ? sourcemeta::jsontoolkit::URI{uri.value()}.canonicalize().recompose()
+          ? sourcemeta::core::URI{uri.value()}.canonicalize().recompose()
           : to_uri(schema_context.relative_pointer.concat(schema_suffix),
                    schema_context.base)
                 .canonicalize()
@@ -295,23 +282,23 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   // Otherwise the recursion attempt is non-sense
   if (!context.frame.locations().contains(
-          {sourcemeta::jsontoolkit::ReferenceType::Static, destination})) {
-    throw sourcemeta::jsontoolkit::SchemaReferenceError(
+          {sourcemeta::core::ReferenceType::Static, destination})) {
+    throw sourcemeta::core::SchemaReferenceError(
         destination, schema_context.relative_pointer,
         "The target of the reference does not exist in the schema");
   }
 
   const auto &entry{context.frame.locations().at(
-      {sourcemeta::jsontoolkit::ReferenceType::Static, destination})};
+      {sourcemeta::core::ReferenceType::Static, destination})};
   const auto &new_schema{get(context.root, entry.pointer)};
 
   if (!is_schema(new_schema)) {
-    throw sourcemeta::jsontoolkit::SchemaReferenceError(
+    throw sourcemeta::core::SchemaReferenceError(
         destination, schema_context.relative_pointer,
         "The target of the reference is not a valid schema");
   }
 
-  const sourcemeta::jsontoolkit::Pointer destination_pointer{
+  const sourcemeta::core::Pointer destination_pointer{
       dynamic_context.keyword.empty()
           ? dynamic_context.base_schema_location.concat(schema_suffix)
           : dynamic_context.base_schema_location
@@ -322,9 +309,8 @@ auto compile(const Context &context, const SchemaContext &schema_context,
       context,
       {entry.relative_pointer, new_schema,
        vocabularies(new_schema, context.resolver, entry.dialect),
-       sourcemeta::jsontoolkit::URI{entry.base}
-           .recompose_without_fragment()
-           .value_or(""),
+       sourcemeta::core::URI{entry.base}.recompose_without_fragment().value_or(
+           ""),
        // TODO: This represents a copy
        schema_context.labels, schema_context.references},
       {dynamic_context.keyword, destination_pointer,

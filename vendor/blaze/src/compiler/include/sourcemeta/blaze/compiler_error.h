@@ -5,8 +5,8 @@
 #include <sourcemeta/blaze/compiler_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/uri.h>
 
 #include <exception> // std::exception
 #include <string>    // std::string
@@ -25,8 +25,8 @@ namespace sourcemeta::blaze {
 /// An error that represents a schema compilation failure event
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerError : public std::exception {
 public:
-  CompilerError(const sourcemeta::jsontoolkit::URI &base,
-                const sourcemeta::jsontoolkit::Pointer &schema_location,
+  CompilerError(const sourcemeta::core::URI &base,
+                const sourcemeta::core::Pointer &schema_location,
                 std::string message)
       : base_{base}, schema_location_{schema_location},
         message_{std::move(message)} {}
@@ -34,19 +34,18 @@ public:
     return this->message_.c_str();
   }
 
-  [[nodiscard]] auto base() const noexcept
-      -> const sourcemeta::jsontoolkit::URI & {
+  [[nodiscard]] auto base() const noexcept -> const sourcemeta::core::URI & {
     return this->base_;
   }
 
   [[nodiscard]] auto location() const noexcept
-      -> const sourcemeta::jsontoolkit::Pointer & {
+      -> const sourcemeta::core::Pointer & {
     return this->schema_location_;
   }
 
 private:
-  sourcemeta::jsontoolkit::URI base_;
-  sourcemeta::jsontoolkit::Pointer schema_location_;
+  sourcemeta::core::URI base_;
+  sourcemeta::core::Pointer schema_location_;
   std::string message_;
 };
 

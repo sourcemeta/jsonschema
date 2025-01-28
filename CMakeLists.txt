@@ -8,20 +8,18 @@ option(JSONSCHEMA_TESTS_CI "Build the JSON Schema CLI CI tests" OFF)
 option(JSONSCHEMA_DEVELOPMENT "Build the JSON Schema CLI in development mode" OFF)
 option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 
-find_package(Noa REQUIRED)
-find_package(JSONToolkit REQUIRED)
-find_package(AlterSchema REQUIRED)
+find_package(Core REQUIRED)
 find_package(Blaze REQUIRED)
 find_package(JSONBinPack REQUIRED)
 find_package(Hydra REQUIRED)
 add_subdirectory(src)
 
 if(JSONSCHEMA_DEVELOPMENT)
-  noa_target_clang_format(SOURCES
+  sourcemeta_target_clang_format(SOURCES
     src/*.h src/*.cc)
-  noa_target_clang_tidy(SOURCES
+  sourcemeta_target_clang_tidy(SOURCES
     src/*.h src/*.cc)
-  noa_target_shellcheck(SOURCES
+  sourcemeta_target_shellcheck(SOURCES
     test/*.sh install *.sh)
 endif()
 

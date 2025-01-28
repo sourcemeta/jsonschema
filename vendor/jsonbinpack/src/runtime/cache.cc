@@ -2,7 +2,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto Cache::record(const sourcemeta::jsontoolkit::JSON::String &value,
+auto Cache::record(const sourcemeta::core::JSON::String &value,
                    const std::uint64_t offset, const Type type) -> void {
   // Encoding a shared string has some overhead, such as the
   // shared string marker + the offset, so its not worth
@@ -53,7 +53,7 @@ auto Cache::remove_oldest() -> void {
   this->order.erase(iterator);
 }
 
-auto Cache::find(const sourcemeta::jsontoolkit::JSON::String &value,
+auto Cache::find(const sourcemeta::core::JSON::String &value,
                  const Type type) const -> std::optional<std::uint64_t> {
   const auto result{this->data.find(std::make_pair(value, type))};
   if (result == this->data.cend()) {

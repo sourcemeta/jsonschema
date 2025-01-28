@@ -20,7 +20,7 @@ option(HYDRA_INSTALL "Install the Hydra library" ON)
 option(HYDRA_ADDRESS_SANITIZER "Build Hydra with an address sanitizer" OFF)
 option(HYDRA_UNDEFINED_SANITIZER "Build Hydra with an undefined behavior sanitizer" OFF)
 
-find_package(Noa REQUIRED)
+find_package(Core REQUIRED)
 
 if(HYDRA_INSTALL)
   include(GNUInstallDirs)
@@ -65,25 +65,25 @@ if(HYDRA_HTTPSERVER)
 endif()
 
 if(HYDRA_BUCKET)
-  find_package(JSONToolkit REQUIRED COMPONENTS json uri)
+  find_package(Core REQUIRED COMPONENTS json uri)
   add_subdirectory(src/bucket)
 endif()
 
 if(HYDRA_ADDRESS_SANITIZER)
-  noa_sanitizer(TYPE address)
+  sourcemeta_sanitizer(TYPE address)
 elseif(HYDRA_UNDEFINED_SANITIZER)
-  noa_sanitizer(TYPE undefined)
+  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(HYDRA_DOCS)
-  noa_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
+  sourcemeta_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/website")
 endif()
 
 if(PROJECT_IS_TOP_LEVEL)
-  noa_target_clang_format(SOURCES
+  sourcemeta_target_clang_format(SOURCES
     src/*.cc src/*.h test/*.cc test/*.h)
-  noa_target_clang_tidy(SOURCES
+  sourcemeta_target_clang_tidy(SOURCES
     src/*.h src/*.cc)
 endif()
 
@@ -105,7 +105,7 @@ if(HYDRA_TESTS)
 
   if(HYDRA_HTTPSERVER)
     add_subdirectory(test/unit/httpserver)
-    find_package(JSONToolkit REQUIRED COMPONENTS json)
+    find_package(Core REQUIRED COMPONENTS json)
     # Because we need to test with an HTTP client
     if(HYDRA_HTTPCLIENT)
       add_subdirectory(test/e2e/httpserver)

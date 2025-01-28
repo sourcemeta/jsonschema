@@ -1,7 +1,7 @@
-#include <sourcemeta/alterschema/engine.h>
-#include <sourcemeta/alterschema/linter.h>
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/alterschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS
 #include <fstream>  // std::ofstream
@@ -14,17 +14,17 @@ auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"f", "fix"})};
 
-  sourcemeta::alterschema::Bundle bundle;
-  sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::AntiPattern);
-  sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::Simplify);
-  sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::Superfluous);
-  sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::Redundant);
-  sourcemeta::alterschema::add(
-      bundle, sourcemeta::alterschema::LinterCategory::SyntaxSugar);
+  sourcemeta::core::SchemaTransformer bundle;
+  sourcemeta::core::add(bundle,
+                        sourcemeta::core::AlterSchemaCategory::AntiPattern);
+  sourcemeta::core::add(bundle,
+                        sourcemeta::core::AlterSchemaCategory::Simplify);
+  sourcemeta::core::add(bundle,
+                        sourcemeta::core::AlterSchemaCategory::Superfluous);
+  sourcemeta::core::add(bundle,
+                        sourcemeta::core::AlterSchemaCategory::Redundant);
+  sourcemeta::core::add(bundle,
+                        sourcemeta::core::AlterSchemaCategory::SyntaxSugar);
 
   bool result{true};
 
@@ -40,11 +40,11 @@ auto sourcemeta::jsonschema::cli::lint(
       }
 
       auto copy = entry.second;
-      bundle.apply(copy, sourcemeta::jsontoolkit::default_schema_walker,
+      bundle.apply(copy, sourcemeta::core::default_schema_walker,
                    resolver(options));
       std::ofstream output{entry.first};
-      sourcemeta::jsontoolkit::prettify(
-          copy, output, sourcemeta::jsontoolkit::schema_format_compare);
+      sourcemeta::core::prettify(copy, output,
+                                 sourcemeta::core::schema_format_compare);
       output << "\n";
     }
   } else {
@@ -53,13 +53,13 @@ auto sourcemeta::jsonschema::cli::lint(
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       const bool subresult = bundle.check(
-          entry.second, sourcemeta::jsontoolkit::default_schema_walker,
+          entry.second, sourcemeta::core::default_schema_walker,
           resolver(options),
           [&entry](const auto &pointer, const auto &name, const auto &message) {
             std::cout << entry.first.string() << ":\n";
             std::cout << "  " << message << " (" << name << ")\n";
             std::cout << "    at schema location \"";
-            sourcemeta::jsontoolkit::stringify(pointer, std::cout);
+            sourcemeta::core::stringify(pointer, std::cout);
             std::cout << "\"\n";
           });
 

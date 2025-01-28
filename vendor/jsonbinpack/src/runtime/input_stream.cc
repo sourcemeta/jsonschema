@@ -61,13 +61,12 @@ auto InputStream::has_more_data() const noexcept -> bool {
 }
 
 auto InputStream::get_string_utf8(const std::uint64_t length)
-    -> sourcemeta::jsontoolkit::JSON::String {
-  sourcemeta::jsontoolkit::JSON::String result;
+    -> sourcemeta::core::JSON::String {
+  sourcemeta::core::JSON::String result;
   result.reserve(length);
   std::uint64_t counter = 0;
   while (counter < length) {
-    result +=
-        static_cast<sourcemeta::jsontoolkit::JSON::Char>(this->get_byte());
+    result += static_cast<sourcemeta::core::JSON::Char>(this->get_byte());
     counter += 1;
   }
 

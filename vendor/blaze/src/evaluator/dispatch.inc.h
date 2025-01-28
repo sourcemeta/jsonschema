@@ -1,18 +1,19 @@
-inline auto evaluate_instruction(
-    const sourcemeta::blaze::Instruction &instruction,
-    const sourcemeta::blaze::Template &schema,
-    const sourcemeta::blaze::Callback &callback,
-    const sourcemeta::jsontoolkit::JSON &instance,
-    const sourcemeta::jsontoolkit::JSON::String *property_target,
-    const std::uint64_t depth, sourcemeta::blaze::Evaluator &evaluator) -> bool;
+inline auto
+evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
+                     const sourcemeta::blaze::Template &schema,
+                     const sourcemeta::blaze::Callback &callback,
+                     const sourcemeta::core::JSON &instance,
+                     const sourcemeta::core::JSON::String *property_target,
+                     const std::uint64_t depth,
+                     sourcemeta::blaze::Evaluator &evaluator) -> bool;
 
 #define INSTRUCTION_HANDLER(name)                                              \
   static inline auto name(                                                     \
       const sourcemeta::blaze::Instruction &instruction,                       \
       const sourcemeta::blaze::Template &schema,                               \
       const sourcemeta::blaze::Callback &callback,                             \
-      const sourcemeta::jsontoolkit::JSON &instance,                           \
-      const sourcemeta::jsontoolkit::JSON::String *property_target,            \
+      const sourcemeta::core::JSON &instance,                                  \
+      const sourcemeta::core::JSON::String *property_target,                   \
       const std::uint64_t depth, sourcemeta::blaze::Evaluator &evaluator)      \
       -> bool
 
@@ -165,6 +166,43 @@ INSTRUCTION_HANDLER(AssertionDefinesExactlyStrict) {
   EVALUATE_END(AssertionDefinesExactlyStrict);
 }
 
+INSTRUCTION_HANDLER(AssertionDefinesExactlyStrictHash3) {
+  SOURCEMETA_MAYBE_UNUSED(depth);
+  SOURCEMETA_MAYBE_UNUSED(schema);
+  SOURCEMETA_MAYBE_UNUSED(callback);
+  SOURCEMETA_MAYBE_UNUSED(instance);
+  SOURCEMETA_MAYBE_UNUSED(property_target);
+  SOURCEMETA_MAYBE_UNUSED(evaluator);
+  EVALUATE_BEGIN_NO_PRECONDITION(AssertionDefinesExactlyStrictHash3);
+  const auto &target{get(instance, instruction.relative_instance_location)};
+  // TODO: Take advantage of the table of contents structure to speed up checks
+  const auto &value{*std::get_if<ValueStringHashes>(&instruction.value)};
+  assert(value.first.size() == 3);
+  assert(target.is_object());
+  const auto &object{target.as_object()};
+
+  result = object.size() == 3 && ((value.first.at(0) == object.at(0).hash &&
+                                   value.first.at(1) == object.at(1).hash &&
+                                   value.first.at(2) == object.at(2).hash) ||
+                                  (value.first.at(0) == object.at(0).hash &&
+                                   value.first.at(1) == object.at(2).hash &&
+                                   value.first.at(2) == object.at(1).hash) ||
+                                  (value.first.at(0) == object.at(1).hash &&
+                                   value.first.at(1) == object.at(0).hash &&
+                                   value.first.at(2) == object.at(2).hash) ||
+                                  (value.first.at(0) == object.at(1).hash &&
+                                   value.first.at(1) == object.at(2).hash &&
+                                   value.first.at(2) == object.at(0).hash) ||
+                                  (value.first.at(0) == object.at(2).hash &&
+                                   value.first.at(1) == object.at(0).hash &&
+                                   value.first.at(2) == object.at(1).hash) ||
+                                  (value.first.at(0) == object.at(2).hash &&
+                                   value.first.at(1) == object.at(1).hash &&
+                                   value.first.at(2) == object.at(0).hash));
+
+  EVALUATE_END(AssertionDefinesExactlyStrictHash3);
+}
+
 INSTRUCTION_HANDLER(AssertionPropertyDependencies) {
   SOURCEMETA_MAYBE_UNUSED(depth);
   SOURCEMETA_MAYBE_UNUSED(schema);
@@ -178,7 +216,7 @@ INSTRUCTION_HANDLER(AssertionPropertyDependencies) {
   assert(!value.empty());
   result = true;
   const auto &object{target.as_object()};
-  const sourcemeta::jsontoolkit::KeyHash<ValueString> hasher;
+  const sourcemeta::core::KeyHash<ValueString> hasher;
   for (const auto &entry : value) {
     if (!object.defines(entry.first, entry.hash)) {
       continue;
@@ -496,6 +534,41 @@ INSTRUCTION_HANDLER(AssertionEqualsAny) {
   EVALUATE_END(AssertionEqualsAny);
 }
 
+INSTRUCTION_HANDLER(AssertionEqualsAnyStringHash) {
+  SOURCEMETA_MAYBE_UNUSED(depth);
+  SOURCEMETA_MAYBE_UNUSED(schema);
+  SOURCEMETA_MAYBE_UNUSED(callback);
+  SOURCEMETA_MAYBE_UNUSED(instance);
+  SOURCEMETA_MAYBE_UNUSED(property_target);
+  SOURCEMETA_MAYBE_UNUSED(evaluator);
+  EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqualsAnyStringHash);
+  const auto &target{get(instance, instruction.relative_instance_location)};
+  const auto &value{*std::get_if<ValueStringHashes>(&instruction.value)};
+
+  if (target.is_string()) {
+    const auto &target_string{target.to_string()};
+    const auto string_size{target_string.size()};
+    // TODO: Put this on the evaluator to re-use it everywhere
+    const sourcemeta::core::KeyHash<ValueString> hasher;
+    const auto value_hash{hasher(target_string)};
+    if (string_size < value.second.size()) {
+      const auto &hint{value.second[string_size]};
+      assert(hint.first <= hint.second);
+      if (hint.second != 0) {
+        for (std::size_t index = hint.first - 1; index < hint.second; index++) {
+          assert(hasher.is_perfect(value.first[index]));
+          if (value.first[index] == value_hash) {
+            result = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  EVALUATE_END(AssertionEqualsAnyStringHash);
+}
+
 INSTRUCTION_HANDLER(AssertionGreaterEqual) {
   SOURCEMETA_MAYBE_UNUSED(depth);
   SOURCEMETA_MAYBE_UNUSED(schema);
@@ -608,11 +681,7 @@ INSTRUCTION_HANDLER(AssertionPropertyType) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyType,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyType);
   // Now here we refer to the actual property
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   // In non-strict mode, we consider a real number that represents an
@@ -629,11 +698,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeEvaluate) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeEvaluate,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeEvaluate);
   // Now here we refer to the actual property
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   // In non-strict mode, we consider a real number that represents an
@@ -655,11 +720,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrict) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrict,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrict);
   // Now here we refer to the actual property
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   result = target_check->type() == value;
@@ -673,11 +734,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictEvaluate) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictEvaluate,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictEvaluate);
   // Now here we refer to the actual property
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   result = target_check->type() == value;
@@ -696,11 +753,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAny) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAny,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAny);
   const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
   // Now here we refer to the actual property
   result = (std::find(value.cbegin(), value.cend(), target_check->type()) !=
@@ -715,11 +768,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAnyEvaluate) {
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAnyEvaluate,
-                            // Note that here are are referring to the parent
-                            // object that might hold the given property,
-                            // before traversing into the actual property
-                            target.is_object());
+  EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAnyEvaluate);
   const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
   // Now here we refer to the actual property
   result = (std::find(value.cbegin(), value.cend(), target_check->type()) !=
@@ -1397,12 +1446,12 @@ INSTRUCTION_HANDLER(LoopPropertiesMatch) {
   assert(!value.empty());
   result = true;
   for (const auto &entry : target.as_object()) {
-    const auto index{value.find(entry.first, entry.hash)};
-    if (index == value.cend()) {
+    const auto *index{value.try_at(entry.first, entry.hash)};
+    if (!index) {
       continue;
     }
 
-    const auto &subinstruction{instruction.children[index->second]};
+    const auto &subinstruction{instruction.children[*index]};
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
@@ -1428,13 +1477,13 @@ INSTRUCTION_HANDLER(LoopPropertiesMatchClosed) {
   assert(!value.empty());
   result = true;
   for (const auto &entry : target.as_object()) {
-    const auto index{value.find(entry.first, entry.hash)};
-    if (index == value.cend()) {
+    const auto *index{value.try_at(entry.first, entry.hash)};
+    if (!index) {
       result = false;
       break;
     }
 
-    const auto &subinstruction{instruction.children[index->second]};
+    const auto &subinstruction{instruction.children[*index]};
     assert(subinstruction.type ==
            sourcemeta::blaze::InstructionIndex::ControlGroup);
     for (const auto &child : subinstruction.children) {
@@ -1852,16 +1901,18 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(LoopPropertiesExactlyTypeStrictHash);
   const auto &target{get(instance, instruction.relative_instance_location)};
+  // TODO: Take advantage of the table of contents structure to speed up checks
   const auto &value{*std::get_if<ValueTypedHashes>(&instruction.value)};
+
   if (!target.is_object()) {
     EVALUATE_END(LoopPropertiesExactlyTypeStrictHash);
   }
 
   const auto &object{target.as_object()};
   const auto size{object.size()};
-  if (size == value.second.size()) {
+  if (size == value.second.first.size()) {
     // Otherwise why emit this instruction?
-    assert(!value.second.empty());
+    assert(!value.second.first.empty());
 
     // The idea is to first assume the object property ordering and the
     // hashes collection aligns. If they don't we do a full comparison
@@ -1873,7 +1924,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
         EVALUATE_END(LoopPropertiesExactlyTypeStrictHash);
       }
 
-      if (entry.hash != value.second[index]) {
+      if (entry.hash != value.second.first[index]) {
         break;
       }
 
@@ -1886,7 +1937,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
       // Continue where we left
       std::advance(iterator, index);
       for (; iterator != object.cend(); ++iterator) {
-        if (std::none_of(value.second.cbegin(), value.second.cend(),
+        if (std::none_of(value.second.first.cbegin(), value.second.first.cend(),
                          [&iterator](const auto hash) {
                            return hash == iterator->hash;
                          })) {
@@ -2243,9 +2294,10 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(LoopItemsPropertiesExactlyTypeStrictHash);
   const auto &target{get(instance, instruction.relative_instance_location)};
+  // TODO: Take advantage of the table of contents structure to speed up checks
   const auto &value{*std::get_if<ValueTypedHashes>(&instruction.value)};
   // Otherwise why emit this instruction?
-  assert(!value.second.empty());
+  assert(!value.second.first.empty());
 
   if (!target.is_array()) {
     EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2253,7 +2305,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
 
   result = true;
 
-  const auto hashes_size{value.second.size()};
+  const auto hashes_size{value.second.first.size()};
   for (const auto &item : target.as_array()) {
     if (!item.is_object()) {
       result = false;
@@ -2273,9 +2325,9 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
         if (entry.second.type() != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash != value.second[0] &&
-                   entry.hash != value.second[1] &&
-                   entry.hash != value.second[2]) {
+        } else if (entry.hash != value.second.first[0] &&
+                   entry.hash != value.second.first[1] &&
+                   entry.hash != value.second.first[2]) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
@@ -2285,15 +2337,16 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
         if (entry.second.type() != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash != value.second[0] &&
-                   entry.hash != value.second[1]) {
+        } else if (entry.hash != value.second.first[0] &&
+                   entry.hash != value.second.first[1]) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
       }
     } else if (hashes_size == 1) {
       const auto &entry{*object.cbegin()};
-      if (entry.second.type() != value.first || entry.hash != value.second[0]) {
+      if (entry.second.type() != value.first ||
+          entry.hash != value.second.first[0]) {
         result = false;
         EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
       }
@@ -2303,11 +2356,12 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
         if (entry.second.type() != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash == value.second[index]) {
+        } else if (entry.hash == value.second.first[index]) {
           index += 1;
           continue;
-        } else if (std::find(value.second.cbegin(), value.second.cend(),
-                             entry.hash) == value.second.cend()) {
+        } else if (std::find(value.second.first.cbegin(),
+                             value.second.first.cend(),
+                             entry.hash) == value.second.first.cend()) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else {
@@ -2318,6 +2372,73 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
   }
 
   EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
+}
+
+INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
+  SOURCEMETA_MAYBE_UNUSED(depth);
+  SOURCEMETA_MAYBE_UNUSED(schema);
+  SOURCEMETA_MAYBE_UNUSED(callback);
+  SOURCEMETA_MAYBE_UNUSED(instance);
+  SOURCEMETA_MAYBE_UNUSED(property_target);
+  SOURCEMETA_MAYBE_UNUSED(evaluator);
+  EVALUATE_BEGIN_NO_PRECONDITION(LoopItemsPropertiesExactlyTypeStrictHash3);
+  const auto &target{get(instance, instruction.relative_instance_location)};
+  // TODO: Take advantage of the table of contents structure to speed up checks
+  const auto &value{*std::get_if<ValueTypedHashes>(&instruction.value)};
+  assert(value.second.first.size() == 3);
+  // Otherwise why emit this instruction?
+  assert(!value.second.first.empty());
+
+  if (!target.is_array()) {
+    EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
+  }
+
+  for (const auto &item : target.as_array()) {
+    if (!item.is_object()) {
+      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
+    }
+
+    const auto &object{item.as_object()};
+    if (object.size() != 3) {
+      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
+    }
+
+    const auto &value_1{object.at(0)};
+    const auto &value_2{object.at(1)};
+    const auto &value_3{object.at(2)};
+
+    if (value_1.second.type() != value.first ||
+        value_2.second.type() != value.first ||
+        value_3.second.type() != value.first) {
+      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
+    }
+
+    if ((value_1.hash == value.second.first[0] &&
+         value_2.hash == value.second.first[1] &&
+         value_3.hash == value.second.first[2]) ||
+        (value_1.hash == value.second.first[0] &&
+         value_2.hash == value.second.first[2] &&
+         value_3.hash == value.second.first[1]) ||
+        (value_1.hash == value.second.first[1] &&
+         value_2.hash == value.second.first[0] &&
+         value_3.hash == value.second.first[2]) ||
+        (value_1.hash == value.second.first[1] &&
+         value_2.hash == value.second.first[2] &&
+         value_3.hash == value.second.first[0]) ||
+        (value_1.hash == value.second.first[2] &&
+         value_2.hash == value.second.first[0] &&
+         value_3.hash == value.second.first[1]) ||
+        (value_1.hash == value.second.first[2] &&
+         value_2.hash == value.second.first[1] &&
+         value_3.hash == value.second.first[0])) {
+      continue;
+    } else {
+      EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
+    }
+  }
+
+  result = true;
+  EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
 }
 
 INSTRUCTION_HANDLER(LoopContains) {
@@ -2392,13 +2513,13 @@ INSTRUCTION_HANDLER(LoopContains) {
 using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
                                  const sourcemeta::blaze::Template &,
                                  const sourcemeta::blaze::Callback &,
-                                 const sourcemeta::jsontoolkit::JSON &,
-                                 const sourcemeta::jsontoolkit::JSON::String *,
+                                 const sourcemeta::core::JSON &,
+                                 const sourcemeta::core::JSON::String *,
                                  const std::uint64_t depth,
                                  sourcemeta::blaze::Evaluator &);
 
 // Must have same order as InstructionIndex
-static constexpr DispatchHandler handlers[90] = {
+static constexpr DispatchHandler handlers[93] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2406,6 +2527,7 @@ static constexpr DispatchHandler handlers[90] = {
     AssertionDefinesAllStrict,
     AssertionDefinesExactly,
     AssertionDefinesExactlyStrict,
+    AssertionDefinesExactlyStrictHash3,
     AssertionPropertyDependencies,
     AssertionType,
     AssertionTypeAny,
@@ -2426,6 +2548,7 @@ static constexpr DispatchHandler handlers[90] = {
     AssertionObjectSizeGreater,
     AssertionEqual,
     AssertionEqualsAny,
+    AssertionEqualsAnyStringHash,
     AssertionGreaterEqual,
     AssertionLessEqual,
     AssertionGreater,
@@ -2480,6 +2603,7 @@ static constexpr DispatchHandler handlers[90] = {
     LoopItemsTypeStrict,
     LoopItemsTypeStrictAny,
     LoopItemsPropertiesExactlyTypeStrictHash,
+    LoopItemsPropertiesExactlyTypeStrictHash3,
     LoopContains,
     ControlGroup,
     ControlGroupWhenDefines,
@@ -2490,14 +2614,14 @@ static constexpr DispatchHandler handlers[90] = {
     ControlJump,
     ControlDynamicAnchorJump};
 
-inline auto evaluate_instruction(
-    const sourcemeta::blaze::Instruction &instruction,
-    const sourcemeta::blaze::Template &schema,
-    const sourcemeta::blaze::Callback &callback,
-    const sourcemeta::jsontoolkit::JSON &instance,
-    const sourcemeta::jsontoolkit::JSON::String *property_target,
-    const std::uint64_t depth, sourcemeta::blaze::Evaluator &evaluator)
-    -> bool {
+inline auto
+evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
+                     const sourcemeta::blaze::Template &schema,
+                     const sourcemeta::blaze::Callback &callback,
+                     const sourcemeta::core::JSON &instance,
+                     const sourcemeta::core::JSON::String *property_target,
+                     const std::uint64_t depth,
+                     sourcemeta::blaze::Evaluator &evaluator) -> bool {
   // Guard against infinite recursion in a cheap manner, as
   // infinite recursion will manifest itself through huge
   // ever-growing evaluate paths

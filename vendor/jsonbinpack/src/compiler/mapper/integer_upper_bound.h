@@ -1,12 +1,12 @@
-class IntegerUpperBound final : public sourcemeta::alterschema::Rule {
+class IntegerUpperBound final : public sourcemeta::core::SchemaTransformRule {
 public:
   IntegerUpperBound()
-      : sourcemeta::alterschema::Rule{"integer_upper_bound", ""} {};
+      : sourcemeta::core::SchemaTransformRule{"integer_upper_bound", ""} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::jsontoolkit::JSON &schema,
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
                                const std::string &dialect,
                                const std::set<std::string> &vocabularies,
-                               const sourcemeta::jsontoolkit::Pointer &) const
+                               const sourcemeta::core::Pointer &) const
       -> bool override {
     return dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(
@@ -17,12 +17,12 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::alterschema::Transformer &transformer) const
+  auto transform(sourcemeta::core::PointerProxy &transformer) const
       -> void override {
-    auto maximum = transformer.schema().at("maximum");
-    auto options = sourcemeta::jsontoolkit::JSON::make_object();
+    auto maximum = transformer.value().at("maximum");
+    auto options = sourcemeta::core::JSON::make_object();
     options.assign("maximum", std::move(maximum));
-    options.assign("multiplier", sourcemeta::jsontoolkit::JSON{1});
+    options.assign("multiplier", sourcemeta::core::JSON{1});
     make_encoding(transformer, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
   }
 };

@@ -5,7 +5,7 @@
 #include <sourcemeta/jsonbinpack/runtime_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cstdint> // std::uint8_t, std::uint16_t, std::uint64_t
 #include <istream> // std::basic_istream
@@ -15,8 +15,8 @@ namespace sourcemeta::jsonbinpack {
 /// @ingroup runtime
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT InputStream {
 public:
-  using Stream = std::basic_istream<sourcemeta::jsontoolkit::JSON::Char,
-                                    sourcemeta::jsontoolkit::JSON::CharTraits>;
+  using Stream = std::basic_istream<sourcemeta::core::JSON::Char,
+                                    sourcemeta::core::JSON::CharTraits>;
   InputStream(Stream &input);
   // Prevent copying, as this class is tied to a stream resource
   InputStream(const InputStream &) = delete;
@@ -35,7 +35,7 @@ public:
   auto get_varint_zigzag() -> std::int64_t;
   auto has_more_data() const noexcept -> bool;
   auto get_string_utf8(const std::uint64_t length)
-      -> sourcemeta::jsontoolkit::JSON::String;
+      -> sourcemeta::core::JSON::String;
 
 private:
   Stream &stream;

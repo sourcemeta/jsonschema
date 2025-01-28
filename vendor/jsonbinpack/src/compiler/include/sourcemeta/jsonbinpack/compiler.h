@@ -14,8 +14,8 @@
 /// #include <sourcemeta/jsonbinpack/compiler.h>
 /// ```
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <optional> // std::optional
 #include <string>   // std::string
@@ -29,27 +29,27 @@ namespace sourcemeta::jsonbinpack {
 ///
 /// ```cpp
 /// #include <sourcemeta/binpack/compiler.h>
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <iostream>
 ///
-/// auto schema{sourcemeta::jsontoolkit::parse(R"JSON({
+/// auto schema{sourcemeta::core::parse(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver);
+///     schema, sourcemeta::core::default_schema_walker,
+///     sourcemeta::core::official_resolver);
 ///
-/// sourcemeta::jsontoolkit::prettify(schema, std::cout);
+/// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_JSONBINPACK_COMPILER_EXPORT
-auto compile(sourcemeta::jsontoolkit::JSON &schema,
-             const sourcemeta::jsontoolkit::SchemaWalker &walker,
-             const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+auto compile(sourcemeta::core::JSON &schema,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
              const std::optional<std::string> &default_dialect = std::nullopt)
     -> void;
 
@@ -62,28 +62,28 @@ auto compile(sourcemeta::jsontoolkit::JSON &schema,
 ///
 /// ```cpp
 /// #include <sourcemeta/binpack/compiler.h>
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
 /// #include <iostream>
 ///
-/// auto schema{sourcemeta::jsontoolkit::parse(R"JSON({
+/// auto schema{sourcemeta::core::parse(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::canonicalize(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver);
+///     schema, sourcemeta::core::default_schema_walker,
+///     sourcemeta::core::official_resolver);
 ///
-/// sourcemeta::jsontoolkit::prettify(schema, std::cout);
+/// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_JSONBINPACK_COMPILER_EXPORT
 auto canonicalize(
-    sourcemeta::jsontoolkit::JSON &schema,
-    const sourcemeta::jsontoolkit::SchemaWalker &walker,
-    const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+    sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver,
     const std::optional<std::string> &default_dialect = std::nullopt) -> void;
 
 } // namespace sourcemeta::jsonbinpack

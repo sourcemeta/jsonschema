@@ -1,6 +1,6 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -12,10 +12,9 @@
 #include "command.h"
 #include "utils.h"
 
-static auto
-get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
-                  const sourcemeta::jsontoolkit::SchemaResolver &resolver)
-    -> std::optional<sourcemeta::jsontoolkit::JSON> {
+static auto get_schema_object(const sourcemeta::core::URI &identifier,
+                              const sourcemeta::core::SchemaResolver &resolver)
+    -> std::optional<sourcemeta::core::JSON> {
   const auto schema{resolver(identifier.recompose())};
   if (schema.has_value()) {
     return schema;
@@ -26,20 +25,19 @@ get_schema_object(const sourcemeta::jsontoolkit::URI &identifier,
   // all over again. To make it work without much hassle, we do exactly that:
   // create an artificial schema wrapper that uses `$ref`.
   if (identifier.fragment().has_value()) {
-    auto result{sourcemeta::jsontoolkit::JSON::make_object()};
-    result.assign("$schema", sourcemeta::jsontoolkit::JSON{
+    auto result{sourcemeta::core::JSON::make_object()};
+    result.assign("$schema", sourcemeta::core::JSON{
                                  "http://json-schema.org/draft-07/schema#"});
-    result.assign("$ref",
-                  sourcemeta::jsontoolkit::JSON{identifier.recompose()});
+    result.assign("$ref", sourcemeta::core::JSON{identifier.recompose()});
     return result;
   }
 
   return std::nullopt;
 }
 
-static auto get_data(const sourcemeta::jsontoolkit::JSON &test_case,
+static auto get_data(const sourcemeta::core::JSON &test_case,
                      const std::filesystem::path &base, const bool verbose)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   assert(base.is_absolute());
   assert(test_case.is_object());
   assert(test_case.defines("data") || test_case.defines("dataPath"));
@@ -75,7 +73,7 @@ auto sourcemeta::jsonschema::cli::test(
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
-    const sourcemeta::jsontoolkit::JSON test{
+    const sourcemeta::core::JSON test{
         sourcemeta::jsonschema::cli::read_file(entry.first)};
     std::cout << entry.first.string() << ":";
 
@@ -123,12 +121,12 @@ auto sourcemeta::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
-    sourcemeta::jsontoolkit::URI schema_uri{test.at("target").to_string()};
+    sourcemeta::core::URI schema_uri{test.at("target").to_string()};
     schema_uri.canonicalize();
     const auto schema{get_schema_object(schema_uri, test_resolver)};
     if (!schema.has_value()) {
       std::cout << "\n";
-      throw sourcemeta::jsontoolkit::SchemaResolutionError(
+      throw sourcemeta::core::SchemaResolutionError(
           test.at("target").to_string(), "Could not resolve schema under test");
     }
 
@@ -145,13 +143,13 @@ auto sourcemeta::jsonschema::cli::test(
 
     try {
       schema_template = sourcemeta::blaze::compile(
-          schema.value(), sourcemeta::jsontoolkit::default_schema_walker,
+          schema.value(), sourcemeta::core::default_schema_walker,
           test_resolver, sourcemeta::blaze::default_schema_compiler);
-    } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
-      if (error.location() == sourcemeta::jsontoolkit::Pointer{"$ref"} &&
+    } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
           error.id() == schema_uri.recompose()) {
         std::cout << "\n";
-        throw sourcemeta::jsontoolkit::SchemaResolutionError(
+        throw sourcemeta::core::SchemaResolutionError(
             test.at("target").to_string(),
             "Could not resolve schema under test");
       }

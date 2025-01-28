@@ -2,7 +2,7 @@
 #define SOURCEMETA_BLAZE_COMPILER_COMPILE_HELPERS_H_
 
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::find
 #include <cassert>   // assert
@@ -14,27 +14,26 @@
 namespace sourcemeta::blaze {
 
 inline auto relative_dynamic_context() -> DynamicContext {
-  return {"", sourcemeta::jsontoolkit::empty_pointer,
-          sourcemeta::jsontoolkit::empty_pointer, false};
+  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
+          false};
 }
 
 inline auto relative_dynamic_context(const DynamicContext &dynamic_context)
     -> DynamicContext {
-  return {"", sourcemeta::jsontoolkit::empty_pointer,
-          sourcemeta::jsontoolkit::empty_pointer,
+  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
           dynamic_context.property_as_target};
 }
 
 inline auto property_relative_dynamic_context() -> DynamicContext {
-  return {"", sourcemeta::jsontoolkit::empty_pointer,
-          sourcemeta::jsontoolkit::empty_pointer, true};
+  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
+          true};
 }
 
 inline auto schema_resource_id(const Context &context,
                                const std::string &resource) -> std::size_t {
-  const auto iterator{std::find(
-      context.resources.cbegin(), context.resources.cend(),
-      sourcemeta::jsontoolkit::URI{resource}.canonicalize().recompose())};
+  const auto iterator{
+      std::find(context.resources.cbegin(), context.resources.cend(),
+                sourcemeta::core::URI{resource}.canonicalize().recompose())};
   if (iterator == context.resources.cend()) {
     assert(resource.empty());
     return 0;
@@ -80,10 +79,9 @@ inline auto make(const InstructionIndex type, const Context &context,
       std::move(children)};
 }
 
-inline auto
-unroll(const Instruction &step,
-       const sourcemeta::jsontoolkit::Pointer &base_instance_location =
-           sourcemeta::jsontoolkit::empty_pointer) -> Instruction {
+inline auto unroll(const Instruction &step,
+                   const sourcemeta::core::Pointer &base_instance_location =
+                       sourcemeta::core::empty_pointer) -> Instruction {
   return {step.type,
           step.relative_schema_location,
           base_instance_location.concat(step.relative_instance_location),
@@ -105,8 +103,8 @@ inline auto rephrase(const InstructionIndex type, const Instruction &step)
 }
 
 inline auto
-unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
-                          const sourcemeta::jsontoolkit::JSON::String &property)
+unsigned_integer_property(const sourcemeta::core::JSON &document,
+                          const sourcemeta::core::JSON::String &property)
     -> std::optional<std::size_t> {
   if (document.defines(property) && document.at(property).is_integer()) {
     const auto value{document.at(property).to_integer()};
@@ -118,18 +116,18 @@ unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
 }
 
 inline auto
-unsigned_integer_property(const sourcemeta::jsontoolkit::JSON &document,
-                          const sourcemeta::jsontoolkit::JSON::String &property,
+unsigned_integer_property(const sourcemeta::core::JSON &document,
+                          const sourcemeta::core::JSON::String &property,
                           const std::size_t otherwise) -> std::size_t {
   return unsigned_integer_property(document, property).value_or(otherwise);
 }
 
 inline auto static_frame_entry(const Context &context,
                                const SchemaContext &schema_context)
-    -> const sourcemeta::jsontoolkit::Frame::LocationsEntry & {
+    -> const sourcemeta::core::Frame::LocationsEntry & {
   const auto current{
       to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
-  const auto type{sourcemeta::jsontoolkit::ReferenceType::Static};
+  const auto type{sourcemeta::core::ReferenceType::Static};
   assert(context.frame.locations().contains({type, current}));
   return context.frame.locations().at({type, current});
 }
@@ -138,12 +136,12 @@ inline auto walk_subschemas(const Context &context,
                             const SchemaContext &schema_context,
                             const DynamicContext &dynamic_context) -> auto {
   const auto &entry{static_frame_entry(context, schema_context)};
-  return sourcemeta::jsontoolkit::SchemaIterator{
+  return sourcemeta::core::SchemaIterator{
       schema_context.schema.at(dynamic_context.keyword), context.walker,
       context.resolver, entry.dialect};
 }
 
-// TODO: Get rid of this given the new JSON Toolkit regex optimisations
+// TODO: Get rid of this given the new Core regex optimisations
 inline auto pattern_as_prefix(const std::string &pattern)
     -> std::optional<std::string> {
   static const std::regex starts_with_regex{R"(^\^([a-zA-Z0-9-_/]+)$)"};
@@ -159,8 +157,7 @@ inline auto find_adjacent(const Context &context,
                           const SchemaContext &schema_context,
                           const std::set<std::string> &vocabularies,
                           const std::string &keyword,
-                          const sourcemeta::jsontoolkit::JSON::Type type)
-    -> auto {
+                          const sourcemeta::core::JSON::Type type) -> auto {
   std::vector<std::string> possible_keyword_uris;
   possible_keyword_uris.push_back(
       to_uri(schema_context.relative_pointer.initial().concat({keyword}),
@@ -171,7 +168,7 @@ inline auto find_adjacent(const Context &context,
 
   // Attempt to statically follow references
   if (schema_context.schema.defines("$ref")) {
-    const auto reference_type{sourcemeta::jsontoolkit::ReferenceType::Static};
+    const auto reference_type{sourcemeta::core::ReferenceType::Static};
     const auto destination_uri{
         to_uri(schema_context.relative_pointer.initial().concat({"$ref"}),
                schema_context.base)
@@ -185,8 +182,8 @@ inline auto find_adjacent(const Context &context,
     const auto &reference{
         context.frame.references().at({reference_type, destination.pointer})};
     const auto keyword_uri{
-        sourcemeta::jsontoolkit::to_uri(
-            sourcemeta::jsontoolkit::to_pointer(reference.fragment.value_or(""))
+        sourcemeta::core::to_uri(
+            sourcemeta::core::to_pointer(reference.fragment.value_or(""))
                 .concat({keyword}))
             .try_resolve_from(reference.base.value_or(""))};
 
@@ -197,22 +194,19 @@ inline auto find_adjacent(const Context &context,
     possible_keyword_uris.push_back(keyword_uri.recompose());
   }
 
-  std::vector<std::reference_wrapper<const sourcemeta::jsontoolkit::JSON>>
-      result;
+  std::vector<std::reference_wrapper<const sourcemeta::core::JSON>> result;
 
   for (const auto &possible_keyword_uri : possible_keyword_uris) {
     if (!context.frame.locations().contains(
-            {sourcemeta::jsontoolkit::ReferenceType::Static,
-             possible_keyword_uri})) {
+            {sourcemeta::core::ReferenceType::Static, possible_keyword_uri})) {
       continue;
     }
 
     const auto &frame_entry{context.frame.locations().at(
-        {sourcemeta::jsontoolkit::ReferenceType::Static,
-         possible_keyword_uri})};
+        {sourcemeta::core::ReferenceType::Static, possible_keyword_uri})};
     const auto &subschema{
-        sourcemeta::jsontoolkit::get(context.root, frame_entry.pointer)};
-    const auto &subschema_vocabularies{sourcemeta::jsontoolkit::vocabularies(
+        sourcemeta::core::get(context.root, frame_entry.pointer)};
+    const auto &subschema_vocabularies{sourcemeta::core::vocabularies(
         subschema, context.resolver, frame_entry.dialect)};
 
     if (std::any_of(vocabularies.cbegin(), vocabularies.cend(),
@@ -237,7 +231,7 @@ inline auto recursive_template_size(const Instructions &steps) -> std::size_t {
 }
 
 inline auto make_property(const ValueString &property) -> ValueProperty {
-  static const sourcemeta::jsontoolkit::KeyHash<ValueString> hasher;
+  static const sourcemeta::core::KeyHash<ValueString> hasher;
   return {property, hasher(property)};
 }
 

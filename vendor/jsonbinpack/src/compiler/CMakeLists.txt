@@ -1,4 +1,4 @@
-noa_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME compiler
+sourcemeta_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME compiler
   FOLDER "JSON BinPack/Compiler"
   SOURCES
     encoding.h compiler.cc
@@ -19,16 +19,16 @@ noa_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME compiler
     mapper/number_arbitrary.h)
 
 if(JSONBINPACK_INSTALL)
-  noa_library_install(NAMESPACE sourcemeta PROJECT jsonbinpack NAME compiler)
+  sourcemeta_library_install(NAMESPACE sourcemeta PROJECT jsonbinpack NAME compiler)
 endif()
 
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
   sourcemeta::jsonbinpack::numeric)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PUBLIC
-  sourcemeta::jsontoolkit::json)
+  sourcemeta::core::json)
+target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
+  sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PUBLIC
-  sourcemeta::jsontoolkit::jsonschema)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
-  sourcemeta::alterschema::engine)
-target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
-  sourcemeta::alterschema::linter)
+  sourcemeta::core::alterschema)

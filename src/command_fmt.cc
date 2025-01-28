@@ -1,5 +1,5 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
@@ -27,9 +27,8 @@ auto sourcemeta::jsonschema::cli::fmt(
       std::ostringstream buffer;
       buffer << input.rdbuf();
       std::ostringstream expected;
-      sourcemeta::jsontoolkit::prettify(
-          entry.second, expected,
-          sourcemeta::jsontoolkit::schema_format_compare);
+      sourcemeta::core::prettify(entry.second, expected,
+                                 sourcemeta::core::schema_format_compare);
       expected << "\n";
 
       if (buffer.str() == expected.str()) {
@@ -44,8 +43,8 @@ auto sourcemeta::jsonschema::cli::fmt(
     } else {
       log_verbose(options) << "Formatting: " << entry.first.string() << "\n";
       std::ofstream output{entry.first};
-      sourcemeta::jsontoolkit::prettify(
-          entry.second, output, sourcemeta::jsontoolkit::schema_format_compare);
+      sourcemeta::core::prettify(entry.second, output,
+                                 sourcemeta::core::schema_format_compare);
       output << "\n";
     }
   }

@@ -15,8 +15,6 @@ option(BLAZE_INSTALL "Install the Blaze library" ON)
 option(BLAZE_ADDRESS_SANITIZER "Build Blaze with an address sanitizer" OFF)
 option(BLAZE_UNDEFINED_SANITIZER "Build Blaze with an undefined behavior sanitizer" OFF)
 
-find_package(Noa REQUIRED)
-
 if(BLAZE_INSTALL)
   include(GNUInstallDirs)
   include(CMakePackageConfigHelpers)
@@ -34,9 +32,7 @@ if(BLAZE_INSTALL)
     COMPONENT sourcemeta_blaze_dev)
 endif()
 
-if(BLAZE_COMPILER OR BLAZE_EVALUATOR)
-  find_package(JSONToolkit REQUIRED)
-endif()
+find_package(Core REQUIRED)
 
 if(BLAZE_COMPILER)
   add_subdirectory(src/compiler)
@@ -51,23 +47,23 @@ if(BLAZE_CONTRIB)
 endif()
 
 if(BLAZE_ADDRESS_SANITIZER)
-  noa_sanitizer(TYPE address)
+  sourcemeta_sanitizer(TYPE address)
 elseif(BLAZE_UNDEFINED_SANITIZER)
-  noa_sanitizer(TYPE undefined)
+  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(BLAZE_DOCS)
-  noa_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
+  sourcemeta_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/website")
 endif()
 
 if(PROJECT_IS_TOP_LEVEL)
-  noa_target_clang_format(SOURCES
+  sourcemeta_target_clang_format(SOURCES
     bindings/*.cc contrib/*.cc
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
     test/*.h test/*.cc)
-  noa_target_clang_tidy(SOURCES
+  sourcemeta_target_clang_tidy(SOURCES
     src/*.h src/*.cc)
 endif()
 

@@ -9,7 +9,7 @@
 #include <sourcemeta/jsonbinpack/runtime_encoding.h>
 #include <sourcemeta/jsonbinpack/runtime_output_stream.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 namespace sourcemeta::jsonbinpack {
 
@@ -17,14 +17,13 @@ namespace sourcemeta::jsonbinpack {
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT Encoder : private OutputStream {
 public:
   Encoder(Stream &output);
-  auto write(const sourcemeta::jsontoolkit::JSON &document,
-             const Encoding &encoding) -> void;
+  auto write(const sourcemeta::core::JSON &document, const Encoding &encoding)
+      -> void;
 
 // The methods that implement individual encodings as considered private
 #ifndef DOXYGEN
 #define DECLARE_ENCODING(name)                                                 \
-  auto name(const sourcemeta::jsontoolkit::JSON &document, const name &)       \
-      -> void;
+  auto name(const sourcemeta::core::JSON &document, const name &) -> void;
 
   // Integer
   DECLARE_ENCODING(BOUNDED_MULTIPLE_8BITS_ENUM_FIXED)

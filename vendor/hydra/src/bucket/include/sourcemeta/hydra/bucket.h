@@ -20,7 +20,7 @@
 #include <sourcemeta/hydra/bucket_error.h>
 #include <sourcemeta/hydra/bucket_response.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cstdint>    // std::uint64_t
 #include <functional> // std::function
@@ -75,14 +75,14 @@ public:
 #endif
 
   /// Represents a JSON response from a bucket
-  using ResponseJSON = BucketResponse<sourcemeta::jsontoolkit::JSON>;
+  using ResponseJSON = BucketResponse<sourcemeta::core::JSON>;
 
   /// Fetch a JSON document from the given bucket. The key must start with a
   /// forward slash. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/hydra/bucket.h>
-  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <sourcemeta/core/json.h>
   ///
   /// #include <iostream>
   ///
@@ -99,7 +99,7 @@ public:
   ///   bucket.fetch_json("/foo/bar.json").get()};
   ///
   /// if (response.has_value()) {
-  ///   sourcemeta::jsontoolkit::prettify(response.value().data, std::cout);
+  ///   sourcemeta::core::prettify(response.value().data, std::cout);
   ///   std::cout << "\n";
   ///   std::cout << "ETag: " << response.value().etag << "\n";
   ///   std::cout << "Last-Modified: "
@@ -122,21 +122,20 @@ public:
   ///
   /// ```cpp
   /// #include <sourcemeta/hydra/bucket.h>
-  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <sourcemeta/core/json.h>
   ///
   /// sourcemeta::hydra::Bucket bucket{
   ///   // A Backblaze B2 bucket
   ///   "https://s3.us-east-005.backblazeb2.com/my-bucket",
   ///   "us-east-005", "123456789", "ultra-secret"};
   ///
-  /// const sourcemeta::jsontoolkit::JSON document =
-  ///   sourcemeta::jsontoolkit::parse("{ \"foo\": \"bar\" }");
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse("{ \"foo\": \"bar\" }");
   ///
   /// bucket.upsert_json("/foo/bar.json", document).wait();
   /// ```
   auto upsert_json(const std::string &key,
-                   const sourcemeta::jsontoolkit::JSON &document)
-      -> std::future<void>;
+                   const sourcemeta::core::JSON &document) -> std::future<void>;
 
   /// Upsert a JSON document into the given bucket unless it already exists. If
   /// so, just return the existing one. The key must start with a forward slash.
@@ -144,7 +143,7 @@ public:
   ///
   /// ```cpp
   /// #include <sourcemeta/hydra/bucket.h>
-  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <sourcemeta/core/json.h>
   ///
   /// sourcemeta::hydra::Bucket bucket{
   ///   // A Backblaze B2 bucket
@@ -153,12 +152,12 @@ public:
   ///
   /// std::optional<sourcemeta::hydra::Bucket::ResponseJSON> response{
   ///   bucket.fetch_or_upsert("/foo/bar.json",
-  ///     []() -> sourcemeta::jsontoolkit::JSON {
-  ///       return sourcemeta::jsontoolkit::parse("{ \"foo\": \"bar\" }");
+  ///     []() -> sourcemeta::core::JSON {
+  ///       return sourcemeta::core::parse("{ \"foo\": \"bar\" }");
   ///     }).get()};
   ///
   /// if (response.has_value()) {
-  ///   sourcemeta::jsontoolkit::prettify(response.value().data, std::cout);
+  ///   sourcemeta::core::prettify(response.value().data, std::cout);
   ///   std::cout << "\n";
   ///   std::cout << "ETag: " << response.value().etag << "\n";
   ///   std::cout << "Last-Modified: "
@@ -170,7 +169,7 @@ public:
   /// }
   /// ```
   auto fetch_or_upsert(const std::string &key,
-                       std::function<sourcemeta::jsontoolkit::JSON()> callback)
+                       std::function<sourcemeta::core::JSON()> callback)
       -> std::future<ResponseJSON>;
 
 private:
