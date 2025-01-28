@@ -5,7 +5,7 @@
 #include <sourcemeta/blaze/evaluator_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <utility> // std::pair
 #include <vector>  // std::vector
@@ -17,8 +17,8 @@ class SOURCEMETA_BLAZE_EVALUATOR_EXPORT StringSet {
 public:
   StringSet() = default;
 
-  using value_type = sourcemeta::jsontoolkit::JSON::String;
-  using hash_type = sourcemeta::jsontoolkit::JSON::Object::Container::hash_type;
+  using value_type = sourcemeta::core::JSON::String;
+  using hash_type = sourcemeta::core::JSON::Object::Container::hash_type;
   using underlying_type = std::vector<std::pair<value_type, hash_type>>;
   using size_type = typename underlying_type::size_type;
   using difference_type = typename underlying_type::difference_type;
@@ -27,6 +27,11 @@ public:
   auto contains(const value_type &value, const hash_type hash) const -> bool;
   inline auto contains(const value_type &value) const -> bool {
     return this->contains(value, this->hasher(value));
+  }
+
+  inline auto at(const size_type index) const noexcept
+      -> const std::pair<value_type, hash_type> & {
+    return this->data[index];
   }
 
   auto insert(const value_type &value) -> void;
@@ -49,7 +54,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
-  sourcemeta::jsontoolkit::KeyHash<value_type> hasher;
+  sourcemeta::core::KeyHash<value_type> hasher;
 };
 
 } // namespace sourcemeta::blaze

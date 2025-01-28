@@ -6,7 +6,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto Encoder::DOUBLE_VARINT_TUPLE(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::DOUBLE_VARINT_TUPLE(const sourcemeta::core::JSON &document,
                                   const struct DOUBLE_VARINT_TUPLE &) -> void {
   assert(document.is_real());
   const auto value{document.to_real()};

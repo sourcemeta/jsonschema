@@ -42,7 +42,7 @@ auto sourcemeta::blaze::default_schema_compiler(
   for (const auto &vocabulary : schema_context.vocabularies) {
     if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
         vocabulary.second) {
-      throw sourcemeta::jsontoolkit::SchemaVocabularyError(
+      throw sourcemeta::core::SchemaVocabularyError(
           vocabulary.first, "Cannot compile unsupported vocabulary");
     }
   }

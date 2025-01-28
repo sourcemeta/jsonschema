@@ -5,7 +5,7 @@
   assert(instruction.type == InstructionIndex::instruction_type);              \
   const auto &target{                                                          \
       resolve_target(property_target,                                          \
-                     sourcemeta::jsontoolkit::get(                             \
+                     sourcemeta::core::get(                                    \
                          instance, instruction.relative_instance_location))};  \
   if (!(precondition)) {                                                       \
     return true;                                                               \
@@ -27,7 +27,7 @@
 
 #define EVALUATE_BEGIN_NON_STRING(instruction_type, precondition)              \
   assert(instruction.type == InstructionIndex::instruction_type);              \
-  const auto &target{sourcemeta::jsontoolkit::get(                             \
+  const auto &target{sourcemeta::core::get(                                    \
       instance, instruction.relative_instance_location)};                      \
   if (!(precondition)) {                                                       \
     return true;                                                               \
@@ -72,14 +72,19 @@
 
 // This is a slightly complicated dance to avoid traversing the relative
 // instance location twice.
-#define EVALUATE_BEGIN_TRY_TARGET(instruction_type, precondition)              \
+#define EVALUATE_BEGIN_TRY_TARGET(instruction_type)                            \
   assert(instruction.type == InstructionIndex::instruction_type);              \
   const auto &target{instance};                                                \
-  if (!(precondition)) {                                                       \
+  if (!target.is_object()) {                                                   \
     return true;                                                               \
   }                                                                            \
-  const auto target_check{                                                     \
-      try_get(target, instruction.relative_instance_location)};                \
+  assert(!instruction.relative_instance_location.empty());                     \
+  const auto *target_check{                                                    \
+      instruction.relative_instance_location.size() == 1                       \
+          ? target.try_at(                                                     \
+                instruction.relative_instance_location.at(0).to_property(),    \
+                instruction.relative_instance_location.at(0).property_hash())  \
+          : try_get(target, instruction.relative_instance_location)};          \
   if (!target_check) {                                                         \
     return true;                                                               \
   }                                                                            \
@@ -92,7 +97,6 @@
   if (schema.dynamic) {                                                        \
     evaluator.resources.push_back(instruction.schema_resource);                \
   }                                                                            \
-  assert(!instruction.relative_instance_location.empty());                     \
   if (callback) {                                                              \
     callback(EvaluationType::Pre, true, instruction, evaluator.evaluate_path,  \
              evaluator.instance_location, Evaluator::null);                    \
@@ -184,7 +188,7 @@ namespace sourcemeta::blaze::complete {
 
 #include "dispatch.inc.h"
 
-inline auto evaluate(const sourcemeta::jsontoolkit::JSON &instance,
+inline auto evaluate(const sourcemeta::core::JSON &instance,
                      sourcemeta::blaze::Evaluator &evaluator,
                      const sourcemeta::blaze::Template &schema,
                      const sourcemeta::blaze::Callback &callback) -> bool {

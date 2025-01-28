@@ -36,7 +36,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Null)};
+                   sourcemeta::core::JSON::Type::Null)};
     } else if (type == "boolean") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -55,7 +55,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Boolean)};
+                   sourcemeta::core::JSON::Type::Boolean)};
     } else if (type == "object") {
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minProperties", 0)};
@@ -98,11 +98,15 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Object)};
+                   sourcemeta::core::JSON::Type::Object)};
     } else if (type == "array") {
       if (context.mode == Mode::FastValidation && !current.empty() &&
-          current.back().type == sourcemeta::blaze::InstructionIndex::
-                                     LoopItemsPropertiesExactlyTypeStrictHash &&
+          (current.back().type ==
+               sourcemeta::blaze::InstructionIndex::
+                   LoopItemsPropertiesExactlyTypeStrictHash ||
+           current.back().type ==
+               sourcemeta::blaze::InstructionIndex::
+                   LoopItemsPropertiesExactlyTypeStrictHash3) &&
           current.back().relative_instance_location ==
               dynamic_context.base_instance_location) {
         return {};
@@ -144,7 +148,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Array)};
+                   sourcemeta::core::JSON::Type::Array)};
     } else if (type == "number") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -163,9 +167,9 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::jsontoolkit::JSON::Type>{
-                       sourcemeta::jsontoolkit::JSON::Type::Real,
-                       sourcemeta::jsontoolkit::JSON::Type::Integer})};
+                   std::vector<sourcemeta::core::JSON::Type>{
+                       sourcemeta::core::JSON::Type::Real,
+                       sourcemeta::core::JSON::Type::Integer})};
     } else if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -187,7 +191,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
                    schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Integer)};
+                   sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
       if (dynamic_context.property_as_target) {
         return {};
@@ -229,7 +233,7 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::String)};
+                   sourcemeta::core::JSON::Type::String)};
     } else {
       return {};
     }
@@ -243,29 +247,29 @@ auto compiler_draft6_validation_type(const Context &context,
     if (type == "null") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Null)};
+                   sourcemeta::core::JSON::Type::Null)};
     } else if (type == "boolean") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Boolean)};
+                   sourcemeta::core::JSON::Type::Boolean)};
     } else if (type == "object") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Object)};
+                   sourcemeta::core::JSON::Type::Object)};
     } else if (type == "array") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Array)};
+                   sourcemeta::core::JSON::Type::Array)};
     } else if (type == "number") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::jsontoolkit::JSON::Type>{
-                       sourcemeta::jsontoolkit::JSON::Type::Real,
-                       sourcemeta::jsontoolkit::JSON::Type::Integer})};
+                   std::vector<sourcemeta::core::JSON::Type>{
+                       sourcemeta::core::JSON::Type::Real,
+                       sourcemeta::core::JSON::Type::Integer})};
     } else if (type == "integer") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
                    schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::Integer)};
+                   sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
       if (dynamic_context.property_as_target) {
         return {};
@@ -273,35 +277,35 @@ auto compiler_draft6_validation_type(const Context &context,
 
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   sourcemeta::jsontoolkit::JSON::Type::String)};
+                   sourcemeta::core::JSON::Type::String)};
     } else {
       return {};
     }
   } else if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    std::vector<sourcemeta::jsontoolkit::JSON::Type> types;
+    std::vector<sourcemeta::core::JSON::Type> types;
     for (const auto &type :
          schema_context.schema.at(dynamic_context.keyword).as_array()) {
       assert(type.is_string());
       const auto &type_string{type.to_string()};
       if (type_string == "null") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Null);
+        types.push_back(sourcemeta::core::JSON::Type::Null);
       } else if (type_string == "boolean") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Boolean);
+        types.push_back(sourcemeta::core::JSON::Type::Boolean);
       } else if (type_string == "object") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Object);
+        types.push_back(sourcemeta::core::JSON::Type::Object);
       } else if (type_string == "array") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Array);
+        types.push_back(sourcemeta::core::JSON::Type::Array);
       } else if (type_string == "number") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Integer);
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Real);
+        types.push_back(sourcemeta::core::JSON::Type::Integer);
+        types.push_back(sourcemeta::core::JSON::Type::Real);
       } else if (type_string == "integer") {
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::Integer);
+        types.push_back(sourcemeta::core::JSON::Type::Integer);
       } else if (type_string == "string") {
         if (dynamic_context.property_as_target) {
           continue;
         }
 
-        types.push_back(sourcemeta::jsontoolkit::JSON::Type::String);
+        types.push_back(sourcemeta::core::JSON::Type::String);
       }
     }
 
@@ -320,7 +324,7 @@ auto compiler_draft6_validation_const(const Context &context,
                                       const Instructions &) -> Instructions {
   return {make(sourcemeta::blaze::InstructionIndex::AssertionEqual, context,
                schema_context, dynamic_context,
-               sourcemeta::jsontoolkit::JSON{
+               sourcemeta::core::JSON{
                    schema_context.schema.at(dynamic_context.keyword)})};
 }
 
@@ -339,7 +343,7 @@ auto compiler_draft6_validation_exclusivemaximum(
 
   return {make(sourcemeta::blaze::InstructionIndex::AssertionLess, context,
                schema_context, dynamic_context,
-               sourcemeta::jsontoolkit::JSON{
+               sourcemeta::core::JSON{
                    schema_context.schema.at(dynamic_context.keyword)})};
 }
 
@@ -358,7 +362,7 @@ auto compiler_draft6_validation_exclusiveminimum(
 
   return {make(sourcemeta::blaze::InstructionIndex::AssertionGreater, context,
                schema_context, dynamic_context,
-               sourcemeta::jsontoolkit::JSON{
+               sourcemeta::core::JSON{
                    schema_context.schema.at(dynamic_context.keyword)})};
 }
 
@@ -372,10 +376,9 @@ auto compiler_draft6_applicator_contains(const Context &context,
     return {};
   }
 
-  Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
-                                sourcemeta::jsontoolkit::empty_pointer,
-                                sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(
+      context, schema_context, relative_dynamic_context(dynamic_context),
+      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (children.empty()) {
     // We still need to check the instance is not empty
@@ -399,10 +402,9 @@ auto compiler_draft6_validation_propertynames(
     return {};
   }
 
-  Instructions children{compile(context, schema_context,
-                                property_relative_dynamic_context(),
-                                sourcemeta::jsontoolkit::empty_pointer,
-                                sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(
+      context, schema_context, property_relative_dynamic_context(),
+      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (children.empty()) {
     return {};

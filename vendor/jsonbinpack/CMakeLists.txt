@@ -13,12 +13,11 @@ option(JSONBINPACK_RUNTIME "Build the JSON BinPack runtime" ON)
 option(JSONBINPACK_COMPILER "Build the JSON BinPack compiler" ON)
 option(JSONBINPACK_TESTS "Build the JSON BinPack tests" OFF)
 option(JSONBINPACK_INSTALL "Install the JSON BinPack library" ON)
-option(JSONBINPACK_WEBSITE "Build the JSON BinPack website" OFF)
 option(JSONBINPACK_DOCS "Build the JSON BinPack documentation" OFF)
 option(JSONBINPACK_ADDRESS_SANITIZER "Build JSON BinPack with an address sanitizer" OFF)
 option(JSONBINPACK_UNDEFINED_SANITIZER "Build JSON BinPack with an undefined behavior sanitizer" OFF)
 
-find_package(Noa REQUIRED)
+find_package(Core REQUIRED)
 
 if(JSONBINPACK_INSTALL)
   include(GNUInstallDirs)
@@ -38,8 +37,7 @@ if(JSONBINPACK_INSTALL)
 endif()
 
 # Dependencies
-find_package(JSONToolkit REQUIRED)
-find_package(AlterSchema REQUIRED)
+find_package(Core REQUIRED)
 
 # Numeric
 if(JSONBINPACK_NUMERIC)
@@ -57,25 +55,21 @@ if(JSONBINPACK_COMPILER)
 endif()
 
 if(JSONBINPACK_ADDRESS_SANITIZER)
-  noa_sanitizer(TYPE address)
+  sourcemeta_sanitizer(TYPE address)
 elseif(JSONBINPACK_UNDEFINED_SANITIZER)
-  noa_sanitizer(TYPE undefined)
-endif()
-
-if(JSONBINPACK_WEBSITE)
-  add_subdirectory(www)
+  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(JSONBINPACK_DOCS)
-  noa_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/www/api")
+  sourcemeta_target_doxygen(CONFIG "${PROJECT_SOURCE_DIR}/doxygen/Doxyfile.in"
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/www")
 endif()
 
 if(PROJECT_IS_TOP_LEVEL)
-  noa_target_clang_format(SOURCES
+  sourcemeta_target_clang_format(SOURCES
     src/*.h src/*.cc
     test/*.h test/*.cc)
-  noa_target_clang_tidy(SOURCES
+  sourcemeta_target_clang_tidy(SOURCES
     src/*.h src/*.cc)
 endif()
 

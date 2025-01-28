@@ -1,4 +1,4 @@
-noa_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
+sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   FOLDER "Blaze/Compiler"
   PRIVATE_HEADERS error.h output.h
   SOURCES
@@ -12,18 +12,18 @@ noa_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
     default_compiler_draft4.h)
 
 if(BLAZE_INSTALL)
-  noa_library_install(NAMESPACE sourcemeta PROJECT blaze NAME compiler)
+  sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME compiler)
 endif()
 
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
-  sourcemeta::jsontoolkit::json)
+  sourcemeta::core::json)
 target_link_libraries(sourcemeta_blaze_compiler PRIVATE
-  sourcemeta::noa::regex)
+  sourcemeta::core::regex)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
-  sourcemeta::jsontoolkit::jsonpointer)
+  sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_blaze_compiler PRIVATE
-  sourcemeta::jsontoolkit::uri)
+  sourcemeta::core::uri)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
-  sourcemeta::jsontoolkit::jsonschema)
+  sourcemeta::core::jsonschema)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::blaze::evaluator)

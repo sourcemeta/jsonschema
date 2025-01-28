@@ -45,15 +45,14 @@ auto compiler_2019_09_applicator_dependentschemas(
                make_property(dependent),
                compile(context, schema_context,
                        relative_dynamic_context(dynamic_context), {dependent},
-                       sourcemeta::jsontoolkit::empty_pointer)));
+                       sourcemeta::core::empty_pointer)));
     }
   }
 
   // TODO: Is this wrapper really necessary?
   return {make(sourcemeta::blaze::InstructionIndex::LogicalWhenType, context,
                schema_context, dynamic_context,
-               sourcemeta::jsontoolkit::JSON::Type::Object,
-               std::move(children))};
+               sourcemeta::core::JSON::Type::Object, std::move(children))};
 }
 
 auto compiler_2019_09_validation_dependentrequired(
@@ -77,7 +76,7 @@ auto compiler_2019_09_validation_dependentrequired(
       continue;
     }
 
-    std::vector<sourcemeta::jsontoolkit::JSON::String> properties;
+    std::vector<sourcemeta::core::JSON::String> properties;
     for (const auto &property : entry.second.as_array()) {
       assert(property.is_string());
       properties.push_back(property.to_string());
@@ -103,7 +102,7 @@ auto compiler_2019_09_core_annotation(const Context &context,
                                       const Instructions &) -> Instructions {
   return {make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
                schema_context, dynamic_context,
-               sourcemeta::jsontoolkit::JSON{
+               sourcemeta::core::JSON{
                    schema_context.schema.at(dynamic_context.keyword)})};
 }
 
@@ -150,10 +149,9 @@ auto compiler_2019_09_applicator_contains_with_options(
     return {};
   }
 
-  Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
-                                sourcemeta::jsontoolkit::empty_pointer,
-                                sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(
+      context, schema_context, relative_dynamic_context(dynamic_context),
+      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (annotate) {
     children.push_back(
@@ -268,25 +266,23 @@ auto compiler_2019_09_applicator_unevaluateditems(
     assert(!dependency.empty());
     assert(dependency.back().is_property());
     const auto &keyword{dependency.back().to_property()};
-    const auto &subschema{
-        sourcemeta::jsontoolkit::get(context.root, dependency)};
-    if (keyword == "items" && sourcemeta::jsontoolkit::is_schema(subschema)) {
+    const auto &subschema{sourcemeta::core::get(context.root, dependency)};
+    if (keyword == "items" && sourcemeta::core::is_schema(subschema)) {
       return {};
     } else if (keyword == "additionalItems" || keyword == "unevaluatedItems") {
       return {};
     }
   }
 
-  Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
-                                sourcemeta::jsontoolkit::empty_pointer,
-                                sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(
+      context, schema_context, relative_dynamic_context(dynamic_context),
+      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
     children.push_back(
         make(sourcemeta::blaze::InstructionIndex::AnnotationToParent, context,
              schema_context, relative_dynamic_context(dynamic_context),
-             sourcemeta::jsontoolkit::JSON{true}));
+             sourcemeta::core::JSON{true}));
   }
 
   if (children.empty()) {
@@ -317,10 +313,9 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
     return {};
   }
 
-  Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
-                                sourcemeta::jsontoolkit::empty_pointer,
-                                sourcemeta::jsontoolkit::empty_pointer)};
+  Instructions children{compile(
+      context, schema_context, relative_dynamic_context(dynamic_context),
+      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
     children.push_back(
@@ -342,8 +337,7 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
     assert(!dependency.empty());
     assert(dependency.back().is_property());
     const auto &keyword{dependency.back().to_property()};
-    const auto &subschema{
-        sourcemeta::jsontoolkit::get(context.root, dependency)};
+    const auto &subschema{sourcemeta::core::get(context.root, dependency)};
     if (keyword == "properties") {
       if (subschema.is_object()) {
         for (const auto &property : subschema.as_object()) {
@@ -417,7 +411,7 @@ auto compiler_2019_09_core_recursiveref(const Context &context,
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
-          {sourcemeta::jsontoolkit::ReferenceType::Dynamic, entry.pointer})) {
+          {sourcemeta::core::ReferenceType::Dynamic, entry.pointer})) {
     return compiler_draft4_core_ref(context, schema_context, dynamic_context,
                                     current);
   }

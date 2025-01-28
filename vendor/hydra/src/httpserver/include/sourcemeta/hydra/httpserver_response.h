@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/httpserver_export.h>
 #endif
 
+#include <sourcemeta/core/json.h>
 #include <sourcemeta/hydra/http.h>
-#include <sourcemeta/jsontoolkit/json.h>
 
 #include <chrono>      // std::chrono::system_clock::time_point
 #include <map>         // std::map
@@ -207,7 +207,7 @@ public:
   ///
   /// ```cpp
   /// #include <sourcemeta/hydra/httpserver.h>
-  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <sourcemeta/core/json.h>
   ///
   /// sourcemeta::hydra::http::Server server;
   ///
@@ -217,19 +217,19 @@ public:
   ///         sourcemeta::hydra::http::ServerResponse &response) -> void {
   ///   response.status(sourcemeta::hydra::http::Status::OK);
   ///   response.header("Content-Type", "application/json");
-  ///   const sourcemeta::jsontoolkit::JSON array{
-  ///     sourcemeta::jsontoolkit::JSON{false},
-  ///     sourcemeta::jsontoolkit::JSON{true}};
+  ///   const sourcemeta::core::JSON array{
+  ///     sourcemeta::core::JSON{false},
+  ///     sourcemeta::core::JSON{true}};
   ///   response.end(array);
   /// }
   ///
   /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
   /// ```
-  auto end(const sourcemeta::jsontoolkit::JSON &document) -> void;
+  auto end(const sourcemeta::core::JSON &document) -> void;
 
   /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
   /// the actual response content
-  auto head(const sourcemeta::jsontoolkit::JSON &document) -> void;
+  auto head(const sourcemeta::core::JSON &document) -> void;
 
   /// Respond with a JSON document, passing a key comparison for formatting
   /// purposes. Keep in mind that you still need to manually set a corresponding
@@ -237,7 +237,7 @@ public:
   ///
   /// ```cpp
   /// #include <sourcemeta/hydra/httpserver.h>
-  /// #include <sourcemeta/jsontoolkit/json.h>
+  /// #include <sourcemeta/core/json.h>
   ///
   /// sourcemeta::hydra::http::Server server;
   ///
@@ -247,21 +247,21 @@ public:
   ///         sourcemeta::hydra::http::ServerResponse &response) -> void {
   ///   response.status(sourcemeta::hydra::http::Status::OK);
   ///   response.header("Content-Type", "application/json");
-  ///   auto schema{sourcemeta::jsontoolkit::JSON::make_object()};
-  ///   schema.assign("type", sourcemeta::jsontoolkit::JSON{"string"});
-  ///   schema.assign("minLength", sourcemeta::jsontoolkit::JSON{1});
-  ///   response.end(schema, sourcemeta::jsontoolkit::schema_format_compare);
+  ///   auto schema{sourcemeta::core::JSON::make_object()};
+  ///   schema.assign("type", sourcemeta::core::JSON{"string"});
+  ///   schema.assign("minLength", sourcemeta::core::JSON{1});
+  ///   response.end(schema, sourcemeta::core::schema_format_compare);
   /// }
   ///
   /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
   /// ```
-  auto end(const sourcemeta::jsontoolkit::JSON &document,
-           const sourcemeta::jsontoolkit::KeyComparison &compare) -> void;
+  auto end(const sourcemeta::core::JSON &document,
+           const sourcemeta::core::KeyComparison &compare) -> void;
 
   /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
   /// the actual response content
-  auto head(const sourcemeta::jsontoolkit::JSON &document,
-            const sourcemeta::jsontoolkit::KeyComparison &compare) -> void;
+  auto head(const sourcemeta::core::JSON &document,
+            const sourcemeta::core::KeyComparison &compare) -> void;
 
   /// Respond with an empty body. For example:
   ///

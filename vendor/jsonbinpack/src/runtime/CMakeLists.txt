@@ -1,4 +1,4 @@
-noa_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime
+sourcemeta_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime
   FOLDER "JSON BinPack/Runtime"
   PRIVATE_HEADERS
     decoder.h
@@ -37,10 +37,10 @@ noa_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime
     encoder_string.cc)
 
 if(JSONBINPACK_INSTALL)
-  noa_library_install(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime)
+  sourcemeta_library_install(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime)
 endif()
 
 target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
-  sourcemeta::jsontoolkit::json)
+  sourcemeta::core::json)
 target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
   sourcemeta::jsonbinpack::numeric)

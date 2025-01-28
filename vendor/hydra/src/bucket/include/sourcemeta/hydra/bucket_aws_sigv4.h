@@ -5,8 +5,8 @@
 #include <sourcemeta/hydra/bucket_export.h>
 #endif
 
+#include <sourcemeta/core/uri.h>
 #include <sourcemeta/hydra/http.h>
-#include <sourcemeta/jsontoolkit/uri.h>
 
 #include <chrono>      // std::chrono::system_clock::time_point
 #include <map>         // std::map
@@ -21,7 +21,7 @@
 namespace sourcemeta::hydra {
 
 auto SOURCEMETA_HYDRA_BUCKET_EXPORT
-aws_sigv4(const http::Method method, const sourcemeta::jsontoolkit::URI &url,
+aws_sigv4(const http::Method method, const sourcemeta::core::URI &url,
           std::string_view access_key, std::string_view secret_key,
           std::string_view region, std::string &&content_checksum,
           const std::chrono::system_clock::time_point now)

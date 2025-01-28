@@ -3,7 +3,7 @@
 
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <algorithm> // std::transform
 #include <cassert>   // assert
@@ -14,8 +14,7 @@
 
 namespace sourcemeta::jsonbinpack::v1 {
 
-auto FIXED_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
-    -> Encoding {
+auto FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("size"));
   assert(options.defines("encoding"));
   assert(options.defines("prefixEncodings"));
@@ -37,7 +36,7 @@ auto FIXED_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
       std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
 }
 
-auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
+auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::core::JSON &options)
     -> Encoding {
   assert(options.defines("minimum"));
   assert(options.defines("maximum"));
@@ -65,8 +64,7 @@ auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
       std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
 }
 
-auto FLOOR_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
-    -> Encoding {
+auto FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("minimum"));
   assert(options.defines("encoding"));
   assert(options.defines("prefixEncodings"));
@@ -88,8 +86,7 @@ auto FLOOR_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
       std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
 }
 
-auto ROOF_TYPED_ARRAY(const sourcemeta::jsontoolkit::JSON &options)
-    -> Encoding {
+auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("maximum"));
   assert(options.defines("encoding"));
   assert(options.defines("prefixEncodings"));

@@ -1,19 +1,19 @@
 #ifndef SOURCEMETA_JSONBINPACK_COMPILER_ENCODING_H_
 #define SOURCEMETA_JSONBINPACK_COMPILER_ENCODING_H_
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 namespace sourcemeta::jsonbinpack {
 
 constexpr auto ENCODING_V1{"tag:sourcemeta.com,2024:jsonbinpack/encoding/v1"};
 
-inline auto
-make_resolver(const sourcemeta::jsontoolkit::SchemaResolver &fallback) -> auto {
+inline auto make_resolver(const sourcemeta::core::SchemaResolver &fallback)
+    -> auto {
   return [&fallback](std::string_view identifier)
-             -> std::optional<sourcemeta::jsontoolkit::JSON> {
+             -> std::optional<sourcemeta::core::JSON> {
     if (identifier == ENCODING_V1) {
-      return sourcemeta::jsontoolkit::parse(R"JSON({
+      return sourcemeta::core::parse(R"JSON({
         "$id": "tag:sourcemeta.com,2024:jsonbinpack/encoding/v1",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$vocabulary": {

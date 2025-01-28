@@ -8,10 +8,9 @@
 namespace sourcemeta::jsonbinpack {
 
 auto Decoder::FIXED_TYPED_ARRAY(const struct FIXED_TYPED_ARRAY &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const auto prefix_encodings{options.prefix_encodings.size()};
-  sourcemeta::jsontoolkit::JSON result =
-      sourcemeta::jsontoolkit::JSON::make_array();
+  sourcemeta::core::JSON result = sourcemeta::core::JSON::make_array();
   for (std::size_t index = 0; index < options.size; index++) {
     const Encoding &encoding{prefix_encodings > index
                                  ? options.prefix_encodings[index]
@@ -24,8 +23,7 @@ auto Decoder::FIXED_TYPED_ARRAY(const struct FIXED_TYPED_ARRAY &options)
 };
 
 auto Decoder::BOUNDED_8BITS_TYPED_ARRAY(
-    const struct BOUNDED_8BITS_TYPED_ARRAY &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    const struct BOUNDED_8BITS_TYPED_ARRAY &options) -> sourcemeta::core::JSON {
   assert(options.maximum >= options.minimum);
   assert(is_byte(options.maximum - options.minimum));
   const std::uint8_t byte{this->get_byte()};
@@ -36,7 +34,7 @@ auto Decoder::BOUNDED_8BITS_TYPED_ARRAY(
 };
 
 auto Decoder::FLOOR_TYPED_ARRAY(const struct FLOOR_TYPED_ARRAY &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t value{this->get_varint()};
   const std::uint64_t size{value + options.minimum};
   assert(size >= value);
@@ -46,7 +44,7 @@ auto Decoder::FLOOR_TYPED_ARRAY(const struct FLOOR_TYPED_ARRAY &options)
 };
 
 auto Decoder::ROOF_TYPED_ARRAY(const struct ROOF_TYPED_ARRAY &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t value{this->get_varint()};
   const std::uint64_t size{options.maximum - value};
   assert(size <= options.maximum);

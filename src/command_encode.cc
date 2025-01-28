@@ -1,8 +1,8 @@
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonl.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonl.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
 
 #include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem
@@ -25,12 +25,12 @@ auto sourcemeta::jsonschema::cli::encode(
   }
 
   // TODO: Take a real schema as argument
-  auto schema{sourcemeta::jsontoolkit::parse(R"JSON({
+  auto schema{sourcemeta::core::parse(R"JSON({
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
   sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::jsontoolkit::default_schema_walker,
+      schema, sourcemeta::core::default_schema_walker,
       resolver(options, options.contains("h") || options.contains("http")));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
@@ -43,14 +43,14 @@ auto sourcemeta::jsonschema::cli::encode(
                          << std::filesystem::weakly_canonical(document).string()
                          << "\n";
 
-    auto stream{sourcemeta::jsontoolkit::read_file(document)};
+    auto stream{sourcemeta::core::read_file(document)};
     std::ofstream output_stream(
         std::filesystem::weakly_canonical(options.at("").at(1)),
         std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     std::size_t count{0};
-    for (const auto &entry : sourcemeta::jsontoolkit::JSONL{stream}) {
+    for (const auto &entry : sourcemeta::core::JSONL{stream}) {
       log_verbose(options) << "Encoding entry #" << count << "\n";
       encoder.write(entry, encoding);
       count += 1;

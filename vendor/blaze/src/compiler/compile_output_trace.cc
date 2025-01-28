@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/compiler_output.h>
 
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <utility> // std::move
 #include <variant> // std::visit
@@ -14,7 +14,7 @@ static auto step_name(const sourcemeta::blaze::Instruction &instruction)
 
 namespace sourcemeta::blaze {
 
-TraceOutput::TraceOutput(const sourcemeta::jsontoolkit::WeakPointer &base)
+TraceOutput::TraceOutput(const sourcemeta::core::WeakPointer &base)
     : base_{base} {}
 
 auto TraceOutput::begin() const -> const_iterator {
@@ -31,9 +31,9 @@ auto TraceOutput::cend() const -> const_iterator { return this->output.cend(); }
 
 auto TraceOutput::operator()(
     const EvaluationType type, const bool result, const Instruction &step,
-    const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-    const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-    const sourcemeta::jsontoolkit::JSON &) -> void {
+    const sourcemeta::core::WeakPointer &evaluate_path,
+    const sourcemeta::core::WeakPointer &instance_location,
+    const sourcemeta::core::JSON &) -> void {
 
   const auto short_step_name{step_name(step)};
   auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};

@@ -6,19 +6,19 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto Encoder::UTF8_STRING_NO_LENGTH(
-    const sourcemeta::jsontoolkit::JSON &document,
-    const struct UTF8_STRING_NO_LENGTH &options) -> void {
+auto Encoder::UTF8_STRING_NO_LENGTH(const sourcemeta::core::JSON &document,
+                                    const struct UTF8_STRING_NO_LENGTH &options)
+    -> void {
   assert(document.is_string());
-  const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+  const sourcemeta::core::JSON::String value{document.to_string()};
   this->put_string_utf8(value, options.size);
 }
 
 auto Encoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED &options) -> void {
   assert(document.is_string());
-  const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+  const sourcemeta::core::JSON::String value{document.to_string()};
   const auto size{value.size()};
   assert(document.byte_size() == size);
   const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
@@ -41,10 +41,10 @@ auto Encoder::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto Encoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct ROOF_VARINT_PREFIX_UTF8_STRING_SHARED &options) -> void {
   assert(document.is_string());
-  const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+  const sourcemeta::core::JSON::String value{document.to_string()};
   const auto size{value.size()};
   assert(document.byte_size() == size);
   assert(size <= options.maximum);
@@ -68,10 +68,10 @@ auto Encoder::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto Encoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED &options) -> void {
   assert(document.is_string());
-  const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+  const sourcemeta::core::JSON::String value{document.to_string()};
   const auto size{value.size()};
   assert(document.byte_size() == size);
   assert(options.minimum <= options.maximum);
@@ -97,7 +97,7 @@ auto Encoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
 }
 
 auto Encoder::RFC3339_DATE_INTEGER_TRIPLET(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct RFC3339_DATE_INTEGER_TRIPLET &) -> void {
   assert(document.is_string());
   const auto &value{document.to_string()};
@@ -121,10 +121,10 @@ auto Encoder::RFC3339_DATE_INTEGER_TRIPLET(
 }
 
 auto Encoder::PREFIX_VARINT_LENGTH_STRING_SHARED(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct PREFIX_VARINT_LENGTH_STRING_SHARED &) -> void {
   assert(document.is_string());
-  const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+  const sourcemeta::core::JSON::String value{document.to_string()};
 
   const auto shared{
       this->cache_.find(value, Cache::Type::PrefixLengthVarintPlusOne)};

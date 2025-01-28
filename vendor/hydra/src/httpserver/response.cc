@@ -159,33 +159,31 @@ auto ServerResponse::head(const std::string_view message) -> void {
   }
 }
 
-auto ServerResponse::end(const sourcemeta::jsontoolkit::JSON &document)
-    -> void {
+auto ServerResponse::end(const sourcemeta::core::JSON &document) -> void {
   std::ostringstream output;
-  sourcemeta::jsontoolkit::prettify(document, output);
+  sourcemeta::core::prettify(document, output);
   this->end(output.str());
 }
 
-auto ServerResponse::head(const sourcemeta::jsontoolkit::JSON &document)
-    -> void {
+auto ServerResponse::head(const sourcemeta::core::JSON &document) -> void {
   std::ostringstream output;
-  sourcemeta::jsontoolkit::prettify(document, output);
+  sourcemeta::core::prettify(document, output);
   this->head(output.str());
 }
 
-auto ServerResponse::end(const sourcemeta::jsontoolkit::JSON &document,
-                         const sourcemeta::jsontoolkit::KeyComparison &compare)
+auto ServerResponse::end(const sourcemeta::core::JSON &document,
+                         const sourcemeta::core::KeyComparison &compare)
     -> void {
   std::ostringstream output;
-  sourcemeta::jsontoolkit::prettify(document, output, compare);
+  sourcemeta::core::prettify(document, output, compare);
   this->end(output.str());
 }
 
-auto ServerResponse::head(const sourcemeta::jsontoolkit::JSON &document,
-                          const sourcemeta::jsontoolkit::KeyComparison &compare)
+auto ServerResponse::head(const sourcemeta::core::JSON &document,
+                          const sourcemeta::core::KeyComparison &compare)
     -> void {
   std::ostringstream output;
-  sourcemeta::jsontoolkit::prettify(document, output, compare);
+  sourcemeta::core::prettify(document, output, compare);
   this->head(output.str());
 }
 

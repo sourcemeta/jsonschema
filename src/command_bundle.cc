@@ -1,5 +1,5 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdlib>  // EXIT_SUCCESS
 #include <iostream> // std::cout
@@ -21,19 +21,19 @@ auto sourcemeta::jsonschema::cli::bundle(
 
   auto schema{sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
-  sourcemeta::jsontoolkit::bundle(
-      schema, sourcemeta::jsontoolkit::default_schema_walker,
+  sourcemeta::core::bundle(
+      schema, sourcemeta::core::default_schema_walker,
       resolver(options, options.contains("h") || options.contains("http")));
 
   if (options.contains("w") || options.contains("without-id")) {
     log_verbose(options) << "Removing schema identifiers\n";
-    sourcemeta::jsontoolkit::unidentify(
-        schema, sourcemeta::jsontoolkit::default_schema_walker,
+    sourcemeta::core::unidentify(
+        schema, sourcemeta::core::default_schema_walker,
         resolver(options, options.contains("h") || options.contains("http")));
   }
 
-  sourcemeta::jsontoolkit::prettify(
-      schema, std::cout, sourcemeta::jsontoolkit::schema_format_compare);
+  sourcemeta::core::prettify(schema, std::cout,
+                             sourcemeta::core::schema_format_compare);
   std::cout << "\n";
   return EXIT_SUCCESS;
 }

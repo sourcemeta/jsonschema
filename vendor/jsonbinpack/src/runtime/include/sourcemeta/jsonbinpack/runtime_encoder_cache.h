@@ -6,7 +6,7 @@
 #include <sourcemeta/jsonbinpack/runtime_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <functional> // std::reference_wrapper
 #include <map>        // std::map
@@ -18,10 +18,10 @@ namespace sourcemeta::jsonbinpack {
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT Cache {
 public:
   enum class Type { Standalone, PrefixLengthVarintPlusOne };
-  auto record(const sourcemeta::jsontoolkit::JSON::String &value,
+  auto record(const sourcemeta::core::JSON::String &value,
               const std::uint64_t offset, const Type type) -> void;
-  auto find(const sourcemeta::jsontoolkit::JSON::String &value,
-            const Type type) const -> std::optional<std::uint64_t>;
+  auto find(const sourcemeta::core::JSON::String &value, const Type type) const
+      -> std::optional<std::uint64_t>;
 
 #ifndef DOXYGEN
   // This method is considered private. We only expose it for testing purposes
@@ -36,7 +36,7 @@ private:
 #pragma warning(disable : 4251 4275)
 #endif
   std::uint64_t byte_size{0};
-  using Entry = std::pair<sourcemeta::jsontoolkit::JSON::String, Type>;
+  using Entry = std::pair<sourcemeta::core::JSON::String, Type>;
   std::map<Entry, std::uint64_t> data;
   std::map<std::uint64_t, std::reference_wrapper<const Entry>> order;
 #if defined(_MSC_VER)

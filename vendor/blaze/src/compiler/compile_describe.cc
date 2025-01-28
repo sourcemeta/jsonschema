@@ -17,10 +17,10 @@ auto instruction_value(const T &step) -> decltype(auto) {
   }
 }
 
-auto to_string(const sourcemeta::jsontoolkit::JSON::Type type) -> std::string {
+auto to_string(const sourcemeta::core::JSON::Type type) -> std::string {
   // Otherwise the type "real" might not make a lot
   // of sense to JSON Schema users
-  if (type == sourcemeta::jsontoolkit::JSON::Type::Real) {
+  if (type == sourcemeta::core::JSON::Type::Real) {
     return "number";
   } else {
     std::ostringstream result;
@@ -46,8 +46,8 @@ auto escape_string(const std::string &input) -> std::string {
 }
 
 auto describe_type_check(const bool valid,
-                         const sourcemeta::jsontoolkit::JSON::Type current,
-                         const sourcemeta::jsontoolkit::JSON::Type expected,
+                         const sourcemeta::core::JSON::Type current,
+                         const sourcemeta::core::JSON::Type expected,
                          std::ostringstream &message) -> void {
   message << "The value was expected to be of type ";
   message << to_string(expected);
@@ -58,17 +58,16 @@ auto describe_type_check(const bool valid,
 }
 
 auto describe_types_check(
-    const bool valid, const sourcemeta::jsontoolkit::JSON::Type current,
-    const std::vector<sourcemeta::jsontoolkit::JSON::Type> &expected,
+    const bool valid, const sourcemeta::core::JSON::Type current,
+    const std::vector<sourcemeta::core::JSON::Type> &expected,
     std::ostringstream &message) -> void {
   assert(expected.size() > 1);
   auto copy = expected;
 
   const auto match_real{std::find(copy.cbegin(), copy.cend(),
-                                  sourcemeta::jsontoolkit::JSON::Type::Real)};
-  const auto match_integer{
-      std::find(copy.cbegin(), copy.cend(),
-                sourcemeta::jsontoolkit::JSON::Type::Integer)};
+                                  sourcemeta::core::JSON::Type::Real)};
+  const auto match_integer{std::find(copy.cbegin(), copy.cend(),
+                                     sourcemeta::core::JSON::Type::Integer)};
   if (match_real != copy.cend() && match_integer != copy.cend()) {
     copy.erase(match_integer);
   }
@@ -93,17 +92,16 @@ auto describe_types_check(
     message << " but it was of type ";
   }
 
-  if (valid && current == sourcemeta::jsontoolkit::JSON::Type::Integer &&
+  if (valid && current == sourcemeta::core::JSON::Type::Integer &&
       std::find(copy.cbegin(), copy.cend(),
-                sourcemeta::jsontoolkit::JSON::Type::Real) != copy.cend()) {
+                sourcemeta::core::JSON::Type::Real) != copy.cend()) {
     message << "number";
   } else {
     message << to_string(current);
   }
 }
 
-auto describe_reference(const sourcemeta::jsontoolkit::JSON &target)
-    -> std::string {
+auto describe_reference(const sourcemeta::core::JSON &target) -> std::string {
   std::ostringstream message;
   message << "The " << to_string(target.type())
           << " value was expected to validate against the statically "
@@ -111,9 +109,8 @@ auto describe_reference(const sourcemeta::jsontoolkit::JSON &target)
   return message.str();
 }
 
-auto is_within_keyword(
-    const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-    const std::string &keyword) -> bool {
+auto is_within_keyword(const sourcemeta::core::WeakPointer &evaluate_path,
+                       const std::string &keyword) -> bool {
   return std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
                      [&keyword](const auto &token) {
                        return token.is_property() &&
@@ -134,14 +131,14 @@ namespace sourcemeta::blaze {
 // TODO: What will unlock even better error messages is being able to
 // get the subschema being evaluated along with the keyword
 auto describe(const bool valid, const Instruction &step,
-              const sourcemeta::jsontoolkit::WeakPointer &evaluate_path,
-              const sourcemeta::jsontoolkit::WeakPointer &instance_location,
-              const sourcemeta::jsontoolkit::JSON &instance,
-              const sourcemeta::jsontoolkit::JSON &annotation) -> std::string {
+              const sourcemeta::core::WeakPointer &evaluate_path,
+              const sourcemeta::core::WeakPointer &instance_location,
+              const sourcemeta::core::JSON &instance,
+              const sourcemeta::core::JSON &annotation) -> std::string {
   assert(evaluate_path.empty() || evaluate_path.back().is_property());
   const std::string keyword{
       evaluate_path.empty() ? "" : evaluate_path.back().to_property()};
-  const sourcemeta::jsontoolkit::JSON &target{get(instance, instance_location)};
+  const sourcemeta::core::JSON &target{get(instance, instance_location)};
 
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionFail) {
     if (keyword == "contains") {
@@ -205,8 +202,7 @@ auto describe(const bool valid, const Instruction &step,
       if (!target.is_object()) {
         std::ostringstream message;
         describe_type_check(valid, target.type(),
-                            sourcemeta::jsontoolkit::JSON::Type::Object,
-                            message);
+                            sourcemeta::core::JSON::Type::Object, message);
         return message.str();
       }
 
@@ -707,7 +703,9 @@ auto describe(const bool valid, const Instruction &step,
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::
-                       LoopItemsPropertiesExactlyTypeStrictHash) {
+                       LoopItemsPropertiesExactlyTypeStrictHash ||
+      step.type == sourcemeta::blaze::InstructionIndex::
+                       LoopItemsPropertiesExactlyTypeStrictHash3) {
     std::ostringstream message;
     message << "Every item in the array was expected to be an object whose "
                "required properties were of type "
@@ -1052,6 +1050,16 @@ auto describe(const bool valid, const Instruction &step,
     return message.str();
   }
 
+  if (step.type ==
+      sourcemeta::blaze::InstructionIndex::AssertionDefinesExactlyStrictHash3) {
+    const auto &value{instruction_value<ValueStringHashes>(step).first};
+    std::ostringstream message;
+    message << "The value was expected to be an object that only defines "
+               "the "
+            << value.size() << " given properties";
+    return message.str();
+  }
+
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionType) {
     std::ostringstream message;
     describe_type_check(valid, target.type(),
@@ -1062,13 +1070,12 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionTypeStrict) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueType>(step)};
-    if (!valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
-        target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+    if (!valid && value == sourcemeta::core::JSON::Type::Real &&
+        target.type() == sourcemeta::core::JSON::Type::Integer) {
       message
           << "The value was expected to be a real number but it was an integer";
-    } else if (!valid &&
-               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
-               target.type() == sourcemeta::jsontoolkit::JSON::Type::Real) {
+    } else if (!valid && value == sourcemeta::core::JSON::Type::Integer &&
+               target.type() == sourcemeta::core::JSON::Type::Real) {
       message
           << "The value was expected to be an integer but it was a real number";
     } else {
@@ -1532,7 +1539,7 @@ auto describe(const bool valid, const Instruction &step,
     if (valid) {
       message << "The array value was expected to not contain duplicate items";
     } else {
-      std::set<sourcemeta::jsontoolkit::JSON> duplicates;
+      std::set<sourcemeta::core::JSON> duplicates;
       for (auto iterator = array.cbegin(); iterator != array.cend();
            ++iterator) {
         for (auto subiterator = std::next(iterator);
@@ -1594,8 +1601,7 @@ auto describe(const bool valid, const Instruction &step,
                 << " declared values";
       } else {
         message << " was expected to equal one of the following values: ";
-        std::vector<sourcemeta::jsontoolkit::JSON> copy{value.cbegin(),
-                                                        value.cend()};
+        std::vector<sourcemeta::core::JSON> copy{value.cbegin(), value.cend()};
         std::sort(copy.begin(), copy.end());
         for (auto iterator = copy.cbegin(); iterator != copy.cend();
              ++iterator) {
@@ -1608,6 +1614,23 @@ auto describe(const bool valid, const Instruction &step,
           }
         }
       }
+    }
+
+    return message.str();
+  }
+
+  if (step.type ==
+      sourcemeta::blaze::InstructionIndex::AssertionEqualsAnyStringHash) {
+    std::ostringstream message;
+    const auto &value{instruction_value<ValueStringHashes>(step).first};
+    message << "The " << to_string(target.type()) << " value ";
+    stringify(target, message);
+    assert(!value.empty());
+
+    if (value.size() == 1) {
+      message << " was expected to equal the given constant";
+    } else {
+      message << " was expected to equal one of the given declared values";
     }
 
     return message.str();
@@ -1632,13 +1655,12 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionPropertyType) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueType>(step)};
-    if (!valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
-        target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+    if (!valid && value == sourcemeta::core::JSON::Type::Real &&
+        target.type() == sourcemeta::core::JSON::Type::Integer) {
       message
           << "The value was expected to be a real number but it was an integer";
-    } else if (!valid &&
-               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
-               target.type() == sourcemeta::jsontoolkit::JSON::Type::Real) {
+    } else if (!valid && value == sourcemeta::core::JSON::Type::Integer &&
+               target.type() == sourcemeta::core::JSON::Type::Real) {
       message
           << "The value was expected to be an integer but it was a real number";
     } else {
@@ -1652,13 +1674,12 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeEvaluate) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueType>(step)};
-    if (!valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
-        target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+    if (!valid && value == sourcemeta::core::JSON::Type::Real &&
+        target.type() == sourcemeta::core::JSON::Type::Integer) {
       message
           << "The value was expected to be a real number but it was an integer";
-    } else if (!valid &&
-               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
-               target.type() == sourcemeta::jsontoolkit::JSON::Type::Real) {
+    } else if (!valid && value == sourcemeta::core::JSON::Type::Integer &&
+               target.type() == sourcemeta::core::JSON::Type::Real) {
       message
           << "The value was expected to be an integer but it was a real number";
     } else {
@@ -1672,13 +1693,12 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeStrict) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueType>(step)};
-    if (!valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
-        target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+    if (!valid && value == sourcemeta::core::JSON::Type::Real &&
+        target.type() == sourcemeta::core::JSON::Type::Integer) {
       message
           << "The value was expected to be a real number but it was an integer";
-    } else if (!valid &&
-               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
-               target.type() == sourcemeta::jsontoolkit::JSON::Type::Real) {
+    } else if (!valid && value == sourcemeta::core::JSON::Type::Integer &&
+               target.type() == sourcemeta::core::JSON::Type::Real) {
       message
           << "The value was expected to be an integer but it was a real number";
     } else {
@@ -1692,13 +1712,12 @@ auto describe(const bool valid, const Instruction &step,
                        AssertionPropertyTypeStrictEvaluate) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueType>(step)};
-    if (!valid && value == sourcemeta::jsontoolkit::JSON::Type::Real &&
-        target.type() == sourcemeta::jsontoolkit::JSON::Type::Integer) {
+    if (!valid && value == sourcemeta::core::JSON::Type::Real &&
+        target.type() == sourcemeta::core::JSON::Type::Integer) {
       message
           << "The value was expected to be a real number but it was an integer";
-    } else if (!valid &&
-               value == sourcemeta::jsontoolkit::JSON::Type::Integer &&
-               target.type() == sourcemeta::jsontoolkit::JSON::Type::Real) {
+    } else if (!valid && value == sourcemeta::core::JSON::Type::Integer &&
+               target.type() == sourcemeta::core::JSON::Type::Real) {
       message
           << "The value was expected to be an integer but it was a real number";
     } else {

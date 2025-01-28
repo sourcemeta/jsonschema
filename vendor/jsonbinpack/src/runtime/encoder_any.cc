@@ -12,7 +12,7 @@
 
 namespace sourcemeta::jsonbinpack {
 
-auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                 const struct BYTE_CHOICE_INDEX &options)
     -> void {
   assert(!options.choices.empty());
@@ -27,7 +27,7 @@ auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::jsontoolkit::JSON &document,
   this->put_byte(static_cast<std::uint8_t>(cursor));
 }
 
-auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::jsontoolkit::JSON &document,
+auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                  const struct LARGE_CHOICE_INDEX &options)
     -> void {
   assert(options.choices.size() > 0);
@@ -42,7 +42,7 @@ auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::jsontoolkit::JSON &document,
 }
 
 auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
   assert(options.choices.size() > 0);
   assert(is_byte(options.choices.size()));
@@ -61,17 +61,16 @@ auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
 
 auto Encoder::CONST_NONE(
 #ifndef NDEBUG
-    const sourcemeta::jsontoolkit::JSON &document,
-    const struct CONST_NONE &options)
+    const sourcemeta::core::JSON &document, const struct CONST_NONE &options)
 #else
-    const sourcemeta::jsontoolkit::JSON &, const struct CONST_NONE &)
+    const sourcemeta::core::JSON &, const struct CONST_NONE &)
 #endif
     -> void {
   assert(document == options.value);
 }
 
 auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &) -> void {
   using namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX;
   if (document.is_null()) {
@@ -118,7 +117,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_varint(absolute);
     }
   } else if (document.is_string()) {
-    const sourcemeta::jsontoolkit::JSON::String value{document.to_string()};
+    const sourcemeta::core::JSON::String value{document.to_string()};
     const auto size{document.byte_size()};
     const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
     if (size < uint_max<5>) {

@@ -14,7 +14,7 @@
 #include <sourcemeta/jsonbinpack/runtime_export.h>
 #endif
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <sourcemeta/jsonbinpack/runtime_decoder.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
@@ -27,7 +27,7 @@ namespace sourcemeta::jsonbinpack {
 
 /// @ingroup runtime
 SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT
-auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding;
+auto load(const sourcemeta::core::JSON &input) -> Encoding;
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -41,7 +41,7 @@ auto load(const sourcemeta::jsontoolkit::JSON &input) -> Encoding;
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT EncodingError
     : public std::exception {
 public:
-  EncodingError(sourcemeta::jsontoolkit::JSON::String message)
+  EncodingError(sourcemeta::core::JSON::String message)
       : message_{std::move(message)} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -49,7 +49,7 @@ public:
   }
 
 private:
-  const sourcemeta::jsontoolkit::JSON::String message_;
+  const sourcemeta::core::JSON::String message_;
 };
 
 #if defined(_MSC_VER)

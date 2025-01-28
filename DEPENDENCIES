@@ -1,7 +1,5 @@
 vendorpull https://github.com/sourcemeta/vendorpull dea311b5bfb53b6926a4140267959ae334d3ecf4
-noa https://github.com/sourcemeta/noa dee6c859895baf918fe3ecca22e4e7a262c5d500
-jsontoolkit https://github.com/sourcemeta/jsontoolkit d3436cfa5546f5f5c01ffa2f2314aabd966a84ed
-hydra https://github.com/sourcemeta/hydra 436c078e8446ed64b95e1695a0990e6430726560
-alterschema https://github.com/sourcemeta/alterschema dfbc1f51d81ec231346c7e73f06c60cbaa7b0db6
-jsonbinpack https://github.com/sourcemeta/jsonbinpack c455f1492709fa8f499f077b96f8211e597dd25c
-blaze https://github.com/sourcemeta/blaze a6b14a0b5aa536d94c4c4a7eddeaebed0c477b00
+core https://github.com/sourcemeta/core 32f08ad1e4d3e39097eda3fdd44e58ad0b5d59ec
+hydra https://github.com/sourcemeta/hydra a67b879df800e834ed8a2d056f98398f7211d870
+jsonbinpack https://github.com/sourcemeta/jsonbinpack d0f111b04fc4d252e278bafd66c382a9db3d3057
+blaze https://github.com/sourcemeta/blaze ee117240f8399831001cb1c764d8b08503fc9112

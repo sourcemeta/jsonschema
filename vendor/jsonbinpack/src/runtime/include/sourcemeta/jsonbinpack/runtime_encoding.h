@@ -3,7 +3,7 @@
 
 #include <sourcemeta/jsonbinpack/numeric.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
+#include <sourcemeta/core/json.h>
 
 #include <cstdint> // std::int64_t, std::uint64_t
 #include <memory>  // std::shared_ptr
@@ -302,7 +302,7 @@ struct DOUBLE_VARINT_TUPLE {};
 // clang-format on
 struct BYTE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::jsontoolkit::JSON> choices;
+  const std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -336,7 +336,7 @@ struct BYTE_CHOICE_INDEX {
 // clang-format on
 struct LARGE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::jsontoolkit::JSON> choices;
+  const std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -375,7 +375,7 @@ struct LARGE_CHOICE_INDEX {
 // clang-format on
 struct TOP_LEVEL_BYTE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::jsontoolkit::JSON> choices;
+  const std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -397,7 +397,7 @@ struct TOP_LEVEL_BYTE_CHOICE_INDEX {
 // clang-format on
 struct CONST_NONE {
   /// The constant value
-  const sourcemeta::jsontoolkit::JSON value;
+  const sourcemeta::core::JSON value;
 };
 
 // TODO: Write brief description

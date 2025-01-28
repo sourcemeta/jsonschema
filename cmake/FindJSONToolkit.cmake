@@ -1,5 +1,0 @@
-if(NOT JSONToolkit_FOUND)
-  set(JSONTOOLKIT_INSTALL OFF CACHE BOOL "disable installation")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/jsontoolkit")
-  set(JSONToolkit_FOUND ON)
-endif()

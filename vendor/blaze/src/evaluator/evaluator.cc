@@ -1,17 +1,17 @@
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <sourcemeta/noa/regex.h>
+#include <sourcemeta/core/regex.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::min, std::any_of, std::find
 #include <cassert>   // assert
 #include <limits>    // std::numeric_limits
 
 namespace sourcemeta::blaze {
-using namespace sourcemeta::jsontoolkit;
+using namespace sourcemeta::core;
 
 inline auto resolve_target(const JSON::String *property_target,
                            const JSON &instance) noexcept -> const JSON & {
@@ -58,8 +58,7 @@ resolve_string_target(const JSON::String *property_target, const JSON &instance,
 namespace sourcemeta::blaze {
 
 auto Evaluator::validate(const Template &schema,
-                         const sourcemeta::jsontoolkit::JSON &instance)
-    -> bool {
+                         const sourcemeta::core::JSON &instance) -> bool {
   // Do a full reset for the next run
   assert(this->evaluate_path.empty());
   assert(this->instance_location.empty());
@@ -80,7 +79,7 @@ auto Evaluator::validate(const Template &schema,
 }
 
 auto Evaluator::validate(const Template &schema,
-                         const sourcemeta::jsontoolkit::JSON &instance,
+                         const sourcemeta::core::JSON &instance,
                          const Callback &callback) -> bool {
   // Do a full reset for the next run
   assert(this->evaluate_path.empty());
@@ -92,21 +91,21 @@ auto Evaluator::validate(const Template &schema,
   return complete::evaluate(instance, *this, schema, callback);
 }
 
-const sourcemeta::jsontoolkit::JSON Evaluator::null{nullptr};
-const sourcemeta::jsontoolkit::JSON Evaluator::empty_string{""};
+const sourcemeta::core::JSON Evaluator::null{nullptr};
+const sourcemeta::core::JSON Evaluator::empty_string{""};
 
 auto Evaluator::hash(const std::size_t resource,
-                     const sourcemeta::jsontoolkit::JSON::String &fragment)
+                     const sourcemeta::core::JSON::String &fragment)
     const noexcept -> std::size_t {
   return resource + this->hasher_(fragment);
 }
 
-auto Evaluator::evaluate(const sourcemeta::jsontoolkit::JSON *target) -> void {
+auto Evaluator::evaluate(const sourcemeta::core::JSON *target) -> void {
   Evaluation mark{target, this->evaluate_path, false};
   this->evaluated_.push_back(std::move(mark));
 }
 
-auto Evaluator::is_evaluated(const sourcemeta::jsontoolkit::JSON *target) const
+auto Evaluator::is_evaluated(const sourcemeta::core::JSON *target) const
     -> bool {
   for (auto iterator = this->evaluated_.crbegin();
        iterator != this->evaluated_.crend(); ++iterator) {

@@ -1,12 +1,13 @@
 // TODO: Unit test this mapping once we have container encodings
-class Enum8Bit final : public sourcemeta::alterschema::Rule {
+class Enum8Bit final : public sourcemeta::core::SchemaTransformRule {
 public:
-  Enum8Bit() : sourcemeta::alterschema::Rule{"enum_8_bit", ""} {};
+  Enum8Bit() : sourcemeta::core::SchemaTransformRule{"enum_8_bit", ""} {};
 
-  [[nodiscard]] auto condition(
-      const sourcemeta::jsontoolkit::JSON &schema, const std::string &dialect,
-      const std::set<std::string> &vocabularies,
-      const sourcemeta::jsontoolkit::Pointer &pointer) const -> bool override {
+  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
+                               const std::string &dialect,
+                               const std::set<std::string> &vocabularies,
+                               const sourcemeta::core::Pointer &pointer) const
+      -> bool override {
     return dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(
                "https://json-schema.org/draft/2020-12/vocab/validation") &&
@@ -15,10 +16,10 @@ public:
            is_byte(schema.at("enum").size() - 1);
   }
 
-  auto transform(sourcemeta::alterschema::Transformer &transformer) const
+  auto transform(sourcemeta::core::PointerProxy &transformer) const
       -> void override {
-    auto options = sourcemeta::jsontoolkit::JSON::make_object();
-    options.assign("choices", transformer.schema().at("enum"));
+    auto options = sourcemeta::core::JSON::make_object();
+    options.assign("choices", transformer.value().at("enum"));
     make_encoding(transformer, "BYTE_CHOICE_INDEX", options);
   }
 };

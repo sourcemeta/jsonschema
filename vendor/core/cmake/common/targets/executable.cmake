@@ -1,0 +1,35 @@
+function(sourcemeta_executable)
+  cmake_parse_arguments(SOURCEMETA_EXECUTABLE ""
+    "NAMESPACE;PROJECT;NAME;FOLDER;VARIANT;OUTPUT" "SOURCES" ${ARGN})
+
+  if(NOT SOURCEMETA_EXECUTABLE_PROJECT)
+    message(FATAL_ERROR "You must pass the project name using the PROJECT option")
+  endif()
+  if(NOT SOURCEMETA_EXECUTABLE_NAME)
+    message(FATAL_ERROR "You must pass the executable name using the NAME option")
+  endif()
+  if(NOT SOURCEMETA_EXECUTABLE_FOLDER)
+    message(FATAL_ERROR "You must pass the folder name using the FOLDER option")
+  endif()
+  if(NOT SOURCEMETA_EXECUTABLE_SOURCES)
+    message(FATAL_ERROR "You must pass the sources list using the SOURCES option")
+  endif()
+
+  if(SOURCEMETA_EXECUTABLE_NAMESPACE)
+    set(TARGET_NAME "${SOURCEMETA_EXECUTABLE_NAMESPACE}_${SOURCEMETA_EXECUTABLE_PROJECT}_${SOURCEMETA_EXECUTABLE_NAME}")
+  else()
+    set(TARGET_NAME "${SOURCEMETA_EXECUTABLE_PROJECT}_${SOURCEMETA_EXECUTABLE_NAME}")
+  endif()
+
+  if(SOURCEMETA_EXECUTABLE_VARIANT)
+    set(TARGET_NAME "${TARGET_NAME}_${SOURCEMETA_EXECUTABLE_VARIANT}")
+  endif()
+
+  if(SOURCEMETA_EXECUTABLE_OUTPUT)
+    set("${SOURCEMETA_EXECUTABLE_OUTPUT}" "${TARGET_NAME}" PARENT_SCOPE)
+  endif()
+
+  add_executable("${TARGET_NAME}" ${SOURCEMETA_EXECUTABLE_SOURCES})
+  sourcemeta_add_default_options(PRIVATE ${TARGET_NAME})
+  set_target_properties("${TARGET_NAME}" PROPERTIES FOLDER "${SOURCEMETA_EXECUTABLE_FOLDER}")
+endfunction()

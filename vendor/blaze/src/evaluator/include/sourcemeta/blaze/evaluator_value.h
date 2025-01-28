@@ -1,12 +1,10 @@
 #ifndef SOURCEMETA_BLAZE_EVALUATOR_VALUE_H
 #define SOURCEMETA_BLAZE_EVALUATOR_VALUE_H
 
-#include <sourcemeta/noa/flat_map.h>
-#include <sourcemeta/noa/regex.h>
-
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/regex.h>
+#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/evaluator_string_set.h>
 
@@ -26,22 +24,22 @@ struct ValueNone {};
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON value
-using ValueJSON = sourcemeta::jsontoolkit::JSON;
+using ValueJSON = sourcemeta::core::JSON;
 
 /// @ingroup evaluator
 /// Represents a set of JSON values
-using ValueSet = std::unordered_set<sourcemeta::jsontoolkit::JSON,
-                                    sourcemeta::jsontoolkit::Hash>;
+using ValueSet =
+    std::unordered_set<sourcemeta::core::JSON, sourcemeta::core::Hash>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string value
-using ValueString = sourcemeta::jsontoolkit::JSON::String;
+using ValueString = sourcemeta::core::JSON::String;
 
 /// @ingroup evaluator
 /// Represents a compiler step object property value
 using ValueProperty =
     std::pair<ValueString,
-              sourcemeta::jsontoolkit::JSON::Object::Container::hash_type>;
+              sourcemeta::core::JSON::Object::Container::hash_type>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string values
@@ -53,18 +51,18 @@ using ValueStringSet = StringSet;
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON types value
-using ValueTypes = std::vector<sourcemeta::jsontoolkit::JSON::Type>;
+using ValueTypes = std::vector<sourcemeta::core::JSON::Type>;
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON type value
-using ValueType = sourcemeta::jsontoolkit::JSON::Type;
+using ValueType = sourcemeta::core::JSON::Type;
 
 /// @ingroup evaluator
 /// Represents a compiler step ECMA regular expression value. We store both the
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
 /// purposes)
-using ValueRegex = std::pair<sourcemeta::noa::Regex<ValueString>, std::string>;
+using ValueRegex = std::pair<sourcemeta::core::Regex<ValueString>, std::string>;
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON unsigned integer value
@@ -80,21 +78,23 @@ using ValueRange = std::tuple<std::size_t, std::optional<std::size_t>, bool>;
 /// Represents a compiler step boolean value
 using ValueBoolean = bool;
 
+// TODO: Don't use FlatMap directly, as it is an internal module of Core
 /// @ingroup evaluator
 /// Represents a compiler step string to index map
 using ValueNamedIndexes =
-    sourcemeta::noa::FlatMap<ValueString, ValueUnsignedInteger,
-                             sourcemeta::jsontoolkit::KeyHash<ValueString>>;
+    sourcemeta::core::FlatMap<ValueString, ValueUnsignedInteger,
+                              sourcemeta::core::KeyHash<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string logical type
 enum class ValueStringType : std::uint8_t { URI };
 
+// TODO: Don't use FlatMap directly, as it is an internal module of Core
 /// @ingroup evaluator
 /// Represents an compiler step that maps strings to strings
 using ValueStringMap =
-    sourcemeta::noa::FlatMap<ValueString, ValueStrings,
-                             sourcemeta::jsontoolkit::KeyHash<ValueString>>;
+    sourcemeta::core::FlatMap<ValueString, ValueStrings,
+                              sourcemeta::core::KeyHash<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consist of object property filters
@@ -108,7 +108,7 @@ using ValueIndexPair = std::pair<std::size_t, std::size_t>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consists of a pointer
-using ValuePointer = sourcemeta::jsontoolkit::Pointer;
+using ValuePointer = sourcemeta::core::Pointer;
 
 /// @ingroup evaluator
 /// Represents a compiler step types properties value
@@ -116,8 +116,13 @@ using ValueTypedProperties = std::pair<ValueType, ValueStringSet>;
 
 /// @ingroup evaluator
 /// Represents a compiler step types property hashes value
-using ValueTypedHashes =
-    std::pair<ValueType, std::vector<ValueStringSet::hash_type>>;
+using ValueStringHashes =
+    std::pair<std::vector<ValueStringSet::hash_type>,
+              std::vector<std::pair<std::size_t, std::size_t>>>;
+
+/// @ingroup evaluator
+/// Represents a compiler step types property hashes value
+using ValueTypedHashes = std::pair<ValueType, ValueStringHashes>;
 
 /// @ingroup evaluator
 using Value =
@@ -126,7 +131,7 @@ using Value =
                  ValueRegex, ValueUnsignedInteger, ValueRange, ValueBoolean,
                  ValueNamedIndexes, ValueStringType, ValueStringMap,
                  ValuePropertyFilter, ValueIndexPair, ValuePointer,
-                 ValueTypedProperties, ValueTypedHashes>;
+                 ValueTypedProperties, ValueStringHashes, ValueTypedHashes>;
 
 } // namespace sourcemeta::blaze
 

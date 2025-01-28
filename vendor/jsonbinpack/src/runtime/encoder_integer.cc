@@ -7,7 +7,7 @@
 namespace sourcemeta::jsonbinpack {
 
 auto Encoder::BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct BOUNDED_MULTIPLE_8BITS_ENUM_FIXED &options) -> void {
   assert(document.is_integer());
   const std::int64_t value{document.to_integer()};
@@ -26,7 +26,7 @@ auto Encoder::BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(
 }
 
 auto Encoder::FLOOR_MULTIPLE_ENUM_VARINT(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct FLOOR_MULTIPLE_ENUM_VARINT &options) -> void {
   assert(document.is_integer());
   const std::int64_t value{document.to_integer()};
@@ -45,7 +45,7 @@ auto Encoder::FLOOR_MULTIPLE_ENUM_VARINT(
 }
 
 auto Encoder::ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT &options) -> void {
   assert(document.is_integer());
   const std::int64_t value{document.to_integer()};
@@ -64,7 +64,7 @@ auto Encoder::ROOF_MULTIPLE_MIRROR_ENUM_VARINT(
 }
 
 auto Encoder::ARBITRARY_MULTIPLE_ZIGZAG_VARINT(
-    const sourcemeta::jsontoolkit::JSON &document,
+    const sourcemeta::core::JSON &document,
     const struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT &options) -> void {
   assert(document.is_integer());
   const std::int64_t value{document.to_integer()};

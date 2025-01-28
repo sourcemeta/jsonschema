@@ -10,10 +10,10 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
-#include <sourcemeta/jsontoolkit/uri.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/uri.h>
 
 #include <cstdint>    // std::uint8_t
 #include <functional> // std::function
@@ -34,13 +34,13 @@ namespace sourcemeta::blaze {
 /// your disposal to implement a keyword
 struct SchemaContext {
   /// The schema location relative to the base URI
-  const sourcemeta::jsontoolkit::Pointer &relative_pointer;
+  const sourcemeta::core::Pointer &relative_pointer;
   /// The current subschema
-  const sourcemeta::jsontoolkit::JSON &schema;
+  const sourcemeta::core::JSON &schema;
   /// The schema vocabularies in use
   const std::map<std::string, bool> &vocabularies;
   /// The schema base URI
-  const sourcemeta::jsontoolkit::URI &base;
+  const sourcemeta::core::URI &base;
   /// The set of labels registered so far
   std::set<std::size_t> labels;
   /// The set of references destinations traversed so far
@@ -54,9 +54,9 @@ struct DynamicContext {
   /// The schema keyword
   const std::string keyword;
   /// The schema base keyword path
-  const sourcemeta::jsontoolkit::Pointer &base_schema_location;
+  const sourcemeta::core::Pointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
-  const sourcemeta::jsontoolkit::Pointer &base_instance_location;
+  const sourcemeta::core::Pointer &base_instance_location;
   /// Whether the instance location property acts as the target
   const bool property_as_target;
 };
@@ -88,15 +88,15 @@ enum class Mode : std::uint8_t {
 /// the compilation process
 struct Context {
   /// The root schema resource
-  const sourcemeta::jsontoolkit::JSON &root;
+  const sourcemeta::core::JSON &root;
   /// The reference frame of the entire schema
-  const sourcemeta::jsontoolkit::Frame &frame;
+  const sourcemeta::core::Frame &frame;
   /// The set of all schema resources in the schema without duplicates
   const std::vector<std::string> resources;
   /// The schema walker in use
-  const sourcemeta::jsontoolkit::SchemaWalker &walker;
+  const sourcemeta::core::SchemaWalker &walker;
   /// The schema resolver in use
-  const sourcemeta::jsontoolkit::SchemaResolver &resolver;
+  const sourcemeta::core::SchemaResolver &resolver;
   /// The schema compiler in use
   const Compiler &compiler;
   /// The mode of the schema compiler
@@ -104,7 +104,7 @@ struct Context {
   /// Whether the schema makes use of dynamic scoping
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
-  const sourcemeta::jsontoolkit::UnevaluatedEntries unevaluated;
+  const sourcemeta::core::UnevaluatedEntries unevaluated;
   /// The list of subschemas that are precompiled at the beginning of the
   /// instruction set
   const std::set<std::string> precompiled_static_schemas;
@@ -125,26 +125,26 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// ```cpp
 /// #include <sourcemeta/blaze/compiler.h>
 ///
-/// #include <sourcemeta/jsontoolkit/json.h>
-/// #include <sourcemeta/jsontoolkit/jsonschema.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
 ///
-/// const sourcemeta::jsontoolkit::JSON schema =
-///     sourcemeta::jsontoolkit::parse(R"JSON({
+/// const sourcemeta::core::JSON schema =
+///     sourcemeta::core::parse(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::jsontoolkit::default_schema_walker,
-///     sourcemeta::jsontoolkit::official_resolver,
-///     sourcemeta::jsontoolkit::default_schema_compiler)};
+///     schema, sourcemeta::core::default_schema_walker,
+///     sourcemeta::core::official_resolver,
+///     sourcemeta::core::default_schema_compiler)};
 ///
 /// // Evaluate or encode
 /// ```
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-compile(const sourcemeta::jsontoolkit::JSON &schema,
-        const sourcemeta::jsontoolkit::SchemaWalker &walker,
-        const sourcemeta::jsontoolkit::SchemaResolver &resolver,
+compile(const sourcemeta::core::JSON &schema,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const Mode mode = Mode::FastValidation,
         const std::optional<std::string> &default_dialect = std::nullopt)
     -> Template;
@@ -160,9 +160,9 @@ compile(const sourcemeta::jsontoolkit::JSON &schema,
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 compile(const Context &context, const SchemaContext &schema_context,
         const DynamicContext &dynamic_context,
-        const sourcemeta::jsontoolkit::Pointer &schema_suffix,
-        const sourcemeta::jsontoolkit::Pointer &instance_suffix =
-            sourcemeta::jsontoolkit::empty_pointer,
+        const sourcemeta::core::Pointer &schema_suffix,
+        const sourcemeta::core::Pointer &instance_suffix =
+            sourcemeta::core::empty_pointer,
         const std::optional<std::string> &uri = std::nullopt) -> Instructions;
 
 } // namespace sourcemeta::blaze

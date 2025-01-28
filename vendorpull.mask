@@ -2,8 +2,6 @@ assets
 bin
 docs
 test
-vendor/hydra
-vendor/jsontoolkit
 vendor/vendorpull
 .ackrc
 .editorconfig

@@ -1,5 +1,5 @@
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -27,22 +27,22 @@ auto sourcemeta::jsonschema::cli::metaschema(
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
-    if (!sourcemeta::jsontoolkit::is_schema(entry.second)) {
+    if (!sourcemeta::core::is_schema(entry.second)) {
       std::cerr << "error: The schema file you provided does not represent a "
                    "valid JSON Schema\n  "
                 << std::filesystem::canonical(entry.first).string() << "\n";
       return EXIT_FAILURE;
     }
 
-    const auto dialect{sourcemeta::jsontoolkit::dialect(entry.second)};
+    const auto dialect{sourcemeta::core::dialect(entry.second)};
     assert(dialect.has_value());
 
     const auto metaschema{
-        sourcemeta::jsontoolkit::metaschema(entry.second, custom_resolver)};
+        sourcemeta::core::metaschema(entry.second, custom_resolver)};
     if (!cache.contains(dialect.value())) {
       const auto metaschema_template{sourcemeta::blaze::compile(
-          metaschema, sourcemeta::jsontoolkit::default_schema_walker,
-          custom_resolver, sourcemeta::blaze::default_schema_compiler)};
+          metaschema, sourcemeta::core::default_schema_walker, custom_resolver,
+          sourcemeta::blaze::default_schema_compiler)};
       cache.insert({dialect.value(), metaschema_template});
     }
 

@@ -1,0 +1,133 @@
+{
+    "$schema": "http://json-schema.org/draft-06/hyper-schema#",
+    "$id": "http://json-schema.org/draft-06/hyper-schema#",
+    "title": "JSON Hyper-Schema",
+    "definitions": {
+        "schemaArray": {
+            "allOf": [
+                { "$ref": "http://json-schema.org/draft-06/schema#/definitions/schemaArray" },
+                {
+                    "items": { "$ref": "#" }
+                }
+            ]
+        },
+        "linkDescription": {
+            "title": "Link Description Object",
+            "type": "object",
+            "required": [ "href" ],
+            "properties": {
+                "href": {
+                    "description": "a URI template, as defined by RFC 6570",
+                    "type": "string",
+                    "format": "uri-template"
+                },
+                "hrefSchema": {
+                    "description": "a schema for validating user input to the URI template, where the input is in the form of a JSON object with property names matching variable names in \"href\"",
+                    "allOf": [ {"$ref": "#"} ]
+                },
+                "rel": {
+                    "description": "relation to the target resource of the link",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "a title for the link",
+                    "type": "string"
+                },
+                "targetSchema": {
+                    "description": "JSON Schema describing the link target",
+                    "allOf": [ { "$ref": "#" } ]
+                },
+                "mediaType": {
+                    "description": "media type (as defined by RFC 2046) describing the link target",
+                    "type": "string"
+                },
+                "submissionEncType": {
+                    "description": "The media type in which to submit data along with the request",
+                    "type": "string",
+                    "default": "application/json"
+                },
+                "submissionSchema": {
+                    "description": "Schema describing the data to submit along with the request",
+                    "allOf": [ { "$ref": "#" } ]
+                }
+            }
+        }
+    },
+    "allOf": [ { "$ref": "http://json-schema.org/draft-06/schema#" } ],
+    "properties": {
+        "additionalItems": {
+            "anyOf": [
+                { "type": "boolean" },
+                { "$ref": "#" }
+            ]
+        },
+        "additionalProperties": {
+            "anyOf": [
+                { "type": "boolean" },
+                { "$ref": "#" }
+            ]
+        },
+        "dependencies": {
+            "additionalProperties": {
+                "anyOf": [
+                    { "$ref": "#" },
+                    { "type": "array" }
+                ]
+            }
+        },
+        "items": {
+            "anyOf": [
+                { "$ref": "#" },
+                { "$ref": "#/definitions/schemaArray" }
+            ]
+        },
+        "definitions": {
+            "additionalProperties": { "$ref": "#" }
+        },
+        "patternProperties": {
+            "additionalProperties": { "$ref": "#" }
+        },
+        "properties": {
+            "additionalProperties": { "$ref": "#" }
+        },
+        "allOf": { "$ref": "#/definitions/schemaArray" },
+        "anyOf": { "$ref": "#/definitions/schemaArray" },
+        "oneOf": { "$ref": "#/definitions/schemaArray" },
+        "not": { "$ref": "#" },
+
+        "contains": { "$ref": "#" },
+        "propertyNames": { "$ref": "#" },
+        "base": {
+            "description": "URI Template resolved as for the 'href' keyword in the Link Description Object.  The resulting URI Reference is resolved against the current URI base and sets the new URI base for URI references within the instance.",
+            "type": "string"
+        },
+        "links": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/linkDescription" }
+        },
+        "media": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "description": "A media type, as described in RFC 2046",
+                    "type": "string"
+                },
+                "binaryEncoding": {
+                    "description": "A content encoding scheme, as described in RFC 2045",
+                    "type": "string"
+                }
+            }
+        },
+        "readOnly": {
+            "description": "If true, indicates that the value of this property is controlled by the server.",
+            "type": "boolean",
+            "default": false
+        }
+    },
+    "links": [
+        {
+            "rel": "self",
+            "href": "{+%24id}"
+        }
+    ]
+}

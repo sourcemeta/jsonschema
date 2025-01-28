@@ -1,4 +1,4 @@
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <algorithm>   // std::min
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
@@ -110,34 +110,34 @@ auto main(int argc, char *argv[]) noexcept -> int {
     const std::vector<std::string> arguments{argv + std::min(2, argc),
                                              argv + argc};
     return jsonschema_main(program, command, arguments);
-  } catch (const sourcemeta::jsontoolkit::SchemaReferenceError &error) {
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
               << "\n    at schema location \"";
-    sourcemeta::jsontoolkit::stringify(error.location(), std::cerr);
+    sourcemeta::core::stringify(error.location(), std::cerr);
     std::cerr << "\"\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::SchemaResolutionError &error) {
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  at " << error.id() << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::SchemaError &error) {
+  } catch (const sourcemeta::core::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::SchemaVocabularyError &error) {
+  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.uri()
               << "\n\nTo request support for it, please open an issue "
                  "at\nhttps://github.com/sourcemeta/jsonschema\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::URIParseError &error) {
+  } catch (const sourcemeta::core::URIParseError &error) {
     std::cerr << "error: " << error.what() << " at column " << error.column()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::FileParseError &error) {
+  } catch (const sourcemeta::core::FileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n  "
               << std::filesystem::weakly_canonical(error.path()).string()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsontoolkit::ParseError &error) {
+  } catch (const sourcemeta::core::ParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n";
     return EXIT_FAILURE;

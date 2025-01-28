@@ -7,12 +7,10 @@ namespace sourcemeta::jsonbinpack {
 
 auto Decoder::FIXED_TYPED_ARBITRARY_OBJECT(
     const struct FIXED_TYPED_ARBITRARY_OBJECT &options)
-    -> sourcemeta::jsontoolkit::JSON {
-  sourcemeta::jsontoolkit::JSON document =
-      sourcemeta::jsontoolkit::JSON::make_object();
+    -> sourcemeta::core::JSON {
+  sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
   for (std::size_t index = 0; index < options.size; index++) {
-    const sourcemeta::jsontoolkit::JSON key =
-        this->read(*(options.key_encoding));
+    const sourcemeta::core::JSON key = this->read(*(options.key_encoding));
     assert(key.is_string());
     document.assign(key.to_string(), this->read(*(options.encoding)));
   }
@@ -23,13 +21,11 @@ auto Decoder::FIXED_TYPED_ARBITRARY_OBJECT(
 
 auto Decoder::VARINT_TYPED_ARBITRARY_OBJECT(
     const struct VARINT_TYPED_ARBITRARY_OBJECT &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   const std::uint64_t size{this->get_varint()};
-  sourcemeta::jsontoolkit::JSON document =
-      sourcemeta::jsontoolkit::JSON::make_object();
+  sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
   for (std::size_t index = 0; index < size; index++) {
-    const sourcemeta::jsontoolkit::JSON key =
-        this->read(*(options.key_encoding));
+    const sourcemeta::core::JSON key = this->read(*(options.key_encoding));
     assert(key.is_string());
     document.assign(key.to_string(), this->read(*(options.encoding)));
   }

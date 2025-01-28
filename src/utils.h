@@ -1,9 +1,9 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
-#include <sourcemeta/jsontoolkit/json.h>
-#include <sourcemeta/jsontoolkit/jsonpointer.h>
-#include <sourcemeta/jsontoolkit/jsonschema.h>
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
 
@@ -19,8 +19,7 @@
 
 namespace sourcemeta::jsonschema::cli {
 
-auto read_file(const std::filesystem::path &path)
-    -> sourcemeta::jsontoolkit::JSON;
+auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON;
 
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
@@ -29,8 +28,7 @@ auto parse_options(const std::span<const std::string> &arguments,
 auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
-    -> std::vector<
-        std::pair<std::filesystem::path, sourcemeta::jsontoolkit::JSON>>;
+    -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
 
 auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
     -> void;
@@ -39,8 +37,7 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote = false)
-    -> sourcemeta::jsontoolkit::SchemaResolver;
+              const bool remote = false) -> sourcemeta::core::SchemaResolver;
 
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;

@@ -85,8 +85,7 @@ auto aws_sigv4_canonical(const http::Method method, std::string_view host,
   return canonical.str();
 }
 
-auto aws_sigv4(const http::Method method,
-               const sourcemeta::jsontoolkit::URI &url,
+auto aws_sigv4(const http::Method method, const sourcemeta::core::URI &url,
                std::string_view access_key, std::string_view secret_key,
                std::string_view region, std::string &&content_checksum,
                const std::chrono::system_clock::time_point now)

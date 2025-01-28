@@ -10,7 +10,7 @@
 namespace sourcemeta::jsonbinpack {
 
 auto Decoder::BYTE_CHOICE_INDEX(const struct BYTE_CHOICE_INDEX &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   assert(!options.choices.empty());
   assert(is_byte(options.choices.size()));
   const std::uint8_t index{this->get_byte()};
@@ -19,7 +19,7 @@ auto Decoder::BYTE_CHOICE_INDEX(const struct BYTE_CHOICE_INDEX &options)
 }
 
 auto Decoder::LARGE_CHOICE_INDEX(const struct LARGE_CHOICE_INDEX &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   assert(!options.choices.empty());
   const std::uint64_t index{this->get_varint()};
   assert(options.choices.size() > index);
@@ -28,7 +28,7 @@ auto Decoder::LARGE_CHOICE_INDEX(const struct LARGE_CHOICE_INDEX &options)
 
 auto Decoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   assert(!options.choices.empty());
   assert(is_byte(options.choices.size()));
   if (!this->has_more_data()) {
@@ -41,13 +41,12 @@ auto Decoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
 }
 
 auto Decoder::CONST_NONE(const struct CONST_NONE &options)
-    -> sourcemeta::jsontoolkit::JSON {
+    -> sourcemeta::core::JSON {
   return options.value;
 }
 
 auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
-    const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &)
-    -> sourcemeta::jsontoolkit::JSON {
+    const struct ANY_PACKED_TYPE_TAG_BYTE_PREFIX &) -> sourcemeta::core::JSON {
   using namespace internal::ANY_PACKED_TYPE_TAG_BYTE_PREFIX;
   const std::uint8_t byte{this->get_byte()};
   const std::uint8_t type{
@@ -57,33 +56,32 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
   if (type == TYPE_OTHER) {
     switch (subtype) {
       case SUBTYPE_NULL:
-        return sourcemeta::jsontoolkit::JSON{nullptr};
+        return sourcemeta::core::JSON{nullptr};
       case SUBTYPE_FALSE:
-        return sourcemeta::jsontoolkit::JSON{false};
+        return sourcemeta::core::JSON{false};
       case SUBTYPE_TRUE:
-        return sourcemeta::jsontoolkit::JSON{true};
+        return sourcemeta::core::JSON{true};
       case SUBTYPE_NUMBER:
         return this->DOUBLE_VARINT_TUPLE({});
       case SUBTYPE_POSITIVE_REAL_INTEGER_BYTE:
-        return sourcemeta::jsontoolkit::JSON{
-            static_cast<double>(this->get_byte())};
+        return sourcemeta::core::JSON{static_cast<double>(this->get_byte())};
       case SUBTYPE_POSITIVE_INTEGER:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             static_cast<std::int64_t>(this->get_varint())};
       case SUBTYPE_NEGATIVE_INTEGER:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             -static_cast<std::int64_t>(this->get_varint()) - 1};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_7:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             this->get_string_utf8(this->get_varint() + 128)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_8:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             this->get_string_utf8(this->get_varint() + 256)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_9:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             this->get_string_utf8(this->get_varint() + 512)};
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_10:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             this->get_string_utf8(this->get_varint() + 1024)};
     }
 
@@ -92,10 +90,10 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
   } else {
     switch (type) {
       case TYPE_POSITIVE_INTEGER_BYTE:
-        return sourcemeta::jsontoolkit::JSON{subtype > 0 ? subtype - 1
-                                                         : this->get_byte()};
+        return sourcemeta::core::JSON{subtype > 0 ? subtype - 1
+                                                  : this->get_byte()};
       case TYPE_NEGATIVE_INTEGER_BYTE:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             subtype > 0 ? static_cast<std::int64_t>(-subtype)
                         : static_cast<std::int64_t>(-this->get_byte() - 1)};
       case TYPE_SHARED_STRING: {
@@ -104,18 +102,17 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                                 : subtype - 1;
         const std::uint64_t position{this->position()};
         const std::uint64_t current{this->rewind(this->get_varint(), position)};
-        const sourcemeta::jsontoolkit::JSON value{
-            this->get_string_utf8(length)};
+        const sourcemeta::core::JSON value{this->get_string_utf8(length)};
         this->seek(current);
         return value;
       };
       case TYPE_STRING:
-        return subtype == 0 ? this->FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-                                  {uint_max<5> * 2})
-                            : sourcemeta::jsontoolkit::JSON{
-                                  this->get_string_utf8(subtype - 1)};
+        return subtype == 0
+                   ? this->FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
+                         {uint_max<5> * 2})
+                   : sourcemeta::core::JSON{this->get_string_utf8(subtype - 1)};
       case TYPE_LONG_STRING:
-        return sourcemeta::jsontoolkit::JSON{
+        return sourcemeta::core::JSON{
             this->get_string_utf8(subtype + uint_max<5>)};
       case TYPE_ARRAY:
         return subtype == 0 ? this->FIXED_TYPED_ARRAY(
