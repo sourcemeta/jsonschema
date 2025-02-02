@@ -8,10 +8,16 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
-#include <termcolor/termcolor.hpp>
 #include "command.h"
 #include "configure.h"
-
+#ifdef _WIN32
+#include <io.h>
+#define isatty _isatty
+#define fileno _fileno
+#else
+#include <unistd.h>
+#endif
+#include <termcolor/termcolor.hpp>
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
