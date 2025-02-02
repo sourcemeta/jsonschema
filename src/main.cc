@@ -8,7 +8,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
-
+#include <termcolor/termcolor.hpp>
 #include "command.h"
 #include "configure.h"
 
