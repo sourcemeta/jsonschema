@@ -209,18 +209,18 @@ auto print(const sourcemeta::blaze::TraceOutput &output,
     }
 
     switch (entry.type) {
-    case sourcemeta::blaze::TraceOutput::EntryType::Push:
-      stream << "-> (push) ";
-      break;
-    case sourcemeta::blaze::TraceOutput::EntryType::Pass:
-      stream << "<- (pass) ";
-      break;
-    case sourcemeta::blaze::TraceOutput::EntryType::Fail:
-      stream << "<- (fail) ";
-      break;
-    default:
-      assert(false);
-      break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Push:
+        stream << "-> (push) ";
+        break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Pass:
+        stream << "<- (pass) ";
+        break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Fail:
+        stream << "<- (fail) ";
+        break;
+      default:
+        assert(false);
+        break;
     }
 
     stream << "\"";

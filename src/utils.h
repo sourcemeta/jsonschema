@@ -30,11 +30,11 @@ auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::string> &extensions)
     -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
 
-auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
-    -> void;
+auto print(const sourcemeta::blaze::ErrorOutput &output,
+           std::ostream &stream) -> void;
 
-auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
-    -> void;
+auto print(const sourcemeta::blaze::TraceOutput &output,
+           std::ostream &stream) -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote = false) -> sourcemeta::core::SchemaResolver;
@@ -42,13 +42,11 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;
 
-auto parse_extensions(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::string>;
+auto parse_extensions(const std::map<std::string, std::vector<std::string>>
+                          &options) -> std::set<std::string>;
 
-auto parse_ignore(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::filesystem::path>;
+auto parse_ignore(const std::map<std::string, std::vector<std::string>>
+                      &options) -> std::set<std::filesystem::path>;
 
 } // namespace sourcemeta::jsonschema::cli
 
