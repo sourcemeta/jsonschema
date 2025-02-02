@@ -1,15 +1,20 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <chrono>   // std::chrono
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
+#include <filesystem>
 #include <iostream> // std::cerr
+#include <optional> // std::optional
 #include <set>      // std::set
+#include <span>     // std::span
 #include <string>   // std::string
+#include <utility>  // std::ref
 
 #include "command.h"
 #include "utils.h"
@@ -20,7 +25,8 @@
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
-      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace"})};
+      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace",
+                               "p", "path"})};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -44,9 +50,36 @@ auto sourcemeta::jsonschema::cli::validate(
 
   const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
-  if (!sourcemeta::core::is_schema(schema)) {
-    std::cerr << "error: The schema file you provided does not represent a "
-                 "valid JSON Schema\n  "
+  // Extract optional JSON Pointer from --path/-p
+  std::optional<std::string> pointer_option;
+  if (options.contains("p") && !options.at("p").empty()) {
+    pointer_option = options.at("p").at(0);
+  } else if (options.contains("path") && !options.at("path").empty()) {
+    pointer_option = options.at("path").at(0);
+  }
+
+  // Start by copying the entire schema, then override if pointer is given
+  sourcemeta::core::JSON resolved_schema{schema};
+
+  if (pointer_option.has_value()) {
+    // Convert pointer string -> sourcemeta::core::Pointer
+    const auto pointer = sourcemeta::core::to_pointer(pointer_option.value());
+    // Attempt to get the sub-schema
+    const auto *maybe_ptr = sourcemeta::core::try_get(schema, pointer);
+    if (maybe_ptr == nullptr) {
+      std::cerr << "error: Failed to resolve JSON Pointer '"
+                << pointer_option.value() << "' in the provided schema\n  "
+                << std::filesystem::canonical(schema_path).string() << "\n";
+      return EXIT_FAILURE;
+    }
+
+    resolved_schema = *maybe_ptr;
+  }
+
+  // Validate that the final resolved_schema is indeed a valid JSON Schema
+  if (!sourcemeta::core::is_schema(resolved_schema)) {
+    std::cerr << "error: The schema (or sub-schema) you provided does not\n"
+              << "represent a valid JSON Schema\n  "
               << std::filesystem::canonical(schema_path).string() << "\n";
     return EXIT_FAILURE;
   }
@@ -54,7 +87,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::core::default_schema_walker, custom_resolver,
+      resolved_schema, sourcemeta::core::default_schema_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
   sourcemeta::blaze::Evaluator evaluator;
 
