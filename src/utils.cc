@@ -142,6 +142,8 @@ auto parse_options(const std::span<const std::string> &arguments,
   std::set<std::string> effective_flags{flags};
   effective_flags.insert("v");
   effective_flags.insert("verbose");
+  effective_flags.insert("n");
+  effective_flags.insert("no-color");
 
   options.insert({"", {}});
   std::optional<std::string> current_option;

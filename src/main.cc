@@ -10,6 +10,7 @@
 #include <vector>      // std::vector
 #include "command.h"
 #include "configure.h"
+#include "utils.h"
 #ifdef _WIN32
 #include <io.h>
 #define isatty _isatty
@@ -22,6 +23,7 @@ constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
    --verbose, -v    Enable verbose output
+   --no-color, -n   Disable colored output
    --resolve, -r    Import the given JSON Schema (or directory of schemas)
                     into the resolution context
 
@@ -81,6 +83,11 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
+  const std::set<std::string> flags{"no-color", "n", "verbose", "v"};
+  const auto options = sourcemeta::jsonschema::cli::parse_options(arguments, flags);
+  const bool use_colors = !options.contains("no-color") && 
+                         !options.contains("n") && 
+                         isatty(fileno(stdout));
   if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
   } else if (command == "frame") {
@@ -100,11 +107,17 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "decode") {
     return sourcemeta::jsonschema::cli::decode(arguments);
   } else {
-    std::cout << "JSON Schema CLI - v"
-              << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
-    std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
-              << " <command> [arguments...]\n";
-    std::cout << USAGE_DETAILS;
+    std::cout << "JSON Schema CLI - ";
+  if (use_colors) {
+    std::cout << termcolor::yellow << "v" 
+              << sourcemeta::jsonschema::cli::PROJECT_VERSION 
+              << termcolor::reset;
+  } else {
+    std::cout << "v" << sourcemeta::jsonschema::cli::PROJECT_VERSION;
+  }
+  std::cout << "\nUsage: " << std::filesystem::path{program}.filename().string()
+            << " <command> [arguments...]\n"
+            << USAGE_DETAILS;
     return EXIT_SUCCESS;
   }
 }
