@@ -185,8 +185,8 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto print(const sourcemeta::blaze::ErrorOutput &output,
-           std::ostream &stream) -> void {
+auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
+    -> void {
   stream << "error: Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
@@ -199,8 +199,8 @@ auto print(const sourcemeta::blaze::ErrorOutput &output,
   }
 }
 
-auto print(const sourcemeta::blaze::TraceOutput &output,
-           std::ostream &stream) -> void {
+auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
+    -> void {
   for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
     const auto &entry{*iterator};
 
@@ -311,8 +311,9 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
   return null_stream;
 }
 
-auto parse_extensions(const std::map<std::string, std::vector<std::string>>
-                          &options) -> std::set<std::string> {
+auto parse_extensions(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::set<std::string> {
   std::set<std::string> result;
 
   if (options.contains("extension")) {
@@ -338,8 +339,9 @@ auto parse_extensions(const std::map<std::string, std::vector<std::string>>
   return result;
 }
 
-auto parse_ignore(const std::map<std::string, std::vector<std::string>>
-                      &options) -> std::set<std::filesystem::path> {
+auto parse_ignore(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::set<std::filesystem::path> {
   std::set<std::filesystem::path> result;
 
   if (options.contains("ignore")) {
