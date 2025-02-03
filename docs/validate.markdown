@@ -85,6 +85,12 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json \
   --resolve path/to/external.json
 ```
 
+### Validate a JSON instance against a sub-schema
+
+```sh
+jsonschema validate path/to/schema.json path/to/instance.json --path=/components/schemas/Pet
+```
+
 ### Validate a JSON instance importing a directory of `.schema.json` schemas
 
 ```sh
