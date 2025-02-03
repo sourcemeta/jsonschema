@@ -12,6 +12,7 @@ find_package(Core REQUIRED)
 find_package(Blaze REQUIRED)
 find_package(JSONBinPack REQUIRED)
 find_package(Hydra REQUIRED)
+find_package(TermColor REQUIRED)
 add_subdirectory(src)
 
 if(JSONSCHEMA_DEVELOPMENT)

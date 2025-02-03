@@ -3,3 +3,4 @@ core https://github.com/sourcemeta/core 32f08ad1e4d3e39097eda3fdd44e58ad0b5d59ec
 hydra https://github.com/sourcemeta/hydra a67b879df800e834ed8a2d056f98398f7211d870
 jsonbinpack https://github.com/sourcemeta/jsonbinpack d0f111b04fc4d252e278bafd66c382a9db3d3057
 blaze https://github.com/sourcemeta/blaze ee117240f8399831001cb1c764d8b08503fc9112
+termcolor https://github.com/ikalnytskyi/termcolor v2.1.0
