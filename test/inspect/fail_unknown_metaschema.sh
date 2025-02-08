@@ -15,7 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" frame "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
+"$1" inspect "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"

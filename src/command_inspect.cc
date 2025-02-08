@@ -25,13 +25,13 @@ enum_to_string(const sourcemeta::core::SchemaFrame::LocationType type)
   }
 }
 
-auto sourcemeta::jsonschema::cli::frame(
+auto sourcemeta::jsonschema::cli::inspect(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {})};
   if (options.at("").size() < 1) {
     std::cerr
         << "error: This command expects a path to a schema. For example:\n\n"
-        << "  jsonschema frame path/to/schema.json\n";
+        << "  jsonschema inspect path/to/schema.json\n";
     return EXIT_FAILURE;
   }
 

@@ -15,7 +15,7 @@ $defs:
   string: { type: string }
 EOF
 
-"$1" frame "$TMP/schema.yaml" > "$TMP/result.txt"
+"$1" inspect "$TMP/schema.yaml" > "$TMP/result.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
 (LOCATION) URI: https://example.com

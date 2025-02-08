@@ -19,7 +19,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 # Test with --json flag
-"$1" frame "$TMP/schema.json" --json > "$TMP/result_json.txt"
+"$1" inspect "$TMP/schema.json" --json > "$TMP/result_json.txt"
 
 cat << 'EOF' > "$TMP/expected_json.txt"
 {

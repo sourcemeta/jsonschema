@@ -144,12 +144,12 @@ add_jsonschema_test_unix(bundle/fail_resolve_invalid_json)
 add_jsonschema_test_unix(bundle/fail_schema_invalid_json)
 add_jsonschema_test_unix(bundle/fail_unknown_metaschema)
 
-# Frame
-add_jsonschema_test_unix(frame/pass)
-add_jsonschema_test_unix(frame/pass_yaml)
-add_jsonschema_test_unix(frame/fail_no_schema)
-add_jsonschema_test_unix(frame/fail_schema_invalid_json)
-add_jsonschema_test_unix(frame/fail_unknown_metaschema)
+# Inspect
+add_jsonschema_test_unix(inspect/pass)
+add_jsonschema_test_unix(inspect/pass_yaml)
+add_jsonschema_test_unix(inspect/fail_no_schema)
+add_jsonschema_test_unix(inspect/fail_schema_invalid_json)
+add_jsonschema_test_unix(inspect/fail_unknown_metaschema)
 
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
