@@ -10,5 +10,5 @@ runs:
           --output "${GITHUB_WORKSPACE}/install.sh" \
           "https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install"
         chmod +x "${GITHUB_WORKSPACE}/install.sh"
-        "${GITHUB_WORKSPACE}/install.sh" 5.0.1
+        "${GITHUB_WORKSPACE}/install.sh" 5.0.2
         rm "${GITHUB_WORKSPACE}/install.sh"
