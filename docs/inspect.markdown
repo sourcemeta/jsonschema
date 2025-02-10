@@ -2,14 +2,14 @@ Framing
 =======
 
 ```sh
-jsonschema frame <schema.json|.yaml> [--json/-j] [--verbose/-v]
+jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the
 dialects and keywords in use, walk over its valid subschemas, and resolve URI
 references between them. We refer to this
 [reconnaissance](https://en.wikipedia.org/wiki/Reconnaissance) process as
-"framing". The JSON Schema CLI offers a `frame` command so you can "see through
+"framing". The JSON Schema CLI offers a `inspect` command so you can "see through
 the eyes" of a JSON Schema implementation previous to the evaluation step. This
 is often useful for debugging purposes.
 
@@ -55,14 +55,14 @@ reference:
     - (fragment)     : /$defs/string
 ```
 
-### Frame a JSON Schema
+### Inspect a JSON Schema
 
 ```sh
-jsonschema frame path/to/my/schema.json
+jsonschema inspect path/to/my/schema.json
 ```
 
-### Frame a JSON Schema and output result as a JSON document
+### Inspect a JSON Schema and output result as a JSON document
 
 ```sh
-jsonschema frame path/to/my/schema.json --json
+jsonschema inspect path/to/my/schema.json --json
 ```

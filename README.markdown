@@ -62,7 +62,7 @@ documentation:
 - [`jsonschema fmt`](./docs/format.markdown)
 - [`jsonschema lint`](./docs/lint.markdown)
 - [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
-- [`jsonschema frame`](./docs/frame.markdown) (for debugging references)
+- [`jsonschema inspect`](./docs/inspect.markdown) (for debugging references)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
 
