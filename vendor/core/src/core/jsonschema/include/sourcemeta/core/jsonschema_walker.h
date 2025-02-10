@@ -6,73 +6,17 @@
 #endif
 
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema_keywords.h>
-#include <sourcemeta/core/jsonschema_resolver.h>
+
+#include <sourcemeta/core/jsonschema_types.h>
 
 #include <cstdint>     // std::uint64_t
-#include <functional>  // std::function
 #include <map>         // std::map
 #include <optional>    // std::optional
-#include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
-
-/// @ingroup jsonschema
-/// A structure that encapsulates the result of walker over a specific keyword
-struct SchemaWalkerResult {
-  /// The walker strategy to continue traversing across the schema
-  const KeywordType type;
-  /// The vocabulary associated with the keyword, if any
-  const std::optional<std::string> vocabulary;
-  /// The keywords a given keyword depends on (if any) during the evaluation
-  /// process
-  const std::set<std::string> dependencies;
-};
-
-/// @ingroup jsonschema
-///
-/// For walking purposes, some functions need to understand which JSON Schema
-/// keywords declare other JSON Schema definitions. To accomplish this in a
-/// generic and flexible way that does not assume the use any vocabulary other
-/// than `core`, these functions take a walker function as argument, of the type
-/// sourcemeta::core::SchemaWalker.
-///
-/// For convenience, we provide the following default walkers:
-///
-/// - sourcemeta::core::default_schema_walker
-/// - sourcemeta::core::schema_walker_none
-using SchemaWalker = std::function<SchemaWalkerResult(
-    std::string_view, const std::map<std::string, bool> &)>;
-
-/// @ingroup jsonschema
-/// A stub walker that doesn't walk
-SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-inline auto schema_walker_none(std::string_view,
-                               const std::map<std::string, bool> &)
-    -> sourcemeta::core::SchemaWalkerResult {
-  return {KeywordType::Unknown, std::nullopt, {}};
-}
-
-/// @ingroup jsonschema
-/// A default schema walker with support for a wide range of drafs
-SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto default_schema_walker(std::string_view keyword,
-                           const std::map<std::string, bool> &vocabularies)
-    -> sourcemeta::core::SchemaWalkerResult;
-
-/// @ingroup jsonschema
-/// An entry of a schema iterator.
-struct SchemaIteratorEntry {
-  Pointer pointer;
-  std::optional<std::string> dialect;
-  std::map<std::string, bool> vocabularies;
-  std::optional<std::string> base_dialect;
-  JSON value;
-};
 
 /// @ingroup jsonschema
 ///
@@ -90,7 +34,7 @@ struct SchemaIteratorEntry {
 /// #include <iostream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(R"JSON({
+///   sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "object",
 ///   "properties": {
@@ -105,8 +49,8 @@ struct SchemaIteratorEntry {
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaIterator{
-///          document, sourcemeta::core::default_schema_walker,
-///          sourcemeta::core::official_resolver}) {
+///          document, sourcemeta::core::schema_official_walker,
+///          sourcemeta::core::schema_official_resolver}) {
 ///   sourcemeta::core::prettify(
 ///     sourcemeta::core::get(document, entry.pointer), std::cout);
 ///   std::cout << "\n";
@@ -157,7 +101,7 @@ private:
 /// #include <iostream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(R"JSON({
+///   sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "object",
 ///   "properties": {
@@ -172,8 +116,8 @@ private:
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaIteratorFlat{
-///          document, sourcemeta::core::default_schema_walker,
-///          sourcemeta::core::official_resolver}) {
+///          document, sourcemeta::core::schema_official_walker,
+///          sourcemeta::core::schema_official_resolver}) {
 ///   sourcemeta::core::prettify(
 ///     sourcemeta::core::get(document, entry.pointer), std::cout);
 ///   std::cout << "\n";
@@ -209,45 +153,6 @@ private:
 
 /// @ingroup jsonschema
 ///
-/// Calculate the priority of a keyword that determines the ordering in which a
-/// JSON Schema implementation should evaluate keyword on a subschema. It does
-/// so based on the keyword dependencies expressed in the schema walker. The
-/// higher the priority, the more the evaluation of such keyword must be
-/// delayed.
-///
-/// For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
-/// #include <cassert>
-///
-/// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "prefixItems": [ true, true ],
-///   "items": false
-/// })JSON");
-///
-/// const auto vocabularies{
-///   sourcemeta::core::vocabularies(
-///     document, sourcemeta::core::official_resolver)};
-///
-/// assert(sourcemeta::core::keyword_priority(
-///   "prefixItems", vocabularies,
-///   sourcemeta::core::default_schema_walker) == 0);
-///
-/// // The "items" keyword must be evaluated after the "prefixItems" keyword
-/// assert(sourcemeta::core::keyword_priority(
-///   "items", vocabularies,
-///   sourcemeta::core::default_schema_walker) == 1);
-/// ```
-auto SOURCEMETA_CORE_JSONSCHEMA_EXPORT keyword_priority(
-    std::string_view keyword, const std::map<std::string, bool> &vocabularies,
-    const SchemaWalker &walker) -> std::uint64_t;
-
-/// @ingroup jsonschema
-///
 /// Return an iterator over the top-level keywords of a given JSON Schema
 /// definition in the order in which an implementation must evaluate them.
 ///
@@ -259,7 +164,7 @@ auto SOURCEMETA_CORE_JSONSCHEMA_EXPORT keyword_priority(
 /// #include <iostream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(R"JSON({
+///   sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "object",
 ///   "properties": {},
@@ -269,8 +174,8 @@ auto SOURCEMETA_CORE_JSONSCHEMA_EXPORT keyword_priority(
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaKeywordIterator{
-///          document, sourcemeta::core::default_schema_walker,
-///          sourcemeta::core::official_resolver}) {
+///          document, sourcemeta::core::schema_official_walker,
+///          sourcemeta::core::schema_official_resolver}) {
 ///   sourcemeta::core::stringify(entry.pointer, std::cout);
 ///   std::cout << "\n";
 /// }

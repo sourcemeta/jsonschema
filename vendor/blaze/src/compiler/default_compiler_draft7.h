@@ -27,7 +27,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
-        {sourcemeta::core::ReferenceType::Static, destination}));
+        {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
         "then", dynamic_context.base_schema_location,
         sourcemeta::core::empty_pointer, dynamic_context.property_as_target};
@@ -52,7 +52,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
-        {sourcemeta::core::ReferenceType::Static, destination}));
+        {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
         "else", dynamic_context.base_schema_location,
         sourcemeta::core::empty_pointer, dynamic_context.property_as_target};

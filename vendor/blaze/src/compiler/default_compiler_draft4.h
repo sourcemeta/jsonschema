@@ -199,7 +199,7 @@ auto compiler_draft4_core_ref(const Context &context,
                               const Instructions &) -> Instructions {
   // Determine the label
   const auto &entry{static_frame_entry(context, schema_context)};
-  const auto type{sourcemeta::core::ReferenceType::Static};
+  const auto type{sourcemeta::core::SchemaReferenceType::Static};
   if (!context.frame.references().contains({type, entry.pointer})) {
     assert(schema_context.schema.at(dynamic_context.keyword).is_string());
     throw sourcemeta::core::SchemaReferenceError(
@@ -601,7 +601,7 @@ auto compiler_draft4_validation_required(const Context &context,
           }
         }
 
-        sourcemeta::core::KeyHash<ValueString> hasher;
+        sourcemeta::core::PropertyHashJSON<ValueString> hasher;
         if (context.mode == Mode::FastValidation &&
             properties_set.size() == 3 &&
             std::all_of(properties_set.begin(), properties_set.end(),
@@ -843,14 +843,14 @@ auto properties_as_loop(const Context &context,
                   context.frame.references().cend(),
                   [&context, &current_entry](const auto &reference) {
                     if (!context.frame.locations().contains(
-                            {sourcemeta::core::ReferenceType::Static,
+                            {sourcemeta::core::SchemaReferenceType::Static,
                              reference.second.destination})) {
                       return false;
                     }
 
                     const auto &target{
                         context.frame.locations()
-                            .at({sourcemeta::core::ReferenceType::Static,
+                            .at({sourcemeta::core::SchemaReferenceType::Static,
                                  reference.second.destination})
                             .pointer};
                     return is_inside_disjunctor(reference.first.second) &&
@@ -997,7 +997,7 @@ auto compiler_draft4_applicator_properties_with_options(
                     required_copy.as_array().end());
           ValueStringSet required{json_array_to_string_set(required_copy)};
           if (is_closed_properties_required(schema_context.schema, required)) {
-            sourcemeta::core::KeyHash<ValueString> hasher;
+            sourcemeta::core::PropertyHashJSON<ValueString> hasher;
             std::vector<std::pair<ValueString, ValueStringSet::hash_type>>
                 perfect_hashes;
             for (const auto &entry : required) {
@@ -1905,7 +1905,7 @@ auto compiler_draft4_validation_enum(const Context &context,
                         sourcemeta::blaze::ValueStringSet::hash_type>>
       perfect_string_hashes;
   ValueSet options;
-  sourcemeta::core::KeyHash<ValueString> hasher;
+  sourcemeta::core::PropertyHashJSON<ValueString> hasher;
   for (const auto &option :
        schema_context.schema.at(dynamic_context.keyword).as_array()) {
     if (option.is_string()) {

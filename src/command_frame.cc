@@ -8,16 +8,17 @@
 #include "command.h"
 #include "utils.h"
 
-static auto enum_to_string(const sourcemeta::core::Frame::LocationType type)
+static auto
+enum_to_string(const sourcemeta::core::SchemaFrame::LocationType type)
     -> std::string {
   switch (type) {
-    case sourcemeta::core::Frame::LocationType::Resource:
+    case sourcemeta::core::SchemaFrame::LocationType::Resource:
       return "resource";
-    case sourcemeta::core::Frame::LocationType::Anchor:
+    case sourcemeta::core::SchemaFrame::LocationType::Anchor:
       return "anchor";
-    case sourcemeta::core::Frame::LocationType::Pointer:
+    case sourcemeta::core::SchemaFrame::LocationType::Pointer:
       return "pointer";
-    case sourcemeta::core::Frame::LocationType::Subschema:
+    case sourcemeta::core::SchemaFrame::LocationType::Subschema:
       return "subschema";
     default:
       return "unknown";
@@ -37,8 +38,8 @@ auto sourcemeta::jsonschema::cli::frame(
   const sourcemeta::core::JSON schema{
       sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
-  sourcemeta::core::Frame frame;
-  frame.analyse(schema, sourcemeta::core::default_schema_walker,
+  sourcemeta::core::SchemaFrame frame;
+  frame.analyse(schema, sourcemeta::core::schema_official_walker,
                 resolver(options));
 
   const auto output_json = options.contains("json") || options.contains("j");
@@ -75,10 +76,11 @@ auto sourcemeta::jsonschema::cli::frame(
     for (const auto &[pointer, entry] : frame.references()) {
       auto ref_entry = sourcemeta::core::JSON::make_object();
       ref_entry.assign(
-          "type", sourcemeta::core::JSON{
-                      pointer.first == sourcemeta::core::ReferenceType::Dynamic
-                          ? "dynamic"
-                          : "static"});
+          "type",
+          sourcemeta::core::JSON{
+              pointer.first == sourcemeta::core::SchemaReferenceType::Dynamic
+                  ? "dynamic"
+                  : "static"});
       ref_entry.assign("destination",
                        sourcemeta::core::JSON{entry.destination});
       if (entry.base.has_value()) {
@@ -106,16 +108,16 @@ auto sourcemeta::jsonschema::cli::frame(
   } else {
     for (const auto &[key, entry] : frame.locations()) {
       switch (entry.type) {
-        case sourcemeta::core::Frame::LocationType::Resource:
+        case sourcemeta::core::SchemaFrame::LocationType::Resource:
           std::cout << "(LOCATION)";
           break;
-        case sourcemeta::core::Frame::LocationType::Anchor:
+        case sourcemeta::core::SchemaFrame::LocationType::Anchor:
           std::cout << "(ANCHOR)";
           break;
-        case sourcemeta::core::Frame::LocationType::Pointer:
+        case sourcemeta::core::SchemaFrame::LocationType::Pointer:
           std::cout << "(POINTER)";
           break;
-        case sourcemeta::core::Frame::LocationType::Subschema:
+        case sourcemeta::core::SchemaFrame::LocationType::Subschema:
           std::cout << "(SUBSCHEMA)";
           break;
         default:
@@ -129,7 +131,7 @@ auto sourcemeta::jsonschema::cli::frame(
       std::cout << key.second << "\n";
 
       std::cout << "    Type             : ";
-      if (key.first == sourcemeta::core::ReferenceType::Dynamic) {
+      if (key.first == sourcemeta::core::SchemaReferenceType::Dynamic) {
         std::cout << "Dynamic";
       } else {
         std::cout << "Static";
@@ -160,7 +162,8 @@ auto sourcemeta::jsonschema::cli::frame(
       sourcemeta::core::stringify(pointer.second, std::cout);
       std::cout << "\n";
       std::cout << "    Type             : "
-                << (pointer.first == sourcemeta::core::ReferenceType::Dynamic
+                << (pointer.first ==
+                            sourcemeta::core::SchemaReferenceType::Dynamic
                         ? "Dynamic"
                         : "Static")
                 << "\n";

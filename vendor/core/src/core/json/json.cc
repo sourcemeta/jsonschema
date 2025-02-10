@@ -9,30 +9,30 @@
 
 namespace sourcemeta::core {
 
-auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
-           std::uint64_t &line, std::uint64_t &column, const Callback &callback)
-    -> JSON {
-  return internal_parse(stream, line, column, callback);
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                std::uint64_t &line, std::uint64_t &column,
+                const JSON::ParseCallback &callback) -> JSON {
+  return internal_parse_json(stream, line, column, callback);
 }
 
-auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-           std::uint64_t &line, std::uint64_t &column, const Callback &callback)
-    -> JSON {
-  return internal_parse(input, line, column, callback);
+auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
+                std::uint64_t &line, std::uint64_t &column,
+                const JSON::ParseCallback &callback) -> JSON {
+  return internal_parse_json(input, line, column, callback);
 }
 
-auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
-           const Callback &callback) -> JSON {
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                const JSON::ParseCallback &callback) -> JSON {
   std::uint64_t line{1};
   std::uint64_t column{0};
-  return parse(stream, line, column, callback);
+  return parse_json(stream, line, column, callback);
 }
 
-auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-           const Callback &callback) -> JSON {
+auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
+                const JSON::ParseCallback &callback) -> JSON {
   std::uint64_t line{1};
   std::uint64_t column{0};
-  return parse(input, line, column, callback);
+  return parse_json(input, line, column, callback);
 }
 
 auto read_file(const std::filesystem::path &path)
@@ -50,13 +50,13 @@ auto read_file(const std::filesystem::path &path)
   return stream;
 }
 
-auto from_file(const std::filesystem::path &path) -> JSON {
+auto read_json(const std::filesystem::path &path) -> JSON {
   auto stream{read_file(path)};
   try {
-    return parse(stream);
-  } catch (const ParseError &error) {
+    return parse_json(stream);
+  } catch (const JSONParseError &error) {
     // For producing better error messages
-    throw FileParseError(path, error);
+    throw JSONFileParseError(path, error);
   }
 }
 
@@ -74,13 +74,13 @@ auto prettify(const JSON &document,
 
 auto stringify(const JSON &document,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-               const KeyComparison &compare) -> void {
+               const JSON::KeyComparison &compare) -> void {
   stringify<std::allocator>(document, stream, compare);
 }
 
 auto prettify(const JSON &document,
               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-              const KeyComparison &compare) -> void {
+              const JSON::KeyComparison &compare) -> void {
   prettify<std::allocator>(document, stream, compare);
 }
 

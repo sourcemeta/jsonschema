@@ -90,7 +90,7 @@ struct Context {
   /// The root schema resource
   const sourcemeta::core::JSON &root;
   /// The reference frame of the entire schema
-  const sourcemeta::core::Frame &frame;
+  const sourcemeta::core::SchemaFrame &frame;
   /// The set of all schema resources in the schema without duplicates
   const std::vector<std::string> resources;
   /// The schema walker in use
@@ -104,7 +104,7 @@ struct Context {
   /// Whether the schema makes use of dynamic scoping
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
-  const sourcemeta::core::UnevaluatedEntries unevaluated;
+  const sourcemeta::core::SchemaUnevaluatedEntries unevaluated;
   /// The list of subschemas that are precompiled at the beginning of the
   /// instruction set
   const std::set<std::string> precompiled_static_schemas;
@@ -129,14 +129,14 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// #include <sourcemeta/core/jsonschema.h>
 ///
 /// const sourcemeta::core::JSON schema =
-///     sourcemeta::core::parse(R"JSON({
+///     sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::core::default_schema_walker,
-///     sourcemeta::core::official_resolver,
+///     schema, sourcemeta::core::schema_official_walker,
+///     sourcemeta::core::schema_official_resolver,
 ///     sourcemeta::core::default_schema_compiler)};
 ///
 /// // Evaluate or encode

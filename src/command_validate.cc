@@ -54,7 +54,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::core::default_schema_walker, custom_resolver,
+      schema, sourcemeta::core::schema_official_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
   sourcemeta::blaze::Evaluator evaluator;
 
@@ -122,9 +122,9 @@ auto sourcemeta::jsonschema::cli::validate(
             break;
           }
         }
-      } catch (const sourcemeta::core::ParseError &error) {
+      } catch (const sourcemeta::core::JSONParseError &error) {
         // For producing better error messages
-        throw sourcemeta::core::FileParseError(instance_path, error);
+        throw sourcemeta::core::JSONFileParseError(instance_path, error);
       }
 
       if (index == 0) {

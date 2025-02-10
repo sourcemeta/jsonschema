@@ -323,6 +323,21 @@ public:
   /// ```
   auto relative_to(const URI &base) -> URI &;
 
+  /// Attempt to change the base of a URI . If the URI is not
+  /// relative to the former, leave the URI intact. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://example.com/foo/bar/baz"};
+  /// const sourcemeta::core::URI base{"https://example.com/foo"};
+  /// const sourcemeta::core::URI new_base{"/qux"};
+  /// uri.rebase(base, new_base);
+  /// assert(uri.recompose() == "/qux/bar/baz");
+  /// ```
+  auto rebase(const URI &base, const URI &new_base) -> URI &;
+
   /// Escape a string as established by RFC 3986 using C++ standard stream. For
   /// example:
   ///

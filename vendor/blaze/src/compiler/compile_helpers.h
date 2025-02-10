@@ -124,10 +124,10 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
 
 inline auto static_frame_entry(const Context &context,
                                const SchemaContext &schema_context)
-    -> const sourcemeta::core::Frame::LocationsEntry & {
+    -> const sourcemeta::core::SchemaFrame::LocationsEntry & {
   const auto current{
       to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
-  const auto type{sourcemeta::core::ReferenceType::Static};
+  const auto type{sourcemeta::core::SchemaReferenceType::Static};
   assert(context.frame.locations().contains({type, current}));
   return context.frame.locations().at({type, current});
 }
@@ -168,7 +168,7 @@ inline auto find_adjacent(const Context &context,
 
   // Attempt to statically follow references
   if (schema_context.schema.defines("$ref")) {
-    const auto reference_type{sourcemeta::core::ReferenceType::Static};
+    const auto reference_type{sourcemeta::core::SchemaReferenceType::Static};
     const auto destination_uri{
         to_uri(schema_context.relative_pointer.initial().concat({"$ref"}),
                schema_context.base)
@@ -198,12 +198,13 @@ inline auto find_adjacent(const Context &context,
 
   for (const auto &possible_keyword_uri : possible_keyword_uris) {
     if (!context.frame.locations().contains(
-            {sourcemeta::core::ReferenceType::Static, possible_keyword_uri})) {
+            {sourcemeta::core::SchemaReferenceType::Static,
+             possible_keyword_uri})) {
       continue;
     }
 
     const auto &frame_entry{context.frame.locations().at(
-        {sourcemeta::core::ReferenceType::Static, possible_keyword_uri})};
+        {sourcemeta::core::SchemaReferenceType::Static, possible_keyword_uri})};
     const auto &subschema{
         sourcemeta::core::get(context.root, frame_entry.pointer)};
     const auto &subschema_vocabularies{sourcemeta::core::vocabularies(
@@ -231,7 +232,7 @@ inline auto recursive_template_size(const Instructions &steps) -> std::size_t {
 }
 
 inline auto make_property(const ValueString &property) -> ValueProperty {
-  static const sourcemeta::core::KeyHash<ValueString> hasher;
+  static const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
   return {property, hasher(property)};
 }
 

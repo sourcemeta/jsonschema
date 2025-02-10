@@ -89,7 +89,7 @@ template <template <typename T> typename Allocator>
 auto stringify(
     const JSON &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare) -> void;
+    const JSON::KeyComparison &compare) -> void;
 
 template <template <typename T> typename Allocator>
 auto stringify(
@@ -393,7 +393,7 @@ template <template <typename T> typename Allocator>
 auto stringify(
     const typename JSON::Array &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare) -> void {
+    const JSON::KeyComparison &compare) -> void {
   stream.put(internal::token_array_begin<typename JSON::Char>);
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
@@ -410,7 +410,7 @@ template <template <typename T> typename Allocator>
 auto stringify(
     const typename JSON::Object &document, const JSON &container,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare) -> void {
+    const JSON::KeyComparison &compare) -> void {
   stream.put(internal::token_object_begin<typename JSON::Char>);
 
   if (compare) {
@@ -448,13 +448,13 @@ template <template <typename T> typename Allocator>
 auto prettify(
     const typename JSON::Object &document, const JSON &,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare, const std::size_t) -> void;
+    const JSON::KeyComparison &compare, const std::size_t) -> void;
 
 template <template <typename T> typename Allocator>
 auto prettify(
     const typename JSON::Array &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare, const std::size_t indentation) -> void {
+    const JSON::KeyComparison &compare, const std::size_t indentation) -> void {
   stream.put(internal::token_array_begin<typename JSON::Char>);
   const auto end{std::cend(document)};
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
@@ -479,7 +479,7 @@ template <template <typename T> typename Allocator>
 auto prettify(
     const typename JSON::Object &document, const JSON &container,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare, const std::size_t indentation) -> void {
+    const JSON::KeyComparison &compare, const std::size_t indentation) -> void {
   stream.put(internal::token_object_begin<typename JSON::Char>);
 
   if (compare) {
@@ -532,7 +532,7 @@ template <template <typename T> typename Allocator>
 auto stringify(
     const JSON &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare) -> void {
+    const JSON::KeyComparison &compare) -> void {
   switch (document.type()) {
     case JSON::Type::Null:
       stringify<Allocator>(nullptr, stream);
@@ -565,7 +565,8 @@ template <template <typename T> typename Allocator>
 auto prettify(
     const JSON &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const KeyComparison &compare, const std::size_t indentation = 0) -> void {
+    const JSON::KeyComparison &compare, const std::size_t indentation = 0)
+    -> void {
   switch (document.type()) {
     case JSON::Type::Null:
       stringify<Allocator>(nullptr, stream);

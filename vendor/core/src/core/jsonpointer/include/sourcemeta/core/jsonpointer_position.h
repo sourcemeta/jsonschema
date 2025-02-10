@@ -27,8 +27,8 @@ namespace sourcemeta::core {
 /// #include <cassert>
 ///
 /// const auto input{"{\n  \"foo\": \"bar\"\n}"};;
-/// sourcemeta::core::PositionTracker tracker;
-/// sourcemeta::core::parse(stream, std::ref(tracker));
+/// sourcemeta::core::PointerPositionTracker tracker;
+/// sourcemeta::core::parse_json(stream, std::ref(tracker));
 /// assert(tracker.size() == 2);
 /// const auto foo{tracker.get(sourcemeta::core::Pointer{"foo"})};
 /// assert(foo.has_value());
@@ -41,12 +41,12 @@ namespace sourcemeta::core {
 /// assert(std::get<3>(foo.value()) == 2);
 /// assert(std::get<4>(foo.value()) == 14);
 /// ```
-class SOURCEMETA_CORE_JSONPOINTER_EXPORT PositionTracker {
+class SOURCEMETA_CORE_JSONPOINTER_EXPORT PointerPositionTracker {
 public:
-  using Pointer = GenericPointer<JSON::String, KeyHash<JSON::String>>;
+  using Pointer = GenericPointer<JSON::String, PropertyHashJSON<JSON::String>>;
   using Position =
       std::tuple<std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
-  auto operator()(const CallbackPhase phase, const JSON::Type,
+  auto operator()(const JSON::ParsePhase phase, const JSON::Type,
                   const std::uint64_t line, const std::uint64_t column,
                   const JSON &value) -> void;
   auto get(const Pointer &pointer) const -> std::optional<Position>;

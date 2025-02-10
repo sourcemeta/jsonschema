@@ -40,7 +40,7 @@ auto sourcemeta::jsonschema::cli::lint(
       }
 
       auto copy = entry.second;
-      bundle.apply(copy, sourcemeta::core::default_schema_walker,
+      bundle.apply(copy, sourcemeta::core::schema_official_walker,
                    resolver(options));
       std::ofstream output{entry.first};
       sourcemeta::core::prettify(copy, output,
@@ -53,7 +53,7 @@ auto sourcemeta::jsonschema::cli::lint(
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       const bool subresult = bundle.check(
-          entry.second, sourcemeta::core::default_schema_walker,
+          entry.second, sourcemeta::core::schema_official_walker,
           resolver(options),
           [&entry](const auto &pointer, const auto &name, const auto &message) {
             std::cout << entry.first.string() << ":\n";

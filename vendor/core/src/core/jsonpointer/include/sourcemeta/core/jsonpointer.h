@@ -14,6 +14,7 @@
 #include <sourcemeta/core/jsonpointer_position.h>
 #include <sourcemeta/core/jsonpointer_proxy.h>
 #include <sourcemeta/core/jsonpointer_subpointer_walker.h>
+#include <sourcemeta/core/jsonpointer_template.h>
 #include <sourcemeta/core/jsonpointer_walker.h>
 
 #include <functional> // std::reference_wrapper
@@ -33,11 +34,11 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer
-using Pointer = GenericPointer<JSON::String, KeyHash<JSON::String>>;
+using Pointer = GenericPointer<JSON::String, PropertyHashJSON<JSON::String>>;
 
 /// @ingroup jsonpointer
 using WeakPointer = GenericPointer<std::reference_wrapper<const std::string>,
-                                   KeyHash<JSON::String>>;
+                                   PropertyHashJSON<JSON::String>>;
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON Pointer.
@@ -46,6 +47,10 @@ const Pointer empty_pointer;
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON WeakPointer.
 const WeakPointer empty_weak_pointer;
+
+/// @ingroup jsonpointer
+/// A JSON Pointer with unresolved wildcards
+using PointerTemplate = GenericPointerTemplate<Pointer>;
 
 /// @ingroup jsonpointer
 using PointerProxy = GenericPointerProxy<Pointer>;
@@ -61,7 +66,7 @@ using PointerProxy = GenericPointerProxy<Pointer>;
 ///
 /// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// const sourcemeta::core::Pointer pointer{1, "bar"};
 /// const sourcemeta::core::JSON &value{
@@ -84,7 +89,7 @@ auto get(const JSON &document, const Pointer &pointer) -> const JSON &;
 ///
 /// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// const std::string bar = "bar";
 /// const sourcemeta::core::WeakPointer pointer{1, std::cref(bar)};
@@ -107,7 +112,7 @@ auto get(const JSON &document, const WeakPointer &pointer) -> const JSON &;
 /// #include <sstream>
 ///
 /// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
-/// const auto document{sourcemeta::core::parse(stream)};
+/// const auto document{sourcemeta::core::parse_json(stream)};
 /// const sourcemeta::core::Pointer pointer{1, "bar"};
 /// const auto result{sourcemeta::core::try_get(document, pointer)};
 /// assert(result);
@@ -127,7 +132,7 @@ auto try_get(const JSON &document, const Pointer &pointer) -> const JSON *;
 /// #include <sstream>
 ///
 /// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
-/// const auto document{sourcemeta::core::parse(stream)};
+/// const auto document{sourcemeta::core::parse_json(stream)};
 /// const std::string bar = "bar";
 /// const sourcemeta::core::WeakPointer pointer{1, std::cref(bar)};
 /// const auto result{sourcemeta::core::try_get(document, pointer)};
@@ -149,7 +154,7 @@ auto try_get(const JSON &document, const WeakPointer &pointer) -> const JSON *;
 ///
 /// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
 /// sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 /// assert(document.at("foo").to_integer() == 1);
 ///
 /// const sourcemeta::core::Pointer pointer{1, "bar"};
@@ -173,7 +178,7 @@ auto get(JSON &document, const Pointer &pointer) -> JSON &;
 ///
 /// std::istringstream stream{"{ \"foo\": 1 }"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// const sourcemeta::core::JSON &value{
 ///   sourcemeta::core::get(document,
@@ -196,7 +201,7 @@ auto get(const JSON &document, const Pointer::Token &token) -> const JSON &;
 ///
 /// std::istringstream stream{"{ \"foo\": 1 }"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// const std::string foo = "foo";
 /// const sourcemeta::core::JSON &value{
@@ -220,7 +225,7 @@ auto get(const JSON &document, const WeakPointer::Token &token) -> const JSON &;
 ///
 /// std::istringstream stream{"{ \"foo\": 1 }"};
 /// sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// sourcemeta::core::JSON &value{
 ///   sourcemeta::core::get(document, "bar")};
@@ -245,7 +250,7 @@ auto get(JSON &document, const Pointer::Token &token) -> JSON &;
 ///
 /// std::istringstream stream{"{ \"foo\": 1 }"};
 /// sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 /// assert(document.at("foo").to_integer() == 1);
 ///
 /// const sourcemeta::core::Pointer pointer{"foo"};
@@ -271,7 +276,7 @@ auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void;
 ///
 /// std::istringstream stream{"{ \"foo\": 1 }"};
 /// sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 ///
 /// const sourcemeta::core::Pointer pointer{"foo"};
 /// sourcemeta::core::set(document, pointer,
@@ -375,6 +380,27 @@ auto stringify(const WeakPointer &pointer,
 
 /// @ingroup jsonpointer
 ///
+/// Stringify the input JSON Pointer template into a given C++ standard output
+/// stream. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <iostream>
+/// #include <sstream>
+///
+/// const sourcemeta::core::Pointer base{"foo", "bar"};
+/// const sourcemeta::core::PointerTemplate pointer{base};
+/// std::ostringstream stream;
+/// sourcemeta::core::stringify(pointer, stream);
+/// std::cout << stream.str() << std::endl;
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto stringify(const PointerTemplate &pointer,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
+    -> void;
+
+/// @ingroup jsonpointer
+///
 /// Stringify the input JSON Pointer into a C++ standard string. For example:
 ///
 /// ```cpp
@@ -462,7 +488,7 @@ auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 /// #include <vector>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
 /// std::vector<sourcemeta::core::Pointer> subpointers;
 ///
 /// for (const auto &subpointer :

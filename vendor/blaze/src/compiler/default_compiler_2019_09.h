@@ -411,7 +411,7 @@ auto compiler_2019_09_core_recursiveref(const Context &context,
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
-          {sourcemeta::core::ReferenceType::Dynamic, entry.pointer})) {
+          {sourcemeta::core::SchemaReferenceType::Dynamic, entry.pointer})) {
     return compiler_draft4_core_ref(context, schema_context, dynamic_context,
                                     current);
   }

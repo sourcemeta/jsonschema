@@ -14,10 +14,10 @@
 
 namespace {
 
-template <
-    template <typename T> typename Allocator, typename V,
-    typename PointerT = sourcemeta::core::GenericPointer<
-        typename V::String, sourcemeta::core::KeyHash<typename V::String>>>
+template <template <typename T> typename Allocator, typename V,
+          typename PointerT = sourcemeta::core::GenericPointer<
+              typename V::String,
+              sourcemeta::core::PropertyHashJSON<typename V::String>>>
 auto traverse(V &document, typename PointerT::const_iterator begin,
               typename PointerT::const_iterator end) -> V & {
   // Make sure types match
@@ -62,10 +62,10 @@ auto traverse(V &document, typename PointerT::const_iterator begin,
 
 // A variant of the above function that assumes traversing of
 // the entire pointer and does not rely on iterators for performance reasons
-template <
-    template <typename T> typename Allocator, typename V,
-    typename PointerT = sourcemeta::core::GenericPointer<
-        typename V::String, sourcemeta::core::KeyHash<typename V::String>>>
+template <template <typename T> typename Allocator, typename V,
+          typename PointerT = sourcemeta::core::GenericPointer<
+              typename V::String,
+              sourcemeta::core::PropertyHashJSON<typename V::String>>>
 auto traverse_all(V &document, const PointerT &pointer) -> V & {
   // Make sure types match
   static_assert(
@@ -254,7 +254,7 @@ auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
   stream << internal::token_pointer_quote<JSON::Char>;
   stream << input;
   stream << internal::token_pointer_quote<JSON::Char>;
-  return to_pointer(parse(stream));
+  return to_pointer(parse_json(stream));
 }
 
 auto to_pointer(const WeakPointer &pointer) -> Pointer {
@@ -278,6 +278,13 @@ auto stringify(const Pointer &pointer,
 }
 
 auto stringify(const WeakPointer &pointer,
+               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
+    -> void {
+  stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream,
+                                                          false);
+}
+
+auto stringify(const PointerTemplate &pointer,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {
   stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream,

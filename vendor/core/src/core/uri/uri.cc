@@ -432,7 +432,11 @@ auto URI::canonicalize() -> URI & {
   if (result_path.has_value()) {
     const auto canonical_path{canonicalize_path(result_path.value())};
     if (canonical_path.has_value()) {
-      this->path_ = canonical_path.value();
+      if (result_path.value().ends_with('/')) {
+        this->path_ = canonical_path.value() + "/";
+      } else {
+        this->path_ = canonical_path.value();
+      }
     }
   }
 
@@ -541,6 +545,29 @@ auto URI::relative_to(const URI &base) -> URI & {
     this->parse();
   }
 
+  return *this;
+}
+
+auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
+  this->relative_to(base);
+  if (!this->is_relative()) {
+    return *this;
+  }
+
+  // TODO: We should be able to this with `resolve_from`,
+  // however that methow can't take a relative base yet
+  std::ostringstream new_uri;
+  const auto new_base_string{new_base.recompose()};
+  const auto new_uri_string{this->recompose()};
+
+  new_uri << new_base_string;
+  if (!new_base_string.ends_with('/') && !new_uri_string.empty()) {
+    new_uri << '/';
+  }
+  new_uri << new_uri_string;
+
+  this->data = std::move(URI{new_uri.str()}.data);
+  this->parse();
   return *this;
 }
 

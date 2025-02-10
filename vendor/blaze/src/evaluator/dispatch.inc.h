@@ -216,7 +216,7 @@ INSTRUCTION_HANDLER(AssertionPropertyDependencies) {
   assert(!value.empty());
   result = true;
   const auto &object{target.as_object()};
-  const sourcemeta::core::KeyHash<ValueString> hasher;
+  const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
   for (const auto &entry : value) {
     if (!object.defines(entry.first, entry.hash)) {
       continue;
@@ -511,12 +511,17 @@ INSTRUCTION_HANDLER(AssertionEqual) {
   SOURCEMETA_MAYBE_UNUSED(schema);
   SOURCEMETA_MAYBE_UNUSED(callback);
   SOURCEMETA_MAYBE_UNUSED(instance);
-  SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqual);
-  const auto &target{get(instance, instruction.relative_instance_location)};
   const auto &value{*std::get_if<ValueJSON>(&instruction.value)};
-  result = (target == value);
+
+  if (property_target) [[unlikely]] {
+    result = value.is_string() && value.to_string() == *property_target;
+  } else {
+    const auto &target{get(instance, instruction.relative_instance_location)};
+    result = (target == value);
+  }
+
   EVALUATE_END(AssertionEqual);
 }
 
@@ -528,9 +533,16 @@ INSTRUCTION_HANDLER(AssertionEqualsAny) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqualsAny);
-  const auto &target{get(instance, instruction.relative_instance_location)};
   const auto &value{*std::get_if<ValueSet>(&instruction.value)};
-  result = value.contains(target);
+
+  if (property_target) [[unlikely]] {
+    // TODO: This involves a string copy
+    result = value.contains(JSON{*property_target});
+  } else {
+    const auto &target{get(instance, instruction.relative_instance_location)};
+    result = value.contains(target);
+  }
+
   EVALUATE_END(AssertionEqualsAny);
 }
 
@@ -539,28 +551,35 @@ INSTRUCTION_HANDLER(AssertionEqualsAnyStringHash) {
   SOURCEMETA_MAYBE_UNUSED(schema);
   SOURCEMETA_MAYBE_UNUSED(callback);
   SOURCEMETA_MAYBE_UNUSED(instance);
-  SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqualsAnyStringHash);
-  const auto &target{get(instance, instruction.relative_instance_location)};
   const auto &value{*std::get_if<ValueStringHashes>(&instruction.value)};
 
-  if (target.is_string()) {
-    const auto &target_string{target.to_string()};
-    const auto string_size{target_string.size()};
-    // TODO: Put this on the evaluator to re-use it everywhere
-    const sourcemeta::core::KeyHash<ValueString> hasher;
-    const auto value_hash{hasher(target_string)};
-    if (string_size < value.second.size()) {
-      const auto &hint{value.second[string_size]};
-      assert(hint.first <= hint.second);
-      if (hint.second != 0) {
-        for (std::size_t index = hint.first - 1; index < hint.second; index++) {
-          assert(hasher.is_perfect(value.first[index]));
-          if (value.first[index] == value_hash) {
-            result = true;
-            break;
-          }
+  const sourcemeta::core::JSON::String *target_string = nullptr;
+  if (property_target) [[unlikely]] {
+    target_string = property_target;
+  } else {
+    const auto &target{get(instance, instruction.relative_instance_location)};
+    if (target.is_string()) {
+      target_string = &target.to_string();
+    } else {
+      EVALUATE_END(AssertionEqualsAnyStringHash);
+    }
+  }
+
+  const auto string_size{target_string->size()};
+  // TODO: Put this on the evaluator to re-use it everywhere
+  const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
+  const auto value_hash{hasher(*target_string)};
+  if (string_size < value.second.size()) {
+    const auto &hint{value.second[string_size]};
+    assert(hint.first <= hint.second);
+    if (hint.second != 0) {
+      for (std::size_t index = hint.first - 1; index < hint.second; index++) {
+        assert(hasher.is_perfect(value.first[index]));
+        if (value.first[index] == value_hash) {
+          result = true;
+          break;
         }
       }
     }

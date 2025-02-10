@@ -12,7 +12,6 @@
 #include <cstdint>    // std::uint64_t
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::basic_ifstream
-#include <functional> // std::function
 #include <istream>    // std::basic_istream
 #include <ostream>    // std::basic_ostream
 #include <string>     // std::basic_string
@@ -30,22 +29,6 @@
 namespace sourcemeta::core {
 
 /// @ingroup json
-using Hash = FastHash<JSON>;
-
-/// @ingroup json
-enum class CallbackPhase { Pre, Post };
-
-/// @ingroup json
-///
-/// An optional callback that can be passed to parsing functions to obtain
-/// metadata during the parsing process. Each subdocument will emit 2 events: a
-/// "pre" and a "post". When parsing object and arrays, during the "pre" event,
-/// the value corresponds to the property name or index, respectively.
-using Callback = std::function<void(
-    const CallbackPhase phase, const JSON::Type type, const std::uint64_t line,
-    const std::uint64_t column, const JSON &value)>;
-
-/// @ingroup json
 ///
 /// Create a JSON document from a C++ standard input stream. For example, a JSON
 /// document that represents an array can be parsed as follows:
@@ -57,14 +40,14 @@ using Callback = std::function<void(
 ///
 /// std::istringstream stream{"[ 1, 2, 3 ]"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream);
+///   sourcemeta::core::parse_json(stream);
 /// assert(document.is_array());
 /// ```
 ///
-/// If parsing fails, sourcemeta::core::ParseError will be thrown.
+/// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
-           const Callback &callback = nullptr) -> JSON;
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup json
 ///
@@ -76,14 +59,14 @@ auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 /// #include <cassert>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
 /// assert(document.is_array());
 /// ```
 ///
-/// If parsing fails, sourcemeta::core::ParseError will be thrown.
+/// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-           const Callback &callback = nullptr) -> JSON;
+auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup json
 ///
@@ -99,13 +82,13 @@ auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
 /// std::uint64_t line{1};
 /// std::uint64_t column{0};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse(stream, line, column);
+///   sourcemeta::core::parse_json(stream, line, column);
 /// assert(document.is_array());
 /// ```
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
-           std::uint64_t &line, std::uint64_t &column,
-           const Callback &callback = nullptr) -> JSON;
+auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                std::uint64_t &line, std::uint64_t &column,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup json
 ///
@@ -119,33 +102,13 @@ auto parse(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 /// std::uint64_t line{1};
 /// std::uint64_t column{0};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]", line, column);
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]", line, column);
 /// assert(document.is_array());
 /// ```
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-           std::uint64_t &line, std::uint64_t &column,
-           const Callback &callback = nullptr) -> JSON;
-
-/// @ingroup json
-///
-/// A convenience function to read a document from a file. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <cassert>
-/// #include <iostream>
-///
-/// auto stream = sourcemeta::core::read_file("/tmp/foo.json");
-/// const auto document = sourcemeta::core::parse(stream);
-/// sourcemeta::core::stringify(document, std::cout);
-/// std::cout << std::endl;
-/// ```
-///
-/// If parsing fails, sourcemeta::core::ParseError will be thrown.
-SOURCEMETA_CORE_JSON_EXPORT
-auto read_file(const std::filesystem::path &path)
-    -> std::basic_ifstream<JSON::Char, JSON::CharTraits>;
+auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
+                std::uint64_t &line, std::uint64_t &column,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup json
 ///
@@ -157,14 +120,37 @@ auto read_file(const std::filesystem::path &path)
 /// #include <iostream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::from_file("/tmp/foo.json");
+///   sourcemeta::core::read_json("/tmp/foo.json");
 /// sourcemeta::core::stringify(document, std::cout);
 /// std::cout << std::endl;
 /// ```
 ///
-/// If parsing fails, sourcemeta::core::ParseError will be thrown.
+/// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto from_file(const std::filesystem::path &path) -> JSON;
+auto read_json(const std::filesystem::path &path) -> JSON;
+
+// TODO: Move this function to a system integration component, as it
+// is not JSON specific
+
+/// @ingroup json
+///
+/// A convenience function to read a document from a file. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+/// #include <iostream>
+///
+/// auto stream = sourcemeta::core::read_file("/tmp/foo.json");
+/// const auto document = sourcemeta::core::parse_json(stream);
+/// sourcemeta::core::stringify(document, std::cout);
+/// std::cout << std::endl;
+/// ```
+///
+/// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
+SOURCEMETA_CORE_JSON_EXPORT
+auto read_file(const std::filesystem::path &path)
+    -> std::basic_ifstream<JSON::Char, JSON::CharTraits>;
 
 /// @ingroup json
 ///
@@ -177,7 +163,7 @@ auto from_file(const std::filesystem::path &path) -> JSON;
 /// #include <sstream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
 /// std::ostringstream stream;
 /// sourcemeta::core::stringify(document, stream);
 /// std::cout << stream.str() << std::endl;
@@ -198,7 +184,7 @@ auto stringify(const JSON &document,
 /// #include <sstream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
 /// std::ostringstream stream;
 /// sourcemeta::core::prettify(document, stream);
 /// std::cout << stream.str() << std::endl;
@@ -206,13 +192,6 @@ auto stringify(const JSON &document,
 SOURCEMETA_CORE_JSON_EXPORT
 auto prettify(const JSON &document,
               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream) -> void;
-
-/// @ingroup json
-///
-/// A comparison function between object property keys.
-/// See https://en.cppreference.com/w/cpp/named_req/Compare
-using KeyComparison =
-    std::function<bool(const JSON::String &, const JSON::String &)>;
 
 /// @ingroup json
 ///
@@ -231,7 +210,7 @@ using KeyComparison =
 /// }
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2, \"baz\": 3 }");
+///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2, \"baz\": 3 }");
 /// std::ostringstream stream;
 /// sourcemeta::core::stringify(document, stream, key_compare);
 /// std::cout << stream.str() << std::endl;
@@ -239,7 +218,7 @@ using KeyComparison =
 SOURCEMETA_CORE_JSON_EXPORT
 auto stringify(const JSON &document,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-               const KeyComparison &compare) -> void;
+               const JSON::KeyComparison &compare) -> void;
 
 /// @ingroup json
 ///
@@ -259,7 +238,7 @@ auto stringify(const JSON &document,
 /// }
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2, \"baz\": 3 }");
+///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2, \"baz\": 3 }");
 /// std::ostringstream stream;
 /// sourcemeta::core::prettify(document, stream, key_compare);
 /// std::cout << stream.str() << std::endl;
@@ -267,7 +246,7 @@ auto stringify(const JSON &document,
 SOURCEMETA_CORE_JSON_EXPORT
 auto prettify(const JSON &document,
               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
-              const KeyComparison &compare) -> void;
+              const JSON::KeyComparison &compare) -> void;
 
 /// @ingroup json
 ///
@@ -281,7 +260,7 @@ auto prettify(const JSON &document,
 /// #include <sstream>
 ///
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
 /// std::ostringstream stream;
 /// stream << document;
 /// std::cout << stream.str() << std::endl;

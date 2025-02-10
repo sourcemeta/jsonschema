@@ -22,13 +22,13 @@ auto sourcemeta::jsonschema::cli::bundle(
   auto schema{sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
   sourcemeta::core::bundle(
-      schema, sourcemeta::core::default_schema_walker,
+      schema, sourcemeta::core::schema_official_walker,
       resolver(options, options.contains("h") || options.contains("http")));
 
   if (options.contains("w") || options.contains("without-id")) {
     log_verbose(options) << "Removing schema identifiers\n";
     sourcemeta::core::unidentify(
-        schema, sourcemeta::core::default_schema_walker,
+        schema, sourcemeta::core::schema_official_walker,
         resolver(options, options.contains("h") || options.contains("http")));
   }
 

@@ -51,7 +51,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
       assert(context.frame.locations().contains(
-          {sourcemeta::core::ReferenceType::Static, step.keyword_location}));
+          {sourcemeta::core::SchemaReferenceType::Static,
+           step.keyword_location}));
       steps.push_back(std::move(step));
     }
   }
@@ -59,10 +60,11 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   return steps;
 }
 
-auto precompile(const sourcemeta::blaze::Context &context,
-                sourcemeta::blaze::SchemaContext &schema_context,
-                const sourcemeta::blaze::DynamicContext &dynamic_context,
-                const sourcemeta::core::Frame::Locations::value_type &entry)
+auto precompile(
+    const sourcemeta::blaze::Context &context,
+    sourcemeta::blaze::SchemaContext &schema_context,
+    const sourcemeta::blaze::DynamicContext &dynamic_context,
+    const sourcemeta::core::SchemaFrame::Locations::value_type &entry)
     -> sourcemeta::blaze::Instructions {
   const sourcemeta::core::URI anchor_uri{entry.first.second};
   const auto label{sourcemeta::blaze::Evaluator{}.hash(
@@ -111,27 +113,29 @@ auto compile(const sourcemeta::core::JSON &schema,
       sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
 
   // Perform framing to resolve references later on
-  sourcemeta::core::Frame frame;
+  sourcemeta::core::SchemaFrame frame;
   frame.analyse(result, walker, resolver, default_dialect);
 
   const std::string base{sourcemeta::core::URI{
       sourcemeta::core::identify(
-          schema, resolver, sourcemeta::core::IdentificationStrategy::Strict,
+          schema, resolver,
+          sourcemeta::core::SchemaIdentificationStrategy::Strict,
           default_dialect)
           .value_or("")}
                              .canonicalize()
                              .recompose()};
 
   assert(frame.locations().contains(
-      {sourcemeta::core::ReferenceType::Static, base}));
-  const auto root_frame_entry{
-      frame.locations().at({sourcemeta::core::ReferenceType::Static, base})};
+      {sourcemeta::core::SchemaReferenceType::Static, base}));
+  const auto root_frame_entry{frame.locations().at(
+      {sourcemeta::core::SchemaReferenceType::Static, base})};
 
   // Check whether dynamic referencing takes places in this schema. If not,
   // we can avoid the overhead of keeping track of dynamics scopes, etc
   bool uses_dynamic_scopes{false};
   for (const auto &reference : frame.references()) {
-    if (reference.first.first == sourcemeta::core::ReferenceType::Dynamic) {
+    if (reference.first.first ==
+        sourcemeta::core::SchemaReferenceType::Dynamic) {
       uses_dynamic_scopes = true;
       break;
     }
@@ -147,7 +151,8 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   std::vector<std::string> resources;
   for (const auto &entry : frame.locations()) {
-    if (entry.second.type == sourcemeta::core::Frame::LocationType::Resource) {
+    if (entry.second.type ==
+        sourcemeta::core::SchemaFrame::LocationType::Resource) {
       resources.push_back(entry.first.second);
     }
   }
@@ -164,14 +169,16 @@ auto compile(const sourcemeta::core::JSON &schema,
   // TODO: Replace this logic with `.frame()` `destination_of` information
   std::map<std::string, std::size_t> static_references_count;
   for (const auto &reference : frame.references()) {
-    if (reference.first.first != sourcemeta::core::ReferenceType::Static ||
-        !frame.locations().contains({sourcemeta::core::ReferenceType::Static,
-                                     reference.second.destination})) {
+    if (reference.first.first !=
+            sourcemeta::core::SchemaReferenceType::Static ||
+        !frame.locations().contains(
+            {sourcemeta::core::SchemaReferenceType::Static,
+             reference.second.destination})) {
       continue;
     }
 
     const auto &entry{
-        frame.locations().at({sourcemeta::core::ReferenceType::Static,
+        frame.locations().at({sourcemeta::core::SchemaReferenceType::Static,
                               reference.second.destination})};
     for (const auto &subreference : frame.references()) {
       if (subreference.first.second.starts_with(entry.pointer)) {
@@ -216,9 +223,9 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   for (const auto &destination : context.precompiled_static_schemas) {
     assert(context.frame.locations().contains(
-        {sourcemeta::core::ReferenceType::Static, destination}));
+        {sourcemeta::core::SchemaReferenceType::Static, destination}));
     const auto match{context.frame.locations().find(
-        {sourcemeta::core::ReferenceType::Static, destination})};
+        {sourcemeta::core::SchemaReferenceType::Static, destination})};
     for (auto &&substep :
          precompile(context, schema_context, dynamic_context, *match)) {
       compiler_template.push_back(std::move(substep));
@@ -232,8 +239,9 @@ auto compile(const sourcemeta::core::JSON &schema,
            "https://json-schema.org/draft/2020-12/vocab/core"))) {
     for (const auto &entry : context.frame.locations()) {
       // We are only trying to find dynamic anchors
-      if (entry.second.type != sourcemeta::core::Frame::LocationType::Anchor ||
-          entry.first.first != sourcemeta::core::ReferenceType::Dynamic) {
+      if (entry.second.type !=
+              sourcemeta::core::SchemaFrame::LocationType::Anchor ||
+          entry.first.first != sourcemeta::core::SchemaReferenceType::Dynamic) {
         continue;
       }
 
@@ -282,14 +290,14 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   // Otherwise the recursion attempt is non-sense
   if (!context.frame.locations().contains(
-          {sourcemeta::core::ReferenceType::Static, destination})) {
+          {sourcemeta::core::SchemaReferenceType::Static, destination})) {
     throw sourcemeta::core::SchemaReferenceError(
         destination, schema_context.relative_pointer,
         "The target of the reference does not exist in the schema");
   }
 
   const auto &entry{context.frame.locations().at(
-      {sourcemeta::core::ReferenceType::Static, destination})};
+      {sourcemeta::core::SchemaReferenceType::Static, destination})};
   const auto &new_schema{get(context.root, entry.pointer)};
 
   if (!is_schema(new_schema)) {

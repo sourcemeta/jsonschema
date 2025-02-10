@@ -35,12 +35,12 @@ namespace sourcemeta::core {
 ///
 /// const std::string input{"hello: world"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::from_yaml(input);
+///   sourcemeta::core::parse_yaml(input);
 /// sourcemeta::core::prettify(document, std::cerr);
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto from_yaml(const JSON::String &input) -> JSON;
+auto parse_yaml(const JSON::String &input) -> JSON;
 
 /// @ingroup yaml
 ///
@@ -56,12 +56,12 @@ auto from_yaml(const JSON::String &input) -> JSON;
 ///
 /// const std::filesystem::path path{"test.yaml"};
 /// const sourcemeta::core::JSON document =
-///   sourcemeta::core::from_yaml(path);
+///   sourcemeta::core::read_yaml(path);
 /// sourcemeta::core::prettify(document, std::cerr);
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto from_yaml(const std::filesystem::path &path) -> JSON;
+auto read_yaml(const std::filesystem::path &path) -> JSON;
 
 } // namespace sourcemeta::core
 
