@@ -1,5 +1,4 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
-  FOLDER "Core/AlterSchema"
   SOURCES alterschema.cc
     # Antipattern
     antipattern/const_with_type.h

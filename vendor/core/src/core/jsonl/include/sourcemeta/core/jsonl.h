@@ -44,7 +44,7 @@ public:
   /// }
   /// ```
   ///
-  /// If parsing fails, sourcemeta::core::ParseError will be thrown.
+  /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
   JSONL(std::basic_istream<JSON::Char, JSON::CharTraits> &stream);
 
   using const_iterator = ConstJSONLIterator;

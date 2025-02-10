@@ -44,7 +44,9 @@ template <typename T> using RegexTypeBoost = boost::basic_regex<T>;
 template <typename T> using RegexTypePrefix = T;
 
 /// @ingroup regex
-struct RegexTypeNonEmpty {};
+struct RegexTypeNonEmpty {
+  auto operator==(const RegexTypeNonEmpty &) const noexcept -> bool = default;
+};
 
 /// @ingroup regex
 using RegexTypeRange = std::pair<std::uint64_t, std::uint64_t>;
@@ -53,7 +55,9 @@ using RegexTypeRange = std::pair<std::uint64_t, std::uint64_t>;
 template <typename T> using RegexTypeStd = std::basic_regex<T>;
 
 /// @ingroup regex
-struct RegexTypeNoop {};
+struct RegexTypeNoop {
+  auto operator==(const RegexTypeNoop &) const noexcept -> bool = default;
+};
 
 /// @ingroup regex
 template <typename T>

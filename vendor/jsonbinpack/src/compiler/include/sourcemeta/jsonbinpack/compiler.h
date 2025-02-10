@@ -34,14 +34,14 @@ namespace sourcemeta::jsonbinpack {
 ///
 /// #include <iostream>
 ///
-/// auto schema{sourcemeta::core::parse(R"JSON({
+/// auto schema{sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::compile(
-///     schema, sourcemeta::core::default_schema_walker,
-///     sourcemeta::core::official_resolver);
+///     schema, sourcemeta::core::schema_official_walker,
+///     sourcemeta::core::schema_official_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
@@ -67,14 +67,14 @@ auto compile(sourcemeta::core::JSON &schema,
 ///
 /// #include <iostream>
 ///
-/// auto schema{sourcemeta::core::parse(R"JSON({
+/// auto schema{sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
 ///   "type": "string"
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::canonicalize(
-///     schema, sourcemeta::core::default_schema_walker,
-///     sourcemeta::core::official_resolver);
+///     schema, sourcemeta::core::schema_official_walker,
+///     sourcemeta::core::schema_official_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;

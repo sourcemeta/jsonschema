@@ -1,11 +1,13 @@
-#include <sourcemeta/core/jsonschema_walker.h>
+#include <sourcemeta/core/jsonschema.h>
 
-auto sourcemeta::core::default_schema_walker(
+auto sourcemeta::core::schema_official_walker(
     std::string_view keyword, const std::map<std::string, bool> &vocabularies)
     -> sourcemeta::core::SchemaWalkerResult {
 #define WALK(vocabulary, _keyword, strategy, ...)                              \
   if (vocabularies.contains(vocabulary) && keyword == _keyword)                \
-    return {sourcemeta::core::KeywordType::strategy, vocabulary, {__VA_ARGS__}};
+    return {sourcemeta::core::SchemaKeywordType::strategy,                     \
+            vocabulary,                                                        \
+            {__VA_ARGS__}};
 
 #define WALK_ANY(vocabulary_1, vocabulary_2, _keyword, strategy, ...)          \
   WALK(vocabulary_1, _keyword, strategy, __VA_ARGS__)                          \
@@ -37,31 +39,35 @@ auto sourcemeta::core::default_schema_walker(
        ApplicatorElementsInPlace)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "anyOf",
        ApplicatorElementsInPlace)
-  WALK(HTTPS_BASE "2020-12/vocab/applicator", "allOf", ApplicatorElementsInline)
+  WALK(HTTPS_BASE "2020-12/vocab/applicator", "allOf",
+       ApplicatorElementsInPlaceInline)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "if", ApplicatorValueInPlace)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "then", ApplicatorValueInPlace,
        "if")
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "else", ApplicatorValueInPlace,
        "if")
-  WALK(HTTPS_BASE "2020-12/vocab/applicator", "not", ApplicatorValueOther)
+  WALK(HTTPS_BASE "2020-12/vocab/applicator", "not",
+       ApplicatorValueInPlaceOther)
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/applicator", "properties",
-                       ApplicatorMembers, HTTPS_BASE "2020-12/vocab/validation",
-                       "required")
+                       ApplicatorMembersTraversePropertyStatic,
+                       HTTPS_BASE "2020-12/vocab/validation", "required")
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "additionalProperties",
-       ApplicatorValue, "properties", "patternProperties")
+       ApplicatorValueTraverseAnyProperty, "properties", "patternProperties")
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "patternProperties",
-       ApplicatorMembers)
+       ApplicatorMembersTraversePropertyRegex)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "propertyNames",
-       ApplicatorValueInPlace)
+       ApplicatorValueTraverseAnyPropertyKey)
   WALK(HTTPS_BASE "2020-12/vocab/applicator", "dependentSchemas",
        ApplicatorMembersInPlace)
-  WALK_MAYBE_DEPENDENT(
-      HTTPS_BASE "2020-12/vocab/applicator", "contains", ApplicatorValueInPlace,
-      HTTPS_BASE "2020-12/vocab/validation", "minContains", "maxContains")
-  WALK(HTTPS_BASE "2020-12/vocab/applicator", "items", ApplicatorValue,
-       "prefixItems")
-  WALK(HTTPS_BASE "2020-12/vocab/applicator", "prefixItems", ApplicatorElements)
+  WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/applicator", "contains",
+                       ApplicatorValueTraverseAnyItem,
+                       HTTPS_BASE "2020-12/vocab/validation", "minContains",
+                       "maxContains")
+  WALK(HTTPS_BASE "2020-12/vocab/applicator", "items",
+       ApplicatorValueTraverseAnyItem, "prefixItems")
+  WALK(HTTPS_BASE "2020-12/vocab/applicator", "prefixItems",
+       ApplicatorElementsTraverseItem)
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/validation", "type", Assertion,
                        HTTPS_BASE "2020-12/vocab/applicator", "properties")
@@ -92,16 +98,16 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTPS_BASE "2020-12/vocab/meta-data", "default", Annotation)
   WALK(HTTPS_BASE "2020-12/vocab/meta-data", "deprecated", Annotation)
   WALK(HTTPS_BASE "2020-12/vocab/format-annotation", "format", Annotation)
+  WALK_MAYBE_DEPENDENT(
+      HTTPS_BASE "2020-12/vocab/unevaluated", "unevaluatedProperties",
+      ApplicatorValueTraverseAnyProperty, HTTPS_BASE "2020-12/vocab/applicator",
+      "properties", "patternProperties", "additionalProperties")
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/unevaluated",
-                       "unevaluatedProperties", ApplicatorValue,
-                       HTTPS_BASE "2020-12/vocab/applicator", "properties",
-                       "patternProperties", "additionalProperties")
-  WALK_MAYBE_DEPENDENT(HTTPS_BASE "2020-12/vocab/unevaluated",
-                       "unevaluatedItems", ApplicatorValue,
+                       "unevaluatedItems", ApplicatorValueTraverseAnyItem,
                        HTTPS_BASE "2020-12/vocab/applicator", "prefixItems",
                        "items", "contains")
   WALK(HTTPS_BASE "2020-12/vocab/content", "contentSchema",
-       ApplicatorValueOther)
+       ApplicatorValueInPlaceOther)
   WALK(HTTPS_BASE "2020-12/vocab/content", "contentMediaType", Annotation)
   WALK(HTTPS_BASE "2020-12/vocab/content", "contentEncoding", Annotation)
   WALK(HTTPS_BASE "2020-12/vocab/format-assertion", "format", Assertion)
@@ -119,7 +125,8 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTPS_BASE "2019-09/vocab/core", "$vocabulary", Other)
   WALK(HTTPS_BASE "2019-09/vocab/core", "$recursiveRef", Reference)
   WALK(HTTPS_BASE "2019-09/vocab/core", "$recursiveAnchor", Other)
-  WALK(HTTPS_BASE "2019-09/vocab/applicator", "allOf", ApplicatorElementsInline)
+  WALK(HTTPS_BASE "2019-09/vocab/applicator", "allOf",
+       ApplicatorElementsInPlaceInline)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "anyOf",
        ApplicatorElementsInPlace)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "oneOf",
@@ -129,31 +136,33 @@ auto sourcemeta::core::default_schema_walker(
        "if")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "else", ApplicatorValueInPlace,
        "if")
-  WALK(HTTPS_BASE "2019-09/vocab/applicator", "not", ApplicatorValueOther)
+  WALK(HTTPS_BASE "2019-09/vocab/applicator", "not",
+       ApplicatorValueInPlaceOther)
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2019-09/vocab/applicator", "properties",
-                       ApplicatorMembers, HTTPS_BASE "2019-09/vocab/validation",
-                       "required")
+                       ApplicatorMembersTraversePropertyStatic,
+                       HTTPS_BASE "2019-09/vocab/validation", "required")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "patternProperties",
-       ApplicatorMembers)
+       ApplicatorMembersTraversePropertyRegex)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "additionalProperties",
-       ApplicatorValue, "properties", "patternProperties")
+       ApplicatorValueTraverseAnyProperty, "properties", "patternProperties")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "propertyNames",
-       ApplicatorValueInPlace)
+       ApplicatorValueTraverseAnyPropertyKey)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "dependentSchemas",
        ApplicatorMembersInPlace)
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "unevaluatedProperties",
-       ApplicatorValue, "properties", "patternProperties",
+       ApplicatorValueTraverseAnyProperty, "properties", "patternProperties",
        "additionalProperties")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "unevaluatedItems",
-       ApplicatorValue, "items", "additionalItems")
+       ApplicatorValueTraverseAnyItem, "items", "additionalItems")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "items",
-       ApplicatorValueOrElements)
-  WALK_MAYBE_DEPENDENT(
-      HTTPS_BASE "2019-09/vocab/applicator", "contains", ApplicatorValueInPlace,
-      HTTPS_BASE "2019-09/vocab/validation", "minContains", "maxContains")
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK_MAYBE_DEPENDENT(HTTPS_BASE "2019-09/vocab/applicator", "contains",
+                       ApplicatorValueTraverseAnyItem,
+                       HTTPS_BASE "2019-09/vocab/validation", "minContains",
+                       "maxContains")
   WALK(HTTPS_BASE "2019-09/vocab/applicator", "additionalItems",
-       ApplicatorValue, "items")
+       ApplicatorValueTraverseAnyItem, "items")
   // For the purpose of compiler optimizations
   WALK_MAYBE_DEPENDENT(HTTPS_BASE "2019-09/vocab/validation", "type", Assertion,
                        HTTPS_BASE "2019-09/vocab/applicator", "properties")
@@ -185,14 +194,17 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTPS_BASE "2019-09/vocab/meta-data", "default", Annotation)
   WALK(HTTPS_BASE "2019-09/vocab/format", "format", Annotation)
   WALK(HTTPS_BASE "2019-09/vocab/content", "contentSchema",
-       ApplicatorValueOther)
+       ApplicatorValueInPlaceOther)
   WALK(HTTPS_BASE "2019-09/vocab/content", "contentMediaType", Annotation)
   WALK(HTTPS_BASE "2019-09/vocab/content", "contentEncoding", Annotation)
-  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "hrefSchema", ApplicatorValue)
-  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetSchema", ApplicatorValue)
-  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "headerSchema", ApplicatorValue)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "hrefSchema",
+       ApplicatorValueInPlaceOther)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetSchema",
+       ApplicatorValueInPlaceOther)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "headerSchema",
+       ApplicatorValueInPlaceOther)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "submissionSchema",
-       ApplicatorValue)
+       ApplicatorValueInPlaceOther)
 
 #undef HTTPS_BASE
 
@@ -230,9 +242,9 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "pattern", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "items", ApplicatorValueOrElements, "$ref")
+           "items", ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "additionalItems", ApplicatorValue, "items")
+           "additionalItems", ApplicatorValueTraverseAnyItem, "items")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "maxItems", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
@@ -240,7 +252,7 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "uniqueItems", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "contains", ApplicatorValueInPlace, "$ref")
+           "contains", ApplicatorValueTraverseAnyItem, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "maxProperties", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
@@ -249,16 +261,17 @@ auto sourcemeta::core::default_schema_walker(
            "required", Assertion, "$ref")
   // For the purpose of compiler optimizations
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "properties", ApplicatorMembers, "$ref", "required")
+           "properties", ApplicatorMembersTraversePropertyStatic, "$ref",
+           "required")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "patternProperties", ApplicatorMembers, "$ref")
+           "patternProperties", ApplicatorMembersTraversePropertyRegex, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "additionalProperties", ApplicatorValue, "properties",
-           "patternProperties")
+           "additionalProperties", ApplicatorValueTraverseAnyProperty,
+           "properties", "patternProperties")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "dependencies", ApplicatorMembers, "$ref")
+           "dependencies", ApplicatorMembersInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "propertyNames", ApplicatorValueInPlace, "$ref")
+           "propertyNames", ApplicatorValueTraverseAnyPropertyKey, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "if", ApplicatorValueInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
@@ -266,13 +279,13 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "else", ApplicatorValueInPlace, "if")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "allOf", ApplicatorElementsInline, "$ref")
+           "allOf", ApplicatorElementsInPlaceInline, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "anyOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "oneOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
-           "not", ApplicatorValueOther, "$ref")
+           "not", ApplicatorValueInPlaceOther, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "format", Other, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
@@ -294,19 +307,24 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "examples", Comment, "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "hrefSchema",
-                       ApplicatorValue, HTTP_BASE "draft-07/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-07/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "targetSchema",
-                       ApplicatorValue, HTTP_BASE "draft-07/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-07/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "headerSchema",
-                       ApplicatorValue, HTTP_BASE "draft-07/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-07/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "submissionSchema",
-                       ApplicatorValue, HTTP_BASE "draft-07/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-07/schema#", "$ref")
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-07/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-07/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::KeywordType::Unknown, std::nullopt, {"$ref"}};
+    return {
+        sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {"$ref"}};
   }
 
   // Draft6
@@ -342,9 +360,9 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "pattern", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "items", ApplicatorValueOrElements, "$ref")
+           "items", ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "additionalItems", ApplicatorValue, "items")
+           "additionalItems", ApplicatorValueTraverseAnyItem, "items")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "maxItems", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
@@ -352,7 +370,7 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "uniqueItems", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "contains", ApplicatorValueInPlace, "$ref")
+           "contains", ApplicatorValueTraverseAnyItem, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "maxProperties", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
@@ -361,24 +379,25 @@ auto sourcemeta::core::default_schema_walker(
            "required", Assertion, "$ref")
   // For the purpose of compiler optimizations
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "properties", ApplicatorMembers, "$ref", "required")
+           "properties", ApplicatorMembersTraversePropertyStatic, "$ref",
+           "required")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "patternProperties", ApplicatorMembers, "$ref")
+           "patternProperties", ApplicatorMembersTraversePropertyRegex, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "additionalProperties", ApplicatorValue, "properties",
-           "patternProperties")
+           "additionalProperties", ApplicatorValueTraverseAnyProperty,
+           "properties", "patternProperties")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "dependencies", ApplicatorMembers, "$ref")
+           "dependencies", ApplicatorMembersInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "propertyNames", ApplicatorValueInPlace, "$ref")
+           "propertyNames", ApplicatorValueTraverseAnyPropertyKey, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "allOf", ApplicatorElementsInline, "$ref")
+           "allOf", ApplicatorElementsInPlaceInline, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "anyOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "oneOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
-           "not", ApplicatorValueOther, "$ref")
+           "not", ApplicatorValueInPlaceOther, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "format", Other, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
@@ -400,17 +419,21 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "examples", Comment, "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "hrefSchema",
-                       ApplicatorValue, HTTP_BASE "draft-06/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-06/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "targetSchema",
-                       ApplicatorValue, HTTP_BASE "draft-06/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-06/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "submissionSchema",
-                       ApplicatorValue, HTTP_BASE "draft-06/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-06/schema#", "$ref")
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-06/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-06/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::KeywordType::Unknown, std::nullopt, {"$ref"}};
+    return {
+        sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {"$ref"}};
   }
 
   // Draft4
@@ -442,9 +465,9 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "pattern", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "items", ApplicatorValueOrElements, "$ref")
+           "items", ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "additionalItems", ApplicatorValue, "items")
+           "additionalItems", ApplicatorValueTraverseAnyItem, "items")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "maxItems", Assertion, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
@@ -459,22 +482,23 @@ auto sourcemeta::core::default_schema_walker(
            "required", Assertion, "$ref")
   // These dependencies are only for the purpose of compiler optimizations
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "properties", ApplicatorMembers, "$ref", "required")
+           "properties", ApplicatorMembersTraversePropertyStatic, "$ref",
+           "required")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "patternProperties", ApplicatorMembers, "$ref")
+           "patternProperties", ApplicatorMembersTraversePropertyRegex, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "additionalProperties", ApplicatorValue, "properties",
-           "patternProperties")
+           "additionalProperties", ApplicatorValueTraverseAnyProperty,
+           "properties", "patternProperties")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "dependencies", ApplicatorMembers, "$ref")
+           "dependencies", ApplicatorMembersInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "allOf", ApplicatorElementsInline, "$ref")
+           "allOf", ApplicatorElementsInPlaceInline, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "anyOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "oneOf", ApplicatorElementsInPlace, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
-           "not", ApplicatorValueOther, "$ref")
+           "not", ApplicatorValueInPlaceOther, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "format", Other, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
@@ -486,15 +510,18 @@ auto sourcemeta::core::default_schema_walker(
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "default", Comment, "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-04/hyper-schema#", "targetSchema",
-                       ApplicatorValue, HTTP_BASE "draft-04/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-04/schema#", "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-04/hyper-schema#", "schema",
-                       ApplicatorValue, HTTP_BASE "draft-04/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-04/schema#", "$ref")
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-04/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-04/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::KeywordType::Unknown, std::nullopt, {"$ref"}};
+    return {
+        sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {"$ref"}};
   }
 
   // Draft3
@@ -503,22 +530,25 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-03/schema#", "$ref", Reference)
   WALK(HTTP_BASE "draft-03/schema#", "extends",
        ApplicatorValueOrElementsInPlace, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "type", ApplicatorElements, "$ref")
+  WALK(HTTP_BASE "draft-03/schema#", "type", ApplicatorElementsInPlace, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "disallow", ApplicatorElementsInPlace,
        "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "properties", ApplicatorMembers, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "patternProperties", ApplicatorMembers,
-       "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "additionalProperties", ApplicatorValue,
-       "properties", "patternProperties")
-  WALK(HTTP_BASE "draft-03/schema#", "items", ApplicatorValueOrElements, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "additionalItems", ApplicatorValue,
-       "items")
+  WALK(HTTP_BASE "draft-03/schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic, "$ref")
+  WALK(HTTP_BASE "draft-03/schema#", "patternProperties",
+       ApplicatorMembersTraversePropertyRegex, "$ref")
+  WALK(HTTP_BASE "draft-03/schema#", "additionalProperties",
+       ApplicatorValueTraverseAnyProperty, "properties", "patternProperties")
+  WALK(HTTP_BASE "draft-03/schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
+  WALK(HTTP_BASE "draft-03/schema#", "additionalItems",
+       ApplicatorValueTraverseAnyItem, "items")
   WALK(HTTP_BASE "draft-03/schema#", "minItems", Assertion, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "maxItems", Assertion, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "uniqueItems", Assertion, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "required", Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "dependencies", ApplicatorMembers, "$ref")
+  WALK(HTTP_BASE "draft-03/schema#", "dependencies", ApplicatorMembersInPlace,
+       "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "enum", Assertion, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "pattern", Assertion, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "minLength", Assertion, "$ref")
@@ -533,23 +563,27 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-03/schema#", "title", Comment, "$ref")
   WALK(HTTP_BASE "draft-03/schema#", "default", Comment, "$ref")
   WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-03/hyper-schema#", "targetSchema",
-                       ApplicatorValue, HTTP_BASE "draft-03/schema#", "$ref")
+                       ApplicatorValueInPlaceOther,
+                       HTTP_BASE "draft-03/schema#", "$ref")
 
   // $ref also takes precedence over any unknown keyword
   if (vocabularies.contains(HTTP_BASE "draft-03/schema#") &&
       keyword != "$ref") {
-    return {sourcemeta::core::KeywordType::Unknown, std::nullopt, {"$ref"}};
+    return {
+        sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {"$ref"}};
   }
 
   // Draft2
   WALK(HTTP_BASE "draft-02/schema#", "$schema", Other)
   WALK(HTTP_BASE "draft-02/schema#", "id", Other)
   WALK(HTTP_BASE "draft-02/schema#", "$ref", Reference)
-  WALK(HTTP_BASE "draft-02/schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-02/schema#", "properties", ApplicatorMembers)
-  WALK(HTTP_BASE "draft-02/schema#", "additionalProperties", ApplicatorValue,
-       "properties")
-  WALK(HTTP_BASE "draft-02/schema#", "type", ApplicatorElements)
+  WALK(HTTP_BASE "draft-02/schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-02/schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
+  WALK(HTTP_BASE "draft-02/schema#", "additionalProperties",
+       ApplicatorValueTraverseAnyProperty, "properties")
+  WALK(HTTP_BASE "draft-02/schema#", "type", ApplicatorElementsInPlace)
   WALK(HTTP_BASE "draft-02/schema#", "enum", Assertion)
   WALK(HTTP_BASE "draft-02/schema#", "maximum", Assertion)
   WALK(HTTP_BASE "draft-02/schema#", "minimum", Assertion)
@@ -561,7 +595,7 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-02/schema#", "maxItems", Assertion)
   WALK(HTTP_BASE "draft-02/schema#", "minItems", Assertion)
   WALK(HTTP_BASE "draft-02/schema#", "uniqueItems", Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "requires", ApplicatorValueInPlace)
+  WALK(HTTP_BASE "draft-02/schema#", "requires", ApplicatorValueTraverseParent)
   WALK(HTTP_BASE "draft-02/schema#", "format", Other)
   WALK(HTTP_BASE "draft-02/schema#", "title", Comment)
   WALK(HTTP_BASE "draft-02/schema#", "description", Comment)
@@ -571,25 +605,31 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-02/schema#", "extends",
        ApplicatorValueOrElementsInPlace)
   WALK(HTTP_BASE "draft-02/schema#", "contentEncoding", Comment)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "requires", ApplicatorValueInPlace)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "targetSchema", ApplicatorValue)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "type", ApplicatorElements)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "properties", ApplicatorMembers)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "requires",
+       ApplicatorValueTraverseParent)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "targetSchema",
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "type", ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
   WALK(HTTP_BASE "draft-02/hyper-schema#", "extends",
        ApplicatorValueOrElementsInPlace)
   WALK(HTTP_BASE "draft-02/hyper-schema#", "additionalProperties",
-       ApplicatorValue, "properties")
+       ApplicatorValueTraverseAnyProperty, "properties")
 
   // Draft1
   WALK(HTTP_BASE "draft-01/schema#", "$schema", Other)
   WALK(HTTP_BASE "draft-01/schema#", "id", Other)
   WALK(HTTP_BASE "draft-01/schema#", "$ref", Reference)
-  WALK(HTTP_BASE "draft-01/schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-01/schema#", "properties", ApplicatorMembers)
-  WALK(HTTP_BASE "draft-01/schema#", "additionalProperties", ApplicatorValue,
-       "properties")
-  WALK(HTTP_BASE "draft-01/schema#", "type", ApplicatorElements)
+  WALK(HTTP_BASE "draft-01/schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-01/schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
+  WALK(HTTP_BASE "draft-01/schema#", "additionalProperties",
+       ApplicatorValueTraverseAnyProperty, "properties")
+  WALK(HTTP_BASE "draft-01/schema#", "type", ApplicatorElementsInPlace)
   WALK(HTTP_BASE "draft-01/schema#", "enum", Assertion)
   WALK(HTTP_BASE "draft-01/schema#", "maximum", Assertion)
   WALK(HTTP_BASE "draft-01/schema#", "minimum", Assertion)
@@ -600,7 +640,7 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-01/schema#", "pattern", Assertion)
   WALK(HTTP_BASE "draft-01/schema#", "maxItems", Assertion)
   WALK(HTTP_BASE "draft-01/schema#", "minItems", Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "requires", ApplicatorValueInPlace)
+  WALK(HTTP_BASE "draft-01/schema#", "requires", ApplicatorValueTraverseParent)
   WALK(HTTP_BASE "draft-01/schema#", "format", Other)
   WALK(HTTP_BASE "draft-01/schema#", "title", Comment)
   WALK(HTTP_BASE "draft-01/schema#", "description", Comment)
@@ -611,24 +651,29 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-01/schema#", "contentEncoding", Comment)
   WALK(HTTP_BASE "draft-01/schema#", "optional", Assertion)
   WALK(HTTP_BASE "draft-01/schema#", "maxDecimal", Assertion)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "type", ApplicatorElements)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "properties", ApplicatorMembers)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "type", ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
   WALK(HTTP_BASE "draft-01/hyper-schema#", "extends",
        ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "requires", ApplicatorValueInPlace)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "requires",
+       ApplicatorValueTraverseParent)
   WALK(HTTP_BASE "draft-01/hyper-schema#", "additionalProperties",
-       ApplicatorValue, "properties")
+       ApplicatorValueTraverseAnyProperty, "properties")
 
   // Draft0
   WALK(HTTP_BASE "draft-00/schema#", "$schema", Other)
   WALK(HTTP_BASE "draft-00/schema#", "id", Other)
   WALK(HTTP_BASE "draft-00/schema#", "$ref", Reference)
-  WALK(HTTP_BASE "draft-00/schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-00/schema#", "properties", ApplicatorMembers)
-  WALK(HTTP_BASE "draft-00/schema#", "additionalProperties", ApplicatorValue,
-       "properties")
-  WALK(HTTP_BASE "draft-00/schema#", "type", ApplicatorElements)
+  WALK(HTTP_BASE "draft-00/schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-00/schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
+  WALK(HTTP_BASE "draft-00/schema#", "additionalProperties",
+       ApplicatorValueTraverseAnyProperty, "properties")
+  WALK(HTTP_BASE "draft-00/schema#", "type", ApplicatorElementsInPlace)
   WALK(HTTP_BASE "draft-00/schema#", "enum", Assertion)
   WALK(HTTP_BASE "draft-00/schema#", "maximum", Assertion)
   WALK(HTTP_BASE "draft-00/schema#", "minimum", Assertion)
@@ -639,7 +684,7 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-00/schema#", "pattern", Assertion)
   WALK(HTTP_BASE "draft-00/schema#", "maxItems", Assertion)
   WALK(HTTP_BASE "draft-00/schema#", "minItems", Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "requires", ApplicatorValueInPlace)
+  WALK(HTTP_BASE "draft-00/schema#", "requires", ApplicatorValueTraverseParent)
   WALK(HTTP_BASE "draft-00/schema#", "format", Other)
   WALK(HTTP_BASE "draft-00/schema#", "title", Comment)
   WALK(HTTP_BASE "draft-00/schema#", "description", Comment)
@@ -650,17 +695,20 @@ auto sourcemeta::core::default_schema_walker(
   WALK(HTTP_BASE "draft-00/schema#", "contentEncoding", Comment)
   WALK(HTTP_BASE "draft-00/schema#", "optional", Assertion)
   WALK(HTTP_BASE "draft-00/schema#", "maxDecimal", Assertion)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "type", ApplicatorElements)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "items", ApplicatorValueOrElements)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "properties", ApplicatorMembers)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "type", ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "items",
+       ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "properties",
+       ApplicatorMembersTraversePropertyStatic)
   WALK(HTTP_BASE "draft-00/hyper-schema#", "extends",
        ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "requires", ApplicatorValueInPlace)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "requires",
+       ApplicatorValueTraverseParent)
   WALK(HTTP_BASE "draft-00/hyper-schema#", "additionalProperties",
-       ApplicatorValue, "properties")
+       ApplicatorValueTraverseAnyProperty, "properties")
 #undef HTTP_BASE
 #undef WALK
 #undef WALK_ANY
 #undef WALK_MAYBE_DEPENDENT
-  return {sourcemeta::core::KeywordType::Unknown, std::nullopt, {}};
+  return {sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {}};
 }

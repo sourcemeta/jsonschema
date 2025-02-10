@@ -131,13 +131,13 @@ auto main(int argc, char *argv[]) noexcept -> int {
     std::cerr << "error: " << error.what() << " at column " << error.column()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::core::FileParseError &error) {
+  } catch (const sourcemeta::core::JSONFileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n  "
               << std::filesystem::weakly_canonical(error.path()).string()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::core::ParseError &error) {
+  } catch (const sourcemeta::core::JSONParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n";
     return EXIT_FAILURE;

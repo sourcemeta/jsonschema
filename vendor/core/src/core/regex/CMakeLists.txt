@@ -1,5 +1,4 @@
-sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME regex
-  FOLDER "Core/Regex")
+sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME regex)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME regex)

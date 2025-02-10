@@ -230,8 +230,20 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalXor) {
     assert(!step.children.empty());
     std::ostringstream message;
-    message << "The " << to_string(target.type())
-            << " value was expected to validate against ";
+
+    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
+                    [](const auto &token) {
+                      return token.is_property() &&
+                             token.to_property() == "propertyNames";
+                    }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      message << "The property name "
+              << escape_string(instance_location.back().to_property());
+    } else {
+      message << "The " << to_string(target.type()) << " value";
+    }
+
+    message << " was expected to validate against ";
     if (step.children.size() > 1) {
       message << "one and only one of the " << step.children.size()
               << " given subschemas";
@@ -1472,8 +1484,20 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionEqual) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
-    message << "The " << to_string(target.type()) << " value ";
-    stringify(target, message);
+
+    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
+                    [](const auto &token) {
+                      return token.is_property() &&
+                             token.to_property() == "propertyNames";
+                    }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      message << "The property name "
+              << escape_string(instance_location.back().to_property());
+    } else {
+      message << "The " << to_string(target.type()) << " value ";
+      stringify(target, message);
+    }
+
     message << " was expected to equal the " << to_string(value.type())
             << " constant ";
     stringify(value, message);
@@ -1587,9 +1611,20 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionEqualsAny) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueSet>(step)};
-    message << "The " << to_string(target.type()) << " value ";
-    stringify(target, message);
     assert(!value.empty());
+
+    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
+                    [](const auto &token) {
+                      return token.is_property() &&
+                             token.to_property() == "propertyNames";
+                    }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      message << "The property name "
+              << escape_string(instance_location.back().to_property());
+    } else {
+      message << "The " << to_string(target.type()) << " value ";
+      stringify(target, message);
+    }
 
     if (value.size() == 1) {
       message << " was expected to equal the "
@@ -1623,9 +1658,20 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionEqualsAnyStringHash) {
     std::ostringstream message;
     const auto &value{instruction_value<ValueStringHashes>(step).first};
-    message << "The " << to_string(target.type()) << " value ";
-    stringify(target, message);
     assert(!value.empty());
+
+    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
+                    [](const auto &token) {
+                      return token.is_property() &&
+                             token.to_property() == "propertyNames";
+                    }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      message << "The property name "
+              << escape_string(instance_location.back().to_property());
+    } else {
+      message << "The " << to_string(target.type()) << " value ";
+      stringify(target, message);
+    }
 
     if (value.size() == 1) {
       message << " was expected to equal the given constant";

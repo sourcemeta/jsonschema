@@ -73,14 +73,14 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON schema =
-  ///     sourcemeta::core::parse(R"JSON({
+  ///     sourcemeta::core::parse_json(R"JSON({
   ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
   ///   "type": "string"
   /// })JSON");
   ///
   /// const auto schema_template{sourcemeta::blaze::compile(
-  ///     schema, sourcemeta::core::default_schema_walker,
-  ///     sourcemeta::core::official_resolver,
+  ///     schema, sourcemeta::core::schema_official_walker,
+  ///     sourcemeta::core::schema_official_resolver,
   ///     sourcemeta::core::default_schema_compiler)};
   ///
   /// sourcemeta::blaze::Evaluator evaluator;
@@ -105,14 +105,14 @@ public:
   /// #include <iostream>
   ///
   /// const sourcemeta::core::JSON schema =
-  ///     sourcemeta::core::parse(R"JSON({
+  ///     sourcemeta::core::parse_json(R"JSON({
   ///   "$schema": "https://json-schema.org/draft/2020-12/schema",
   ///   "type": "string"
   /// })JSON");
   ///
   /// const auto schema_template{sourcemeta::blaze::compile(
-  ///     schema, sourcemeta::core::default_schema_walker,
-  ///     sourcemeta::core::official_resolver,
+  ///     schema, sourcemeta::core::schema_official_walker,
+  ///     sourcemeta::core::schema_official_resolver,
   ///     sourcemeta::core::default_schema_compiler)};
   ///
   /// static auto callback(

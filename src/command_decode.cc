@@ -38,12 +38,12 @@ auto sourcemeta::jsonschema::cli::decode(
   }
 
   // TODO: Take a real schema as argument
-  auto schema{sourcemeta::core::parse(R"JSON({
+  auto schema{sourcemeta::core::parse_json(R"JSON({
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
   sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::core::default_schema_walker,
+      schema, sourcemeta::core::schema_official_walker,
       resolver(options, options.contains("h") || options.contains("http")));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 

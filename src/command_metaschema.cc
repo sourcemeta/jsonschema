@@ -41,7 +41,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
         sourcemeta::core::metaschema(entry.second, custom_resolver)};
     if (!cache.contains(dialect.value())) {
       const auto metaschema_template{sourcemeta::blaze::compile(
-          metaschema, sourcemeta::core::default_schema_walker, custom_resolver,
+          metaschema, sourcemeta::core::schema_official_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler)};
       cache.insert({dialect.value(), metaschema_template});
     }

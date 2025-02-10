@@ -143,7 +143,7 @@ auto sourcemeta::jsonschema::cli::test(
 
     try {
       schema_template = sourcemeta::blaze::compile(
-          schema.value(), sourcemeta::core::default_schema_walker,
+          schema.value(), sourcemeta::core::schema_official_walker,
           test_resolver, sourcemeta::blaze::default_schema_compiler);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&

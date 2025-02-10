@@ -54,7 +54,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
-  sourcemeta::core::KeyHash<value_type> hasher;
+  sourcemeta::core::PropertyHashJSON<value_type> hasher;
 };
 
 } // namespace sourcemeta::blaze

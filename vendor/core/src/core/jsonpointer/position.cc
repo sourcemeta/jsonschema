@@ -4,11 +4,12 @@
 
 namespace sourcemeta::core {
 
-auto PositionTracker::operator()(const CallbackPhase phase, const JSON::Type,
-                                 const std::uint64_t line,
-                                 const std::uint64_t column, const JSON &value)
-    -> void {
-  if (phase == CallbackPhase::Pre) {
+auto PointerPositionTracker::operator()(const JSON::ParsePhase phase,
+                                        const JSON::Type,
+                                        const std::uint64_t line,
+                                        const std::uint64_t column,
+                                        const JSON &value) -> void {
+  if (phase == JSON::ParsePhase::Pre) {
     this->stack.push({line, column});
     if (value.is_string()) {
       this->current.push_back(value.to_string());
@@ -16,7 +17,7 @@ auto PositionTracker::operator()(const CallbackPhase phase, const JSON::Type,
       this->current.push_back(
           static_cast<Pointer::Token::Index>(value.to_integer()));
     }
-  } else if (phase == CallbackPhase::Post) {
+  } else if (phase == JSON::ParsePhase::Post) {
     assert(!this->stack.empty());
     this->data.emplace(this->current,
                        Position{this->stack.top().first,
@@ -28,13 +29,15 @@ auto PositionTracker::operator()(const CallbackPhase phase, const JSON::Type,
   }
 }
 
-auto PositionTracker::get(const Pointer &pointer) const
+auto PointerPositionTracker::get(const Pointer &pointer) const
     -> std::optional<Position> {
   const auto result{this->data.find(pointer)};
   return result == this->data.cend() ? std::nullopt
                                      : std::optional<Position>{result->second};
 }
 
-auto PositionTracker::size() const -> std::size_t { return this->data.size(); }
+auto PointerPositionTracker::size() const -> std::size_t {
+  return this->data.size();
+}
 
 } // namespace sourcemeta::core

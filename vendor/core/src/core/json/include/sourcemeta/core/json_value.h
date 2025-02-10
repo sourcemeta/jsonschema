@@ -12,7 +12,7 @@
 #include <algorithm>        // std::any_of
 #include <cassert>          // assert
 #include <cstdint>          // std::int64_t, std::uint8_t
-#include <functional>       // std::less, std::reference_wrapper
+#include <functional>       // std::less, std::reference_wrapper, std::function
 #include <initializer_list> // std::initializer_list
 #include <memory>           // std::allocator
 #include <optional>         // std::optional
@@ -43,10 +43,34 @@ public:
   /// The array type used by the JSON document.
   using Array = JSONArray<JSON>;
   /// The object type used by the JSON document.
-  using Object = JSONObject<String, JSON, KeyHash<JSON::String>>;
+  using Object = JSONObject<String, JSON, PropertyHashJSON<JSON::String>>;
+  /// The parsing phase of a JSON document.
+  enum class ParsePhase { Pre, Post };
+  // The enumeration indexes must stay in sync with the internal variant
+  /// The different types of a JSON instance.
+  enum class Type : std::uint8_t {
+    Null = 0,
+    Boolean = 1,
+    Integer = 2,
+    Real = 3,
+    String = 4,
+    Array = 5,
+    Object = 6
+  };
+
+  /// An optional callback that can be passed to parsing functions to obtain
+  /// metadata during the parsing process. Each subdocument will emit 2 events:
+  /// a "pre" and a "post". When parsing object and arrays, during the "pre"
+  /// event, the value corresponds to the property name or index, respectively.
+  using ParseCallback = std::function<void(
+      const ParsePhase phase, const Type type, const std::uint64_t line,
+      const std::uint64_t column, const JSON &value)>;
+  /// A comparison function between object property keys.
+  /// See https://en.cppreference.com/w/cpp/named_req/Compare
+  using KeyComparison = std::function<bool(const String &, const String &)>;
 
   /*
-   * Constructors
+    Constructors
    */
 
   /// This constructor creates a JSON document from an integer type. For
@@ -422,7 +446,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON
-  /// document=sourcemeta::core::parse("[ 1, 2, 3 ]");
+  /// document=sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.is_array());
   /// ```
   [[nodiscard]] auto is_array() const noexcept -> bool;
@@ -434,22 +458,10 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON
-  /// document=sourcemeta::core::parse("{ \"foo\": 1 }");
+  /// document=sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// assert(document.is_object());
   /// ```
   [[nodiscard]] auto is_object() const noexcept -> bool;
-
-  // The enumeration indexes must stay in sync with the internal variant
-  /// The different types of a JSON instance.
-  enum class Type : std::uint8_t {
-    Null = 0,
-    Boolean = 1,
-    Integer = 2,
-    Real = 3,
-    String = 4,
-    Array = 5,
-    Object = 6
-  };
 
   /// Get the type of the JSON document. For example:
   ///
@@ -546,7 +558,7 @@ public:
   /// #include <iostream>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// std::for_each(document.as_array().cbegin(),
   ///               document.as_array().cend(),
   ///               [](const auto &element) {
@@ -566,7 +578,7 @@ public:
   /// #include <iostream>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// std::sort(document.as_array().begin(), document.as_array().end());
   /// ```
   [[nodiscard]] auto as_array() noexcept -> Array &;
@@ -655,11 +667,11 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[ 1, 2 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2 ]");
   /// assert(my_array.at(1).to_integer() == 2);
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"1\": "foo" }");
+  ///   sourcemeta::core::parse_json("{ \"1\": "foo" }");
   /// assert(my_array.at(1).to_string() == "foo");
   /// ```
   [[nodiscard]] auto at(const typename Array::size_type index) const
@@ -676,11 +688,11 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[ 1, 2 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2 ]");
   /// assert(my_array.at(1).to_integer() == 2);
   ///
   /// sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"1\": "foo" }");
+  ///   sourcemeta::core::parse_json("{ \"1\": "foo" }");
   /// assert(my_array.at(1).to_string() == "foo");
   /// ```
   [[nodiscard]] auto at(const typename Array::size_type index) -> JSON &;
@@ -694,7 +706,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
   /// assert(my_object.at("bar").to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key) const -> const JSON &;
@@ -709,9 +721,9 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2 }");
-  /// const sourcemeta::core::Hash hasher;
-  /// assert(my_object.at("bar", hasher("bar")).to_integer() == 2);
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
+  /// assert(my_object.at("bar",
+  ///  my_object.as_object().hash("bar")).to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key,
                         const typename Object::Container::hash_type hash) const
@@ -726,7 +738,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
   /// assert(my_object.at("bar").to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key) -> JSON &;
@@ -741,9 +753,9 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1, \"bar\": 2 }");
-  /// const sourcemeta::core::Hash hasher;
-  /// assert(my_object.at("bar", hasher("bar")).to_integer() == 2);
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
+  /// assert(my_object.at("bar",
+  ///   my_object.as_object().hash("bar")).to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key,
                         const typename Object::Container::hash_type hash)
@@ -758,7 +770,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.front().to_integer() == 1);
   /// ```
   [[nodiscard]] auto front() -> JSON &;
@@ -772,7 +784,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.front().to_integer() == 1);
   /// ```
   [[nodiscard]] auto front() const -> const JSON &;
@@ -786,7 +798,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.back().to_integer() == 3);
   /// ```
   [[nodiscard]] auto back() -> JSON &;
@@ -800,7 +812,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.back().to_integer() == 3);
   /// ```
   [[nodiscard]] auto back() const -> const JSON &;
@@ -820,9 +832,9 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// const sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[ 1, 2 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2 ]");
   /// const sourcemeta::core::JSON my_string{"foo"};
   ///
   /// assert(my_object.size() == 1);
@@ -853,7 +865,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[ 1, 2 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2 ]");
   /// assert(my_array.array_size() == 2);
   /// ```
   [[nodiscard]] auto array_size() const -> std::size_t;
@@ -867,7 +879,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// assert(my_object.object_size() == 1);
   /// ```
   [[nodiscard]] auto object_size() const -> std::size_t;
@@ -880,7 +892,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_string{
-  ///   sourcemeta::core::parse("\"\\uD83D\\uDCA9\"")};
+  ///   sourcemeta::core::parse_json("\"\\uD83D\\uDCA9\"")};
   /// assert(my_string.size() == 2);
   /// ```
   [[nodiscard]] auto byte_size() const -> std::size_t;
@@ -894,7 +906,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON value =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   ///
   /// // Byte length of "foo" (3) + byte length of 1 (8)
   /// assert(value.estimated_byte_size() == 11);
@@ -909,10 +921,10 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON value_1 =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   ///
   /// const sourcemeta::core::JSON value_2 =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   ///
   /// assert(value_1.fast_hash() == value_2.fast_hash());
   /// ```
@@ -942,9 +954,9 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{}");
+  ///   sourcemeta::core::parse_json("{}");
   /// const sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[]");
+  ///   sourcemeta::core::parse_json("[]");
   /// const sourcemeta::core::JSON my_string{""};
   ///
   /// assert(my_object.empty());
@@ -961,7 +973,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// EXPECT_TRUE(document.is_object());
   /// const auto result = document.try_at("foo");
   /// EXPECT_TRUE(result);
@@ -977,10 +989,10 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// EXPECT_TRUE(document.is_object());
-  /// const sourcemeta::core::Hash hasher;
-  /// const auto result = document.try_at("foo", hasher("foo"));
+  /// const auto result = document.try_at("foo",
+  ///   document.as_object().hash("foo"));
   /// EXPECT_TRUE(result);
   /// EXPECT_EQ(result->to_integer(), 1);
   [[nodiscard]] auto
@@ -996,7 +1008,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
   /// assert(document.defines("foo"));
   /// assert(!document.defines("bar"));
   /// ```
@@ -1010,10 +1022,11 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": 1 }");
-  /// const sourcemeta::core::Hash hasher;
-  /// assert(document.defines("foo", hasher("foo")));
-  /// assert(!document.defines("bar", hasher("bar")));
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
+  /// assert(document.defines("foo",
+  ///   document.as_object().hash("foo")));
+  /// assert(document.defines("bar",
+  ///   document.as_object().hash("bar")));
   /// ```
   [[nodiscard]] auto
   defines(const String &key,
@@ -1027,7 +1040,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"0\": 1 }");
+  ///   sourcemeta::core::parse_json("{ \"0\": 1 }");
   /// assert(document.defines(0));
   /// assert(!document.defines(1));
   /// ```
@@ -1044,7 +1057,7 @@ public:
   /// #include <vector>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true, \"bar\": false }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true, \"bar\": false }");
   ///
   /// const std::vector<std::string> keys{"foo", "qux"};
   /// assert(document.defines_any(keys.cbegin(), keys.cend()));
@@ -1064,7 +1077,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true, \"bar\": false }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true, \"bar\": false }");
   ///
   /// assert(document.defines_any({ "foo", "qux" }));
   /// ```
@@ -1079,7 +1092,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.contains(sourcemeta::core::JSON{2}));
   /// assert(!document.contains(sourcemeta::core::JSON{4}));
   /// ```
@@ -1119,7 +1132,7 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// assert(document.unique());
   /// ```
   [[nodiscard]] auto unique() const -> bool;
@@ -1136,7 +1149,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// const sourcemeta::core::JSON value{4};
   /// document.push_back(value);
   /// assert(document.size() == 4);
@@ -1152,7 +1165,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// document.push_back(sourcemeta::core::JSON{4});
   /// assert(document.size() == 4);
   /// assert(document.back().to_integer() == 4);
@@ -1169,7 +1182,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// const sourcemeta::core::JSON new_element{3};
   /// const auto result{document.push_back_if_unique(new_element)};
   /// assert(result.first.get().to_integer() == 3);
@@ -1189,7 +1202,7 @@ public:
   /// #include <utility>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// sourcemeta::core::JSON new_element{3};
   /// const auto result{document.push_back_if_unique(std::move(new_element)};
   /// assert(result.first.get().to_integer() == 3);
@@ -1206,7 +1219,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// const sourcemeta::core::JSON value{false};
   /// document.assign("bar", value);
   /// assert(document.defines("foo"));
@@ -1222,7 +1235,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// document.assign("bar", sourcemeta::core::JSON{false});
   /// assert(document.defines("foo"));
   /// assert(document.defines("bar"));
@@ -1236,7 +1249,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   ///
   /// const sourcemeta::core::JSON value_1{1};
   /// const sourcemeta::core::JSON value_2{2};
@@ -1258,7 +1271,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   ///
   /// document.assign_if_missing("foo", sourcemeta::core::JSON{1});
   /// document.assign_if_missing("bar", sourcemeta::core::JSON{2});
@@ -1277,7 +1290,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// document.erase("foo");
   /// assert(!document.defines("foo"));
   /// ```
@@ -1340,7 +1353,7 @@ public:
   /// #include <iterator>
   ///
   /// sourcemeta::core::JSON array =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// array.erase(std::next(array.begin()));
   /// assert(array.size(), 2);
   /// assert(array.at(0), 1);
@@ -1357,7 +1370,7 @@ public:
   /// #include <iterator>
   ///
   /// sourcemeta::core::JSON array =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// array.erase(std::next(array.begin()), array.end());
   /// assert(array.size(), 1);
   /// assert(array.at(0), 1);
@@ -1373,9 +1386,9 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON my_object =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// sourcemeta::core::JSON my_array =
-  ///   sourcemeta::core::parse("[ 1, 2, 3 ]");
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
   /// my_object.clear();
   /// my_array.clear();
   /// assert(my_object.empty());
@@ -1457,7 +1470,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// const sourcemeta::core::JSON value{2};
   /// document.at("foo").into(value);
   /// assert(document.at("foo").is_integer());
@@ -1473,7 +1486,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": true }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
   /// document.at("foo").into(sourcemeta::core::JSON{2});
   /// assert(document.at("foo").is_integer());
   /// ```

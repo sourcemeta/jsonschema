@@ -28,7 +28,7 @@ inline auto parse_null(
           1)) {
     column += 1;
     if (stream.get() != character) {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
   }
 
@@ -45,7 +45,7 @@ inline auto parse_boolean_true(
           1)) {
     column += 1;
     if (stream.get() != character) {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
   }
 
@@ -62,7 +62,7 @@ inline auto parse_boolean_false(
           1)) {
     column += 1;
     if (stream.get() != character) {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
   }
 
@@ -97,7 +97,7 @@ auto parse_string_unicode_code_point(
     if (std::isxdigit(code_point[code_point_size])) {
       code_point_size += 1;
     } else {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
   }
 
@@ -127,13 +127,13 @@ auto parse_string_unicode(
     // Next, we expect "\"
     column += 1;
     if (stream.get() != internal::token_string_escape<CharT>) {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
 
     // Next, we expect "u"
     column += 1;
     if (stream.get() != internal::token_string_escape_unicode<CharT>) {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
 
     // Finally, get the low code point of the surrogate and calculate
@@ -147,7 +147,7 @@ auto parse_string_unicode(
       code_point =
           0x10000 + ((code_point - 0xD800) << 10) + (low_code_point - 0xDC00);
     } else {
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     }
   }
 
@@ -218,7 +218,7 @@ auto parse_string_escape(
       return;
 
     default:
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
   }
 }
 
@@ -276,14 +276,14 @@ auto parse_string(
       case '\u001E':
       case '\u001F':
       case static_cast<typename JSON::Char>(JSON::CharTraits::eof()):
-        throw ParseError(line, column);
+        throw JSONParseError(line, column);
       default:
         result.put(character);
         break;
     }
   }
 
-  throw ParseError(line, column);
+  throw JSONParseError(line, column);
 }
 
 template <typename CharT, typename Traits>
@@ -293,7 +293,7 @@ auto parse_number_integer(const std::uint64_t line, const std::uint64_t column,
   try {
     return std::stoll(string);
   } catch (const std::out_of_range &) {
-    throw ParseError(line, column);
+    throw JSONParseError(line, column);
   }
 }
 
@@ -304,7 +304,7 @@ auto parse_number_real(const std::uint64_t line, const std::uint64_t column,
   try {
     return std::stod(string);
   } catch (const std::out_of_range &) {
-    throw ParseError(line, column);
+    throw JSONParseError(line, column);
   }
 }
 
@@ -338,7 +338,7 @@ auto parse_number_exponent_rest(
     }
   }
 
-  throw ParseError(line, column);
+  throw JSONParseError(line, column);
 }
 
 auto parse_number_exponent(
@@ -366,7 +366,7 @@ auto parse_number_exponent(
       return parse_number_exponent_rest(line, column, original_column, stream,
                                         result);
     default:
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
   }
 }
 
@@ -405,7 +405,7 @@ auto parse_number_exponent_first(
       return parse_number_exponent_rest(line, column, original_column, stream,
                                         result);
     default:
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
   }
 }
 
@@ -450,7 +450,7 @@ auto parse_number_fractional(
     }
   }
 
-  throw ParseError(line, column);
+  throw JSONParseError(line, column);
 }
 
 auto parse_number_fractional_first(
@@ -469,7 +469,7 @@ auto parse_number_fractional_first(
     case internal::token_number_decimal_point<typename JSON::Char>:
     case static_cast<typename JSON::Char>(JSON::CharTraits::eof()):
       column += 1;
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     case internal::token_number_zero<typename JSON::Char>:
     case internal::token_number_one<typename JSON::Char>:
     case internal::token_number_two<typename JSON::Char>:
@@ -526,7 +526,7 @@ auto parse_number_maybe_fractional(
     case internal::token_number_eight<typename JSON::Char>:
     case internal::token_number_nine<typename JSON::Char>:
       column += 1;
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
     default:
       return JSON{parse_number_integer(line, original_column, result.str())};
   }
@@ -578,7 +578,7 @@ auto parse_number_any_rest(
     }
   }
 
-  throw ParseError(line, column);
+  throw JSONParseError(line, column);
 }
 
 auto parse_number_any_negative_first(
@@ -612,7 +612,7 @@ auto parse_number_any_negative_first(
       return parse_number_any_rest(line, column, original_column, stream,
                                    result);
     default:
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
   }
 }
 
@@ -649,27 +649,29 @@ auto parse_number(
 #define CALLBACK_PRE(value_type, value)                                        \
   if (callback) {                                                              \
     assert(value.is_null() || value.is_string() || value.is_integer());        \
-    callback(CallbackPhase::Pre, JSON::Type::value_type, line, column, value); \
+    callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
+             value);                                                           \
   }
 
 #define CALLBACK_PRE_WITH_POSITION(value_type, line, column, value)            \
   if (callback) {                                                              \
     assert(value.is_null() || value.is_string() || value.is_integer());        \
-    callback(CallbackPhase::Pre, JSON::Type::value_type, line, column, value); \
+    callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
+             value);                                                           \
   }
 
 #define CALLBACK_POST(value_type, value)                                       \
   if (callback) {                                                              \
     assert(value.type() == JSON::Type::value_type);                            \
-    callback(CallbackPhase::Post, JSON::Type::value_type, line, column,        \
+    callback(JSON::ParsePhase::Post, JSON::Type::value_type, line, column,     \
              value);                                                           \
   }
 
 namespace sourcemeta::core {
-auto internal_parse(
+auto internal_parse_json(
     std::basic_istream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    std::uint64_t &line, std::uint64_t &column, const Callback &callback)
-    -> JSON {
+    std::uint64_t &line, std::uint64_t &column,
+    const JSON::ParseCallback &callback) -> JSON {
   // Globals
   using Result = JSON;
   enum class Container : std::uint8_t { Array, Object };
@@ -781,7 +783,7 @@ do_parse:
     case internal::token_whitespace_space<typename JSON::Char>:
       goto do_parse;
     default:
-      throw ParseError(line, column);
+      throw JSONParseError(line, column);
   }
 
   /*
@@ -826,7 +828,7 @@ do_parse_array_item:
         CALLBACK_POST(Array, frames.top().get());
         goto do_parse_container_end;
       } else {
-        throw ParseError(line, column);
+        throw JSONParseError(line, column);
       }
 
     // Values
@@ -1170,7 +1172,7 @@ error:
     frames.pop();
   }
 
-  throw ParseError(line, column);
+  throw JSONParseError(line, column);
 
 do_parse_container_end:
   assert(!levels.empty());
@@ -1189,14 +1191,15 @@ do_parse_container_end:
 
 // NOLINTEND(cppcoreguidelines-avoid-goto)
 
-auto internal_parse(const std::basic_string<typename JSON::Char,
-                                            typename JSON::CharTraits> &input,
-                    std::uint64_t &line, std::uint64_t &column,
-                    const Callback &callback) -> JSON {
+auto internal_parse_json(
+    const std::basic_string<typename JSON::Char, typename JSON::CharTraits>
+        &input,
+    std::uint64_t &line, std::uint64_t &column,
+    const JSON::ParseCallback &callback) -> JSON {
   std::basic_istringstream<typename JSON::Char, typename JSON::CharTraits,
                            typename JSON::Allocator<typename JSON::Char>>
       stream{input};
-  return internal_parse(stream, line, column, callback);
+  return internal_parse_json(stream, line, column, callback);
 }
 
 } // namespace sourcemeta::core

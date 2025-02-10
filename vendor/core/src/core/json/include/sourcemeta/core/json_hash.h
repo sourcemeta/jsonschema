@@ -8,7 +8,7 @@
 namespace sourcemeta::core {
 
 /// @ingroup json
-template <typename T> struct FastHash {
+template <typename T> struct HashJSON {
   using hash_type = std::uint64_t;
   inline auto operator()(const T &value) const noexcept -> hash_type {
     return value.fast_hash();
@@ -20,7 +20,7 @@ template <typename T> struct FastHash {
 };
 
 /// @ingroup json
-template <typename T> struct KeyHash {
+template <typename T> struct PropertyHashJSON {
   struct hash_type {
     // For performance when the platform allows it
 #if defined(__SIZEOF_INT128__)

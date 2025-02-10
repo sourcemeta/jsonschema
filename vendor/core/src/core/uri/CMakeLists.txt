@@ -1,5 +1,4 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME uri
-  FOLDER "Core/URI"
   PRIVATE_HEADERS error.h
   SOURCES uri.cc escaping.cc)
 

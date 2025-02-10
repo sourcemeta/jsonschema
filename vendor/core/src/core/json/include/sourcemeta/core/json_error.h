@@ -20,10 +20,10 @@ namespace sourcemeta::core {
 
 /// @ingroup json
 /// This class represents a parsing error
-class SOURCEMETA_CORE_JSON_EXPORT ParseError : public std::exception {
+class SOURCEMETA_CORE_JSON_EXPORT JSONParseError : public std::exception {
 public:
   /// Create a parsing error
-  ParseError(const std::uint64_t line, const std::uint64_t column)
+  JSONParseError(const std::uint64_t line, const std::uint64_t column)
       : line_{line}, column_{column} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -45,16 +45,17 @@ private:
 
 /// @ingroup json
 /// This class represents a parsing error occurring from parsing a file
-class SOURCEMETA_CORE_JSON_EXPORT FileParseError : public ParseError {
+class SOURCEMETA_CORE_JSON_EXPORT JSONFileParseError : public JSONParseError {
 public:
   /// Create a file parsing error
-  FileParseError(const std::filesystem::path &path, const std::uint64_t line,
-                 const std::uint64_t column)
-      : ParseError{line, column}, path_{path} {}
+  JSONFileParseError(const std::filesystem::path &path,
+                     const std::uint64_t line, const std::uint64_t column)
+      : JSONParseError{line, column}, path_{path} {}
 
   /// Create a file parsing error from a parse error
-  FileParseError(const std::filesystem::path &path, const ParseError &parent)
-      : ParseError{parent.line(), parent.column()}, path_{path} {}
+  JSONFileParseError(const std::filesystem::path &path,
+                     const JSONParseError &parent)
+      : JSONParseError{parent.line(), parent.column()}, path_{path} {}
 
   /// Get the fiel path of the error
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path {
