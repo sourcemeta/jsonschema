@@ -3,7 +3,7 @@ Linting
 
 ```sh
 jsonschema lint [schemas-or-directories...]
-  [--fix/-f] [--verbose/-v] [--extension/-e <extension>]
+  [--fix/-f] [--json/-j] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>]
 ```
 
@@ -26,6 +26,8 @@ automatically fix many of them.
 > specifications, you should make use of both linters together!
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
+
+**The `--json/-j` option prints results as a JSON object rather than human‐readable text.**
 
 Examples
 --------
@@ -60,6 +62,11 @@ result in the JSON Schema CLI *automatically* fixing the warning for you.
 
 ```sh
 jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
+```
+### Lint with JSON output
+
+```sh
+jsonschema lint path/to/my/schema.json --json
 ```
 
 ### Lint every `.json` file in a given directory (recursively)
