@@ -38,7 +38,8 @@ auto sourcemeta::jsonschema::cli::inspect(
   const sourcemeta::core::JSON schema{
       sourcemeta::jsonschema::cli::read_file(options.at("").front())};
 
-  sourcemeta::core::SchemaFrame frame;
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
   frame.analyse(schema, sourcemeta::core::schema_official_walker,
                 resolver(options));
 

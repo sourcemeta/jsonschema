@@ -124,7 +124,7 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
 
 inline auto static_frame_entry(const Context &context,
                                const SchemaContext &schema_context)
-    -> const sourcemeta::core::SchemaFrame::LocationsEntry & {
+    -> const sourcemeta::core::SchemaFrame::Location & {
   const auto current{
       to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
   const auto type{sourcemeta::core::SchemaReferenceType::Static};
