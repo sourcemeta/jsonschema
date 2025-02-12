@@ -18,7 +18,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" frame "$TMP/schema.json" > "$TMP/result.txt"
+"$1" inspect "$TMP/schema.json" > "$TMP/result.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
 (LOCATION) URI: https://example.com
