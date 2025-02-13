@@ -27,8 +27,6 @@ automatically fix many of them.
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
 
-**The `--json/-j` option prints results as a JSON object rather than human‐readable text.**
-
 Examples
 --------
 
