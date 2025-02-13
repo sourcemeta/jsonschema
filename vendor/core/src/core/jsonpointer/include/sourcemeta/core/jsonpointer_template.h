@@ -7,7 +7,7 @@
 #include <algorithm> // std::copy
 #include <cassert>   // assert
 #include <iterator>  // std::back_inserter
-#include <variant>   // std::variant
+#include <variant>   // std::variant, std::holds_alternative
 #include <vector>    // std::vector
 
 namespace sourcemeta::core {
@@ -15,12 +15,19 @@ namespace sourcemeta::core {
 /// @ingroup jsonpointer
 template <typename PointerT> class GenericPointerTemplate {
 public:
-  /// The type of wildcard
   enum class Wildcard { Property, Item, Key };
-
+  struct Condition {
+    auto operator==(const Condition &) const noexcept -> bool = default;
+    auto operator<(const Condition &) const noexcept -> bool { return false; }
+  };
+  struct Negation {
+    auto operator==(const Negation &) const noexcept -> bool = default;
+    auto operator<(const Negation &) const noexcept -> bool { return false; }
+  };
   using Regex = typename PointerT::Value::String;
   using Token = typename PointerT::Token;
-  using Container = std::vector<std::variant<Token, Wildcard, Regex>>;
+  using Container =
+      std::vector<std::variant<Wildcard, Condition, Negation, Regex, Token>>;
 
   /// This constructor creates an empty JSON Pointer template. For example:
   ///
@@ -114,10 +121,6 @@ public:
   /// pointer.emplace_back(sourcemeta::core::PointerTemplate::Wildcard::Property);
   /// ```
   template <class... Args> auto emplace_back(Args &&...args) -> reference {
-    // It is a logical error to push a token after a key wildcard
-    assert(this->empty() ||
-           !std::holds_alternative<Wildcard>(this->data.back()) ||
-           std::get<Wildcard>(this->data.back()) != Wildcard::Key);
     return this->data.emplace_back(args...);
   }
 
@@ -132,10 +135,6 @@ public:
   /// result.push_back(pointer);
   /// ```
   auto push_back(const PointerT &other) -> void {
-    // It is a logical error to push a token after a key wildcard
-    assert(this->empty() ||
-           !std::holds_alternative<Wildcard>(this->data.back()) ||
-           std::get<Wildcard>(this->data.back()) != Wildcard::Key);
     this->data.reserve(this->data.size() + other.size());
     std::copy(other.cbegin(), other.cend(), std::back_inserter(this->data));
   }
@@ -194,6 +193,56 @@ public:
   /// ```
   [[nodiscard]] auto empty() const noexcept -> bool {
     return this->data.empty();
+  }
+
+  /// Check if a JSON Pointer template is equal to another JSON Pointer template
+  /// when not taking into account condition tokens. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::PointerTemplate left{
+  ///     sourcemeta::core::PointerTemplate::Condition{},
+  ///     sourcemeta::core::Pointer::Token{"foo"}};
+  /// const sourcemeta::core::PointerTemplate right{
+  ///     sourcemeta::core::Pointer::Token{"foo"}};
+  ///
+  /// assert(left.conditional_of(right));
+  /// assert(right.conditional_of(left));
+  /// ```
+  [[nodiscard]] auto
+  conditional_of(const GenericPointerTemplate<PointerT> &other) const noexcept
+      -> bool {
+    auto iterator_this = this->data.cbegin();
+    auto iterator_that = other.data.cbegin();
+
+    while (iterator_this != this->data.cend() &&
+           iterator_that != other.data.cend()) {
+      while (iterator_this != this->data.cend() &&
+             std::holds_alternative<Condition>(*iterator_this)) {
+        iterator_this += 1;
+      }
+
+      while (iterator_that != other.data.cend() &&
+             std::holds_alternative<Condition>(*iterator_that)) {
+        iterator_that += 1;
+      }
+
+      if (iterator_this == this->data.cend() ||
+          iterator_that == other.data.cend()) {
+        return iterator_this == this->data.cend() &&
+               iterator_that == other.data.cend();
+      } else if (*iterator_this != *iterator_that) {
+        return false;
+      } else {
+        iterator_this += 1;
+        iterator_that += 1;
+      }
+    }
+
+    return iterator_this == this->data.cend() &&
+           iterator_that == other.data.cend();
   }
 
   /// Compare JSON Pointer template instances

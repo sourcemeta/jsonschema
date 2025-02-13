@@ -127,7 +127,8 @@ auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
 ///
 /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto read_json(const std::filesystem::path &path) -> JSON;
+auto read_json(const std::filesystem::path &path,
+               const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 // TODO: Move this function to a system integration component, as it
 // is not JSON specific

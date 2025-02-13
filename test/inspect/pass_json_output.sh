@@ -23,77 +23,115 @@ EOF
 
 cat << 'EOF' > "$TMP/expected_json.txt"
 {
-  "frames": {
-    "https://example.com": {
+  "locations": [
+    {
+      "referenceType": "static",
+      "uri": "https://example.com",
+      "parent": null,
+      "type": "resource",
+      "root": "https://example.com",
       "base": "https://example.com",
-      "dialect": "https://json-schema.org/draft/2020-12/schema",
       "pointer": "",
       "relativePointer": "",
-      "root": "https://example.com",
-      "type": "resource"
-    },
-    "https://example.com#/$defs": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$defs",
+      "parent": "",
+      "type": "pointer",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$defs",
       "relativePointer": "/$defs",
-      "root": "https://example.com",
-      "type": "pointer"
-    },
-    "https://example.com#/$defs/string": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$defs/string",
+      "parent": "",
+      "type": "subschema",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$defs/string",
       "relativePointer": "/$defs/string",
-      "root": "https://example.com",
-      "type": "pointer"
-    },
-    "https://example.com#/$defs/string/type": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$defs/string/type",
+      "parent": "/$defs/string",
+      "type": "pointer",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$defs/string/type",
       "relativePointer": "/$defs/string/type",
-      "root": "https://example.com",
-      "type": "pointer"
-    },
-    "https://example.com#/$id": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$id",
+      "parent": "",
+      "type": "pointer",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$id",
       "relativePointer": "/$id",
-      "root": "https://example.com",
-      "type": "pointer"
-    },
-    "https://example.com#/$ref": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$ref",
+      "parent": "",
+      "type": "pointer",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$ref",
       "relativePointer": "/$ref",
-      "root": "https://example.com",
-      "type": "pointer"
-    },
-    "https://example.com#/$schema": {
-      "base": "https://example.com",
       "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "referenceType": "static",
+      "uri": "https://example.com#/$schema",
+      "parent": "",
+      "type": "pointer",
+      "root": "https://example.com",
+      "base": "https://example.com",
       "pointer": "/$schema",
       "relativePointer": "/$schema",
-      "root": "https://example.com",
-      "type": "pointer"
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "baseDialect": "https://json-schema.org/draft/2020-12/schema"
     }
-  },
-  "references": {
-    "/$ref": {
-      "base": "https://example.com",
+  ],
+  "references": [
+    {
+      "type": "static",
+      "origin": "/$ref",
       "destination": "https://example.com#/$defs/string",
-      "fragment": "/$defs/string",
-      "type": "static"
+      "base": "https://example.com",
+      "fragment": "/$defs/string"
     },
-    "/$schema": {
-      "base": "https://json-schema.org/draft/2020-12/schema",
+    {
+      "type": "static",
+      "origin": "/$schema",
       "destination": "https://json-schema.org/draft/2020-12/schema",
-      "fragment": null,
-      "type": "static"
+      "base": "https://json-schema.org/draft/2020-12/schema",
+      "fragment": null
     }
+  ],
+  "instances": {
+    "": [
+      ""
+    ],
+    "/$defs/string": [
+      ""
+    ]
   }
 }
 EOF
