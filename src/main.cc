@@ -73,8 +73,7 @@ Commands:
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
-auto jsonschema_main([[maybe_unused]] const std::string &program,
-                     const std::string &command,
+auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
   if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
