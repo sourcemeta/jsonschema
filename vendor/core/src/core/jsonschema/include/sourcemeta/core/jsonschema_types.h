@@ -189,12 +189,21 @@ using SchemaWalker = std::function<SchemaWalkerResult(
 /// @ingroup jsonschema
 /// An entry of a schema iterator.
 struct SchemaIteratorEntry {
+  // TODO: Turn this into a weak pointer
+  std::optional<Pointer> parent;
+  // TODO: Turn this into a weak pointer
   Pointer pointer;
   std::optional<std::string> dialect;
   std::map<std::string, bool> vocabularies;
   std::optional<std::string> base_dialect;
   std::reference_wrapper<const JSON> subschema;
+
+  // TODO: These two pointer templates contain some overlap.
+  // Instead, have a `base_instance_location` and a `relative_instance_location`
+  // that when concatenated, represent the full `instance_location`
   PointerTemplate instance_location;
+  PointerTemplate relative_instance_location;
+
   bool orphan;
 };
 

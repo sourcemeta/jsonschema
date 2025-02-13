@@ -47,7 +47,9 @@ namespace sourcemeta::core {
 ///   }
 /// })JSON");
 ///
-/// sourcemeta::core::SchemaFrame frame;
+/// sourcemeta::core::SchemaFrame
+///   frame{sourcemeta::core::SchemaFrame::Mode::References};
+///
 /// frame.analyse(document,
 ///   sourcemeta::core::schema_official_walker,
 ///   sourcemeta::core::schema_official_resolver);
@@ -101,10 +103,18 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrame {
 public:
+  /// The mode of framing. More extensive analysis can be compute and memory
+  /// intensive
+  enum class Mode { Locations, References, Instances };
+
+  SchemaFrame(const Mode mode) : mode_{mode} {}
+
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
     std::string destination;
+    // TODO: This string can be a `string_view` over the `destination`
     std::optional<std::string> base;
+    // TODO: This string can be a `string_view` over the `destination`
     std::optional<std::string> fragment;
   };
 
@@ -129,6 +139,7 @@ public:
   enum class LocationType : std::uint8_t {
     Resource,
     Anchor,
+    // TODO: Distinguish between a Pointer and a Keyword
     Pointer,
     Subschema
   };
@@ -136,29 +147,32 @@ public:
 #pragma GCC diagnostic pop
 #endif
 
-  /// Determines a location entry
-  using LocationKey = std::pair<SchemaReferenceType, std::string>;
-
-  /// A single frame in a JSON Schema reference frame
-  struct LocationsEntry {
+  /// A location entry
+  struct Location {
+    // TODO: Turn this into a weak pointer
+    std::optional<Pointer> parent;
     LocationType type;
     std::optional<std::string> root;
     std::string base;
+    // TODO: Turn this into a weak pointer
     Pointer pointer;
+    // TODO: Turn this into a weak pointer
     Pointer relative_pointer;
     std::string dialect;
     std::string base_dialect;
-    // TODO: Support only populating these when needed, given
-    // how expensive they can be, by taking more options on the
-    // analyse method
-    std::vector<PointerTemplate> instance_locations;
-    std::vector<std::reference_wrapper<const LocationKey>> destination_of;
   };
 
+  // TODO: Indexing locations by reference type is wrong. We can index by just
+  // URI, and introduce a new `DynamicAnchor` location type
   /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,
   /// JSON Pointers within the schema, and subschemas dialects. We call it
   /// reference frame as this mapping is essential for resolving references.
-  using Locations = std::map<LocationKey, LocationsEntry>;
+  using Locations =
+      std::map<std::pair<SchemaReferenceType, std::string>, Location>;
+
+  // TODO: Turn the mapped value into a proper set
+  /// A set of unresolved instance locations
+  using Instances = std::map<Pointer, std::vector<PointerTemplate>>;
 
   /// Analyse a given schema
   auto analyse(const JSON &schema, const SchemaWalker &walker,
@@ -174,32 +188,41 @@ public:
   auto references() const noexcept -> const References &;
 
   /// Get the vocabularies associated with a location entry
-  auto vocabularies(const LocationsEntry &location,
+  auto vocabularies(const Location &location,
                     const SchemaResolver &resolver) const
       -> std::map<std::string, bool>;
 
   /// Get the URI associated with a location entry
-  auto uri(const LocationsEntry &location,
+  auto uri(const Location &location,
            const Pointer &relative_schema_location = empty_pointer) const
       -> std::string;
 
   /// Get the location associated by traversing a pointer from another location
-  auto traverse(const LocationsEntry &location,
+  auto traverse(const Location &location,
                 const Pointer &relative_schema_location) const
-      -> const LocationsEntry &;
+      -> const Location &;
 
   /// Get the location associated with a given URI
   auto traverse(const std::string &uri) const
-      -> std::optional<std::reference_wrapper<const LocationsEntry>>;
+      -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Try to dereference a reference location into its destination location
   auto
-  dereference(const LocationsEntry &location,
+  dereference(const Location &location,
               const Pointer &relative_schema_location = empty_pointer) const
       -> std::pair<SchemaReferenceType,
-                   std::optional<std::reference_wrapper<const LocationsEntry>>>;
+                   std::optional<std::reference_wrapper<const Location>>>;
+
+  /// Get the unresolved instance locations associated with a location entry
+  auto instance_locations(const Location &location) const -> const
+      typename Instances::mapped_type &;
+
+  /// Find all references to a given location pointer
+  auto references_to(const Pointer &pointer) const -> std::vector<
+      std::reference_wrapper<const typename References::value_type>>;
 
 private:
+  Mode mode_;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -208,6 +231,7 @@ private:
 #endif
   Locations locations_;
   References references_;
+  Instances instances_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
@@ -249,7 +273,9 @@ using SchemaUnevaluatedEntries = std::map<std::string, SchemaUnevaluatedEntry>;
 ///   "unevaluatedProperties": false
 /// })JSON");
 ///
-/// sourcemeta::core::SchemaFrame frame;
+/// sourcemeta::core::SchemaFrame
+///   frame{sourcemeta::core::SchemaFrame::Mode::References};
+///
 /// frame.analyse(document,
 ///   sourcemeta::core::schema_official_walker,
 ///   sourcemeta::core::schema_official_resolver);

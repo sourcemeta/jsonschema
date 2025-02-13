@@ -113,7 +113,8 @@ auto compile(const sourcemeta::core::JSON &schema,
       sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
 
   // Perform framing to resolve references later on
-  sourcemeta::core::SchemaFrame frame;
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
   frame.analyse(result, walker, resolver, default_dialect);
 
   const std::string base{sourcemeta::core::URI{
