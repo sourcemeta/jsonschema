@@ -45,11 +45,12 @@ Commands:
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
 
-   lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
+   lint [schemas-or-directories...] [--fix/-f] [--json/-j] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
+       Use --json/-j to output lint errors and warnings in JSON format.
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]

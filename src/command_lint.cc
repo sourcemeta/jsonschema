@@ -3,16 +3,18 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <cstdlib>  // EXIT_SUCCESS
+#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout
+#include <sstream>  // std::ostringstream
 
 #include "command.h"
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"f", "fix"})};
+  const auto options{parse_options(arguments, {"f", "fix", "json", "j"})};
+  const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
   sourcemeta::core::add(bundle,
@@ -47,7 +49,15 @@ auto sourcemeta::jsonschema::cli::lint(
                                  sourcemeta::core::schema_format_compare);
       output << "\n";
     }
+
+    if (output_json) {
+      auto msg = sourcemeta::core::JSON::make_object();
+      msg.assign("fixApplied", sourcemeta::core::JSON{true});
+      sourcemeta::core::prettify(msg, std::cout);
+      std::cout << std::endl;
+    }
   } else {
+    auto errors_array = sourcemeta::core::JSON::make_array();
     for (const auto &entry :
          for_each_json(options.at(""), parse_ignore(options),
                        parse_extensions(options))) {
@@ -55,12 +65,28 @@ auto sourcemeta::jsonschema::cli::lint(
       const bool subresult = bundle.check(
           entry.second, sourcemeta::core::schema_official_walker,
           resolver(options),
-          [&entry](const auto &pointer, const auto &name, const auto &message) {
-            std::cout << entry.first.string() << ":\n";
-            std::cout << "  " << message << " (" << name << ")\n";
-            std::cout << "    at schema location \"";
-            sourcemeta::core::stringify(pointer, std::cout);
-            std::cout << "\"\n";
+          [&](const auto &pointer, const auto &name, const auto &message) {
+            if (output_json) {
+              auto error_obj = sourcemeta::core::JSON::make_object();
+
+              error_obj.assign("path",
+                               sourcemeta::core::JSON{entry.first.string()});
+              error_obj.assign("id", sourcemeta::core::JSON{name});
+              error_obj.assign("message", sourcemeta::core::JSON{message});
+
+              std::ostringstream pointer_stream;
+              sourcemeta::core::stringify(pointer, pointer_stream);
+              error_obj.assign("schemaLocation",
+                               sourcemeta::core::JSON{pointer_stream.str()});
+
+              errors_array.push_back(error_obj);
+            } else {
+              std::cout << entry.first.string() << ":\n";
+              std::cout << "  " << message << " (" << name << ")\n";
+              std::cout << "    at schema location \"";
+              sourcemeta::core::stringify(pointer, std::cout);
+              std::cout << "\"\n";
+            }
           });
 
       if (subresult) {
@@ -68,6 +94,13 @@ auto sourcemeta::jsonschema::cli::lint(
       } else {
         result = false;
       }
+    }
+    if (output_json) {
+      auto output_json_object = sourcemeta::core::JSON::make_object();
+      output_json_object.assign("valid", sourcemeta::core::JSON{result});
+      output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
+      sourcemeta::core::prettify(output_json_object, std::cout);
+      std::cout << std::endl;
     }
   }
 
