@@ -147,6 +147,7 @@ add_jsonschema_test_unix(bundle/fail_unknown_metaschema)
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
 add_jsonschema_test_unix(inspect/pass_yaml)
+add_jsonschema_test_unix(inspect/pass_json_output)
 add_jsonschema_test_unix(inspect/fail_no_schema)
 add_jsonschema_test_unix(inspect/fail_schema_invalid_json)
 add_jsonschema_test_unix(inspect/fail_unknown_metaschema)
