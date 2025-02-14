@@ -262,7 +262,10 @@ static auto fallback_resolver(
     throw std::runtime_error(error.str());
   }
 
-  return sourcemeta::core::parse_json(response.body());
+  // TODO: We should be checking the Content-Type instead
+  return identifier.ends_with(".yaml") || identifier.ends_with(".yml")
+             ? sourcemeta::core::parse_yaml(response.body())
+             : sourcemeta::core::parse_json(response.body());
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,

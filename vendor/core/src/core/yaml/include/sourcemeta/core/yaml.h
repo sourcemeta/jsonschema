@@ -10,6 +10,7 @@
 #include <sourcemeta/core/json.h>
 
 #include <filesystem> // std::filesystem
+#include <istream>    // std::basic_istream
 
 /// @defgroup yaml YAML
 /// @brief A YAML compatibility library based on `libyaml`.
@@ -21,6 +22,25 @@
 /// ```
 
 namespace sourcemeta::core {
+
+/// @ingroup yaml
+///
+/// Create a JSON document from a C++ standard input stream that represents a
+/// YAML document. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"foo: bar"};
+/// const sourcemeta::core::JSON document =
+///   sourcemeta::core::parse_yaml(stream);
+/// assert(document.is_object());
+/// ```
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
+    -> JSON;
 
 /// @ingroup yaml
 ///

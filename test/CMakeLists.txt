@@ -74,6 +74,8 @@ add_jsonschema_test_unix(validate/pass_many_verbose)
 add_jsonschema_test_unix(validate/fail_many)
 add_jsonschema_test_unix(validate/fail_many_verbose)
 add_jsonschema_test_unix(validate/fail_yaml)
+add_jsonschema_test_unix(validate/pass_json_ref_yaml)
+add_jsonschema_test_unix(validate/pass_json_ref_yaml_http)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
