@@ -255,6 +255,7 @@ static auto fallback_resolver(
   log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
   sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
   request.method(sourcemeta::hydra::http::Method::GET);
+  request.capture("content-type");
   sourcemeta::hydra::http::ClientResponse response{request.send().get()};
   if (response.status() != sourcemeta::hydra::http::Status::OK) {
     std::ostringstream error;
@@ -262,10 +263,11 @@ static auto fallback_resolver(
     throw std::runtime_error(error.str());
   }
 
-  // TODO: We should be checking the Content-Type instead
-  return identifier.ends_with(".yaml") || identifier.ends_with(".yml")
-             ? sourcemeta::core::parse_yaml(response.body())
-             : sourcemeta::core::parse_json(response.body());
+  if (response.header("content-type").value_or("").starts_with("text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.body());
+  } else {
+    return sourcemeta::core::parse_json(response.body());
+  }
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
