@@ -68,6 +68,10 @@ jobs:
           cmake --install ./build --prefix ./build/dist --config Release --verbose
           --component sourcemeta_jsonschema
 
+      # TODO: Debugging purposes
+      - if: runner.os == 'linux'
+        run: ./test/validate/pass_json_ref_yaml_http.sh bin/jsonschema
+
       # Not every CTest version supports the --test-dir option. If such option
       # is not recognized, `ctest` will successfully exit finding no tests.
       # Better to be sure and `cd` all the time here.

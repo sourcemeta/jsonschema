@@ -5,7 +5,7 @@ set -o nounset
 
 TMP="$(mktemp -d)"
 mkdir "$TMP/server"
-npx --yes http-server --help
+npx --yes http-server --version
 npx --yes http-server "$TMP/server" --port 8000 &
 SERVER_PID="$!"
 
