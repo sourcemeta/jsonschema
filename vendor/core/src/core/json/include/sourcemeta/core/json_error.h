@@ -26,8 +26,13 @@ public:
   JSONParseError(const std::uint64_t line, const std::uint64_t column)
       : line_{line}, column_{column} {}
 
+  /// Create a parsing error with a custom error
+  JSONParseError(const std::uint64_t line, const std::uint64_t column,
+                 std::string message)
+      : line_{line}, column_{column}, message_{std::move(message)} {}
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Failed to parse the JSON document";
+    return this->message_.c_str();
   }
 
   /// Get the line number of the error
@@ -41,6 +46,21 @@ public:
 private:
   std::uint64_t line_;
   std::uint64_t column_;
+  std::string message_{"Failed to parse the JSON document"};
+};
+
+/// @ingroup json
+/// This class represents a numeric integer limit parsing error
+class SOURCEMETA_CORE_JSON_EXPORT JSONParseIntegerLimitError
+    : public JSONParseError {
+public:
+  /// Create a parsing error
+  JSONParseIntegerLimitError(const std::uint64_t line,
+                             const std::uint64_t column)
+      : JSONParseError{
+            line, column,
+            "The JSON value is not representable by the IETF RFC 8259 "
+            "interoperable signed integer range"} {}
 };
 
 /// @ingroup json
@@ -49,15 +69,17 @@ class SOURCEMETA_CORE_JSON_EXPORT JSONFileParseError : public JSONParseError {
 public:
   /// Create a file parsing error
   JSONFileParseError(const std::filesystem::path &path,
-                     const std::uint64_t line, const std::uint64_t column)
-      : JSONParseError{line, column}, path_{path} {}
+                     const std::uint64_t line, const std::uint64_t column,
+                     std::string message)
+      : JSONParseError{line, column, std::move(message)}, path_{path} {}
 
   /// Create a file parsing error from a parse error
   JSONFileParseError(const std::filesystem::path &path,
                      const JSONParseError &parent)
-      : JSONParseError{parent.line(), parent.column()}, path_{path} {}
+      : JSONParseError{parent.line(), parent.column(), parent.what()},
+        path_{path} {}
 
-  /// Get the fiel path of the error
+  /// Get the file path of the error
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path {
     return path_;
   }

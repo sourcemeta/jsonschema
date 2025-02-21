@@ -45,6 +45,7 @@ add_jsonschema_test_unix(validate/fail_schema_invalid_json)
 add_jsonschema_test_unix(validate/fail_schema_non_schema)
 add_jsonschema_test_unix(validate/fail_schema_unknown_dialect)
 add_jsonschema_test_unix(validate/fail_trace)
+add_jsonschema_test_unix(validate/fail_jsonl_bigint)
 add_jsonschema_test_unix(validate/pass_trace)
 add_jsonschema_test_unix(validate/pass_resolve)
 add_jsonschema_test_unix(validate/pass_resolve_custom_extension)
@@ -149,6 +150,7 @@ add_jsonschema_test_unix(bundle/fail_resolve_duplicate)
 add_jsonschema_test_unix(bundle/fail_resolve_invalid_json)
 add_jsonschema_test_unix(bundle/fail_schema_invalid_json)
 add_jsonschema_test_unix(bundle/fail_unknown_metaschema)
+add_jsonschema_test_unix(bundle/fail_bigint)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
@@ -165,6 +167,7 @@ add_jsonschema_test_unix(lint/fail_lint)
 add_jsonschema_test_unix(lint/fail_lint_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yml)
+add_jsonschema_test_unix(lint/fail_bigint)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
