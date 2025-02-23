@@ -50,7 +50,7 @@ Commands:
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
-       Use --json/-j to output lint errors and warnings in JSON format.
+       Use --json/-j to output lint errors in JSON.
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
