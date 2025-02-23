@@ -469,6 +469,16 @@ auto stringify(const PointerT &pointer,
         const auto &value{std::get<typename PointerT::Regex>(token)};
         stream.write(value.c_str(), static_cast<std::streamsize>(value.size()));
         stream.put(internal::token_pointer_tilde<CharT>);
+      } else if (std::holds_alternative<typename PointerT::Condition>(token)) {
+        stream.put(internal::token_pointer_slash<CharT>);
+        stream.put(internal::token_pointer_tilde<CharT>);
+        stream.put('?');
+        stream.put(internal::token_pointer_tilde<CharT>);
+      } else if (std::holds_alternative<typename PointerT::Negation>(token)) {
+        stream.put(internal::token_pointer_slash<CharT>);
+        stream.put(internal::token_pointer_tilde<CharT>);
+        stream.put('!');
+        stream.put(internal::token_pointer_tilde<CharT>);
       } else {
         stringify_token<CharT, Traits, Allocator, typename PointerT::Token>(
             std::get<typename PointerT::Token>(token), stream,

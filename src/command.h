@@ -6,7 +6,7 @@
 
 namespace sourcemeta::jsonschema::cli {
 auto fmt(const std::span<const std::string> &arguments) -> int;
-auto frame(const std::span<const std::string> &arguments) -> int;
+auto inspect(const std::span<const std::string> &arguments) -> int;
 auto bundle(const std::span<const std::string> &arguments) -> int;
 auto test(const std::span<const std::string> &arguments) -> int;
 auto lint(const std::span<const std::string> &arguments) -> int;

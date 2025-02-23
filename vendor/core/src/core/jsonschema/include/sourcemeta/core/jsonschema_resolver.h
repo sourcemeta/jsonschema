@@ -105,11 +105,13 @@ public:
 
   /// Register a schema to the flat file resolver, returning the detected
   /// identifier for the schema
-  auto add(const std::filesystem::path &path,
-           const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt,
-           const Reader &reader = read_json,
-           SchemaVisitorReference &&reference_visitor = nullptr)
+  auto add(
+      const std::filesystem::path &path,
+      const std::optional<std::string> &default_dialect = std::nullopt,
+      const std::optional<std::string> &default_id = std::nullopt,
+      const Reader &reader =
+          [](const std::filesystem::path &path) { return read_json(path); },
+      SchemaVisitorReference &&reference_visitor = nullptr)
       -> const std::string &;
 
   // Change the identifier of a registered schema

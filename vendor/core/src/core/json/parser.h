@@ -293,7 +293,7 @@ auto parse_number_integer(const std::uint64_t line, const std::uint64_t column,
   try {
     return std::stoll(string);
   } catch (const std::out_of_range &) {
-    throw JSONParseError(line, column);
+    throw JSONParseIntegerLimitError(line, column);
   }
 }
 
