@@ -583,7 +583,9 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     return this->resolve_from(base);
 
     // TODO: This only handles a very specific case. We should generalize this
-    // function to perform proper base resolution on relative bases
+    // function to perform proper base resolution on relative bases instead of
+    // doing these one-off workarounds
+
   } else if (this->is_fragment_only() && !base.fragment().has_value()) {
     this->data = base.data;
     this->path_ = base.path_;
@@ -593,7 +595,20 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     this->scheme_ = base.scheme_;
     this->query_ = base.query_;
     return *this;
-
+  } else if (base.path().has_value() && base.path().value().starts_with("..")) {
+    return *this;
+  } else if (base.is_relative() && this->is_relative() &&
+             base.path_.has_value() && this->path_.has_value() &&
+             this->path_.value().find('/') == std::string::npos &&
+             !base.recompose().starts_with('/')) {
+    assert(base.is_relative());
+    URI absolute_base{"https://stub.local/" + base.recompose()};
+    assert(absolute_base.is_absolute());
+    auto copy = *this;
+    copy.resolve_from(absolute_base);
+    this->data = copy.recompose().substr(19);
+    this->parse();
+    return *this;
   } else {
     return *this;
   }
