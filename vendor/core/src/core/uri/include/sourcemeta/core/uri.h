@@ -295,6 +295,10 @@ public:
   /// ```
   auto resolve_from(const URI &base) -> URI &;
 
+  // TODO: Do we really need this `try_resolve_from` method? There shouldn't
+  // be any reason why resolution cannot happen. This is probably just an
+  // artifact of `uriparser` not supporting relative resolution
+
   /// Resolve a relative URI against a base URI as established by RFC
   /// 3986. If the resolution cannot happen, nothing happens. For example:
   ///
@@ -420,7 +424,7 @@ private:
   std::optional<std::string> query_;
   bool is_ipv6_ = false;
 
-  // Use PIMPL idiom to hide `urlparser`
+  // Use PIMPL idiom to hide `uriparser`
   struct Internal;
   std::unique_ptr<Internal> internal;
 #if defined(_MSC_VER)
