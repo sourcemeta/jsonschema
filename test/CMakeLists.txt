@@ -15,6 +15,7 @@ macro(add_jsonschema_test_unix_ci name)
 endmacro()
 
 add_jsonschema_test_unix(help)
+add_jsonschema_test_unix(unknown_command)
 add_jsonschema_test_unix(format_single)
 add_jsonschema_test_unix(format_invalid_path)
 add_jsonschema_test_unix(format_directory)
