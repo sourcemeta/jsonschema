@@ -101,8 +101,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     std::cout << USAGE_DETAILS;
     return EXIT_SUCCESS;
   } else {
-    std::cerr << "error: Unknown command '" << command << "'.\n";
-    std::cerr << "Use '--help' for usage information.\n";
+    std::cerr << "error: Unknown command '" << command << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
     return EXIT_FAILURE;
   }
 }
