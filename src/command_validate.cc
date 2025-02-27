@@ -1,15 +1,20 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
+#include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <chrono>   // std::chrono
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
+#include <chrono>  // std::chrono
+#include <cstdlib> // EXIT_SUCCESS, EXIT_FAILURE
+#include <filesystem>
 #include <iostream> // std::cerr
+#include <optional> // std::optional
 #include <set>      // std::set
+#include <span>     // std::span
 #include <string>   // std::string
+#include <utility>  // std::ref
 
 #include "command.h"
 #include "utils.h"
@@ -19,18 +24,19 @@
 // TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace"})};
+  const auto options{parse_options(
+      arguments, {"h", "http", "b", "benchmark", "t", "trace", "p", "path"})};
 
-  if (options.at("").size() < 1) {
+  auto &leftover = options.at("");
+
+  if (leftover.size() < 1) {
     std::cerr
         << "error: This command expects a path to a schema and a path to an\n"
         << "instance to validate against the schema. For example:\n\n"
         << "  jsonschema validate path/to/schema.json path/to/instance.json\n";
     return EXIT_FAILURE;
   }
-
-  if (options.at("").size() < 2) {
+  if (leftover.size() < 2) {
     std::cerr
         << "error: In addition to the schema, you must also pass an argument\n"
         << "that represents the instance to validate against. For example:\n\n"
@@ -38,32 +44,57 @@ auto sourcemeta::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  const auto &schema_path{options.at("").at(0)};
+  const auto &schema_path = leftover[0];
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"))};
 
   const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
-  if (!sourcemeta::core::is_schema(schema)) {
-    std::cerr << "error: The schema file you provided does not represent a "
-                 "valid JSON Schema\n  "
-              << std::filesystem::canonical(schema_path).string() << "\n";
+  std::optional<std::string> pointer_option;
+  if (options.contains("p") && !options.at("p").empty()) {
+    pointer_option = options.at("p").at(0);
+  } else if (options.contains("path") && !options.at("path").empty()) {
+    pointer_option = options.at("path").at(0);
+  }
+
+  sourcemeta::core::JSON resolved_schema{schema};
+  if (pointer_option.has_value()) {
+    const auto pointer = sourcemeta::core::to_pointer(pointer_option.value());
+    const auto *maybe_ptr = sourcemeta::core::try_get(schema, pointer);
+    if (!maybe_ptr) {
+      std::cerr << "error: Failed to resolve JSON Pointer '"
+                << pointer_option.value() << "' in the provided schema\n  "
+                << std::filesystem::canonical(schema_path).string() << "\n";
+      return EXIT_FAILURE;
+    }
+    resolved_schema = *maybe_ptr;
+  }
+
+  if (!sourcemeta::core::is_schema(resolved_schema)) {
+    if (!pointer_option.has_value()) {
+      std::cerr << "error: The schema file you provided does not represent a "
+                   "valid JSON Schema\n  "
+                << std::filesystem::canonical(schema_path).string() << "\n";
+    } else {
+      std::cerr << "error: The sub-schema at pointer '"
+                << pointer_option.value()
+                << "' does not represent a valid JSON Schema\n  "
+                << std::filesystem::canonical(schema_path).string() << "\n";
+    }
     return EXIT_FAILURE;
   }
 
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::core::schema_official_walker, custom_resolver,
+      resolved_schema, sourcemeta::core::default_schema_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler)};
   sourcemeta::blaze::Evaluator evaluator;
 
   bool result{true};
 
-  auto iterator{options.at("").cbegin()};
-  std::advance(iterator, 1);
-  for (; iterator != options.at("").cend(); ++iterator) {
-    const std::filesystem::path instance_path{*iterator};
+  for (std::size_t i = 1; i < leftover.size(); ++i) {
+    const std::filesystem::path instance_path{leftover[i]};
     if (instance_path.extension() == ".jsonl") {
       log_verbose(options)
           << "Interpreting input as JSONL: "

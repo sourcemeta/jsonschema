@@ -8,6 +8,7 @@ Validating
 jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
   [--verbose/-v] [--resolve/-r <schemas-or-directories> ...] [--benchmark/-b]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] [--trace/-t]
+  [--path/-p <json-pointer>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -83,6 +84,12 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json --http
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json \
   --resolve path/to/external.json
+```
+
+### Validate a JSON instance against a specific part of the schema given a JSON Pointer
+
+```sh
+jsonschema validate path/to/schema.json path/to/instance.json --path=/components/schemas/Pet
 ```
 
 ### Validate a JSON instance importing a directory of `.schema.json` schemas

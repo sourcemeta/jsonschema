@@ -75,6 +75,8 @@ add_jsonschema_test_unix(validate/pass_many_verbose)
 add_jsonschema_test_unix(validate/fail_many)
 add_jsonschema_test_unix(validate/fail_many_verbose)
 add_jsonschema_test_unix(validate/fail_yaml)
+add_jsonschema_test_unix(validate/pass_pointer_subschema)
+add_jsonschema_test_unix(validate/fail_pointer_not_schema)
 add_jsonschema_test_unix(validate/pass_json_ref_yaml)
 
 # TODO: Make this test pass on Linux. It hangs for some reason
