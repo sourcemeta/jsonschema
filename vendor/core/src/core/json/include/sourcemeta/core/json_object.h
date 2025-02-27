@@ -287,9 +287,10 @@ public:
     return true;
   }
 
+  Hash hasher;
+
 private:
   underlying_type data;
-  Hash hasher;
 };
 
 /// @ingroup json
@@ -396,6 +397,11 @@ public:
   inline auto at(const size_type index) const noexcept -> const
       typename Container::Entry & {
     return this->data.at(index);
+  }
+
+  // Hash an object property
+  inline auto hash(const Key &property) const -> typename Container::hash_type {
+    return this->data.hasher(property);
   }
 
 private:

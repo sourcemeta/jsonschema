@@ -48,12 +48,12 @@ auto is_official_metaschema_reference(const sourcemeta::core::Pointer &pointer,
                                       const std::string &destination) -> bool {
   return !pointer.empty() && pointer.back().is_property() &&
          pointer.back().to_property() == "$schema" &&
-         sourcemeta::core::official_resolver(destination).has_value();
+         sourcemeta::core::schema_official_resolver(destination).has_value();
 }
 
 auto bundle_schema(sourcemeta::core::JSON &root, const std::string &container,
                    const sourcemeta::core::JSON &subschema,
-                   sourcemeta::core::Frame &frame,
+                   sourcemeta::core::SchemaFrame &frame,
                    const sourcemeta::core::SchemaWalker &walker,
                    const sourcemeta::core::SchemaResolver &resolver,
                    const std::optional<std::string> &default_dialect) -> void {
@@ -137,7 +137,8 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const std::optional<std::string> &default_dialect) -> void {
   const auto vocabularies{
       sourcemeta::core::vocabularies(schema, resolver, default_dialect)};
-  sourcemeta::core::Frame frame;
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
   bundle_schema(schema, definitions_keyword(vocabularies), schema, frame,
                 walker, resolver, default_dialect);
 }

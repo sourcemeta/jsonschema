@@ -153,9 +153,9 @@ auto sourcemeta::jsonschema::cli::validate(
             break;
           }
         }
-      } catch (const sourcemeta::core::ParseError &error) {
+      } catch (const sourcemeta::core::JSONParseError &error) {
         // For producing better error messages
-        throw sourcemeta::core::FileParseError(instance_path, error);
+        throw sourcemeta::core::JSONFileParseError(instance_path, error);
       }
 
       if (index == 0) {

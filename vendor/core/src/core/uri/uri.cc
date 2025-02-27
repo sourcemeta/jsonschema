@@ -432,7 +432,11 @@ auto URI::canonicalize() -> URI & {
   if (result_path.has_value()) {
     const auto canonical_path{canonicalize_path(result_path.value())};
     if (canonical_path.has_value()) {
-      this->path_ = canonical_path.value();
+      if (result_path.value().ends_with('/')) {
+        this->path_ = canonical_path.value() + "/";
+      } else {
+        this->path_ = canonical_path.value();
+      }
     }
   }
 
@@ -544,6 +548,29 @@ auto URI::relative_to(const URI &base) -> URI & {
   return *this;
 }
 
+auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
+  this->relative_to(base);
+  if (!this->is_relative()) {
+    return *this;
+  }
+
+  // TODO: We should be able to this with `resolve_from`,
+  // however that methow can't take a relative base yet
+  std::ostringstream new_uri;
+  const auto new_base_string{new_base.recompose()};
+  const auto new_uri_string{this->recompose()};
+
+  new_uri << new_base_string;
+  if (!new_base_string.ends_with('/') && !new_uri_string.empty()) {
+    new_uri << '/';
+  }
+  new_uri << new_uri_string;
+
+  this->data = std::move(URI{new_uri.str()}.data);
+  this->parse();
+  return *this;
+}
+
 auto URI::from_fragment(std::string_view fragment) -> URI {
   assert(fragment.empty() || fragment.front() != '#');
   std::ostringstream uri;
@@ -556,7 +583,9 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     return this->resolve_from(base);
 
     // TODO: This only handles a very specific case. We should generalize this
-    // function to perform proper base resolution on relative bases
+    // function to perform proper base resolution on relative bases instead of
+    // doing these one-off workarounds
+
   } else if (this->is_fragment_only() && !base.fragment().has_value()) {
     this->data = base.data;
     this->path_ = base.path_;
@@ -566,7 +595,20 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     this->scheme_ = base.scheme_;
     this->query_ = base.query_;
     return *this;
-
+  } else if (base.path().has_value() && base.path().value().starts_with("..")) {
+    return *this;
+  } else if (base.is_relative() && this->is_relative() &&
+             base.path_.has_value() && this->path_.has_value() &&
+             this->path_.value().find('/') == std::string::npos &&
+             !base.recompose().starts_with('/')) {
+    assert(base.is_relative());
+    URI absolute_base{"https://stub.local/" + base.recompose()};
+    assert(absolute_base.is_absolute());
+    auto copy = *this;
+    copy.resolve_from(absolute_base);
+    this->data = copy.recompose().substr(19);
+    this->parse();
+    return *this;
   } else {
     return *this;
   }

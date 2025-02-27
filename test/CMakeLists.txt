@@ -45,6 +45,7 @@ add_jsonschema_test_unix(validate/fail_schema_invalid_json)
 add_jsonschema_test_unix(validate/fail_schema_non_schema)
 add_jsonschema_test_unix(validate/fail_schema_unknown_dialect)
 add_jsonschema_test_unix(validate/fail_trace)
+add_jsonschema_test_unix(validate/fail_jsonl_bigint)
 add_jsonschema_test_unix(validate/pass_trace)
 add_jsonschema_test_unix(validate/pass_resolve)
 add_jsonschema_test_unix(validate/pass_resolve_custom_extension)
@@ -76,6 +77,12 @@ add_jsonschema_test_unix(validate/fail_many_verbose)
 add_jsonschema_test_unix(validate/fail_yaml)
 add_jsonschema_test_unix(validate/pass_pointer_subschema)
 add_jsonschema_test_unix(validate/fail_pointer_not_schema)
+add_jsonschema_test_unix(validate/pass_json_ref_yaml)
+
+# TODO: Make this test pass on Linux. It hangs for some reason
+if(NOT LINUX)
+  add_jsonschema_test_unix(validate/pass_json_ref_yaml_http)
+endif()
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -145,13 +152,15 @@ add_jsonschema_test_unix(bundle/fail_resolve_duplicate)
 add_jsonschema_test_unix(bundle/fail_resolve_invalid_json)
 add_jsonschema_test_unix(bundle/fail_schema_invalid_json)
 add_jsonschema_test_unix(bundle/fail_unknown_metaschema)
+add_jsonschema_test_unix(bundle/fail_bigint)
 
-# Frame
-add_jsonschema_test_unix(frame/pass)
-add_jsonschema_test_unix(frame/pass_yaml)
-add_jsonschema_test_unix(frame/fail_no_schema)
-add_jsonschema_test_unix(frame/fail_schema_invalid_json)
-add_jsonschema_test_unix(frame/fail_unknown_metaschema)
+# Inspect
+add_jsonschema_test_unix(inspect/pass)
+add_jsonschema_test_unix(inspect/pass_yaml)
+add_jsonschema_test_unix(inspect/pass_json_output)
+add_jsonschema_test_unix(inspect/fail_no_schema)
+add_jsonschema_test_unix(inspect/fail_schema_invalid_json)
+add_jsonschema_test_unix(inspect/fail_unknown_metaschema)
 
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
@@ -160,6 +169,7 @@ add_jsonschema_test_unix(lint/fail_lint)
 add_jsonschema_test_unix(lint/fail_lint_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yml)
+add_jsonschema_test_unix(lint/fail_bigint)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)

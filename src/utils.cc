@@ -108,10 +108,10 @@ namespace sourcemeta::jsonschema::cli {
 
 auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON {
   if (path.extension() == ".yaml" || path.extension() == ".yml") {
-    return sourcemeta::core::from_yaml(path);
+    return sourcemeta::core::read_yaml(path);
   }
 
-  return sourcemeta::core::from_file(path);
+  return sourcemeta::core::read_json(path);
 }
 
 auto for_each_json(const std::vector<std::string> &arguments,
@@ -239,7 +239,7 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
 static auto fallback_resolver(
     const std::map<std::string, std::vector<std::string>> &options,
     std::string_view identifier) -> std::optional<sourcemeta::core::JSON> {
-  auto official_result{sourcemeta::core::official_resolver(identifier)};
+  auto official_result{sourcemeta::core::schema_official_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
   }
@@ -255,6 +255,7 @@ static auto fallback_resolver(
   log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
   sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
   request.method(sourcemeta::hydra::http::Method::GET);
+  request.capture("content-type");
   sourcemeta::hydra::http::ClientResponse response{request.send().get()};
   if (response.status() != sourcemeta::hydra::http::Status::OK) {
     std::ostringstream error;
@@ -262,17 +263,21 @@ static auto fallback_resolver(
     throw std::runtime_error(error.str());
   }
 
-  return sourcemeta::core::parse(response.body());
+  if (response.header("content-type").value_or("").starts_with("text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.body());
+  } else {
+    return sourcemeta::core::parse_json(response.body());
+  }
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote) -> sourcemeta::core::SchemaResolver {
-  sourcemeta::core::MapSchemaResolver dynamic_resolver{
+  sourcemeta::core::SchemaMapResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
         if (remote) {
           return fallback_resolver(options, identifier);
         } else {
-          return sourcemeta::core::official_resolver(identifier);
+          return sourcemeta::core::schema_official_resolver(identifier);
         }
       }};
 

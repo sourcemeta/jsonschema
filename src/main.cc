@@ -57,9 +57,9 @@ Commands:
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
-   frame <schema.json|.yaml> [--json/-j]
+   inspect <schema.json|.yaml> [--json/-j]
 
-       Statically analyse a schema to display schema locations and
+       Statically inspect a schema to display schema locations and
        references in a human-readable manner.
 
    encode <document.json|.jsonl> <output.binpack>
@@ -77,8 +77,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
   if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
-  } else if (command == "frame") {
-    return sourcemeta::jsonschema::cli::frame(arguments);
+  } else if (command == "inspect") {
+    return sourcemeta::jsonschema::cli::inspect(arguments);
   } else if (command == "bundle") {
     return sourcemeta::jsonschema::cli::bundle(arguments);
   } else if (command == "lint") {
@@ -131,13 +131,13 @@ auto main(int argc, char *argv[]) noexcept -> int {
     std::cerr << "error: " << error.what() << " at column " << error.column()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::core::FileParseError &error) {
+  } catch (const sourcemeta::core::JSONFileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n  "
               << std::filesystem::weakly_canonical(error.path()).string()
               << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::core::ParseError &error) {
+  } catch (const sourcemeta::core::JSONParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n";
     return EXIT_FAILURE;

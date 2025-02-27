@@ -1,5 +1,4 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME yaml
-  FOLDER "Core/YAML"
   PRIVATE_HEADERS error.h
   SOURCES yaml.cc)
 

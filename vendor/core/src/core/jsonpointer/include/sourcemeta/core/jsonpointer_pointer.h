@@ -9,7 +9,6 @@
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::advance, std::back_inserter
 #include <sstream>          // std::basic_ostringstream
-#include <stdexcept>        // std::runtime_error
 #include <type_traits>      // std::enable_if_t, std::is_same_v
 #include <utility>          // std::move
 #include <vector>           // std::vector
@@ -378,13 +377,8 @@ public:
   /// assert(pointer.at(0).is_property());
   /// assert(pointer.at(0).to_property() == "foo");
   /// ```
-  ///
-  /// If the JSON Pointer is empty, this method throws `std::runtime_error`.
   auto pop_back() -> void {
-    if (this->empty()) {
-      throw std::runtime_error("Cannot pop an empty Pointer");
-    }
-
+    assert(!this->empty());
     this->data.pop_back();
   }
 

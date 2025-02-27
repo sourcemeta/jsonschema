@@ -1,5 +1,4 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME jsonl
-  FOLDER "Core/JSONL"
   PRIVATE_HEADERS iterator.h
   SOURCES jsonl.cc iterator.cc grammar.h)
 

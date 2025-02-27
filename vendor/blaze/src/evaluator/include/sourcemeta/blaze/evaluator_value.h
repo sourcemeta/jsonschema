@@ -29,7 +29,8 @@ using ValueJSON = sourcemeta::core::JSON;
 /// @ingroup evaluator
 /// Represents a set of JSON values
 using ValueSet =
-    std::unordered_set<sourcemeta::core::JSON, sourcemeta::core::Hash>;
+    std::unordered_set<sourcemeta::core::JSON,
+                       sourcemeta::core::HashJSON<sourcemeta::core::JSON>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string value
@@ -83,7 +84,7 @@ using ValueBoolean = bool;
 /// Represents a compiler step string to index map
 using ValueNamedIndexes =
     sourcemeta::core::FlatMap<ValueString, ValueUnsignedInteger,
-                              sourcemeta::core::KeyHash<ValueString>>;
+                              sourcemeta::core::PropertyHashJSON<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step string logical type
@@ -94,7 +95,7 @@ enum class ValueStringType : std::uint8_t { URI };
 /// Represents an compiler step that maps strings to strings
 using ValueStringMap =
     sourcemeta::core::FlatMap<ValueString, ValueStrings,
-                              sourcemeta::core::KeyHash<ValueString>>;
+                              sourcemeta::core::PropertyHashJSON<ValueString>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step value that consist of object property filters

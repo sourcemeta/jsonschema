@@ -295,6 +295,10 @@ public:
   /// ```
   auto resolve_from(const URI &base) -> URI &;
 
+  // TODO: Do we really need this `try_resolve_from` method? There shouldn't
+  // be any reason why resolution cannot happen. This is probably just an
+  // artifact of `uriparser` not supporting relative resolution
+
   /// Resolve a relative URI against a base URI as established by RFC
   /// 3986. If the resolution cannot happen, nothing happens. For example:
   ///
@@ -322,6 +326,21 @@ public:
   /// assert(result.recompose() == "foo");
   /// ```
   auto relative_to(const URI &base) -> URI &;
+
+  /// Attempt to change the base of a URI . If the URI is not
+  /// relative to the former, leave the URI intact. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://example.com/foo/bar/baz"};
+  /// const sourcemeta::core::URI base{"https://example.com/foo"};
+  /// const sourcemeta::core::URI new_base{"/qux"};
+  /// uri.rebase(base, new_base);
+  /// assert(uri.recompose() == "/qux/bar/baz");
+  /// ```
+  auto rebase(const URI &base, const URI &new_base) -> URI &;
 
   /// Escape a string as established by RFC 3986 using C++ standard stream. For
   /// example:
@@ -405,7 +424,7 @@ private:
   std::optional<std::string> query_;
   bool is_ipv6_ = false;
 
-  // Use PIMPL idiom to hide `urlparser`
+  // Use PIMPL idiom to hide `uriparser`
   struct Internal;
   std::unique_ptr<Internal> internal;
 #if defined(_MSC_VER)
