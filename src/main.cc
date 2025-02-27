@@ -25,7 +25,7 @@ Commands:
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
-       Validate one of more instances against the given schema.
+       Validate one or more instances against the given schema.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
@@ -93,13 +93,17 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::encode(arguments);
   } else if (command == "decode") {
     return sourcemeta::jsonschema::cli::decode(arguments);
-  } else {
+  } else if (command == "help") {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
     return EXIT_SUCCESS;
+  } else {
+    std::cerr << "error: Unknown command '" << command << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
+    return EXIT_FAILURE;
   }
 }
 
