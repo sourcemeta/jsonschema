@@ -24,38 +24,10 @@
 // TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace"})};
+  const auto options{parse_options(
+      arguments, {"h", "http", "b", "benchmark", "t", "trace", "p", "path"})};
 
-  auto leftover = options.at("");
-
-  // Attempt to extract a pointer value from leftover arguments:
-  //    --path=<pointer>
-  //    --path <pointer>
-  //    -p <pointer>
-  std::optional<std::string> pointer_option;
-  for (auto it = leftover.begin(); it != leftover.end();) {
-    const auto &arg = *it;
-
-    // a) --path=/something
-    if (arg.rfind("--path=", 0) == 0) {
-      pointer_option = arg.substr(7);
-      it = leftover.erase(it);
-    }
-    // b) --path or -p, next token is the pointer
-    else if (arg == "--path" || arg == "-p") {
-      it = leftover.erase(it);
-      if (it != leftover.end()) {
-        pointer_option = *it;
-        it = leftover.erase(it);
-      } else {
-        std::cerr << "error: The '--path' option requires a pointer.\n";
-        return EXIT_FAILURE;
-      }
-    } else {
-      ++it;
-    }
-  }
+  auto &leftover = options.at("");
 
   if (leftover.size() < 1) {
     std::cerr
@@ -78,6 +50,13 @@ auto sourcemeta::jsonschema::cli::validate(
 
   const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
+  std::optional<std::string> pointer_option;
+  if (options.contains("p") && !options.at("p").empty()) {
+    pointer_option = options.at("p").at(0);
+  } else if (options.contains("path") && !options.at("path").empty()) {
+    pointer_option = options.at("path").at(0);
+  }
+
   sourcemeta::core::JSON resolved_schema{schema};
   if (pointer_option.has_value()) {
     const auto pointer = sourcemeta::core::to_pointer(pointer_option.value());
@@ -88,11 +67,9 @@ auto sourcemeta::jsonschema::cli::validate(
                 << std::filesystem::canonical(schema_path).string() << "\n";
       return EXIT_FAILURE;
     }
-
     resolved_schema = *maybe_ptr;
   }
 
-  // Validate that the final resolved_schema is indeed a valid JSON Schema
   if (!sourcemeta::core::is_schema(resolved_schema)) {
     if (!pointer_option.has_value()) {
       std::cerr << "error: The schema file you provided does not represent a "
