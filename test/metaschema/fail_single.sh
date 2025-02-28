@@ -20,10 +20,13 @@ test "$CODE" = "2" || exit 1
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.json
 error: Schema validation failure
-  The integer value 1 was expected to equal one of the given declared values
+  The integer value 1 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/0/\$ref/enum"
-  The value was expected to consist of an array of at least 1 item
+  The integer value was expected to validate against the statically referenced schema
+    at instance location "/type"
+    at evaluate path "/properties/type/anyOf/0/\$ref"
+  The value was expected to be of type array but it was of type integer
     at instance location "/type"
     at evaluate path "/properties/type/anyOf/1/type"
   The integer value was expected to validate against at least one of the 2 given subschemas

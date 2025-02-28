@@ -19,8 +19,8 @@
 // TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace"})};
+  const auto options{parse_options(
+      arguments, {"h", "http", "b", "benchmark", "t", "trace", "f", "fast"})};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -51,11 +51,15 @@ auto sourcemeta::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
+  const auto fast_mode{options.contains("f") || options.contains("fast")};
+
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::core::schema_official_walker, custom_resolver,
-      sourcemeta::blaze::default_schema_compiler)};
+      sourcemeta::blaze::default_schema_compiler,
+      fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                : sourcemeta::blaze::Mode::Exhaustive)};
   sourcemeta::blaze::Evaluator evaluator;
 
   bool result{true};
@@ -93,6 +97,8 @@ auto sourcemeta::jsonschema::cli::validate(
           } else if (trace) {
             subresult = evaluator.validate(schema_template, instance,
                                            std::ref(trace_output));
+          } else if (fast_mode) {
+            subresult = evaluator.validate(schema_template, instance);
           } else {
             subresult =
                 evaluator.validate(schema_template, instance, std::ref(output));
@@ -153,6 +159,8 @@ auto sourcemeta::jsonschema::cli::validate(
       } else if (trace) {
         subresult = evaluator.validate(schema_template, instance,
                                        std::ref(trace_output));
+      } else if (fast_mode) {
+        subresult = evaluator.validate(schema_template, instance);
       } else {
         subresult =
             evaluator.validate(schema_template, instance, std::ref(output));

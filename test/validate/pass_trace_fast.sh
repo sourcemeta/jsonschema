@@ -19,29 +19,19 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cat << 'EOF' > "$TMP/instance.json"
-{ "foo": 1 }
+{ "foo": "bar" }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace > "$TMP/output.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace --fast > "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties"
-   at ""
-   at keyword location "#/properties"
-
 -> (push) "/properties/foo/type"
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (fail) "/properties/foo/type"
+<- (pass) "/properties/foo/type"
    at "/foo"
    at keyword location "#/properties/foo/type"
-
-<- (fail) "/properties"
-   at ""
-   at keyword location "#/properties"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
