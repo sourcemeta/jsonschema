@@ -7,7 +7,8 @@ Validating
 ```sh
 jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
   [--verbose/-v] [--resolve/-r <schemas-or-directories> ...] [--benchmark/-b]
-  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] [--trace/-t]
+  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] [--trace/-t] 
+  [--fast/-f]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -20,6 +21,10 @@ information on unsuccessful validation.
 
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
+
+By default, schemas are validated in exhaustive mode, which results in better
+error messages, at the expense of speed. The `--fast`/`-f` option makes the
+schema compiler optimise for speed, at the expense of error messages.
 
 Examples
 --------
@@ -55,6 +60,12 @@ error: The target document is expected to be of the given type
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json
+```
+
+### Validate a JSON instance against a schema in fast mode
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json --fast
 ```
 
 ### Validate a multiple JSON instances against a schema
