@@ -40,7 +40,7 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 Importing schema into the resolution context: $(realpath "$TMP")/schemas/schema.json
 Importing schema into the resolution context: $(realpath "$TMP")/schemas/test.json
-error: Cannot determine the base dialect of the schema
+error: Could not determine the base dialect of the schema
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

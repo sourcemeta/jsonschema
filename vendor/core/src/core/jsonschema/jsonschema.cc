@@ -164,7 +164,8 @@ auto sourcemeta::core::reidentify(
   const auto base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!base_dialect.has_value()) {
-    throw sourcemeta::core::SchemaError("Cannot determine base dialect");
+    throw sourcemeta::core::SchemaError(
+        "Could not determine the base dialect of the schema");
   }
 
   reidentify(schema, new_identifier, base_dialect.value());
@@ -339,7 +340,7 @@ auto sourcemeta::core::vocabularies(
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!maybe_base_dialect.has_value()) {
     throw sourcemeta::core::SchemaError(
-        "Could not determine base dialect for schema");
+        "Could not determine base dialect of the schema");
   }
 
   const std::optional<std::string> maybe_dialect{
@@ -349,7 +350,7 @@ auto sourcemeta::core::vocabularies(
     // provide a explicit default, then we cannot do anything.
     // Better to abort instead of trying to guess.
     throw sourcemeta::core::SchemaError(
-        "Cannot determine the dialect of the schema");
+        "Could not determine the dialect of the schema");
   }
 
   return vocabularies(resolver, maybe_base_dialect.value(),

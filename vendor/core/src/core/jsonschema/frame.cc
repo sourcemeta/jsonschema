@@ -521,7 +521,7 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
   const std::optional<std::string> root_base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!root_base_dialect.has_value()) {
-    throw SchemaError("Cannot determine the base dialect of the schema");
+    throw SchemaError("Could not determine the base dialect of the schema");
   }
 
   std::optional<std::string> root_id{sourcemeta::core::identify(
