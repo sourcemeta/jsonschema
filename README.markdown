@@ -174,6 +174,13 @@ the oven. In the mean-time, star the project to show your support!
 |-----------------------|-----------------------------------------------------|-------------|
 | Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect | Not started |
 
+Contributors
+------------
+
+<a href="https://github.com/sourcemeta/jsonschema/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=sourcemeta/jsonschema" />
+</a>
+
 License
 -------
 
