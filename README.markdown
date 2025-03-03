@@ -68,6 +68,16 @@ documentation:
 
 Note that YAML is supported in most commands!
 
+***
+
+If you are looking for more of a tutorial and overview of what the CLI is
+capable of, take a look at the [Applying software engineering practices to JSON
+Schemas](https://www.youtube.com/watch?v=wJ7bK22n3IU) talk from the 2024 [JSON
+Schema Conference](https://conference.json-schema.org). It covers advise on
+ontology design, linting, unit testing, CI/CD integration, and more:
+
+[![JSON Schema Conference 2024 - Applying software engineering practices to JSON Schemas](https://img.youtube.com/vi/wJ7bK22n3IU/0.jpg)](https://www.youtube.com/watch?v=wJ7bK22n3IU)
+
 Installation
 ------------
 
