@@ -5,6 +5,7 @@ set -o nounset
 
 UNAME="$(uname)"
 ARCH="$(uname -m)"
+OUTPUT="${2:-/usr/local}"
 
 if [ "$UNAME" = "Darwin" ] || [ "$UNAME" = "Linux" ]
 then
@@ -12,7 +13,7 @@ then
   OWNER="sourcemeta"
   REPOSITORY="jsonschema"
 
-  if [ $# -lt 1 ]
+  if [ $# -lt 1 ] || [ "$1" = "latest" ]
   then
     VERSION="$(curl --retry 5 --silent "https://api.github.com/repos/$OWNER/$REPOSITORY/releases/latest" \
       | grep '"tag_name"' | cut -d ':' -f 2 | tr -d 'v" ,')"
@@ -24,13 +25,12 @@ then
   PACKAGE_PLATFORM_NAME="$(echo "$UNAME" | tr '[:upper:]' '[:lower:]')"
   PACKAGE_URL="$PACKAGE_BASE_URL/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH.zip"
   echo "---- Fetching version v$VERSION from $PACKAGE_URL" 1>&2
-  OUTPUT="/usr/local"
   TMP="$(mktemp -d)"
   clean() { rm -rf "$TMP"; }
   trap clean EXIT
   curl --retry 5 --location --output "$TMP/artifact.zip" "$PACKAGE_URL"
   unzip "$TMP/artifact.zip" -d "$TMP/out"
-  mkdir -p "$OUTPUT/bin"
+  install -d -m 0755 "$OUTPUT/bin"
   install -v -m 0755 "$TMP/out/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH/bin/jsonschema" "$OUTPUT/bin"
 else
   echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
