@@ -11,6 +11,7 @@
 
 #include "command.h"
 #include "configure.h"
+#include "utils.h"
 
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
@@ -143,7 +144,9 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const sourcemeta::core::JSONFileParseError &error) {
     std::cerr << "error: " << error.what() << " at line " << error.line()
               << " and column " << error.column() << "\n  "
-              << std::filesystem::weakly_canonical(error.path()).string()
+              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                     error.path())
+                     .string()
               << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::JSONParseError &error) {
@@ -154,12 +157,16 @@ auto main(int argc, char *argv[]) noexcept -> int {
     // See https://en.cppreference.com/w/cpp/error/errc
     if (error.code() == std::errc::no_such_file_or_directory) {
       std::cerr << "error: " << error.code().message() << "\n  "
-                << std::filesystem::weakly_canonical(error.path1()).string()
+                << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                       error.path1())
+                       .string()
                 << "\n";
     } else if (error.code() == std::errc::is_a_directory) {
       std::cerr << "error: The input was supposed to be a file but it is a "
                    "directory\n  "
-                << std::filesystem::weakly_canonical(error.path1()).string()
+                << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                       error.path1())
+                       .string()
                 << "\n";
     } else {
       std::cerr << "error: " << error.what() << "\n";

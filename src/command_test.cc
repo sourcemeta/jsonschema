@@ -48,8 +48,9 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
   assert(test_case.defines("dataPath"));
   assert(test_case.at("dataPath").is_string());
 
-  const std::filesystem::path data_path{std::filesystem::weakly_canonical(
-      base / test_case.at("dataPath").to_string())};
+  const std::filesystem::path data_path{
+      sourcemeta::jsonschema::cli::safe_weakly_canonical(
+          base / test_case.at("dataPath").to_string())};
   if (verbose) {
     std::cerr << "Reading test instance file: " << data_path.string() << "\n";
   }

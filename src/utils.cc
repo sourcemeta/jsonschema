@@ -44,7 +44,8 @@ auto handle_json_entry(
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
-      const auto canonical{std::filesystem::canonical(entry.path())};
+      const auto canonical{
+          sourcemeta::jsonschema::cli::safe_weakly_canonical(entry.path())};
       if (!std::filesystem::is_directory(entry) &&
           std::any_of(extensions.cbegin(), extensions.cend(),
                       [&canonical](const auto &extension) {
@@ -65,10 +66,11 @@ auto handle_json_entry(
       }
     }
   } else {
-    const auto canonical{std::filesystem::canonical(entry_path)};
+    const auto canonical{
+        sourcemeta::jsonschema::cli::safe_weakly_canonical(entry_path)};
     if (!std::filesystem::exists(canonical)) {
       std::ostringstream error;
-      error << "No such file or directory: " << canonical.string();
+      error << "No such file or directory\n  " << canonical.string();
       throw std::runtime_error(error.str());
     }
 
@@ -364,6 +366,13 @@ auto parse_ignore(
   }
 
   return result;
+}
+
+auto safe_weakly_canonical(const std::filesystem::path &input)
+    -> std::filesystem::path {
+  return std::filesystem::is_fifo(input)
+             ? input
+             : std::filesystem::weakly_canonical(input);
 }
 
 } // namespace sourcemeta::jsonschema::cli

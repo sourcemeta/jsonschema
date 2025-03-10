@@ -47,7 +47,9 @@ auto sourcemeta::jsonschema::cli::validate(
   if (!sourcemeta::core::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
                  "valid JSON Schema\n  "
-              << std::filesystem::canonical(schema_path).string() << "\n";
+              << sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path)
+                     .string()
+              << "\n";
     return EXIT_FAILURE;
   }
 
@@ -69,9 +71,9 @@ auto sourcemeta::jsonschema::cli::validate(
   for (; iterator != options.at("").cend(); ++iterator) {
     const std::filesystem::path instance_path{*iterator};
     if (instance_path.extension() == ".jsonl") {
-      log_verbose(options)
-          << "Interpreting input as JSONL: "
-          << std::filesystem::weakly_canonical(instance_path).string() << "\n";
+      log_verbose(options) << "Interpreting input as JSONL: "
+                           << safe_weakly_canonical(instance_path).string()
+                           << "\n";
       std::size_t index{0};
       auto stream{sourcemeta::core::read_file(instance_path)};
       try {
@@ -109,17 +111,14 @@ auto sourcemeta::jsonschema::cli::validate(
             result = subresult;
           } else if (subresult) {
             log_verbose(options)
-                << "ok: "
-                << std::filesystem::weakly_canonical(instance_path).string()
+                << "ok: " << safe_weakly_canonical(instance_path).string()
                 << " (entry #" << index << ")"
-                << "\n  matches "
-                << std::filesystem::weakly_canonical(schema_path).string()
+                << "\n  matches " << safe_weakly_canonical(schema_path).string()
                 << "\n";
           } else {
-            std::cerr
-                << "fail: "
-                << std::filesystem::weakly_canonical(instance_path).string()
-                << " (entry #" << index << ")\n\n";
+            std::cerr << "fail: "
+                      << safe_weakly_canonical(instance_path).string()
+                      << " (entry #" << index << ")\n\n";
             sourcemeta::core::prettify(instance, std::cerr);
             std::cerr << "\n\n";
             std::cerr << error.str();
@@ -171,13 +170,11 @@ auto sourcemeta::jsonschema::cli::validate(
         result = subresult;
       } else if (subresult) {
         log_verbose(options)
-            << "ok: "
-            << std::filesystem::weakly_canonical(instance_path).string()
-            << "\n  matches "
-            << std::filesystem::weakly_canonical(schema_path).string() << "\n";
+            << "ok: " << safe_weakly_canonical(instance_path).string()
+            << "\n  matches " << safe_weakly_canonical(schema_path).string()
+            << "\n";
       } else {
-        std::cerr << "fail: "
-                  << std::filesystem::weakly_canonical(instance_path).string()
+        std::cerr << "fail: " << safe_weakly_canonical(instance_path).string()
                   << "\n";
         std::cerr << error.str();
         print(output, std::cerr);
