@@ -40,13 +40,11 @@ auto sourcemeta::jsonschema::cli::encode(
 
   if (document.extension() == ".jsonl") {
     log_verbose(options) << "Interpreting input as JSONL: "
-                         << std::filesystem::weakly_canonical(document).string()
-                         << "\n";
+                         << safe_weakly_canonical(document).string() << "\n";
 
     auto stream{sourcemeta::core::read_file(document)};
-    std::ofstream output_stream(
-        std::filesystem::weakly_canonical(options.at("").at(1)),
-        std::ios::binary);
+    std::ofstream output_stream(safe_weakly_canonical(options.at("").at(1)),
+                                std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     std::size_t count{0};
@@ -66,9 +64,8 @@ auto sourcemeta::jsonschema::cli::encode(
   } else {
     const auto entry{
         sourcemeta::jsonschema::cli::read_file(options.at("").front())};
-    std::ofstream output_stream(
-        std::filesystem::weakly_canonical(options.at("").at(1)),
-        std::ios::binary);
+    std::ofstream output_stream(safe_weakly_canonical(options.at("").at(1)),
+                                std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     encoder.write(entry, encoding);

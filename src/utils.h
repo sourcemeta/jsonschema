@@ -50,6 +50,9 @@ auto parse_ignore(
     const std::map<std::string, std::vector<std::string>> &options)
     -> std::set<std::filesystem::path>;
 
+auto safe_weakly_canonical(const std::filesystem::path &input)
+    -> std::filesystem::path;
+
 } // namespace sourcemeta::jsonschema::cli
 
 #endif
