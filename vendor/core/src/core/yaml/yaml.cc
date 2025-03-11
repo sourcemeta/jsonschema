@@ -91,6 +91,13 @@ static auto internal_parse_json(yaml_parser_t *parser)
 
 namespace sourcemeta::core {
 
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
+    -> JSON {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;
+  buffer << stream.rdbuf();
+  return parse_yaml(buffer.str());
+}
+
 auto parse_yaml(const JSON::String &input) -> JSON {
   yaml_parser_t parser;
   if (!yaml_parser_initialize(&parser)) {

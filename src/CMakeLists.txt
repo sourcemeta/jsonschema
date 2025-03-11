@@ -2,7 +2,7 @@ add_executable(jsonschema_cli
   main.cc configure.h.in command.h
   utils.h utils.cc
   command_fmt.cc
-  command_frame.cc
+  command_inspect.cc
   command_bundle.cc
   command_test.cc
   command_lint.cc

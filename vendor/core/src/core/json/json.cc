@@ -50,10 +50,14 @@ auto read_file(const std::filesystem::path &path)
   return stream;
 }
 
-auto read_json(const std::filesystem::path &path) -> JSON {
+auto read_json(const std::filesystem::path &path,
+               const JSON::ParseCallback &callback) -> JSON {
   auto stream{read_file(path)};
   try {
-    return parse_json(stream);
+    return parse_json(stream, callback);
+  } catch (const JSONParseIntegerLimitError &error) {
+    // For producing better error messages
+    throw JSONFileParseError(path, error);
   } catch (const JSONParseError &error) {
     // For producing better error messages
     throw JSONFileParseError(path, error);

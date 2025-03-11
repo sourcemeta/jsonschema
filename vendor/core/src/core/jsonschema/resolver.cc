@@ -20,7 +20,7 @@ auto SchemaMapResolver::add(const JSON &schema,
 
   // Registering the top-level schema is not enough. We need to check
   // and register every embedded schema resource too
-  SchemaFrame frame;
+  SchemaFrame frame{SchemaFrame::Mode::References};
   frame.analyse(schema, schema_official_walker, *this, default_dialect,
                 default_id);
 

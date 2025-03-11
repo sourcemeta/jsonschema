@@ -151,9 +151,9 @@ if(NOT BoostRegex_FOUND)
     install(TARGETS boost_regex
       EXPORT boost_regex
       PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost"
-        COMPONENT sourcemeta_core
+        COMPONENT sourcemeta_core_dev
       PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost"
-        COMPONENT sourcemeta_core
+        COMPONENT sourcemeta_core_dev
       RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT sourcemeta_core
       LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -163,19 +163,19 @@ if(NOT BoostRegex_FOUND)
         COMPONENT sourcemeta_core_dev)
     install(FILES ${BOOST_REGEX_PRIVATE_HEADERS_REGEX}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost/regex"
-        COMPONENT sourcemeta_core)
+        COMPONENT sourcemeta_core_dev)
     install(FILES ${BOOST_REGEX_PRIVATE_HEADERS_REGEX_CONFIG}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost/regex/config"
-        COMPONENT sourcemeta_core)
+        COMPONENT sourcemeta_core_dev)
     install(FILES ${BOOST_REGEX_PRIVATE_HEADERS_REGEX_PENDING}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost/regex/pending"
-        COMPONENT sourcemeta_core)
+        COMPONENT sourcemeta_core_dev)
     install(FILES ${BOOST_REGEX_PRIVATE_HEADERS_REGEX_V4}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost/regex/v4"
-        COMPONENT sourcemeta_core)
+        COMPONENT sourcemeta_core_dev)
     install(FILES ${BOOST_REGEX_PRIVATE_HEADERS_REGEX_V5}
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/boost/regex/v5"
-        COMPONENT sourcemeta_core)
+        COMPONENT sourcemeta_core_dev)
     install(EXPORT boost_regex
       DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/boostregex"
       COMPONENT sourcemeta_core_dev)
