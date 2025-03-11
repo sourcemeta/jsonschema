@@ -20,8 +20,7 @@ test "$CODE" = "0" || exit 1
 cat << EOF > "$TMP/expected.json"
 {
   "valid": true,
-  "errors": [],
-  "fixApplied": true
+  "errors": []
 }
 EOF
 

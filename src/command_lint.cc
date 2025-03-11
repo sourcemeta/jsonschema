@@ -14,7 +14,6 @@
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"f", "fix", "json", "j"})};
-  const bool fix = options.contains("f") || options.contains("fix");
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -90,13 +89,8 @@ auto sourcemeta::jsonschema::cli::lint(
     auto output_json_object = sourcemeta::core::JSON::make_object();
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
     output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
-    if (fix) {
-      output_json_object.assign("fixApplied", sourcemeta::core::JSON{true});
-    }
     sourcemeta::core::prettify(output_json_object, std::cout);
     std::cout << "\n";
-  } else {
-    // If fix == true and --json was NOT specified, produce no output.
   }
 
   return result ? EXIT_SUCCESS : EXIT_FAILURE;
