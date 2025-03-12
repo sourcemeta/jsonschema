@@ -3,7 +3,7 @@ Linting
 
 ```sh
 jsonschema lint [schemas-or-directories...]
-  [--fix/-f] [--verbose/-v] [--extension/-e <extension>]
+  [--fix/-f] [--json/-j] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>]
 ```
 
@@ -60,6 +60,11 @@ result in the JSON Schema CLI *automatically* fixing the warning for you.
 
 ```sh
 jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
+```
+### Lint with JSON output
+
+```sh
+jsonschema lint path/to/my/schema.json --json
 ```
 
 ### Lint every `.json` file in a given directory (recursively)

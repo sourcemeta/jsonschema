@@ -173,6 +173,9 @@ add_jsonschema_test_unix(lint/fail_lint)
 add_jsonschema_test_unix(lint/fail_lint_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yaml)
 add_jsonschema_test_unix(lint/fail_lint_fix_yml)
+add_jsonschema_test_unix(lint/fail_lint_json)
+add_jsonschema_test_unix(lint/pass_lint_json)
+add_jsonschema_test_unix(lint/pass_lint_fix_json)
 add_jsonschema_test_unix(lint/fail_bigint)
 
 # Encode
