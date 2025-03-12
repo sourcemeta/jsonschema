@@ -15,8 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --fix --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "0" || exit 1
+"$1" lint "$TMP/schema.json" --fix --json >"$TMP/output.json" 2>&1
 
 cat << EOF > "$TMP/expected.json"
 {
@@ -35,5 +34,3 @@ cat << 'EOF' > "$TMP/expected_fixed.json"
 EOF
 
 diff "$TMP/schema.json" "$TMP/expected_fixed.json"
-
-echo "pass_lint_fix_json: PASS"
