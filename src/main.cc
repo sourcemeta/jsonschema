@@ -51,8 +51,8 @@ Commands:
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
 
-   lint [schemas-or-directories...] [--fix/-f] [--json/-j] [--extension/-e <extension>]
-        [--ignore/-i <schemas-or-directories>]
+   lint [schemas-or-directories...] [--fix/-f] [--json/-j]
+        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
@@ -68,6 +68,7 @@ Commands:
 
        Statically inspect a schema to display schema locations and
        references in a human-readable manner.
+       Use --json/-j to output information in JSON.
 
    encode <document.json|.jsonl> <output.binpack>
 
