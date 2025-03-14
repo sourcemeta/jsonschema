@@ -1,4 +1,4 @@
-FROM debian:bookworm as builder
+FROM debian:bookworm AS builder
 RUN apt-get --yes update && apt-get install --yes --no-install-recommends \
   build-essential cmake && apt-get clean && rm -rf /var/lib/apt/lists/*
 
