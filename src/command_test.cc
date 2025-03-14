@@ -292,7 +292,7 @@ auto sourcemeta::jsonschema::cli::test(
       }
     }
 
-    if (!verbose && result) {
+    if (!verbose && pass_count == total) {
       std::cout << " PASS " << pass_count << "/" << total << "\n";
     }
   }
