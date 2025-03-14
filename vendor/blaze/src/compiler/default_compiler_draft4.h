@@ -88,7 +88,8 @@ static auto
 is_closed_properties_required(const sourcemeta::core::JSON &schema,
                               const sourcemeta::blaze::ValueStringSet &required)
     -> bool {
-  return schema.defines("additionalProperties") &&
+  return !schema.defines("patternProperties") &&
+         schema.defines("additionalProperties") &&
          schema.at("additionalProperties").is_boolean() &&
          !schema.at("additionalProperties").to_boolean() &&
          schema.defines("properties") && schema.at("properties").is_object() &&
@@ -988,10 +989,9 @@ auto compiler_draft4_applicator_properties_with_options(
         types.insert(std::get<ValueType>(property.second.front().value));
       }
 
-      if (types.size() == 1) {
-        if (schema_context.schema.defines("required") &&
-            !schema_context.schema.defines("patternProperties") &&
-            assume_object) {
+      if (types.size() == 1 &&
+          !schema_context.schema.defines("patternProperties")) {
+        if (schema_context.schema.defines("required") && assume_object) {
           auto required_copy = schema_context.schema.at("required");
           std::sort(required_copy.as_array().begin(),
                     required_copy.as_array().end());
