@@ -90,6 +90,7 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
     "url": "git+https://github.com/sourcemeta/jsonschema.git"
   },
   "publishConfig": {
+    "provenance": true,
     "access": "public"
   },
   "devDependencies": {
