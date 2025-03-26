@@ -67,7 +67,7 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
   "author": {
     "email": "hello@sourcemeta.com",
     "name": "Sourcemeta",
-    "url": "https://wwwsourcemeta.com"
+    "url": "https://www.sourcemeta.com"
   },
   "os": [ "darwin", "linux", "win32" ],
   "cpu": [ "x64", "arm64" ],
