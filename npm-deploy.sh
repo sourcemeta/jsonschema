@@ -44,6 +44,12 @@ install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-windows-x86_64/bin/js
   "$OUTPUT/npm/staging/jsonschema-windows-x86_64.exe"
 install -m 0644 "$(pwd)/README.markdown" "$OUTPUT/npm/staging/README.md"
 
+# To boost NPM ranking
+# See https://github.com/npms-io/npms-analyzer/blob/master/lib/analyze/evaluate/quality.js
+install -m 0644 "$(pwd)/LICENSE" "$OUTPUT/npm/staging/LICENSE"
+install -m 0644 "$(pwd)/.gitignore" "$OUTPUT/npm/staging/.gitignore"
+echo "/build" > "$OUTPUT/npm/staging/.npmignore"
+
 cat << EOF > "$OUTPUT/npm/staging/package.json"
 {
   "name": "@sourcemeta/jsonschema",
@@ -53,14 +59,28 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
   "bin": {
     "jsonschema": "cli.js"
   },
+  "scripts": {
+    "test": "eslint cli.js && node cli.js"
+  },
   "license": "AGPL-3.0",
   "homepage": "https://github.com/sourcemeta/jsonschema",
-  "author": "Juan Cruz Viotti <jviotti@sourcemeta.com>",
+  "author": {
+    "email": "hello@sourcemeta.com",
+    "name": "Sourcemeta",
+    "url": "https://wwwsourcemeta.com"
+  },
+  "os": [ "darwin", "linux", "win32" ],
+  "cpu": [ "x64", "arm64" ],
+  "engines": {
+    "node": ">=16"
+  },
+  "funding": "https://github.com/sponsors/sourcemeta",
   "keywords": [
     "jsonschema", "json", "schema", "json-schema",
     "cli", "\$ref", "dereference", "reference", "resolve",
-    "json-pointer", "validator", "bundle",
-    "lint", "format"
+    "json-pointer", "validator", "validation", "bundle",
+    "json-schema-validator", "json-schema-validation",
+    "lint", "format", "draft"
   ],
   "bugs": {
     "url": "https://github.com/sourcemeta/jsonschema/issues"
@@ -71,6 +91,11 @@ cat << EOF > "$OUTPUT/npm/staging/package.json"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "globals": "^16.0.0"
   }
 }
 EOF
@@ -103,10 +128,29 @@ const result = child_process.spawnSync(EXECUTABLE,
 process.exit(result.status);
 EOF
 
-# (3) Try packaging
+cat << 'EOF' > "$OUTPUT/npm/staging/eslint.config.mjs"
+import { defineConfig } from "eslint/config";
+import globals from "globals";
+import js from "@eslint/js";
+
+export default defineConfig([
+  { files: ["**/*.{js,mjs,cjs}"] },
+  { files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
+  { files: ["**/*.{js,mjs,cjs}"], languageOptions: { globals: globals.node } },
+  { files: ["**/*.{js,mjs,cjs}"], plugins: { js }, extends: ["js/recommended"] },
+]);
+EOF
+
+# (3) Run checks
+cd "$OUTPUT/npm/staging"
+npm install
+npm test
+cd -
+
+# (4) Try packaging
 cd "$OUTPUT/npm"
 npm pack ./staging
 cd -
 
-# (4) Deploy to NPM
+# (5) Deploy to NPM
 npm publish "$OUTPUT/npm/staging"
