@@ -1,5 +1,10 @@
 ![JSON Schema](./assets/banner.png)
 
+[![NPM Version](https://img.shields.io/npm/v/@sourcemeta/jsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
+[![GitHub Release](https://img.shields.io/github/v/release/sourcemeta/jsonschema)](https://github.com/sourcemeta/jsonschema/releases)
+[![GitHub Actions](https://github.com/sourcemeta/jsonschema/actions/workflows/test.yml/badge.svg)](https://github.com/sourcemeta/jsonschema/actions)
+[![GitHub contributors](https://img.shields.io/github/contributors/sourcemeta/jsonschema.svg)](https://github.com/sourcemeta/jsonschema/graphs/contributors/)
+
 The command-line tool for working with [JSON Schema](https://json-schema.org),
 the world most popular schema language. It is a comprehensive solution for
 maintaining **repositories of schemas** and ensuring their quality, both during

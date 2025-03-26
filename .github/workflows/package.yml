@@ -1,4 +1,4 @@
-name: JSON Schema
+name: CD
 
 on:
   push:
