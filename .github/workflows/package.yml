@@ -13,6 +13,7 @@ concurrency:
 
 permissions:
   contents: write
+  packages: write
   # See https://docs.npmjs.com/generating-provenance-statements#about-npm-provenance
   id-token: write
 
@@ -138,3 +139,24 @@ jobs:
         if: github.ref_type == 'tag'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        if: github.ref_type == 'tag'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        id: meta-cli
+        if: github.ref_type == 'tag'
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/jsonschema
+      - uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        id: push-cli
+        if: github.ref_type == 'tag'
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta-cli.outputs.tags }}
+          labels: ${{ steps.meta-cli.outputs.labels }}
