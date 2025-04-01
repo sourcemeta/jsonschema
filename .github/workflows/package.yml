@@ -43,6 +43,10 @@ jobs:
         shell: ${{ matrix.platform.shell }}
 
     runs-on: ${{ matrix.platform.os }}
+
+    # Building the ARM64 Docker image on QEMU takes forever
+    timeout-minutes: 60
+
     env:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
