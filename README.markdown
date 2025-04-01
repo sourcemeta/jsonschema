@@ -131,8 +131,8 @@ latest pre-built binaries, which you can run as follows:
 
 ### From Dockerfile
 
-Starting from v7.2.1, we publish a Docker image to GitHub Packages, which you
-can use as follows:
+Starting from v7.2.1, we publish a Docker image to GitHub Packages (`amd64` and
+`arm64`), which you can use as follows:
 
 ```sh
 docker run --interactive --volume "$PWD:/workspace" \
