@@ -24,8 +24,8 @@ jobs:
       matrix:
         platform:
           - os: ubuntu-22.04
-            cc: clang
-            cxx: clang++
+            cc: gcc
+            cxx: g++
             shell: sh
           - os: ubuntu-22.04-arm
             cc: gcc
