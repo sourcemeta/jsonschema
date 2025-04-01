@@ -1,0 +1,31 @@
+- id: sourcemeta-jsonschema-fmt
+  name: sourcemeta-jsonschema-fmt
+  description: Format JSON or YAML schema files
+  entry: jsonschema fmt
+  language: system
+  types_or: [json, yaml]
+  minimum_pre_commit_version: 2.9.0
+
+- id: sourcemeta-jsonschema-lint
+  name: sourcemeta-jsonschema-lint
+  description: Lint JSON or YAML schema files
+  entry: jsonschema lint
+  language: system
+  types_or: [json, yaml]
+  minimum_pre_commit_version: 2.9.0
+
+- id: sourcemeta-jsonschema-metaschema
+  name: sourcemeta-jsonschema-metaschema
+  description: Validate that a JSON or YAML schema or a set of schemas are valid with their metaschema
+  entry: jsonschema metaschema
+  language: system
+  types_or: [json, yaml]
+  minimum_pre_commit_version: 2.9.0
+
+- id: sourcemeta-jsonschema-validate
+  name: sourcemeta-jsonschema-validate
+  description: Validate JSON or YAML files against a JSON or YAML schema
+  entry: jsonschema validate
+  language: system
+  types_or: [json, yaml]
+  minimum_pre_commit_version: 2.9.0
