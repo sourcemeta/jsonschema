@@ -27,6 +27,10 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
+          - os: ubuntu-22.04-arm
+            cc: gcc
+            cxx: g++
+            shell: sh
           - os: macos-13
             cc: clang
             cxx: clang++
