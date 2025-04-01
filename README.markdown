@@ -1,7 +1,7 @@
 ![JSON Schema](./assets/banner.png)
 
-[![NPM Version](https://img.shields.io/npm/v/@sourcemeta/jsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
 [![GitHub Release](https://img.shields.io/github/v/release/sourcemeta/jsonschema)](https://github.com/sourcemeta/jsonschema/releases)
+[![NPM Version](https://img.shields.io/npm/v/@sourcemeta/jsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
 [![GitHub Actions](https://github.com/sourcemeta/jsonschema/actions/workflows/test.yml/badge.svg)](https://github.com/sourcemeta/jsonschema/actions)
 [![GitHub contributors](https://img.shields.io/github/contributors/sourcemeta/jsonschema.svg)](https://github.com/sourcemeta/jsonschema/graphs/contributors/)
 
@@ -168,25 +168,3 @@ cmake --install ./build --prefix <prefix> \
 
 Where `<prefix>` can be any destination prefix of your choosing, such as `/opt`
 or `/usr/local`.
-
-Coming Soon
------------
-
-This project is under heavy development, and we have a lot of cool things in
-the oven. In the mean-time, star the project to show your support!
-
-| Feature               | Description                                         | Status      |
-|-----------------------|-----------------------------------------------------|-------------|
-| Upgrading/Downgrading | Convert a JSON Schema into a later or older dialect | Not started |
-
-Contributors
-------------
-
-<a href="https://github.com/sourcemeta/jsonschema/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=sourcemeta/jsonschema" />
-</a>
-
-License
--------
-
-This project is governed by the [AGPL-3.0](./LICENSE) copyleft license.
