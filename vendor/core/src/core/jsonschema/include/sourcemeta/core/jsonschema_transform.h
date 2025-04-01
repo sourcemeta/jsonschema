@@ -198,6 +198,9 @@ public:
     this->rules.emplace(rule->name(), std::move(rule));
   }
 
+  /// Remove a rule from the bundle
+  auto remove(const std::string &name) -> bool;
+
   /// Apply the bundle of rules to a schema
   auto
   apply(JSON &schema, const SchemaWalker &walker,

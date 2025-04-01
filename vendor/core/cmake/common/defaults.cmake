@@ -41,6 +41,17 @@ endif()
 # It is very useful for IDE integration, linting, etc
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# CMake typically defaults to -O2 for RelWithDebInfo, which can
+# result in slight differences when comparing to Release when
+# profiling or analysing the resulting assembly
+# See https://stackoverflow.com/a/59314670
+if(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
+  set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "Optimization level for RelWithDebInfo (C)" FORCE)
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "Optimization level for RelWithDebInfo (C++)" FORCE)
+  set(CMAKE_OBJC_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "Optimization level for RelWithDebInfo (Objective-C)" FORCE)
+  set(CMAKE_OBJCXX_FLAGS_RELWITHDEBINFO "-O3 -g" CACHE STRING "Optimization level for RelWithDebInfo (Objective-C++)" FORCE)
+endif()
+
 # Prevent DT_RPATH/DT_RUNPATH problem
 # This problem is not present on Apple platforms.
 # See https://www.youtube.com/watch?v=m0DwB4OvDXk
@@ -79,19 +90,24 @@ endif()
 # - https://gcc.gnu.org/onlinedocs/gccint/LTO-Overview.html
 # - https://llvm.org/docs/FatLTO.html
 
-if(SOURCEMETA_COMPILER_GCC AND CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT BUILD_SHARED_LIBS)
-  message(STATUS "Enabling Fat LTO")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -ffat-lto-objects")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
-endif()
+# Note we don't enable LTO on RelWithDebInfo, as it breaks debugging symbols
+# on at least AppleClang, making stepping through source code impossible.
 
-# TODO: Make this work on Linux on LLVM
-if(SOURCEMETA_COMPILER_LLVM AND CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT BUILD_SHARED_LIBS AND APPLE)
-  message(STATUS "Enabling Fat LTO")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto=full")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=full")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=full")
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  if(SOURCEMETA_COMPILER_GCC AND NOT BUILD_SHARED_LIBS)
+    message(STATUS "Enabling Fat LTO")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto -ffat-lto-objects")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
+  endif()
+
+  # TODO: Make this work on Linux on LLVM
+  if(SOURCEMETA_COMPILER_LLVM AND NOT BUILD_SHARED_LIBS AND APPLE)
+    message(STATUS "Enabling Fat LTO")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto=full")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -flto=full")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=full")
+  endif()
 endif()
 
 # Attempt to enable SIMD (SSE/AVX/NEON)

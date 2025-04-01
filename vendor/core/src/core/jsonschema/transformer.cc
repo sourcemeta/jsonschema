@@ -138,6 +138,10 @@ auto SchemaTransformer::apply(
   }
 }
 
+auto SchemaTransformer::remove(const std::string &name) -> bool {
+  return this->rules.erase(name) > 0;
+}
+
 auto SchemaTransformer::check(
     const JSON &schema, const SchemaWalker &walker,
     const SchemaResolver &resolver,

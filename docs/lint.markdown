@@ -4,7 +4,7 @@ Linting
 ```sh
 jsonschema lint [schemas-or-directories...]
   [--fix/-f] [--json/-j] [--verbose/-v] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>]
+  [--ignore/-i <schemas-or-directories>] [--disable/-d <rule-name>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -61,6 +61,13 @@ result in the JSON Schema CLI *automatically* fixing the warning for you.
 ```sh
 jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
 ```
+
+### Lint while disabling certain rules
+
+```sh
+jsonschema lint path/to/my/schema.json --disable enum_with_type --disable const_with_type
+```
+
 ### Lint with JSON output
 
 ```sh

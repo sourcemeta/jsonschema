@@ -179,6 +179,10 @@ add_jsonschema_test_unix(lint/fail_lint_json)
 add_jsonschema_test_unix(lint/pass_lint_json)
 add_jsonschema_test_unix(lint/pass_lint_fix_json)
 add_jsonschema_test_unix(lint/fail_bigint)
+add_jsonschema_test_unix(lint/fail_lint_disable_one)
+add_jsonschema_test_unix(lint/fail_lint_disable_one_verbose)
+add_jsonschema_test_unix(lint/fail_lint_disable_unknown_verbose)
+add_jsonschema_test_unix(lint/fail_lint_disable_many)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)

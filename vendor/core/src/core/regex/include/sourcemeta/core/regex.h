@@ -27,7 +27,7 @@
 #include <variant>  // std::variant
 
 /// @defgroup regex Regex
-/// @brief A regex ECMA implementation for JSON Schema
+/// @brief An opinionated regex ECMA 262 implementation for JSON Schema
 ///
 /// This functionality is included as follows:
 ///
@@ -95,6 +95,10 @@ auto to_regex(const T &pattern) -> std::optional<Regex<T>> {
   if (pattern == ".*" || pattern == "^.*$" || pattern == "^(.*)$" ||
       pattern == "(.*)" || pattern == "[\\s\\S]*" || pattern == "^[\\s\\S]*$") {
     return RegexTypeNoop{};
+
+    // Note that the JSON Schema specification does not impose the use of any
+    // regular expression flag. Given popular adoption, we assume `.` matches
+    // new line characters (as in the `DOTALL`) option
   } else if (pattern == ".+" || pattern == "^.+$" || pattern == "^(.+)$" ||
              pattern == ".") {
     return RegexTypeNonEmpty{};
@@ -124,6 +128,9 @@ auto to_regex(const T &pattern) -> std::optional<Regex<T>> {
           // When performing matches, all marked sub-expressions (expr) are
           // treated as non-marking sub-expressions (?:expr)
           boost::regex::nosubs |
+
+          // Make the `.` character class match new lines
+          boost::regex::mod_s |
 
           // Instructs the regular expression engine to make matching faster,
           // with the potential cost of making construction slower
