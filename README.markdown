@@ -131,22 +131,15 @@ latest pre-built binaries, which you can run as follows:
 
 ### From Dockerfile
 
-You can compile the JSON Schema CLI inside a container and run it with Docker
-as follows:
+Starting from v7.2.1, we publish a Docker image to GitHub Packages, which you
+can use as follows:
 
 ```sh
-docker build -t jsonschema .
+docker run --interactive --volume "$PWD:/workspace" \
+  ghcr.io/sourcemeta/jsonschema:vX.Y.Z lint --verbose myschema.json
 ```
 
-Then, you run the JSON Schema CLI by mounting the desired directory as
-`/workspace` as follows:
-
-```sh
-docker run --interactive --volume "$PWD:/workspace" jsonschema lint --verbose myschema.json
-
-# You can optionally add this to your .alias (or similar) file:
-# alias jsonschema="docker run --interactive --volume \"$PWD:/workspace\" jsonschema"
-```
+Replace `vX.Y.Z` with your desired version. You can mount any directory as `/workspace`.
 
 > [!WARNING]
 > Make sure to NOT allocate a pseudo-TTY when running the CLI through Docker
