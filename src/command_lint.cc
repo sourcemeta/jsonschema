@@ -11,6 +11,21 @@
 #include "command.h"
 #include "utils.h"
 
+template <typename Options, typename Iterator>
+static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
+                               const Options &options, Iterator first,
+                               Iterator last) -> void {
+  for (auto iterator = first; iterator != last; ++iterator) {
+    if (bundle.remove(*iterator)) {
+      sourcemeta::jsonschema::cli::log_verbose(options)
+          << "Disabling rule: " << *iterator << "\n";
+    } else {
+      sourcemeta::jsonschema::cli::log_verbose(options)
+          << "warning: Cannot disable unknown rule: " << *iterator << "\n";
+    }
+  }
+}
+
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"f", "fix", "json", "j"})};
@@ -27,6 +42,16 @@ auto sourcemeta::jsonschema::cli::lint(
                         sourcemeta::core::AlterSchemaCategory::Redundant);
   sourcemeta::core::add(bundle,
                         sourcemeta::core::AlterSchemaCategory::SyntaxSugar);
+
+  if (options.contains("disable")) {
+    disable_lint_rules(bundle, options, options.at("disable").cbegin(),
+                       options.at("disable").cend());
+  }
+
+  if (options.contains("d")) {
+    disable_lint_rules(bundle, options, options.at("d").cbegin(),
+                       options.at("d").cend());
+  }
 
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
