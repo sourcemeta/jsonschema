@@ -7,11 +7,11 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-git -C "$TMP" init
+ROOT="$(dirname "$(dirname "$(pwd)")")"
 
 cat << EOF > "$TMP/.pre-commit-config.yaml"
 repos:
-- repo: $(dirname "$(dirname "$(pwd)")")
+- repo: $ROOT
   rev: HEAD
   hooks:
   - id: sourcemeta-jsonschema-lint
@@ -25,11 +25,14 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
+git -C "$TMP" init
 git -C "$TMP" add .
 
 cd "$TMP"
 pre-commit install
-pre-commit run --files schema.json > "$TMP/out.txt" 2>&1 && CODE="$?" || CODE="$?"
+PATH="$ROOT/bin:$PATH" \
+  pre-commit run --files schema.json > "$TMP/out.txt" 2>&1 \
+  && CODE="$?" || CODE="$?"
 cat "$TMP/out.txt"
 test "$CODE" = "1" || exit 1
 grep -q "enum_with_type" "$TMP/out.txt" || exit 1
