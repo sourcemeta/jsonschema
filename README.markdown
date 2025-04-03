@@ -4,6 +4,7 @@
 [![NPM Version](https://img.shields.io/npm/v/@sourcemeta/jsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
 [![GitHub Actions](https://github.com/sourcemeta/jsonschema/actions/workflows/test.yml/badge.svg)](https://github.com/sourcemeta/jsonschema/actions)
 [![GitHub contributors](https://img.shields.io/github/contributors/sourcemeta/jsonschema.svg)](https://github.com/sourcemeta/jsonschema/graphs/contributors/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/sourcemeta/jsonschema/blob/main/.pre-commit-hooks.yaml)
 
 The command-line tool for working with [JSON Schema](https://json-schema.org),
 the world most popular schema language. It is a comprehensive solution for
@@ -72,6 +73,12 @@ documentation:
 - [`jsonschema decode`](./docs/decode.markdown)
 
 Note that YAML is supported in most commands!
+
+We also support a growing amount of [`pre-commit`](https://pre-commit.com)
+hooks. Take a look at the
+[`.pre-commit-hooks.yaml`](https://github.com/sourcemeta/jsonschema/blob/main/.pre-commit-hooks.yaml)
+configuration file for what's available right now. Keep in mind that to use the
+`pre-commit` hooks, you need to install the CLI first.
 
 ***
 
