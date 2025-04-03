@@ -5,6 +5,7 @@ Linting
 jsonschema lint [schemas-or-directories...]
   [--fix/-f] [--json/-j] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--disable/-d <rule-name>]
+  [--keep-ordering/-k]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -102,4 +103,10 @@ jsonschema lint --extension .schema.json
 
 ```sh
 jsonschema lint path/to/my/schema.json --fix
+```
+
+### Fix lint warnings on a single schema while preserving keyword ordering
+
+```sh
+jsonschema lint path/to/my/schema.json --fix --keep-ordering
 ```

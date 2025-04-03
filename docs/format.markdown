@@ -4,7 +4,7 @@ Formatting
 ```sh
 jsonschema fmt [schemas-or-directories...]
   [--check/-c] [--verbose/-v] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>]
+  [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
 ```
 
 Schemas are code. As such, they are expected follow consistent stylistic
@@ -46,6 +46,12 @@ After formatting it, the JSON Schema looks like this:
 
 ```sh
 jsonschema fmt path/to/my/schema_1.json path/to/my/schema_2.json
+```
+
+### Format JSON Schemas in-place while preserving keyword ordering
+
+```sh
+jsonschema fmt path/to/my/schema_1.json path/to/my/schema_2.json --keep-ordering
 ```
 
 ### Format every `.json` file in a given directory (recursively)
