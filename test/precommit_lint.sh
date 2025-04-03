@@ -29,6 +29,7 @@ git -C "$TMP" add .
 
 cd "$TMP"
 pre-commit install
-pre-commit run --files schema.json > "$TMP/out.txt" && CODE="$?" || CODE="$?"
+pre-commit run --files schema.json > "$TMP/out.txt" 2>&1 && CODE="$?" || CODE="$?"
+cat "$TMP/out.txt"
 test "$CODE" = "1" || exit 1
-grep -q "enum_with_type" "$TMP/out.txt" || (echo "$TMP/out.txt" && exit 1)
+grep -q "enum_with_type" "$TMP/out.txt" || exit 1
