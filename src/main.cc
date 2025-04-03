@@ -46,18 +46,20 @@ Commands:
        Run a set of unit tests against a schema.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
-       [--ignore/-i <schemas-or-directories>]
+       [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
 
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
 
    lint [schemas-or-directories...] [--fix/-f] [--json/-j]
         [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-        [--disable/-d <rule-name>]
+        [--disable/-d <rule-name>] [--keep-ordering/-k]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
        Use --json/-j to output lint errors in JSON.
+       The --keep-ordering/-k option is only used when --fix/-f is
+       also present.
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]

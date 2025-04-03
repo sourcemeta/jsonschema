@@ -28,7 +28,8 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
 
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"f", "fix", "json", "j"})};
+  const auto options{parse_options(
+      arguments, {"f", "fix", "json", "j", "k", "keep-ordering"})};
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -71,8 +72,12 @@ auto sourcemeta::jsonschema::cli::lint(
       bundle.apply(copy, sourcemeta::core::schema_official_walker,
                    resolver(options));
       std::ofstream output{entry.first};
-      sourcemeta::core::prettify(copy, output,
-                                 sourcemeta::core::schema_format_compare);
+      if (options.contains("k") || options.contains("keep-ordering")) {
+        sourcemeta::core::prettify(copy, output);
+      } else {
+        sourcemeta::core::prettify(copy, output,
+                                   sourcemeta::core::schema_format_compare);
+      }
       output << "\n";
     }
   }

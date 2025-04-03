@@ -11,7 +11,8 @@
 
 auto sourcemeta::jsonschema::cli::fmt(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"c", "check"})};
+  const auto options{
+      parse_options(arguments, {"c", "check", "k", "keep-ordering"})};
 
   for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
                                          parse_extensions(options))) {
@@ -27,8 +28,14 @@ auto sourcemeta::jsonschema::cli::fmt(
       std::ostringstream buffer;
       buffer << input.rdbuf();
       std::ostringstream expected;
-      sourcemeta::core::prettify(entry.second, expected,
-                                 sourcemeta::core::schema_format_compare);
+
+      if (options.contains("k") || options.contains("keep-ordering")) {
+        sourcemeta::core::prettify(entry.second, expected);
+      } else {
+        sourcemeta::core::prettify(entry.second, expected,
+                                   sourcemeta::core::schema_format_compare);
+      }
+
       expected << "\n";
 
       if (buffer.str() == expected.str()) {
@@ -43,8 +50,14 @@ auto sourcemeta::jsonschema::cli::fmt(
     } else {
       log_verbose(options) << "Formatting: " << entry.first.string() << "\n";
       std::ofstream output{entry.first};
-      sourcemeta::core::prettify(entry.second, output,
-                                 sourcemeta::core::schema_format_compare);
+
+      if (options.contains("k") || options.contains("keep-ordering")) {
+        sourcemeta::core::prettify(entry.second, output);
+      } else {
+        sourcemeta::core::prettify(entry.second, output,
+                                   sourcemeta::core::schema_format_compare);
+      }
+
       output << "\n";
     }
   }
