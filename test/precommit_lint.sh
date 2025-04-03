@@ -25,7 +25,10 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
+git -C "$TMP" add .
+
 cd "$TMP"
 pre-commit install
-pre-commit run --all-files && CODE="$?" || CODE="$?"
+pre-commit run --files schema.json > "$TMP/out.txt" && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
+grep -q "enum_with_type" "$TMP/out.txt" || (echo "$TMP/out.txt" && exit 1)
