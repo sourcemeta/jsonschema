@@ -28,6 +28,7 @@ add_jsonschema_test_unix(format_check_single_pass)
 add_jsonschema_test_unix(format_directory_ignore_directory)
 add_jsonschema_test_unix(format_directory_ignore_file)
 add_jsonschema_test_unix(format_check_single_invalid)
+add_jsonschema_test_unix(precommit_lint)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)
