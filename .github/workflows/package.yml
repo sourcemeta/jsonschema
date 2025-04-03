@@ -55,6 +55,9 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
+      - name: Install pre-commit
+        run: pipx install pre-commit
+
       - uses: actions/checkout@v4
       - name: Install dependencies (macOS)
         if: runner.os == 'macos'
