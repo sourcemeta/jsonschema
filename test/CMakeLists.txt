@@ -14,6 +14,7 @@ macro(add_jsonschema_test_unix_ci name)
   endif()
 endmacro()
 
+add_jsonschema_test_unix(version)
 add_jsonschema_test_unix(help)
 add_jsonschema_test_unix(unknown_command)
 add_jsonschema_test_unix(format_single)

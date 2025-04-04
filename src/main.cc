@@ -22,6 +22,10 @@ Global Options:
 
 Commands:
 
+   version
+
+       Print the current version of the JSON Schema CLI.
+
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
@@ -86,7 +90,10 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
-  if (command == "fmt") {
+  if (command == "version") {
+    std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
+    return EXIT_SUCCESS;
+  } else if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
   } else if (command == "inspect") {
     return sourcemeta::jsonschema::cli::inspect(arguments);
