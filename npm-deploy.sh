@@ -22,11 +22,14 @@ curl --retry 5 --location --output "$OUTPUT/npm/artifacts/darwin-x86_64.zip" \
   "$PACKAGE_BASE_URL/jsonschema-$VERSION-darwin-x86_64.zip"
 curl --retry 5 --location --output "$OUTPUT/npm/artifacts/linux-x86_64.zip" \
   "$PACKAGE_BASE_URL/jsonschema-$VERSION-linux-x86_64.zip"
+curl --retry 5 --location --output "$OUTPUT/npm/artifacts/linux-arm64.zip" \
+  "$PACKAGE_BASE_URL/jsonschema-$VERSION-linux-arm64.zip"
 curl --retry 5 --location --output "$OUTPUT/npm/artifacts/windows-x86_64.zip" \
   "$PACKAGE_BASE_URL/jsonschema-$VERSION-windows-x86_64.zip"
 unzip -o "$OUTPUT/npm/artifacts/darwin-arm64.zip" -d "$OUTPUT/npm/artifacts"
 unzip -o "$OUTPUT/npm/artifacts/darwin-x86_64.zip" -d "$OUTPUT/npm/artifacts"
 unzip -o "$OUTPUT/npm/artifacts/linux-x86_64.zip" -d "$OUTPUT/npm/artifacts"
+unzip -o "$OUTPUT/npm/artifacts/linux-arm64.zip" -d "$OUTPUT/npm/artifacts"
 unzip -o "$OUTPUT/npm/artifacts/windows-x86_64.zip" -d "$OUTPUT/npm/artifacts"
 ls -l "$OUTPUT/npm/artifacts"
 
@@ -40,6 +43,8 @@ install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-darwin-x86_64/bin/jso
   "$OUTPUT/npm/staging/jsonschema-darwin-x86_64"
 install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-linux-x86_64/bin/jsonschema" \
   "$OUTPUT/npm/staging/jsonschema-linux-x86_64"
+install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-linux-arm64/bin/jsonschema" \
+  "$OUTPUT/npm/staging/jsonschema-linux-arm64"
 install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-windows-x86_64/bin/jsonschema.exe" \
   "$OUTPUT/npm/staging/jsonschema-windows-x86_64.exe"
 install -m 0644 "$(pwd)/README.markdown" "$OUTPUT/npm/staging/README.md"
