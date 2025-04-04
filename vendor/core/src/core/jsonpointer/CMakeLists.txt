@@ -11,3 +11,5 @@ target_link_libraries(sourcemeta_core_jsonpointer PUBLIC
   sourcemeta::core::uri)
 target_link_libraries(sourcemeta_core_jsonpointer PUBLIC
   sourcemeta::core::json)
+target_link_libraries(sourcemeta_core_jsonpointer PUBLIC
+  sourcemeta::core::regex)
