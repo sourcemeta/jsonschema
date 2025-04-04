@@ -112,7 +112,7 @@ brew install sourcemeta/apps/jsonschema
 Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```yaml
-- uses: sourcemeta/jsonschema@v7.4.0
+- uses: sourcemeta/jsonschema@v8.0.0
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
 ```
