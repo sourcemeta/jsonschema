@@ -2006,13 +2006,15 @@ auto compiler_draft4_validation_minlength(const Context &context,
     return {};
   }
 
-  return {make(
-      sourcemeta::blaze::InstructionIndex::AssertionStringSizeGreater, context,
-      schema_context, dynamic_context,
-      ValueUnsignedInteger{
-          static_cast<unsigned long>(
-              schema_context.schema.at(dynamic_context.keyword).as_integer()) -
-          1})};
+  const auto value{static_cast<unsigned long>(
+      schema_context.schema.at(dynamic_context.keyword).as_integer())};
+  if (value <= 0) {
+    return {};
+  }
+
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionStringSizeGreater,
+               context, schema_context, dynamic_context,
+               ValueUnsignedInteger{value - 1})};
 }
 
 auto compiler_draft4_validation_maxitems(const Context &context,
@@ -2068,13 +2070,15 @@ auto compiler_draft4_validation_minitems(const Context &context,
     return {};
   }
 
-  return {make(
-      sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater, context,
-      schema_context, dynamic_context,
-      ValueUnsignedInteger{
-          static_cast<unsigned long>(
-              schema_context.schema.at(dynamic_context.keyword).as_integer()) -
-          1})};
+  const auto value{
+      schema_context.schema.at(dynamic_context.keyword).as_integer()};
+  if (value <= 0) {
+    return {};
+  }
+
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionArraySizeGreater,
+               context, schema_context, dynamic_context,
+               ValueUnsignedInteger{static_cast<unsigned long>(value - 1)})};
 }
 
 auto compiler_draft4_validation_maxproperties(
@@ -2130,13 +2134,15 @@ auto compiler_draft4_validation_minproperties(
     return {};
   }
 
-  return {make(
-      sourcemeta::blaze::InstructionIndex::AssertionObjectSizeGreater, context,
-      schema_context, dynamic_context,
-      ValueUnsignedInteger{
-          static_cast<unsigned long>(
-              schema_context.schema.at(dynamic_context.keyword).as_integer()) -
-          1})};
+  const auto value{static_cast<unsigned long>(
+      schema_context.schema.at(dynamic_context.keyword).as_integer())};
+  if (value <= 0) {
+    return {};
+  }
+
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionObjectSizeGreater,
+               context, schema_context, dynamic_context,
+               ValueUnsignedInteger{value - 1})};
 }
 
 auto compiler_draft4_validation_maximum(const Context &context,

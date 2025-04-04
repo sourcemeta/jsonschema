@@ -1323,7 +1323,7 @@ auto describe(const bool valid, const Instruction &step,
       std::ostringstream message;
       const auto maximum{instruction_value<ValueUnsignedInteger>(step) - 1};
       message << "The array value was expected to contain at most " << maximum;
-      assert(maximum > 0);
+      assert(maximum >= 0);
       if (maximum == 1) {
         message << " item";
       } else {
@@ -1355,7 +1355,7 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto minimum{instruction_value<ValueUnsignedInteger>(step) + 1};
     message << "The array value was expected to contain at least " << minimum;
-    assert(minimum > 0);
+    assert(minimum >= 0);
     if (minimum == 1) {
       message << " item";
     } else {
@@ -1390,7 +1390,7 @@ auto describe(const bool valid, const Instruction &step,
       std::ostringstream message;
       const auto maximum{instruction_value<ValueUnsignedInteger>(step) - 1};
       message << "The object value was expected to contain at most " << maximum;
-      assert(maximum > 0);
+      assert(maximum >= 0);
       if (maximum == 1) {
         message << " property";
       } else {
@@ -1404,7 +1404,9 @@ auto describe(const bool valid, const Instruction &step,
       }
 
       message << " it contained " << target.size();
-      if (target.size() == 1) {
+      if (target.size() == 0) {
+        message << " properties";
+      } else if (target.size() == 1) {
         message << " property: ";
         message << escape_string(target.as_object().cbegin()->first);
       } else {
@@ -1440,7 +1442,7 @@ auto describe(const bool valid, const Instruction &step,
       const auto minimum{instruction_value<ValueUnsignedInteger>(step) + 1};
       message << "The object value was expected to contain at least "
               << minimum;
-      assert(minimum > 0);
+      assert(minimum >= 0);
       if (minimum == 1) {
         message << " property";
       } else {
