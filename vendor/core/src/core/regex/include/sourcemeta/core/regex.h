@@ -204,6 +204,24 @@ auto matches(const Regex<T> &regex, const T &value) -> bool {
 #endif
 }
 
+/// @ingroup regex
+///
+/// Validate a string against a regular expression pattern if the pattern
+/// represents a valid regular expression, compiling it along the way. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/regex.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::matches_if_valid("^foo", "foo bar"));
+/// ```
+template <typename T>
+auto matches_if_valid(const T &pattern, const T &value) -> bool {
+  const auto regex{to_regex(pattern)};
+  return regex.has_value() && matches(regex.value(), value);
+}
+
 } // namespace sourcemeta::core
 
 #endif

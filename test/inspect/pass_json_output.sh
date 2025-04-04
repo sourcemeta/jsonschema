@@ -126,12 +126,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
     }
   ],
   "instances": {
-    "": [
-      ""
-    ],
-    "/$defs/string": [
-      ""
-    ]
+    "": [ "" ],
+    "/$defs/string": [ "" ]
   }
 }
 EOF

@@ -13,11 +13,13 @@
 #include <string>    // std::to_string
 
 namespace sourcemeta::core::internal {
+constexpr auto LINE_WIDTH{80};
+constexpr auto INDENTATION_MULTIPLIER{2};
 template <typename CharT, typename Traits>
 auto indent(std::basic_ostream<CharT, Traits> &stream,
             const std::size_t indentation) -> void {
-  constexpr auto multiplier{2};
-  for (std::size_t index{0}; index < indentation * multiplier; index++) {
+  for (std::size_t index{0}; index < indentation * INDENTATION_MULTIPLIER;
+       index++) {
     stream.put(internal::token_whitespace_space<CharT>);
   }
 }
@@ -454,9 +456,44 @@ template <template <typename T> typename Allocator>
 auto prettify(
     const typename JSON::Array &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const JSON::KeyComparison &compare, const std::size_t indentation) -> void {
-  stream.put(internal::token_array_begin<typename JSON::Char>);
+    const JSON::KeyComparison &compare, const std::size_t indentation,
+    const std::size_t property_size) -> void {
   const auto end{std::cend(document)};
+  const auto effective_indentation{
+      (indentation * internal::INDENTATION_MULTIPLIER) + property_size};
+
+  // Attempt to print arrays in a single line if possible
+
+  bool prettify_in_place{effective_indentation < internal::LINE_WIDTH};
+  std::ostringstream inplace;
+  inplace.put(internal::token_array_begin<typename JSON::Char>);
+  for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
+    if (iterator->is_object() || iterator->is_array()) {
+      prettify_in_place = false;
+      break;
+    }
+
+    inplace.put(internal::token_whitespace_space<typename JSON::Char>);
+    prettify<Allocator>(*iterator, inplace, compare, indentation);
+    if (std::next(iterator) == end) {
+      inplace.put(internal::token_whitespace_space<typename JSON::Char>);
+    } else {
+      inplace.put(internal::token_array_delimiter<typename JSON::Char>);
+    }
+
+    if (inplace.str().size() + effective_indentation >= internal::LINE_WIDTH) {
+      prettify_in_place = false;
+      break;
+    }
+  }
+
+  if (prettify_in_place) {
+    stream << inplace.str();
+    stream.put(internal::token_array_end<typename JSON::Char>);
+    return;
+  }
+
+  stream.put(internal::token_array_begin<typename JSON::Char>);
   for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
     stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
     internal::indent(stream, indentation + 1);
@@ -493,11 +530,15 @@ auto prettify(
     for (auto iterator = std::cbegin(keys); iterator != end; ++iterator) {
       stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
       internal::indent(stream, indentation + 1);
+      const auto current_position{stream.tellp()};
       stringify<Allocator>(*iterator, stream);
       stream.put(internal::token_object_key_delimiter<typename JSON::Char>);
       stream.put(internal::token_whitespace_space<typename JSON::Char>);
-      prettify<Allocator>(container.at(*iterator), stream, compare,
-                          indentation + 1);
+      prettify<Allocator>(
+          container.at(*iterator), stream, compare, indentation + 1,
+          // Pass the length of the property name as encoded in JSON
+          // to help determine the actual current column
+          static_cast<std::size_t>(stream.tellp() - current_position));
       if (std::next(iterator) == end) {
         stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
       } else {
@@ -509,10 +550,15 @@ auto prettify(
     for (auto iterator = std::cbegin(document); iterator != end; ++iterator) {
       stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
       internal::indent(stream, indentation + 1);
+      const auto current_position{stream.tellp()};
       stringify<Allocator>(iterator->first, stream);
       stream.put(internal::token_object_key_delimiter<typename JSON::Char>);
       stream.put(internal::token_whitespace_space<typename JSON::Char>);
-      prettify<Allocator>(iterator->second, stream, compare, indentation + 1);
+      prettify<Allocator>(
+          iterator->second, stream, compare, indentation + 1,
+          // Pass the length of the property name as encoded in JSON
+          // to help determine the actual current column
+          static_cast<std::size_t>(stream.tellp() - current_position));
       if (std::next(iterator) == end) {
         stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);
       } else {
@@ -565,8 +611,8 @@ template <template <typename T> typename Allocator>
 auto prettify(
     const JSON &document,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream,
-    const JSON::KeyComparison &compare, const std::size_t indentation = 0)
-    -> void {
+    const JSON::KeyComparison &compare, const std::size_t indentation = 0,
+    const std::size_t property_size = 0) -> void {
   switch (document.type()) {
     case JSON::Type::Null:
       stringify<Allocator>(nullptr, stream);
@@ -585,7 +631,8 @@ auto prettify(
       stringify<Allocator>(document.to_string(), stream);
       break;
     case JSON::Type::Array:
-      prettify<Allocator>(document.as_array(), stream, compare, indentation);
+      prettify<Allocator>(document.as_array(), stream, compare, indentation,
+                          property_size);
       break;
     case JSON::Type::Object:
       prettify<Allocator>(document.as_object(), document, stream, compare,
