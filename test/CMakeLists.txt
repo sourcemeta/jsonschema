@@ -30,7 +30,6 @@ add_jsonschema_test_unix(format_check_single_pass_keep_ordering)
 add_jsonschema_test_unix(format_directory_ignore_directory)
 add_jsonschema_test_unix(format_directory_ignore_file)
 add_jsonschema_test_unix(format_check_single_invalid)
-add_jsonschema_test_unix(precommit_lint)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)
@@ -214,3 +213,4 @@ add_jsonschema_test_unix_ci(fail_validate_http_non_schema)
 add_jsonschema_test_unix_ci(fail_validate_http_non_schema_verbose)
 add_jsonschema_test_unix_ci(pass_validate_http)
 add_jsonschema_test_unix_ci(pass_validate_http_verbose)
+add_jsonschema_test_unix_ci(precommit_lint)
