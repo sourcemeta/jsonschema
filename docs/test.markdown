@@ -20,10 +20,34 @@ suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
 **If you want to validate that a schema adheres to its metaschema, use the
 [`metaschema`](./metaschema.markdown) command instead.**
 
+To test a schema, you define one or more test suite (i.e. collections of tests)
+as JSON files that follow a specific format:
+
+- `target`: The URI of the schema you want to test, which must be imported into
+  the resolution context using the `--resolve` or `--http` options
+- `tests`: An array of tests you want to run.
+
+Every item in the `tests` array must be an object with the following
+properties:
+
+- `valid`: A boolean that determines whether the given instance is expected to
+  be valid or not against the target schema
+- `description`: An optional string property to make test output more readable
+
+And either of the following properties, but not both:
+
+- `data`: The instance that you want to test against the target schema
+- `dataPath`: The instance that you want to test against the target schema,
+  loaded from an external file instead
+
 Examples
 --------
 
-To create a test definition, you must write JSON documents that look like this:
+For example, this is a test suite definition that runs a few test cases against
+the official JSON Schema Draft 4 meta-schema. The first test asserts that the
+instance `{}` is valid. The second test asserts that a schema where the `type`
+keyword is set to an integer is invalid. The third test asserts that an
+instance loaded from a relative path is valid against the schema:
 
 ```json
 {
