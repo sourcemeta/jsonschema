@@ -20,34 +20,65 @@ suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
 **If you want to validate that a schema adheres to its metaschema, use the
 [`metaschema`](./metaschema.markdown) command instead.**
 
+Writing tests
+-------------
+
 To test a schema, you define one or more test suite (i.e. collections of tests)
 as JSON files that follow a specific format:
 
-- `target`: The URI of the schema you want to test, which must be imported into
-  the resolution context using the `--resolve` or `--http` options
+- `target`: The URI of the schema you want to test, _which must be imported
+  into the resolution context using the `--resolve` or `--http` options_
 - `tests`: An array of tests you want to run.
+
+> [!TIP]
+> You can test different portions of a large schema by passing a schema URI
+> that contains a JSON Pointer in the `target` property. For example:
+> `https://example.com/my-big-schema#/definitions/foo`.
 
 Every item in the `tests` array must be an object with the following
 properties:
 
 - `valid`: A boolean that determines whether the given instance is expected to
-  be valid or not against the target schema
+  be valid or not against the target schema. In other words, if this property
+  is `true`, the test passes when the instance successfully validates against
+  the schema.  Conversely, if this property is `false`, the test passes when
+  the instance does NOT validate against the schema
 - `description`: An optional string property to make test output more readable
 
 And either of the following properties, but not both:
 
-- `data`: The instance that you want to test against the target schema
+- `data`: The instance that you want to test against the target schema.
 - `dataPath`: The instance that you want to test against the target schema,
   loaded from an external file instead
+
+For example, here is a minimal test suite that expects an object with two
+properties (`foo` and `bar`) to successfully validate against the target schema
+`https://example.com/my-schema-id`:
+
+```json
+{
+  "target": "https://example.com/my-schema-id",
+  "tests": [
+    {
+      "description": "I expect to pass",
+      "valid": true,
+      "data": {
+        "foo": 1,
+        "bar": 1
+      }
+    }
+  ]
+}
+```
 
 Examples
 --------
 
-For example, this is a test suite definition that runs a few test cases against
-the official JSON Schema Draft 4 meta-schema. The first test asserts that the
-instance `{}` is valid. The second test asserts that a schema where the `type`
-keyword is set to an integer is invalid. The third test asserts that an
-instance loaded from a relative path is valid against the schema:
+This is a test suite definition that runs a few test cases against the official
+JSON Schema Draft 4 meta-schema. The first test asserts that the instance `{}`
+is valid. The second test asserts that a schema where the `type` keyword is set
+to an integer is invalid. The third test asserts that an instance loaded from a
+relative path is valid against the schema:
 
 ```json
 {
@@ -74,11 +105,6 @@ instance loaded from a relative path is valid against the schema:
   ]
 }
 ```
-
-> [!TIP]
-> You can test different portions of a large schema by passing a schema URI
-> that contains a JSON Pointer in the `target` property. For example:
-> `https://example.com/my-big-schema#/definitions/foo`.
 
 Assuming this file is saved as `test/draft4.json`, you can run it as follows:
 
