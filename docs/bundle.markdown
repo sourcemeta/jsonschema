@@ -9,7 +9,7 @@ jsonschema bundle <schema.json|.yaml>
 ```
 
 A schema may contain references to remote schemas outside the scope of the
-given schema. These remote schemas may live in other files, or may be server by
+given schema. These remote schemas may live in other files, or may be served by
 others over the Internet. JSON Schema supports a standardized process, referred
 to as
 [bundling](https://json-schema.org/blog/posts/bundling-json-schema-compound-documents),
