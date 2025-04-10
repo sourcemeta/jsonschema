@@ -19,8 +19,8 @@ public:
            schema.defines_any(this->BLACKLIST.cbegin(), this->BLACKLIST.cend());
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase_keys(this->BLACKLIST.cbegin(), this->BLACKLIST.cend());
+  auto transform(JSON &schema) const -> void override {
+    schema.erase_keys(this->BLACKLIST.cbegin(), this->BLACKLIST.cend());
   }
 
 private:

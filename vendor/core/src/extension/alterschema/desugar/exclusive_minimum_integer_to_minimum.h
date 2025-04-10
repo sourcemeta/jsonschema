@@ -25,17 +25,17 @@ public:
            !schema.defines("minimum");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    if (transformer.value().at("exclusiveMinimum").is_integer()) {
-      auto new_minimum = transformer.value().at("exclusiveMinimum");
+  auto transform(JSON &schema) const -> void override {
+    if (schema.at("exclusiveMinimum").is_integer()) {
+      auto new_minimum = schema.at("exclusiveMinimum");
       new_minimum += sourcemeta::core::JSON{1};
-      transformer.assign("minimum", new_minimum);
-      transformer.erase("exclusiveMinimum");
+      schema.at("exclusiveMinimum").into(new_minimum);
+      schema.rename("exclusiveMinimum", "minimum");
     } else {
-      const auto current{transformer.value().at("exclusiveMinimum").to_real()};
+      const auto current{schema.at("exclusiveMinimum").to_real()};
       const auto new_value{static_cast<std::int64_t>(std::ceil(current))};
-      transformer.assign("minimum", sourcemeta::core::JSON{new_value});
-      transformer.erase("exclusiveMinimum");
+      schema.at("exclusiveMinimum").into(sourcemeta::core::JSON{new_value});
+      schema.rename("exclusiveMinimum", "minimum");
     }
   }
 };

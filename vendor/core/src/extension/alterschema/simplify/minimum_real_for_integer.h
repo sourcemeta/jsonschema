@@ -27,9 +27,9 @@ public:
            schema.defines("minimum") && schema.at("minimum").is_real();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    const auto current{transformer.value().at("minimum").to_real()};
+  auto transform(JSON &schema) const -> void override {
+    const auto current{schema.at("minimum").to_real()};
     const auto new_value{static_cast<std::int64_t>(std::ceil(current))};
-    transformer.assign("minimum", sourcemeta::core::JSON{new_value});
+    schema.assign("minimum", sourcemeta::core::JSON{new_value});
   }
 };

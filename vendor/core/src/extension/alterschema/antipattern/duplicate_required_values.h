@@ -22,12 +22,12 @@ public:
            schema.at("required").is_array() && !schema.at("required").unique();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    auto collection = transformer.value().at("required");
+  auto transform(JSON &schema) const -> void override {
+    auto collection = schema.at("required");
     std::sort(collection.as_array().begin(), collection.as_array().end());
     auto last =
         std::unique(collection.as_array().begin(), collection.as_array().end());
     collection.erase(last, collection.as_array().end());
-    transformer.replace({"required"}, std::move(collection));
+    schema.at("required").into(std::move(collection));
   }
 };

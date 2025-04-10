@@ -19,7 +19,7 @@ public:
            !schema.defines("contains");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("minContains");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("minContains");
   }
 };

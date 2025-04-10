@@ -20,7 +20,7 @@ public:
            schema.at("dependentRequired").empty();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("dependentRequired");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("dependentRequired");
   }
 };

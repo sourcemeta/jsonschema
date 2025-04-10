@@ -234,6 +234,29 @@ public:
     return this->data[index];
   }
 
+  auto rename(const key_type &key, const hash_type key_hash, key_type &&to,
+              const hash_type to_hash) -> void {
+    this->erase(to, to_hash);
+
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash) {
+          entry.first = std::move(to);
+          entry.hash = to_hash;
+          break;
+        }
+      }
+    } else {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first == key) {
+          entry.first = std::move(to);
+          entry.hash = to_hash;
+          break;
+        }
+      }
+    }
+  }
+
   auto erase(const key_type &key, const hash_type key_hash) -> size_type {
     const auto current_size{this->size()};
 

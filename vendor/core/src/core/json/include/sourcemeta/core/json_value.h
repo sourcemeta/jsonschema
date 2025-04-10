@@ -1461,6 +1461,25 @@ public:
    * Transform operations
    */
 
+  /// This method moves a JSON property value from one property name to another,
+  /// potentially deleting the destination property name if it already exists.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
+  /// document.rename("foo", "bar");
+  ///
+  /// assert(!document.defines("foo"));
+  /// assert(document.defines("bar"));
+  /// assert(document.at("bar").is_boolean());
+  /// assert(document.at("bar").to_boolean());
+  /// ```
+  auto rename(const JSON::String &key, JSON::String &&to) -> void;
+
   /// This method sets a value to another JSON value by copying it. For example,
   /// the member of a JSON document can be transformed from a boolean to an
   /// integer as follows:

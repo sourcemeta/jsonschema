@@ -27,7 +27,7 @@ public:
                    schema.at("minProperties").to_integer());
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("minProperties");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("minProperties");
   }
 };

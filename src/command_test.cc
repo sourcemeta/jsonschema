@@ -12,29 +12,6 @@
 #include "command.h"
 #include "utils.h"
 
-static auto get_schema_object(const sourcemeta::core::URI &identifier,
-                              const sourcemeta::core::SchemaResolver &resolver)
-    -> std::optional<sourcemeta::core::JSON> {
-  const auto schema{resolver(identifier.recompose())};
-  if (schema.has_value()) {
-    return schema;
-  }
-
-  // Resolving a schema identifier that contains a fragment (i.e. a JSON Pointer
-  // one) can be tricky, as we might end up re-inventing JSON Schema referencing
-  // all over again. To make it work without much hassle, we do exactly that:
-  // create an artificial schema wrapper that uses `$ref`.
-  if (identifier.fragment().has_value()) {
-    auto result{sourcemeta::core::JSON::make_object()};
-    result.assign("$schema", sourcemeta::core::JSON{
-                                 "http://json-schema.org/draft-07/schema#"});
-    result.assign("$ref", sourcemeta::core::JSON{identifier.recompose()});
-    return result;
-  }
-
-  return std::nullopt;
-}
-
 static auto get_data(const sourcemeta::core::JSON &test_case,
                      const std::filesystem::path &base, const bool verbose)
     -> sourcemeta::core::JSON {
@@ -124,12 +101,7 @@ auto sourcemeta::jsonschema::cli::test(
 
     sourcemeta::core::URI schema_uri{test.at("target").to_string()};
     schema_uri.canonicalize();
-    const auto schema{get_schema_object(schema_uri, test_resolver)};
-    if (!schema.has_value()) {
-      std::cout << "\n";
-      throw sourcemeta::core::SchemaResolutionError(
-          test.at("target").to_string(), "Could not resolve schema under test");
-    }
+    const auto schema{sourcemeta::core::wrap(schema_uri.recompose())};
 
     unsigned int pass_count{0};
     unsigned int index{0};
@@ -144,8 +116,8 @@ auto sourcemeta::jsonschema::cli::test(
 
     try {
       schema_template = sourcemeta::blaze::compile(
-          schema.value(), sourcemeta::core::schema_official_walker,
-          test_resolver, sourcemeta::blaze::default_schema_compiler);
+          schema, sourcemeta::core::schema_official_walker, test_resolver,
+          sourcemeta::blaze::default_schema_compiler);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
           error.id() == schema_uri.recompose()) {

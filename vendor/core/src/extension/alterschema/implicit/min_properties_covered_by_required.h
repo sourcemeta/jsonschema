@@ -27,9 +27,8 @@ public:
                    schema.at("minProperties").to_integer());
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign(
-        "minProperties",
-        sourcemeta::core::JSON{transformer.value().at("required").size()});
+  auto transform(JSON &schema) const -> void override {
+    schema.assign("minProperties",
+                  sourcemeta::core::JSON{schema.at("required").size()});
   }
 };

@@ -22,7 +22,7 @@ public:
              schema.at("unevaluatedItems").empty()));
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("unevaluatedItems");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("unevaluatedItems");
   }
 };

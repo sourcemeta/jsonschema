@@ -27,10 +27,10 @@ public:
            !schema.defines("const");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
+  auto transform(JSON &schema) const -> void override {
     auto choices = sourcemeta::core::JSON::make_array();
     choices.push_back(sourcemeta::core::JSON{nullptr});
-    transformer.assign("enum", choices);
-    transformer.erase("type");
+    schema.at("type").into(std::move(choices));
+    schema.rename("type", "enum");
   }
 };

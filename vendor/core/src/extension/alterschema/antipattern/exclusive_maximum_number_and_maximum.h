@@ -23,12 +23,11 @@ public:
            schema.at("exclusiveMaximum").is_number();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    if (transformer.value().at("maximum") <
-        transformer.value().at("exclusiveMaximum")) {
-      transformer.erase("exclusiveMaximum");
+  auto transform(JSON &schema) const -> void override {
+    if (schema.at("maximum") < schema.at("exclusiveMaximum")) {
+      schema.erase("exclusiveMaximum");
     } else {
-      transformer.erase("maximum");
+      schema.erase("maximum");
     }
   }
 };

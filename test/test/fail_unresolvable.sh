@@ -29,7 +29,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: Could not resolve schema under test
+error: Could not resolve the requested schema
   at https://example.com/unknown
 EOF
 

@@ -839,6 +839,13 @@ auto JSON::clear_except(std::initializer_list<JSON::String> keys) -> void {
   this->clear_except(keys.begin(), keys.end());
 }
 
+auto JSON::rename(const JSON::String &key, JSON::String &&to) -> void {
+  assert(this->is_object());
+  auto &object{this->data_object};
+  object.data.rename(key, object.data.hash(key), std::move(to),
+                     object.data.hash(to));
+}
+
 auto JSON::into(const JSON &other) -> void { this->operator=(other); }
 
 auto JSON::into(JSON &&other) noexcept -> void {

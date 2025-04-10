@@ -19,14 +19,13 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    auto minimum = transformer.value().at("minimum");
-    auto maximum = transformer.value().at("maximum");
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    auto minimum = schema.at("minimum");
+    auto maximum = schema.at("maximum");
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("minimum", std::move(minimum));
     options.assign("maximum", std::move(maximum));
     options.assign("multiplier", sourcemeta::core::JSON{1});
-    make_encoding(transformer, "BOUNDED_MULTIPLE_8BITS_ENUM_FIXED", options);
+    make_encoding(schema, "BOUNDED_MULTIPLE_8BITS_ENUM_FIXED", options);
   }
 };

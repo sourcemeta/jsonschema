@@ -473,6 +473,12 @@ auto stringify(const PointerT &pointer,
         stream.put(internal::token_pointer_slash<CharT>);
         stream.put(internal::token_pointer_tilde<CharT>);
         stream.put('?');
+        const auto &value{std::get<typename PointerT::Condition>(token)};
+        if (value.suffix.has_value()) {
+          stream.write(value.suffix->c_str(),
+                       static_cast<std::streamsize>(value.suffix->size()));
+        }
+
         stream.put(internal::token_pointer_tilde<CharT>);
       } else if (std::holds_alternative<typename PointerT::Negation>(token)) {
         stream.put(internal::token_pointer_slash<CharT>);

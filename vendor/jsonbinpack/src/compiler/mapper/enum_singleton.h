@@ -15,10 +15,9 @@ public:
            schema.at("enum").size() == 1;
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
     auto options = sourcemeta::core::JSON::make_object();
-    options.assign("value", transformer.value().at("enum").at(0));
-    make_encoding(transformer, "CONST_NONE", options);
+    options.assign("value", schema.at("enum").at(0));
+    make_encoding(schema, "CONST_NONE", options);
   }
 };

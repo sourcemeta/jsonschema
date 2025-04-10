@@ -17,12 +17,11 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    auto minimum = transformer.value().at("minimum");
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    auto minimum = schema.at("minimum");
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("minimum", std::move(minimum));
     options.assign("multiplier", sourcemeta::core::JSON{1});
-    make_encoding(transformer, "FLOOR_MULTIPLE_ENUM_VARINT", options);
+    make_encoding(schema, "FLOOR_MULTIPLE_ENUM_VARINT", options);
   }
 };

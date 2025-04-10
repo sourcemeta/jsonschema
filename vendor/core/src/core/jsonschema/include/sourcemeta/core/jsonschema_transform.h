@@ -50,9 +50,9 @@ namespace sourcemeta::core {
 ///     return schema.defines("foo");
 ///   }
 ///
-///   auto transform(sourcemeta::core::PointerProxy &transformer)
+///   auto transform(sourcemeta::core::JSON &schema)
 ///       const -> void override {
-///     transformer.erase("foo");
+///     schema.erase("foo");
 ///   }
 /// };
 /// ```
@@ -83,7 +83,7 @@ public:
   auto
   apply(JSON &schema, const Pointer &pointer, const SchemaResolver &resolver,
         const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> std::vector<PointerProxy::Operation>;
+      -> bool;
 
   /// Check if the rule applies to a schema
   auto
@@ -100,7 +100,7 @@ private:
             const Pointer &pointer) const -> bool = 0;
 
   /// The rule transformation
-  virtual auto transform(PointerProxy &transformer) const -> void = 0;
+  virtual auto transform(JSON &schema) const -> void = 0;
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -140,9 +140,9 @@ private:
 ///     return schema.defines("foo");
 ///   }
 ///
-///   auto transform(sourcemeta::core::PointerProxy &transformer)
+///   auto transform(sourcemeta::core::JSON &schema)
 ///       const -> void override {
-///     transformer.erase("foo");
+///     schema.erase("foo");
 ///   }
 /// };
 ///

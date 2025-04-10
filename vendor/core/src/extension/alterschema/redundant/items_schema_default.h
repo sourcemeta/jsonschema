@@ -26,7 +26,5 @@ public:
             (schema.at("items").is_object() && schema.at("items").empty()));
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("items");
-  }
+  auto transform(JSON &schema) const -> void override { schema.erase("items"); }
 };

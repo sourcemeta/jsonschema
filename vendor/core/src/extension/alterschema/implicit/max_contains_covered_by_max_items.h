@@ -23,7 +23,7 @@ public:
                schema.at("maxItems").to_integer();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign("maxContains", transformer.value().at("maxItems"));
+  auto transform(JSON &schema) const -> void override {
+    schema.assign("maxContains", schema.at("maxItems"));
   }
 };
