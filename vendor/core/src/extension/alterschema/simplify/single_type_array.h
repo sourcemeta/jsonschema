@@ -26,8 +26,8 @@ public:
            schema.at("type").front().is_string();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    auto type{transformer.value().at("type").front()};
-    transformer.replace({"type"}, std::move(type));
+  auto transform(JSON &schema) const -> void override {
+    auto type{schema.at("type").front()};
+    schema.at("type").into(std::move(type));
   }
 };

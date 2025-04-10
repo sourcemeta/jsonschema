@@ -21,8 +21,9 @@ public:
            schema.at("enum").size() == 1;
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign("const", transformer.value().at("enum").front());
-    transformer.erase("enum");
+  auto transform(JSON &schema) const -> void override {
+    auto front{schema.at("enum").front()};
+    schema.at("enum").into(front);
+    schema.rename("enum", "const");
   }
 };

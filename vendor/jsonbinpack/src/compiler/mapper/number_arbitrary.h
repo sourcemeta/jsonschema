@@ -14,9 +14,8 @@ public:
            schema.defines("type") && schema.at("type").to_string() == "number";
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    make_encoding(transformer, "DOUBLE_VARINT_TUPLE",
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    make_encoding(schema, "DOUBLE_VARINT_TUPLE",
                   sourcemeta::core::JSON::make_object());
   }
 };

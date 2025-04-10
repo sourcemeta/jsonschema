@@ -592,6 +592,28 @@ auto bundle(const JSON &schema, const SchemaWalker &walker,
             const std::optional<std::string> &default_dialect = std::nullopt)
     -> JSON;
 
+/// @ingroup jsonschema
+///
+/// Given a schema identifier, this function creates a JSON Schema wrapper that
+/// references such schema. This is useful when trying to validate an instance
+/// against a specific subset of a schema, as the wrapper allows you to make use
+/// of JSON Schema referencing to get there without reinventing the wheel. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <iostream>
+///
+/// const sourcemeta::core::JSON result =
+///   sourcemeta::core::wrap("https://www.example.com#/foo/bar");
+///
+/// sourcemeta::core::prettify(result, std::cerr);
+/// std::cerr << "\n";
+/// ```
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT
+auto wrap(const JSON::String &identifier) -> JSON;
+
 } // namespace sourcemeta::core
 
 #endif

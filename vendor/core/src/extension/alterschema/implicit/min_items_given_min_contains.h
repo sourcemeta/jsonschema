@@ -21,15 +21,13 @@ public:
            !schema.defines("minItems");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    if (transformer.value().defines("contains") &&
-        transformer.value().defines("minContains") &&
-        transformer.value().at("minContains").is_integer()) {
-      transformer.assign(
-          "minItems", sourcemeta::core::JSON{
-                          transformer.value().at("minContains").to_integer()});
+  auto transform(JSON &schema) const -> void override {
+    if (schema.defines("contains") && schema.defines("minContains") &&
+        schema.at("minContains").is_integer()) {
+      schema.assign("minItems", sourcemeta::core::JSON{
+                                    schema.at("minContains").to_integer()});
     } else {
-      transformer.assign("minItems", sourcemeta::core::JSON{0});
+      schema.assign("minItems", sourcemeta::core::JSON{0});
     }
   }
 };

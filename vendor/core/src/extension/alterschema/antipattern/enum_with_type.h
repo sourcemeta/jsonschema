@@ -52,7 +52,5 @@ public:
                        });
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("type");
-  }
+  auto transform(JSON &schema) const -> void override { schema.erase("type"); }
 };

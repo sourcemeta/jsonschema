@@ -19,11 +19,10 @@ public:
            schema.defines("multipleOf") && schema.at("multipleOf").is_integer();
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    auto multiplier = transformer.value().at("multipleOf");
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    auto multiplier = schema.at("multipleOf");
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("multiplier", std::move(multiplier));
-    make_encoding(transformer, "ARBITRARY_MULTIPLE_ZIGZAG_VARINT", options);
+    make_encoding(schema, "ARBITRARY_MULTIPLE_ZIGZAG_VARINT", options);
   }
 };

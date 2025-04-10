@@ -23,7 +23,7 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign("multipleOf", sourcemeta::core::JSON{1});
+  auto transform(JSON &schema) const -> void override {
+    schema.assign("multipleOf", sourcemeta::core::JSON{1});
   }
 };

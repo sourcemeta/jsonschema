@@ -20,7 +20,5 @@ public:
            !schema.defines("then") && !schema.defines("else");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("if");
-  }
+  auto transform(JSON &schema) const -> void override { schema.erase("if"); }
 };

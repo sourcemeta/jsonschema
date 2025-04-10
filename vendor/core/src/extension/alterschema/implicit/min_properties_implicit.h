@@ -24,14 +24,12 @@ public:
            !schema.defines("minProperties");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    if (transformer.value().defines("required") &&
-        transformer.value().at("required").is_array()) {
-      transformer.assign(
-          "minProperties",
-          sourcemeta::core::JSON{transformer.value().at("required").size()});
+  auto transform(JSON &schema) const -> void override {
+    if (schema.defines("required") && schema.at("required").is_array()) {
+      schema.assign("minProperties",
+                    sourcemeta::core::JSON{schema.at("required").size()});
     } else {
-      transformer.assign("minProperties", sourcemeta::core::JSON{0});
+      schema.assign("minProperties", sourcemeta::core::JSON{0});
     }
   }
 };

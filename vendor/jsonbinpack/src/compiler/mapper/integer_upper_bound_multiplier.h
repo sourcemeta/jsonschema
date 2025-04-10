@@ -19,13 +19,12 @@ public:
            schema.defines("multipleOf") && schema.at("multipleOf").is_integer();
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    auto maximum = transformer.value().at("maximum");
-    auto multiplier = transformer.value().at("multipleOf");
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    auto maximum = schema.at("maximum");
+    auto multiplier = schema.at("multipleOf");
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("maximum", std::move(maximum));
     options.assign("multiplier", std::move(multiplier));
-    make_encoding(transformer, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
+    make_encoding(schema, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
   }
 };

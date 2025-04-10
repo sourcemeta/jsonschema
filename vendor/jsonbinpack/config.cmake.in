@@ -10,7 +10,7 @@ if(NOT JSONBINPACK_COMPONENTS)
 endif()
 
 include(CMakeFindDependencyMacro)
-find_dependency(Core COMPONENTS uri json jsonpointer jsonschema alterschema)
+find_dependency(Core COMPONENTS regex uri json jsonpointer jsonschema alterschema)
 
 foreach(component ${JSONBINPACK_COMPONENTS})
   if(component STREQUAL "numeric")

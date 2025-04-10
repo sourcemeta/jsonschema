@@ -24,12 +24,12 @@ public:
            schema.at("allOf").is_array() && !schema.at("allOf").unique();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    auto collection = transformer.value().at("allOf");
+  auto transform(JSON &schema) const -> void override {
+    auto collection = schema.at("allOf");
     std::sort(collection.as_array().begin(), collection.as_array().end());
     auto last =
         std::unique(collection.as_array().begin(), collection.as_array().end());
     collection.erase(last, collection.as_array().end());
-    transformer.replace({"allOf"}, std::move(collection));
+    schema.at("allOf").into(std::move(collection));
   }
 };

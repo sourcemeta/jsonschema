@@ -115,7 +115,7 @@ public:
     return true;
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
+  auto transform(JSON &schema) const -> void override {
     auto types{sourcemeta::core::JSON::make_array()};
 
     // All possible JSON Schema types
@@ -129,6 +129,6 @@ public:
     types.push_back(sourcemeta::core::JSON{"number"});
     types.push_back(sourcemeta::core::JSON{"integer"});
 
-    transformer.assign("type", std::move(types));
+    schema.assign("type", std::move(types));
   }
 };

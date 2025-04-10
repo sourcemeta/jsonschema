@@ -6,9 +6,10 @@
 
 #include <sourcemeta/core/regex.h>
 
-#include <algorithm> // std::copy
+#include <algorithm> // std::copy, std::all_of
 #include <cassert>   // assert
 #include <iterator>  // std::back_inserter
+#include <optional>  // std::optional, std::nullopt
 #include <variant>   // std::variant, std::holds_alternative, std::get
 #include <vector>    // std::vector
 
@@ -21,6 +22,7 @@ public:
   struct Condition {
     auto operator==(const Condition &) const noexcept -> bool = default;
     auto operator<(const Condition &) const noexcept -> bool { return false; }
+    std::optional<typename PointerT::Value::String> suffix = std::nullopt;
   };
   struct Negation {
     auto operator==(const Negation &) const noexcept -> bool = default;
@@ -195,6 +197,24 @@ public:
   /// ```
   [[nodiscard]] auto empty() const noexcept -> bool {
     return this->data.empty();
+  }
+
+  /// Check if a JSON Pointer template only consists in normal non-templated
+  /// tokens. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::PointerTemplate pointer;
+  /// pointer.emplace_back(sourcemeta::core::PointerTemplate::Wildcard::Property);
+  /// pointer.emplace_back(sourcemeta::core::Pointer::Token{"foo"});
+  /// assert(!pointer.trivial());
+  /// ```
+  [[nodiscard]] auto trivial() const noexcept -> bool {
+    return std::all_of(
+        this->data.cbegin(), this->data.cend(),
+        [](const auto &token) { return std::holds_alternative<Token>(token); });
   }
 
   /// Check if a JSON Pointer template matches another JSON Pointer template.

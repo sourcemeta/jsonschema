@@ -22,7 +22,7 @@ public:
            !schema.defines("minItems");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign("minItems", sourcemeta::core::JSON{0});
+  auto transform(JSON &schema) const -> void override {
+    schema.assign("minItems", sourcemeta::core::JSON{0});
   }
 };

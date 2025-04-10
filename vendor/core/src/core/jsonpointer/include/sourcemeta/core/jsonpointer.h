@@ -12,7 +12,6 @@
 #include <sourcemeta/core/jsonpointer_error.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/jsonpointer_position.h>
-#include <sourcemeta/core/jsonpointer_proxy.h>
 #include <sourcemeta/core/jsonpointer_subpointer_walker.h>
 #include <sourcemeta/core/jsonpointer_template.h>
 #include <sourcemeta/core/jsonpointer_walker.h>
@@ -51,9 +50,6 @@ const WeakPointer empty_weak_pointer;
 /// @ingroup jsonpointer
 /// A JSON Pointer with unresolved wildcards
 using PointerTemplate = GenericPointerTemplate<Pointer>;
-
-/// @ingroup jsonpointer
-using PointerProxy = GenericPointerProxy<Pointer>;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a JSON Pointer (`const` overload).

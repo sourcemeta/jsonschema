@@ -24,12 +24,12 @@ public:
            !schema.defines("oneOf") && !schema.defines("anyOf");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
+  auto transform(JSON &schema) const -> void override {
     const std::set<std::string> keep{"$schema", "$id", "$anchor",
                                      "$dynamicAnchor", "$vocabulary"};
     auto disjunctors{sourcemeta::core::JSON::make_array()};
-    for (const auto &type : transformer.value().at("type").as_array()) {
-      auto copy = transformer.value();
+    for (const auto &type : schema.at("type").as_array()) {
+      auto copy = schema;
       copy.erase_keys(keep.cbegin(), keep.cend());
       copy.assign("type", type);
       disjunctors.push_back(std::move(copy));
@@ -37,12 +37,12 @@ public:
 
     auto result{sourcemeta::core::JSON::make_object()};
     for (const auto &keyword : keep) {
-      if (transformer.value().defines(keyword)) {
-        result.assign(keyword, transformer.value().at(keyword));
+      if (schema.defines(keyword)) {
+        result.assign(keyword, schema.at(keyword));
       }
     }
 
     result.assign("anyOf", std::move(disjunctors));
-    transformer.replace(std::move(result));
+    schema.into(std::move(result));
   }
 };

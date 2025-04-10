@@ -17,12 +17,11 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::core::PointerProxy &transformer) const
-      -> void override {
-    auto maximum = transformer.value().at("maximum");
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    auto maximum = schema.at("maximum");
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("maximum", std::move(maximum));
     options.assign("multiplier", sourcemeta::core::JSON{1});
-    make_encoding(transformer, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
+    make_encoding(schema, "ROOF_MULTIPLE_MIRROR_ENUM_VARINT", options);
   }
 };

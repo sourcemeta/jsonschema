@@ -19,7 +19,7 @@ public:
            !schema.defines("contentEncoding");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("contentMediaType");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("contentMediaType");
   }
 };

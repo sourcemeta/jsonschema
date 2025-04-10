@@ -31,7 +31,7 @@ public:
            !schema.defines("properties");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.assign("properties", sourcemeta::core::JSON::make_object());
+  auto transform(JSON &schema) const -> void override {
+    schema.assign("properties", sourcemeta::core::JSON::make_object());
   }
 };

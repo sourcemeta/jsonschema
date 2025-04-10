@@ -30,12 +30,12 @@ public:
            schema.at("minimum") == schema.at("maximum");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
+  auto transform(JSON &schema) const -> void override {
     sourcemeta::core::JSON values = sourcemeta::core::JSON::make_array();
-    values.push_back(transformer.value().at("minimum"));
-    transformer.assign("enum", std::move(values));
-    transformer.erase("type");
-    transformer.erase("minimum");
-    transformer.erase("maximum");
+    values.push_back(schema.at("minimum"));
+    schema.assign("enum", std::move(values));
+    schema.erase("type");
+    schema.erase("minimum");
+    schema.erase("maximum");
   }
 };

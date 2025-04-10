@@ -24,7 +24,7 @@ public:
            schema.at("patternProperties").empty();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.erase("patternProperties");
+  auto transform(JSON &schema) const -> void override {
+    schema.erase("patternProperties");
   }
 };

@@ -27,10 +27,10 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                       sourcemeta::core::empty_pointer, default_dialect);
 }
 
-auto make_encoding(sourcemeta::core::PointerProxy &document,
+auto make_encoding(sourcemeta::core::JSON &document,
                    const std::string &encoding,
                    const sourcemeta::core::JSON &options) -> void {
-  document.replace(sourcemeta::core::JSON::make_object());
+  document.into_object();
   document.assign("$schema", sourcemeta::core::JSON{ENCODING_V1});
   document.assign("binpackEncoding", sourcemeta::core::JSON{encoding});
   document.assign("binpackOptions", options);
@@ -87,8 +87,7 @@ auto compile(sourcemeta::core::JSON &schema,
   // The "any" encoding is always the last resort
   const auto dialect{sourcemeta::core::dialect(schema)};
   if (!dialect.has_value() || dialect.value() != ENCODING_V1) {
-    sourcemeta::core::PointerProxy transformer{schema};
-    make_encoding(transformer, "ANY_PACKED_TYPE_TAG_BYTE_PREFIX",
+    make_encoding(schema, "ANY_PACKED_TYPE_TAG_BYTE_PREFIX",
                   sourcemeta::core::JSON::make_object());
   }
 }

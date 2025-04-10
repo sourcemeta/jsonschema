@@ -41,8 +41,7 @@ auto SchemaTransformRule::message() const -> const std::string & {
 
 auto SchemaTransformRule::apply(
     JSON &schema, const Pointer &pointer, const SchemaResolver &resolver,
-    const std::optional<std::string> &default_dialect) const
-    -> std::vector<PointerProxy::Operation> {
+    const std::optional<std::string> &default_dialect) const -> bool {
   const std::optional<std::string> effective_dialect{
       dialect(schema, default_dialect)};
   if (!effective_dialect.has_value()) {
@@ -53,13 +52,10 @@ auto SchemaTransformRule::apply(
       vocabularies_to_set(vocabularies(schema, resolver, default_dialect))};
   if (!this->condition(schema, effective_dialect.value(), current_vocabularies,
                        pointer)) {
-    return {};
+    return false;
   }
 
-  PointerProxy transformer{schema};
-  this->transform(transformer);
-  // Otherwise the transformation didn't do anything
-  assert(!transformer.traces().empty());
+  this->transform(schema);
 
   // The condition must always be false after applying the
   // transformation in order to avoid infinite loops
@@ -70,7 +66,7 @@ auto SchemaTransformRule::apply(
     throw std::runtime_error(error.str());
   }
 
-  return transformer.traces();
+  return true;
 }
 
 auto SchemaTransformRule::check(
@@ -108,9 +104,9 @@ auto SchemaTransformer::apply(
     auto matches{processed_rules.size()};
     for (const auto &[name, rule] : this->rules) {
       // TODO: Process traces to fixup references
-      const auto traces{
+      const auto applied{
           rule->apply(current, pointer, resolver, effective_dialect)};
-      if (!traces.empty()) {
+      if (applied) {
         if (processed_rules.contains(name)) {
           std::ostringstream error;
           error << "Rules must only be processed once: " << name;

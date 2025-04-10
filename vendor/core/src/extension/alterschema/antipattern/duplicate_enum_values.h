@@ -24,12 +24,12 @@ public:
            schema.at("enum").is_array() && !schema.at("enum").unique();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    auto collection = transformer.value().at("enum");
+  auto transform(JSON &schema) const -> void override {
+    auto collection = schema.at("enum");
     std::sort(collection.as_array().begin(), collection.as_array().end());
     auto last =
         std::unique(collection.as_array().begin(), collection.as_array().end());
     collection.erase(last, collection.as_array().end());
-    transformer.replace({"enum"}, std::move(collection));
+    schema.at("enum").into(std::move(collection));
   }
 };

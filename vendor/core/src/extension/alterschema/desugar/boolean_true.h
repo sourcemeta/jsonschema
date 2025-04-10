@@ -14,7 +14,7 @@ public:
     return schema.is_boolean() && schema.to_boolean();
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    transformer.replace(sourcemeta::core::JSON::make_object());
+  auto transform(JSON &schema) const -> void override {
+    schema.into(sourcemeta::core::JSON::make_object());
   }
 };

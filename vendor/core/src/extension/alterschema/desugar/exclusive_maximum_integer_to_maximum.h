@@ -25,17 +25,17 @@ public:
            !schema.defines("maximum");
   }
 
-  auto transform(PointerProxy &transformer) const -> void override {
-    if (transformer.value().at("exclusiveMaximum").is_integer()) {
-      auto new_maximum = transformer.value().at("exclusiveMaximum");
+  auto transform(JSON &schema) const -> void override {
+    if (schema.at("exclusiveMaximum").is_integer()) {
+      auto new_maximum = schema.at("exclusiveMaximum");
       new_maximum += sourcemeta::core::JSON{-1};
-      transformer.assign("maximum", new_maximum);
-      transformer.erase("exclusiveMaximum");
+      schema.at("exclusiveMaximum").into(new_maximum);
+      schema.rename("exclusiveMaximum", "maximum");
     } else {
-      const auto current{transformer.value().at("exclusiveMaximum").to_real()};
+      const auto current{schema.at("exclusiveMaximum").to_real()};
       const auto new_value{static_cast<std::int64_t>(std::floor(current))};
-      transformer.assign("maximum", sourcemeta::core::JSON{new_value});
-      transformer.erase("exclusiveMaximum");
+      schema.at("exclusiveMaximum").into(sourcemeta::core::JSON{new_value});
+      schema.rename("exclusiveMaximum", "maximum");
     }
   }
 };
