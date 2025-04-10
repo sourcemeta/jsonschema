@@ -3,6 +3,9 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
+
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout
@@ -26,6 +29,56 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
   }
 }
 
+// TODO: Move to Blaze as a set of extension AlterSchema rules
+class ValidExamples final : public sourcemeta::core::SchemaTransformRule {
+public:
+  ValidExamples()
+      : sourcemeta::core::SchemaTransformRule{
+            "valid_examples", "Only include instances in the `examples` array "
+                              "that validate against the schema"} {};
+
+  [[nodiscard]] auto condition(
+      const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
+      const sourcemeta::core::Vocabularies &vocabularies,
+      const sourcemeta::core::SchemaFrame &,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) const -> bool override {
+    if (!vocabularies.contains(
+            "https://json-schema.org/draft/2020-12/vocab/meta-data") &&
+        !vocabularies.contains(
+            "https://json-schema.org/draft/2019-09/vocab/meta-data") &&
+        !vocabularies.contains("http://json-schema.org/draft-07/schema#") &&
+        !vocabularies.contains("http://json-schema.org/draft-06/schema#")) {
+      return false;
+    }
+
+    if (!schema.defines("examples") || !schema.at("examples").is_array() ||
+        schema.at("examples").empty()) {
+      return false;
+    }
+
+    const auto subschema{sourcemeta::core::wrap(root, location.pointer,
+                                                resolver, location.dialect)};
+    const auto schema_template{sourcemeta::blaze::compile(
+        subschema, walker, resolver, sourcemeta::blaze::default_schema_compiler,
+        sourcemeta::blaze::Mode::FastValidation, location.dialect)};
+
+    sourcemeta::blaze::Evaluator evaluator;
+    for (const auto &example : schema.at("examples").as_array()) {
+      if (!evaluator.validate(schema_template, example)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    schema.erase("examples");
+  }
+};
+
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
@@ -43,6 +96,8 @@ auto sourcemeta::jsonschema::cli::lint(
                         sourcemeta::core::AlterSchemaCategory::Redundant);
   sourcemeta::core::add(bundle,
                         sourcemeta::core::AlterSchemaCategory::SyntaxSugar);
+
+  bundle.add<ValidExamples>();
 
   if (options.contains("disable")) {
     disable_lint_rules(bundle, options, options.at("disable").cbegin(),
