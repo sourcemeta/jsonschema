@@ -10,7 +10,6 @@
 #include <sourcemeta/core/jsonschema_types.h>
 
 #include <cstdint>     // std::uint64_t
-#include <map>         // std::map
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view

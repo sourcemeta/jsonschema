@@ -23,8 +23,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                         sourcemeta::core::AlterSchemaCategory::Implicit);
   sourcemeta::core::add(canonicalizer,
                         sourcemeta::core::AlterSchemaCategory::Superfluous);
-  canonicalizer.apply(schema, walker, make_resolver(resolver),
-                      sourcemeta::core::empty_pointer, default_dialect);
+  canonicalizer.apply(schema, walker, make_resolver(resolver), default_dialect);
 }
 
 auto make_encoding(sourcemeta::core::JSON &document,
@@ -81,8 +80,7 @@ auto compile(sourcemeta::core::JSON &schema,
   // Numbers
   mapper.add<NumberArbitrary>();
 
-  mapper.apply(schema, walker, make_resolver(resolver),
-               sourcemeta::core::empty_pointer, default_dialect);
+  mapper.apply(schema, walker, make_resolver(resolver), default_dialect);
 
   // The "any" encoding is always the last resort
   const auto dialect{sourcemeta::core::dialect(schema)};

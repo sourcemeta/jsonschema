@@ -4,21 +4,7 @@
 #include <set>       // std::set
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::runtime_error
-#include <utility>   // std::move
-
-namespace {
-
-auto vocabularies_to_set(const std::map<std::string, bool> &vocabularies)
-    -> std::set<std::string> {
-  std::set<std::string> result;
-  for (const auto &pair : vocabularies) {
-    result.insert(pair.first);
-  }
-
-  return result;
-}
-
-} // namespace
+#include <utility>   // std::move, std::pair
 
 namespace sourcemeta::core {
 
@@ -39,19 +25,15 @@ auto SchemaTransformRule::message() const -> const std::string & {
   return this->message_;
 }
 
-auto SchemaTransformRule::apply(
-    JSON &schema, const Pointer &pointer, const SchemaResolver &resolver,
-    const std::optional<std::string> &default_dialect) const -> bool {
-  const std::optional<std::string> effective_dialect{
-      dialect(schema, default_dialect)};
-  if (!effective_dialect.has_value()) {
-    throw SchemaError("Could not determine the schema dialect");
-  }
-
-  const auto current_vocabularies{
-      vocabularies_to_set(vocabularies(schema, resolver, default_dialect))};
-  if (!this->condition(schema, effective_dialect.value(), current_vocabularies,
-                       pointer)) {
+auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
+                                const Vocabularies &vocabularies,
+                                const SchemaWalker &walker,
+                                const SchemaResolver &resolver,
+                                const SchemaFrame &frame,
+                                const SchemaFrame::Location &location) const
+    -> bool {
+  if (!this->condition(schema, root, vocabularies, frame, location, walker,
+                       resolver)) {
     return false;
   }
 
@@ -59,8 +41,8 @@ auto SchemaTransformRule::apply(
 
   // The condition must always be false after applying the
   // transformation in order to avoid infinite loops
-  if (this->condition(schema, effective_dialect.value(), current_vocabularies,
-                      pointer)) {
+  if (this->condition(schema, root, vocabularies, frame, location, walker,
+                      resolver)) {
     std::ostringstream error;
     error << "Rule condition holds after application: " << this->name();
     throw std::runtime_error(error.str());
@@ -69,100 +51,100 @@ auto SchemaTransformRule::apply(
   return true;
 }
 
-auto SchemaTransformRule::check(
-    const JSON &schema, const Pointer &pointer, const SchemaResolver &resolver,
-    const std::optional<std::string> &default_dialect) const -> bool {
-  const std::optional<std::string> effective_dialect{
-      dialect(schema, default_dialect)};
-  if (!effective_dialect.has_value()) {
-    throw SchemaError("Could not determine the schema dialect");
-  }
-
-  return this->condition(
-      schema, effective_dialect.value(),
-      vocabularies_to_set(vocabularies(schema, resolver, default_dialect)),
-      pointer);
-}
-
-auto SchemaTransformer::apply(
-    JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
-    const Pointer &pointer,
-    const std::optional<std::string> &default_dialect) const -> void {
-  // There is no point in applying an empty bundle
-  assert(!this->rules.empty());
-
-  auto &current{get(schema, pointer)};
-  const std::optional<std::string> root_dialect{
-      dialect(schema, default_dialect)};
-  const std::optional<std::string> effective_dialect{
-      dialect(current, root_dialect)};
-
-  // (1) Transform the current schema object
-  // Avoid recursion to not blow up the stack even on highly complex schemas
-  std::set<std::string> processed_rules;
-  while (true) {
-    auto matches{processed_rules.size()};
-    for (const auto &[name, rule] : this->rules) {
-      // TODO: Process traces to fixup references
-      const auto applied{
-          rule->apply(current, pointer, resolver, effective_dialect)};
-      if (applied) {
-        if (processed_rules.contains(name)) {
-          std::ostringstream error;
-          error << "Rules must only be processed once: " << name;
-          throw std::runtime_error(error.str());
-        }
-
-        processed_rules.insert(name);
-      }
-    }
-
-    if (matches < processed_rules.size()) {
-      continue;
-    }
-
-    break;
-  }
-
-  // (2) Transform its sub-schemas
-  for (const auto &entry :
-       // TODO: Replace `SchemaIteratorFlat` with framing and then just get
-       // rid of the idea of flat iterators, as we don't need it anywhere else
-       SchemaIteratorFlat{current, walker, resolver, effective_dialect}) {
-    apply(schema, walker, resolver, pointer.concat(entry.pointer),
-          effective_dialect);
-  }
-}
-
-auto SchemaTransformer::remove(const std::string &name) -> bool {
-  return this->rules.erase(name) > 0;
+auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
+                                const Vocabularies &vocabularies,
+                                const SchemaWalker &walker,
+                                const SchemaResolver &resolver,
+                                const SchemaFrame &frame,
+                                const SchemaFrame::Location &location) const
+    -> bool {
+  return this->condition(schema, root, vocabularies, frame, location, walker,
+                         resolver);
 }
 
 auto SchemaTransformer::check(
     const JSON &schema, const SchemaWalker &walker,
     const SchemaResolver &resolver,
-    const SchemaTransformer::CheckCallback &callback, const Pointer &pointer,
+    const SchemaTransformer::CheckCallback &callback,
     const std::optional<std::string> &default_dialect) const -> bool {
-  const auto &current{get(schema, pointer)};
-  const std::optional<std::string> root_dialect{
-      dialect(schema, default_dialect)};
-  const std::optional<std::string> effective_dialect{
-      dialect(current, root_dialect)};
+  SchemaFrame frame{SchemaFrame::Mode::Locations};
+  frame.analyse(schema, walker, resolver, default_dialect);
 
   bool result{true};
-  for (const auto &entry :
-       SchemaIterator{current, walker, resolver, effective_dialect}) {
-    const auto current_pointer{pointer.concat(entry.pointer)};
+  for (const auto &entry : frame.locations()) {
+    if (entry.second.type != SchemaFrame::LocationType::Resource &&
+        entry.second.type != SchemaFrame::LocationType::Subschema) {
+      continue;
+    }
+
+    const auto &current{get(schema, entry.second.pointer)};
+    const auto current_vocabularies{
+        vocabularies(schema, resolver, entry.second.dialect)};
     for (const auto &[name, rule] : this->rules) {
-      if (rule->check(get(current, entry.pointer), current_pointer, resolver,
-                      effective_dialect)) {
+      if (rule->check(current, schema, current_vocabularies, walker, resolver,
+                      frame, entry.second)) {
         result = false;
-        callback(current_pointer, name, rule->message());
+        callback(entry.second.pointer, name, rule->message());
       }
     }
   }
 
   return result;
+}
+
+auto SchemaTransformer::apply(
+    JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
+    const std::optional<std::string> &default_dialect) const -> bool {
+  // There is no point in applying an empty bundle
+  assert(!this->rules.empty());
+  std::set<std::pair<Pointer, JSON::String>> processed_rules;
+
+  while (true) {
+    SchemaFrame frame{SchemaFrame::Mode::Locations};
+    frame.analyse(schema, walker, resolver, default_dialect);
+
+    bool applied{false};
+    for (const auto &entry : frame.locations()) {
+      if (entry.second.type != SchemaFrame::LocationType::Resource &&
+          entry.second.type != SchemaFrame::LocationType::Subschema) {
+        continue;
+      }
+
+      auto &current{get(schema, entry.second.pointer)};
+      const auto current_vocabularies{
+          vocabularies(schema, resolver, entry.second.dialect)};
+      for (const auto &[name, rule] : this->rules) {
+        applied = rule->apply(current, schema, current_vocabularies, walker,
+                              resolver, frame, entry.second) ||
+                  applied;
+        if (!applied) {
+          continue;
+        }
+
+        if (processed_rules.contains({entry.second.pointer, name})) {
+          // TODO: Throw a better custom error that also highlights the schema
+          // location
+          std::ostringstream error;
+          error << "Rules must only be processed once: " << name;
+          throw std::runtime_error(error.str());
+        }
+
+        processed_rules.emplace(entry.second.pointer, name);
+        goto alterschema_start_again;
+      }
+    }
+
+  alterschema_start_again:
+    if (!applied) {
+      break;
+    }
+  }
+
+  return true;
+}
+
+auto SchemaTransformer::remove(const std::string &name) -> bool {
+  return this->rules.erase(name) > 0;
 }
 
 } // namespace sourcemeta::core

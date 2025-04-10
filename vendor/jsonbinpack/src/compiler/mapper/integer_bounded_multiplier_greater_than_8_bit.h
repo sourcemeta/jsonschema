@@ -5,12 +5,15 @@ public:
       : sourcemeta::core::SchemaTransformRule{
             "integer_bounded_multiplier_greater_than_8_bit", ""} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-                               const std::string &dialect,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::core::Pointer &) const
-      -> bool override {
-    if (dialect != "https://json-schema.org/draft/2020-12/schema" ||
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &schema,
+            const sourcemeta::core::JSON &,
+            const sourcemeta::core::Vocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
+    if (location.dialect != "https://json-schema.org/draft/2020-12/schema" ||
         !vocabularies.contains(
             "https://json-schema.org/draft/2020-12/vocab/validation") ||
         !schema.defines("type") || schema.at("type").to_string() != "integer" ||

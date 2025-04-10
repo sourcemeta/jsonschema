@@ -7,9 +7,12 @@ public:
         };
 
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &,
-                               const sourcemeta::core::Pointer &) const
+                               const sourcemeta::core::JSON &,
+                               const sourcemeta::core::Vocabularies &,
+                               const sourcemeta::core::SchemaFrame &,
+                               const sourcemeta::core::SchemaFrame::Location &,
+                               const sourcemeta::core::SchemaWalker &,
+                               const sourcemeta::core::SchemaResolver &) const
       -> bool override {
     return schema.is_boolean() && schema.to_boolean();
   }

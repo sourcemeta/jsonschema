@@ -1,13 +1,12 @@
 #include <sourcemeta/core/jsonschema.h>
 
 #include <cassert> // assert
-#include <map>     // std::map
 #include <sstream> // std::ostringstream
 #include <utility> // std::move
 
 namespace {
 
-auto definitions_keyword(const std::map<std::string, bool> &vocabularies)
+auto definitions_keyword(const sourcemeta::core::Vocabularies &vocabularies)
     -> std::string {
   if (vocabularies.contains(
           "https://json-schema.org/draft/2020-12/vocab/core") ||

@@ -32,7 +32,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
   const std::optional<std::string> base_dialect{
       sourcemeta::core::base_dialect(subschema, resolver, new_dialect)};
   assert(base_dialect.has_value());
-  const std::map<std::string, bool> vocabularies{sourcemeta::core::vocabularies(
+  const auto vocabularies{sourcemeta::core::vocabularies(
       resolver, base_dialect.value(), new_dialect)};
 
   if (type == SchemaWalkerType_t::Deep || level > 0) {
@@ -423,7 +423,7 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
   const std::optional<std::string> base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, dialect)};
 
-  std::map<std::string, bool> vocabularies;
+  Vocabularies vocabularies;
   if (base_dialect.has_value() && dialect.has_value()) {
     vocabularies.merge(sourcemeta::core::vocabularies(
         resolver, base_dialect.value(), dialect.value()));
