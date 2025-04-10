@@ -13,7 +13,7 @@
 enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 
 static auto find_anchors(const sourcemeta::core::JSON &schema,
-                         const std::map<std::string, bool> &vocabularies)
+                         const sourcemeta::core::Vocabularies &vocabularies)
     -> std::map<std::string, AnchorType> {
   std::map<std::string, AnchorType> result;
 
@@ -1065,7 +1065,7 @@ auto SchemaFrame::references() const noexcept -> const References & {
 
 auto SchemaFrame::vocabularies(const Location &location,
                                const SchemaResolver &resolver) const
-    -> std::map<std::string, bool> {
+    -> Vocabularies {
   return sourcemeta::core::vocabularies(resolver, location.base_dialect,
                                         location.dialect);
 }

@@ -1,19 +1,23 @@
 #ifndef SOURCEMETA_CORE_JSONSCHEMA_TYPES_H_
 #define SOURCEMETA_CORE_JSONSCHEMA_TYPES_H_
 
-#include <cstdint>     // std::uint8_t
-#include <functional>  // std::function, std::reference_wrapper
-#include <map>         // std::map
-#include <optional>    // std::optional
-#include <set>         // std::set
-#include <string>      // std::string
-#include <string_view> // std::string_view
+#include <cstdint>       // std::uint8_t
+#include <functional>    // std::function, std::reference_wrapper
+#include <optional>      // std::optional
+#include <set>           // std::set
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
 namespace sourcemeta::core {
+
+/// @ingroup jsonschema
+/// A set of vocabularies
+using Vocabularies = std::unordered_map<JSON::String, bool>;
 
 // Take a URI and get back a schema
 /// @ingroup jsonschema
@@ -198,8 +202,8 @@ struct SchemaWalkerResult {
 ///
 /// - sourcemeta::core::schema_official_walker
 /// - sourcemeta::core::schema_walker_none
-using SchemaWalker = std::function<SchemaWalkerResult(
-    std::string_view, const std::map<std::string, bool> &)>;
+using SchemaWalker =
+    std::function<SchemaWalkerResult(std::string_view, const Vocabularies &)>;
 
 /// @ingroup jsonschema
 /// An entry of a schema iterator.
@@ -209,7 +213,7 @@ struct SchemaIteratorEntry {
   // TODO: Turn this into a weak pointer
   Pointer pointer;
   std::optional<std::string> dialect;
-  std::map<std::string, bool> vocabularies;
+  Vocabularies vocabularies;
   std::optional<std::string> base_dialect;
   std::reference_wrapper<const JSON> subschema;
 

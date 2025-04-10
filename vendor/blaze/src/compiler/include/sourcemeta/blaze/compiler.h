@@ -17,7 +17,6 @@
 
 #include <cstdint>    // std::uint8_t
 #include <functional> // std::function
-#include <map>        // std::map
 #include <optional>   // std::optional, std::nullopt
 #include <set>        // std::set
 #include <string>     // std::string
@@ -38,7 +37,7 @@ struct SchemaContext {
   /// The current subschema
   const sourcemeta::core::JSON &schema;
   /// The schema vocabularies in use
-  const std::map<std::string, bool> &vocabularies;
+  const sourcemeta::core::Vocabularies &vocabularies;
   /// The schema base URI
   const sourcemeta::core::URI &base;
   /// The set of labels registered so far

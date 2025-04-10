@@ -3,16 +3,19 @@ class Enum8Bit final : public sourcemeta::core::SchemaTransformRule {
 public:
   Enum8Bit() : sourcemeta::core::SchemaTransformRule{"enum_8_bit", ""} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-                               const std::string &dialect,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::core::Pointer &pointer) const
-      -> bool override {
-    return dialect == "https://json-schema.org/draft/2020-12/schema" &&
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &schema,
+            const sourcemeta::core::JSON &,
+            const sourcemeta::core::Vocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &location,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
+    return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(
                "https://json-schema.org/draft/2020-12/vocab/validation") &&
            schema.defines("enum") && schema.at("enum").is_array() &&
-           !pointer.empty() && schema.at("enum").size() > 1 &&
+           !location.pointer.empty() && schema.at("enum").size() > 1 &&
            is_byte(schema.at("enum").size() - 1);
   }
 

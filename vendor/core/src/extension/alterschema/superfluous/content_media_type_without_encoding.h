@@ -6,11 +6,14 @@ public:
             "The `contentMediaType` keyword is meaningless "
             "without the presence of the `contentEncoding` keyword"} {};
 
-  [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-                               const std::string &,
-                               const std::set<std::string> &vocabularies,
-                               const sourcemeta::core::Pointer &) const
-      -> bool override {
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &schema,
+            const sourcemeta::core::JSON &,
+            const sourcemeta::core::Vocabularies &vocabularies,
+            const sourcemeta::core::SchemaFrame &,
+            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaResolver &) const -> bool override {
     return contains_any(vocabularies,
                         {"https://json-schema.org/draft/2020-12/vocab/content",
                          "https://json-schema.org/draft/2019-09/vocab/content",

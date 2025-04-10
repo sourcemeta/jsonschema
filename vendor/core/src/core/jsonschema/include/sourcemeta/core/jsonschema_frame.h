@@ -193,8 +193,7 @@ public:
 
   /// Get the vocabularies associated with a location entry
   auto vocabularies(const Location &location,
-                    const SchemaResolver &resolver) const
-      -> std::map<std::string, bool>;
+                    const SchemaResolver &resolver) const -> Vocabularies;
 
   /// Get the URI associated with a location entry
   auto uri(const Location &location,

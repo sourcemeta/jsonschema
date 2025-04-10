@@ -15,7 +15,6 @@
 
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
-#include <map>         // std::map
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -41,7 +40,7 @@ auto schema_official_resolver(std::string_view identifier)
 /// A default schema walker with support for a wide range of drafs
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_official_walker(std::string_view keyword,
-                            const std::map<std::string, bool> &vocabularies)
+                            const Vocabularies &vocabularies)
     -> SchemaWalkerResult;
 
 /// @ingroup jsonschema
@@ -81,7 +80,7 @@ auto schema_official_walker(std::string_view keyword,
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_keyword_priority(std::string_view keyword,
-                             const std::map<std::string, bool> &vocabularies,
+                             const Vocabularies &vocabularies,
                              const SchemaWalker &walker) -> std::uint64_t;
 
 /// @ingroup jsonschema
@@ -316,7 +315,7 @@ auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
 ///   "type": "object"
 /// })JSON");
 ///
-/// const std::map<std::string, bool> vocabularies{
+/// const auto vocabularies{
 ///   sourcemeta::core::vocabularies(
 ///     document, sourcemeta::core::schema_official_resolver)};
 ///
@@ -331,7 +330,7 @@ auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto vocabularies(const JSON &schema, const SchemaResolver &resolver,
                   const std::optional<std::string> &default_dialect =
-                      std::nullopt) -> std::map<std::string, bool>;
+                      std::nullopt) -> Vocabularies;
 
 /// @ingroup jsonschema
 ///
@@ -340,7 +339,7 @@ auto vocabularies(const JSON &schema, const SchemaResolver &resolver,
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto vocabularies(const SchemaResolver &resolver,
                   const std::string &base_dialect, const std::string &dialect)
-    -> std::map<std::string, bool>;
+    -> Vocabularies;
 
 /// @ingroup jsonschema
 ///
@@ -613,6 +612,36 @@ auto bundle(const JSON &schema, const SchemaWalker &walker,
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto wrap(const JSON::String &identifier) -> JSON;
+
+/// @ingroup jsonschema
+///
+/// Wrap a schema to only access one of its subschemas. This is useful if you
+/// want to perform validation only a specific part of the schemaw without
+/// having to reinvent the wheel. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <iostream>
+///
+/// const sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_json(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "items": { "type": "string" }
+/// })JSON");
+///
+/// const sourcemeta::core::JSON result =
+///   sourcemeta::core::wrap(document, { "items" },
+///     sourcemeta::core::schema_official_resolver);
+///
+/// sourcemeta::core::prettify(result, std::cerr);
+/// std::cerr << "\n";
+/// ```
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT
+auto wrap(const JSON &schema, const Pointer &pointer,
+          const SchemaResolver &resolver,
+          const std::optional<std::string> &default_dialect = std::nullopt)
+    -> JSON;
 
 } // namespace sourcemeta::core
 

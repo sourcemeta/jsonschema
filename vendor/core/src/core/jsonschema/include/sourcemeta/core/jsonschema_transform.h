@@ -42,11 +42,12 @@ namespace sourcemeta::core {
 ///   sourcemeta::core::SchemaTransformRule("my_rule", "My rule") {};
 ///
 ///   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-///                                const std::string &dialect,
-///                                const std::set<std::string> &vocabularies,
-///                                const sourcemeta::core::Pointer
-///                                  &pointer) const
-///       -> bool override
+///                                const sourcemeta::core::Vocabularies
+///                                  &vocabularies,
+///                                const sourcemeta::core::SchemaFrame &,
+///                                const sourcemeta::core::SchemaFrame::Location
+///                                &)
+///       const -> bool override
 ///     return schema.defines("foo");
 ///   }
 ///
@@ -80,24 +81,24 @@ public:
   [[nodiscard]] auto message() const -> const std::string &;
 
   /// Apply the rule to a schema
-  auto
-  apply(JSON &schema, const Pointer &pointer, const SchemaResolver &resolver,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> bool;
+  auto apply(JSON &schema, const JSON &root, const Vocabularies &vocabularies,
+             const SchemaWalker &walker, const SchemaResolver &resolver,
+             const SchemaFrame &frame,
+             const SchemaFrame::Location &location) const -> bool;
 
   /// Check if the rule applies to a schema
-  auto
-  check(const JSON &schema, const Pointer &pointer,
-        const SchemaResolver &resolver,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> bool;
+  auto check(const JSON &schema, const JSON &root,
+             const Vocabularies &vocabularies, const SchemaWalker &walker,
+             const SchemaResolver &resolver, const SchemaFrame &frame,
+             const SchemaFrame::Location &location) const -> bool;
 
 private:
   /// The rule condition
   [[nodiscard]] virtual auto
-  condition(const JSON &schema, const std::string &dialect,
-            const std::set<std::string> &vocabularies,
-            const Pointer &pointer) const -> bool = 0;
+  condition(const JSON &schema, const JSON &root,
+            const Vocabularies &vocabularies, const SchemaFrame &frame,
+            const SchemaFrame::Location &location, const SchemaWalker &walker,
+            const SchemaResolver &resolver) const -> bool = 0;
 
   /// The rule transformation
   virtual auto transform(JSON &schema) const -> void = 0;
@@ -132,11 +133,12 @@ private:
 ///   MyRule() : sourcemeta::core::SchemaTransformRule("my_rule") {};
 ///
 ///   [[nodiscard]] auto condition(const sourcemeta::core::JSON &schema,
-///                                const std::string &dialect,
-///                                const std::set<std::string> &vocabularies,
-///                                const sourcemeta::core::Pointer
-///                                  &pointer) const
-///       -> bool override {
+///                                const sourcemeta::core::Vocabularies
+///                                  &vocabularies,
+///                                const sourcemeta::core::SchemaFrame &,
+///                                const sourcemeta::core::SchemaFrame::Location
+///                                &)
+///       const -> bool override {
 ///     return schema.defines("foo");
 ///   }
 ///
@@ -201,12 +203,15 @@ public:
   /// Remove a rule from the bundle
   auto remove(const std::string &name) -> bool;
 
+  // TODO: Still take a CheckCallback for rules that failed but do not
+  // support auto-fixing
+
   /// Apply the bundle of rules to a schema
   auto
   apply(JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const Pointer &pointer = empty_pointer,
+        const SchemaResolver &resolver,
         const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> void;
+      -> bool;
 
   /// The callback that is called whenever the "check" functionality reports a
   /// rule whose condition holds true. The arguments are as follows:
@@ -221,7 +226,6 @@ public:
   auto
   check(const JSON &schema, const SchemaWalker &walker,
         const SchemaResolver &resolver, const CheckCallback &callback,
-        const Pointer &pointer = empty_pointer,
         const std::optional<std::string> &default_dialect = std::nullopt) const
       -> bool;
 
