@@ -25,6 +25,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::runtime)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::evaluator)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::linter)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

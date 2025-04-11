@@ -24,7 +24,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/schema.json:
-  Only include instances in the \`examples\` array that validate against the schema (valid_examples)
+  Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
     at schema location "/properties/foo"
 EOF
 
