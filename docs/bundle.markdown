@@ -29,6 +29,16 @@ this functionality through the `bundle` command.
 > identifiers to make your resulting schemas compatible with Visual Studio
 > Code.
 
+> [!CAUTION]
+> The `--without-id`/`-w` option may result in schemas that are not strictly
+> compliant with the JSON Schema specification. More specifically, it may
+> result in standalone instances of the `$schema` keyword that are [not
+> permitted outside the root of a schema
+> resource](https://json-schema.org/draft/2020-12/json-schema-core#section-8.1.1-4).
+> Therefore, only make use of this option to serve non-compliant
+> implementations like Visual Studio Code, and avoid using the resulting schema
+> in any other way.
+
 Examples
 --------
 
