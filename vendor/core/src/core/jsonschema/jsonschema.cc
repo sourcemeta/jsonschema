@@ -709,46 +709,48 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
                             const sourcemeta::core::SchemaResolver &resolver,
                             const std::optional<std::string> &default_dialect)
     -> sourcemeta::core::JSON {
-  // Otherwise what's the point?
-  assert(!pointer.empty());
   assert(try_get(schema, pointer));
-
-  auto result{JSON::make_object()};
-  // JSON Schema 2020-12 is the first dialect that truly supports cross-dialect
-  // references In practice, others do, but we can play it safe here
-  result.assign("$schema",
-                JSON{"https://json-schema.org/draft/2020-12/schema"});
-
-  // Reference the target schema
-  const auto id{identify(schema, resolver, SchemaIdentificationStrategy::Strict,
-                         default_dialect)};
-  if (id.has_value()) {
-    const URI uri{id.value()};
-    if (!uri.fragment().has_value() || uri.fragment().value().empty()) {
-      std::ostringstream effective_uri;
-      effective_uri << uri.recompose_without_fragment().value_or("")
-                    << to_uri(pointer).recompose();
-      result.assign("$ref", JSON{effective_uri.str()});
-    }
+  if (pointer.empty()) {
+    return schema;
   }
 
-  // As a fallback
-  if (!result.defines("$ref")) {
+  auto copy = schema;
+  const auto effective_dialect{dialect(copy, default_dialect)};
+  if (effective_dialect.has_value()) {
+    copy.assign("$schema", JSON{effective_dialect.value()});
+  } else {
+    throw SchemaError("Could not determine the base dialect of the schema");
+  }
+
+  auto result{JSON::make_object()};
+  result.assign("$schema",
+                // JSON Schema 2020-12 is the first dialect that truly supports
+                // cross-dialect references In practice, others do, but we can
+                // play it safe here
+                JSON{"https://json-schema.org/draft/2020-12/schema"});
+  // We need to make sure the schema we are wrapping always has an identifier,
+  // at least an artificial one, otherwise a standalone instance of `$schema`
+  // outside of the root of a schema resource is not valid according to
+  // JSON Schema
+  constexpr auto WRAPPER_IDENTIFIER{"tag:core.sourcemeta.com,2025:wrap"};
+  const auto id{identify(copy, resolver, SchemaIdentificationStrategy::Strict,
+                         default_dialect)
+                    .value_or(WRAPPER_IDENTIFIER)};
+  reidentify(copy, id, resolver, default_dialect);
+  result.assign("$defs", JSON::make_object());
+  result.at("$defs").assign("schema", std::move(copy));
+
+  // Add a reference to the schema
+  const URI uri{id};
+  if (!uri.fragment().has_value() || uri.fragment().value().empty()) {
+    std::ostringstream effective_uri;
+    effective_uri << uri.recompose_without_fragment().value_or("")
+                  << to_uri(pointer).recompose();
+    result.assign("$ref", JSON{effective_uri.str()});
+  } else {
     result.assign(
         "$ref",
         JSON{to_uri(Pointer{"$defs", "schema"}.concat(pointer)).recompose()});
-  }
-
-  // Embed the target schema
-  result.assign("$defs", JSON::make_object());
-  result.at("$defs").assign("schema", schema);
-  if (schema.is_object() && !schema.defines("$schema")) {
-    if (default_dialect.has_value()) {
-      result.at("$defs").at("schema").assign("$schema",
-                                             JSON{default_dialect.value()});
-    } else {
-      throw SchemaError("Could not determine the base dialect of the schema");
-    }
   }
 
   return result;

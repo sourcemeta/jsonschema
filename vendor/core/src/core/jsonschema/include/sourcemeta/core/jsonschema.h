@@ -367,7 +367,14 @@ auto schema_format_compare(const JSON::String &left, const JSON::String &right)
 /// @ingroup jsonschema
 ///
 /// Remove every identifer from a schema, rephrasing references (if any) as
-/// needed. For example:
+/// needed.
+///
+/// As a big caveat, unidentifying a schema with embedded schema
+/// resources will result in standalone instances of the `$schema` keyword,
+/// which will not be valid according to the specification (the `$schema`
+/// keyword must only occur within schema resources). We advise against using
+/// unidentified schema for anything other than serving non-compliant JSON
+/// Schema implementations that do not support identifier.
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

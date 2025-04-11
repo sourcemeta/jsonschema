@@ -18,7 +18,7 @@
 #include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move
+#include <utility>     // std::move, std::forward
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -99,6 +99,9 @@ private:
             const Vocabularies &vocabularies, const SchemaFrame &frame,
             const SchemaFrame::Location &location, const SchemaWalker &walker,
             const SchemaResolver &resolver) const -> bool = 0;
+
+  // TODO: Allow this method to not be overriden, as a way to signify
+  // that a rule does not support auto-fixing
 
   /// The rule transformation
   virtual auto transform(JSON &schema) const -> void = 0;
@@ -193,8 +196,9 @@ public:
 #endif
 
   /// Add a rule to the bundle
-  template <std::derived_from<SchemaTransformRule> T> auto add() -> void {
-    auto rule{std::make_unique<T>()};
+  template <std::derived_from<SchemaTransformRule> T, typename... Args>
+  auto add(Args &&...args) -> void {
+    auto rule{std::make_unique<T>(std::forward<Args>(args)...)};
     // Rules must only be defined once
     assert(!this->rules.contains(rule->name()));
     this->rules.emplace(rule->name(), std::move(rule));
