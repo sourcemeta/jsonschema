@@ -11,6 +11,7 @@ auto sourcemeta::jsonschema::cli::bundle(
     const std::span<const std::string> &arguments) -> int {
   const auto options{
       parse_options(arguments, {"h", "http", "w", "without-id"})};
+  const auto dialect{default_dialect(options)};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -23,13 +24,17 @@ auto sourcemeta::jsonschema::cli::bundle(
 
   sourcemeta::core::bundle(
       schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http")));
+      resolver(options, options.contains("h") || options.contains("http"),
+               dialect),
+      dialect);
 
   if (options.contains("w") || options.contains("without-id")) {
     log_verbose(options) << "Removing schema identifiers\n";
     sourcemeta::core::unidentify(
         schema, sourcemeta::core::schema_official_walker,
-        resolver(options, options.contains("h") || options.contains("http")));
+        resolver(options, options.contains("h") || options.contains("http"),
+                 dialect),
+        dialect);
   }
 
   sourcemeta::core::prettify(schema, std::cout,

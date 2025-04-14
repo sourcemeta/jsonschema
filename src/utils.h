@@ -37,7 +37,9 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote = false) -> sourcemeta::core::SchemaResolver;
+              const bool remote,
+              const std::optional<std::string> &default_dialect)
+    -> sourcemeta::core::SchemaResolver;
 
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;
@@ -52,6 +54,10 @@ auto parse_ignore(
 
 auto safe_weakly_canonical(const std::filesystem::path &input)
     -> std::filesystem::path;
+
+auto default_dialect(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::optional<std::string>;
 
 } // namespace sourcemeta::jsonschema::cli
 

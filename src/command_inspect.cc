@@ -22,8 +22,13 @@ auto sourcemeta::jsonschema::cli::inspect(
 
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::Instances};
+
+  const auto dialect{default_dialect(options)};
   frame.analyse(schema, sourcemeta::core::schema_official_walker,
-                resolver(options));
+                resolver(options,
+                         options.contains("h") || options.contains("http"),
+                         dialect),
+                dialect);
 
   if (options.contains("json") || options.contains("j")) {
     sourcemeta::core::prettify(frame.to_json(), std::cout);

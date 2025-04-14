@@ -291,7 +291,9 @@ static auto fallback_resolver(
 }
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote) -> sourcemeta::core::SchemaResolver {
+              const bool remote,
+              const std::optional<std::string> &default_dialect)
+    -> sourcemeta::core::SchemaResolver {
   sourcemeta::core::SchemaMapResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
         if (remote) {
@@ -307,7 +309,7 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
                        parse_extensions(options))) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
-      dynamic_resolver.add(entry.second);
+      dynamic_resolver.add(entry.second, default_dialect);
     }
   }
 
@@ -317,7 +319,7 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
                        parse_extensions(options))) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
-      dynamic_resolver.add(entry.second);
+      dynamic_resolver.add(entry.second, default_dialect);
     }
   }
 
@@ -391,6 +393,21 @@ auto safe_weakly_canonical(const std::filesystem::path &input)
   return std::filesystem::is_fifo(input)
              ? input
              : std::filesystem::weakly_canonical(input);
+}
+
+auto default_dialect(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::optional<std::string> {
+
+  if (options.contains("default-dialect")) {
+    return options.at("default-dialect").front();
+  }
+
+  if (options.contains("d")) {
+    return options.at("d").front();
+  }
+
+  return std::nullopt;
 }
 
 } // namespace sourcemeta::jsonschema::cli
