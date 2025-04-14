@@ -16,11 +16,11 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --verbose --disable foo_bar >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
+"$1" lint "$TMP/schema.json" --verbose --exclude foo_bar >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-warning: Cannot disable unknown rule: foo_bar
+warning: Cannot exclude unknown rule: foo_bar
 Linting: $(realpath "$TMP")/schema.json
 $(realpath "$TMP")/schema.json:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)

@@ -23,7 +23,7 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
           << "Disabling rule: " << *iterator << "\n";
     } else {
       sourcemeta::jsonschema::cli::log_verbose(options)
-          << "warning: Cannot disable unknown rule: " << *iterator << "\n";
+          << "warning: Cannot exclude unknown rule: " << *iterator << "\n";
     }
   }
 }
@@ -51,14 +51,14 @@ auto sourcemeta::jsonschema::cli::lint(
   bundle.add<sourcemeta::blaze::ValidDefault>(
       sourcemeta::blaze::default_schema_compiler);
 
-  if (options.contains("disable")) {
-    disable_lint_rules(bundle, options, options.at("disable").cbegin(),
-                       options.at("disable").cend());
+  if (options.contains("exclude")) {
+    disable_lint_rules(bundle, options, options.at("exclude").cbegin(),
+                       options.at("exclude").cend());
   }
 
-  if (options.contains("d")) {
-    disable_lint_rules(bundle, options, options.at("d").cbegin(),
-                       options.at("d").cend());
+  if (options.contains("x")) {
+    disable_lint_rules(bundle, options, options.at("x").cbegin(),
+                       options.at("x").cend());
   }
 
   bool result{true};
