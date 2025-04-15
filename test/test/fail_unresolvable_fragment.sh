@@ -43,6 +43,8 @@ Importing schema into the resolution context: $(realpath "$TMP")/schema.json
 $(realpath "$TMP")/test.json:
 error: Could not resolve schema under test
   at https://example.com#/foo
+
+This is likely because you forgot to import such schema using --resolve/-r
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

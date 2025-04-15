@@ -105,14 +105,16 @@ auto bundle_schema(sourcemeta::core::JSON &root, const std::string &container,
     sourcemeta::core::JSON copy{remote.value()};
 
     if (!sourcemeta::core::is_schema(copy)) {
-      throw sourcemeta::core::SchemaResolutionError(
-          identifier, "The JSON document is not a valid JSON Schema");
+      throw sourcemeta::core::SchemaReferenceError(
+          identifier, key.second,
+          "The JSON document is not a valid JSON Schema");
     }
 
     const auto dialect{sourcemeta::core::dialect(copy, default_dialect)};
     if (!dialect.has_value()) {
-      throw sourcemeta::core::SchemaResolutionError(
-          identifier, "The JSON document is not a valid JSON Schema");
+      throw sourcemeta::core::SchemaReferenceError(
+          identifier, key.second,
+          "The JSON document is not a valid JSON Schema");
     }
 
     if (copy.is_object()) {
