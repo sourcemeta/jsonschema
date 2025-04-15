@@ -140,6 +140,8 @@ auto main(int argc, char *argv[]) noexcept -> int {
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  at " << error.id() << "\n";
+    std::cerr << "\nThis is likely because you forgot to import such schema "
+                 "using --resolve/-r\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";

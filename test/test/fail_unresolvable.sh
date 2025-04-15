@@ -31,6 +31,8 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: Could not resolve the requested schema
   at https://example.com/unknown
+
+This is likely because you forgot to import such schema using --resolve/-r
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

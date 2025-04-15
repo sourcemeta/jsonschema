@@ -28,6 +28,8 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the requested schema
   at https://example.com/nested
+
+This is likely because you forgot to import such schema using --resolve/-r
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
