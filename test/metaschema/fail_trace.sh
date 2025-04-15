@@ -18,38 +18,36 @@ EOF
   && CODE="$?" || CODE="$?"
 test "$CODE" = "2" || exit 1
 
-# Order of execution can vary
-
-cat << 'EOF' > "$TMP/expected-1.txt"
--> (push) "/dependencies"
+cat << 'EOF' > "$TMP/expected.txt"
+-> (push) "/dependencies" (AssertionPropertyDependencies)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
-<- (pass) "/dependencies"
+<- (pass) "/dependencies" (AssertionPropertyDependencies)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
--> (push) "/properties"
+-> (push) "/properties" (LoopPropertiesMatch)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 
--> (push) "/properties/$schema/type"
+-> (push) "/properties/$schema/type" (AssertionTypeStrict)
    at "/$schema"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
 
-<- (pass) "/properties/$schema/type"
+<- (pass) "/properties/$schema/type" (AssertionTypeStrict)
    at "/$schema"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
 
--> (push) "/properties/minimum/type"
+-> (push) "/properties/minimum/type" (AssertionTypeStrictAny)
    at "/minimum"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
 
-<- (fail) "/properties/minimum/type"
+<- (fail) "/properties/minimum/type" (AssertionTypeStrictAny)
    at "/minimum"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
 
-<- (fail) "/properties"
+<- (fail) "/properties" (LoopPropertiesMatch)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 EOF
@@ -80,5 +78,4 @@ cat << 'EOF' > "$TMP/expected-2.txt"
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 EOF
 
-diff "$TMP/output.txt" "$TMP/expected-1.txt" || \
-  diff "$TMP/output.txt" "$TMP/expected-2.txt"
+diff "$TMP/output.txt" "$TMP/expected.txt"

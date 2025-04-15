@@ -169,7 +169,7 @@ public:
   TraceOutput(const ErrorOutput &) = delete;
   auto operator=(const TraceOutput &) -> TraceOutput & = delete;
 
-  enum class EntryType { Push, Pass, Fail };
+  enum class EntryType { Push, Pass, Fail, Annotation };
 
   struct Entry {
     const EntryType type;
@@ -177,6 +177,7 @@ public:
     const sourcemeta::core::WeakPointer instance_location;
     const sourcemeta::core::WeakPointer evaluate_path;
     const std::string keyword_location;
+    const std::optional<sourcemeta::core::JSON> annotation;
   };
 
   auto operator()(const EvaluationType type, const bool result,

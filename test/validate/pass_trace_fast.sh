@@ -25,11 +25,11 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace --fast > "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties/foo/type"
+-> (push) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (pass) "/properties/foo/type"
+<- (pass) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 EOF

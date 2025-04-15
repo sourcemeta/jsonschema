@@ -199,6 +199,7 @@ auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
   }
 }
 
+// TODO: Move this as an operator<< overload for TraceOutput in Blaze itself
 auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void {
   for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
@@ -218,6 +219,9 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
       case sourcemeta::blaze::TraceOutput::EntryType::Fail:
         stream << "<- (fail) ";
         break;
+      case sourcemeta::blaze::TraceOutput::EntryType::Annotation:
+        stream << "@- (annotation) ";
+        break;
       default:
         assert(false);
         break;
@@ -225,7 +229,21 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
 
     stream << "\"";
     sourcemeta::core::stringify(entry.evaluate_path, stream);
-    stream << "\"\n";
+    stream << "\" (" << entry.name << ")\n";
+
+    if (entry.annotation.has_value()) {
+      stream << "   value ";
+
+      if (entry.annotation.value().is_object()) {
+        sourcemeta::core::stringify(entry.annotation.value(), stream);
+      } else {
+        sourcemeta::core::prettify(entry.annotation.value(), stream,
+                                   sourcemeta::core::schema_format_compare);
+      }
+
+      stream << "\n";
+    }
+
     stream << "   at \"";
     sourcemeta::core::stringify(entry.instance_location, stream);
     stream << "\"\n";
