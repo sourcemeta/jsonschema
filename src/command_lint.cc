@@ -48,6 +48,8 @@ auto sourcemeta::jsonschema::cli::lint(
 
   bundle.add<sourcemeta::blaze::ValidExamples>(
       sourcemeta::blaze::default_schema_compiler);
+  bundle.add<sourcemeta::blaze::ValidDefault>(
+      sourcemeta::blaze::default_schema_compiler);
 
   if (options.contains("disable")) {
     disable_lint_rules(bundle, options, options.at("disable").cbegin(),

@@ -1,6 +1,8 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME linter
   FOLDER "Blaze/Linter"
-  SOURCES valid_examples.cc)
+  SOURCES
+    valid_default.cc
+    valid_examples.cc)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME linter)
