@@ -2,10 +2,10 @@ Linting
 =======
 
 ```sh
-jsonschema lint [schemas-or-directories...]
-  [--fix/-f] [--json/-j] [--verbose/-v] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>] [--disable/-d <rule-name>]
-  [--keep-ordering/-k]
+jsonschema lint [schemas-or-directories...] [--fix/-f] [--json/-j] 
+  [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] 
+  [--disable/-d <rule-name>] [--keep-ordering/-k]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -27,6 +27,15 @@ automatically fix many of them.
 > specifications, you should make use of both linters together!
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
+
+> [!NOTE] 
+> There are linting rules that require compiling and validating instance
+> against the given schema. For example, there is a rule to check that the
+> instances set in the `examples` keyword successfully validate against the
+> corresponding subschema. In those cases, if your schema has external
+> references, you will have to import them using the `--resolve`/`-r` options
+> as you would normally do when making use of other commands like `validate`
+> and `test`.
 
 Examples
 --------
