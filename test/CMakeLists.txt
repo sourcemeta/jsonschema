@@ -190,6 +190,9 @@ add_jsonschema_test_unix(lint/fail_lint_disable_many)
 add_jsonschema_test_unix(lint/fail_lint_examples)
 add_jsonschema_test_unix(lint/pass_lint_examples_fix)
 add_jsonschema_test_unix(lint/pass_lint_examples_no_fix)
+add_jsonschema_test_unix(lint/fail_lint_default)
+add_jsonschema_test_unix(lint/pass_lint_default_fix)
+add_jsonschema_test_unix(lint/pass_lint_default_no_fix)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
