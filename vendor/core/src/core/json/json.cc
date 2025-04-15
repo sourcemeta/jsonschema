@@ -49,7 +49,7 @@ auto read_file(const std::filesystem::path &path)
       // made canonical
       // See https://github.com/sourcemeta/jsonschema/issues/252
       std::filesystem::is_fifo(path) ? path : std::filesystem::canonical(path)};
-  stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  stream.exceptions(std::ifstream::badbit);
   assert(!stream.fail());
   assert(stream.is_open());
   return stream;
