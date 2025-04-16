@@ -79,6 +79,11 @@ Commands:
        references in a human-readable manner.
        Use --json/-j to output information in JSON.
 
+   default <schema.json|.yaml> <instance.json|.yaml> [--http/-h]
+
+       Apply any `default` value from the schema to the instance and
+       print the new instance in JSON format to standard output.
+
    encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
@@ -113,6 +118,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::encode(arguments);
   } else if (command == "decode") {
     return sourcemeta::jsonschema::cli::decode(arguments);
+  } else if (command == "default") {
+    return sourcemeta::jsonschema::cli::defaults(arguments);
   } else if (command == "help") {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";

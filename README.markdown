@@ -73,6 +73,7 @@ documentation:
 - [`jsonschema inspect`](./docs/inspect.markdown) (for debugging references)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
+- [`jsonschema default`](./docs/default.markdown) (augment an instance with default values)
 
 Note that YAML is supported in most commands!
 
