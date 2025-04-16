@@ -39,8 +39,9 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto &schema_path{options.at("").at(0)};
-  const auto custom_resolver{
-      resolver(options, options.contains("h") || options.contains("http"))};
+  const auto dialect{default_dialect(options)};
+  const auto custom_resolver{resolver(
+      options, options.contains("h") || options.contains("http"), dialect)};
 
   const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
@@ -54,14 +55,14 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto fast_mode{options.contains("f") || options.contains("fast")};
-
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::core::schema_official_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive)};
+                : sourcemeta::blaze::Mode::Exhaustive,
+      dialect)};
   sourcemeta::blaze::Evaluator evaluator;
 
   bool result{true};

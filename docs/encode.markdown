@@ -3,6 +3,7 @@ Encode
 
 ```sh
 jsonschema encode <document.json|.jsonl> <output.binpack>
+  [--default-dialect, -d <uri>]
 ```
 
 This command encodes a JSON document using [JSON

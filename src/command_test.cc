@@ -44,8 +44,9 @@ auto sourcemeta::jsonschema::cli::test(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http"})};
   bool result{true};
-  const auto test_resolver{
-      resolver(options, options.contains("h") || options.contains("http"))};
+  const auto dialect{default_dialect(options)};
+  const auto test_resolver{resolver(
+      options, options.contains("h") || options.contains("http"), dialect)};
   const auto verbose{options.contains("verbose") || options.contains("v")};
   sourcemeta::blaze::Evaluator evaluator;
 
@@ -117,7 +118,8 @@ auto sourcemeta::jsonschema::cli::test(
     try {
       schema_template = sourcemeta::blaze::compile(
           schema, sourcemeta::core::schema_official_walker, test_resolver,
-          sourcemeta::blaze::default_schema_compiler);
+          sourcemeta::blaze::default_schema_compiler,
+          sourcemeta::blaze::Mode::FastValidation, dialect);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
           error.id() == schema_uri.recompose()) {

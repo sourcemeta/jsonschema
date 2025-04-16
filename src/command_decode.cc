@@ -42,9 +42,11 @@ auto sourcemeta::jsonschema::cli::decode(
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
+  const auto dialect{default_dialect(options)};
   sourcemeta::jsonbinpack::compile(
       schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http")));
+      resolver(options, options.contains("h") || options.contains("http"),
+               dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   std::ifstream input_stream{sourcemeta::jsonschema::cli::safe_weakly_canonical(

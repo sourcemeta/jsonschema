@@ -18,8 +18,10 @@ auto sourcemeta::jsonschema::cli::metaschema(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http", "t", "trace"})};
   const auto trace{options.contains("t") || options.contains("trace")};
+  const auto default_dialect_option{default_dialect(options)};
   const auto custom_resolver{
-      resolver(options, options.contains("h") || options.contains("http"))};
+      resolver(options, options.contains("h") || options.contains("http"),
+               default_dialect_option)};
   bool result{true};
   sourcemeta::blaze::Evaluator evaluator;
 
@@ -37,16 +39,17 @@ auto sourcemeta::jsonschema::cli::metaschema(
       return EXIT_FAILURE;
     }
 
-    const auto dialect{sourcemeta::core::dialect(entry.second)};
+    const auto dialect{
+        sourcemeta::core::dialect(entry.second, default_dialect_option)};
     assert(dialect.has_value());
 
-    const auto metaschema{
-        sourcemeta::core::metaschema(entry.second, custom_resolver)};
+    const auto metaschema{sourcemeta::core::metaschema(
+        entry.second, custom_resolver, default_dialect_option)};
     if (!cache.contains(dialect.value())) {
       const auto metaschema_template{sourcemeta::blaze::compile(
           metaschema, sourcemeta::core::schema_official_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler,
-          sourcemeta::blaze::Mode::Exhaustive)};
+          sourcemeta::blaze::Mode::Exhaustive, default_dialect_option)};
       cache.insert({dialect.value(), metaschema_template});
     }
 

@@ -63,6 +63,7 @@ auto sourcemeta::jsonschema::cli::lint(
 
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
+  const auto dialect{default_dialect(options)};
 
   if (options.contains("f") || options.contains("fix")) {
     for (const auto &entry :
@@ -77,7 +78,10 @@ auto sourcemeta::jsonschema::cli::lint(
 
       auto copy = entry.second;
       bundle.apply(copy, sourcemeta::core::schema_official_walker,
-                   resolver(options));
+                   resolver(options,
+                            options.contains("h") || options.contains("http"),
+                            dialect),
+                   dialect);
       std::ofstream output{entry.first};
       if (options.contains("k") || options.contains("keep-ordering")) {
         sourcemeta::core::prettify(copy, output);
@@ -93,7 +97,8 @@ auto sourcemeta::jsonschema::cli::lint(
     log_verbose(options) << "Linting: " << entry.first.string() << "\n";
     const bool subresult = bundle.check(
         entry.second, sourcemeta::core::schema_official_walker,
-        resolver(options),
+        resolver(options, options.contains("h") || options.contains("http"),
+                 dialect),
         [&](const auto &pointer, const auto &name, const auto &message) {
           if (output_json) {
             auto error_obj = sourcemeta::core::JSON::make_object();
@@ -116,7 +121,8 @@ auto sourcemeta::jsonschema::cli::lint(
             sourcemeta::core::stringify(pointer, std::cout);
             std::cout << "\"\n";
           }
-        });
+        },
+        dialect);
 
     if (!subresult) {
       result = false;

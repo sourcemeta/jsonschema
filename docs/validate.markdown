@@ -5,10 +5,11 @@ Validating
 > JSON Schema Draft 3 and older are not supported at this point in time.
 
 ```sh
-jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
-  [--verbose/-v] [--resolve/-r <schemas-or-directories> ...] [--benchmark/-b]
-  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] [--trace/-t] 
-  [--fast/-f]
+jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
+  [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--benchmark/-b] [--extension/-e <extension>]
+  [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
+  [--default-dialect, -d <uri>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The

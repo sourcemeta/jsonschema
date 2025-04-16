@@ -6,8 +6,9 @@ Metaschema
 
 ```sh
 jsonschema metaschema [schemas-or-directories...]
-  [--verbose/-v] [--http/-h] [--extension/-e <extension>]
+  [--http/-h] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
+  [--default-dialect, -d <uri>]
 ```
 
 Ensure that a schema or a set of schemas are considered valid with regards to

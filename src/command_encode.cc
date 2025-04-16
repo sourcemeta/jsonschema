@@ -29,9 +29,11 @@ auto sourcemeta::jsonschema::cli::encode(
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
+  const auto dialect{default_dialect(options)};
   sourcemeta::jsonbinpack::compile(
       schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http")));
+      resolver(options, options.contains("h") || options.contains("http"),
+               dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   const std::filesystem::path document{options.at("").front()};

@@ -8,6 +8,7 @@ Testing
 jsonschema test [schemas-or-directories...]
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+  [--default-dialect, -d <uri>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
