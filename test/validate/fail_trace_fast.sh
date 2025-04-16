@@ -27,11 +27,11 @@ EOF
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties/foo/type"
+-> (push) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (fail) "/properties/foo/type"
+<- (fail) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 EOF

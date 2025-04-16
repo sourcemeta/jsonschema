@@ -27,19 +27,19 @@ EOF
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties"
+-> (push) "/properties" (LogicalAnd)
    at ""
    at keyword location "#/properties"
 
--> (push) "/properties/foo/type"
+-> (push) "/properties/foo/type" (AssertionTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (fail) "/properties/foo/type"
+<- (fail) "/properties/foo/type" (AssertionTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (fail) "/properties"
+<- (fail) "/properties" (LogicalAnd)
    at ""
    at keyword location "#/properties"
 EOF

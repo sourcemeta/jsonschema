@@ -207,6 +207,21 @@ constexpr std::string_view InstructionNames[] = {
     "ControlJump",
     "ControlDynamicAnchorJump"};
 
+/// @ingroup evaluator
+/// Check if a given instruction type corresponds to an annotation
+inline auto is_annotation(const InstructionIndex type) noexcept -> bool {
+  switch (type) {
+    case InstructionIndex::AnnotationBasenameToParent:
+      return true;
+    case InstructionIndex::AnnotationToParent:
+      return true;
+    case InstructionIndex::AnnotationEmit:
+      return true;
+    default:
+      return false;
+  }
+}
+
 // Forward declaration for defining a circular structure
 #ifndef DOXYGEN
 struct Instruction;

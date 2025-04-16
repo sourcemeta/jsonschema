@@ -33,23 +33,32 @@ auto TraceOutput::operator()(
     const EvaluationType type, const bool result, const Instruction &step,
     const sourcemeta::core::WeakPointer &evaluate_path,
     const sourcemeta::core::WeakPointer &instance_location,
-    const sourcemeta::core::JSON &) -> void {
+    const sourcemeta::core::JSON &annotation) -> void {
 
   const auto short_step_name{step_name(step)};
   auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
 
-  if (type == EvaluationType::Pre) {
+  if (is_annotation(step.type)) {
+    if (type == EvaluationType::Pre) {
+      return;
+    } else {
+      this->output.push_back({EntryType::Annotation, short_step_name,
+                              instance_location,
+                              std::move(effective_evaluate_path),
+                              step.keyword_location, annotation});
+    }
+  } else if (type == EvaluationType::Pre) {
     this->output.push_back({EntryType::Push, short_step_name, instance_location,
                             std::move(effective_evaluate_path),
-                            step.keyword_location});
+                            step.keyword_location, std::nullopt});
   } else if (result) {
     this->output.push_back({EntryType::Pass, short_step_name, instance_location,
                             std::move(effective_evaluate_path),
-                            step.keyword_location});
+                            step.keyword_location, std::nullopt});
   } else {
     this->output.push_back({EntryType::Fail, short_step_name, instance_location,
                             std::move(effective_evaluate_path),
-                            step.keyword_location});
+                            step.keyword_location, std::nullopt});
   }
 }
 

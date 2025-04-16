@@ -14,35 +14,35 @@ EOF
 "$1" metaschema "$TMP/schema.json" --trace > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
--> (push) "/dependencies"
+-> (push) "/dependencies" (AssertionPropertyDependencies)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
-<- (pass) "/dependencies"
+<- (pass) "/dependencies" (AssertionPropertyDependencies)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
--> (push) "/properties"
+-> (push) "/properties" (LoopPropertiesMatch)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 
--> (push) "/properties/$schema/type"
+-> (push) "/properties/$schema/type" (AssertionTypeStrict)
    at "/$schema"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
 
-<- (pass) "/properties/$schema/type"
+<- (pass) "/properties/$schema/type" (AssertionTypeStrict)
    at "/$schema"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
 
-<- (pass) "/properties"
+<- (pass) "/properties" (LoopPropertiesMatch)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 
--> (push) "/type"
+-> (push) "/type" (AssertionTypeStrict)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/type"
 
-<- (pass) "/type"
+<- (pass) "/type" (AssertionTypeStrict)
    at ""
    at keyword location "http://json-schema.org/draft-04/schema#/type"
 EOF

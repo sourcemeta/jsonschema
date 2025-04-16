@@ -24,30 +24,25 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace > "$TMP/output.txt"
 
-# TODO: Why is `properties` ran twice here?
-
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties"
+-> (push) "/properties" (LogicalAnd)
    at ""
    at keyword location "#/properties"
 
--> (push) "/properties/foo/type"
+-> (push) "/properties/foo/type" (AssertionTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
-<- (pass) "/properties/foo/type"
+<- (pass) "/properties/foo/type" (AssertionTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
 
--> (push) "/properties"
+@- (annotation) "/properties" (AnnotationEmit)
+   value "foo"
    at ""
    at keyword location "#/properties"
 
-<- (pass) "/properties"
-   at ""
-   at keyword location "#/properties"
-
-<- (pass) "/properties"
+<- (pass) "/properties" (LogicalAnd)
    at ""
    at keyword location "#/properties"
 EOF
