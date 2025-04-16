@@ -23,9 +23,15 @@ information on unsuccessful validation.
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
-By default, schemas are validated in exhaustive mode, which results in better
-error messages, at the expense of speed. The `--fast`/`-f` option makes the
-schema compiler optimise for speed, at the expense of error messages.
+> [!NOTE]
+> Annotations are only printed when passing the `--verbose` or the `--trace`
+> options. However, annotation collection will be skipped if the `--fast`
+> option is passed.
+
+> [!WARNING]
+> By default, schemas are validated in exhaustive mode, which results in better
+> error messages, at the expense of speed. The `--fast`/`-f` option makes the
+> schema compiler optimise for speed, at the expense of error messages.
 
 Examples
 --------

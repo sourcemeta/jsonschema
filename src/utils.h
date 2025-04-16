@@ -30,8 +30,13 @@ auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::string> &extensions)
     -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
 
-auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
+auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
     -> void;
+
+auto print_annotations(
+    const sourcemeta::blaze::SimpleOutput &output,
+    const std::map<std::string, std::vector<std::string>> &options,
+    std::ostream &stream) -> void;
 
 auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void;

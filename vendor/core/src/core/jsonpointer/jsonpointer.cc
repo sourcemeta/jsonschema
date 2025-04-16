@@ -270,6 +270,19 @@ auto to_pointer(const WeakPointer &pointer) -> Pointer {
   return result;
 }
 
+auto to_weak_pointer(const Pointer &pointer) -> WeakPointer {
+  WeakPointer result;
+  for (const auto &token : pointer) {
+    if (token.is_property()) {
+      result.push_back(token.to_property());
+    } else {
+      result.push_back(token.to_index());
+    }
+  }
+
+  return result;
+}
+
 auto stringify(const Pointer &pointer,
                std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
     -> void {

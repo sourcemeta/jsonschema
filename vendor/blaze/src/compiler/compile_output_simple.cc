@@ -9,23 +9,25 @@
 
 namespace sourcemeta::blaze {
 
-ErrorOutput::ErrorOutput(const sourcemeta::core::JSON &instance,
-                         const sourcemeta::core::WeakPointer &base)
+SimpleOutput::SimpleOutput(const sourcemeta::core::JSON &instance,
+                           const sourcemeta::core::WeakPointer &base)
     : instance_{instance}, base_{base} {}
 
-auto ErrorOutput::begin() const -> const_iterator {
+auto SimpleOutput::begin() const -> const_iterator {
   return this->output.begin();
 }
 
-auto ErrorOutput::end() const -> const_iterator { return this->output.end(); }
+auto SimpleOutput::end() const -> const_iterator { return this->output.end(); }
 
-auto ErrorOutput::cbegin() const -> const_iterator {
+auto SimpleOutput::cbegin() const -> const_iterator {
   return this->output.cbegin();
 }
 
-auto ErrorOutput::cend() const -> const_iterator { return this->output.cend(); }
+auto SimpleOutput::cend() const -> const_iterator {
+  return this->output.cend();
+}
 
-auto ErrorOutput::operator()(
+auto SimpleOutput::operator()(
     const EvaluationType type, const bool result, const Instruction &step,
     const sourcemeta::core::WeakPointer &evaluate_path,
     const sourcemeta::core::WeakPointer &instance_location,
@@ -35,6 +37,19 @@ auto ErrorOutput::operator()(
   }
 
   assert(evaluate_path.back().is_property());
+  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
+  if (effective_evaluate_path.empty()) {
+    return;
+  }
+
+  if (is_annotation(step.type)) {
+    if (type == EvaluationType::Post) {
+      Location location{instance_location, std::move(effective_evaluate_path)};
+      this->annotations_[std::move(location)].push_back(annotation);
+    }
+
+    return;
+  }
 
   if (type == EvaluationType::Pre) {
     assert(result);
@@ -47,6 +62,16 @@ auto ErrorOutput::operator()(
   } else if (type == EvaluationType::Post &&
              this->mask.contains(evaluate_path)) {
     this->mask.erase(evaluate_path);
+  } else if (type == EvaluationType::Post && !result &&
+             !this->annotations_.empty()) {
+    for (auto iterator = this->annotations_.begin();
+         iterator != this->annotations_.end();) {
+      if (iterator->first.evaluate_path.starts_with_initial(evaluate_path)) {
+        iterator = this->annotations_.erase(iterator);
+      } else {
+        iterator++;
+      }
+    }
   }
 
   // Ignore successful or masked steps
@@ -54,11 +79,6 @@ auto ErrorOutput::operator()(
                             [&evaluate_path](const auto &entry) {
                               return evaluate_path.starts_with(entry);
                             })) {
-    return;
-  }
-
-  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
-  if (effective_evaluate_path.empty()) {
     return;
   }
 

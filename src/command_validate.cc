@@ -81,7 +81,7 @@ auto sourcemeta::jsonschema::cli::validate(
         for (const auto &instance : sourcemeta::core::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
-          sourcemeta::blaze::ErrorOutput output{instance};
+          sourcemeta::blaze::SimpleOutput output{instance};
           sourcemeta::blaze::TraceOutput trace_output;
           bool subresult = true;
           if (benchmark) {
@@ -116,6 +116,7 @@ auto sourcemeta::jsonschema::cli::validate(
                 << " (entry #" << index << ")"
                 << "\n  matches " << safe_weakly_canonical(schema_path).string()
                 << "\n";
+            print_annotations(output, options, std::cerr);
           } else {
             std::cerr << "fail: "
                       << safe_weakly_canonical(instance_path).string()
@@ -140,7 +141,7 @@ auto sourcemeta::jsonschema::cli::validate(
       const auto instance{
           sourcemeta::jsonschema::cli::read_file(instance_path)};
       std::ostringstream error;
-      sourcemeta::blaze::ErrorOutput output{instance};
+      sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output;
       bool subresult{true};
       if (benchmark) {
@@ -174,6 +175,7 @@ auto sourcemeta::jsonschema::cli::validate(
             << "ok: " << safe_weakly_canonical(instance_path).string()
             << "\n  matches " << safe_weakly_canonical(schema_path).string()
             << "\n";
+        print_annotations(output, options, std::cerr);
       } else {
         std::cerr << "fail: " << safe_weakly_canonical(instance_path).string()
                   << "\n";

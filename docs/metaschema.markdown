@@ -14,6 +14,17 @@ jsonschema metaschema [schemas-or-directories...]
 Ensure that a schema or a set of schemas are considered valid with regards to
 their metaschemas.
 
+> [!NOTE] 
+> This command won't collect annotations. To do so, use the
+> [`validate`](./validate.markdown) command instead.
+
+> [!WARNING] 
+> The point of this command is to help schema writers make sure their schemas
+> are valid. As a consequence, this command prioritises useful error messages
+> and exhaustive evaluation rather than validation speed. If you require fast
+> validation, use the [`validate`](./validate.markdown) command with its
+> `--fast` option instead.
+
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
 

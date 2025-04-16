@@ -59,7 +59,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
                                   std::ref(output));
       print(output, std::cout);
     } else {
-      sourcemeta::blaze::ErrorOutput output{entry.second};
+      sourcemeta::blaze::SimpleOutput output{entry.second};
       if (evaluator.validate(cache.at(dialect.value()), entry.second,
                              std::ref(output))) {
         log_verbose(options)
