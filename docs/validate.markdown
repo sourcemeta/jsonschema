@@ -9,7 +9,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-  [--default-dialect, -d <uri>]
+  [--default-dialect/-d <uri>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -24,9 +24,9 @@ To help scripts distinguish validation errors, these are reported using exit
 code 2.
 
 > [!NOTE]
-> Annotations are only printed when passing the `--verbose` or the `--trace`
-> options. However, annotation collection will be skipped if the `--fast`
-> option is passed.
+> Annotations are only printed when passing the `--verbose`/`-v` or the
+> `--trace`/`-t` options. However, annotation collection will be skipped if the
+> `--fast`/`-f` option is passed.
 
 > [!WARNING]
 > By default, schemas are validated in exhaustive mode, which results in better

@@ -3,7 +3,7 @@ Decode
 
 ```sh
 jsonschema decode <output.binpack> <output.json|.jsonl>
-  [--default-dialect, -d <uri>]
+  [--default-dialect/-d <uri>]
 ```
 
 This command decodes a JSON document using [JSON

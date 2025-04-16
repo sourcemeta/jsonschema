@@ -3,7 +3,7 @@ Framing
 
 ```sh
 jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v]
-  [--default-dialect, -d <uri>]
+  [--default-dialect/-d <uri>]
 ```
 
 To evaluate a schema, an implementation will first scan it to determine the
