@@ -2,10 +2,10 @@ Linting
 =======
 
 ```sh
-jsonschema lint [schemas-or-directories...] [--fix/-f] [--json/-j] 
+jsonschema lint [schemas-or-directories...] [--fix/-f] [--json/-j]
   [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
-  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] 
-  [--disable/-d <rule-name>] [--keep-ordering/-k]
+  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+  [--exclude/-x <rule-name>] [--keep-ordering/-k]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -28,7 +28,7 @@ automatically fix many of them.
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
 
-> [!NOTE] 
+> [!NOTE]
 > There are linting rules that require compiling and validating instance
 > against the given schema. For example, there is a rule to check that the
 > instances set in the `examples` keyword successfully validate against the
@@ -75,7 +75,7 @@ jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
 ### Lint while disabling certain rules
 
 ```sh
-jsonschema lint path/to/my/schema.json --disable enum_with_type --disable const_with_type
+jsonschema lint path/to/my/schema.json --exclude enum_with_type --exclude const_with_type
 ```
 
 ### Lint with JSON output

@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --disable enum_to_const -d enum_with_type >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
+"$1" lint "$TMP/schema.json" --exclude enum_to_const -x enum_with_type >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
