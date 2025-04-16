@@ -326,12 +326,32 @@ auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
 /// const sourcemeta::core::WeakPointer pointer{std::cref(foo)};
 /// const sourcemeta::core::Pointer result{
 ///   sourcemeta::core::to_pointer(pointer)}:
-/// assert(pointer.size() == 1);
-/// assert(pointer.at(0).is_property());
-/// assert(pointer.at(0).to_property() == "foo");
+/// assert(result.size() == 1);
+/// assert(result.at(0).is_property());
+/// assert(result.at(0).to_property() == "foo");
 /// ```
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_pointer(const WeakPointer &pointer) -> Pointer;
+
+/// @ingroup jsonpointer
+/// Convert a JSON Pointer into a JSON WeakPointer. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::Pointer pointer{"foo", "bar", "baz"};
+/// const auto result{sourcemeta::core::to_weak_pointer(pointer)};
+/// assert(result.size() == 3);
+/// assert(result.at(0).is_property());
+/// assert(result.at(0).to_property() == "foo");
+/// assert(result.at(1).is_property());
+/// assert(result.at(1).to_property() == "bar");
+/// assert(result.at(2).is_property());
+/// assert(result.at(2).to_property() == "baz");
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto to_weak_pointer(const Pointer &pointer) -> WeakPointer;
 
 /// @ingroup jsonpointer
 ///

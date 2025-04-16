@@ -185,7 +185,7 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
+auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
     -> void {
   stream << "error: Schema validation failure\n";
   for (const auto &entry : output) {
@@ -196,6 +196,25 @@ auto print(const sourcemeta::blaze::ErrorOutput &output, std::ostream &stream)
     stream << "    at evaluate path \"";
     sourcemeta::core::stringify(entry.evaluate_path, stream);
     stream << "\"\n";
+  }
+}
+
+auto print_annotations(
+    const sourcemeta::blaze::SimpleOutput &output,
+    const std::map<std::string, std::vector<std::string>> &options,
+    std::ostream &stream) -> void {
+  if (options.contains("verbose") || options.contains("v")) {
+    for (const auto &annotation : output.annotations()) {
+      for (const auto &value : annotation.second) {
+        stream << "annotation: ";
+        sourcemeta::core::stringify(value, stream);
+        stream << "\n  at instance location \"";
+        sourcemeta::core::stringify(annotation.first.instance_location, stream);
+        stream << "\"\n  at evaluate path \"";
+        sourcemeta::core::stringify(annotation.first.evaluate_path, stream);
+        stream << "\"\n";
+      }
+    }
   }
 }
 

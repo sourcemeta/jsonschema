@@ -218,7 +218,7 @@ auto sourcemeta::jsonschema::cli::test(
       const auto instance{
           get_data(test_case, entry.first.parent_path(), verbose)};
       const std::string ref{"$ref"};
-      sourcemeta::blaze::ErrorOutput output{instance, {std::cref(ref)}};
+      sourcemeta::blaze::SimpleOutput output{instance, {std::cref(ref)}};
       const auto case_result{
           evaluator.validate(schema_template, instance, std::ref(output))};
 
