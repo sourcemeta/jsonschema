@@ -58,7 +58,7 @@ jobs:
           additional-packages: cmake build-essential shellcheck pipx
           wsl-version: 2
       # To make pipx work on WSL
-      - run: echo "PATH=/root/.local/bin:$PATH" >> $GITHUB_ENV
+      - run: echo 'export PATH=/root/.local/bin:\$PATH' >> ~/.bashrc
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
 
       - name: Install ClangFormat
