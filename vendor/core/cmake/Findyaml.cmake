@@ -21,7 +21,8 @@ if(NOT Yaml_FOUND)
     target_compile_options(yaml PRIVATE -Wno-int-to-pointer-cast)
   endif()
 
-  if(LINUX)
+  if(SOURCEMETA_OS_LINUX)
+    message(STATUS "Compiling libyaml with _GNU_SOURCE")
     # See https://github.com/3DSGuy/Project_CTR/issues/122
     target_compile_definitions(yaml PRIVATE _GNU_SOURCE)
   endif()
