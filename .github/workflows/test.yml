@@ -91,55 +91,26 @@ jobs:
       - run: ./test/docker/help.sh
       - run: ./test/docker/bundle_fmt.sh
 
-  # See https://documentation.ubuntu.com/wsl/en/latest/reference/actions/#reference-actions-wsl-install
+  # See https://github.com/Vampire/setup-wsl
   wsl:
     runs-on: windows-latest
-    env:
-      WSL_DISTRO: Ubuntu-22.04
+    defaults:
+      run:
+        shell: wsl-bash {0}
     steps:
-      - uses: Ubuntu/WSL/.github/actions/wsl-install@main
+      - uses: Vampire/setup-wsl@v5
         with:
-          distro: ${{ env.WSL_DISTRO }}
-      - uses: Ubuntu/WSL/.github/actions/wsl-checkout@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-      - uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-          exec: |
-            DEBIAN_FRONTEND=noninteractive sudo apt update
-            DEBIAN_FRONTEND=noninteractive sudo apt install cmake build-essential
-      - uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-          exec: >
-           cmake -S . -B ./build
-           -DCMAKE_BUILD_TYPE:STRING=Release
-           -DJSONSCHEMA_PORTABLE:BOOL=ON
-           -DJSONSCHEMA_TESTS:BOOL=ON
-           -DJSONSCHEMA_TESTS_CI:BOOL=ON
-           -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
-           -DBUILD_SHARED_LIBS:BOOL=OFF
-           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
-      - uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-          exec: >
-            cmake --build ./build --config Release --parallel 4
-      - uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-          exec: >
-            cmake --install ./build --prefix ./build/dist --config Release --verbose
-            --component sourcemeta_jsonschema
-      - uses: Ubuntu/WSL/.github/actions/wsl-bash@main
-        with:
-          distro: ${{ env.WSL_DISTRO }}
-          working-dir: /tmp/github/
-          exec: >
-            cd ./build && ctest --build-config Release --output-on-failure --parallel
+          distribution: Ubuntu-22.04
+      - uses: actions/checkout@v4
+      - run: sudo apt update --yes && sudo apt install cmake build-essential --yes
+      - run: cmake --version
+      - name: Configure JSON Schema
+        run: >
+          cmake -S . -B ./build
+          -DCMAKE_BUILD_TYPE:STRING=Release
+          -DJSONSCHEMA_PORTABLE:BOOL=ON
+          -DJSONSCHEMA_TESTS:BOOL=ON
+          -DJSONSCHEMA_TESTS_CI:BOOL=ON
+          -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
+          -DBUILD_SHARED_LIBS:BOOL=OFF
+          -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
