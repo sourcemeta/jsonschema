@@ -101,8 +101,8 @@ jobs:
       - uses: Vampire/setup-wsl@v5
         with:
           distribution: Ubuntu-22.04
+          additional-packages: cmake build-essential
       - uses: actions/checkout@v4
-      - run: sudo apt update --yes && sudo apt install cmake build-essential --yes
       - run: cmake --version
       - name: Configure JSON Schema
         run: >
