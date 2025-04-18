@@ -34,10 +34,10 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
-          - os: windows-latest
+          - os: windows-2022
             type: native
             shell: pwsh
-          - os: windows-latest
+          - os: windows-2022
             type: wsl-2
             shell: wsl-bash {0}
 
@@ -57,7 +57,8 @@ jobs:
           distribution: Ubuntu-22.04
           additional-packages: cmake build-essential shellcheck pipx
           wsl-version: 2
-      - run: pipx ensurepath
+      # To make pipx work on WSL
+      - run: echo "PATH=/root/.local/bin:$PATH" >> $GITHUB_ENV
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
 
       - name: Install ClangFormat
