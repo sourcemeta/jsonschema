@@ -52,11 +52,11 @@ jobs:
     steps:
       # See https://github.com/Vampire/setup-wsl
       - uses: Vampire/setup-wsl@v5
-        if: runner.os == 'windows' && runner.type == 'wsl-2'
+        if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-22.04
           additional-packages: cmake build-essential shellcheck
-          wsl-version: 1
+          wsl-version: 2
 
       - name: Install ClangFormat
         run: pipx install clang-format==19.1.0
