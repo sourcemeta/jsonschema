@@ -62,7 +62,10 @@ jobs:
         run: pipx install clang-format==19.1.0
       - name: Install pre-commit
         run: pipx install pre-commit
-      - run: ln -s /root/.local/bin/clang-format /usr/bin/clang-format
+      - name: Surface pipx binaries to WSL
+        run: |
+          ln -s -v /root/.local/bin/clang-format /usr/bin/clang-format
+          ln -s -v /root/.local/bin/pre-commit /usr/bin/pre-commit
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
 
       - uses: actions/checkout@v4
