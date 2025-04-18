@@ -32,11 +32,11 @@ automatically fix many of them.
 > [!NOTE]
 > There are linting rules that require compiling and validating instance
 > against the given schema. For example, there is a rule to check that the
-> instances set in the `examples` keyword successfully validate against the
-> corresponding subschema. In those cases, if your schema has external
-> references, you will have to import them using the `--resolve`/`-r` options
-> as you would normally do when making use of other commands like `validate`
-> and `test`.
+> instances set in the `examples` and `default` keywords successfully validate
+> against the corresponding subschema. In those cases, if your schema has
+> external references, you will have to import them using the `--resolve`/`-r`
+> options as you would normally do when making use of other commands like
+> `validate` and `test`.
 
 Examples
 --------
