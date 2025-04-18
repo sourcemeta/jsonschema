@@ -694,7 +694,6 @@ auto sourcemeta::core::unidentify(
 
 auto sourcemeta::core::wrap(const sourcemeta::core::JSON::String &identifier)
     -> sourcemeta::core::JSON {
-  assert(URI{identifier}.is_absolute());
   auto result{JSON::make_object()};
   // JSON Schema 2020-12 is the first dialect that truly supports cross-dialect
   // references In practice, others do, but we can play it safe here
