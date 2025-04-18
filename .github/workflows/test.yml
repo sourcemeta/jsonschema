@@ -55,7 +55,7 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-22.04
-          additional-packages: cmake build-essential shellcheck
+          additional-packages: cmake build-essential shellcheck pipx
           wsl-version: 2
 
       - name: Install ClangFormat
@@ -71,7 +71,7 @@ jobs:
           HOMEBREW_NO_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
       - name: Install dependencies (Windows)
-        if: runner.os == 'windows' && runner.type == 'native'
+        if: runner.os == 'windows' && matrix.platform.type == 'native'
         run: choco install shellcheck
 
       - run: cmake --version
