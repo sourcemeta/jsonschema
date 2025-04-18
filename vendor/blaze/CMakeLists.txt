@@ -35,6 +35,11 @@ endif()
 
 find_package(Core REQUIRED)
 
+# Don't force downstream consumers on it
+if(PROJECT_IS_TOP_LEVEL)
+  sourcemeta_enable_simd()
+endif()
+
 if(BLAZE_COMPILER)
   add_subdirectory(src/compiler)
 endif()

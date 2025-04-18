@@ -44,7 +44,8 @@ auto SimpleOutput::operator()(
 
   if (is_annotation(step.type)) {
     if (type == EvaluationType::Post) {
-      Location location{instance_location, std::move(effective_evaluate_path)};
+      Location location{instance_location, std::move(effective_evaluate_path),
+                        step.keyword_location};
       this->annotations_[std::move(location)].push_back(annotation);
     }
 

@@ -103,19 +103,10 @@ namespace sourcemeta::blaze {
 auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaWalker &walker,
              const sourcemeta::core::SchemaResolver &resolver,
-             const Compiler &compiler, const Mode mode,
+             const Compiler &compiler,
+             const sourcemeta::core::SchemaFrame &frame, const Mode mode,
              const std::optional<std::string> &default_dialect) -> Template {
   assert(is_schema(schema));
-
-  // Make sure the input schema is bundled, otherwise we won't be able to
-  // resolve remote references here
-  const sourcemeta::core::JSON result{
-      sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
-
-  // Perform framing to resolve references later on
-  sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References};
-  frame.analyse(result, walker, resolver, default_dialect);
 
   const std::string base{sourcemeta::core::URI{
       sourcemeta::core::identify(
@@ -144,7 +135,7 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   SchemaContext schema_context{
       sourcemeta::core::empty_pointer,
-      result,
+      schema,
       vocabularies(schema, resolver, root_frame_entry.dialect),
       sourcemeta::core::URI{root_frame_entry.base}.canonicalize().recompose(),
       {},
@@ -207,10 +198,10 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   auto unevaluated{
-      sourcemeta::core::unevaluated(result, frame, walker, resolver)};
+      sourcemeta::core::unevaluated(schema, frame, walker, resolver)};
 
-  const Context context{result,
-                        std::move(frame),
+  const Context context{schema,
+                        frame,
                         std::move(resources),
                         walker,
                         resolver,
@@ -273,6 +264,27 @@ auto compile(const sourcemeta::core::JSON &schema,
               std::back_inserter(compiler_template));
     return {std::move(compiler_template), uses_dynamic_scopes, track};
   }
+}
+
+auto compile(const sourcemeta::core::JSON &schema,
+             const sourcemeta::core::SchemaWalker &walker,
+             const sourcemeta::core::SchemaResolver &resolver,
+             const Compiler &compiler, const Mode mode,
+             const std::optional<std::string> &default_dialect) -> Template {
+  assert(is_schema(schema));
+
+  // Make sure the input schema is bundled, otherwise we won't be able to
+  // resolve remote references here
+  const sourcemeta::core::JSON result{
+      sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
+
+  // Perform framing to resolve references later on
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
+  frame.analyse(result, walker, resolver, default_dialect);
+
+  return compile(result, walker, resolver, compiler, frame, mode,
+                 default_dialect);
 }
 
 auto compile(const Context &context, const SchemaContext &schema_context,

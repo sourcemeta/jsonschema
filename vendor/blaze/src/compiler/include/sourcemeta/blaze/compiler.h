@@ -150,6 +150,24 @@ compile(const sourcemeta::core::JSON &schema,
 
 /// @ingroup compiler
 ///
+/// This function compiles an input JSON Schema into a template that can be
+/// later evaluated, but given an existing schema frame. The schema frame must
+/// contain reference information for the given schema and the input schema must
+/// be bundled. If those pre-conditions are not met, you will hit undefined
+/// behavior.
+///
+/// Don't use this function unless you know what you are doing.
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT
+compile(const sourcemeta::core::JSON &schema,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
+        const Mode mode = Mode::FastValidation,
+        const std::optional<std::string> &default_dialect = std::nullopt)
+    -> Template;
+
+/// @ingroup compiler
+///
 /// This function compiles a single subschema into a compiler template as
 /// determined by the given pointer. If a URI is given, the compiler will
 /// attempt to jump to that corresponding frame entry. Otherwise, it will

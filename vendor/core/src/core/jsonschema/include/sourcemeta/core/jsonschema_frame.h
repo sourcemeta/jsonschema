@@ -110,6 +110,9 @@ public:
 
   SchemaFrame(const Mode mode) : mode_{mode} {}
 
+  // Query the current mode that the schema frame was configured with
+  auto mode() const noexcept -> Mode { return this->mode_; }
+
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
     std::string destination;
