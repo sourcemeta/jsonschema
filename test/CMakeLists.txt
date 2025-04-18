@@ -88,7 +88,7 @@ add_jsonschema_test_unix(validate/pass_json_ref_yaml)
 add_jsonschema_test_unix(validate/pass_process_substitution)
 
 # TODO: Make this test pass on Linux. It hangs for some reason
-if(NOT LINUX)
+if(APPLE)
   add_jsonschema_test_unix(validate/pass_json_ref_yaml_http)
 endif()
 

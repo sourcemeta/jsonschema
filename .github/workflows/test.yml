@@ -10,27 +10,36 @@ jobs:
       matrix:
         platform:
           - os: ubuntu-22.04
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
           - os: ubuntu-22.04
+            type: native
             cc: gcc
             cxx: g++
             shell: sh
           - os: ubuntu-22.04-arm
+            type: native
             cc: gcc
             cxx: g++
             shell: sh
           - os: macos-13
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
           - os: macos-14
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
-          - os: windows-latest
+          - os: windows-2022
+            type: native
             shell: pwsh
+          - os: windows-2022
+            type: wsl-2
+            shell: wsl-bash {0}
 
     defaults:
       run:
@@ -41,10 +50,23 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
+      # See https://github.com/Vampire/setup-wsl
+      - uses: Vampire/setup-wsl@v5
+        if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
+        with:
+          distribution: Ubuntu-22.04
+          additional-packages: cmake build-essential shellcheck pipx
+          wsl-version: 2
+
       - name: Install ClangFormat
         run: pipx install clang-format==19.1.0
       - name: Install pre-commit
         run: pipx install pre-commit
+      - name: Surface pipx binaries to WSL
+        run: |
+          ln -s -v /root/.local/bin/clang-format /usr/bin/clang-format
+          ln -s -v /root/.local/bin/pre-commit /usr/bin/pre-commit
+        if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
 
       - uses: actions/checkout@v4
       - name: Install dependencies (macOS)
@@ -54,7 +76,7 @@ jobs:
           HOMEBREW_NO_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
       - name: Install dependencies (Windows)
-        if: runner.os == 'windows'
+        if: runner.os == 'windows' && matrix.platform.type == 'native'
         run: choco install shellcheck
 
       - run: cmake --version
