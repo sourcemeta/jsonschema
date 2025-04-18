@@ -10,27 +10,36 @@ jobs:
       matrix:
         platform:
           - os: ubuntu-22.04
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
           - os: ubuntu-22.04
+            type: native
             cc: gcc
             cxx: g++
             shell: sh
           - os: ubuntu-22.04-arm
+            type: native
             cc: gcc
             cxx: g++
             shell: sh
           - os: macos-13
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
           - os: macos-14
+            type: native
             cc: clang
             cxx: clang++
             shell: sh
           - os: windows-latest
+            type: native
             shell: pwsh
+          - os: windows-latest
+            type: wsl-2
+            shell: wsl-bash {0}
 
     defaults:
       run:
@@ -41,6 +50,14 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
+      # See https://github.com/Vampire/setup-wsl
+      - uses: Vampire/setup-wsl@v5
+        if: runner.os == 'windows' && runner.type == 'wsl-2'
+        with:
+          distribution: Ubuntu-22.04
+          additional-packages: cmake build-essential shellcheck
+          wsl-version: 1
+
       - name: Install ClangFormat
         run: pipx install clang-format==19.1.0
       - name: Install pre-commit
@@ -54,7 +71,7 @@ jobs:
           HOMEBREW_NO_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
       - name: Install dependencies (Windows)
-        if: runner.os == 'windows'
+        if: runner.os == 'windows' && runner.type == 'native'
         run: choco install shellcheck
 
       - run: cmake --version
@@ -90,27 +107,3 @@ jobs:
       - run: docker run --interactive --volume "$PWD:/schema" jsonschema
       - run: ./test/docker/help.sh
       - run: ./test/docker/bundle_fmt.sh
-
-  # See https://github.com/Vampire/setup-wsl
-  wsl:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: wsl-bash {0}
-    steps:
-      - uses: Vampire/setup-wsl@v5
-        with:
-          distribution: Ubuntu-22.04
-          additional-packages: cmake build-essential
-      - uses: actions/checkout@v4
-      - run: cmake --version
-      - name: Configure JSON Schema
-        run: >
-          cmake -S . -B ./build
-          -DCMAKE_BUILD_TYPE:STRING=Release
-          -DJSONSCHEMA_PORTABLE:BOOL=ON
-          -DJSONSCHEMA_TESTS:BOOL=ON
-          -DJSONSCHEMA_TESTS_CI:BOOL=ON
-          -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
-          -DBUILD_SHARED_LIBS:BOOL=OFF
-          -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
