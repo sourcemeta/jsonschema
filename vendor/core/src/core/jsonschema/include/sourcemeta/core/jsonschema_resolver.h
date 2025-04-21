@@ -49,10 +49,11 @@ public:
   /// Construct an empty resolver that has another schema resolver as a fallback
   SchemaMapResolver(const SchemaResolver &resolver);
 
-  /// Register a schema to the map resolver
+  /// Register a schema to the map resolver. Returns whether at least one
+  /// schema was imported into the resolver
   auto add(const JSON &schema,
            const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt) -> void;
+           const std::optional<std::string> &default_id = std::nullopt) -> bool;
 
   /// Attempt to resolve a schema
   auto operator()(std::string_view identifier) const -> std::optional<JSON>;

@@ -328,7 +328,13 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
                        parse_extensions(options))) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
-      dynamic_resolver.add(entry.second, default_dialect);
+      const auto result = dynamic_resolver.add(entry.second, default_dialect);
+      if (!result) {
+        std::cerr
+            << "warning: No schema resources were imported from this file\n";
+        std::cerr << "  at " << entry.first.string() << "\n";
+        std::cerr << "Are you sure this schema sets any identifiers?\n";
+      }
     }
   }
 
@@ -338,7 +344,13 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
                        parse_extensions(options))) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
-      dynamic_resolver.add(entry.second, default_dialect);
+      const auto result = dynamic_resolver.add(entry.second, default_dialect);
+      if (!result) {
+        std::cerr
+            << "warning: No schema resources were imported from this file\n";
+        std::cerr << "  at " << entry.first.string() << "\n";
+        std::cerr << "Are you sure this schema sets any identifiers?\n";
+      }
     }
   }
 
