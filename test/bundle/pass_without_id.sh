@@ -24,7 +24,7 @@ cat << 'EOF' > "$TMP/schemas/remote.json"
 }
 EOF
 
-"$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --without-id > "$TMP/result.json"
+"$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --without-id > "$TMP/result.json" 2> "$TMP/stderr.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
@@ -39,7 +39,17 @@ cat << 'EOF' > "$TMP/expected.json"
 }
 EOF
 
+cat << 'EOF' > "$TMP/expected-stderr.txt"
+warning: You are opting in to remove schema identifiers in the bundled schema.
+The only legit use case of this advanced feature we know of it to workaround
+non-compliant JSON Schema implementations such as Visual Studio Code.
+In other case, this is not needed and may harm other use cases. For example,
+you will be unable to reference the resulting schema from other schemas
+using the --resolve/-r option.
+EOF
+
 diff "$TMP/result.json" "$TMP/expected.json"
+diff "$TMP/stderr.txt" "$TMP/expected-stderr.txt"
 
 # Must come out formatted
 "$1" fmt "$TMP/result.json" --check

@@ -28,8 +28,12 @@ EOF
 
 cat << EOF > "$TMP/expected.json"
 Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.json
-Removing schema identifiers
-Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.json
+warning: You are opting in to remove schema identifiers in the bundled schema.
+The only legit use case of this advanced feature we know of it to workaround
+non-compliant JSON Schema implementations such as Visual Studio Code.
+In other case, this is not needed and may harm other use cases. For example,
+you will be unable to reference the resulting schema from other schemas
+using the --resolve/-r option.
 {
   "\$schema": "https://json-schema.org/draft/2020-12/schema",
   "\$ref": "#/\$defs/https%3A~1~1example.com~1nested",
@@ -41,7 +45,5 @@ Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.
   }
 }
 EOF
-
-cat "$TMP/result.json"
 
 diff "$TMP/result.json" "$TMP/expected.json"
