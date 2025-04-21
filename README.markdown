@@ -13,6 +13,7 @@ maintaining **repositories of schemas** and ensuring their quality, both during
 local development and when running on CI/CD pipelines. For example:
 
 - Ensure your schemas are valid
+- Debug unexpected schema validation results
 - Unit test your schemas against valid and invalid instances
 - Enforce consistent indentation and keyword ordering in your schema files
 - Detect and fix common JSON Schema anti-patterns
