@@ -45,16 +45,26 @@ auto sourcemeta::jsonschema::cli::metaschema(
 
     const auto metaschema{sourcemeta::core::metaschema(
         entry.second, custom_resolver, default_dialect_option)};
+    const sourcemeta::core::JSON bundled{sourcemeta::core::bundle(
+        metaschema, sourcemeta::core::schema_official_walker, custom_resolver,
+        default_dialect_option)};
+    sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::References};
+    frame.analyse(bundled, sourcemeta::core::schema_official_walker,
+                  custom_resolver, default_dialect_option);
+
     if (!cache.contains(dialect.value())) {
       const auto metaschema_template{sourcemeta::blaze::compile(
-          metaschema, sourcemeta::core::schema_official_walker, custom_resolver,
-          sourcemeta::blaze::default_schema_compiler,
+          bundled, sourcemeta::core::schema_official_walker, custom_resolver,
+          sourcemeta::blaze::default_schema_compiler, frame,
           sourcemeta::blaze::Mode::Exhaustive, default_dialect_option)};
       cache.insert({dialect.value(), metaschema_template});
     }
 
     if (trace) {
-      sourcemeta::blaze::TraceOutput output;
+      sourcemeta::blaze::TraceOutput output{
+          sourcemeta::core::schema_official_walker, custom_resolver,
+          sourcemeta::core::empty_weak_pointer, frame};
       result = evaluator.validate(cache.at(dialect.value()), entry.second,
                                   std::ref(output));
       print(output, std::cout);

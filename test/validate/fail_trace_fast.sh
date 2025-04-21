@@ -30,10 +30,12 @@ cat << EOF > "$TMP/expected.txt"
 -> (push) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
+   at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 
 <- (fail) "/properties/foo/type" (AssertionPropertyTypeStrict)
    at "/foo"
    at keyword location "#/properties/foo/type"
+   at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

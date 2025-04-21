@@ -12,7 +12,8 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "foo": {
-      "type": "string"
+      "type": "string",
+      "unknown": true
     }
   }
 }
@@ -29,6 +30,12 @@ cat << EOF > "$TMP/expected.txt"
    at ""
    at keyword location "#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+
+@- (annotation) "/properties/foo/unknown" (AnnotationEmit)
+   value true
+   at "/foo"
+   at keyword location "#/properties/foo/unknown"
+   at vocabulary "<unknown>"
 
 -> (push) "/properties/foo/type" (AssertionTypeStrict)
    at "/foo"
