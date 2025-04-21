@@ -29,6 +29,10 @@ local development and when running on CI/CD pipelines. For example:
 > and Code: Designing Data Products with JSON
 > Schema](https://www.oreilly.com/library/view/unifying-business-data/9781098144999/).
 
+***
+
+![JSON Schema CLI Example](./assets/example.png)
+
 Version support
 ---------------
 
