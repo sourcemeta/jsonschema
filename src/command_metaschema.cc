@@ -18,17 +18,14 @@ auto sourcemeta::jsonschema::cli::metaschema(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(arguments, {"h", "http", "t", "trace"})};
   const auto trace{options.contains("t") || options.contains("trace")};
-  const auto default_dialect_option{default_dialect(options)};
-  const auto custom_resolver{
-      resolver(options, options.contains("h") || options.contains("http"),
-               default_dialect_option)};
+  const auto default_dialect_option{infer_default_dialect(options)};
+  const auto custom_resolver{infer_resolver(options, default_dialect_option)};
   bool result{true};
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
-  for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
-                                         parse_extensions(options))) {
+  for (const auto &entry : for_each_json_or_yaml(options.at(""), options)) {
     if (!sourcemeta::core::is_schema(entry.second)) {
       std::cerr << "error: The schema file you provided does not represent a "
                    "valid JSON Schema\n  "

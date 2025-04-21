@@ -14,7 +14,7 @@
 
 auto sourcemeta::jsonschema::cli::encode(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
+  const auto options{parse_options(arguments, {"h", "http"})};
 
   if (options.at("").size() < 2) {
     std::cerr
@@ -29,11 +29,10 @@ auto sourcemeta::jsonschema::cli::encode(
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
-  const auto dialect{default_dialect(options)};
-  sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http"),
-               dialect));
+  const auto default_dialect{infer_default_dialect(options)};
+  sourcemeta::jsonbinpack::compile(schema,
+                                   sourcemeta::core::schema_official_walker,
+                                   infer_resolver(options, default_dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   const std::filesystem::path document{options.at("").front()};
@@ -64,8 +63,7 @@ auto sourcemeta::jsonschema::cli::encode(
               << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
               << "%\n";
   } else {
-    const auto entry{
-        sourcemeta::jsonschema::cli::read_file(options.at("").front())};
+    const auto entry{read_yaml_or_json(options.at("").front())};
     std::ofstream output_stream(safe_weakly_canonical(options.at("").at(1)),
                                 std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);

@@ -27,7 +27,7 @@ static auto has_data(std::ifstream &stream) -> bool {
 
 auto sourcemeta::jsonschema::cli::decode(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
+  const auto options{parse_options(arguments, {"h", "http"})};
 
   if (options.at("").size() < 2) {
     std::cerr
@@ -42,11 +42,10 @@ auto sourcemeta::jsonschema::cli::decode(
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
-  const auto dialect{default_dialect(options)};
-  sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http"),
-               dialect));
+  const auto default_dialect{infer_default_dialect(options)};
+  sourcemeta::jsonbinpack::compile(schema,
+                                   sourcemeta::core::schema_official_walker,
+                                   infer_resolver(options, default_dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   std::ifstream input_stream{sourcemeta::jsonschema::cli::safe_weakly_canonical(
