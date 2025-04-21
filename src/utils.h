@@ -19,15 +19,13 @@
 
 namespace sourcemeta::jsonschema::cli {
 
-auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON;
-
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>>;
 
-auto for_each_json(const std::vector<std::string> &arguments,
-                   const std::set<std::filesystem::path> &blacklist,
-                   const std::set<std::string> &extensions)
+auto for_each_json_or_yaml(
+    const std::vector<std::string> &arguments,
+    const std::map<std::string, std::vector<std::string>> &options)
     -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
 
 auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
@@ -41,26 +39,27 @@ auto print_annotations(
 auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     -> void;
 
-auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote,
-              const std::optional<std::string> &default_dialect)
-    -> sourcemeta::core::SchemaResolver;
-
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;
 
-auto parse_extensions(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::string>;
+auto log_error() -> std::ostream &;
 
-auto parse_ignore(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::filesystem::path>;
+auto log_warning() -> std::ostream &;
 
 auto safe_weakly_canonical(const std::filesystem::path &input)
     -> std::filesystem::path;
 
-auto default_dialect(
+auto looks_like_yaml(const std::filesystem::path &path) -> bool;
+
+auto read_yaml_or_json(const std::filesystem::path &path)
+    -> sourcemeta::core::JSON;
+
+auto infer_resolver(
+    const std::map<std::string, std::vector<std::string>> &options,
+    const std::optional<std::string> &default_dialect)
+    -> sourcemeta::core::SchemaResolver;
+
+auto infer_default_dialect(
     const std::map<std::string, std::vector<std::string>> &options)
     -> std::optional<std::string>;
 

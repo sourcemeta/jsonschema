@@ -15,7 +15,6 @@
 #include "utils.h"
 
 // TODO: Add a flag to emit output using the standard JSON Schema output format
-// TODO: Add a flag to collect annotations
 // TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
@@ -39,11 +38,10 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto &schema_path{options.at("").at(0)};
-  const auto dialect{default_dialect(options)};
-  const auto custom_resolver{resolver(
-      options, options.contains("h") || options.contains("http"), dialect)};
+  const auto dialect{infer_default_dialect(options)};
+  const auto custom_resolver{infer_resolver(options, dialect)};
 
-  const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
+  const auto schema{read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
@@ -138,8 +136,7 @@ auto sourcemeta::jsonschema::cli::validate(
         log_verbose(options) << "warning: The JSONL file is empty\n";
       }
     } else {
-      const auto instance{
-          sourcemeta::jsonschema::cli::read_file(instance_path)};
+      const auto instance{read_yaml_or_json(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output;

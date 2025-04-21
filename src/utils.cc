@@ -61,8 +61,9 @@ auto handle_json_entry(
         }
 
         // TODO: Print a verbose message for what is getting parsed
-        result.emplace_back(canonical,
-                            sourcemeta::jsonschema::cli::read_file(canonical));
+        result.emplace_back(
+            canonical,
+            sourcemeta::jsonschema::cli::read_yaml_or_json(canonical));
       }
     }
   } else {
@@ -88,8 +89,8 @@ auto handle_json_entry(
       }
 
       // TODO: Print a verbose message for what is getting parsed
-      result.emplace_back(canonical,
-                          sourcemeta::jsonschema::cli::read_file(canonical));
+      result.emplace_back(
+          canonical, sourcemeta::jsonschema::cli::read_yaml_or_json(canonical));
     }
   }
 }
@@ -108,19 +109,64 @@ auto normalize_extension(const std::string &extension) -> std::string {
 
 namespace sourcemeta::jsonschema::cli {
 
-auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON {
-  if (path.extension() == ".yaml" || path.extension() == ".yml") {
+auto looks_like_yaml(const std::filesystem::path &path) -> bool {
+  return path.extension() == ".yaml" || path.extension() == ".yml";
+}
+
+auto read_yaml_or_json(const std::filesystem::path &path)
+    -> sourcemeta::core::JSON {
+  if (looks_like_yaml(path)) {
     return sourcemeta::core::read_yaml(path);
   }
 
   return sourcemeta::core::read_json(path);
 }
 
-auto for_each_json(const std::vector<std::string> &arguments,
-                   const std::set<std::filesystem::path> &blacklist,
-                   const std::set<std::string> &extensions)
+auto for_each_json_or_yaml(
+    const std::vector<std::string> &arguments,
+    const std::map<std::string, std::vector<std::string>> &options)
     -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> {
   std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> result;
+
+  std::set<std::filesystem::path> blacklist;
+
+  if (options.contains("ignore")) {
+    for (const auto &ignore : options.at("ignore")) {
+      const auto canonical{std::filesystem::weakly_canonical(ignore)};
+      log_verbose(options) << "Ignoring path: " << canonical << "\n";
+      blacklist.insert(canonical);
+    }
+  }
+
+  if (options.contains("i")) {
+    for (const auto &ignore : options.at("e")) {
+      const auto canonical{std::filesystem::weakly_canonical(ignore)};
+      log_verbose(options) << "Ignoring path: " << canonical << "\n";
+      blacklist.insert(canonical);
+    }
+  }
+
+  std::set<std::string> extensions;
+
+  if (options.contains("extension")) {
+    for (const auto &extension : options.at("extension")) {
+      log_verbose(options) << "Using extension: " << extension << "\n";
+      extensions.insert(normalize_extension(extension));
+    }
+  }
+
+  if (options.contains("e")) {
+    for (const auto &extension : options.at("e")) {
+      log_verbose(options) << "Using extension: " << extension << "\n";
+      extensions.insert(normalize_extension(extension));
+    }
+  }
+
+  if (extensions.empty()) {
+    extensions.insert({".json"});
+    extensions.insert({".yaml"});
+    extensions.insert({".yml"});
+  }
 
   if (arguments.empty()) {
     handle_json_entry(std::filesystem::current_path(), blacklist, extensions,
@@ -309,10 +355,11 @@ static auto fallback_resolver(
   }
 }
 
-auto resolver(const std::map<std::string, std::vector<std::string>> &options,
-              const bool remote,
-              const std::optional<std::string> &default_dialect)
+auto infer_resolver(
+    const std::map<std::string, std::vector<std::string>> &options,
+    const std::optional<std::string> &default_dialect)
     -> sourcemeta::core::SchemaResolver {
+  const auto remote{options.contains("h") || options.contains("http")};
   sourcemeta::core::SchemaMapResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
         if (remote) {
@@ -324,8 +371,7 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 
   if (options.contains("resolve")) {
     for (const auto &entry :
-         for_each_json(options.at("resolve"), parse_ignore(options),
-                       parse_extensions(options))) {
+         for_each_json_or_yaml(options.at("resolve"), options)) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
       const auto result = dynamic_resolver.add(entry.second, default_dialect);
@@ -339,9 +385,7 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
   }
 
   if (options.contains("r")) {
-    for (const auto &entry :
-         for_each_json(options.at("r"), parse_ignore(options),
-                       parse_extensions(options))) {
+    for (const auto &entry : for_each_json_or_yaml(options.at("r"), options)) {
       log_verbose(options) << "Importing schema into the resolution context: "
                            << entry.first.string() << "\n";
       const auto result = dynamic_resolver.add(entry.second, default_dialect);
@@ -367,57 +411,9 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
   return null_stream;
 }
 
-auto parse_extensions(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::string> {
-  std::set<std::string> result;
+auto log_error() -> std::ostream & { return std::cerr << "error: "; }
 
-  if (options.contains("extension")) {
-    for (const auto &extension : options.at("extension")) {
-      log_verbose(options) << "Using extension: " << extension << "\n";
-      result.insert(normalize_extension(extension));
-    }
-  }
-
-  if (options.contains("e")) {
-    for (const auto &extension : options.at("e")) {
-      log_verbose(options) << "Using extension: " << extension << "\n";
-      result.insert(normalize_extension(extension));
-    }
-  }
-
-  if (result.empty()) {
-    result.insert({".json"});
-    result.insert({".yaml"});
-    result.insert({".yml"});
-  }
-
-  return result;
-}
-
-auto parse_ignore(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::filesystem::path> {
-  std::set<std::filesystem::path> result;
-
-  if (options.contains("ignore")) {
-    for (const auto &ignore : options.at("ignore")) {
-      const auto canonical{std::filesystem::weakly_canonical(ignore)};
-      log_verbose(options) << "Ignoring path: " << canonical << "\n";
-      result.insert(canonical);
-    }
-  }
-
-  if (options.contains("i")) {
-    for (const auto &ignore : options.at("e")) {
-      const auto canonical{std::filesystem::weakly_canonical(ignore)};
-      log_verbose(options) << "Ignoring path: " << canonical << "\n";
-      result.insert(canonical);
-    }
-  }
-
-  return result;
-}
+auto log_warning() -> std::ostream & { return std::cerr << "warning: "; }
 
 auto safe_weakly_canonical(const std::filesystem::path &input)
     -> std::filesystem::path {
@@ -426,7 +422,7 @@ auto safe_weakly_canonical(const std::filesystem::path &input)
              : std::filesystem::weakly_canonical(input);
 }
 
-auto default_dialect(
+auto infer_default_dialect(
     const std::map<std::string, std::vector<std::string>> &options)
     -> std::optional<std::string> {
 

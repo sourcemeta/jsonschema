@@ -31,7 +31,7 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
-      arguments, {"f", "fix", "json", "j", "k", "keep-ordering"})};
+      arguments, {"f", "fix", "json", "j", "k", "keep-ordering", "h", "http"})};
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -63,12 +63,10 @@ auto sourcemeta::jsonschema::cli::lint(
 
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
-  const auto dialect{default_dialect(options)};
+  const auto dialect{infer_default_dialect(options)};
 
   if (options.contains("f") || options.contains("fix")) {
-    for (const auto &entry :
-         for_each_json(options.at(""), parse_ignore(options),
-                       parse_extensions(options))) {
+    for (const auto &entry : for_each_json_or_yaml(options.at(""), options)) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       if (entry.first.extension() == ".yaml" ||
           entry.first.extension() == ".yml") {
@@ -78,10 +76,7 @@ auto sourcemeta::jsonschema::cli::lint(
 
       auto copy = entry.second;
       bundle.apply(copy, sourcemeta::core::schema_official_walker,
-                   resolver(options,
-                            options.contains("h") || options.contains("http"),
-                            dialect),
-                   dialect);
+                   infer_resolver(options, dialect), dialect);
       std::ofstream output{entry.first};
       if (options.contains("k") || options.contains("keep-ordering")) {
         sourcemeta::core::prettify(copy, output);
@@ -92,13 +87,11 @@ auto sourcemeta::jsonschema::cli::lint(
       output << "\n";
     }
   }
-  for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
-                                         parse_extensions(options))) {
+  for (const auto &entry : for_each_json_or_yaml(options.at(""), options)) {
     log_verbose(options) << "Linting: " << entry.first.string() << "\n";
     const bool subresult = bundle.check(
         entry.second, sourcemeta::core::schema_official_walker,
-        resolver(options, options.contains("h") || options.contains("http"),
-                 dialect),
+        infer_resolver(options, dialect),
         [&](const auto &pointer, const auto &name, const auto &message) {
           if (output_json) {
             auto error_obj = sourcemeta::core::JSON::make_object();
