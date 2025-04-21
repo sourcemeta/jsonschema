@@ -7,10 +7,13 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <functional>  // std::reference_wrapper
 #include <map>         // std::map
+#include <optional>    // std::optional, std::nullopt
 #include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -183,8 +186,14 @@ private:
 /// ```
 class SOURCEMETA_BLAZE_COMPILER_EXPORT TraceOutput {
 public:
-  TraceOutput(const sourcemeta::core::WeakPointer &base =
-                  sourcemeta::core::empty_weak_pointer);
+  // Passing a frame of the schema is optional, but allows the output
+  // formatter to give you back additional information
+  TraceOutput(const sourcemeta::core::SchemaWalker &walker,
+              const sourcemeta::core::SchemaResolver &resolver,
+              const sourcemeta::core::WeakPointer &base =
+                  sourcemeta::core::empty_weak_pointer,
+              const std::optional<std::reference_wrapper<
+                  const sourcemeta::core::SchemaFrame>> &frame = std::nullopt);
 
   // Prevent accidental copies
   TraceOutput(const TraceOutput &) = delete;
@@ -199,6 +208,9 @@ public:
     const sourcemeta::core::WeakPointer evaluate_path;
     const std::string keyword_location;
     const std::optional<sourcemeta::core::JSON> annotation;
+    // Whether we were able to collect vocabulary information,
+    // and the vocabulary URI, if any
+    const std::pair<bool, std::optional<std::string>> vocabulary;
   };
 
   auto operator()(const EvaluationType type, const bool result,
@@ -221,7 +233,12 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
+  const sourcemeta::core::SchemaWalker walker_;
+  const sourcemeta::core::SchemaResolver resolver_;
   const sourcemeta::core::WeakPointer base_;
+  const std::optional<
+      std::reference_wrapper<const sourcemeta::core::SchemaFrame>>
+      frame_;
   container_type output;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

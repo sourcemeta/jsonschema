@@ -268,6 +268,11 @@ auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
     stream << "\"\n";
     stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
 
+    if (entry.vocabulary.first) {
+      stream << "   at vocabulary \""
+             << entry.vocabulary.second.value_or("<unknown>") << "\"\n";
+    }
+
     // To make it easier to read
     if (std::next(iterator) != output.cend()) {
       stream << "\n";

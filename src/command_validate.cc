@@ -57,12 +57,21 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto fast_mode{options.contains("f") || options.contains("fast")};
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
+
+  const sourcemeta::core::JSON bundled{
+      sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
+                               custom_resolver, dialect)};
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
+  frame.analyse(bundled, sourcemeta::core::schema_official_walker,
+                custom_resolver, dialect);
   const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::core::schema_official_walker, custom_resolver,
-      sourcemeta::blaze::default_schema_compiler,
+      bundled, sourcemeta::core::schema_official_walker, custom_resolver,
+      sourcemeta::blaze::default_schema_compiler, frame,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
                 : sourcemeta::blaze::Mode::Exhaustive,
       dialect)};
+
   sourcemeta::blaze::Evaluator evaluator;
 
   bool result{true};
@@ -82,7 +91,9 @@ auto sourcemeta::jsonschema::cli::validate(
           index += 1;
           std::ostringstream error;
           sourcemeta::blaze::SimpleOutput output{instance};
-          sourcemeta::blaze::TraceOutput trace_output;
+          sourcemeta::blaze::TraceOutput trace_output{
+              sourcemeta::core::schema_official_walker, custom_resolver,
+              sourcemeta::core::empty_weak_pointer, frame};
           bool subresult = true;
           if (benchmark) {
             const auto timestamp_start{
@@ -142,7 +153,9 @@ auto sourcemeta::jsonschema::cli::validate(
           sourcemeta::jsonschema::cli::read_file(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
-      sourcemeta::blaze::TraceOutput trace_output;
+      sourcemeta::blaze::TraceOutput trace_output{
+          sourcemeta::core::schema_official_walker, custom_resolver,
+          sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
         const auto timestamp_start{std::chrono::high_resolution_clock::now()};
