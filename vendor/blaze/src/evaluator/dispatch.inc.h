@@ -1129,6 +1129,7 @@ INSTRUCTION_HANDLER(ControlGroupWhenDefinesDirect) {
   assert(!instruction.children.empty());
   assert(instruction.relative_instance_location.empty());
   const auto &value{*std::get_if<ValueProperty>(&instruction.value)};
+
   if (instance.is_object() && instance.defines(value.first, value.second)) {
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, instance)) {
@@ -1139,6 +1140,29 @@ INSTRUCTION_HANDLER(ControlGroupWhenDefinesDirect) {
   }
 
   EVALUATE_END_PASS_THROUGH(ControlGroupWhenDefinesDirect);
+}
+
+INSTRUCTION_HANDLER(ControlGroupWhenType) {
+  SOURCEMETA_MAYBE_UNUSED(depth);
+  SOURCEMETA_MAYBE_UNUSED(schema);
+  SOURCEMETA_MAYBE_UNUSED(callback);
+  SOURCEMETA_MAYBE_UNUSED(instance);
+  SOURCEMETA_MAYBE_UNUSED(property_target);
+  SOURCEMETA_MAYBE_UNUSED(evaluator);
+  EVALUATE_BEGIN_PASS_THROUGH(ControlGroupWhenType);
+  assert(!instruction.children.empty());
+  assert(instruction.relative_instance_location.empty());
+  const auto value{*std::get_if<ValueType>(&instruction.value)};
+  if (instance.type() == value) {
+    for (const auto &child : instruction.children) {
+      if (!EVALUATE_RECURSE(child, instance)) {
+        result = false;
+        break;
+      }
+    }
+  }
+
+  EVALUATE_END_PASS_THROUGH(ControlGroupWhenType);
 }
 
 INSTRUCTION_HANDLER(ControlLabel) {
@@ -2538,7 +2562,7 @@ using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
                                  sourcemeta::blaze::Evaluator &);
 
 // Must have same order as InstructionIndex
-static constexpr DispatchHandler handlers[93] = {
+static constexpr DispatchHandler handlers[94] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2627,6 +2651,7 @@ static constexpr DispatchHandler handlers[93] = {
     ControlGroup,
     ControlGroupWhenDefines,
     ControlGroupWhenDefinesDirect,
+    ControlGroupWhenType,
     ControlLabel,
     ControlMark,
     ControlEvaluate,

@@ -104,6 +104,14 @@ auto sourcemeta::blaze::default_schema_compiler(
           compiler_2019_09_applicator_unevaluatedproperties);
   COMPILE("https://json-schema.org/draft/2020-12/vocab/unevaluated",
           "unevaluatedItems", compiler_2019_09_applicator_unevaluateditems);
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
+          "contentEncoding", compiler_2019_09_content_contentencoding);
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
+          "contentMediaType", compiler_2019_09_content_contentmediatype);
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
+          "contentSchema", compiler_2019_09_content_contentschema);
+  COMPILE("https://json-schema.org/draft/2020-12/vocab/format-annotation",
+          "format", compiler_2019_09_format_format);
 
   // Same as Draft 7
 
@@ -201,6 +209,14 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
           "additionalProperties",
           compiler_2019_09_applicator_additionalproperties);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
+          "contentEncoding", compiler_2019_09_content_contentencoding);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
+          "contentMediaType", compiler_2019_09_content_contentmediatype);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
+          "contentSchema", compiler_2019_09_content_contentschema);
+  COMPILE("https://json-schema.org/draft/2019-09/vocab/format", "format",
+          compiler_2019_09_format_format);
 
   // Same as Draft 7
 

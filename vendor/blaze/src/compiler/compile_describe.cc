@@ -528,6 +528,22 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "format") {
+      std::ostringstream message;
+      message << "The logical type of the";
+      if (instance_location.empty()) {
+        message << " instance";
+      } else {
+        message << " instance location \"";
+        stringify(instance_location, message);
+        message << "\"";
+      }
+
+      message << " was expected to be ";
+      stringify(annotation, message);
+      return message.str();
+    }
+
     std::ostringstream message;
     message << "The unrecognized keyword " << escape_string(keyword)
             << " was collected as the annotation ";
