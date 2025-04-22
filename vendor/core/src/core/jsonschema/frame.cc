@@ -14,8 +14,8 @@ enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 
 static auto find_anchors(const sourcemeta::core::JSON &schema,
                          const sourcemeta::core::Vocabularies &vocabularies)
-    -> std::map<std::string, AnchorType> {
-  std::map<std::string, AnchorType> result;
+    -> std::map<sourcemeta::core::JSON::String, AnchorType> {
+  std::map<sourcemeta::core::JSON::String, AnchorType> result;
 
   // 2020-12
   if (schema.is_object() &&
@@ -74,7 +74,8 @@ static auto find_anchors(const sourcemeta::core::JSON &schema,
       const sourcemeta::core::URI identifier(schema.at("$id").to_string());
       if (identifier.is_fragment_only()) {
         result.insert(
-            {std::string{identifier.fragment().value()}, AnchorType::Static});
+            {sourcemeta::core::JSON::String{identifier.fragment().value()},
+             AnchorType::Static});
       }
     }
   }
@@ -88,7 +89,8 @@ static auto find_anchors(const sourcemeta::core::JSON &schema,
       const sourcemeta::core::URI identifier(schema.at("id").to_string());
       if (identifier.is_fragment_only()) {
         result.insert(
-            {std::string{identifier.fragment().value()}, AnchorType::Static});
+            {sourcemeta::core::JSON::String{identifier.fragment().value()},
+             AnchorType::Static});
       }
     }
   }
@@ -97,10 +99,12 @@ static auto find_anchors(const sourcemeta::core::JSON &schema,
 }
 
 static auto find_nearest_bases(
-    const std::map<sourcemeta::core::Pointer, std::vector<std::string>> &bases,
+    const std::map<sourcemeta::core::Pointer,
+                   std::vector<sourcemeta::core::JSON::String>> &bases,
     const sourcemeta::core::Pointer &pointer,
-    const std::optional<std::string> &default_base)
-    -> std::pair<std::vector<std::string>, sourcemeta::core::Pointer> {
+    const std::optional<sourcemeta::core::JSON::String> &default_base)
+    -> std::pair<std::vector<sourcemeta::core::JSON::String>,
+                 sourcemeta::core::Pointer> {
   for (const auto &subpointer : sourcemeta::core::SubPointerWalker{pointer}) {
     if (bases.contains(subpointer)) {
       return {bases.at(subpointer), subpointer};
@@ -115,10 +119,14 @@ static auto find_nearest_bases(
 }
 
 static auto find_every_base(
-    const std::map<sourcemeta::core::Pointer, std::vector<std::string>> &bases,
+    const std::map<sourcemeta::core::Pointer,
+                   std::vector<sourcemeta::core::JSON::String>> &bases,
     const sourcemeta::core::Pointer &pointer)
-    -> std::vector<std::pair<std::string, sourcemeta::core::Pointer>> {
-  std::vector<std::pair<std::string, sourcemeta::core::Pointer>> result;
+    -> std::vector<
+        std::pair<sourcemeta::core::JSON::String, sourcemeta::core::Pointer>> {
+  std::vector<
+      std::pair<sourcemeta::core::JSON::String, sourcemeta::core::Pointer>>
+      result;
 
   for (const auto &subpointer : sourcemeta::core::SubPointerWalker{pointer}) {
     if (bases.contains(subpointer)) {
@@ -137,8 +145,8 @@ static auto find_every_base(
   return result;
 }
 
-static auto ref_overrides_adjacent_keywords(const std::string &base_dialect)
-    -> bool {
+static auto ref_overrides_adjacent_keywords(
+    const sourcemeta::core::JSON::String &base_dialect) -> bool {
   // In older drafts, the presence of `$ref` would override any sibling
   // keywords
   // See
@@ -153,7 +161,9 @@ static auto ref_overrides_adjacent_keywords(const std::string &base_dialect)
          base_dialect == "http://json-schema.org/draft-03/hyper-schema#";
 }
 
-static auto supports_id_anchors(const std::string &base_dialect) -> bool {
+static auto
+supports_id_anchors(const sourcemeta::core::JSON::String &base_dialect)
+    -> bool {
   return base_dialect == "http://json-schema.org/draft-07/schema#" ||
          base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
          base_dialect == "http://json-schema.org/draft-06/schema#" ||
@@ -163,10 +173,10 @@ static auto supports_id_anchors(const std::string &base_dialect) -> bool {
 }
 
 static auto fragment_string(const sourcemeta::core::URI &uri)
-    -> std::optional<std::string> {
+    -> std::optional<sourcemeta::core::JSON::String> {
   const auto fragment{uri.fragment()};
   if (fragment.has_value()) {
-    return std::string{fragment.value()};
+    return sourcemeta::core::JSON::String{fragment.value()};
   }
 
   return std::nullopt;
@@ -177,11 +187,13 @@ store(sourcemeta::core::SchemaFrame::Locations &frame,
       sourcemeta::core::SchemaFrame::Instances &instances,
       const sourcemeta::core::SchemaReferenceType type,
       const sourcemeta::core::SchemaFrame::LocationType entry_type,
-      const std::string &uri, const std::optional<std::string> &root_id,
-      const std::string &base_id,
+      const sourcemeta::core::JSON::String &uri,
+      const std::optional<sourcemeta::core::JSON::String> &root_id,
+      const sourcemeta::core::JSON::String &base_id,
       const sourcemeta::core::Pointer &pointer_from_root,
       const sourcemeta::core::Pointer &pointer_from_base,
-      const std::string &dialect, const std::string &base_dialect,
+      const sourcemeta::core::JSON::String &dialect,
+      const sourcemeta::core::JSON::String &base_dialect,
       const std::vector<sourcemeta::core::PointerTemplate> &instance_locations,
       const std::optional<sourcemeta::core::Pointer> &parent,
       const bool ignore_if_present = false) -> void {
@@ -206,7 +218,7 @@ store(sourcemeta::core::SchemaFrame::Locations &frame,
 
 struct InternalEntry {
   const sourcemeta::core::SchemaIteratorEntry common;
-  const std::optional<std::string> id;
+  const std::optional<sourcemeta::core::JSON::String> id;
 };
 
 static auto traverse_origin_instance_locations(
@@ -510,27 +522,27 @@ auto operator<<(std::ostream &stream, const SchemaFrame &frame)
 
 auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
                           const SchemaResolver &resolver,
-                          const std::optional<std::string> &default_dialect,
-                          const std::optional<std::string> &default_id)
+                          const std::optional<JSON::String> &default_dialect,
+                          const std::optional<JSON::String> &default_id)
     -> void {
   std::vector<InternalEntry> subschema_entries;
   std::map<Pointer, CacheSubschema> subschemas;
-  std::map<sourcemeta::core::Pointer, std::vector<std::string>> base_uris;
-  std::map<sourcemeta::core::Pointer, std::vector<std::string>> base_dialects;
+  std::map<sourcemeta::core::Pointer, std::vector<JSON::String>> base_uris;
+  std::map<sourcemeta::core::Pointer, std::vector<JSON::String>> base_dialects;
 
-  const std::optional<std::string> root_base_dialect{
+  const std::optional<JSON::String> root_base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!root_base_dialect.has_value()) {
     throw SchemaError("Could not determine the base dialect of the schema");
   }
 
-  std::optional<std::string> root_id{sourcemeta::core::identify(
+  std::optional<JSON::String> root_id{sourcemeta::core::identify(
       schema, root_base_dialect.value(), default_id)};
   if (root_id.has_value()) {
     root_id = URI{root_id.value()}.canonicalize().recompose();
   }
 
-  const std::optional<std::string> root_dialect{
+  const std::optional<JSON::String> root_dialect{
       sourcemeta::core::dialect(schema, default_dialect)};
   assert(root_dialect.has_value());
 
@@ -568,7 +580,7 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
     assert(entry.base_dialect.has_value());
 
     // Schema identifier
-    std::optional<std::string> id{sourcemeta::core::identify(
+    std::optional<JSON::String> id{sourcemeta::core::identify(
         entry.subschema.get(), entry.base_dialect.value(),
         entry.pointer.empty() ? default_id : std::nullopt)};
 
@@ -611,7 +623,7 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
 
           const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
           maybe_relative.try_resolve_from(base).canonicalize();
-          const std::string new_id{maybe_relative.recompose()};
+          const JSON::String new_id{maybe_relative.recompose()};
 
           if (!maybe_relative_is_absolute ||
               !this->locations_.contains(
@@ -667,7 +679,7 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
         }
 
         metaschema.canonicalize();
-        const std::string destination{metaschema.recompose()};
+        const JSON::String destination{metaschema.recompose()};
         assert(entry.common.subschema.get().defines("$schema"));
         this->references_.insert_or_assign(
             {SchemaReferenceType::Static,
@@ -971,7 +983,7 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
 
   if (standalone) {
     // Find all dynamic anchors
-    std::map<std::string, std::vector<std::string>> dynamic_anchors;
+    std::map<JSON::String, std::vector<JSON::String>> dynamic_anchors;
     for (const auto &entry : this->locations_) {
       if (entry.first.first != SchemaReferenceType::Dynamic ||
           entry.second.type != SchemaFrame::LocationType::Anchor) {
@@ -979,9 +991,9 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
       }
 
       const URI anchor_uri{entry.first.second};
-      const std::string fragment{anchor_uri.fragment().value_or("")};
+      const JSON::String fragment{anchor_uri.fragment().value_or("")};
       if (!dynamic_anchors.contains(fragment)) {
-        dynamic_anchors.emplace(fragment, std::vector<std::string>{});
+        dynamic_anchors.emplace(fragment, std::vector<JSON::String>{});
       }
 
       dynamic_anchors[fragment].push_back(entry.first.second);
@@ -1072,7 +1084,7 @@ auto SchemaFrame::vocabularies(const Location &location,
 
 auto SchemaFrame::uri(const Location &location,
                       const Pointer &relative_schema_location) const
-    -> std::string {
+    -> JSON::String {
   return to_uri(location.relative_pointer.concat(relative_schema_location),
                 location.base)
       .recompose();
@@ -1094,7 +1106,7 @@ auto SchemaFrame::traverse(const Location &location,
   return dynamic_match->second;
 }
 
-auto SchemaFrame::traverse(const std::string &uri) const
+auto SchemaFrame::traverse(const JSON::String &uri) const
     -> std::optional<std::reference_wrapper<const Location>> {
   const auto static_result{
       this->locations_.find({SchemaReferenceType::Static, uri})};

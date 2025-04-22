@@ -12,10 +12,10 @@ SchemaMapResolver::SchemaMapResolver() {}
 SchemaMapResolver::SchemaMapResolver(const SchemaResolver &resolver)
     : default_resolver{resolver} {}
 
-auto SchemaMapResolver::add(const JSON &schema,
-                            const std::optional<std::string> &default_dialect,
-                            const std::optional<std::string> &default_id)
-    -> bool {
+auto SchemaMapResolver::add(
+    const JSON &schema, const std::optional<std::string> &default_dialect,
+    const std::optional<std::string> &default_id,
+    const std::function<void(const JSON::String &)> &callback) -> bool {
   assert(sourcemeta::core::is_schema(schema));
 
   // Registering the top-level schema is not enough. We need to check
@@ -58,6 +58,10 @@ auto SchemaMapResolver::add(const JSON &schema,
       std::ostringstream error;
       error << "Cannot register the same identifier twice: " << key.second;
       throw SchemaError(error.str());
+    }
+
+    if (callback) {
+      callback(key.second);
     }
 
     added_any_schema = true;

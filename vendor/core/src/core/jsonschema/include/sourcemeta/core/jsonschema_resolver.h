@@ -53,7 +53,9 @@ public:
   /// schema was imported into the resolver
   auto add(const JSON &schema,
            const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt) -> bool;
+           const std::optional<std::string> &default_id = std::nullopt,
+           const std::function<void(const JSON::String &)> &callback = nullptr)
+      -> bool;
 
   /// Attempt to resolve a schema
   auto operator()(std::string_view identifier) const -> std::optional<JSON>;

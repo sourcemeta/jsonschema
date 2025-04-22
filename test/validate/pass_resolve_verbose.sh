@@ -56,9 +56,12 @@ EOF
   --resolve "$TMP/foo.json" --resolve "$TMP/schemas" --verbose 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
-Importing schema into the resolution context: $(realpath "$TMP")/foo.json
-Importing schema into the resolution context: $(realpath "$TMP")/schemas/baz.json
-Importing schema into the resolution context: $(realpath "$TMP")/schemas/nested/bar.json
+Detecting schema resources from file: $(realpath "$TMP")/foo.json
+Importing schema into the resolution context: https://example.com/foo
+Detecting schema resources from file: $(realpath "$TMP")/schemas/baz.json
+Importing schema into the resolution context: https://example.com/baz
+Detecting schema resources from file: $(realpath "$TMP")/schemas/nested/bar.json
+Importing schema into the resolution context: https://example.com/bar
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 EOF

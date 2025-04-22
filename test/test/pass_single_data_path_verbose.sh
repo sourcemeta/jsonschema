@@ -44,7 +44,8 @@ EOF
 "$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Importing schema into the resolution context: $(realpath "$TMP")/schema.json
+Detecting schema resources from file: $(realpath "$TMP")/schema.json
+Importing schema into the resolution context: https://example.com
 $(realpath "$TMP")/test.json:
 Reading test instance file: $(realpath "$TMP")/data-valid.json
   1/2 PASS First test

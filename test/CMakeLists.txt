@@ -89,11 +89,6 @@ add_jsonschema_test_unix(validate/fail_yaml)
 add_jsonschema_test_unix(validate/pass_json_ref_yaml)
 add_jsonschema_test_unix(validate/pass_process_substitution)
 
-# TODO: Make this test pass on Linux. It hangs for some reason
-if(APPLE)
-  add_jsonschema_test_unix(validate/pass_json_ref_yaml_http)
-endif()
-
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
 add_jsonschema_test_unix(metaschema/fail_trace)
@@ -229,3 +224,8 @@ add_jsonschema_test_unix_ci(fail_validate_http_non_schema_verbose)
 add_jsonschema_test_unix_ci(pass_validate_http)
 add_jsonschema_test_unix_ci(pass_validate_http_verbose)
 add_jsonschema_test_unix_ci(precommit_lint)
+
+# TODO: Make this test pass on Linux. It hangs for some reason
+if(APPLE)
+  add_jsonschema_test_unix_ci(pass_validate_json_ref_yaml_http)
+endif()

@@ -331,9 +331,15 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
     for (const auto &entry :
          for_each_json(options.at("resolve"), parse_ignore(options),
                        parse_extensions(options))) {
-      log_verbose(options) << "Importing schema into the resolution context: "
+      log_verbose(options) << "Detecting schema resources from file: "
                            << entry.first.string() << "\n";
-      const auto result = dynamic_resolver.add(entry.second, default_dialect);
+      const auto result = dynamic_resolver.add(
+          entry.second, default_dialect, std::nullopt,
+          [&options](const auto &identifier) {
+            log_verbose(options)
+                << "Importing schema into the resolution context: "
+                << identifier << "\n";
+          });
       if (!result) {
         std::cerr
             << "warning: No schema resources were imported from this file\n";
@@ -347,9 +353,15 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
     for (const auto &entry :
          for_each_json(options.at("r"), parse_ignore(options),
                        parse_extensions(options))) {
-      log_verbose(options) << "Importing schema into the resolution context: "
+      log_verbose(options) << "Detecting schema resources from file: "
                            << entry.first.string() << "\n";
-      const auto result = dynamic_resolver.add(entry.second, default_dialect);
+      const auto result = dynamic_resolver.add(
+          entry.second, default_dialect, std::nullopt,
+          [&options](const auto &identifier) {
+            log_verbose(options)
+                << "Importing schema into the resolution context: "
+                << identifier << "\n";
+          });
       if (!result) {
         std::cerr
             << "warning: No schema resources were imported from this file\n";
