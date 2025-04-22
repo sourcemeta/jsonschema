@@ -48,7 +48,8 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Importing schema into the resolution context: $(realpath "$TMP")/schema.json
+Detecting schema resources from file: $(realpath "$TMP")/schema.json
+Importing schema into the resolution context: https://example.com
 $(realpath "$TMP")/test.json:
   1/4 PASS First test
   2/4 FAIL First failure

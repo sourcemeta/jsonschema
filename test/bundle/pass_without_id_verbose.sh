@@ -27,7 +27,8 @@ EOF
 "$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --without-id --verbose 1> "$TMP/result.json" 2>&1
 
 cat << EOF > "$TMP/expected.json"
-Importing schema into the resolution context: $(realpath "$TMP")/schemas/remote.json
+Detecting schema resources from file: $(realpath "$TMP")/schemas/remote.json
+Importing schema into the resolution context: https://example.com/nested
 warning: You are opting in to remove schema identifiers in the bundled schema.
 The only legit use case of this advanced feature we know of it to workaround
 non-compliant JSON Schema implementations such as Visual Studio Code.

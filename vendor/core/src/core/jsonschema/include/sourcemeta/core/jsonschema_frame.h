@@ -17,7 +17,6 @@
 #include <map>           // std::map
 #include <optional>      // std::optional
 #include <ostream>       // std::ostream
-#include <string>        // std::string
 #include <tuple>         // std::tuple
 #include <unordered_set> // std::set
 #include <utility>       // std::pair
@@ -115,11 +114,11 @@ public:
 
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
-    std::string destination;
+    JSON::String destination;
     // TODO: This string can be a `string_view` over the `destination`
-    std::optional<std::string> base;
+    std::optional<JSON::String> base;
     // TODO: This string can be a `string_view` over the `destination`
-    std::optional<std::string> fragment;
+    std::optional<JSON::String> fragment;
   };
 
   /// A JSON Schema reference map is a mapping of a JSON Pointer
@@ -156,14 +155,14 @@ public:
     // TODO: Turn this into a weak pointer
     std::optional<Pointer> parent;
     LocationType type;
-    std::optional<std::string> root;
-    std::string base;
+    std::optional<JSON::String> root;
+    JSON::String base;
     // TODO: Turn this into a weak pointer
     Pointer pointer;
     // TODO: Turn this into a weak pointer
     Pointer relative_pointer;
-    std::string dialect;
-    std::string base_dialect;
+    JSON::String dialect;
+    JSON::String base_dialect;
   };
 
   // TODO: Indexing locations by reference type is wrong. We can index by just
@@ -172,7 +171,7 @@ public:
   /// JSON Pointers within the schema, and subschemas dialects. We call it
   /// reference frame as this mapping is essential for resolving references.
   using Locations =
-      std::map<std::pair<SchemaReferenceType, std::string>, Location>;
+      std::map<std::pair<SchemaReferenceType, JSON::String>, Location>;
 
   // TODO: Turn the mapped value into a proper set
   /// A set of unresolved instance locations
@@ -182,11 +181,11 @@ public:
   auto to_json() const -> JSON;
 
   /// Analyse a given schema
-  auto analyse(const JSON &schema, const SchemaWalker &walker,
-               const SchemaResolver &resolver,
-               const std::optional<std::string> &default_dialect = std::nullopt,
-               const std::optional<std::string> &default_id = std::nullopt)
-      -> void;
+  auto
+  analyse(const JSON &schema, const SchemaWalker &walker,
+          const SchemaResolver &resolver,
+          const std::optional<JSON::String> &default_dialect = std::nullopt,
+          const std::optional<JSON::String> &default_id = std::nullopt) -> void;
 
   /// Access the analysed schema locations
   auto locations() const noexcept -> const Locations &;
@@ -201,7 +200,7 @@ public:
   /// Get the URI associated with a location entry
   auto uri(const Location &location,
            const Pointer &relative_schema_location = empty_pointer) const
-      -> std::string;
+      -> JSON::String;
 
   /// Get the location associated by traversing a pointer from another location
   auto traverse(const Location &location,
@@ -209,7 +208,7 @@ public:
       -> const Location &;
 
   /// Get the location associated with a given URI
-  auto traverse(const std::string &uri) const
+  auto traverse(const JSON::String &uri) const
       -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Try to dereference a reference location into its destination location
@@ -265,7 +264,7 @@ struct SchemaUnevaluatedEntry {
 
 /// @ingroup jsonschema
 /// The flattened set of unevaluated cases in the schema by absolute URI
-using SchemaUnevaluatedEntries = std::map<std::string, SchemaUnevaluatedEntry>;
+using SchemaUnevaluatedEntries = std::map<JSON::String, SchemaUnevaluatedEntry>;
 
 /// @ingroup jsonschema
 ///
