@@ -440,5 +440,90 @@ auto compiler_2019_09_applicator_patternproperties(
       requires_evaluation(context, schema_context));
 }
 
+auto compiler_2019_09_content_contentencoding(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
+  if (context.mode == Mode::FastValidation) {
+    return {};
+  }
+
+  Instructions children{
+      make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+           schema_context, dynamic_context,
+           sourcemeta::core::JSON{
+               schema_context.schema.at(dynamic_context.keyword)})};
+
+  return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+               context, schema_context,
+               relative_dynamic_context(dynamic_context), ValueType::String,
+               std::move(children))};
+}
+
+auto compiler_2019_09_content_contentmediatype(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
+  if (context.mode == Mode::FastValidation) {
+    return {};
+  }
+
+  Instructions children{
+      make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+           schema_context, dynamic_context,
+           sourcemeta::core::JSON{
+               schema_context.schema.at(dynamic_context.keyword)})};
+
+  return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+               context, schema_context,
+               relative_dynamic_context(dynamic_context), ValueType::String,
+               std::move(children))};
+}
+
+auto compiler_2019_09_content_contentschema(
+    const Context &context, const SchemaContext &schema_context,
+    const DynamicContext &dynamic_context, const Instructions &)
+    -> Instructions {
+  if (context.mode == Mode::FastValidation) {
+    return {};
+  }
+
+  // The `contentSchema` keyword does nothing without `contentMediaType`
+  if (!schema_context.schema.defines("contentMediaType")) {
+    return {};
+  }
+
+  Instructions children{
+      make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+           schema_context, dynamic_context,
+           sourcemeta::core::JSON{
+               schema_context.schema.at(dynamic_context.keyword)})};
+
+  return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+               context, schema_context,
+               relative_dynamic_context(dynamic_context), ValueType::String,
+               std::move(children))};
+}
+
+auto compiler_2019_09_format_format(const Context &context,
+                                    const SchemaContext &schema_context,
+                                    const DynamicContext &dynamic_context,
+                                    const Instructions &) -> Instructions {
+  if (context.mode == Mode::FastValidation) {
+    return {};
+  }
+
+  Instructions children{
+      make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+           schema_context, dynamic_context,
+           sourcemeta::core::JSON{
+               schema_context.schema.at(dynamic_context.keyword)})};
+
+  return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+               context, schema_context,
+               relative_dynamic_context(dynamic_context), ValueType::String,
+               std::move(children))};
+}
+
 } // namespace internal
 #endif
