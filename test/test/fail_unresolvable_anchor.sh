@@ -43,7 +43,7 @@ Detecting schema resources from file: $(realpath "$TMP")/schema.json
 Importing schema into the resolution context: https://example.com
 $(realpath "$TMP")/test.json:
 error: Could not resolve schema under test
-  at https://example.com#foo
+  https://example.com#foo
 
 This is likely because you forgot to import such schema using --resolve/-r
 EOF
