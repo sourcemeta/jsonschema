@@ -1,4 +1,4 @@
-Framing
+Inspect
 =======
 
 ```sh
@@ -8,11 +8,9 @@ jsonschema inspect <schema.json|.yaml> [--json/-j] [--verbose/-v]
 
 To evaluate a schema, an implementation will first scan it to determine the
 dialects and keywords in use, walk over its valid subschemas, and resolve URI
-references between them. We refer to this
-[reconnaissance](https://en.wikipedia.org/wiki/Reconnaissance) process as
-"framing". The JSON Schema CLI offers a `inspect` command so you can "see through
-the eyes" of a JSON Schema implementation previous to the evaluation step. This
-is often useful for debugging purposes.
+references between them. The JSON Schema CLI offers a `inspect` command so you
+can "see through the eyes" of a JSON Schema implementation previous to the
+evaluation step. This is often useful for debugging purposes.
 
 Examples
 --------
@@ -28,7 +26,7 @@ For example, consider the following schema that includes a local reference:
 }
 ```
 
-The framing process will result in the following entries that capture the
+The inspect process will result in the following entries that capture the
 reference:
 
 ```
