@@ -7,6 +7,7 @@
 
 #include <sourcemeta/blaze/compiler_error.h>
 #include <sourcemeta/blaze/compiler_output.h>
+#include <sourcemeta/blaze/compiler_unevaluated.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
@@ -103,7 +104,7 @@ struct Context {
   /// Whether the schema makes use of dynamic scoping
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
-  const sourcemeta::core::SchemaUnevaluatedEntries unevaluated;
+  const SchemaUnevaluatedEntries unevaluated;
   /// The list of subschemas that are precompiled at the beginning of the
   /// instruction set
   const std::set<std::string> precompiled_static_schemas;

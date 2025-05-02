@@ -6,41 +6,35 @@
 
 namespace {
 
-auto definitions_keyword(const sourcemeta::core::Vocabularies &vocabularies)
-    -> std::string {
-  if (vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/core") ||
-      vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core")) {
-    return "$defs";
-  }
-
-  if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-07/hyper-schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-06/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-06/hyper-schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-04/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-04/hyper-schema#")) {
-    return "definitions";
-  }
-
-  // We don't attempt to bundle on dialects where we
-  // don't know where to put the embedded schemas
-  throw sourcemeta::core::SchemaError(
-      "Could not determine how to perform bundling in this dialect");
-}
-
-auto embed_schema(sourcemeta::core::JSON &definitions,
+auto embed_schema(sourcemeta::core::JSON &root,
+                  const sourcemeta::core::Pointer &container,
                   const std::string &identifier,
                   const sourcemeta::core::JSON &target) -> void {
+  auto *current{&root};
+  for (const auto &token : container) {
+    if (token.is_property()) {
+      current->assign_if_missing(token.to_property(),
+                                 sourcemeta::core::JSON::make_object());
+      current = &current->at(token.to_property());
+    } else {
+      assert(current->is_array() && current->size() >= token.to_index());
+      current = &current->at(token.to_index());
+    }
+  }
+
+  if (!current->is_object()) {
+    throw sourcemeta::core::SchemaError(
+        "Could not bundle to a container path that is not an object");
+  }
+
   std::ostringstream key;
   key << identifier;
   // Ensure we get a definitions entry that does not exist
-  while (definitions.defines(key.str())) {
+  while (current->defines(key.str())) {
     key << "/x";
   }
 
-  definitions.assign(key.str(), target);
+  current->assign(key.str(), target);
 }
 
 auto is_official_metaschema_reference(const sourcemeta::core::Pointer &pointer,
@@ -50,13 +44,29 @@ auto is_official_metaschema_reference(const sourcemeta::core::Pointer &pointer,
          sourcemeta::core::schema_official_resolver(destination).has_value();
 }
 
-auto bundle_schema(sourcemeta::core::JSON &root, const std::string &container,
+auto bundle_schema(sourcemeta::core::JSON &root,
+                   const sourcemeta::core::Pointer &container,
                    const sourcemeta::core::JSON &subschema,
                    sourcemeta::core::SchemaFrame &frame,
                    const sourcemeta::core::SchemaWalker &walker,
                    const sourcemeta::core::SchemaResolver &resolver,
-                   const std::optional<std::string> &default_dialect) -> void {
-  frame.analyse(subschema, walker, resolver, default_dialect);
+                   const std::optional<std::string> &default_dialect,
+                   const sourcemeta::core::SchemaFrame::Paths &paths,
+                   const std::size_t depth = 0) -> void {
+  // Keep in mind that the resulting frame does miss some information. For
+  // example, when we recurse to framing embedded schemas, we will frame them
+  // without keeping their new relationship to their parent (after embedding if
+  // to the container location). However, that's fine for the purpose of this
+  // function, given we don't pass the frame back to the caller
+  if (depth == 0) {
+    frame.analyse(
+        subschema, walker, resolver, default_dialect, std::nullopt,
+        // We only want to frame in "wrapper" mode for the top level object
+        paths);
+  } else {
+    frame.analyse(subschema, walker, resolver, default_dialect);
+  }
+
   // Otherwise, given recursion, we would be modifying the
   // references list *while* looping on it
   const auto references_copy = frame.references();
@@ -77,8 +87,6 @@ auto bundle_schema(sourcemeta::core::JSON &root, const std::string &container,
           reference.destination, key.second,
           "Could not resolve schema reference");
     }
-
-    root.assign_if_missing(container, sourcemeta::core::JSON::make_object());
 
     if (!reference.base.has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
@@ -123,9 +131,9 @@ auto bundle_schema(sourcemeta::core::JSON &root, const std::string &container,
       sourcemeta::core::reidentify(copy, identifier, resolver, default_dialect);
     }
 
-    embed_schema(root.at(container), identifier, copy);
+    embed_schema(root, container, identifier, copy);
     bundle_schema(root, container, copy, frame, walker, resolver,
-                  default_dialect);
+                  default_dialect, paths, depth + 1);
   }
 }
 
@@ -135,21 +143,54 @@ namespace sourcemeta::core {
 
 auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect) -> void {
-  const auto vocabularies{
-      sourcemeta::core::vocabularies(schema, resolver, default_dialect)};
+            const std::optional<std::string> &default_dialect,
+            const std::optional<Pointer> &default_container,
+            const SchemaFrame::Paths &paths) -> void {
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::References};
-  bundle_schema(schema, definitions_keyword(vocabularies), schema, frame,
-                walker, resolver, default_dialect);
+
+  if (default_container.has_value()) {
+    // This is undefined behavior
+    assert(!default_container.value().empty());
+    bundle_schema(schema, default_container.value(), schema, frame, walker,
+                  resolver, default_dialect, paths);
+    return;
+  }
+
+  const auto vocabularies{
+      sourcemeta::core::vocabularies(schema, resolver, default_dialect)};
+  if (vocabularies.contains(
+          "https://json-schema.org/draft/2020-12/vocab/core") ||
+      vocabularies.contains(
+          "https://json-schema.org/draft/2019-09/vocab/core")) {
+    bundle_schema(schema, {"$defs"}, schema, frame, walker, resolver,
+                  default_dialect, paths);
+  } else if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-07/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-06/schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-06/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-04/schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-04/hyper-schema#")) {
+    bundle_schema(schema, {"definitions"}, schema, frame, walker, resolver,
+                  default_dialect, paths);
+  } else {
+    // We don't attempt to bundle on dialects where we
+    // don't know where to put the embedded schemas
+    throw sourcemeta::core::SchemaError(
+        "Could not determine how to perform bundling in this dialect");
+  }
 }
 
 auto bundle(const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect)
-    -> sourcemeta::core::JSON {
+            const std::optional<std::string> &default_dialect,
+            const std::optional<Pointer> &default_container,
+            const SchemaFrame::Paths &paths) -> sourcemeta::core::JSON {
   sourcemeta::core::JSON copy = schema;
-  bundle(copy, walker, resolver, default_dialect);
+  bundle(copy, walker, resolver, default_dialect, default_container, paths);
   return copy;
 }
 

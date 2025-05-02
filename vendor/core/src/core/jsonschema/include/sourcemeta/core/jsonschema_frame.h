@@ -17,8 +17,9 @@
 #include <map>           // std::map
 #include <optional>      // std::optional
 #include <ostream>       // std::ostream
+#include <set>           // std::set
 #include <tuple>         // std::tuple
-#include <unordered_set> // std::set
+#include <unordered_set> // std::unordered_set
 #include <utility>       // std::pair
 #include <vector>        // std::vector
 
@@ -177,15 +178,20 @@ public:
   /// A set of unresolved instance locations
   using Instances = std::map<Pointer, std::vector<PointerTemplate>>;
 
+  /// A set of paths to frame within a schema wrapper
+  using Paths = std::set<Pointer>;
+
   /// Export the frame entries as JSON
   auto to_json() const -> JSON;
 
-  /// Analyse a given schema
+  /// Analyse a schema or set of schemas from a given root. Passing
+  /// multiple paths that have any overlap is undefined behaviour
   auto
-  analyse(const JSON &schema, const SchemaWalker &walker,
+  analyse(const JSON &root, const SchemaWalker &walker,
           const SchemaResolver &resolver,
           const std::optional<JSON::String> &default_dialect = std::nullopt,
-          const std::optional<JSON::String> &default_id = std::nullopt) -> void;
+          const std::optional<JSON::String> &default_id = std::nullopt,
+          const Paths &paths = {empty_pointer}) -> void;
 
   /// Access the analysed schema locations
   auto locations() const noexcept -> const Locations &;
@@ -247,61 +253,6 @@ private:
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto operator<<(std::ostream &stream, const SchemaFrame &frame)
     -> std::ostream &;
-
-// TODO: Eventually generalize this to detecting cross-keyword dependencies as
-// part of framing
-
-/// @ingroup jsonschema
-struct SchemaUnevaluatedEntry {
-  /// The absolute pointers of the static keyword dependencies
-  std::set<Pointer> static_dependencies;
-  /// The absolute pointers of the static keyword dependencies
-  std::set<Pointer> dynamic_dependencies;
-  /// Whether the entry cannot be fully resolved, which means
-  /// there might be unknown dynamic dependencies
-  bool unresolved{false};
-};
-
-/// @ingroup jsonschema
-/// The flattened set of unevaluated cases in the schema by absolute URI
-using SchemaUnevaluatedEntries = std::map<JSON::String, SchemaUnevaluatedEntry>;
-
-/// @ingroup jsonschema
-///
-/// This function performs a static analysis pass on `unevaluatedProperties` and
-/// `unevaluatedItems` occurences throughout the entire schema (if any).
-///
-/// For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
-/// #include <cassert>
-///
-/// const sourcemeta::core::JSON document =
-///     sourcemeta::core::parse_json(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "unevaluatedProperties": false
-/// })JSON");
-///
-/// sourcemeta::core::SchemaFrame
-///   frame{sourcemeta::core::SchemaFrame::Mode::References};
-///
-/// frame.analyse(document,
-///   sourcemeta::core::schema_official_walker,
-///   sourcemeta::core::schema_official_resolver);
-/// const auto result{sourcemeta::core::unevaluated(
-///     schema, frame,
-///     sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver)};
-///
-/// assert(result.contains("#/unevaluatedProperties"));
-/// assert(!result.at("#/unevaluatedProperties").dynamic);
-/// assert(result.at("#/unevaluatedProperties").dependencies.empty());
-/// ```
-auto SOURCEMETA_CORE_JSONSCHEMA_EXPORT unevaluated(
-    const JSON &schema, const SchemaFrame &frame, const SchemaWalker &walker,
-    const SchemaResolver &resolver) -> SchemaUnevaluatedEntries;
 
 } // namespace sourcemeta::core
 

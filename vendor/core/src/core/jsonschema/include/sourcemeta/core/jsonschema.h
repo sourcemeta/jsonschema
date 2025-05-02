@@ -6,6 +6,8 @@
 #endif
 
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+
 #include <sourcemeta/core/jsonschema_error.h>
 #include <sourcemeta/core/jsonschema_frame.h>
 #include <sourcemeta/core/jsonschema_resolver.h>
@@ -16,6 +18,7 @@
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt
+#include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -538,8 +541,9 @@ auto reference_visit(
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect = std::nullopt)
-    -> void;
+            const std::optional<std::string> &default_dialect = std::nullopt,
+            const std::optional<Pointer> &default_container = std::nullopt,
+            const SchemaFrame::Paths &paths = {empty_pointer}) -> void;
 
 /// @ingroup jsonschema
 ///
@@ -595,8 +599,9 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(const JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect = std::nullopt)
-    -> JSON;
+            const std::optional<std::string> &default_dialect = std::nullopt,
+            const std::optional<Pointer> &default_container = std::nullopt,
+            const SchemaFrame::Paths &paths = {empty_pointer}) -> JSON;
 
 /// @ingroup jsonschema
 ///

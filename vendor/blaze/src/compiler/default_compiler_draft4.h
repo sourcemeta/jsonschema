@@ -560,7 +560,7 @@ auto compiler_draft4_validation_required(const Context &context,
     ValueStringSet properties_set{json_array_to_string_set(
         schema_context.schema.at(dynamic_context.keyword))};
     if (properties_set.size() == 1) {
-      if (context.mode == Mode::FastValidation && assume_object) {
+      if (assume_object) {
         return {
             make(sourcemeta::blaze::InstructionIndex::AssertionDefinesStrict,
                  context, schema_context, dynamic_context,
@@ -630,7 +630,7 @@ auto compiler_draft4_validation_required(const Context &context,
                  context, schema_context, dynamic_context,
                  std::move(properties_set))};
       }
-    } else if (context.mode == Mode::FastValidation && assume_object) {
+    } else if (assume_object) {
       return {make(
           sourcemeta::blaze::InstructionIndex::AssertionDefinesAllStrict,
           context, schema_context, dynamic_context, std::move(properties_set))};
@@ -639,7 +639,7 @@ auto compiler_draft4_validation_required(const Context &context,
                    context, schema_context, dynamic_context,
                    std::move(properties_set))};
     }
-  } else if (context.mode == Mode::FastValidation && assume_object) {
+  } else if (assume_object) {
     assert(
         schema_context.schema.at(dynamic_context.keyword).front().is_string());
     return {make(sourcemeta::blaze::InstructionIndex::AssertionDefinesStrict,
