@@ -198,7 +198,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   auto unevaluated{
-      sourcemeta::core::unevaluated(schema, frame, walker, resolver)};
+      sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
   const Context context{schema,
                         frame,

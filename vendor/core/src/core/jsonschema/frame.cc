@@ -182,6 +182,14 @@ static auto fragment_string(const sourcemeta::core::URI &uri)
   return std::nullopt;
 }
 
+[[noreturn]]
+static auto throw_already_exists(const sourcemeta::core::JSON::String &uri)
+    -> void {
+  std::ostringstream error;
+  error << "Schema identifier already exists: " << uri;
+  throw sourcemeta::core::SchemaError(error.str());
+}
+
 static auto
 store(sourcemeta::core::SchemaFrame::Locations &frame,
       sourcemeta::core::SchemaFrame::Instances &instances,
@@ -208,9 +216,7 @@ store(sourcemeta::core::SchemaFrame::Locations &frame,
                     pointer_from_base, dialect, base_dialect}})
           .second};
   if (!ignore_if_present && !inserted) {
-    std::ostringstream error;
-    error << "Schema identifier already exists: " << uri;
-    throw sourcemeta::core::SchemaError(error.str());
+    throw_already_exists(uri);
   }
 
   instances[pointer_from_root] = instance_locations;
@@ -520,264 +526,278 @@ auto operator<<(std::ostream &stream, const SchemaFrame &frame)
   return stream;
 }
 
-auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
+auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                           const SchemaResolver &resolver,
                           const std::optional<JSON::String> &default_dialect,
-                          const std::optional<JSON::String> &default_id)
-    -> void {
+                          const std::optional<JSON::String> &default_id,
+                          const SchemaFrame::Paths &paths) -> void {
   std::vector<InternalEntry> subschema_entries;
   std::map<Pointer, CacheSubschema> subschemas;
   std::map<sourcemeta::core::Pointer, std::vector<JSON::String>> base_uris;
   std::map<sourcemeta::core::Pointer, std::vector<JSON::String>> base_dialects;
 
-  const std::optional<JSON::String> root_base_dialect{
-      sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
-  if (!root_base_dialect.has_value()) {
-    throw SchemaError("Could not determine the base dialect of the schema");
-  }
+  for (const auto &path : paths) {
+    // Passing paths that overlap is undefined behavior. No path should
+    // start with another one, else you are doing something wrong
+    assert(
+        std::all_of(paths.cbegin(), paths.cend(), [&path](const auto &other) {
+          return path == other || !path.starts_with(other);
+        }));
 
-  std::optional<JSON::String> root_id{sourcemeta::core::identify(
-      schema, root_base_dialect.value(), default_id)};
-  if (root_id.has_value()) {
-    root_id = URI{root_id.value()}.canonicalize().recompose();
-  }
+    const auto &schema{get(root, path)};
 
-  const std::optional<JSON::String> root_dialect{
-      sourcemeta::core::dialect(schema, default_dialect)};
-  assert(root_dialect.has_value());
-
-  // If the top-level schema has a specific identifier but the user
-  // passes a different default identifier, then the schema is by
-  // definition known by two names, and we should handle that accordingly
-  const bool has_explicit_different_id{root_id.has_value() &&
-                                       default_id.has_value() &&
-                                       root_id.value() != default_id.value()};
-  if (has_explicit_different_id) {
-    if (this->mode_ == SchemaFrame::Mode::Instances) {
-      store(this->locations_, this->instances_, SchemaReferenceType::Static,
-            SchemaFrame::LocationType::Resource, default_id.value(),
-            root_id.value(), root_id.value(), sourcemeta::core::empty_pointer,
-            sourcemeta::core::empty_pointer, root_dialect.value(),
-            root_base_dialect.value(), {{}}, std::nullopt);
-    } else {
-      store(this->locations_, this->instances_, SchemaReferenceType::Static,
-            SchemaFrame::LocationType::Resource, default_id.value(),
-            root_id.value(), root_id.value(), sourcemeta::core::empty_pointer,
-            sourcemeta::core::empty_pointer, root_dialect.value(),
-            root_base_dialect.value(), {}, std::nullopt);
+    const std::optional<JSON::String> root_base_dialect{
+        sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
+    if (!root_base_dialect.has_value()) {
+      throw SchemaError("Could not determine the base dialect of the schema");
     }
 
-    base_uris.insert({sourcemeta::core::empty_pointer, {default_id.value()}});
-  }
+    std::optional<JSON::String> root_id{
+        // If we are dealing with nested schemas, then by definition
+        // the root has no identifier
+        !path.empty() ? std::nullopt
+                      : sourcemeta::core::identify(
+                            schema, root_base_dialect.value(), default_id)};
+    if (root_id.has_value()) {
+      root_id = URI{root_id.value()}.canonicalize().recompose();
+    }
 
-  for (auto &entry : sourcemeta::core::SchemaIterator{schema, walker, resolver,
-                                                      default_dialect}) {
-    // Dialect
-    assert(entry.dialect.has_value());
-    base_dialects.insert({entry.pointer, {entry.dialect.value()}});
+    const std::optional<JSON::String> root_dialect{
+        sourcemeta::core::dialect(schema, default_dialect)};
+    assert(root_dialect.has_value());
 
-    // Base dialect
-    assert(entry.base_dialect.has_value());
+    // If the top-level schema has a specific identifier but the user
+    // passes a different default identifier, then the schema is by
+    // definition known by two names, and we should handle that accordingly
+    const bool has_explicit_different_id{root_id.has_value() &&
+                                         default_id.has_value() &&
+                                         root_id.value() != default_id.value()};
+    if (has_explicit_different_id) {
+      if (this->mode_ == SchemaFrame::Mode::Instances) {
+        store(this->locations_, this->instances_, SchemaReferenceType::Static,
+              SchemaFrame::LocationType::Resource, default_id.value(),
+              root_id.value(), root_id.value(), path,
+              sourcemeta::core::empty_pointer, root_dialect.value(),
+              root_base_dialect.value(), {{}}, std::nullopt);
+      } else {
+        store(this->locations_, this->instances_, SchemaReferenceType::Static,
+              SchemaFrame::LocationType::Resource, default_id.value(),
+              root_id.value(), root_id.value(), path,
+              sourcemeta::core::empty_pointer, root_dialect.value(),
+              root_base_dialect.value(), {}, std::nullopt);
+      }
 
-    // Schema identifier
-    std::optional<JSON::String> id{sourcemeta::core::identify(
-        entry.subschema.get(), entry.base_dialect.value(),
-        entry.pointer.empty() ? default_id : std::nullopt)};
+      base_uris.insert({path, {default_id.value()}});
+    }
 
-    // Store information
-    subschema_entries.emplace_back(InternalEntry{entry, std::move(id)});
-    subschemas.emplace(entry.pointer,
-                       CacheSubschema{entry.instance_location,
-                                      entry.relative_instance_location,
-                                      entry.orphan, entry.parent});
-  }
+    std::vector<std::size_t> current_subschema_entries;
+    for (const auto &relative_entry : sourcemeta::core::SchemaIterator{
+             schema, walker, resolver, default_dialect}) {
+      // Rephrase the iterator entry as being for the current base
+      auto entry{relative_entry};
+      entry.pointer = path.concat(relative_entry.pointer);
+      if (entry.parent.has_value()) {
+        entry.parent = path.concat(relative_entry.parent.value());
+      }
 
-  for (const auto &entry : subschema_entries) {
-    if (entry.id.has_value()) {
-      const bool ref_overrides =
-          ref_overrides_adjacent_keywords(entry.common.base_dialect.value());
-      const bool is_pre_2019_09_location_independent_identifier =
-          supports_id_anchors(entry.common.base_dialect.value()) &&
-          sourcemeta::core::URI{entry.id.value()}.is_fragment_only();
+      // Dialect
+      assert(entry.dialect.has_value());
+      base_dialects.insert({entry.pointer, {entry.dialect.value()}});
 
-      if ((!entry.common.subschema.get().defines("$ref") || !ref_overrides) &&
-          // If we are dealing with a pre-2019-09 location independent
-          // identifier, we ignore it as a traditional identifier and take care
-          // of it as an anchor
-          !is_pre_2019_09_location_independent_identifier) {
-        const auto bases{
-            find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
-        for (const auto &base_string : bases.first) {
-          const sourcemeta::core::URI base{base_string};
-          sourcemeta::core::URI maybe_relative{entry.id.value()};
-          const auto maybe_fragment{maybe_relative.fragment()};
+      // Base dialect
+      assert(entry.base_dialect.has_value());
 
-          // See
-          // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.2.2
-          // See
-          // https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-01#section-8.2.1-5
-          if (maybe_fragment.has_value() && !maybe_fragment.value().empty()) {
-            throw SchemaError(
-                "Identifiers must not contain non-empty fragments");
-          }
+      // Schema identifier
+      std::optional<JSON::String> id{sourcemeta::core::identify(
+          entry.subschema.get(), entry.base_dialect.value(),
+          entry.pointer.empty() ? default_id : std::nullopt)};
 
-          const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
-          maybe_relative.try_resolve_from(base).canonicalize();
-          const JSON::String new_id{maybe_relative.recompose()};
+      // Store information
+      subschemas.emplace(entry.pointer,
+                         CacheSubschema{entry.instance_location,
+                                        entry.relative_instance_location,
+                                        entry.orphan, entry.parent});
+      subschema_entries.emplace_back(
+          InternalEntry{std::move(entry), std::move(id)});
+      current_subschema_entries.emplace_back(subschema_entries.size() - 1);
+    }
 
-          if (!maybe_relative_is_absolute ||
-              !this->locations_.contains(
-                  {SchemaReferenceType::Static, new_id})) {
-            assert(entry.common.base_dialect.has_value());
-            if (entry.common.orphan) {
-              store(this->locations_, this->instances_,
-                    SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Resource, new_id, root_id,
-                    new_id, entry.common.pointer,
-                    sourcemeta::core::empty_pointer,
-                    entry.common.dialect.value(),
-                    entry.common.base_dialect.value(), {}, entry.common.parent);
-            } else if (this->mode_ == SchemaFrame::Mode::Instances) {
-              store(this->locations_, this->instances_,
-                    SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Resource, new_id, root_id,
-                    new_id, entry.common.pointer,
-                    sourcemeta::core::empty_pointer,
-                    entry.common.dialect.value(),
-                    entry.common.base_dialect.value(),
-                    {entry.common.instance_location}, entry.common.parent);
+    for (const auto &entry_index : current_subschema_entries) {
+      const auto &entry{subschema_entries[entry_index]};
+      if (entry.id.has_value()) {
+        const bool ref_overrides =
+            ref_overrides_adjacent_keywords(entry.common.base_dialect.value());
+        const bool is_pre_2019_09_location_independent_identifier =
+            supports_id_anchors(entry.common.base_dialect.value()) &&
+            sourcemeta::core::URI{entry.id.value()}.is_fragment_only();
+
+        if ((!entry.common.subschema.get().defines("$ref") || !ref_overrides) &&
+            // If we are dealing with a pre-2019-09 location independent
+            // identifier, we ignore it as a traditional identifier and take
+            // care of it as an anchor
+            !is_pre_2019_09_location_independent_identifier) {
+          const auto bases{
+              find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
+          for (const auto &base_string : bases.first) {
+            const sourcemeta::core::URI base{base_string};
+            sourcemeta::core::URI maybe_relative{entry.id.value()};
+            const auto maybe_fragment{maybe_relative.fragment()};
+
+            // See
+            // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.2.2
+            // See
+            // https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-01#section-8.2.1-5
+            if (maybe_fragment.has_value() && !maybe_fragment.value().empty()) {
+              throw SchemaError(
+                  "Identifiers must not contain non-empty fragments");
+            }
+
+            const bool maybe_relative_is_absolute{maybe_relative.is_absolute()};
+            maybe_relative.try_resolve_from(base).canonicalize();
+            const JSON::String new_id{maybe_relative.recompose()};
+
+            const auto maybe_match{
+                this->locations_.find({SchemaReferenceType::Static, new_id})};
+            if (maybe_match != this->locations_.cend() &&
+                maybe_match->second.pointer != entry.common.pointer) {
+              throw_already_exists(new_id);
+            }
+
+            if (!maybe_relative_is_absolute ||
+                maybe_match == this->locations_.cend()) {
+              assert(entry.common.base_dialect.has_value());
+              if (entry.common.orphan) {
+                store(this->locations_, this->instances_,
+                      SchemaReferenceType::Static,
+                      SchemaFrame::LocationType::Resource, new_id, root_id,
+                      new_id, entry.common.pointer,
+                      sourcemeta::core::empty_pointer,
+                      entry.common.dialect.value(),
+                      entry.common.base_dialect.value(), {},
+                      entry.common.parent);
+              } else if (this->mode_ == SchemaFrame::Mode::Instances) {
+                store(this->locations_, this->instances_,
+                      SchemaReferenceType::Static,
+                      SchemaFrame::LocationType::Resource, new_id, root_id,
+                      new_id, entry.common.pointer,
+                      sourcemeta::core::empty_pointer,
+                      entry.common.dialect.value(),
+                      entry.common.base_dialect.value(),
+                      {entry.common.instance_location}, entry.common.parent);
+              } else {
+                store(this->locations_, this->instances_,
+                      SchemaReferenceType::Static,
+                      SchemaFrame::LocationType::Resource, new_id, root_id,
+                      new_id, entry.common.pointer,
+                      sourcemeta::core::empty_pointer,
+                      entry.common.dialect.value(),
+                      entry.common.base_dialect.value(), {},
+                      entry.common.parent);
+              }
+            }
+
+            if (base_uris.contains(entry.common.pointer)) {
+              base_uris.at(entry.common.pointer).push_back(new_id);
             } else {
-              store(this->locations_, this->instances_,
-                    SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Resource, new_id, root_id,
-                    new_id, entry.common.pointer,
-                    sourcemeta::core::empty_pointer,
-                    entry.common.dialect.value(),
-                    entry.common.base_dialect.value(), {}, entry.common.parent);
+              base_uris.insert({entry.common.pointer, {new_id}});
             }
           }
+        }
+      }
 
-          if (base_uris.contains(entry.common.pointer)) {
-            base_uris.at(entry.common.pointer).push_back(new_id);
-          } else {
-            base_uris.insert({entry.common.pointer, {new_id}});
+      if (this->mode_ != SchemaFrame::Mode::Locations) {
+        // Handle metaschema references
+        const auto maybe_metaschema{
+            sourcemeta::core::dialect(entry.common.subschema.get())};
+        if (maybe_metaschema.has_value()) {
+          sourcemeta::core::URI metaschema{maybe_metaschema.value()};
+          const auto nearest_bases{
+              find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
+          if (!nearest_bases.first.empty()) {
+            metaschema.try_resolve_from(nearest_bases.first.front());
           }
+
+          metaschema.canonicalize();
+          const JSON::String destination{metaschema.recompose()};
+          assert(entry.common.subschema.get().defines("$schema"));
+          this->references_.insert_or_assign(
+              {SchemaReferenceType::Static,
+               entry.common.pointer.concat({"$schema"})},
+              SchemaFrame::ReferencesEntry{
+                  destination, metaschema.recompose_without_fragment(),
+                  fragment_string(metaschema)});
         }
       }
-    }
 
-    if (this->mode_ != SchemaFrame::Mode::Locations) {
-      // Handle metaschema references
-      const auto maybe_metaschema{
-          sourcemeta::core::dialect(entry.common.subschema.get())};
-      if (maybe_metaschema.has_value()) {
-        sourcemeta::core::URI metaschema{maybe_metaschema.value()};
-        const auto nearest_bases{
+      // Handle schema anchors
+      for (const auto &[name, type] : find_anchors(entry.common.subschema.get(),
+                                                   entry.common.vocabularies)) {
+        const auto bases{
             find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
-        if (!nearest_bases.first.empty()) {
-          metaschema.try_resolve_from(nearest_bases.first.front());
+
+        std::vector<sourcemeta::core::PointerTemplate> instance_locations;
+        if (!entry.common.orphan &&
+            this->mode_ == SchemaFrame::Mode::Instances) {
+          instance_locations.push_back(entry.common.instance_location);
         }
 
-        metaschema.canonicalize();
-        const JSON::String destination{metaschema.recompose()};
-        assert(entry.common.subschema.get().defines("$schema"));
-        this->references_.insert_or_assign(
-            {SchemaReferenceType::Static,
-             entry.common.pointer.concat({"$schema"})},
-            SchemaFrame::ReferencesEntry{
-                destination, metaschema.recompose_without_fragment(),
-                fragment_string(metaschema)});
-      }
-    }
+        if (bases.first.empty()) {
+          const auto anchor_uri{sourcemeta::core::URI::from_fragment(name)};
+          const auto relative_anchor_uri{anchor_uri.recompose()};
 
-    // Handle schema anchors
-    for (const auto &[name, type] : find_anchors(entry.common.subschema.get(),
-                                                 entry.common.vocabularies)) {
-      const auto bases{
-          find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
-
-      std::vector<sourcemeta::core::PointerTemplate> instance_locations;
-      if (!entry.common.orphan && this->mode_ == SchemaFrame::Mode::Instances) {
-        instance_locations.push_back(entry.common.instance_location);
-      }
-
-      if (bases.first.empty()) {
-        const auto anchor_uri{sourcemeta::core::URI::from_fragment(name)};
-        const auto relative_anchor_uri{anchor_uri.recompose()};
-
-        if (type == AnchorType::Static || type == AnchorType::All) {
-          store(this->locations_, this->instances_, SchemaReferenceType::Static,
-                SchemaFrame::LocationType::Anchor, relative_anchor_uri, root_id,
-                "", entry.common.pointer,
-                entry.common.pointer.resolve_from(bases.second),
-                entry.common.dialect.value(), entry.common.base_dialect.value(),
-                instance_locations, entry.common.parent);
-        }
-
-        if (type == AnchorType::Dynamic || type == AnchorType::All) {
-          store(this->locations_, this->instances_,
-                SchemaReferenceType::Dynamic, SchemaFrame::LocationType::Anchor,
-                relative_anchor_uri, root_id, "", entry.common.pointer,
-                entry.common.pointer.resolve_from(bases.second),
-                entry.common.dialect.value(), entry.common.base_dialect.value(),
-                instance_locations, entry.common.parent);
-
-          // Register a dynamic anchor as a static anchor if possible too
-          if (entry.common.vocabularies.contains(
-                  "https://json-schema.org/draft/2020-12/vocab/core")) {
+          if (type == AnchorType::Static || type == AnchorType::All) {
             store(
                 this->locations_, this->instances_, SchemaReferenceType::Static,
                 SchemaFrame::LocationType::Anchor, relative_anchor_uri, root_id,
                 "", entry.common.pointer,
                 entry.common.pointer.resolve_from(bases.second),
                 entry.common.dialect.value(), entry.common.base_dialect.value(),
-                instance_locations, entry.common.parent, true);
-          }
-        }
-      } else {
-        bool is_first = true;
-        for (const auto &base_string : bases.first) {
-          // TODO: All this dance is necessary because we don't have a
-          // URI::fragment setter
-          std::ostringstream anchor_uri_string;
-          anchor_uri_string << sourcemeta::core::URI{base_string}
-                                   .recompose_without_fragment()
-                                   .value_or("");
-          anchor_uri_string << '#';
-          anchor_uri_string << name;
-          const auto anchor_uri{sourcemeta::core::URI{anchor_uri_string.str()}
-                                    .canonicalize()
-                                    .recompose()};
-
-          if (!is_first && this->locations_.contains(
-                               {SchemaReferenceType::Static, anchor_uri})) {
-            continue;
-          }
-
-          if (type == AnchorType::Static || type == AnchorType::All) {
-            store(this->locations_, this->instances_,
-                  sourcemeta::core::SchemaReferenceType::Static,
-                  SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
-                  base_string, entry.common.pointer,
-                  entry.common.pointer.resolve_from(bases.second),
-                  entry.common.dialect.value(),
-                  entry.common.base_dialect.value(), instance_locations,
-                  entry.common.parent);
+                instance_locations, entry.common.parent);
           }
 
           if (type == AnchorType::Dynamic || type == AnchorType::All) {
-            store(this->locations_, this->instances_,
-                  sourcemeta::core::SchemaReferenceType::Dynamic,
-                  SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
-                  base_string, entry.common.pointer,
-                  entry.common.pointer.resolve_from(bases.second),
-                  entry.common.dialect.value(),
-                  entry.common.base_dialect.value(), instance_locations,
-                  entry.common.parent);
+            store(
+                this->locations_, this->instances_,
+                SchemaReferenceType::Dynamic, SchemaFrame::LocationType::Anchor,
+                relative_anchor_uri, root_id, "", entry.common.pointer,
+                entry.common.pointer.resolve_from(bases.second),
+                entry.common.dialect.value(), entry.common.base_dialect.value(),
+                instance_locations, entry.common.parent);
 
             // Register a dynamic anchor as a static anchor if possible too
             if (entry.common.vocabularies.contains(
                     "https://json-schema.org/draft/2020-12/vocab/core")) {
+              store(this->locations_, this->instances_,
+                    SchemaReferenceType::Static,
+                    SchemaFrame::LocationType::Anchor, relative_anchor_uri,
+                    root_id, "", entry.common.pointer,
+                    entry.common.pointer.resolve_from(bases.second),
+                    entry.common.dialect.value(),
+                    entry.common.base_dialect.value(), instance_locations,
+                    entry.common.parent, true);
+            }
+          }
+        } else {
+          bool is_first = true;
+          for (const auto &base_string : bases.first) {
+            // TODO: All this dance is necessary because we don't have a
+            // URI::fragment setter
+            std::ostringstream anchor_uri_string;
+            anchor_uri_string << sourcemeta::core::URI{base_string}
+                                     .recompose_without_fragment()
+                                     .value_or("");
+            anchor_uri_string << '#';
+            anchor_uri_string << name;
+            const auto anchor_uri{sourcemeta::core::URI{anchor_uri_string.str()}
+                                      .canonicalize()
+                                      .recompose()};
+
+            if (!is_first && this->locations_.contains(
+                                 {SchemaReferenceType::Static, anchor_uri})) {
+              continue;
+            }
+
+            if (type == AnchorType::Static || type == AnchorType::All) {
               store(this->locations_, this->instances_,
                     sourcemeta::core::SchemaReferenceType::Static,
                     SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
@@ -785,87 +805,113 @@ auto SchemaFrame::analyse(const JSON &schema, const SchemaWalker &walker,
                     entry.common.pointer.resolve_from(bases.second),
                     entry.common.dialect.value(),
                     entry.common.base_dialect.value(), instance_locations,
-                    entry.common.parent, true);
+                    entry.common.parent);
             }
-          }
 
-          is_first = false;
+            if (type == AnchorType::Dynamic || type == AnchorType::All) {
+              store(this->locations_, this->instances_,
+                    sourcemeta::core::SchemaReferenceType::Dynamic,
+                    SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
+                    base_string, entry.common.pointer,
+                    entry.common.pointer.resolve_from(bases.second),
+                    entry.common.dialect.value(),
+                    entry.common.base_dialect.value(), instance_locations,
+                    entry.common.parent);
+
+              // Register a dynamic anchor as a static anchor if possible too
+              if (entry.common.vocabularies.contains(
+                      "https://json-schema.org/draft/2020-12/vocab/core")) {
+                store(this->locations_, this->instances_,
+                      sourcemeta::core::SchemaReferenceType::Static,
+                      SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
+                      base_string, entry.common.pointer,
+                      entry.common.pointer.resolve_from(bases.second),
+                      entry.common.dialect.value(),
+                      entry.common.base_dialect.value(), instance_locations,
+                      entry.common.parent, true);
+              }
+            }
+
+            is_first = false;
+          }
         }
       }
     }
-  }
 
-  // It is important for the loop that follows to assume a specific ordering
-  // where smaller pointers (by number of tokens) are scanned first.
-  const auto pointer_walker{sourcemeta::core::PointerWalker{schema}};
-  std::vector<sourcemeta::core::Pointer> pointers{pointer_walker.cbegin(),
-                                                  pointer_walker.cend()};
-  std::sort(pointers.begin(), pointers.end(),
-            std::less<sourcemeta::core::Pointer>());
+    // It is important for the loop that follows to assume a specific ordering
+    // where smaller pointers (by number of tokens) are scanned first.
+    const auto pointer_walker{sourcemeta::core::PointerWalker{schema}};
+    std::vector<sourcemeta::core::Pointer> pointers{pointer_walker.cbegin(),
+                                                    pointer_walker.cend()};
+    std::sort(pointers.begin(), pointers.end(),
+              std::less<sourcemeta::core::Pointer>());
 
-  // Pre-compute every possible pointer to the schema
-  for (const auto &pointer : pointers) {
-    const auto dialects{
-        find_nearest_bases(base_dialects, pointer, root_dialect)};
-    assert(dialects.first.size() == 1);
+    // Pre-compute every possible pointer to the schema
+    for (const auto &relative_pointer : pointers) {
+      const auto pointer{path.concat(relative_pointer)};
+      const auto dialects{
+          find_nearest_bases(base_dialects, pointer, root_dialect)};
+      assert(dialects.first.size() == 1);
 
-    for (const auto &base : find_every_base(base_uris, pointer)) {
-      auto relative_pointer_uri{
-          sourcemeta::core::to_uri(pointer.resolve_from(base.second))};
-      if (!base.first.empty()) {
-        relative_pointer_uri.try_resolve_from({base.first});
-      }
+      for (const auto &base : find_every_base(base_uris, pointer)) {
+        auto relative_pointer_uri{
+            base.first.empty()
+                ? sourcemeta::core::to_uri(pointer.resolve_from(base.second))
+                : sourcemeta::core::to_uri(pointer.resolve_from(base.second))
+                      .try_resolve_from({base.first})};
 
-      relative_pointer_uri.canonicalize();
-      const auto result{relative_pointer_uri.recompose()};
+        relative_pointer_uri.canonicalize();
+        const auto result{relative_pointer_uri.recompose()};
 
-      if (!this->locations_.contains({SchemaReferenceType::Static, result})) {
-        const auto nearest_bases{
-            find_nearest_bases(base_uris, pointer, base.first)};
-        assert(!nearest_bases.first.empty());
-        const auto &current_base{nearest_bases.first.front()};
-        const auto maybe_base_entry{
-            this->locations_.find({SchemaReferenceType::Static, current_base})};
-        const auto current_base_dialect{
-            maybe_base_entry == this->locations_.cend()
-                ? root_base_dialect.value()
-                : maybe_base_entry->second.base_dialect};
-        const auto subschema{subschemas.find(pointer)};
-        if (subschema != subschemas.cend()) {
-          // Handle orphan schemas
-          if (subschema->second.orphan) {
-            store(this->locations_, this->instances_,
-                  SchemaReferenceType::Static,
-                  SchemaFrame::LocationType::Subschema, result, root_id,
-                  current_base, pointer,
-                  pointer.resolve_from(nearest_bases.second),
-                  dialects.first.front(), current_base_dialect, {},
-                  subschema->second.parent);
-          } else if (this->mode_ == SchemaFrame::Mode::Instances) {
-            store(this->locations_, this->instances_,
-                  SchemaReferenceType::Static,
-                  SchemaFrame::LocationType::Subschema, result, root_id,
-                  current_base, pointer,
-                  pointer.resolve_from(nearest_bases.second),
-                  dialects.first.front(), current_base_dialect,
-                  {subschema->second.instance_location},
-                  subschema->second.parent);
+        if (!this->locations_.contains({SchemaReferenceType::Static, result})) {
+          const auto nearest_bases{
+              find_nearest_bases(base_uris, pointer, base.first)};
+          assert(!nearest_bases.first.empty());
+          const auto &current_base{nearest_bases.first.front()};
+          const auto maybe_base_entry{this->locations_.find(
+              {SchemaReferenceType::Static, current_base})};
+          const auto current_base_dialect{
+              maybe_base_entry == this->locations_.cend()
+                  ? root_base_dialect.value()
+                  : maybe_base_entry->second.base_dialect};
+          const auto subschema{subschemas.find(pointer)};
+          if (subschema != subschemas.cend()) {
+            // Handle orphan schemas
+            if (subschema->second.orphan) {
+              store(this->locations_, this->instances_,
+                    SchemaReferenceType::Static,
+                    SchemaFrame::LocationType::Subschema, result, root_id,
+                    current_base, pointer,
+                    pointer.resolve_from(nearest_bases.second),
+                    dialects.first.front(), current_base_dialect, {},
+                    subschema->second.parent);
+            } else if (this->mode_ == SchemaFrame::Mode::Instances) {
+              store(this->locations_, this->instances_,
+                    SchemaReferenceType::Static,
+                    SchemaFrame::LocationType::Subschema, result, root_id,
+                    current_base, pointer,
+                    pointer.resolve_from(nearest_bases.second),
+                    dialects.first.front(), current_base_dialect,
+                    {subschema->second.instance_location},
+                    subschema->second.parent);
+            } else {
+              store(this->locations_, this->instances_,
+                    SchemaReferenceType::Static,
+                    SchemaFrame::LocationType::Subschema, result, root_id,
+                    current_base, pointer,
+                    pointer.resolve_from(nearest_bases.second),
+                    dialects.first.front(), current_base_dialect, {},
+                    subschema->second.parent);
+            }
           } else {
             store(this->locations_, this->instances_,
                   SchemaReferenceType::Static,
-                  SchemaFrame::LocationType::Subschema, result, root_id,
+                  SchemaFrame::LocationType::Pointer, result, root_id,
                   current_base, pointer,
                   pointer.resolve_from(nearest_bases.second),
                   dialects.first.front(), current_base_dialect, {},
-                  subschema->second.parent);
+                  dialects.second);
           }
-        } else {
-          store(this->locations_, this->instances_, SchemaReferenceType::Static,
-                SchemaFrame::LocationType::Pointer, result, root_id,
-                current_base, pointer,
-                pointer.resolve_from(nearest_bases.second),
-                dialects.first.front(), current_base_dialect, {},
-                dialects.second);
         }
       }
     }
@@ -1190,214 +1236,6 @@ auto SchemaFrame::references_to(const Pointer &pointer) const -> std::vector<
             result.emplace_back(reference);
           }
         }
-      }
-    }
-  }
-
-  return result;
-}
-
-} // namespace sourcemeta::core
-
-// TODO: Rephrase all this logic on top of framing by keeping track of all
-// keyword inter-dependencies?
-
-namespace {
-using namespace sourcemeta::core;
-
-// TODO: Extract all of this into a public utility to traverse
-// adjacent subschemas
-auto find_adjacent_dependencies(
-    const JSON::String &current, const JSON &schema, const SchemaFrame &frame,
-    const SchemaWalker &walker, const SchemaResolver &resolver,
-    const std::set<JSON::String> &keywords, const SchemaFrame::Location &root,
-    const SchemaFrame::Location &entry, const bool is_static,
-    SchemaUnevaluatedEntry &result) -> void {
-  const auto &subschema{get(schema, entry.pointer)};
-  if (!subschema.is_object()) {
-    return;
-  }
-
-  const auto subschema_vocabularies{
-      vocabularies(subschema, resolver, entry.dialect)};
-
-  for (const auto &property : subschema.as_object()) {
-    if (property.first == current && entry.pointer == root.pointer) {
-      continue;
-    } else if (keywords.contains(property.first)) {
-      // In 2019-09, `additionalItems` takes no effect without `items`
-      if (subschema_vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/applicator") &&
-          property.first == "additionalItems" && !subschema.defines("items")) {
-        continue;
-      }
-
-      auto pointer{entry.pointer.concat({property.first})};
-      if (is_static) {
-        result.static_dependencies.emplace(std::move(pointer));
-      } else {
-        result.dynamic_dependencies.emplace(std::move(pointer));
-      }
-
-      continue;
-    }
-
-    switch (walker(property.first, subschema_vocabularies).type) {
-      // References
-      case SchemaKeywordType::Reference: {
-        const auto reference{frame.dereference(entry, {property.first})};
-        if (reference.first == SchemaReferenceType::Static &&
-            reference.second.has_value()) {
-          find_adjacent_dependencies(
-              current, schema, frame, walker, resolver, keywords, root,
-              reference.second.value().get(), is_static, result);
-        } else if (reference.first == SchemaReferenceType::Dynamic) {
-          result.unresolved = true;
-        }
-
-        break;
-      }
-
-      // Static
-      case SchemaKeywordType::ApplicatorElementsInPlace:
-        for (std::size_t index = 0; index < property.second.size(); index++) {
-          find_adjacent_dependencies(
-              current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first, index}), is_static,
-              result);
-        }
-
-        break;
-
-      // Dynamic
-      case SchemaKeywordType::ApplicatorElementsInPlaceSome:
-        if (property.second.is_array()) {
-          for (std::size_t index = 0; index < property.second.size(); index++) {
-            find_adjacent_dependencies(
-                current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, index}), false, result);
-          }
-        }
-
-        break;
-      case SchemaKeywordType::ApplicatorValueTraverseAnyItem:
-        [[fallthrough]];
-      case SchemaKeywordType::ApplicatorValueTraverseParent:
-        [[fallthrough]];
-      case SchemaKeywordType::ApplicatorValueInPlaceMaybe:
-        if (is_schema(property.second)) {
-          find_adjacent_dependencies(
-              current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first}), false, result);
-        }
-
-        break;
-      case SchemaKeywordType::ApplicatorValueOrElementsInPlace:
-        if (property.second.is_array()) {
-          for (std::size_t index = 0; index < property.second.size(); index++) {
-            find_adjacent_dependencies(
-                current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, index}), false, result);
-          }
-        } else if (is_schema(property.second)) {
-          find_adjacent_dependencies(
-              current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first}), false, result);
-        }
-
-        break;
-      case SchemaKeywordType::ApplicatorMembersInPlaceSome:
-        if (property.second.is_object()) {
-          for (const auto &pair : property.second.as_object()) {
-            find_adjacent_dependencies(
-                current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, pair.first}), false,
-                result);
-          }
-        }
-
-        break;
-
-      // Anything else does not contribute to the dependency list
-      default:
-        break;
-    }
-  }
-}
-
-} // namespace
-
-namespace sourcemeta::core {
-
-// TODO: Refactor this entire function using `SchemaFrame`'s new `Instances`
-// mode. We can loop over every subschema that defines `unevaluatedProperties`
-// or `unevaluatedItems`, find all other subschemas with the same unresolved
-// instance location (static dependency) or conditional equivalent unresolved
-// instance location (dynamic dependency) and see if those ones define any of
-// the dependent keywords.
-auto unevaluated(const JSON &schema, const SchemaFrame &frame,
-                 const SchemaWalker &walker, const SchemaResolver &resolver)
-    -> SchemaUnevaluatedEntries {
-  SchemaUnevaluatedEntries result;
-
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type != SchemaFrame::LocationType::Subschema &&
-        entry.second.type != SchemaFrame::LocationType::Resource) {
-      continue;
-    }
-
-    const auto &subschema{get(schema, entry.second.pointer)};
-    assert(is_schema(subschema));
-    if (!subschema.is_object()) {
-      continue;
-    }
-
-    const auto subschema_vocabularies{
-        frame.vocabularies(entry.second, resolver)};
-    for (const auto &pair : subschema.as_object()) {
-      const auto keyword_uri{frame.uri(entry.second, {pair.first})};
-      SchemaUnevaluatedEntry unevaluated;
-      if ((subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/unevaluated") &&
-           subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/applicator")) &&
-          pair.first == "unevaluatedProperties") {
-        find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
-            {"properties", "patternProperties", "additionalProperties",
-             "unevaluatedProperties"},
-            entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
-      } else if (
-          (subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/unevaluated") &&
-           subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/applicator")) &&
-          pair.first == "unevaluatedItems") {
-        find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
-            {"prefixItems", "items", "contains", "unevaluatedItems"},
-            entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
-      } else if (subschema_vocabularies.contains(
-                     "https://json-schema.org/draft/2019-09/vocab/"
-                     "applicator") &&
-                 pair.first == "unevaluatedProperties") {
-        find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
-            {"properties", "patternProperties", "additionalProperties",
-             "unevaluatedProperties"},
-            entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
-      } else if (subschema_vocabularies.contains(
-                     "https://json-schema.org/draft/2019-09/vocab/"
-                     "applicator") &&
-                 pair.first == "unevaluatedItems") {
-        find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
-            {"items", "additionalItems", "unevaluatedItems"}, entry.second,
-            entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
       }
     }
   }
