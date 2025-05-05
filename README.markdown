@@ -143,6 +143,11 @@ latest pre-built binaries, which you can run as follows:
 /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
 ```
 
+Keep in mind that it is hard to provide binaries that work across GNU/Linux
+distributions, given they often have major differences such as C runtimes (GLIC
+vs MUSL). We conservatively target Ubuntu 22.04, but you might need to build
+from source if your distribution of choice is different.
+
 ### From Dockerfile
 
 Starting from v7.2.1, we publish a Docker image to GitHub Packages (`amd64` and
