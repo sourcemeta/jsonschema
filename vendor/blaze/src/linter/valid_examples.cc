@@ -26,8 +26,8 @@ auto ValidExamples::condition(
     return false;
   }
 
-  if (!schema.defines("examples") || !schema.at("examples").is_array() ||
-      schema.at("examples").empty()) {
+  if (!schema.is_object() || !schema.defines("examples") ||
+      !schema.at("examples").is_array() || schema.at("examples").empty()) {
     return false;
   }
 

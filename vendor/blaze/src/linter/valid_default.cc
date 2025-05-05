@@ -28,7 +28,7 @@ auto ValidDefault::condition(
     return false;
   }
 
-  if (!schema.defines("default")) {
+  if (!schema.is_object() || !schema.defines("default")) {
     return false;
   }
 
