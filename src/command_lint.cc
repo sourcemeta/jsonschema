@@ -91,43 +91,46 @@ auto sourcemeta::jsonschema::cli::lint(
       }
       output << "\n";
     }
-  }
-  for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
-                                         parse_extensions(options))) {
-    log_verbose(options) << "Linting: " << entry.first.string() << "\n";
-    const bool subresult = bundle.check(
-        entry.second, sourcemeta::core::schema_official_walker,
-        resolver(options, options.contains("h") || options.contains("http"),
-                 dialect),
-        [&](const auto &pointer, const auto &name, const auto &message) {
-          if (output_json) {
-            auto error_obj = sourcemeta::core::JSON::make_object();
+  } else {
+    for (const auto &entry :
+         for_each_json(options.at(""), parse_ignore(options),
+                       parse_extensions(options))) {
+      log_verbose(options) << "Linting: " << entry.first.string() << "\n";
+      const bool subresult = bundle.check(
+          entry.second, sourcemeta::core::schema_official_walker,
+          resolver(options, options.contains("h") || options.contains("http"),
+                   dialect),
+          [&](const auto &pointer, const auto &name, const auto &message) {
+            if (output_json) {
+              auto error_obj = sourcemeta::core::JSON::make_object();
 
-            error_obj.assign("path",
-                             sourcemeta::core::JSON{entry.first.string()});
-            error_obj.assign("id", sourcemeta::core::JSON{name});
-            error_obj.assign("message", sourcemeta::core::JSON{message});
+              error_obj.assign("path",
+                               sourcemeta::core::JSON{entry.first.string()});
+              error_obj.assign("id", sourcemeta::core::JSON{name});
+              error_obj.assign("message", sourcemeta::core::JSON{message});
 
-            std::ostringstream pointer_stream;
-            sourcemeta::core::stringify(pointer, pointer_stream);
-            error_obj.assign("schemaLocation",
-                             sourcemeta::core::JSON{pointer_stream.str()});
+              std::ostringstream pointer_stream;
+              sourcemeta::core::stringify(pointer, pointer_stream);
+              error_obj.assign("schemaLocation",
+                               sourcemeta::core::JSON{pointer_stream.str()});
 
-            errors_array.push_back(error_obj);
-          } else {
-            std::cout << entry.first.string() << ":\n";
-            std::cout << "  " << message << " (" << name << ")\n";
-            std::cout << "    at schema location \"";
-            sourcemeta::core::stringify(pointer, std::cout);
-            std::cout << "\"\n";
-          }
-        },
-        dialect);
+              errors_array.push_back(error_obj);
+            } else {
+              std::cout << entry.first.string() << ":\n";
+              std::cout << "  " << message << " (" << name << ")\n";
+              std::cout << "    at schema location \"";
+              sourcemeta::core::stringify(pointer, std::cout);
+              std::cout << "\"\n";
+            }
+          },
+          dialect);
 
-    if (!subresult) {
-      result = false;
+      if (!subresult) {
+        result = false;
+      }
     }
   }
+
   if (output_json) {
     auto output_json_object = sourcemeta::core::JSON::make_object();
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
