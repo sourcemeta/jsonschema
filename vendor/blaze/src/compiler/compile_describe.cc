@@ -293,7 +293,7 @@ auto describe(const bool valid, const Instruction &step,
     return "The schema location was marked for future use";
   }
 
-  if (step.type == sourcemeta::blaze::InstructionIndex::ControlEvaluate) {
+  if (step.type == sourcemeta::blaze::InstructionIndex::Evaluate) {
     return "The instance location was marked as evaluated";
   }
 

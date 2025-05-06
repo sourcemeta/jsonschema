@@ -1202,33 +1202,14 @@ INSTRUCTION_HANDLER(ControlMark) {
 }
 
 INSTRUCTION_HANDLER(ControlEvaluate) {
-  SOURCEMETA_MAYBE_UNUSED(instruction);
   SOURCEMETA_MAYBE_UNUSED(depth);
   SOURCEMETA_MAYBE_UNUSED(schema);
   SOURCEMETA_MAYBE_UNUSED(callback);
   SOURCEMETA_MAYBE_UNUSED(instance);
   SOURCEMETA_MAYBE_UNUSED(property_target);
-  SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_PASS_THROUGH(ControlEvaluate);
-
-#if defined(SOURCEMETA_EVALUATOR_COMPLETE) ||                                  \
-    defined(SOURCEMETA_EVALUATOR_TRACK)
   const auto &value{*std::get_if<ValuePointer>(&instruction.value)};
   evaluator.evaluate(&get(instance, value));
-#endif
-
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-  if (callback) {
-    // TODO: Optimize this case to avoid an extra pointer copy
-    auto destination = evaluator.instance_location;
-    destination.push_back(value);
-    callback(EvaluationType::Pre, true, instruction, evaluator.evaluate_path,
-             destination, Evaluator::null);
-    callback(EvaluationType::Post, true, instruction, evaluator.evaluate_path,
-             destination, Evaluator::null);
-  }
-#endif
-
   EVALUATE_END_PASS_THROUGH(ControlEvaluate);
 }
 
@@ -1328,6 +1309,19 @@ INSTRUCTION_HANDLER(AnnotationBasenameToParent) {
       // TODO: Can we avoid a copy of the instance location here?
       evaluator.instance_location.initial(),
       evaluator.instance_location.back().to_json());
+}
+
+INSTRUCTION_HANDLER(Evaluate) {
+  SOURCEMETA_MAYBE_UNUSED(depth);
+  SOURCEMETA_MAYBE_UNUSED(schema);
+  SOURCEMETA_MAYBE_UNUSED(callback);
+  SOURCEMETA_MAYBE_UNUSED(instance);
+  SOURCEMETA_MAYBE_UNUSED(property_target);
+  EVALUATE_BEGIN_NO_PRECONDITION(Evaluate);
+  const auto &target{get(instance, instruction.relative_instance_location)};
+  evaluator.evaluate(&target);
+  result = true;
+  EVALUATE_END(Evaluate);
 }
 
 INSTRUCTION_HANDLER(LogicalNot) {
@@ -2562,7 +2556,7 @@ using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
                                  sourcemeta::blaze::Evaluator &);
 
 // Must have same order as InstructionIndex
-static constexpr DispatchHandler handlers[94] = {
+static constexpr DispatchHandler handlers[95] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2610,6 +2604,7 @@ static constexpr DispatchHandler handlers[94] = {
     AnnotationEmit,
     AnnotationToParent,
     AnnotationBasenameToParent,
+    Evaluate,
     LogicalNot,
     LogicalNotEvaluate,
     LogicalOr,

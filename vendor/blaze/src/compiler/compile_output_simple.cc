@@ -46,7 +46,15 @@ auto SimpleOutput::operator()(
     if (type == EvaluationType::Post) {
       Location location{instance_location, std::move(effective_evaluate_path),
                         step.keyword_location};
-      this->annotations_[std::move(location)].push_back(annotation);
+      const auto match{this->annotations_.find(location)};
+      if (match == this->annotations_.cend()) {
+        this->annotations_[std::move(location)].push_back(annotation);
+
+        // To avoid emitting the exact same annotation more than once
+        // This is right now mostly because of `unevaluatedItems`
+      } else if (match->second.back() != annotation) {
+        match->second.push_back(annotation);
+      }
     }
 
     return;
@@ -58,13 +66,28 @@ auto SimpleOutput::operator()(
     // To ease the output
     if (keyword == "anyOf" || keyword == "oneOf" || keyword == "not" ||
         keyword == "if") {
-      this->mask.insert(evaluate_path);
+      this->mask.emplace(evaluate_path, true);
+    } else if (keyword == "contains") {
+      this->mask.emplace(evaluate_path, false);
     }
   } else if (type == EvaluationType::Post &&
              this->mask.contains(evaluate_path)) {
     this->mask.erase(evaluate_path);
-  } else if (type == EvaluationType::Post && !result &&
-             !this->annotations_.empty()) {
+  }
+
+  if (result) {
+    return;
+  }
+
+  if (std::any_of(this->mask.cbegin(), this->mask.cend(),
+                  [&evaluate_path](const auto &entry) {
+                    return evaluate_path.starts_with(entry.first) &&
+                           !entry.second;
+                  })) {
+    return;
+  }
+
+  if (type == EvaluationType::Post && !this->annotations_.empty()) {
     for (auto iterator = this->annotations_.begin();
          iterator != this->annotations_.end();) {
       if (iterator->first.evaluate_path.starts_with_initial(evaluate_path)) {
@@ -75,11 +98,10 @@ auto SimpleOutput::operator()(
     }
   }
 
-  // Ignore successful or masked steps
-  if (result || std::any_of(this->mask.cbegin(), this->mask.cend(),
-                            [&evaluate_path](const auto &entry) {
-                              return evaluate_path.starts_with(entry);
-                            })) {
+  if (std::any_of(this->mask.cbegin(), this->mask.cend(),
+                  [&evaluate_path](const auto &entry) {
+                    return evaluate_path.starts_with(entry.first);
+                  })) {
     return;
   }
 
