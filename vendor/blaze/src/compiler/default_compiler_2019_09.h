@@ -291,8 +291,8 @@ auto compiler_2019_09_applicator_unevaluateditems(
       return {};
     }
 
-    return {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-                 schema_context, dynamic_context, ValuePointer{})};
+    return {make(sourcemeta::blaze::InstructionIndex::Evaluate, context,
+                 schema_context, dynamic_context, ValueNone{})};
   }
 
   // TODO: Attempt to short-circuit evaluation tracking by looking at sibling
@@ -385,8 +385,8 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
   }
 
   if (children.empty()) {
-    return {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-                 schema_context, dynamic_context, ValuePointer{})};
+    return {make(sourcemeta::blaze::InstructionIndex::Evaluate, context,
+                 schema_context, dynamic_context, ValueNone{})};
   } else if (!filter_strings.empty() || !filter_prefixes.empty() ||
              !filter_regexes.empty()) {
     return {make(

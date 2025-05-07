@@ -1115,19 +1115,16 @@ auto compiler_draft4_applicator_properties_with_options(
 
     } else {
       if (track_evaluation) {
-        if (context.mode == Mode::FastValidation) {
-          // We need this wrapper as `ControlEvaluate` doesn't push to the stack
-          substeps.push_back(
-              make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                   schema_context, effective_dynamic_context, ValueNone{},
-                   {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate,
-                         context, schema_context, effective_dynamic_context,
-                         ValuePointer{name})}));
-        } else {
-          substeps.push_back(make(
-              sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-              schema_context, effective_dynamic_context, ValuePointer{name}));
-        }
+        auto new_base_instance_location{
+            effective_dynamic_context.base_instance_location};
+        new_base_instance_location.push_back({name});
+        substeps.push_back(make(sourcemeta::blaze::InstructionIndex::Evaluate,
+                                context, schema_context,
+                                {effective_dynamic_context.keyword,
+                                 effective_dynamic_context.base_schema_location,
+                                 new_base_instance_location,
+                                 effective_dynamic_context.property_as_target},
+                                ValueNone{}));
       }
 
       if (!substeps.empty()) {
@@ -1404,8 +1401,8 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
 
   } else if (track_evaluation) {
     if (children.empty()) {
-      return {make(sourcemeta::blaze::InstructionIndex::ControlEvaluate,
-                   context, schema_context, dynamic_context, ValuePointer{})};
+      return {make(sourcemeta::blaze::InstructionIndex::Evaluate, context,
+                   schema_context, dynamic_context, ValueNone{})};
     }
 
     return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesEvaluate,
