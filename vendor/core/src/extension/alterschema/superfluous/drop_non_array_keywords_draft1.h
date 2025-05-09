@@ -13,7 +13,8 @@ public:
             const sourcemeta::core::SchemaFrame &,
             const sourcemeta::core::SchemaFrame::Location &,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaResolver &) const
+      -> sourcemeta::core::SchemaTransformRule::Result override {
     return vocabularies.contains(
                "http://json-schema.org/draft-01/hyper-schema#") &&
            schema.is_object() && schema.defines("type") &&

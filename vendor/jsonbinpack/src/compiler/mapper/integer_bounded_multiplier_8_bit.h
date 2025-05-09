@@ -12,7 +12,8 @@ public:
             const sourcemeta::core::SchemaFrame &,
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaResolver &) const
+      -> sourcemeta::core::SchemaTransformRule::Result override {
     if (location.dialect != "https://json-schema.org/draft/2020-12/schema" ||
         !vocabularies.contains(
             "https://json-schema.org/draft/2020-12/vocab/validation") ||

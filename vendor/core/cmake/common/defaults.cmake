@@ -41,6 +41,10 @@ endif()
 # It is very useful for IDE integration, linting, etc
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Always prefer PIC, even on static libraries
+# See https://cmake.org/cmake/help/latest/prop_tgt/POSITION_INDEPENDENT_CODE.html
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # CMake typically defaults to -O2 for RelWithDebInfo, which can
 # result in slight differences when comparing to Release when
 # profiling or analysing the resulting assembly

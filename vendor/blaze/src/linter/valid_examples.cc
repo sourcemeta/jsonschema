@@ -1,6 +1,9 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/linter.h>
 
+#include <functional> // std::ref, std::cref
+#include <sstream>    // std::ostringstream
+
 namespace sourcemeta::blaze {
 
 ValidExamples::ValidExamples(Compiler compiler)
@@ -16,7 +19,8 @@ auto ValidExamples::condition(
     const sourcemeta::core::SchemaFrame &,
     const sourcemeta::core::SchemaFrame::Location &location,
     const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver) const -> bool {
+    const sourcemeta::core::SchemaResolver &resolver) const
+    -> sourcemeta::core::SchemaTransformRule::Result {
   if (!vocabularies.contains(
           "https://json-schema.org/draft/2020-12/vocab/meta-data") &&
       !vocabularies.contains(
@@ -38,10 +42,20 @@ auto ValidExamples::condition(
                                      location.dialect)};
 
   Evaluator evaluator;
+  std::size_t cursor{0};
   for (const auto &example : schema.at("examples").as_array()) {
-    if (!evaluator.validate(schema_template, example)) {
-      return true;
+    const std::string ref{"$ref"};
+    SimpleOutput output{example, {std::cref(ref)}};
+    const auto result{
+        evaluator.validate(schema_template, example, std::ref(output))};
+    if (!result) {
+      std::ostringstream message;
+      message << "Invalid example instance at index " << cursor << "\n";
+      output.stacktrace(message, "  ");
+      return message.str();
     }
+
+    cursor += 1;
   }
 
   return false;

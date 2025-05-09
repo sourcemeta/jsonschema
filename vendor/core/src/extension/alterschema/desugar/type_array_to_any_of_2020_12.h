@@ -14,7 +14,8 @@ public:
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &,
             const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const -> bool override {
+            const sourcemeta::core::SchemaResolver &) const
+      -> sourcemeta::core::SchemaTransformRule::Result override {
 
     // Note that a big limitation of this rule is that it cannot apply to
     // schemas that have identifiers. For example, consider a schema that has

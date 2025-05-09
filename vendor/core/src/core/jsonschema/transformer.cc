@@ -6,6 +6,22 @@
 #include <stdexcept> // std::runtime_error
 #include <utility>   // std::move, std::pair
 
+namespace {
+
+auto is_true(const sourcemeta::core::SchemaTransformRule::Result &result)
+    -> bool {
+  switch (result.index()) {
+    case 0:
+      assert(std::holds_alternative<bool>(result));
+      return *std::get_if<bool>(&result);
+    default:
+      assert(std::holds_alternative<std::string>(result));
+      return true;
+  }
+}
+
+} // namespace
+
 namespace sourcemeta::core {
 
 SchemaTransformRule::SchemaTransformRule(std::string &&name,
@@ -31,18 +47,21 @@ auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
                                 const SchemaResolver &resolver,
                                 const SchemaFrame &frame,
                                 const SchemaFrame::Location &location) const
-    -> bool {
-  if (!this->condition(schema, root, vocabularies, frame, location, walker,
-                       resolver)) {
-    return false;
+    -> SchemaTransformRule::Result {
+  const auto outcome{this->condition(schema, root, vocabularies, frame,
+                                     location, walker, resolver)};
+  if (!is_true(outcome)) {
+    return outcome;
   }
 
   this->transform(schema);
 
   // The condition must always be false after applying the
   // transformation in order to avoid infinite loops
-  if (this->condition(schema, root, vocabularies, frame, location, walker,
-                      resolver)) {
+  if (is_true(this->condition(schema, root, vocabularies, frame, location,
+                              walker, resolver))) {
+    // TODO: Throw a better custom error that also highlights the schema
+    // location
     std::ostringstream error;
     error << "Rule condition holds after application: " << this->name();
     throw std::runtime_error(error.str());
@@ -57,7 +76,7 @@ auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
                                 const SchemaResolver &resolver,
                                 const SchemaFrame &frame,
                                 const SchemaFrame::Location &location) const
-    -> bool {
+    -> SchemaTransformRule::Result {
   return this->condition(schema, root, vocabularies, frame, location, walker,
                          resolver);
 }
@@ -81,10 +100,23 @@ auto SchemaTransformer::check(
     const auto current_vocabularies{
         vocabularies(schema, resolver, entry.second.dialect)};
     for (const auto &[name, rule] : this->rules) {
-      if (rule->check(current, schema, current_vocabularies, walker, resolver,
-                      frame, entry.second)) {
-        result = false;
-        callback(entry.second.pointer, name, rule->message());
+      const auto outcome{rule->check(current, schema, current_vocabularies,
+                                     walker, resolver, frame, entry.second)};
+      switch (outcome.index()) {
+        case 0:
+          assert(std::holds_alternative<bool>(outcome));
+          if (*std::get_if<bool>(&outcome)) {
+            result = false;
+            callback(entry.second.pointer, name, rule->message(), "");
+          }
+
+          break;
+        default:
+          assert(std::holds_alternative<std::string>(outcome));
+          result = false;
+          callback(entry.second.pointer, name, rule->message(),
+                   *std::get_if<std::string>(&outcome));
+          break;
       }
     }
   }
@@ -114,8 +146,8 @@ auto SchemaTransformer::apply(
       const auto current_vocabularies{
           vocabularies(schema, resolver, entry.second.dialect)};
       for (const auto &[name, rule] : this->rules) {
-        applied = rule->apply(current, schema, current_vocabularies, walker,
-                              resolver, frame, entry.second) ||
+        applied = is_true(rule->apply(current, schema, current_vocabularies,
+                                      walker, resolver, frame, entry.second)) ||
                   applied;
         if (!applied) {
           continue;

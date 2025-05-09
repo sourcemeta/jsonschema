@@ -28,6 +28,22 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
   }
 }
 
+static auto reindent(const std::string_view &value,
+                     const std::string &indentation, std::ostream &stream)
+    -> void {
+  if (!value.empty()) {
+    stream << indentation;
+  }
+
+  for (std::size_t index = 0; index < value.size(); index++) {
+    const auto character{value[index]};
+    stream.put(character);
+    if (character == '\n' && index != value.size() - 1) {
+      stream << indentation;
+    }
+  }
+}
+
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
@@ -100,7 +116,8 @@ auto sourcemeta::jsonschema::cli::lint(
           entry.second, sourcemeta::core::schema_official_walker,
           resolver(options, options.contains("h") || options.contains("http"),
                    dialect),
-          [&](const auto &pointer, const auto &name, const auto &message) {
+          [&](const auto &pointer, const auto &name, const auto &message,
+              const auto &description) {
             if (output_json) {
               auto error_obj = sourcemeta::core::JSON::make_object();
 
@@ -108,6 +125,14 @@ auto sourcemeta::jsonschema::cli::lint(
                                sourcemeta::core::JSON{entry.first.string()});
               error_obj.assign("id", sourcemeta::core::JSON{name});
               error_obj.assign("message", sourcemeta::core::JSON{message});
+
+              if (description.empty()) {
+                error_obj.assign("description",
+                                 sourcemeta::core::JSON{nullptr});
+              } else {
+                error_obj.assign("description",
+                                 sourcemeta::core::JSON{message});
+              }
 
               std::ostringstream pointer_stream;
               sourcemeta::core::stringify(pointer, pointer_stream);
@@ -121,6 +146,12 @@ auto sourcemeta::jsonschema::cli::lint(
               std::cout << "    at schema location \"";
               sourcemeta::core::stringify(pointer, std::cout);
               std::cout << "\"\n";
+              if (!description.empty()) {
+                reindent(description, "    ", std::cout);
+                if (description.back() != '\n') {
+                  std::cout << "\n";
+                }
+              }
             }
           },
           dialect);
