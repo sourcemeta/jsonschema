@@ -34,7 +34,7 @@ public:
                                const sourcemeta::core::SchemaFrame::Location &,
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
-      -> bool override;
+      -> sourcemeta::core::SchemaTransformRule::Result override;
   auto transform(sourcemeta::core::JSON &) const -> void override;
 
 private:
@@ -65,7 +65,7 @@ public:
                                const sourcemeta::core::SchemaFrame::Location &,
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
-      -> bool override;
+      -> sourcemeta::core::SchemaTransformRule::Result override;
   auto transform(sourcemeta::core::JSON &) const -> void override;
 
 private:

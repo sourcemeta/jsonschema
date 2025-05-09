@@ -26,6 +26,10 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/schema.json:
   Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
     at schema location "/properties/foo"
+    Invalid example instance at index 0
+      The value was expected to be of type string but it was of type integer
+        at instance location ""
+        at evaluate path "/type"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

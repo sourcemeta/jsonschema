@@ -1,6 +1,9 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/linter.h>
 
+#include <functional> // std::ref, std::cref
+#include <sstream>    // std::ostringstream
+
 namespace sourcemeta::blaze {
 
 ValidDefault::ValidDefault(Compiler compiler)
@@ -15,7 +18,8 @@ auto ValidDefault::condition(
     const sourcemeta::core::SchemaFrame &,
     const sourcemeta::core::SchemaFrame::Location &location,
     const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver) const -> bool {
+    const sourcemeta::core::SchemaResolver &resolver) const
+    -> sourcemeta::core::SchemaTransformRule::Result {
   // Technically, the `default` keyword goes back to Draft 1, but Blaze
   // only supports Draft 4 and later
   if (!vocabularies.contains(
@@ -37,9 +41,19 @@ auto ValidDefault::condition(
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::FastValidation,
                                      location.dialect)};
-
+  const auto &instance{schema.at("default")};
   Evaluator evaluator;
-  return !evaluator.validate(schema_template, schema.at("default"));
+  const std::string ref{"$ref"};
+  SimpleOutput output{instance, {std::cref(ref)}};
+  const auto result{
+      evaluator.validate(schema_template, instance, std::ref(output))};
+  if (result) {
+    return false;
+  }
+
+  std::ostringstream message;
+  output.stacktrace(message);
+  return message.str();
 }
 
 auto ValidDefault::transform(sourcemeta::core::JSON &schema) const -> void {

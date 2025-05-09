@@ -188,15 +188,7 @@ auto parse_options(const std::span<const std::string> &arguments,
 auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
     -> void {
   stream << "error: Schema validation failure\n";
-  for (const auto &entry : output) {
-    stream << "  " << entry.message << "\n";
-    stream << "    at instance location \"";
-    sourcemeta::core::stringify(entry.instance_location, stream);
-    stream << "\"\n";
-    stream << "    at evaluate path \"";
-    sourcemeta::core::stringify(entry.evaluate_path, stream);
-    stream << "\"\n";
-  }
+  output.stacktrace(stream, "  ");
 }
 
 auto print_annotations(

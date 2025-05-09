@@ -14,6 +14,7 @@
 #include <functional>  // std::reference_wrapper
 #include <map>         // std::map
 #include <optional>    // std::optional, std::nullopt
+#include <ostream>     // std::ostream
 #include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -111,6 +112,9 @@ public:
     const sourcemeta::core::WeakPointer evaluate_path;
     const std::string schema_location;
   };
+
+  auto stacktrace(std::ostream &stream,
+                  const std::string &indentation = "") const -> void;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered

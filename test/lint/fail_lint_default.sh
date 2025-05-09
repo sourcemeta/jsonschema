@@ -26,6 +26,9 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/schema.json:
   Only set a \`default\` value that validates against the schema (blaze/valid_default)
     at schema location "/properties/foo"
+    The value was expected to be of type string but it was of type integer
+      at instance location ""
+      at evaluate path "/type"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
