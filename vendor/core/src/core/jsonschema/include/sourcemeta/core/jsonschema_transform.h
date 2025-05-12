@@ -18,7 +18,7 @@
 #include <set>         // std::set
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <utility>     // std::move, std::forward
+#include <utility>     // std::move, std::forward, std::pair
 #include <variant>     // std::variant
 #include <vector>      // std::vector
 
@@ -88,7 +88,8 @@ public:
   auto apply(JSON &schema, const JSON &root, const Vocabularies &vocabularies,
              const SchemaWalker &walker, const SchemaResolver &resolver,
              const SchemaFrame &frame,
-             const SchemaFrame::Location &location) const -> Result;
+             const SchemaFrame::Location &location) const
+      -> std::pair<bool, Result>;
 
   /// Check if the rule applies to a schema
   auto check(const JSON &schema, const JSON &root,
@@ -104,11 +105,9 @@ private:
             const SchemaFrame::Location &location, const SchemaWalker &walker,
             const SchemaResolver &resolver) const -> Result = 0;
 
-  // TODO: Allow this method to not be overriden, as a way to signify
-  // that a rule does not support auto-fixing
-
-  /// The rule transformation
-  virtual auto transform(JSON &schema) const -> void = 0;
+  /// The rule transformation. If this virtual method is not overriden,
+  /// then the rule condition is considered to not be fixable.
+  virtual auto transform(JSON &schema) const -> void;
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -211,30 +210,28 @@ public:
   /// Remove a rule from the bundle
   auto remove(const std::string &name) -> bool;
 
-  // TODO: Still take a CheckCallback for rules that failed but do not
-  // support auto-fixing
-
-  /// Apply the bundle of rules to a schema
-  auto
-  apply(JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
-      -> bool;
-
-  /// The callback that is called whenever the "check" functionality reports a
-  /// rule whose condition holds true. The arguments are as follows:
+  /// The callback that is called whenever the condition of a rule holds true.
+  /// The arguments are as follows:
   ///
   /// - The JSON Pointer to the given subschema
   /// - The name of the rule
   /// - The message of the rule
-  using CheckCallback =
+  /// - The longer description of the rule (if any)
+  using Callback =
       std::function<void(const Pointer &, const std::string_view,
                          const std::string_view, const std::string_view)>;
+
+  /// Apply the bundle of rules to a schema
+  auto
+  apply(JSON &schema, const SchemaWalker &walker,
+        const SchemaResolver &resolver, const Callback &callback,
+        const std::optional<std::string> &default_dialect = std::nullopt) const
+      -> bool;
 
   /// Report back the rules from the bundle that need to be applied to a schema
   auto
   check(const JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const CheckCallback &callback,
+        const SchemaResolver &resolver, const Callback &callback,
         const std::optional<std::string> &default_dialect = std::nullopt) const
       -> bool;
 

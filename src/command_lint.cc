@@ -44,6 +44,47 @@ static auto reindent(const std::string_view &value,
   }
 }
 
+static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
+                              const std::filesystem::path &path,
+                              const bool output_json) -> auto {
+  return [&path, &errors_array,
+          output_json](const auto &pointer, const auto &name,
+                       const auto &message, const auto &description) {
+    if (output_json) {
+      auto error_obj = sourcemeta::core::JSON::make_object();
+
+      error_obj.assign("path", sourcemeta::core::JSON{path.string()});
+      error_obj.assign("id", sourcemeta::core::JSON{name});
+      error_obj.assign("message", sourcemeta::core::JSON{message});
+
+      if (description.empty()) {
+        error_obj.assign("description", sourcemeta::core::JSON{nullptr});
+      } else {
+        error_obj.assign("description", sourcemeta::core::JSON{message});
+      }
+
+      std::ostringstream pointer_stream;
+      sourcemeta::core::stringify(pointer, pointer_stream);
+      error_obj.assign("schemaLocation",
+                       sourcemeta::core::JSON{pointer_stream.str()});
+
+      errors_array.push_back(error_obj);
+    } else {
+      std::cout << path.string() << ":\n";
+      std::cout << "  " << message << " (" << name << ")\n";
+      std::cout << "    at schema location \"";
+      sourcemeta::core::stringify(pointer, std::cout);
+      std::cout << "\"\n";
+      if (!description.empty()) {
+        reindent(description, "    ", std::cout);
+        if (description.back() != '\n') {
+          std::cout << "\n";
+        }
+      }
+    }
+  };
+}
+
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
@@ -93,11 +134,11 @@ auto sourcemeta::jsonschema::cli::lint(
       }
 
       auto copy = entry.second;
-      bundle.apply(copy, sourcemeta::core::schema_official_walker,
-                   resolver(options,
-                            options.contains("h") || options.contains("http"),
-                            dialect),
-                   dialect);
+      bundle.apply(
+          copy, sourcemeta::core::schema_official_walker,
+          resolver(options, options.contains("h") || options.contains("http"),
+                   dialect),
+          get_lint_callback(errors_array, entry.first, output_json), dialect);
       std::ofstream output{entry.first};
       if (options.contains("k") || options.contains("keep-ordering")) {
         sourcemeta::core::prettify(copy, output);
@@ -116,45 +157,7 @@ auto sourcemeta::jsonschema::cli::lint(
           entry.second, sourcemeta::core::schema_official_walker,
           resolver(options, options.contains("h") || options.contains("http"),
                    dialect),
-          [&](const auto &pointer, const auto &name, const auto &message,
-              const auto &description) {
-            if (output_json) {
-              auto error_obj = sourcemeta::core::JSON::make_object();
-
-              error_obj.assign("path",
-                               sourcemeta::core::JSON{entry.first.string()});
-              error_obj.assign("id", sourcemeta::core::JSON{name});
-              error_obj.assign("message", sourcemeta::core::JSON{message});
-
-              if (description.empty()) {
-                error_obj.assign("description",
-                                 sourcemeta::core::JSON{nullptr});
-              } else {
-                error_obj.assign("description",
-                                 sourcemeta::core::JSON{message});
-              }
-
-              std::ostringstream pointer_stream;
-              sourcemeta::core::stringify(pointer, pointer_stream);
-              error_obj.assign("schemaLocation",
-                               sourcemeta::core::JSON{pointer_stream.str()});
-
-              errors_array.push_back(error_obj);
-            } else {
-              std::cout << entry.first.string() << ":\n";
-              std::cout << "  " << message << " (" << name << ")\n";
-              std::cout << "    at schema location \"";
-              sourcemeta::core::stringify(pointer, std::cout);
-              std::cout << "\"\n";
-              if (!description.empty()) {
-                reindent(description, "    ", std::cout);
-                if (description.back() != '\n') {
-                  std::cout << "\n";
-                }
-              }
-            }
-          },
-          dialect);
+          get_lint_callback(errors_array, entry.first, output_json), dialect);
 
       if (!subresult) {
         result = false;

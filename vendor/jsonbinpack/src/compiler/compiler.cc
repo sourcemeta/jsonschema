@@ -6,6 +6,15 @@
 
 #include "encoding.h"
 
+static auto transformer_callback_noop(const sourcemeta::core::Pointer &,
+                                      const std::string_view,
+                                      const std::string_view,
+                                      const std::string_view) -> void {
+  // This callback should never be called, as all the transformation rules
+  // we define in this project can indeed be transformed
+  assert(false);
+}
+
 namespace sourcemeta::jsonbinpack {
 
 auto canonicalize(sourcemeta::core::JSON &schema,
@@ -23,7 +32,8 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                         sourcemeta::core::AlterSchemaCategory::Implicit);
   sourcemeta::core::add(canonicalizer,
                         sourcemeta::core::AlterSchemaCategory::Superfluous);
-  canonicalizer.apply(schema, walker, make_resolver(resolver), default_dialect);
+  canonicalizer.apply(schema, walker, make_resolver(resolver),
+                      transformer_callback_noop, default_dialect);
 }
 
 auto make_encoding(sourcemeta::core::JSON &document,
@@ -80,7 +90,8 @@ auto compile(sourcemeta::core::JSON &schema,
   // Numbers
   mapper.add<NumberArbitrary>();
 
-  mapper.apply(schema, walker, make_resolver(resolver), default_dialect);
+  mapper.apply(schema, walker, make_resolver(resolver),
+               transformer_callback_noop, default_dialect);
 
   // The "any" encoding is always the last resort
   const auto dialect{sourcemeta::core::dialect(schema)};

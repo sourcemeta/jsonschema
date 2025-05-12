@@ -41,20 +41,28 @@ auto SchemaTransformRule::message() const -> const std::string & {
   return this->message_;
 }
 
+auto SchemaTransformRule::transform(JSON &) const -> void {
+  throw SchemaAbortError("This rule cannot be automatically transformed");
+}
+
 auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
                                 const Vocabularies &vocabularies,
                                 const SchemaWalker &walker,
                                 const SchemaResolver &resolver,
                                 const SchemaFrame &frame,
                                 const SchemaFrame::Location &location) const
-    -> SchemaTransformRule::Result {
-  const auto outcome{this->condition(schema, root, vocabularies, frame,
-                                     location, walker, resolver)};
+    -> std::pair<bool, Result> {
+  auto outcome{this->condition(schema, root, vocabularies, frame, location,
+                               walker, resolver)};
   if (!is_true(outcome)) {
-    return outcome;
+    return {true, std::move(outcome)};
   }
 
-  this->transform(schema);
+  try {
+    this->transform(schema);
+  } catch (const SchemaAbortError &) {
+    return {false, std::move(outcome)};
+  }
 
   // The condition must always be false after applying the
   // transformation in order to avoid infinite loops
@@ -67,7 +75,7 @@ auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
     throw std::runtime_error(error.str());
   }
 
-  return true;
+  return {true, std::move(outcome)};
 }
 
 auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
@@ -83,8 +91,7 @@ auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
 
 auto SchemaTransformer::check(
     const JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver,
-    const SchemaTransformer::CheckCallback &callback,
+    const SchemaResolver &resolver, const SchemaTransformer::Callback &callback,
     const std::optional<std::string> &default_dialect) const -> bool {
   SchemaFrame frame{SchemaFrame::Mode::Locations};
   frame.analyse(schema, walker, resolver, default_dialect);
@@ -126,11 +133,13 @@ auto SchemaTransformer::check(
 
 auto SchemaTransformer::apply(
     JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
+    const SchemaTransformer::Callback &callback,
     const std::optional<std::string> &default_dialect) const -> bool {
   // There is no point in applying an empty bundle
   assert(!this->rules.empty());
   std::set<std::pair<Pointer, JSON::String>> processed_rules;
 
+  bool result{true};
   while (true) {
     SchemaFrame frame{SchemaFrame::Mode::Locations};
     frame.analyse(schema, walker, resolver, default_dialect);
@@ -146,9 +155,20 @@ auto SchemaTransformer::apply(
       const auto current_vocabularies{
           vocabularies(schema, resolver, entry.second.dialect)};
       for (const auto &[name, rule] : this->rules) {
-        applied = is_true(rule->apply(current, schema, current_vocabularies,
-                                      walker, resolver, frame, entry.second)) ||
-                  applied;
+        const auto subresult{rule->apply(current, schema, current_vocabularies,
+                                         walker, resolver, frame,
+                                         entry.second)};
+        // This means the rule is fixable
+        if (subresult.first) {
+          applied = is_true(subresult.second) || applied;
+        } else {
+          result = false;
+          callback(entry.second.pointer, name, rule->message(),
+                   subresult.second.index() == 0
+                       ? ""
+                       : *std::get_if<std::string>(&subresult.second));
+        }
+
         if (!applied) {
           continue;
         }
@@ -172,7 +192,7 @@ auto SchemaTransformer::apply(
     }
   }
 
-  return true;
+  return result;
 }
 
 auto SchemaTransformer::remove(const std::string &name) -> bool {
