@@ -724,7 +724,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               {SchemaReferenceType::Static,
                entry.common.pointer.concat({"$schema"})},
               SchemaFrame::ReferencesEntry{
-                  destination, metaschema.recompose_without_fragment(),
+                  maybe_metaschema.value(), destination,
+                  metaschema.recompose_without_fragment(),
                   fragment_string(metaschema)});
         }
       }
@@ -928,8 +929,9 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
       if (entry.common.subschema.get().defines("$ref")) {
         assert(entry.common.subschema.get().at("$ref").is_string());
-        sourcemeta::core::URI ref{
+        const auto &original{
             entry.common.subschema.get().at("$ref").to_string()};
+        sourcemeta::core::URI ref{original};
         if (!nearest_bases.first.empty()) {
           ref.try_resolve_from(nearest_bases.first.front());
         }
@@ -938,7 +940,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         this->references_.insert_or_assign(
             {SchemaReferenceType::Static,
              entry.common.pointer.concat({"$ref"})},
-            SchemaFrame::ReferencesEntry{ref.recompose(),
+            SchemaFrame::ReferencesEntry{original, ref.recompose(),
                                          ref.recompose_without_fragment(),
                                          fragment_string(ref)});
       }
@@ -971,7 +973,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         this->references_.insert_or_assign(
             {reference_type, entry.common.pointer.concat({"$recursiveRef"})},
             SchemaFrame::ReferencesEntry{
-                anchor_uri.recompose(), anchor_uri.recompose_without_fragment(),
+                ref, anchor_uri.recompose(),
+                anchor_uri.recompose_without_fragment(),
                 fragment_string(anchor_uri)});
       }
 
@@ -979,8 +982,9 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               "https://json-schema.org/draft/2020-12/vocab/core") &&
           entry.common.subschema.get().defines("$dynamicRef")) {
         assert(entry.common.subschema.get().at("$dynamicRef").is_string());
-        sourcemeta::core::URI ref{
+        const auto &original{
             entry.common.subschema.get().at("$dynamicRef").to_string()};
+        sourcemeta::core::URI ref{original};
         if (!nearest_bases.first.empty()) {
           ref.resolve_from(nearest_bases.first.front());
         }
@@ -1005,7 +1009,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             {behaves_as_static ? SchemaReferenceType::Static
                                : SchemaReferenceType::Dynamic,
              entry.common.pointer.concat({"$dynamicRef"})},
-            SchemaFrame::ReferencesEntry{std::move(ref_string),
+            SchemaFrame::ReferencesEntry{original, std::move(ref_string),
                                          ref.recompose_without_fragment(),
                                          fragment_string(ref)});
       }
@@ -1070,7 +1074,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           SchemaFrame::References::key_type{SchemaReferenceType::Static,
                                             reference.first.second},
           SchemaFrame::References::mapped_type{
-              match->second.front(),
+              match->second.front(), match->second.front(),
               new_destination.recompose_without_fragment(),
               fragment_string(new_destination)});
     }

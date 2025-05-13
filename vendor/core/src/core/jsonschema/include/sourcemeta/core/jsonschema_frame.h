@@ -115,6 +115,7 @@ public:
 
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
+    JSON::String original;
     JSON::String destination;
     // TODO: This string can be a `string_view` over the `destination`
     std::optional<JSON::String> base;
