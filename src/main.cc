@@ -1,6 +1,6 @@
 #include <sourcemeta/core/jsonschema.h>
 
-#include <algorithm>   // std::min, std::any_of
+#include <algorithm>   // std::min
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
 #include <iostream>    // std::cerr, std::cout
@@ -24,9 +24,13 @@ Global Options:
 
 Commands:
 
-   version
+   version / --version / -v
 
        Print the current version of the JSON Schema CLI.
+
+   help / --help / -h
+
+       Print this command reference help.
 
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
@@ -92,10 +96,7 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 
 auto jsonschema_main(const std::string &program, const std::string &command,
                      const std::span<const std::string> &arguments) -> int {
-  if (command == "version") {
-    std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
-    return EXIT_SUCCESS;
-  } else if (command == "fmt") {
+  if (command == "fmt") {
     return sourcemeta::jsonschema::cli::fmt(arguments);
   } else if (command == "inspect") {
     return sourcemeta::jsonschema::cli::inspect(arguments);
@@ -119,6 +120,10 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
+    return EXIT_SUCCESS;
+  } else if (command == "version" || command == "--version" ||
+             command == "-v") {
+    std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     return EXIT_SUCCESS;
   } else {
     std::cerr << "error: Unknown command '" << command << "'\n";
