@@ -1,6 +1,6 @@
 #include <sourcemeta/core/jsonschema.h>
 
-#include <algorithm>   // std::min
+#include <algorithm>   // std::min, std::any_of
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
 #include <iostream>    // std::cerr, std::cout
@@ -113,7 +113,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::encode(arguments);
   } else if (command == "decode") {
     return sourcemeta::jsonschema::cli::decode(arguments);
-  } else if (command == "help") {
+  } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
