@@ -8,6 +8,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema_resolver.h>
+#include <sourcemeta/core/uri.h>
 
 #include <cassert>     // assert
 #include <concepts>    // std::derived_from
@@ -96,6 +97,12 @@ public:
              const Vocabularies &vocabularies, const SchemaWalker &walker,
              const SchemaResolver &resolver, const SchemaFrame &frame,
              const SchemaFrame::Location &location) const -> Result;
+
+  /// A method to optionally fix any reference location that was affected by the
+  /// transformation.
+  [[nodiscard]] virtual auto
+  rereference(const std::string &reference, const Pointer &origin,
+              const Pointer &target, const Pointer &current) const -> Pointer;
 
 private:
   /// The rule condition

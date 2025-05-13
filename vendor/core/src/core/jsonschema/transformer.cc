@@ -45,6 +45,13 @@ auto SchemaTransformRule::transform(JSON &) const -> void {
   throw SchemaAbortError("This rule cannot be automatically transformed");
 }
 
+auto SchemaTransformRule::rereference(const std::string &reference,
+                                      const Pointer &origin, const Pointer &,
+                                      const Pointer &) const -> Pointer {
+  throw SchemaReferenceError(reference, origin,
+                             "The reference broke after transformation");
+}
+
 auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
                                 const Vocabularies &vocabularies,
                                 const SchemaWalker &walker,
@@ -141,7 +148,7 @@ auto SchemaTransformer::apply(
 
   bool result{true};
   while (true) {
-    SchemaFrame frame{SchemaFrame::Mode::Locations};
+    SchemaFrame frame{SchemaFrame::Mode::References};
     frame.analyse(schema, walker, resolver, default_dialect);
 
     bool applied{false};
@@ -181,12 +188,50 @@ auto SchemaTransformer::apply(
           throw std::runtime_error(error.str());
         }
 
+        // Identify and try to address broken references, if any
+        for (const auto &reference : frame.references()) {
+          const auto destination{frame.traverse(reference.second.destination)};
+          if (!destination.has_value() ||
+              // We only care about references with JSON Pointer fragments,
+              // as these are the only cases, by definition, where the target
+              // is location-dependent.
+              !reference.second.fragment.has_value() ||
+              !reference.second.fragment.value().starts_with('/')) {
+            continue;
+          }
+
+          const auto &target{destination.value().get().pointer};
+          // The destination still exists, so we don't have to do anything
+          if (try_get(schema, target)) {
+            continue;
+          }
+
+          const auto new_fragment{rule->rereference(
+              reference.second.destination, reference.first.second, target,
+              entry.second.pointer)};
+
+          // Note we use the base from the original reference before any
+          // canonicalisation takes place so that we don't overly change
+          // user's references when only fixing up their pointer fragments
+          const auto original_base{
+              URI{reference.second.original}.recompose_without_fragment()};
+          // TODO: This is a silly dance just because we don't have a
+          // .fragment() setter in the URI class
+          if (original_base.has_value()) {
+            set(schema, reference.first.second,
+                JSON{to_uri(new_fragment, original_base.value()).recompose()});
+          } else {
+            set(schema, reference.first.second,
+                JSON{to_uri(new_fragment).recompose()});
+          }
+        }
+
         processed_rules.emplace(entry.second.pointer, name);
-        goto alterschema_start_again;
+        goto core_transformer_start_again;
       }
     }
 
-  alterschema_start_again:
+  core_transformer_start_again:
     if (!applied) {
       break;
     }
