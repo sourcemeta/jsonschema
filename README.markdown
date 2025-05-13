@@ -150,8 +150,9 @@ from source if your distribution of choice is different.
 
 ### From Dockerfile
 
-Starting from v7.2.1, we publish a Docker image to GitHub Packages (`amd64` and
-`arm64`), which you can use as follows:
+Starting from v7.2.1, we publish a Docker image to [GitHub
+Packages](https://github.com/sourcemeta/jsonschema/pkgs/container/jsonschema)
+(`amd64` and `arm64`), which you can use as follows:
 
 ```sh
 docker run --interactive --volume "$PWD:/workspace" \
