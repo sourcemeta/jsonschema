@@ -122,7 +122,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
   uses: actions/checkout@v4
 
 - name: Install the JSON Schema CLI
-  uses: sourcemeta/jsonschema@v9.3.0
+  uses: sourcemeta/jsonschema@v9.3.1
 
 # Then use as usual
 - name: Lint Schemas
