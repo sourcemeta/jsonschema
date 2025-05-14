@@ -118,9 +118,15 @@ brew install sourcemeta/apps/jsonschema
 Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```yaml
-- uses: sourcemeta/jsonschema@v9.3.0
+- name: Checkout Repository
+  uses: actions/checkout@v4
+
+- name: Install the JSON Schema CLI
+  uses: sourcemeta/jsonschema@v9.3.0
+
 # Then use as usual
-- run: jsonschema fmt path/to/schemas --check
+- name: Lint Schemas
+  run: jsonschema fmt path/to/schemas --check
 ```
 
 ### From NPM
