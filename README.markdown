@@ -125,8 +125,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
   uses: sourcemeta/jsonschema@v9.3.1
 
 # Then use as usual
-- name: Lint Schemas
-  run: jsonschema fmt path/to/schemas --check
+- run: jsonschema fmt path/to/schemas --check
 ```
 
 ### From NPM
