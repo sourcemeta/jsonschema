@@ -1,16 +1,20 @@
 #ifndef SOURCEMETA_CORE_JSON_STRINGIFY_H_
 #define SOURCEMETA_CORE_JSON_STRINGIFY_H_
 
+#include <sourcemeta/core/json_value.h>
+
 #include "grammar.h"
 
-#include <sourcemeta/core/json.h>
-
 #include <algorithm> // std::transform, std::sort
+#include <cstddef>   // std::size_t
+#include <cstdint>   // std::int64_t
 #include <iomanip>   // std::setprecision
 #include <ios>       // std::noshowpoint, std::fixed
 #include <iterator>  // std::next, std::cbegin, std::cend, std::back_inserter
 #include <ostream>   // std::basic_ostream
+#include <sstream>   // std::ostringstream
 #include <string>    // std::to_string
+#include <vector>    // std::vector
 
 namespace sourcemeta::core::internal {
 constexpr auto LINE_WIDTH{80};

@@ -1,4 +1,7 @@
+#include <sourcemeta/core/json_value.h>
 #include <sourcemeta/core/jsonl.h>
+
+#include <istream> // std::basic_istream
 
 namespace sourcemeta::core {
 

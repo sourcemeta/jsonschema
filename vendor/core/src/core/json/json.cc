@@ -1,10 +1,16 @@
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/json_error.h>
+#include <sourcemeta/core/json_value.h>
+
 #include "parser.h"
 #include "stringify.h"
 
-#include <sourcemeta/core/json.h>
-
 #include <cassert>      // assert
+#include <cstdint>      // std::uint64_t
+#include <filesystem>   // std::filesystem
 #include <fstream>      // std::ifstream
+#include <istream>      // std::basic_istream
+#include <ostream>      // std::basic_ostream
 #include <system_error> // std::make_error_code, std::errc
 
 namespace sourcemeta::core {

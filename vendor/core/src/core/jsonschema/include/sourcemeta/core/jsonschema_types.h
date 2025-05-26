@@ -1,6 +1,10 @@
 #ifndef SOURCEMETA_CORE_JSONSCHEMA_TYPES_H_
 #define SOURCEMETA_CORE_JSONSCHEMA_TYPES_H_
 
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/uri.h>
+
 #include <cstdint>       // std::uint8_t
 #include <functional>    // std::function, std::reference_wrapper
 #include <optional>      // std::optional
@@ -8,10 +12,6 @@
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
-
-#include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/uri.h>
 
 namespace sourcemeta::core {
 

@@ -4,8 +4,6 @@
 #include <cstddef>  // std::ptrdiff_t
 #include <iterator> // std::forward_iterator_tag
 
-#include <sourcemeta/core/jsonpointer_pointer.h>
-
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer

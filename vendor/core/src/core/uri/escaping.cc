@@ -1,5 +1,6 @@
-#include <sourcemeta/core/uri.h>
 #include <uriparser/Uri.h>
+
+#include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::copy
 #include <sstream>   // std::ostringstream

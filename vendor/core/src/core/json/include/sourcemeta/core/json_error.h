@@ -8,6 +8,8 @@
 #include <cstdint>    // std::uint64_t
 #include <exception>  // std::exception
 #include <filesystem> // std::filesystem::path
+#include <string>     // std::string
+#include <utility>    // std::move
 
 namespace sourcemeta::core {
 

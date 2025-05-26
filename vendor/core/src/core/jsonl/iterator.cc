@@ -1,8 +1,12 @@
+#include <sourcemeta/core/json.h>
+#include <sourcemeta/core/json_error.h>
+#include <sourcemeta/core/json_value.h>
 #include <sourcemeta/core/jsonl_iterator.h>
 
 #include "grammar.h"
 
 #include <cassert> // assert
+#include <istream> // std::basic_istream
 
 namespace sourcemeta::core {
 
@@ -100,7 +104,7 @@ ConstJSONLIterator::ConstJSONLIterator(
     std::basic_istream<JSON::Char, JSON::CharTraits> *stream)
     : data{stream}, internal{new Internal({this->parse_next()})} {}
 
-ConstJSONLIterator::~ConstJSONLIterator() {}
+ConstJSONLIterator::~ConstJSONLIterator() = default;
 
 auto operator==(const ConstJSONLIterator &left, const ConstJSONLIterator &right)
     -> bool {

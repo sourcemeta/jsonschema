@@ -3,9 +3,11 @@
 
 #include "grammar.h"
 
+#include <sourcemeta/core/json_value.h>
+#include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonpointer_error.h>
-#include <sourcemeta/core/jsonpointer_pointer.h>
 
+#include <cstdint>   // std::uint64_t
 #include <istream>   // std::basic_istream
 #include <sstream>   // std::basic_stringstream
 #include <stdexcept> // std::out_of_range

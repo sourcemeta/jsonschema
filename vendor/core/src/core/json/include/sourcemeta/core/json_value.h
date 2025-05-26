@@ -11,11 +11,11 @@
 
 #include <algorithm>        // std::any_of
 #include <cassert>          // assert
+#include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t, std::uint8_t
 #include <functional>       // std::less, std::reference_wrapper, std::function
 #include <initializer_list> // std::initializer_list
 #include <memory>           // std::allocator
-#include <optional>         // std::optional
 #include <set>              // std::set
 #include <sstream>          // std::basic_istringstream
 #include <string>           // std::basic_string, std::char_traits
@@ -761,6 +761,43 @@ public:
                         const typename Object::Container::hash_type hash)
       -> JSON &;
 
+  /// This method retrieves an object property or a user provided value if such
+  /// property is not defined.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON my_object =
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
+  /// const sourcemeta::core::JSON default_value{3};
+  /// assert(my_object.at_or("baz", default_value).to_integer() == 3);
+  /// ```
+  [[nodiscard]] auto at_or(const String &key, const JSON &otherwise) const
+      -> const JSON &;
+
+  /// This method retrieves an object property given a pre-calculated property
+  /// hash, or a user provided value if such property is not defined.
+  ///
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON my_object =
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
+  /// const sourcemeta::core::JSON default_value{3};
+  /// assert(my_object.at_or("foo",
+  ///   my_object.as_object().hash("foo"),
+  ///   default_value).to_integer() == 1);
+  /// ```
+  [[nodiscard]] auto at_or(const String &key,
+                           const typename Object::Container::hash_type hash,
+                           const JSON &otherwise) const -> const JSON &;
+
   /// This method retrieves a reference to the first element of a JSON array.
   /// This method is undefined if the input JSON instance is an empty array. For
   /// example:
@@ -1456,6 +1493,57 @@ public:
   /// assert(!document.defines("baz"));
   /// ```
   auto clear_except(std::initializer_list<String> keys) -> void;
+
+  /// This method assigns every property of another object into the current
+  /// object. Overriding existing properties if they are already defined. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::JSON::make_object();
+  /// document.assign("foo", sourcemeta::core::JSON{1});
+  /// document.assign("bar", sourcemeta::core::JSON{2});
+  ///
+  /// sourcemeta::core::JSON other =
+  ///   sourcemeta::core::JSON::make_object();
+  /// other.assign("bar", sourcemeta::core::JSON{1});
+  /// other.assign("baz", sourcemeta::core::JSON{2});
+  ///
+  /// document.merge(other.as_object());
+  ///
+  /// assert(document.size() == 3);
+  ///
+  /// assert(document.at("foo").to_integer() == 1);
+  /// assert(document.at("bar").to_integer() == 1);
+  /// assert(document.at("baz").to_integer() == 2);
+  /// ```
+  auto merge(const JSON::Object &other) -> void;
+
+  /// Return a trimmed version of the string. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document{" \r\t  Hello World\n\v   \f"};
+  /// assert(document.trim() == "Hello World");
+  /// ```
+  [[nodiscard]] auto trim() const -> JSON::String;
+
+  /// Trim the string in-place. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document{" \r\t  Hello World\n\v   \f"};
+  /// document.trim();
+  /// assert(document.to_string() == "Hello World");
+  /// ```
+  auto trim() -> const JSON::String &;
 
   /*
    * Transform operations

@@ -1,10 +1,11 @@
+// See https://pyyaml.org/wiki/LibYAML for basic documentation
+#include <yaml.h>
+
+#include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/yaml.h>
 
 #include <sstream>     // std::ostringstream, std::istringstream
 #include <string_view> // std::string_view
-
-// See https://pyyaml.org/wiki/LibYAML for basic documentation
-#include <yaml.h>
 
 // TODO: Perform parsing token by token using `yaml_parser_parse`,
 // as that function also let us get line/column information on `yaml_event_t`

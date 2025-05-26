@@ -5,9 +5,11 @@
 #include <sourcemeta/core/yaml_export.h>
 #endif
 
-#include <sourcemeta/core/yaml_error.h>
-
 #include <sourcemeta/core/json.h>
+
+// NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/yaml_error.h>
+// NOLINTEND(misc-include-cleaner)
 
 #include <filesystem> // std::filesystem
 #include <istream>    // std::basic_istream
