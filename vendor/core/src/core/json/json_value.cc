@@ -1,13 +1,20 @@
+#include <sourcemeta/core/json_array.h>
 #include <sourcemeta/core/json_value.h>
 
-#include <algorithm> // std::find
-#include <cassert>   // assert
-#include <cmath>     // std::isinf, std::isnan, std::modf, std::trunc
-#include <numeric>   // std::transform
-#include <stdexcept> // std::invalid_argument
-#include <string>    // std::to_string
-#include <utility>   // std::move
-#include <vector>    // std::vector
+#include <algorithm>        // std::find
+#include <cassert>          // assert
+#include <cmath>            // std::isinf, std::isnan, std::modf, std::trunc
+#include <cstddef>          // std::size_t
+#include <cstdint>          // std::int64_t
+#include <functional>       // std::reference_wrapper
+#include <initializer_list> // std::initializer_list
+#include <numeric>          // std::transform
+#include <sstream>          // std::basic_istringstream
+#include <stdexcept>        // std::invalid_argument
+#include <string>           // std::to_string
+#include <string_view>      // std::basic_string_view
+#include <utility>          // std::move
+#include <vector>           // std::vector
 
 namespace sourcemeta::core {
 
@@ -40,7 +47,7 @@ JSON::JSON(const bool value) : current_type{Type::Boolean} {
   this->data_boolean = value;
 }
 
-JSON::JSON(const std::nullptr_t) : current_type{Type::Null} {}
+JSON::JSON(const std::nullptr_t) {}
 
 JSON::JSON(const String &value) : current_type{Type::String} {
   new (&this->data_string) String{value};
@@ -497,6 +504,20 @@ JSON::at(const String &key,
   return this->data_object.data.at(key, hash);
 }
 
+[[nodiscard]] auto JSON::at_or(const String &key,
+                               const typename Object::Container::hash_type hash,
+                               const JSON &otherwise) const -> const JSON & {
+  assert(this->is_object());
+  const auto result{this->try_at(key, hash)};
+  return result ? *result : otherwise;
+}
+
+[[nodiscard]] auto JSON::at_or(const String &key, const JSON &otherwise) const
+    -> const JSON & {
+  assert(this->is_object());
+  return this->at_or(key, this->data_object.data.hash(key), otherwise);
+}
+
 [[nodiscard]] auto JSON::front() -> JSON & {
   assert(this->is_array());
   assert(!this->empty());
@@ -837,6 +858,28 @@ auto JSON::clear() -> void {
 
 auto JSON::clear_except(std::initializer_list<JSON::String> keys) -> void {
   this->clear_except(keys.begin(), keys.end());
+}
+
+auto JSON::merge(const JSON::Object &other) -> void {
+  assert(this->is_object());
+  for (const auto &pair : other) {
+    this->assign(pair.first, pair.second);
+  }
+}
+
+[[nodiscard]] auto JSON::trim() const -> JSON::String {
+  assert(this->is_string());
+  auto copy = *this;
+  copy.trim();
+  return copy.to_string();
+}
+
+auto JSON::trim() -> const JSON::String & {
+  assert(this->is_string());
+  constexpr auto WHITESPACE = " \t\n\r\v\f";
+  this->data_string.erase(this->data_string.find_last_not_of(WHITESPACE) + 1);
+  this->data_string.erase(0, this->data_string.find_first_not_of(WHITESPACE));
+  return this->to_string();
 }
 
 auto JSON::rename(const JSON::String &key, JSON::String &&to) -> void {

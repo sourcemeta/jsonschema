@@ -1,17 +1,15 @@
 #ifndef SOURCEMETA_CORE_JSONPOINTER_TEMPLATE_H_
 #define SOURCEMETA_CORE_JSONPOINTER_TEMPLATE_H_
 
-#include <sourcemeta/core/jsonpointer_pointer.h>
-#include <sourcemeta/core/jsonpointer_token.h>
-
 #include <sourcemeta/core/regex.h>
 
-#include <algorithm> // std::copy, std::all_of
-#include <cassert>   // assert
-#include <iterator>  // std::back_inserter
-#include <optional>  // std::optional, std::nullopt
-#include <variant>   // std::variant, std::holds_alternative, std::get
-#include <vector>    // std::vector
+#include <algorithm>        // std::copy, std::all_of
+#include <cassert>          // assert
+#include <initializer_list> // std::initializer_list
+#include <iterator>         // std::back_inserter
+#include <optional>         // std::optional, std::nullopt
+#include <variant>          // std::variant, std::holds_alternative, std::get
+#include <vector>           // std::vector
 
 namespace sourcemeta::core {
 

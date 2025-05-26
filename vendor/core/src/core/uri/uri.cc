@@ -1,5 +1,6 @@
-#include <sourcemeta/core/uri.h>
 #include <uriparser/Uri.h>
+
+#include <sourcemeta/core/uri.h>
 
 #include <cassert>   // assert
 #include <cstdint>   // std::uint32_t
@@ -8,6 +9,7 @@
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::length_error, std::runtime_error
 #include <string>    // std::stoul, std::string, std::tolower
+#include <tuple>     // std::tie
 #include <utility>   // std::move
 #include <vector>    // std::vector
 
@@ -616,6 +618,20 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
 
 auto URI::userinfo() const -> std::optional<std::string_view> {
   return this->userinfo_;
+}
+
+auto URI::operator==(const URI &other) const noexcept -> bool {
+  return this->scheme_ == other.scheme_ && this->userinfo_ == other.userinfo_ &&
+         this->host_ == other.host_ && this->port_ == other.port_ &&
+         this->path_ == other.path_ && this->query_ == other.query_ &&
+         this->fragment_ == other.fragment_;
+}
+
+auto URI::operator<(const URI &other) const noexcept -> bool {
+  return std::tie(this->scheme_, this->userinfo_, this->host_, this->port_,
+                  this->path_, this->query_, this->fragment_) <
+         std::tie(other.scheme_, other.userinfo_, other.host_, other.port_,
+                  other.path_, other.query_, other.fragment_);
 }
 
 } // namespace sourcemeta::core

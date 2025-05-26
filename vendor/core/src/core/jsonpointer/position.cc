@@ -1,6 +1,10 @@
+#include <sourcemeta/core/json_value.h>
 #include <sourcemeta/core/jsonpointer_position.h>
 
-#include <cassert> // assert
+#include <cassert>  // assert
+#include <cstddef>  // std::size_t
+#include <cstdint>  // std::uint64_t
+#include <optional> // std::optional
 
 namespace sourcemeta::core {
 

@@ -6,7 +6,10 @@
 #endif
 
 #include <sourcemeta/core/json.h>
+
+// NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/jsonl_iterator.h>
+// NOLINTEND(misc-include-cleaner)
 
 #include <istream> // std::basic_istream
 

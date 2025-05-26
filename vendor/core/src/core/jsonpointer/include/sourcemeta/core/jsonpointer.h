@@ -8,13 +8,14 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/uri.h>
 
-#include <sourcemeta/core/jsonpointer.h>
+// NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/jsonpointer_error.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/jsonpointer_position.h>
 #include <sourcemeta/core/jsonpointer_subpointer_walker.h>
 #include <sourcemeta/core/jsonpointer_template.h>
 #include <sourcemeta/core/jsonpointer_walker.h>
+// NOLINTEND(misc-include-cleaner)
 
 #include <functional> // std::reference_wrapper
 #include <memory>     // std::allocator

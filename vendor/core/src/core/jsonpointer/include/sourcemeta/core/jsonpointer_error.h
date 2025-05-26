@@ -5,7 +5,7 @@
 #include <sourcemeta/core/jsonpointer_export.h>
 #endif
 
-#include <sourcemeta/core/json_error.h>
+#include <sourcemeta/core/json.h>
 
 #include <cstdint> // std::uint64_t
 
