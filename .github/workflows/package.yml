@@ -122,8 +122,8 @@ jobs:
           merge-multiple: true
 
       # Generate checksums for all pre-built binaries
-      - run: sha512sum build/out/*.zip > build/out/sha512sum.txt
-      - run: cat build/out/sha512sum.txt
+      - run: sha256sum --tag build/out/*.zip > build/out/CHECKSUMS.txt
+      - run: cat build/out/CHECKSUMS.txt
 
       - run: tree build
 
@@ -135,7 +135,7 @@ jobs:
         run: |
           gh release delete continuous --cleanup-tag --yes || true
           gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA" --generate-notes
-          gh release upload --clobber continuous build/out/*
+          gh release upload --clobber continuous build/out/*.zip build/out/CHECKSUMS.txt
         if: github.ref_type == 'branch'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -143,7 +143,7 @@ jobs:
       - name: Perform Tag Release
         run: |
           gh release create ${{ github.ref_name }} --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
-          gh release upload --clobber ${{ github.ref_name }} build/out/*
+          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip build/out/CHECKSUMS.txt
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
