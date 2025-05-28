@@ -130,7 +130,7 @@ public:
   ///   "us-east-005", "123456789", "ultra-secret"};
   ///
   /// const sourcemeta::core::JSON document =
-  ///   sourcemeta::core::parse("{ \"foo\": \"bar\" }");
+  ///   sourcemeta::core::parse_json("{ \"foo\": \"bar\" }");
   ///
   /// bucket.upsert_json("/foo/bar.json", document).wait();
   /// ```
@@ -153,7 +153,7 @@ public:
   /// std::optional<sourcemeta::hydra::Bucket::ResponseJSON> response{
   ///   bucket.fetch_or_upsert("/foo/bar.json",
   ///     []() -> sourcemeta::core::JSON {
-  ///       return sourcemeta::core::parse("{ \"foo\": \"bar\" }");
+  ///       return sourcemeta::core::parse_json("{ \"foo\": \"bar\" }");
   ///     }).get()};
   ///
   /// if (response.has_value()) {

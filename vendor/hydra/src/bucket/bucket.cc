@@ -84,7 +84,7 @@ auto Bucket::fetch_json(const std::string &key)
   assert(response.header("etag").has_value());
   assert(response.header("last-modified").has_value());
 
-  ResponseJSON result = {sourcemeta::core::parse(response.body()),
+  ResponseJSON result = {sourcemeta::core::parse_json(response.body()),
                          response.header("etag").value(),
                          response.header_gmt("last-modified").value(), false};
 
