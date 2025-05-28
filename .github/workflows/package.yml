@@ -122,7 +122,7 @@ jobs:
           merge-multiple: true
 
       # Generate checksums for all pre-built binaries
-      # avoid "build/out/" in the checksum file.
+      # while avoiding "build/out/" in the checksum file.
       - run: sha256sum --tag *.zip >CHECKSUMS.txt
         working-directory: build/out/
       - run: cat CHECKSUMS.txt
