@@ -83,8 +83,7 @@ endif()
 if(PROJECT_IS_TOP_LEVEL)
   sourcemeta_target_clang_format(SOURCES
     src/*.cc src/*.h test/*.cc test/*.h)
-  sourcemeta_target_clang_tidy(SOURCES
-    src/*.h src/*.cc)
+  sourcemeta_target_clang_tidy(SOURCES src/*.cc)
 endif()
 
 # Testing

@@ -256,12 +256,12 @@ public:
   /// server.route(sourcemeta::hydra::http::Method::GET, "/", on_root);
   /// ```
   auto end(const sourcemeta::core::JSON &document,
-           const sourcemeta::core::KeyComparison &compare) -> void;
+           const sourcemeta::core::JSON::KeyComparison &compare) -> void;
 
   /// Same as sourcemeta::hydra::http::ServerResponse::end but without sending
   /// the actual response content
   auto head(const sourcemeta::core::JSON &document,
-            const sourcemeta::core::KeyComparison &compare) -> void;
+            const sourcemeta::core::JSON::KeyComparison &compare) -> void;
 
   /// Respond with an empty body. For example:
   ///

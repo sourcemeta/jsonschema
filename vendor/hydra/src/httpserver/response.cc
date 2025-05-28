@@ -172,7 +172,7 @@ auto ServerResponse::head(const sourcemeta::core::JSON &document) -> void {
 }
 
 auto ServerResponse::end(const sourcemeta::core::JSON &document,
-                         const sourcemeta::core::KeyComparison &compare)
+                         const sourcemeta::core::JSON::KeyComparison &compare)
     -> void {
   std::ostringstream output;
   sourcemeta::core::prettify(document, output, compare);
@@ -180,7 +180,7 @@ auto ServerResponse::end(const sourcemeta::core::JSON &document,
 }
 
 auto ServerResponse::head(const sourcemeta::core::JSON &document,
-                          const sourcemeta::core::KeyComparison &compare)
+                          const sourcemeta::core::JSON::KeyComparison &compare)
     -> void {
   std::ostringstream output;
   sourcemeta::core::prettify(document, output, compare);
