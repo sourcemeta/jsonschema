@@ -34,14 +34,15 @@ Commands:
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-            [--template/-m <template.json>] [--json/-j]
+            [--template/-m <template.json>] [--json/-j] [--loop <iterations>]
 
        Validate one or more instances against the given schema.
 
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option
        makes the schema compiler optimise for speed, at the expense of error
-       messages.
+       messages. Looping in benchmark mode allows to collect the execution time
+       average and standard deviation for the fast mode on basic JSON data.
 
        You may additionally pass a pre-compiled schema template (see the
        `compile` command). However, you still need to pass the original schema
@@ -148,6 +149,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("fast", {"f"});
     app.option("extension", {"e"});
     app.option("template", {"m"});
+    app.option("loop", {"l"});
     app.parse(argc, argv, {.skip = 1});
     return sourcemeta::jsonschema::cli::validate(app);
   } else if (command == "metaschema") {
