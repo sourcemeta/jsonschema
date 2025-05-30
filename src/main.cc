@@ -157,6 +157,12 @@ auto main(int argc, char *argv[]) noexcept -> int {
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &error) {
     std::cerr << "error: " << error.what() << "\n";
+    std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
+                 "base dialect is known?\n";
+    std::cerr << "If the input does not declare the $schema keyword, you might "
+                 "want to\n";
+    std::cerr
+        << "explicity declare a default dialect using --default-dialect/-d\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";
