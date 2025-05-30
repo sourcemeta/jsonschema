@@ -184,7 +184,8 @@ auto sourcemeta::jsonschema::cli::validate(
           empty +=
               (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
                            end - start))
-                  .count() / 1000.0;
+                  .count() /
+              1000.0;
         }
         empty /= (double)bench_loop;
 
@@ -199,7 +200,8 @@ auto sourcemeta::jsonschema::cli::validate(
           const auto delay =
               (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
                            end - start))
-                  .count() / 1000.0 -
+                      .count() /
+                  1000.0 -
               empty;
 
           sum += delay;
