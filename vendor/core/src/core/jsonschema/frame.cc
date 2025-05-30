@@ -549,7 +549,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
     const std::optional<JSON::String> root_base_dialect{
         sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
     if (!root_base_dialect.has_value()) {
-      throw SchemaError("Could not determine the base dialect of the schema");
+      throw SchemaUnknownBaseDialectError();
     }
 
     std::optional<JSON::String> root_id{
@@ -573,21 +573,23 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                          default_id.has_value() &&
                                          root_id.value() != default_id.value()};
     if (has_explicit_different_id) {
+      const auto default_id_canonical{
+          URI{default_id.value()}.canonicalize().recompose()};
       if (this->mode_ == SchemaFrame::Mode::Instances) {
         store(this->locations_, this->instances_, SchemaReferenceType::Static,
-              SchemaFrame::LocationType::Resource, default_id.value(),
+              SchemaFrame::LocationType::Resource, default_id_canonical,
               root_id.value(), root_id.value(), path,
               sourcemeta::core::empty_pointer, root_dialect.value(),
               root_base_dialect.value(), {{}}, std::nullopt);
       } else {
         store(this->locations_, this->instances_, SchemaReferenceType::Static,
-              SchemaFrame::LocationType::Resource, default_id.value(),
+              SchemaFrame::LocationType::Resource, default_id_canonical,
               root_id.value(), root_id.value(), path,
               sourcemeta::core::empty_pointer, root_dialect.value(),
               root_base_dialect.value(), {}, std::nullopt);
       }
 
-      base_uris.insert({path, {default_id.value()}});
+      base_uris.insert({path, {default_id_canonical}});
     }
 
     std::vector<std::size_t> current_subschema_entries;

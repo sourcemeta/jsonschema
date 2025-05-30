@@ -164,8 +164,7 @@ auto sourcemeta::core::reidentify(
   const auto base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!base_dialect.has_value()) {
-    throw sourcemeta::core::SchemaError(
-        "Could not determine the base dialect of the schema");
+    throw sourcemeta::core::SchemaUnknownBaseDialectError();
   }
 
   reidentify(schema, new_identifier, base_dialect.value());
@@ -238,7 +237,7 @@ auto sourcemeta::core::metaschema(
   const auto maybe_dialect{sourcemeta::core::dialect(schema, default_dialect)};
   if (!maybe_dialect.has_value()) {
     throw sourcemeta::core::SchemaError(
-        "Could not determine dialect of the schema");
+        "Could not the determine dialect of the schema");
   }
 
   const auto maybe_metaschema{resolver(maybe_dialect.value())};
@@ -339,8 +338,7 @@ auto sourcemeta::core::vocabularies(
   const std::optional<std::string> maybe_base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   if (!maybe_base_dialect.has_value()) {
-    throw sourcemeta::core::SchemaError(
-        "Could not determine base dialect of the schema");
+    throw sourcemeta::core::SchemaUnknownBaseDialectError();
   }
 
   const std::optional<std::string> maybe_dialect{
@@ -349,8 +347,7 @@ auto sourcemeta::core::vocabularies(
     // If the schema has no declared metaschema and the user didn't
     // provide a explicit default, then we cannot do anything.
     // Better to abort instead of trying to guess.
-    throw sourcemeta::core::SchemaError(
-        "Could not determine the dialect of the schema");
+    throw sourcemeta::core::SchemaUnknownDialectError();
   }
 
   return vocabularies(resolver, maybe_base_dialect.value(),
@@ -718,7 +715,7 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   if (effective_dialect.has_value()) {
     copy.assign("$schema", JSON{effective_dialect.value()});
   } else {
-    throw SchemaError("Could not determine the base dialect of the schema");
+    throw SchemaUnknownBaseDialectError();
   }
 
   auto result{JSON::make_object()};
