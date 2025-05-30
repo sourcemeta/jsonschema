@@ -175,20 +175,17 @@ auto sourcemeta::jsonschema::cli::validate(
       bool subresult{true};
       if (benchmark) {
         double sum = 0.0, sum2 = 0.0, empty = 0.0;
-        size_t count = 0;
 
         // overhead evaluation, if the compiler is kind enough not to optimize
         // this out!
         for (auto i = bench_loop; i; i--) {
           const auto start{std::chrono::high_resolution_clock::now()};
-          count++;
           const auto end{std::chrono::high_resolution_clock::now()};
           empty +=
-              (double)(std::chrono::duration_cast<std::chrono::microseconds>(
+              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
                            end - start))
-                  .count();
+                  .count() / 1000.0;
         }
-        assert(count == bench_loop);
         empty /= (double)bench_loop;
 
         // execution time evaluation
@@ -200,9 +197,9 @@ auto sourcemeta::jsonschema::cli::validate(
 
           const auto end{std::chrono::high_resolution_clock::now()};
           const auto delay =
-              (double)(std::chrono::duration_cast<std::chrono::microseconds>(
+              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
                            end - start))
-                  .count() -
+                  .count() / 1000.0 -
               empty;
 
           sum += delay;
