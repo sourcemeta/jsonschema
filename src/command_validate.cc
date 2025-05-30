@@ -6,19 +6,18 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <chrono>   // std::chrono
+#include <cmath>    // for sqrt
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <set>      // std::set
 #include <string>   // std::string
-#include <cmath>    // for sqrt
 
 #include "command.h"
 #include "utils.h"
 
 // parse unsigned int option, how many loop for benchmarking
 auto benchmark_loop(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> size_t {
+    const std::map<std::string, std::vector<std::string>> &options) -> size_t {
 
   size_t loop = 1;
 
@@ -142,9 +141,8 @@ auto sourcemeta::jsonschema::cli::validate(
           } else if (subresult) {
             log_verbose(options)
                 << "ok: " << safe_weakly_canonical(instance_path).string()
-                << " (entry #" << index << ")"
-                << "\n  matches " << safe_weakly_canonical(schema_path).string()
-                << "\n";
+                << " (entry #" << index << ")" << "\n  matches "
+                << safe_weakly_canonical(schema_path).string() << "\n";
             print_annotations(output, options, std::cerr);
           } else {
             std::cerr << "fail: "
@@ -179,38 +177,45 @@ auto sourcemeta::jsonschema::cli::validate(
         double sum = 0.0, sum2 = 0.0, empty = 0.0;
         size_t count = 0;
 
-        // overhead evaluation, if the compiler is kind enough not to optimize this out!
-        for (auto i = bench_loop; i; i--)  {
+        // overhead evaluation, if the compiler is kind enough not to optimize
+        // this out!
+        for (auto i = bench_loop; i; i--) {
           const auto start{std::chrono::high_resolution_clock::now()};
           count++;
           const auto end{std::chrono::high_resolution_clock::now()};
-          empty += (double)
-            (std::chrono::duration_cast<std::chrono::microseconds>(end - start)).count();
+          empty +=
+              (double)(std::chrono::duration_cast<std::chrono::microseconds>(
+                           end - start))
+                  .count();
         }
         assert(count == bench_loop);
-        empty /= (double) bench_loop;
+        empty /= (double)bench_loop;
 
         // execution time evaluation
-        for (auto i = bench_loop; i; i--)  {
+        for (auto i = bench_loop; i; i--) {
           const auto start{std::chrono::high_resolution_clock::now()};
 
           // force fast evaluation
           subresult = evaluator.validate(schema_template, instance);
 
           const auto end{std::chrono::high_resolution_clock::now()};
-          const auto delay = (double) (std::chrono::duration_cast<
-                std::chrono::microseconds>(end - start)).count() - empty;
+          const auto delay =
+              (double)(std::chrono::duration_cast<std::chrono::microseconds>(
+                           end - start))
+                  .count() -
+              empty;
 
           sum += delay;
           sum2 += delay * delay;
         }
 
         // compute and show average execution time and standard deviation
-        auto avg = sum / (double) bench_loop;
-        auto stdev = sqrt(sum2 / (double) bench_loop - avg * avg);
+        auto avg = sum / (double)bench_loop;
+        auto stdev = sqrt(sum2 / (double)bench_loop - avg * avg);
         std::cout << std::fixed;
         std::cout.precision(3);
-        std::cout << "took: " << avg << " +- " << stdev << " us (" << empty << ")\n";
+        std::cout << "took: " << avg << " +- " << stdev << " us (" << empty
+                  << ")\n";
 
         if (!subresult) {
           error << "error: Schema validation failure\n";
