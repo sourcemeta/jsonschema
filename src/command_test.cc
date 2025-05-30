@@ -13,8 +13,8 @@
 #include "utils.h"
 
 static auto get_data(const sourcemeta::core::JSON &test_case,
-                     const std::filesystem::path &base, const bool verbose)
-    -> sourcemeta::core::JSON {
+                     const std::filesystem::path &base,
+                     const bool verbose) -> sourcemeta::core::JSON {
   assert(base.is_absolute());
   assert(test_case.is_object());
   assert(test_case.defines("data") || test_case.defines("dataPath"));
