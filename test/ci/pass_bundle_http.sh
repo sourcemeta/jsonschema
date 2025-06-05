@@ -10,7 +10,9 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "allOf": [ { "$ref": "https://json.schemastore.org/mocharc.json" } ]
+  "allOf": [
+    { "$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json" }
+  ]
 }
 EOF
 
@@ -21,163 +23,230 @@ cat << 'EOF' > "$TMP/expected.json"
   "$schema": "http://json-schema.org/draft-07/schema#",
   "allOf": [
     {
-      "$ref": "https://json.schemastore.org/mocharc.json"
+      "$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json"
     }
   ],
   "definitions": {
-    "https://json.schemastore.org/mocharc.json": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "$id": "https://json.schemastore.org/mocharc.json",
-      "title": "Mocha JS Configuration File Schema",
-      "description": "A JSON schema describing a .mocharc.[json|yml|yaml] file",
+    "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json": {
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "id": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json",
+      "description": "Core schema meta-schema",
+      "default": {},
       "type": "object",
       "properties": {
-        "allow-uncaught": {
-          "$ref": "#/definitions/bool"
-        },
-        "async-only": {
-          "$ref": "#/definitions/bool"
-        },
-        "bail": {
-          "$ref": "#/definitions/bool"
-        },
-        "check-leaks": {
-          "$ref": "#/definitions/bool"
-        },
-        "color": {
-          "$ref": "#/definitions/bool"
-        },
-        "config": {
-          "$ref": "#/definitions/string"
-        },
-        "delay": {
-          "$ref": "#/definitions/bool"
-        },
-        "diff": {
-          "$ref": "#/definitions/bool"
-        },
-        "enable-source-maps": {
-          "$ref": "#/definitions/bool"
-        },
-        "exit": {
-          "$ref": "#/definitions/bool"
-        },
-        "extension": {
-          "$ref": "#/definitions/string-array"
-        },
-        "fgrep": {
-          "$ref": "#/definitions/string"
-        },
-        "file": {
-          "$ref": "#/definitions/string-array"
-        },
-        "forbid-only": {
-          "$ref": "#/definitions/bool"
-        },
-        "forbid-pending": {
-          "$ref": "#/definitions/bool"
-        },
-        "full-trace": {
-          "$ref": "#/definitions/bool"
-        },
-        "global": {
-          "$ref": "#/definitions/string-array"
-        },
-        "grep": {
-          "$ref": "#/definitions/string"
-        },
-        "growl": {
-          "$ref": "#/definitions/bool"
-        },
-        "ignore": {
-          "$ref": "#/definitions/string-array"
-        },
-        "inline-diffs": {
-          "$ref": "#/definitions/bool"
-        },
-        "invert": {
-          "$ref": "#/definitions/bool"
-        },
-        "jobs": {
-          "$ref": "#/definitions/int"
-        },
-        "package": {
-          "$ref": "#/definitions/string"
-        },
-        "parallel": {
-          "$ref": "#/definitions/bool"
-        },
-        "recursive": {
-          "$ref": "#/definitions/bool"
-        },
-        "reporter": {
-          "$ref": "#/definitions/string"
-        },
-        "reporter-option": {
-          "$ref": "#/definitions/string-array"
-        },
-        "require": {
-          "$ref": "#/definitions/string-array"
-        },
-        "retries": {
-          "$ref": "#/definitions/int"
-        },
-        "slow": {
-          "$ref": "#/definitions/int"
-        },
-        "sort": {
-          "$ref": "#/definitions/bool"
-        },
-        "spec": {
-          "$ref": "#/definitions/string-array"
-        },
-        "timeout": {
-          "$ref": "#/definitions/int"
-        },
-        "ui": {
-          "$ref": "#/definitions/string"
-        },
-        "watch": {
-          "$ref": "#/definitions/bool"
-        },
-        "watch-files": {
-          "$ref": "#/definitions/string-array"
-        },
-        "watch-ignore": {
-          "$ref": "#/definitions/string-array"
-        }
-      },
-      "additionalProperties": true,
-      "definitions": {
-        "bool": {
-          "type": "boolean"
-        },
-        "int": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "string": {
+        "$schema": {
           "type": "string"
         },
-        "string-array": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "default": {},
+        "type": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/definitions/simpleTypes"
             },
             {
               "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
               "items": {
-                "type": "string"
+                "$ref": "#/definitions/simpleTypes"
               }
             }
           ]
+        },
+        "enum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "allOf": {
+          "$ref": "#/definitions/schemaArray"
+        },
+        "anyOf": {
+          "$ref": "#/definitions/schemaArray"
+        },
+        "oneOf": {
+          "$ref": "#/definitions/schemaArray"
+        },
+        "not": {
+          "$ref": ""
+        },
+        "exclusiveMaximum": {
+          "default": false,
+          "type": "boolean"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "exclusiveMinimum": {
+          "default": false,
+          "type": "boolean"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0
+        },
+        "pattern": {
+          "type": "string",
+          "format": "regex"
+        },
+        "format": {
+          "type": "string"
+        },
+        "maxLength": {
+          "$ref": "#/definitions/positiveInteger"
+        },
+        "minLength": {
+          "$ref": "#/definitions/positiveIntegerDefault0"
+        },
+        "maxItems": {
+          "$ref": "#/definitions/positiveInteger"
+        },
+        "minItems": {
+          "$ref": "#/definitions/positiveIntegerDefault0"
+        },
+        "uniqueItems": {
+          "default": false,
+          "type": "boolean"
+        },
+        "items": {
+          "default": {},
+          "anyOf": [
+            {
+              "$ref": ""
+            },
+            {
+              "$ref": "#/definitions/schemaArray"
+            }
+          ]
+        },
+        "additionalItems": {
+          "default": {},
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": ""
+            }
+          ]
+        },
+        "required": {
+          "$ref": "#/definitions/stringArray"
+        },
+        "maxProperties": {
+          "$ref": "#/definitions/positiveInteger"
+        },
+        "minProperties": {
+          "$ref": "#/definitions/positiveIntegerDefault0"
+        },
+        "properties": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "$ref": ""
+          }
+        },
+        "patternProperties": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "$ref": ""
+          }
+        },
+        "additionalProperties": {
+          "default": {},
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": ""
+            }
+          ]
+        },
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": ""
+              },
+              {
+                "$ref": "#/definitions/stringArray"
+              }
+            ]
+          }
+        },
+        "definitions": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "$ref": ""
+          }
+        }
+      },
+      "dependencies": {
+        "exclusiveMaximum": [ "maximum" ],
+        "exclusiveMinimum": [ "minimum" ]
+      },
+      "definitions": {
+        "positiveInteger": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "positiveIntegerDefault0": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/positiveInteger"
+            },
+            {
+              "default": 0
+            }
+          ]
+        },
+        "schemaArray": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": ""
+          }
+        },
+        "simpleTypes": {
+          "enum": [
+            "array",
+            "boolean",
+            "integer",
+            "null",
+            "number",
+            "object",
+            "string"
+          ]
+        },
+        "stringArray": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
         }
       }
     }
   }
 }
 EOF
-
-cat "$TMP/result.json"
 
 diff "$TMP/result.json" "$TMP/expected.json"
