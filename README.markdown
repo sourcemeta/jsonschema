@@ -153,6 +153,13 @@ distributions, given they often have major differences such as C runtimes (GLIC
 vs MUSL). We conservatively target Ubuntu 22.04, but you might need to build
 from source if your distribution of choice is different.
 
+To verify the GPG signature of the checksums file:
+
+```sh
+curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
+gpg --verify CHECKSUMS.txt.sig CHECKSUMS.txt
+```
+
 ### From Dockerfile
 
 Starting from v7.2.1, we publish a Docker image to [GitHub

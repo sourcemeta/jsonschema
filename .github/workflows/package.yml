@@ -121,12 +121,26 @@ jobs:
           pattern: artifacts-*
           merge-multiple: true
 
-      # Generate checksums for all pre-built binaries
+      # Generate signed checksums for all pre-built binaries
       # while avoiding "build/out/" in the checksum file.
       - run: sha256sum --tag *.zip >CHECKSUMS.txt
         working-directory: build/out/
       - run: cat CHECKSUMS.txt
         working-directory: build/out/
+      - run: |
+          echo "$GPG_KEY_PRIVATE" | gpg --batch --import
+          echo "$GPG_KEY_FINGERPRINT:6:" | gpg --import-ownertrust
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$GPG_KEY_PASS" --local-user "$GPG_KEY_FINGERPRINT" \
+            --output build/out/CHECKSUMS.txt.sig --detach-sign build/out/CHECKSUMS.txt
+          gpg --batch --yes --delete-secret-keys "$GPG_KEY_FINGERPRINT"
+          gpg --batch --yes --delete-keys "$GPG_KEY_FINGERPRINT"
+          curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
+          gpg --verify build/out/CHECKSUMS.txt.sig build/out/CHECKSUMS.txt
+        env:
+          GPG_KEY_PRIVATE: ${{ secrets.GPG_KEY_PRIVATE }}
+          GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+          GPG_KEY_FINGERPRINT: ${{ secrets.GPG_KEY_FINGERPRINT }}
 
       - run: tree build
 
@@ -138,7 +152,7 @@ jobs:
         run: |
           gh release delete continuous --cleanup-tag --yes || true
           gh release create continuous --prerelease --draft=false --title continuous --target "$GITHUB_SHA" --generate-notes
-          gh release upload --clobber continuous build/out/*.zip build/out/CHECKSUMS.txt
+          gh release upload --clobber continuous build/out/*.zip build/out/CHECKSUMS.txt build/out/CHECKSUMS.txt.sig
         if: github.ref_type == 'branch'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,7 +160,7 @@ jobs:
       - name: Perform Tag Release
         run: |
           gh release create ${{ github.ref_name }} --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
-          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip build/out/CHECKSUMS.txt
+          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip build/out/CHECKSUMS.txt build/out/CHECKSUMS.txt.sig
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
