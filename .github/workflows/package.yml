@@ -130,18 +130,15 @@ jobs:
       - run: |
           echo "$GPG_KEY_PRIVATE" | gpg --batch --import
           gpg --list-keys
-          set -x
           gpg --batch --yes --pinentry-mode loopback --trust-model always \
             --passphrase "$GPG_KEY_PASS" --local-user "$GPG_KEY_FINGERPRINT" \
             --output build/out/CHECKSUMS.txt.sig --detach-sign build/out/CHECKSUMS.txt
-          gpg --batch --yes --delete-secret-keys "$GPG_KEY_FINGERPRINT"
-          gpg --batch --yes --delete-keys "$GPG_KEY_FINGERPRINT"
           curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
           gpg --verify build/out/CHECKSUMS.txt.sig build/out/CHECKSUMS.txt
         env:
           GPG_KEY_PRIVATE: ${{ secrets.GPG_KEY_PRIVATE }}
           GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
-          GPG_KEY_FINGERPRINT: F1CCCE7BD9D52CB76FE05C9B9C6328B7F7D5AA04
+          GPG_KEY_FINGERPRINT: ${{ secrets.GPG_KEY_FINGERPRINT }}
 
       - run: tree build
 
