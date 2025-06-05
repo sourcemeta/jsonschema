@@ -129,6 +129,7 @@ jobs:
         working-directory: build/out/
       - run: |
           echo "$GPG_KEY_PRIVATE" | gpg --batch --import
+          gpg --list-keys
           echo "$GPG_KEY_FINGERPRINT:6:" | gpg --import-ownertrust
           gpg --batch --yes --pinentry-mode loopback \
             --passphrase "$GPG_KEY_PASS" --local-user "$GPG_KEY_FINGERPRINT" \
