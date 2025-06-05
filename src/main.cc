@@ -35,13 +35,15 @@ Commands:
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
+            [--loop <iterations>]
 
        Validate one or more instances against the given schema.
 
        By default, schemas are validated in exhaustive mode, which results in
        better error messages, at the expense of speed. The --fast/-f option
        makes the schema compiler optimise for speed, at the expense of error
-       messages.
+       messages. Looping in benchmark mode allows to collect the execution time
+       average and standard deviation for the fast mode on basic JSON data.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
