@@ -33,6 +33,8 @@ jobs:
             --passphrase "$GPG_KEY_PASS" --local-user "$GPG_KEY_FINGERPRINT" \
             --output build/out/CHECKSUMS.txt.sig --detach-sign build/out/CHECKSUMS.txt
           tree build/out
+          gpg --batch --yes --delete-secret-keys "9C6328B7F7D5AA04"
+          gpg --batch --yes --delete-keys "9C6328B7F7D5AA04"
           curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
           gpg --verify build/out/CHECKSUMS.txt.sig build/out/CHECKSUMS.txt
         env:
