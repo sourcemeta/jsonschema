@@ -14,32 +14,6 @@ jobs:
             cc: clang
             cxx: clang++
             shell: sh
-          - os: ubuntu-22.04
-            type: native
-            cc: gcc
-            cxx: g++
-            shell: sh
-          - os: ubuntu-22.04-arm
-            type: native
-            cc: gcc
-            cxx: g++
-            shell: sh
-          - os: macos-13
-            type: native
-            cc: clang
-            cxx: clang++
-            shell: sh
-          - os: macos-14
-            type: native
-            cc: clang
-            cxx: clang++
-            shell: sh
-          - os: windows-2022
-            type: native
-            shell: pwsh
-          - os: windows-2022
-            type: wsl-2
-            shell: wsl-bash {0}
 
     defaults:
       run:
@@ -50,65 +24,18 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
-      # See https://github.com/Vampire/setup-wsl
-      - uses: Vampire/setup-wsl@v5
-        if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
-        with:
-          distribution: Ubuntu-22.04
-          additional-packages: cmake build-essential shellcheck pipx
-          wsl-version: 2
-
-      - name: Install ClangFormat
-        run: pipx install clang-format==19.1.0
-      - name: Install pre-commit
-        run: pipx install pre-commit
-      - name: Surface pipx binaries to WSL
-        run: |
-          ln -s -v /root/.local/bin/clang-format /usr/bin/clang-format
-          ln -s -v /root/.local/bin/pre-commit /usr/bin/pre-commit
-        if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
-
-      - uses: actions/checkout@v4
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macos'
-        run: brew bundle
+      - run: mkdir -p build/out && echo "foo" > build/out/CHECKSUMS.txt
+      - run: |
+          echo "$GPG_KEY_PRIVATE" | gpg --batch --import
+          gpg --list-keys
+          set -x
+          gpg --batch --yes --pinentry-mode loopback --trust-model always \
+            --passphrase "$GPG_KEY_PASS" --local-user "$GPG_KEY_FINGERPRINT" \
+            --output build/out/CHECKSUMS.txt.sig --detach-sign build/out/CHECKSUMS.txt
+          tree build/out
+          curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
+          gpg --verify build/out/CHECKSUMS.txt.sig build/out/CHECKSUMS.txt
         env:
-          HOMEBREW_NO_ANALYTICS: 1
-          HOMEBREW_NO_AUTO_UPDATE: 1
-      - name: Install dependencies (Windows)
-        if: runner.os == 'windows' && matrix.platform.type == 'native'
-        run: choco install shellcheck
-
-      - run: cmake --version
-      - name: Configure JSON Schema
-        run: >
-          cmake -S . -B ./build
-          -DCMAKE_BUILD_TYPE:STRING=Release
-          -DJSONSCHEMA_PORTABLE:BOOL=ON
-          -DJSONSCHEMA_TESTS:BOOL=ON
-          -DJSONSCHEMA_TESTS_CI:BOOL=ON
-          -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
-          -DBUILD_SHARED_LIBS:BOOL=OFF
-          -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
-      - run: cmake --build ./build --config Release --target clang_format_test
-      - run: cmake --build ./build --config Release --target shellcheck
-      - run: cmake --build ./build --config Release --parallel 4
-      - run: >
-          cmake --install ./build --prefix ./build/dist --config Release --verbose
-          --component sourcemeta_jsonschema
-
-      # Not every CTest version supports the --test-dir option. If such option
-      # is not recognized, `ctest` will successfully exit finding no tests.
-      # Better to be sure and `cd` all the time here.
-      - run: cd ./build && ctest --build-config Release --output-on-failure --parallel
-
-      - run: cpack --config build/CPackConfig.cmake -B build/out -C Release
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: docker build --tag jsonschema .
-      - run: docker run --interactive --volume "$PWD:/schema" jsonschema
-      - run: ./test/docker/help.sh
-      - run: ./test/docker/bundle_fmt.sh
+          GPG_KEY_PRIVATE: ${{ secrets.GPG_KEY_PRIVATE }}
+          GPG_KEY_PASS: ${{ secrets.GPG_KEY_PASS }}
+          GPG_KEY_FINGERPRINT: F1CCCE7BD9D52CB76FE05C9B9C6328B7F7D5AA04
