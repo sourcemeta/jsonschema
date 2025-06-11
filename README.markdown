@@ -157,7 +157,7 @@ To verify the GPG signature of the checksums file:
 
 ```sh
 curl --silent --show-error --location 'https://www.sourcemeta.com/gpg.asc' | gpg --import
-gpg --verify CHECKSUMS.txt.sig CHECKSUMS.txt
+gpg --verify CHECKSUMS.txt.asc CHECKSUMS.txt
 ```
 
 ### From Dockerfile
