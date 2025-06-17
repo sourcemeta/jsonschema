@@ -9,10 +9,6 @@ option(JSONSCHEMA_DEVELOPMENT "Build the JSON Schema CLI in development mode" OF
 option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 option(JSONSCHEMA_PORTABLE "Build a portable JSON Schema CLI binary to increase platform support" OFF)
 
-# For debugging reasons
-message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
-message(STATUS "CMAKE_HOST_SYSTEM_NAME: ${CMAKE_HOST_SYSTEM_NAME}")
-
 find_package(Core REQUIRED)
 if(NOT JSONSCHEMA_PORTABLE)
   message(STATUS "Building an optimised but less portable binary (JSONSCHEMA_PORTABLE)")

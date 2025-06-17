@@ -23,15 +23,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                   const std::optional<std::string> &default_dialect) -> void {
   sourcemeta::core::SchemaTransformer canonicalizer;
   sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaCategory::AntiPattern);
-  sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaCategory::Simplify);
-  sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaCategory::Desugar);
-  sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaCategory::Implicit);
-  sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaCategory::Superfluous);
+                        sourcemeta::core::AlterSchemaMode::StaticAnalysis);
   canonicalizer.apply(schema, walker, make_resolver(resolver),
                       transformer_callback_noop, default_dialect);
 }

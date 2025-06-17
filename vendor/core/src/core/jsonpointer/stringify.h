@@ -18,14 +18,9 @@ inline auto
 write_character(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
                 const JSON::Char character, const bool perform_uri_escaping)
     -> void {
-  // The dollar sign does not need to be encoded in URI fragments
-  // See `fragment` in https://www.rfc-editor.org/rfc/rfc3986#appendix-A
-  if (perform_uri_escaping && character != '$') {
-    // TODO: Implement a URI function capable of efficiently escaping a single
-    // character to avoid this expensive ugliness
-    std::basic_istringstream<JSON::Char> input{
-        std::basic_string<JSON::Char>{character}};
-    sourcemeta::core::URI::escape(input, stream);
+  if (perform_uri_escaping) {
+    sourcemeta::core::uri_escape(
+        character, stream, sourcemeta::core::URIEscapeMode::SkipSubDelims);
   } else {
     stream.put(character);
   }

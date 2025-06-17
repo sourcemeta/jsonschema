@@ -208,7 +208,7 @@ store(sourcemeta::core::SchemaFrame::Locations &frame,
   assert(std::set<sourcemeta::core::PointerTemplate>(
              instance_locations.cbegin(), instance_locations.cend())
              .size() == instance_locations.size());
-  const auto canonical{sourcemeta::core::URI{uri}.canonicalize().recompose()};
+  const auto canonical{sourcemeta::core::URI::canonicalize(uri)};
   const auto inserted{
       frame
           .insert({{type, canonical},
@@ -559,7 +559,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                       : sourcemeta::core::identify(
                             schema, root_base_dialect.value(), default_id)};
     if (root_id.has_value()) {
-      root_id = URI{root_id.value()}.canonicalize().recompose();
+      root_id = URI::canonicalize(root_id.value());
     }
 
     const std::optional<JSON::String> root_dialect{
@@ -573,8 +573,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                          default_id.has_value() &&
                                          root_id.value() != default_id.value()};
     if (has_explicit_different_id) {
-      const auto default_id_canonical{
-          URI{default_id.value()}.canonicalize().recompose()};
+      const auto default_id_canonical{URI::canonicalize(default_id.value())};
       if (this->mode_ == SchemaFrame::Mode::Instances) {
         store(this->locations_, this->instances_, SchemaReferenceType::Static,
               SchemaFrame::LocationType::Resource, default_id_canonical,
@@ -791,9 +790,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                      .value_or("");
             anchor_uri_string << '#';
             anchor_uri_string << name;
-            const auto anchor_uri{sourcemeta::core::URI{anchor_uri_string.str()}
-                                      .canonicalize()
-                                      .recompose()};
+            const auto anchor_uri{
+                sourcemeta::core::URI::canonicalize(anchor_uri_string.str())};
 
             if (!is_first && this->locations_.contains(
                                  {SchemaReferenceType::Static, anchor_uri})) {
@@ -1019,21 +1017,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   }
 
   // A schema is standalone if all references can be resolved within itself
-  const bool standalone{std::all_of(
-      this->references_.cbegin(), this->references_.cend(),
-      [&](const auto &reference) {
-        assert(!reference.first.second.empty());
-        assert(reference.first.second.back().is_property());
-        // TODO: This check might need to be more elaborate given
-        // https://github.com/sourcemeta/core/issues/1390
-        return reference.first.second.back().to_property() == "$schema" ||
-               this->locations_.contains({SchemaReferenceType::Static,
-                                          reference.second.destination}) ||
-               this->locations_.contains({SchemaReferenceType::Dynamic,
-                                          reference.second.destination});
-      })};
-
-  if (standalone) {
+  if (this->standalone()) {
     // Find all dynamic anchors
     std::map<JSON::String, std::vector<JSON::String>> dynamic_anchors;
     for (const auto &entry : this->locations_) {
@@ -1125,6 +1109,22 @@ auto SchemaFrame::locations() const noexcept -> const Locations & {
 
 auto SchemaFrame::references() const noexcept -> const References & {
   return this->references_;
+}
+
+auto SchemaFrame::standalone() const -> bool {
+  return std::all_of(
+      this->references_.cbegin(), this->references_.cend(),
+      [&](const auto &reference) {
+        assert(!reference.first.second.empty());
+        assert(reference.first.second.back().is_property());
+        // TODO: This check might need to be more elaborate given
+        // https://github.com/sourcemeta/core/issues/1390
+        return reference.first.second.back().to_property() == "$schema" ||
+               this->locations_.contains({SchemaReferenceType::Static,
+                                          reference.second.destination}) ||
+               this->locations_.contains({SchemaReferenceType::Dynamic,
+                                          reference.second.destination});
+      });
 }
 
 auto SchemaFrame::vocabularies(const Location &location,

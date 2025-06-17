@@ -200,6 +200,9 @@ public:
   /// Access the analysed schema references
   auto references() const noexcept -> const References &;
 
+  /// Check whether the analysed schema has no external references
+  auto standalone() const -> bool;
+
   /// Get the vocabularies associated with a location entry
   auto vocabularies(const Location &location,
                     const SchemaResolver &resolver) const -> Vocabularies;

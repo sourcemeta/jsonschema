@@ -20,3 +20,9 @@ include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/googlebenchmark.cmake")
 if(NOT PROJECT_IS_TOP_LEVEL)
   set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" PARENT_SCOPE)
 endif()
+
+# For debugging purposes
+if(PROJECT_IS_TOP_LEVEL)
+  message(STATUS "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+  message(STATUS "CMAKE_HOST_SYSTEM_NAME: ${CMAKE_HOST_SYSTEM_NAME}")
+endif()
