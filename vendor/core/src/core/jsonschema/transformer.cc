@@ -1,4 +1,5 @@
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/uri.h>
 
 #include <cassert>   // assert
 #include <set>       // std::set
@@ -213,17 +214,9 @@ auto SchemaTransformer::apply(
           // Note we use the base from the original reference before any
           // canonicalisation takes place so that we don't overly change
           // user's references when only fixing up their pointer fragments
-          const auto original_base{
-              URI{reference.second.original}.recompose_without_fragment()};
-          // TODO: This is a silly dance just because we don't have a
-          // .fragment() setter in the URI class
-          if (original_base.has_value()) {
-            set(schema, reference.first.second,
-                JSON{to_uri(new_fragment, original_base.value()).recompose()});
-          } else {
-            set(schema, reference.first.second,
-                JSON{to_uri(new_fragment).recompose()});
-          }
+          URI original{reference.second.original};
+          original.fragment(to_string(new_fragment));
+          set(schema, reference.first.second, JSON{original.recompose()});
         }
 
         processed_rules.emplace(entry.second.pointer, name);

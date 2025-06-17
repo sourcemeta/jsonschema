@@ -113,3 +113,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto=full")
   endif()
 endif()
+
+# Turn on POSIX.1-2008 compatibility on MSYS2
+# At least GoogleTest does not seem to compile without this
+if(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
+  add_compile_definitions(_POSIX_C_SOURCE=200809L)
+endif()

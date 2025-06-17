@@ -92,16 +92,7 @@ auto sourcemeta::jsonschema::cli::lint(
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
-  sourcemeta::core::add(bundle,
-                        sourcemeta::core::AlterSchemaCategory::AntiPattern);
-  sourcemeta::core::add(bundle,
-                        sourcemeta::core::AlterSchemaCategory::Simplify);
-  sourcemeta::core::add(bundle,
-                        sourcemeta::core::AlterSchemaCategory::Superfluous);
-  sourcemeta::core::add(bundle,
-                        sourcemeta::core::AlterSchemaCategory::Redundant);
-  sourcemeta::core::add(bundle,
-                        sourcemeta::core::AlterSchemaCategory::SyntaxSugar);
+  sourcemeta::core::add(bundle, sourcemeta::core::AlterSchemaMode::Readability);
 
   bundle.add<sourcemeta::blaze::ValidExamples>(
       sourcemeta::blaze::default_schema_compiler);

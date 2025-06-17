@@ -165,6 +165,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
           "https://json-schema.org/draft/2019-09/vocab/core")) {
     bundle_schema(schema, {"$defs"}, schema, frame, walker, resolver,
                   default_dialect, paths);
+    return;
   } else if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
              vocabularies.contains(
                  "http://json-schema.org/draft-07/hyper-schema#") ||
@@ -176,12 +177,26 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
                  "http://json-schema.org/draft-04/hyper-schema#")) {
     bundle_schema(schema, {"definitions"}, schema, frame, walker, resolver,
                   default_dialect, paths);
-  } else {
-    // We don't attempt to bundle on dialects where we
-    // don't know where to put the embedded schemas
-    throw sourcemeta::core::SchemaError(
-        "Could not determine how to perform bundling in this dialect");
+    return;
+  } else if (vocabularies.contains(
+                 "http://json-schema.org/draft-03/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-03/schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-02/hyper-schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-01/hyper-schema#") ||
+             vocabularies.contains(
+                 "http://json-schema.org/draft-00/hyper-schema#")) {
+    frame.analyse(schema, walker, resolver, default_dialect);
+    if (frame.standalone()) {
+      return;
+    }
   }
+
+  // We don't attempt to bundle on dialects where we
+  // don't know where to put the embedded schemas
+  throw sourcemeta::core::SchemaError(
+      "Could not determine how to perform bundling in this dialect");
 }
 
 auto bundle(const sourcemeta::core::JSON &schema, const SchemaWalker &walker,

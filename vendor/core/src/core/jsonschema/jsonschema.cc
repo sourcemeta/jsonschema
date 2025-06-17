@@ -236,8 +236,7 @@ auto sourcemeta::core::metaschema(
     const std::optional<std::string> &default_dialect) -> JSON {
   const auto maybe_dialect{sourcemeta::core::dialect(schema, default_dialect)};
   if (!maybe_dialect.has_value()) {
-    throw sourcemeta::core::SchemaError(
-        "Could not the determine dialect of the schema");
+    throw sourcemeta::core::SchemaUnknownDialectError();
   }
 
   const auto maybe_metaschema{resolver(maybe_dialect.value())};
@@ -583,9 +582,8 @@ auto sourcemeta::core::reference_visit(
 
     const sourcemeta::core::URI base{entry.second.base};
     // Assume the base is canonicalized already
-    assert(
-        sourcemeta::core::URI{entry.second.base}.canonicalize().recompose() ==
-        base.recompose());
+    assert(sourcemeta::core::URI::canonicalize(entry.second.base) ==
+           base.recompose());
     for (const auto &property : subschema.as_object()) {
       const auto walker_result{
           walker(property.first, frame.vocabularies(entry.second, resolver))};
@@ -740,12 +738,10 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   result.at("$defs").assign("schema", std::move(copy));
 
   // Add a reference to the schema
-  const URI uri{id};
+  URI uri{id};
   if (!uri.fragment().has_value() || uri.fragment().value().empty()) {
-    std::ostringstream effective_uri;
-    effective_uri << uri.recompose_without_fragment().value_or("")
-                  << to_uri(pointer).recompose();
-    result.assign("$ref", JSON{effective_uri.str()});
+    uri.fragment(to_string(pointer));
+    result.assign("$ref", JSON{uri.recompose()});
   } else {
     result.assign(
         "$ref",
