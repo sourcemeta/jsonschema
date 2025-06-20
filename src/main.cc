@@ -162,7 +162,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
     std::cerr << "If the input does not declare the $schema keyword, you might "
                  "want to\n";
     std::cerr
-        << "explicity declare a default dialect using --default-dialect/-d\n";
+        << "explicitly declare a default dialect using --default-dialect/-d\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";
