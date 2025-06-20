@@ -62,7 +62,6 @@ jobs:
         run: pipx install pre-commit
       - name: Surface pipx binaries to WSL
         run: |
-          ln -s -v /root/.local/bin/clang-format /usr/bin/clang-format
           ln -s -v /root/.local/bin/pre-commit /usr/bin/pre-commit
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
 
