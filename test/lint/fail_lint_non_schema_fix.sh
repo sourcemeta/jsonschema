@@ -11,7 +11,7 @@ cat << 'EOF' > "$TMP/schema.json"
 { "foo": "bar" }
 EOF
 
-"$1" lint "$TMP/schema.json" >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
+"$1" lint "$TMP/schema.json" --fix >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"

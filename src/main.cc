@@ -155,6 +155,21 @@ auto main(int argc, char *argv[]) noexcept -> int {
         << "\nThis is likely because you forgot to import such meta-schema "
            "using --resolve/-r\n";
     return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::cli::FileError<
+           sourcemeta::core::SchemaUnknownBaseDialectError> &error) {
+    std::cerr << "error: " << error.what() << "\n";
+    std::cerr << "  "
+              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                     error.path())
+                     .string()
+              << "\n";
+    std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
+                 "base dialect is known?\n";
+    std::cerr << "If the input does not declare the $schema keyword, you might "
+                 "want to\n";
+    std::cerr
+        << "explicitly declare a default dialect using --default-dialect/-d\n";
+    return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &error) {
     std::cerr << "error: " << error.what() << "\n";
     std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
