@@ -138,6 +138,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     linter/drop_non_string_keywords_unevaluated_2020_12.h
     linter/drop_non_string_keywords_validation_2019_09.h
     linter/drop_non_string_keywords_validation_2020_12.h
+    linter/unnecessary_allof_ref_wrapper.h
     linter/duplicate_allof_branches.h
     linter/duplicate_anyof_branches.h
     linter/else_without_if.h

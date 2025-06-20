@@ -355,15 +355,13 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
 }
 
 [[nodiscard]] auto JSON::is_integer_real() const noexcept -> bool {
-  if (this->is_integer()) {
+  if (!this->is_real()) {
     return false;
-  } else if (this->is_real()) {
+  } else {
     const auto value{this->to_real()};
-    Real integral;
+    Real integral = 0.0;
     return !std::isinf(value) && !std::isnan(value) &&
            std::modf(value, &integral) == 0.0;
-  } else {
-    return false;
   }
 }
 
@@ -659,14 +657,14 @@ JSON::at(const String &key,
   const auto dividend_value{this->as_real()};
 
   // Every real number that represents an integral is divisible by 0.5.
-  Real dividend_integral;
+  Real dividend_integral = 0;
   if (std::modf(dividend_value, &dividend_integral) == 0.0 &&
       divisor_value == 0.5) {
     return true;
   }
 
   const auto division{dividend_value / divisor_value};
-  Real integral;
+  Real integral = 0;
   return !std::isinf(division) && !std::isnan(division) &&
          std::modf(division, &integral) == 0.0;
 }
