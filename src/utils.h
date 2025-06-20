@@ -19,6 +19,20 @@
 
 namespace sourcemeta::jsonschema::cli {
 
+template <typename T> class FileError : public T {
+public:
+  FileError(std::filesystem::path path) : T{}, path_{std::move(path)} {
+    assert(std::filesystem::exists(this->path_));
+  }
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON;
 
 auto parse_options(const std::span<const std::string> &arguments,
