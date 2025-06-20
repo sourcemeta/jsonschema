@@ -45,7 +45,7 @@ error: Could not determine the base dialect of the schema
 
 Are you sure the input is a valid JSON Schema and its base dialect is known?
 If the input does not declare the \$schema keyword, you might want to
-explicity declare a default dialect using --default-dialect/-d
+explicitly declare a default dialect using --default-dialect/-d
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
