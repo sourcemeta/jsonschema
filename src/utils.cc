@@ -185,8 +185,8 @@ auto parse_options(const std::span<const std::string> &arguments,
   return options;
 }
 
-auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
-    -> void {
+auto print(const sourcemeta::blaze::SimpleOutput &output,
+           std::ostream &stream) -> void {
   stream << "error: Schema validation failure\n";
   output.stacktrace(stream, "  ");
 }
@@ -211,8 +211,8 @@ auto print_annotations(
 }
 
 // TODO: Move this as an operator<< overload for TraceOutput in Blaze itself
-auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
-    -> void {
+auto print(const sourcemeta::blaze::TraceOutput &output,
+           std::ostream &stream) -> void {
   for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
     const auto &entry{*iterator};
 
@@ -376,9 +376,8 @@ auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
   return null_stream;
 }
 
-auto parse_extensions(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::string> {
+auto parse_extensions(const std::map<std::string, std::vector<std::string>>
+                          &options) -> std::set<std::string> {
   std::set<std::string> result;
 
   if (options.contains("extension")) {
@@ -404,9 +403,8 @@ auto parse_extensions(
   return result;
 }
 
-auto parse_ignore(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::filesystem::path> {
+auto parse_ignore(const std::map<std::string, std::vector<std::string>>
+                      &options) -> std::set<std::filesystem::path> {
   std::set<std::filesystem::path> result;
 
   if (options.contains("ignore")) {
@@ -435,9 +433,8 @@ auto safe_weakly_canonical(const std::filesystem::path &input)
              : std::filesystem::weakly_canonical(input);
 }
 
-auto default_dialect(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::optional<std::string> {
+auto default_dialect(const std::map<std::string, std::vector<std::string>>
+                         &options) -> std::optional<std::string> {
 
   if (options.contains("default-dialect")) {
     return options.at("default-dialect").front();
