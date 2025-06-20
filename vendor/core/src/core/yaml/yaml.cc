@@ -7,10 +7,11 @@
 #include <sstream>     // std::ostringstream, std::istringstream
 #include <string_view> // std::string_view
 
+namespace {
+
 // TODO: Perform parsing token by token using `yaml_parser_parse`,
 // as that function also let us get line/column information on `yaml_event_t`
-static auto yaml_node_to_json(yaml_node_t *const node,
-                              yaml_document_t *const document)
+auto yaml_node_to_json(yaml_node_t *const node, yaml_document_t *const document)
     -> sourcemeta::core::JSON {
   if (!node) {
     return sourcemeta::core::JSON{nullptr};
@@ -81,8 +82,7 @@ static auto yaml_node_to_json(yaml_node_t *const node,
   }
 }
 
-static auto internal_parse_json(yaml_parser_t *parser)
-    -> sourcemeta::core::JSON {
+auto internal_parse_json(yaml_parser_t *parser) -> sourcemeta::core::JSON {
   yaml_document_t document;
   if (!yaml_parser_load(parser, &document)) {
     // TODO: Ideally we would get line/column information like for `ParseError`
@@ -104,6 +104,8 @@ static auto internal_parse_json(yaml_parser_t *parser)
     throw;
   }
 }
+
+} // namespace
 
 namespace sourcemeta::core {
 

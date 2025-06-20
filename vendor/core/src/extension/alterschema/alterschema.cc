@@ -169,6 +169,7 @@ template <typename T> auto every_item_is_boolean(const T &container) -> bool {
 #include "linter/then_without_if.h"
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
+#include "linter/unnecessary_allof_ref_wrapper.h"
 #include "linter/unsatisfiable_max_contains.h"
 #include "linter/unsatisfiable_min_properties.h"
 } // namespace sourcemeta::core
@@ -273,6 +274,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   bundle.add<DropNonStringKeywordsUnevaluated_2020_12>();
   bundle.add<DropNonStringKeywordsValidation_2019_09>();
   bundle.add<DropNonStringKeywordsValidation_2020_12>();
+  bundle.add<UnnecessaryAllOfRefWrapper>();
   bundle.add<DuplicateAllOfBranches>();
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<ElseWithoutIf>();

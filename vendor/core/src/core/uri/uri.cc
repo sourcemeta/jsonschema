@@ -14,13 +14,15 @@
 #include <utility>    // std::move
 #include <vector>     // std::vector
 
-static auto uri_normalize(UriUriA *uri) -> void {
+namespace {
+
+auto uri_normalize(UriUriA *uri) -> void {
   if (uriNormalizeSyntaxA(uri) != URI_SUCCESS) {
     throw sourcemeta::core::URIError{"Could not normalize URI"};
   }
 }
 
-static auto uri_to_string(const UriUriA *const uri) -> std::string {
+auto uri_to_string(const UriUriA *const uri) -> std::string {
   int size;
   if (uriToStringCharsRequiredA(uri, &size) != URI_SUCCESS) {
     throw sourcemeta::core::URIError{"Could not determine URI size"};
@@ -37,7 +39,7 @@ static auto uri_to_string(const UriUriA *const uri) -> std::string {
   return result;
 }
 
-static auto uri_text_range(const UriTextRangeA *const range)
+auto uri_text_range(const UriTextRangeA *const range)
     -> std::optional<std::string_view> {
   if (range->afterLast == nullptr) {
     return std::nullopt;
@@ -48,7 +50,7 @@ static auto uri_text_range(const UriTextRangeA *const range)
                               range->afterLast - range->first)};
 }
 
-static auto uri_parse(const std::string &data, UriUriA *uri) -> void {
+auto uri_parse(const std::string &data, UriUriA *uri) -> void {
   const char *error_position;
   switch (uriParseSingleUriA(uri, data.c_str(), &error_position)) {
     case URI_ERROR_SYNTAX:
@@ -68,8 +70,7 @@ static auto uri_parse(const std::string &data, UriUriA *uri) -> void {
   uri_normalize(uri);
 }
 
-static auto canonicalize_path(const std::string &path)
-    -> std::optional<std::string> {
+auto canonicalize_path(const std::string &path) -> std::optional<std::string> {
   // TODO: This is a hack, as this whole function works badly for
   // relative paths with ".."
   if (path.starts_with("..")) {
@@ -112,6 +113,8 @@ static auto canonicalize_path(const std::string &path)
     return std::nullopt;
   return canonical_path;
 }
+
+} // namespace
 
 namespace sourcemeta::core {
 
