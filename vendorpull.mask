@@ -15,3 +15,5 @@ Makefile
 npm-deploy.sh
 README.markdown
 cmake
+vendor
+.pre-commit-hooks.yaml
