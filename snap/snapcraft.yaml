@@ -1,0 +1,36 @@
+name: jsonschema
+base: core22
+adopt-info: jsonschema
+summary: Command-line tool for working with JSON Schema
+description: |
+  The JSON Schema CLI is a comprehensive command-line utility for validating,
+  testing, formatting, linting and otherwise managing JSON Schema files.  Written in
+  modern C++, it offers first-class support for every published JSON Schema
+  version, runs on all major platforms and integrates nicely with CI/CD
+  pipelines.
+
+confinement: strict   # classic confinement is not needed, the binary is self-contained
+grade: stable
+
+apps:
+  jsonschema:
+    command: usr/bin/jsonschema
+    plugs:
+      - home          # allow access to the user’s home so that schemas can be read/written
+      - network       # needed by "inspect" command when dereferencing remote $refs
+
+parts:
+  jsonschema:
+    plugin: cmake
+    source: .
+    build-packages:
+      - build-essential
+      - cmake
+      - git
+      - pkg-config
+    override-pull: |
+      craftctl default
+      # Use the most recent Git tag (drop the leading "v") as the snap version so
+      # that the store gets a fresh revision whenever you push a new release tag.
+      VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+      craftctl set version=$VERSION
