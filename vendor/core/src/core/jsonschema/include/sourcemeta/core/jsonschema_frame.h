@@ -252,12 +252,6 @@ private:
 #endif
 };
 
-/// @ingroup jsonschema
-/// Pretty print the contents of a schema frame
-SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto operator<<(std::ostream &stream, const SchemaFrame &frame)
-    -> std::ostream &;
-
 } // namespace sourcemeta::core
 
 #endif

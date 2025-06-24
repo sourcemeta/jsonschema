@@ -122,8 +122,8 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  const std::string name_;
-  const std::string message_;
+  const std::string name_{};
+  const std::string message_{};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
