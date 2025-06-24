@@ -15,6 +15,7 @@
 
 namespace sourcemeta::core {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 std::uint64_t &line, std::uint64_t &column,
                 const JSON::ParseCallback &callback) -> JSON {
@@ -27,6 +28,7 @@ auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
   return internal_parse_json(input, line, column, callback);
 }
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 const JSON::ParseCallback &callback) -> JSON {
   std::uint64_t line{1};

@@ -7,21 +7,23 @@
 #include <cmath>
 #include <iterator>
 namespace sourcemeta::core {
-auto contains_any(const Vocabularies &container,
-                  const std::set<typename Vocabularies::key_type> &values)
-    -> bool {
+static auto
+contains_any(const Vocabularies &container,
+             const std::set<typename Vocabularies::key_type> &values) -> bool {
   return std::any_of(std::cbegin(container), std::cend(container),
                      [&values](const auto &element) {
                        return values.contains(element.first);
                      });
 }
 
-template <typename T> auto every_item_is_null(const T &container) -> bool {
+template <typename T>
+static auto every_item_is_null(const T &container) -> bool {
   return std::all_of(std::cbegin(container), std::cend(container),
                      [](const auto &element) { return element.is_null(); });
 }
 
-template <typename T> auto every_item_is_boolean(const T &container) -> bool {
+template <typename T>
+static auto every_item_is_boolean(const T &container) -> bool {
   return std::all_of(std::cbegin(container), std::cend(container),
                      [](const auto &element) { return element.is_boolean(); });
 }

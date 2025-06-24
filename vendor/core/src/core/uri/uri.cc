@@ -138,17 +138,12 @@ URI::~URI() { uriFreeUriMembersA(&this->internal->uri); }
 // TODO: Test the copy constructor
 URI::URI(const URI &other) : URI{other.recompose()} {}
 
-URI::URI(URI &&other)
-    : data{std::move(other.data)}, internal{std::move(other.internal)} {
-  this->parsed = other.parsed;
-  this->path_ = std::move(other.path_);
-  this->scheme_ = std::move(other.scheme_);
-  this->userinfo_ = std::move(other.userinfo_);
-  this->host_ = std::move(other.host_);
-  this->port_ = other.port_;
-  this->fragment_ = std::move(other.fragment_);
-  this->query_ = std::move(other.query_);
-
+URI::URI(URI &&other) noexcept
+    : parsed{other.parsed}, data{std::move(other.data)},
+      path_{std::move(other.path_)}, userinfo_{std::move(other.userinfo_)},
+      host_{std::move(other.host_)}, port_{other.port_},
+      scheme_{std::move(other.scheme_)}, fragment_{std::move(other.fragment_)},
+      query_{std::move(other.query_)}, internal{std::move(other.internal)} {
   other.internal = nullptr;
 }
 

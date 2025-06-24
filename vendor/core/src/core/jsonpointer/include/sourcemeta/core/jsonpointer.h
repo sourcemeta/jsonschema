@@ -17,10 +17,11 @@
 #include <sourcemeta/core/jsonpointer_walker.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <functional> // std::reference_wrapper
-#include <memory>     // std::allocator
-#include <ostream>    // std::basic_ostream
-#include <string>     // std::basic_string
+#include <functional>  // std::reference_wrapper
+#include <memory>      // std::allocator
+#include <ostream>     // std::basic_ostream
+#include <string>      // std::basic_string
+#include <type_traits> // std::is_same_v
 
 /// @defgroup jsonpointer JSON Pointer
 /// @brief An growing implementation of RFC 6901 JSON Pointer.
@@ -74,6 +75,15 @@ using PointerTemplate = GenericPointerTemplate<Pointer>;
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto get(const JSON &document, const Pointer &pointer) -> const JSON &;
 
+// Constant reference parameters can accept xvalues which will be destructed
+// after the call. When the function returns such a parameter also as constant
+// reference, then the returned reference can be used after the object it refers
+// to has been destroyed.
+// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html
+// This overload avoids mis-uses of retuning const reference parameter as
+// constant reference.
+auto get(JSON &&document, const Pointer &pointer) -> const JSON & = delete;
+
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a JSON WeakPointer (`const`
 /// overload).
@@ -97,6 +107,15 @@ auto get(const JSON &document, const Pointer &pointer) -> const JSON &;
 /// ```
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto get(const JSON &document, const WeakPointer &pointer) -> const JSON &;
+
+// Constant reference parameters can accept xvalues which will be destructed
+// after the call. When the function returns such a parameter also as constant
+// reference, then the returned reference can be used after the object it refers
+// to has been destroyed.
+// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html
+// This overload avoids mis-uses of retuning const reference parameter as
+// constant reference.
+auto get(JSON &&document, const WeakPointer &pointer) -> const JSON & = delete;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a Pointer, returning an optional that
@@ -546,6 +565,22 @@ using PointerWalker = GenericPointerWalker<Pointer>;
 /// assert(subpointers.at(2) == sourcemeta::core::Pointer{});
 /// ```
 using SubPointerWalker = GenericSubPointerWalker<Pointer>;
+
+/// @ingroup jsonpointer
+/// Serialise a Pointer as JSON
+template <typename T>
+  requires std::is_same_v<T, Pointer>
+auto to_json(const T &value) -> JSON {
+  return JSON{to_string(value)};
+}
+
+/// @ingroup jsonpointer
+/// Serialise a WeakPointer as JSON
+template <typename T>
+  requires std::is_same_v<T, WeakPointer>
+auto to_json(const T &value) -> JSON {
+  return JSON{to_string(value)};
+}
 
 } // namespace sourcemeta::core
 

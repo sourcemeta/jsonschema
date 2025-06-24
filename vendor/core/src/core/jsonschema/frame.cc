@@ -222,6 +222,8 @@ auto store(
   instances[pointer_from_root] = instance_locations;
 }
 
+// Check misunderstood struct to be a function
+// NOLINTNEXTLINE(bugprone-exception-escape)
 struct InternalEntry {
   const sourcemeta::core::SchemaIteratorEntry common;
   const std::optional<sourcemeta::core::JSON::String> id;
@@ -257,11 +259,13 @@ auto traverse_origin_instance_locations(
   }
 }
 
+// Check misunderstood struct to be a function
+// NOLINTNEXTLINE(bugprone-exception-escape)
 struct CacheSubschema {
-  const sourcemeta::core::PointerTemplate instance_location;
-  const sourcemeta::core::PointerTemplate relative_instance_location;
-  const bool orphan;
-  const std::optional<sourcemeta::core::Pointer> parent;
+  const sourcemeta::core::PointerTemplate instance_location{};
+  const sourcemeta::core::PointerTemplate relative_instance_location{};
+  const bool orphan{};
+  const std::optional<sourcemeta::core::Pointer> parent{};
 };
 
 auto repopulate_instance_locations(
@@ -413,121 +417,6 @@ auto SchemaFrame::to_json() const -> JSON {
   return root;
 }
 
-auto operator<<(std::ostream &stream, const SchemaFrame &frame)
-    -> std::ostream & {
-  if (frame.locations().empty()) {
-    return stream;
-  }
-
-  for (auto iterator = frame.locations().cbegin();
-       iterator != frame.locations().cend(); iterator++) {
-    const auto &location{*iterator};
-
-    switch (location.second.type) {
-      case SchemaFrame::LocationType::Resource:
-        stream << "(RESOURCE)";
-        break;
-      case SchemaFrame::LocationType::Anchor:
-        stream << "(ANCHOR)";
-        break;
-      case SchemaFrame::LocationType::Pointer:
-        stream << "(POINTER)";
-        break;
-      case SchemaFrame::LocationType::Subschema:
-        stream << "(SUBSCHEMA)";
-        break;
-      default:
-        assert(false);
-    }
-
-    stream << " URI: " << location.first.second << "\n";
-
-    if (location.first.first == SchemaReferenceType::Static) {
-      stream << "    Type              : Static\n";
-    } else {
-      stream << "    Type              : Dynamic\n";
-    }
-
-    stream << "    Root              : "
-           << location.second.root.value_or("<ANONYMOUS>") << "\n";
-
-    if (location.second.pointer.empty()) {
-      stream << "    Pointer           :\n";
-    } else {
-      stream << "    Pointer           : ";
-      sourcemeta::core::stringify(location.second.pointer, stream);
-      stream << "\n";
-    }
-
-    stream << "    Base              : " << location.second.base << "\n";
-
-    if (location.second.relative_pointer.empty()) {
-      stream << "    Relative Pointer  :\n";
-    } else {
-      stream << "    Relative Pointer  : ";
-      sourcemeta::core::stringify(location.second.relative_pointer, stream);
-      stream << "\n";
-    }
-
-    stream << "    Dialect           : " << location.second.dialect << "\n";
-    stream << "    Base Dialect      : " << location.second.base_dialect
-           << "\n";
-
-    if (location.second.parent.has_value()) {
-      if (location.second.parent.value().empty()) {
-        stream << "    Parent            :\n";
-      } else {
-        stream << "    Parent            : ";
-        sourcemeta::core::stringify(location.second.parent.value(), stream);
-        stream << "\n";
-      }
-    } else {
-      stream << "    Parent            : <NONE>\n";
-    }
-
-    const auto &instance_locations{frame.instance_locations(location.second)};
-    if (!instance_locations.empty()) {
-      for (const auto &instance_location : instance_locations) {
-        if (instance_location.empty()) {
-          stream << "    Instance Location :\n";
-        } else {
-          stream << "    Instance Location : ";
-          sourcemeta::core::stringify(instance_location, stream);
-          stream << "\n";
-        }
-      }
-    }
-
-    if (std::next(iterator) != frame.locations().cend()) {
-      stream << "\n";
-    }
-  }
-
-  for (auto iterator = frame.references().cbegin();
-       iterator != frame.references().cend(); iterator++) {
-    stream << "\n";
-    const auto &reference{*iterator};
-    stream << "(REFERENCE) ORIGIN: ";
-    sourcemeta::core::stringify(reference.first.second, stream);
-    stream << "\n";
-
-    if (reference.first.first == SchemaReferenceType::Static) {
-      stream << "    Type              : Static\n";
-    } else {
-      stream << "    Type              : Dynamic\n";
-    }
-
-    stream << "    Destination       : " << reference.second.destination
-           << "\n";
-    stream << "    - (w/o fragment)  : "
-           << reference.second.base.value_or("<NONE>") << "\n";
-    stream << "    - (fragment)      : "
-           << reference.second.fragment.value_or("<NONE>") << "\n";
-  }
-
-  return stream;
-}
-
 auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                           const SchemaResolver &resolver,
                           const std::optional<JSON::String> &default_dialect,
@@ -669,16 +558,9 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             if (!maybe_relative_is_absolute ||
                 maybe_match == this->locations_.cend()) {
               assert(entry.common.base_dialect.has_value());
-              if (entry.common.orphan) {
-                store(this->locations_, this->instances_,
-                      SchemaReferenceType::Static,
-                      SchemaFrame::LocationType::Resource, new_id, root_id,
-                      new_id, entry.common.pointer,
-                      sourcemeta::core::empty_pointer,
-                      entry.common.dialect.value(),
-                      entry.common.base_dialect.value(), {},
-                      entry.common.parent);
-              } else if (this->mode_ == SchemaFrame::Mode::Instances) {
+
+              if (!(entry.common.orphan) &&
+                  this->mode_ == SchemaFrame::Mode::Instances) {
                 store(this->locations_, this->instances_,
                       SchemaReferenceType::Static,
                       SchemaFrame::LocationType::Resource, new_id, root_id,
@@ -880,15 +762,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           const auto subschema{subschemas.find(pointer)};
           if (subschema != subschemas.cend()) {
             // Handle orphan schemas
-            if (subschema->second.orphan) {
-              store(this->locations_, this->instances_,
-                    SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Subschema, result, root_id,
-                    current_base, pointer,
-                    pointer.resolve_from(nearest_bases.second),
-                    dialects.first.front(), current_base_dialect, {},
-                    subschema->second.parent);
-            } else if (this->mode_ == SchemaFrame::Mode::Instances) {
+            if (!(subschema->second.orphan) &&
+                this->mode_ == SchemaFrame::Mode::Instances) {
               store(this->locations_, this->instances_,
                     SchemaReferenceType::Static,
                     SchemaFrame::LocationType::Subschema, result, root_id,
