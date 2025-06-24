@@ -1,0 +1,43 @@
+name: Publish Snap
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # speed-up LXD initialisation which snapcraft uses under the hood
+      - name: Setup LXD
+        run: sudo snap install lxd && sudo lxd waitready && sudo lxd init --auto
+
+      # Build the snap in the default channel, outputs the path of the .snap file
+      - name: Build snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          path: ./snap
+
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jsonschema_${{ github.ref_name }}.snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+      - name: Publish to Snap Store
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap_token
+          snapcraft login --with snap_token
+          snapcraft upload --release=stable ${{ steps.snapcraft.outputs.snap }}
