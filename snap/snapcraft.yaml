@@ -1,31 +1,35 @@
 name: jsonschema
 base: core22
 adopt-info: jsonschema
+
 summary: Command-line tool for working with JSON Schema
 description: |
   The JSON Schema CLI is a comprehensive command-line utility for validating,
-  testing, formatting, linting and otherwise managing JSON Schema files.  Written in
-  modern C++, it offers first-class support for every published JSON Schema
-  version, runs on all major platforms and integrates nicely with CI/CD
-  pipelines.
+  testing, formatting, linting and otherwise managing JSON Schema files.
+  Written in modern C++, it offers first-class support for every published
+  JSON Schema version, runs on all major platforms and integrates nicely
+  with CI/CD pipelines.
 
-confinement: strict   # classic confinement is not needed, the binary is self-contained
-grade: stable
+grade: stable          # publish-ready
+confinement: strict    # binary is self-contained
 
 apps:
   jsonschema:
     command: bin/jsonschema
-    plugs:
-      - home          # allow access to the user’s home so that schemas can be read/written
-      - network       # needed by "inspect" command when dereferencing remote $refs
     environment:
-      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
-      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib:$SNAP/usr/lib/x86_64-linux-gnu/mesa-egl:$SNAP/
+      PATH:              $SNAP/usr/bin:$SNAP/bin:$PATH
+      LD_LIBRARY_PATH:   $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib:$SNAP/usr/lib/x86_64-linux-gnu/mesa-egl:$SNAP/
+    plugs:
+      - home             # read/write schemas in $HOME
+      - network          # dereference remote $refs (inspect cmd)
 
 parts:
   jsonschema:
     plugin: cmake
+    # Tell Snapcraft that the project lives one directory up from /snap
     source: ..
+    # (optional clarity) this subdir actually contains CMakeLists.txt
+    source-subdir: .
     build-packages:
       - build-essential
       - cmake
@@ -37,55 +41,31 @@ parts:
       - libc6-dev-i386
       - g++-multilib
     build-attributes: [keep-execstack, no-patchelf, no-install]
+
+    override-pull: |
+      craftctl default
+      # Use the most recent git tag (strip the leading "v") as the snap version
+      VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+      craftctl set version="${VERSION#v}"
+
     override-build: |
-      # Build the project as a fully static binary
+      # Build a fully static binary
       cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_EXE_LINKER_FLAGS="-static" \
         -DCMAKE_EXE_LINK_DYNAMIC_C_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS="-Wl,-Bstatic" \
-        $SNAPCRAFT_PART_SRC
-      
-      cmake --build build -- -j$(nproc)
-      
-      # Install the binary
-      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
-      # The binary might be in build/ or build/src/ depending on the project structure
-      if [ -f build/jsonschema ]; then
-        cp build/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
-      elif [ -f build/src/jsonschema ]; then
-        cp build/src/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
-      else
-        echo "Error: Could not find built binary in build/ or build/src/"
-        find build -type f -executable -name "jsonschema"
-        exit 1
-      fi
-      chmod +x $SNAPCRAFT_PART_INSTALL/bin/jsonschema
-      
-      # Verify the binary exists and is executable
-      if [ -f $SNAPCRAFT_PART_INSTALL/bin/jsonschema ] && [ -x $SNAPCRAFT_PART_INSTALL/bin/jsonschema ]; then
-        echo "Successfully built binary"
-        # Check if it's a static binary (ldd returns non-zero for static binaries)
-        if ! ldd $SNAPCRAFT_PART_INSTALL/bin/jsonschema 2>&1 | grep -q "not a dynamic"; then
-          echo "Warning: Binary might not be fully static"
-          ldd $SNAPCRAFT_PART_INSTALL/bin/jsonschema || true
-        fi
-      else
-        echo "Error: Failed to build binary"
-        exit 1
-      fi
-    override-pull: |
-      craftctl default
-      # Use the most recent Git tag (drop the leading "v") as the snap version so
-      # that the store gets a fresh revision whenever you push a new release tag.
-      # Fall back to "0.0.0" if no tags exist yet
-      VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0" | sed 's/^v//')
-      craftctl set version=$VERSION
-      
+        $CRAFT_PART_SRC
+
+      cmake --build build --parallel "$(nproc)"
+
+      # Install
+      install -Dm755 build/src/jsonschema \
+        "$CRAFT_PART_INSTALL/bin/jsonschema"
+
     organize:
       usr/bin: bin/
