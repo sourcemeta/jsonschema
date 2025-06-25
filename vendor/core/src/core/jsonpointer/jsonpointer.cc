@@ -203,7 +203,7 @@ auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
 
   JSON &current{traverse<std::allocator, JSON>(document, std::cbegin(pointer),
                                                std::prev(std::cend(pointer)))};
-  const auto last{pointer.back()};
+  const auto &last{pointer.back()};
   // Handle the hyphen as a last constant
   // If the currently referenced value is a JSON array, the reference
   // token [can be ] the single character "-", making the new referenced value
@@ -230,7 +230,7 @@ auto set(JSON &document, const Pointer &pointer, JSON &&value) -> void {
 
   JSON &current{traverse<std::allocator, JSON>(document, std::cbegin(pointer),
                                                std::prev(std::cend(pointer)))};
-  const auto last{pointer.back()};
+  const auto &last{pointer.back()};
   // Handle the hyphen as a last constant
   // If the currently referenced value is a JSON array, the reference
   // token [can be ] the single character "-", making the new referenced value

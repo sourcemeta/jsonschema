@@ -66,7 +66,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::map<std::string, JSON> schemas;
+  std::map<std::string, JSON> schemas{};
   SchemaResolver default_resolver = nullptr;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
