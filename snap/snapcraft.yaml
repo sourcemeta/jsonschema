@@ -38,6 +38,9 @@ parts:
       - g++-multilib
     build-attributes: [keep-execstack, no-patchelf, no-install]
     override-build: |
+      # Navigate to the source directory
+      cd "$SNAPCRAFT_PART_SRC"
+      
       # Build the project as a fully static binary
       cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
@@ -45,18 +48,26 @@ parts:
         -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         -DBUILD_SHARED_LIBS=OFF \
         -DCMAKE_EXE_LINKER_FLAGS="-static" \
-        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         -DCMAKE_EXE_LINK_DYNAMIC_C_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS="-Wl,-Bstatic" \
-        $SNAPCRAFT_PART_SRC
+        .
       
       cmake --build build -- -j$(nproc)
       
       # Install the binary
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
-      cp build/src/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
+      # The binary might be in build/ or build/src/ depending on the project structure
+      if [ -f build/jsonschema ]; then
+        cp build/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
+      elif [ -f build/src/jsonschema ]; then
+        cp build/src/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
+      else
+        echo "Error: Could not find built binary in build/ or build/src/"
+        find build -type f -executable -name "jsonschema"
+        exit 1
+      fi
       chmod +x $SNAPCRAFT_PART_INSTALL/bin/jsonschema
       
       # Verify the binary exists and is executable
