@@ -117,7 +117,7 @@ JSON::JSON(const JSON &other) : current_type{other.current_type} {
   }
 }
 
-JSON::JSON(JSON &&other) : current_type{other.current_type} {
+JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
   switch (other.current_type) {
     case Type::Boolean:
       this->data_boolean = other.data_boolean;
@@ -174,7 +174,7 @@ auto JSON::operator=(const JSON &other) -> JSON & {
   return *this;
 }
 
-auto JSON::operator=(JSON &&other) -> JSON & {
+auto JSON::operator=(JSON &&other) noexcept -> JSON & {
   this->maybe_destruct_union();
   this->current_type = other.current_type;
   switch (other.current_type) {

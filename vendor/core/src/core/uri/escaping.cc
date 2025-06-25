@@ -5,7 +5,10 @@
 #include <algorithm> // std::copy
 #include <cassert>   // assert
 #include <cctype>    // std::isalnum
+#include <istream>   // std::istream
+#include <ostream>   // std::ostream
 #include <sstream>   // std::ostringstream
+#include <string>    // std::string
 
 namespace sourcemeta::core {
 
@@ -23,50 +26,22 @@ auto uri_escape(const char character, std::ostream &output,
   } else if (mode == URIEscapeMode::SkipSubDelims) {
     switch (character) {
       case '!':
-        output.put(character);
-        break;
       case '$':
-        output.put(character);
-        break;
       case '&':
-        output.put(character);
-        break;
       case '\'':
-        output.put(character);
-        break;
       case '(':
-        output.put(character);
-        break;
       case ')':
-        output.put(character);
-        break;
       case '*':
-        output.put(character);
-        break;
       case '+':
-        output.put(character);
-        break;
       case ',':
-        output.put(character);
-        break;
       case ';':
-        output.put(character);
-        break;
       case '=':
-        output.put(character);
-        break;
 
       // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
       // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
       case '-':
-        output.put(character);
-        break;
       case '_':
-        output.put(character);
-        break;
       case '.':
-        output.put(character);
-        break;
       case '~':
         output.put(character);
         break;
@@ -82,14 +57,8 @@ auto uri_escape(const char character, std::ostream &output,
     // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
     switch (character) {
       case '-':
-        output.put(character);
-        break;
       case '_':
-        output.put(character);
-        break;
       case '.':
-        output.put(character);
-        break;
       case '~':
         output.put(character);
         break;

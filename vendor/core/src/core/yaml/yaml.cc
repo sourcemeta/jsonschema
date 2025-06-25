@@ -109,6 +109,7 @@ auto internal_parse_json(yaml_parser_t *parser) -> sourcemeta::core::JSON {
 
 namespace sourcemeta::core {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> JSON {
   std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;

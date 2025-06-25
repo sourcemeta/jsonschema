@@ -376,15 +376,10 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
 
         break;
       case sourcemeta::core::SchemaKeywordType::Assertion:
-        break;
       case sourcemeta::core::SchemaKeywordType::Annotation:
-        break;
       case sourcemeta::core::SchemaKeywordType::Reference:
-        break;
       case sourcemeta::core::SchemaKeywordType::Other:
-        break;
       case sourcemeta::core::SchemaKeywordType::Comment:
-        break;
       case sourcemeta::core::SchemaKeywordType::Unknown:
         break;
     }

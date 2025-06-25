@@ -216,9 +216,9 @@ public:
 
   /// Misc constructors
   JSON(const JSON &);
-  JSON(JSON &&);
+  JSON(JSON &&) noexcept;
   auto operator=(const JSON &) -> JSON &;
-  auto operator=(JSON &&) -> JSON &;
+  auto operator=(JSON &&) noexcept -> JSON &;
 
   /// Destructor
   ~JSON();

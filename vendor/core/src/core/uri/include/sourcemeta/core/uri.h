@@ -61,7 +61,7 @@ public:
   URI(const URI &other);
 
   /// Move constructor
-  URI(URI &&other);
+  URI(URI &&other) noexcept;
 
   /// Check if the URI is absolute. For example:
   ///
@@ -462,20 +462,20 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  std::string data;
+  std::string data{};
 
-  std::optional<std::string> path_;
-  std::optional<std::string> userinfo_;
-  std::optional<std::string> host_;
-  std::optional<std::uint32_t> port_;
-  std::optional<std::string> scheme_;
-  std::optional<std::string> fragment_;
-  std::optional<std::string> query_;
+  std::optional<std::string> path_{};
+  std::optional<std::string> userinfo_{};
+  std::optional<std::string> host_{};
+  std::optional<std::uint32_t> port_{};
+  std::optional<std::string> scheme_{};
+  std::optional<std::string> fragment_{};
+  std::optional<std::string> query_{};
   bool is_ipv6_ = false;
 
   // Use PIMPL idiom to hide `uriparser`
   struct Internal;
-  std::unique_ptr<Internal> internal;
+  std::unique_ptr<Internal> internal{};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

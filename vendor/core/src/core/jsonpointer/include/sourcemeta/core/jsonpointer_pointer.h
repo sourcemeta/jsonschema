@@ -9,7 +9,7 @@
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::advance, std::back_inserter
-#include <type_traits>      // std::enable_if_t, std::is_same_v
+#include <type_traits>      // std::enable_if_t, std::is_same_v, std::false_type
 #include <utility>          // std::move
 #include <vector>           // std::vector
 
@@ -21,6 +21,8 @@ public:
   using Token = GenericToken<PropertyT, Hash>;
   using Value = typename Token::Value;
   using Container = std::vector<Token>;
+  // We manually provide a JSON transformer
+  using json_auto = std::false_type;
 
   /// This constructor creates an empty JSON Pointer. For example:
   ///

@@ -100,7 +100,7 @@ auto sourcemeta::core::identify(
     return default_id;
   }
 
-  const auto result{identify(schema, maybe_base_dialect.value(), default_id)};
+  auto result{identify(schema, maybe_base_dialect.value(), default_id)};
 
   // A last shot supporting identifiers alongside `$ref` in loose mode
   if (!result.has_value() && strategy == SchemaIdentificationStrategy::Loose) {
