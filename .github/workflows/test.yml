@@ -118,7 +118,7 @@ jobs:
         id: snapcraft
         uses: snapcore/action-build@v1
         with:
-          path: ./snap
+          path: .
       - name: Upload snap artefact
         uses: actions/upload-artifact@v4
         with:

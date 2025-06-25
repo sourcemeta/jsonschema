@@ -28,7 +28,7 @@ jobs:
         id: snapcraft
         uses: snapcore/action-build@v1
         with:
-          path: ./snap
+          path: .
           snapcraft-args: --target-arch=${{ matrix.arch }}
 
       - name: Upload artefact

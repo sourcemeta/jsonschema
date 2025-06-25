@@ -5,31 +5,25 @@ adopt-info: jsonschema
 summary: Command-line tool for working with JSON Schema
 description: |
   The JSON Schema CLI is a comprehensive command-line utility for validating,
-  testing, formatting, linting and otherwise managing JSON Schema files.
-  Written in modern C++, it offers first-class support for every published
-  JSON Schema version, runs on all major platforms and integrates nicely
+  linting and otherwise managing JSON Schema files. Written in modern C++,
+  it supports every published JSON Schema version and integrates cleanly
   with CI/CD pipelines.
 
-grade: stable          # publish-ready
-confinement: strict    # binary is self-contained
+grade: stable
+confinement: strict      # binary is self-contained
 
 apps:
   jsonschema:
     command: bin/jsonschema
     environment:
-      PATH:              $SNAP/usr/bin:$SNAP/bin:$PATH
-      LD_LIBRARY_PATH:   $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib:$SNAP/usr/lib/x86_64-linux-gnu/mesa-egl:$SNAP/
-    plugs:
-      - home             # read/write schemas in $HOME
-      - network          # dereference remote $refs (inspect cmd)
+      PATH:            $SNAP/usr/bin:$SNAP/bin:$PATH
+      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib
+    plugs: [home, network]
 
 parts:
   jsonschema:
     plugin: cmake
-    # Tell Snapcraft that the project lives one directory up from /snap
-    source: ..
-    # (optional clarity) this subdir actually contains CMakeLists.txt
-    source-subdir: .
+    source: .
     build-packages:
       - build-essential
       - cmake
@@ -44,12 +38,10 @@ parts:
 
     override-pull: |
       craftctl default
-      # Use the most recent git tag (strip the leading "v") as the snap version
       VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
       craftctl set version="${VERSION#v}"
 
     override-build: |
-      # Build a fully static binary
       cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -60,12 +52,8 @@ parts:
         -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS="-Wl,-Bstatic" \
         -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS="-Wl,-Bstatic" \
         $CRAFT_PART_SRC
-
       cmake --build build --parallel "$(nproc)"
-
-      # Install
-      install -Dm755 build/src/jsonschema \
-        "$CRAFT_PART_INSTALL/bin/jsonschema"
+      install -Dm755 build/src/jsonschema "$CRAFT_PART_INSTALL/bin/jsonschema"
 
     organize:
       usr/bin: bin/
