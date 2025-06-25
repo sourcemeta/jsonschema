@@ -109,3 +109,18 @@ jobs:
       - run: docker run --interactive --volume "$PWD:/schema" jsonschema
       - run: ./test/docker/help.sh
       - run: ./test/docker/bundle_fmt.sh
+
+  snap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+        with:
+          path: ./snap
+      - name: Upload snap artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap-${{ github.sha }}.snap
+          path: ${{ steps.snapcraft.outputs.snap }}

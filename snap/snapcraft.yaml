@@ -14,10 +14,13 @@ grade: stable
 
 apps:
   jsonschema:
-    command: usr/bin/jsonschema
+    command: bin/jsonschema
     plugs:
       - home          # allow access to the user’s home so that schemas can be read/written
       - network       # needed by "inspect" command when dereferencing remote $refs
+    environment:
+      PATH: $SNAP/usr/bin:$SNAP/bin:$PATH
+      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib:$SNAP/usr/lib/x86_64-linux-gnu/mesa-egl:$SNAP/
 
 parts:
   jsonschema:
@@ -28,9 +31,53 @@ parts:
       - cmake
       - git
       - pkg-config
+      - libstdc++-12-dev
+      - g++-12
+      - libc6-dev
+      - libc6-dev-i386
+      - g++-multilib
+    build-attributes: [keep-execstack, no-patchelf, no-install]
+    override-build: |
+      # Build the project as a fully static binary
+      cmake -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DCMAKE_EXE_LINKER_FLAGS="-static" \
+        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+        -DCMAKE_EXE_LINK_DYNAMIC_C_FLAGS="-Wl,-Bstatic" \
+        -DCMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS="-Wl,-Bstatic" \
+        -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS="-Wl,-Bstatic" \
+        -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS="-Wl,-Bstatic" \
+        $SNAPCRAFT_PART_SRC
+      
+      cmake --build build -- -j$(nproc)
+      
+      # Install the binary
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      cp build/src/jsonschema $SNAPCRAFT_PART_INSTALL/bin/
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/jsonschema
+      
+      # Verify the binary exists and is executable
+      if [ -f $SNAPCRAFT_PART_INSTALL/bin/jsonschema ] && [ -x $SNAPCRAFT_PART_INSTALL/bin/jsonschema ]; then
+        echo "Successfully built binary"
+        # Check if it's a static binary (ldd returns non-zero for static binaries)
+        if ! ldd $SNAPCRAFT_PART_INSTALL/bin/jsonschema 2>&1 | grep -q "not a dynamic"; then
+          echo "Warning: Binary might not be fully static"
+          ldd $SNAPCRAFT_PART_INSTALL/bin/jsonschema || true
+        fi
+      else
+        echo "Error: Failed to build binary"
+        exit 1
+      fi
     override-pull: |
       craftctl default
       # Use the most recent Git tag (drop the leading "v") as the snap version so
       # that the store gets a fresh revision whenever you push a new release tag.
-      VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+      # Fall back to "0.0.0" if no tags exist yet
+      VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0" | sed 's/^v//')
       craftctl set version=$VERSION
+      
+    organize:
+      usr/bin: bin/

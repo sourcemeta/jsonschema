@@ -11,3 +11,9 @@ _deps
 /build
 Brewfile.lock.json
 .DS_Store
+*.snap
+/parts/
+/stage/
+/prime/
+/.snapcraft/
+jsonschema.snap

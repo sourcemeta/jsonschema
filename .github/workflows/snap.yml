@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   build-and-release:
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,11 +29,12 @@ jobs:
         uses: snapcore/action-build@v1
         with:
           path: ./snap
+          snapcraft-args: --target-arch=${{ matrix.arch }}
 
       - name: Upload artefact
         uses: actions/upload-artifact@v4
         with:
-          name: jsonschema_${{ github.ref_name }}.snap
+          name: jsonschema_${{ github.ref_name }}_${{ matrix.arch }}.snap
           path: ${{ steps.snapcraft.outputs.snap }}
 
       - name: Publish to Snap Store
