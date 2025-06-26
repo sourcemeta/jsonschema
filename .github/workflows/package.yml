@@ -113,14 +113,12 @@ jobs:
   snap:
     strategy:
       matrix:
-        arch: [amd64, arm64]
-    runs-on: ubuntu-latest
+        image: [ ubuntu-24.04, ubuntu-24.04-arm ]
+    runs-on: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
       - uses: snapcore/action-build@v1
         id: snapcraft
-        with:
-          snapcraft-args: --target-arch=${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
           path: ${{ steps.snapcraft.outputs.snap }}

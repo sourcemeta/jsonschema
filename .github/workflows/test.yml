@@ -111,7 +111,12 @@ jobs:
       - run: ./test/docker/bundle_fmt.sh
 
   snap:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ ubuntu-24.04, ubuntu-24.04-arm ]
+
+    runs-on: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
       - uses: snapcore/action-build@v1
