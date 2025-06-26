@@ -134,7 +134,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: build/out/
-          pattern: *
+          pattern: "*"
           merge-multiple: true
 
       # Generate signed checksums for all pre-built binaries
