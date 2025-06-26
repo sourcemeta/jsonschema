@@ -10,20 +10,14 @@ grade: stable
 confinement: strict
 apps:
   jsonschema:
-    command: bin/jsonschema
+    command: usr/local/bin/jsonschema
     plugs: [ home, network ]
 parts:
   jsonschema:
     plugin: cmake
     source: .
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE:STRING=Release
     override-pull: |
       craftctl default
       craftctl set version="$(grep "project(jsonschema VERSION" CMakeLists.txt | cut -d ' ' -f 3)"
-    # TODO: We should be able to fully use the CMake plugin
-    # See: https://documentation.ubuntu.com/snapcraft/stable/common/craft-parts/reference/plugins/cmake_plugin/
-    override-build: |
-      cmake -S "$CRAFT_PART_SRC" -B "$CRAFT_PART_BUILD" \
-        -DCMAKE_BUILD_TYPE:STRING=Release \
-        -DBUILD_SHARED_LIBS:BOOL=OFF
-      cmake --build "$CRAFT_PART_BUILD" --parallel "$(nproc)" --config Release
-      cmake --install "$CRAFT_PART_BUILD" --prefix "$CRAFT_PART_INSTALL" --config Release --component sourcemeta_jsonschema
