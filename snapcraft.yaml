@@ -1,59 +1,29 @@
+# See https://documentation.ubuntu.com/snapcraft/stable/reference/project-file/snapcraft-yaml
 name: jsonschema
 base: core22
 adopt-info: jsonschema
-
 summary: Command-line tool for working with JSON Schema
 description: |
-  The JSON Schema CLI is a comprehensive command-line utility for validating,
-  linting and otherwise managing JSON Schema files. Written in modern C++,
-  it supports every published JSON Schema version and integrates cleanly
-  with CI/CD pipelines.
-
+  The CLI for working with JSON Schema. Covers formatting, linting, testing,
+  bundling, and more for both local development and CI/CD pipelines.
 grade: stable
-confinement: strict      # binary is self-contained
-
+confinement: strict
 apps:
   jsonschema:
     command: bin/jsonschema
-    environment:
-      PATH:            $SNAP/usr/bin:$SNAP/bin:$PATH
-      LD_LIBRARY_PATH: $SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib:$SNAP/lib
-    plugs: [home, network]
-
+    plugs: [ home, network ]
 parts:
   jsonschema:
     plugin: cmake
     source: .
-    build-packages:
-      - build-essential
-      - cmake
-      - git
-      - pkg-config
-      - libstdc++-12-dev
-      - g++-12
-      - libc6-dev
-      - libc6-dev-i386
-      - g++-multilib
-    build-attributes: [keep-execstack, no-patchelf, no-install]
-
     override-pull: |
       craftctl default
-      VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-      craftctl set version="${VERSION#v}"
-
+      craftctl set version="$(grep "project(jsonschema VERSION" CMakeLists.txt | cut -d ' ' -f 3)"
+    # TODO: We should be able to fully use the CMake plugin
+    # See: https://documentation.ubuntu.com/snapcraft/stable/common/craft-parts/reference/plugins/cmake_plugin/
     override-build: |
-      cmake -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DBUILD_SHARED_LIBS=OFF \
-        -DCMAKE_EXE_LINKER_FLAGS="-static" \
-        -DCMAKE_EXE_LINK_DYNAMIC_C_FLAGS="-Wl,-Bstatic" \
-        -DCMAKE_EXE_LINK_DYNAMIC_CXX_FLAGS="-Wl,-Bstatic" \
-        -DCMAKE_SHARED_LIBRARY_LINK_C_FLAGS="-Wl,-Bstatic" \
-        -DCMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS="-Wl,-Bstatic" \
-        $CRAFT_PART_SRC
-      cmake --build build --parallel "$(nproc)"
-      install -Dm755 build/src/jsonschema "$CRAFT_PART_INSTALL/bin/jsonschema"
-
-    organize:
-      usr/bin: bin/
+      cmake -S "$CRAFT_PART_SRC" -B "$CRAFT_PART_BUILD" \
+        -DCMAKE_BUILD_TYPE:STRING=Release \
+        -DBUILD_SHARED_LIBS:BOOL=OFF
+      cmake --build "$CRAFT_PART_BUILD" --parallel "$(nproc)" --config Release
+      cmake --install "$CRAFT_PART_BUILD" --prefix "$CRAFT_PART_INSTALL" --config Release --component sourcemeta_jsonschema

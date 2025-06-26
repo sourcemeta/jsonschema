@@ -117,31 +117,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup LXD
-        run: sudo snap install lxd && sudo lxd waitready && sudo lxd init --auto
-      - name: Build snap
+      - uses: snapcore/action-build@v1
         id: snapcraft
-        uses: snapcore/action-build@v1
         with:
-          path: .
           snapcraft-args: --target-arch=${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: snap-${{ matrix.arch }}-${{ github.sha }}.snap
           path: ${{ steps.snapcraft.outputs.snap }}
+          retention-days: 1
 
   publish:
-    needs: [package, snap]
+    needs: [ package, snap ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: build/out/
-          pattern: "*"
+          pattern: *
           merge-multiple: true
 
-      # Generate signed checksums for all pre-built binaries and snaps
+      # Generate signed checksums for all pre-built binaries
       # while avoiding "build/out/" in the checksum file.
       - run: sha256sum --tag *.zip *.snap >CHECKSUMS.txt
         working-directory: build/out/
@@ -187,17 +183,6 @@ jobs:
         with:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
-      - name: Publish Snap to Snap Store
-        if: github.ref_type == 'tag'
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        run: |
-          echo "$SNAPCRAFT_STORE_CREDENTIALS" > snap_token
-          snapcraft login --with snap_token
-          for s in *.snap; do
-            snapcraft upload --release=stable "$s";
-          done
-
       - name: Publish to NPM
         run: ./npm-deploy.sh ${{ github.ref_name }}
         if: github.ref_type == 'tag'

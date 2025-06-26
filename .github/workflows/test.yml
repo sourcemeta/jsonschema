@@ -114,13 +114,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build snap
+      - uses: snapcore/action-build@v1
         id: snapcraft
-        uses: snapcore/action-build@v1
-        with:
-          path: .
-      - name: Upload snap artefact
-        uses: actions/upload-artifact@v4
-        with:
-          name: snap-${{ github.sha }}.snap
-          path: ${{ steps.snapcraft.outputs.snap }}
+      - run: sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+      - run: jsonschema version
+      # TODO: Make this work
+      # - run: ./test/ci/pass_validate_http.sh jsonschema
