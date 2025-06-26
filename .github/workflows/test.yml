@@ -121,7 +121,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: snapcore/action-build@v1
         id: snapcraft
-      - run: sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+      - run: sudo snap install --dangerous --classic ${{ steps.snapcraft.outputs.snap }}
       - run: jsonschema version
-      # TODO: Make this work
-      # - run: ./test/ci/pass_validate_http.sh jsonschema
+      - run: ./test/bundle/pass_resolve_single.sh jsonschema
+      - run: ./test/ci/pass_validate_http_verbose.sh jsonschema
