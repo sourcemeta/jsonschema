@@ -6,11 +6,11 @@ summary: The command-line tool for working with JSON Schema
 description: |
   Covers formatting, linting, testing, bundling, and more for both local development and CI/CD pipelines.
 grade: stable
-confinement: strict
+# Becase we want users to pass arbitrary files to the CLI
+confinement: classic
 apps:
   jsonschema:
     command: usr/local/bin/jsonschema
-    plugs: [ home, network ]
 parts:
   jsonschema:
     plugin: cmake
