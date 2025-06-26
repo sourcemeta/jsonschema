@@ -2,10 +2,9 @@
 name: jsonschema
 base: core22
 adopt-info: jsonschema
-summary: Command-line tool for working with JSON Schema
+summary: The command-line tool for working with JSON Schema
 description: |
-  The CLI for working with JSON Schema. Covers formatting, linting, testing,
-  bundling, and more for both local development and CI/CD pipelines.
+  Covers formatting, linting, testing, bundling, and more for both local development and CI/CD pipelines.
 grade: stable
 confinement: strict
 apps:
