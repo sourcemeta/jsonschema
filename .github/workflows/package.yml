@@ -110,20 +110,36 @@ jobs:
           path: build/out/*.zip
           retention-days: 1
 
+  snap:
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+        with:
+          snapcraft-args: --target-arch=${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ${{ steps.snapcraft.outputs.snap }}
+          retention-days: 1
+
   publish:
-    needs: package
+    needs: [ package, snap ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: build/out/
-          pattern: artifacts-*
+          pattern: *
           merge-multiple: true
 
       # Generate signed checksums for all pre-built binaries
       # while avoiding "build/out/" in the checksum file.
-      - run: sha256sum --tag *.zip >CHECKSUMS.txt
+      - run: sha256sum --tag *.zip *.snap >CHECKSUMS.txt
         working-directory: build/out/
       - run: cat CHECKSUMS.txt
         working-directory: build/out/
@@ -158,7 +174,7 @@ jobs:
       - name: Perform Tag Release
         run: |
           gh release create ${{ github.ref_name }} --draft=false --title ${{ github.ref_name }} --target "$GITHUB_SHA" --generate-notes
-          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip build/out/CHECKSUMS.txt build/out/CHECKSUMS.txt.asc
+          gh release upload --clobber ${{ github.ref_name }} build/out/*.zip build/out/*.snap build/out/CHECKSUMS.txt build/out/CHECKSUMS.txt.asc
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}

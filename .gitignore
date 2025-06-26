@@ -11,3 +11,4 @@ _deps
 /build
 Brewfile.lock.json
 .DS_Store
+*.snap

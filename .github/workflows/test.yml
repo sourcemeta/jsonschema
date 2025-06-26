@@ -109,3 +109,14 @@ jobs:
       - run: docker run --interactive --volume "$PWD:/schema" jsonschema
       - run: ./test/docker/help.sh
       - run: ./test/docker/bundle_fmt.sh
+
+  snap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: snapcore/action-build@v1
+        id: snapcraft
+      - run: sudo snap install --dangerous ${{ steps.snapcraft.outputs.snap }}
+      - run: jsonschema version
+      # TODO: Make this work
+      # - run: ./test/ci/pass_validate_http.sh jsonschema
