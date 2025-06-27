@@ -321,8 +321,8 @@ auto URI::path(const std::string &path) -> URI & {
   }
 
   const auto is_relative_path = path.starts_with(".");
-  if (is_relative_path) {
-    throw URIError{"You cannot set a relative path"};
+  if (is_relative_path && this->is_absolute()) {
+    throw URIError{"You cannot set a relative path to an absolute URI"};
   }
 
   if (path == "/") {
@@ -341,8 +341,8 @@ auto URI::path(std::string &&path) -> URI & {
   }
 
   const auto is_relative_path = path.starts_with(".");
-  if (is_relative_path) {
-    throw URIError{"You cannot set a relative path"};
+  if (is_relative_path && this->is_absolute()) {
+    throw URIError{"You cannot set a relative path to an absolute URI"};
   }
 
   if (path == "/") {

@@ -51,6 +51,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
                    const sourcemeta::core::SchemaWalker &walker,
                    const sourcemeta::core::SchemaResolver &resolver,
                    const std::optional<std::string> &default_dialect,
+                   const std::optional<std::string> &default_id,
                    const sourcemeta::core::SchemaFrame::Paths &paths,
                    const std::size_t depth = 0) -> void {
   // Keep in mind that the resulting frame does miss some information. For
@@ -60,10 +61,11 @@ auto bundle_schema(sourcemeta::core::JSON &root,
   // function, given we don't pass the frame back to the caller
   if (depth == 0) {
     frame.analyse(
-        subschema, walker, resolver, default_dialect, std::nullopt,
+        subschema, walker, resolver, default_dialect, default_id,
         // We only want to frame in "wrapper" mode for the top level object
         paths);
   } else {
+    // Note that we only apply the default identifier to the top-level frame
     frame.analyse(subschema, walker, resolver, default_dialect);
   }
 
@@ -133,7 +135,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
 
     embed_schema(root, container, identifier, copy);
     bundle_schema(root, container, copy, frame, walker, resolver,
-                  default_dialect, paths, depth + 1);
+                  default_dialect, default_id, paths, depth + 1);
   }
 }
 
@@ -144,6 +146,7 @@ namespace sourcemeta::core {
 auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect,
+            const std::optional<std::string> &default_id,
             const std::optional<Pointer> &default_container,
             const SchemaFrame::Paths &paths) -> void {
   sourcemeta::core::SchemaFrame frame{
@@ -153,7 +156,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
     // This is undefined behavior
     assert(!default_container.value().empty());
     bundle_schema(schema, default_container.value(), schema, frame, walker,
-                  resolver, default_dialect, paths);
+                  resolver, default_dialect, default_id, paths);
     return;
   }
 
@@ -164,7 +167,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
       vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/core")) {
     bundle_schema(schema, {"$defs"}, schema, frame, walker, resolver,
-                  default_dialect, paths);
+                  default_dialect, default_id, paths);
     return;
   } else if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
              vocabularies.contains(
@@ -176,7 +179,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
              vocabularies.contains(
                  "http://json-schema.org/draft-04/hyper-schema#")) {
     bundle_schema(schema, {"definitions"}, schema, frame, walker, resolver,
-                  default_dialect, paths);
+                  default_dialect, default_id, paths);
     return;
   } else if (vocabularies.contains(
                  "http://json-schema.org/draft-03/hyper-schema#") ||
@@ -190,7 +193,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
              vocabularies.contains(
                  "http://json-schema.org/draft-00/hyper-schema#") ||
              vocabularies.contains("http://json-schema.org/draft-00/schema#")) {
-    frame.analyse(schema, walker, resolver, default_dialect);
+    frame.analyse(schema, walker, resolver, default_dialect, default_id);
     if (frame.standalone()) {
       return;
     }
@@ -205,10 +208,12 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
 auto bundle(const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect,
+            const std::optional<std::string> &default_id,
             const std::optional<Pointer> &default_container,
             const SchemaFrame::Paths &paths) -> sourcemeta::core::JSON {
   sourcemeta::core::JSON copy = schema;
-  bundle(copy, walker, resolver, default_dialect, default_container, paths);
+  bundle(copy, walker, resolver, default_dialect, default_id, default_container,
+         paths);
   return copy;
 }
 

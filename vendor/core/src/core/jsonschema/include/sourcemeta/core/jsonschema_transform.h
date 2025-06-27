@@ -229,17 +229,17 @@ public:
                          const std::string_view, const std::string_view)>;
 
   /// Apply the bundle of rules to a schema
-  auto
-  apply(JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const Callback &callback,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
+  auto apply(JSON &schema, const SchemaWalker &walker,
+             const SchemaResolver &resolver, const Callback &callback,
+             const std::optional<JSON::String> &default_dialect = std::nullopt,
+             const std::optional<JSON::String> &default_id = std::nullopt) const
       -> bool;
 
   /// Report back the rules from the bundle that need to be applied to a schema
-  auto
-  check(const JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const Callback &callback,
-        const std::optional<std::string> &default_dialect = std::nullopt) const
+  auto check(const JSON &schema, const SchemaWalker &walker,
+             const SchemaResolver &resolver, const Callback &callback,
+             const std::optional<JSON::String> &default_dialect = std::nullopt,
+             const std::optional<JSON::String> &default_id = std::nullopt) const
       -> bool;
 
 private:

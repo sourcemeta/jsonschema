@@ -544,6 +544,7 @@ SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect = std::nullopt,
+            const std::optional<std::string> &default_id = std::nullopt,
             const std::optional<Pointer> &default_container = std::nullopt,
             const SchemaFrame::Paths &paths = {empty_pointer}) -> void;
 
@@ -602,6 +603,7 @@ SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(const JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect = std::nullopt,
+            const std::optional<std::string> &default_id = std::nullopt,
             const std::optional<Pointer> &default_container = std::nullopt,
             const SchemaFrame::Paths &paths = {empty_pointer}) -> JSON;
 

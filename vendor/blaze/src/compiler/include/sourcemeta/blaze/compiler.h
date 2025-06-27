@@ -143,13 +143,13 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 ///
 /// // Evaluate or encode
 /// ```
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-compile(const sourcemeta::core::JSON &schema,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
-        const Compiler &compiler, const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt)
-    -> Template;
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
+    const Mode mode = Mode::FastValidation,
+    const std::optional<std::string> &default_dialect = std::nullopt,
+    const std::optional<std::string> &default_id = std::nullopt) -> Template;
 
 /// @ingroup compiler
 ///
@@ -160,14 +160,14 @@ compile(const sourcemeta::core::JSON &schema,
 /// behavior.
 ///
 /// Don't use this function unless you know what you are doing.
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-compile(const sourcemeta::core::JSON &schema,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
-        const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
-        const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt)
-    -> Template;
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
+    const sourcemeta::core::SchemaFrame &frame,
+    const Mode mode = Mode::FastValidation,
+    const std::optional<std::string> &default_dialect = std::nullopt,
+    const std::optional<std::string> &default_id = std::nullopt) -> Template;
 
 /// @ingroup compiler
 ///
