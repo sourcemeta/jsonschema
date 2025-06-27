@@ -17,3 +17,4 @@ README.markdown
 cmake
 vendor
 .pre-commit-hooks.yaml
+snapcraft.yaml
