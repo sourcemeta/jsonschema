@@ -44,7 +44,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
              {schema_context.relative_pointer.concat({keyword}),
               schema_context.schema, entry.vocabularies, schema_context.base,
               // TODO: This represents a copy
-              schema_context.labels, schema_context.references},
+              schema_context.labels, schema_context.references,
+              schema_context.is_property_name},
              {keyword, dynamic_context.base_schema_location,
               dynamic_context.base_instance_location,
               dynamic_context.property_as_target},
@@ -84,7 +85,8 @@ auto precompile(
       std::move(nested_vocabularies),
       entry.second.base,
       {},
-      {}};
+      {},
+      schema_context.is_property_name};
 
   return {make(sourcemeta::blaze::InstructionIndex::ControlMark, context,
                nested_schema_context, dynamic_context,
@@ -108,14 +110,12 @@ auto compile(const sourcemeta::core::JSON &schema,
              const std::optional<std::string> &default_dialect) -> Template {
   assert(is_schema(schema));
 
-  const std::string base{sourcemeta::core::URI{
+  const std::string base{sourcemeta::core::URI::canonicalize(
       sourcemeta::core::identify(
           schema, resolver,
           sourcemeta::core::SchemaIdentificationStrategy::Strict,
           default_dialect)
-          .value_or("")}
-                             .canonicalize()
-                             .recompose()};
+          .value_or(""))};
 
   assert(frame.locations().contains(
       {sourcemeta::core::SchemaReferenceType::Static, base}));
@@ -137,9 +137,10 @@ auto compile(const sourcemeta::core::JSON &schema,
       sourcemeta::core::empty_pointer,
       schema,
       vocabularies(schema, resolver, root_frame_entry.dialect),
-      sourcemeta::core::URI{root_frame_entry.base}.canonicalize().recompose(),
+      sourcemeta::core::URI::canonicalize(root_frame_entry.base),
       {},
-      {}};
+      {},
+      false};
 
   std::vector<std::string> resources;
   for (const auto &entry : frame.locations()) {
@@ -295,7 +296,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
   // Determine URI of the destination after recursion
   const std::string destination{
       uri.has_value()
-          ? sourcemeta::core::URI{uri.value()}.canonicalize().recompose()
+          ? sourcemeta::core::URI::canonicalize(uri.value())
           : to_uri(schema_context.relative_pointer.concat(schema_suffix),
                    schema_context.base)
                 .canonicalize()
@@ -333,7 +334,8 @@ auto compile(const Context &context, const SchemaContext &schema_context,
        sourcemeta::core::URI{entry.base}.recompose_without_fragment().value_or(
            ""),
        // TODO: This represents a copy
-       schema_context.labels, schema_context.references},
+       schema_context.labels, schema_context.references,
+       schema_context.is_property_name},
       {dynamic_context.keyword, destination_pointer,
        dynamic_context.base_instance_location.concat(instance_suffix),
        dynamic_context.property_as_target},

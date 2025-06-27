@@ -16,7 +16,6 @@
 #include <functional>    // std::reference_wrapper
 #include <map>           // std::map
 #include <optional>      // std::optional
-#include <ostream>       // std::ostream
 #include <set>           // std::set
 #include <tuple>         // std::tuple
 #include <unordered_set> // std::unordered_set

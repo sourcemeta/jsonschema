@@ -2,12 +2,12 @@
 
 #include <sourcemeta/core/uri.h>
 
+#include <algorithm>  // std::replace
 #include <cassert>    // assert
 #include <cstdint>    // std::uint32_t
 #include <filesystem> // std::filesystem
-#include <istream>    // std::istream
 #include <optional>   // std::optional
-#include <sstream>    // std::ostringstream
+#include <sstream>    // std::ostringstream, std::istringstream
 #include <stdexcept>  // std::length_error, std::runtime_error
 #include <string>     // std::stoul, std::string, std::tolower
 #include <tuple>      // std::tie
@@ -112,6 +112,20 @@ auto canonicalize_path(const std::string &path) -> std::optional<std::string> {
   if (canonical_path.empty())
     return std::nullopt;
   return canonical_path;
+}
+
+auto uri_escape_for_path(const std::string &value) -> std::string {
+  std::istringstream input{value};
+  std::ostringstream output;
+  uri_escape(input, output, sourcemeta::core::URIEscapeMode::SkipSubDelims);
+  auto result{output.str()};
+  // We don't want to escape ":" for Windows paths
+  std::string::size_type position = 0;
+  while ((position = result.find("%3A", position)) != std::string::npos) {
+    result.replace(position, 3, ":");
+  }
+
+  return result;
 }
 
 } // namespace
@@ -532,7 +546,7 @@ auto URI::canonicalize() -> URI & {
                                      result_port.value() == 443};
 
     if (!is_default_http_port && !is_default_https_port) {
-      this->port_ = result_port.value();
+      this->port_ = result_port;
     } else {
       this->port_ = std::nullopt;
     }
@@ -706,6 +720,46 @@ auto URI::operator<(const URI &other) const noexcept -> bool {
 
 auto URI::canonicalize(const std::string &input) -> std::string {
   return URI{input}.canonicalize().recompose();
+}
+
+auto URI::from_path(const std::filesystem::path &path) -> URI {
+  auto normalized{path.lexically_normal().string()};
+  const auto is_unc{normalized.starts_with("\\\\")};
+  const auto is_windows_absolute{normalized.size() >= 2 &&
+                                 normalized[1] == ':'};
+  std::replace(normalized.begin(), normalized.end(), '\\', '/');
+  const auto is_unix_absolute{normalized.starts_with("/")};
+  if (!is_unix_absolute && !is_windows_absolute && !is_unc) {
+    throw URIError(
+        "It is not valid to construct a file:// URI out of a relative path");
+  }
+
+  normalized.erase(0, normalized.find_first_not_of('/'));
+  const std::filesystem::path final_path{normalized};
+
+  URI result{"file://"};
+
+  auto iterator{final_path.begin()};
+  if (is_unc) {
+    result.host_ = uri_escape_for_path(iterator->string());
+    std::advance(iterator, 1);
+  }
+
+  for (; iterator != final_path.end(); ++iterator) {
+    if (iterator->empty()) {
+      result.append_path("/");
+    } else if (*iterator == "/") {
+      if (std::next(iterator) == final_path.end()) {
+        result.append_path("/");
+      }
+    } else if (result.path_.has_value()) {
+      result.append_path(uri_escape_for_path(iterator->string()));
+    } else {
+      result.path_ = uri_escape_for_path(iterator->string());
+    }
+  }
+
+  return result;
 }
 
 } // namespace sourcemeta::core

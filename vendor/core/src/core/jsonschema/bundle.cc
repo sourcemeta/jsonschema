@@ -183,10 +183,13 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
              vocabularies.contains("http://json-schema.org/draft-03/schema#") ||
              vocabularies.contains(
                  "http://json-schema.org/draft-02/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-02/schema#") ||
              vocabularies.contains(
                  "http://json-schema.org/draft-01/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-01/schema#") ||
              vocabularies.contains(
-                 "http://json-schema.org/draft-00/hyper-schema#")) {
+                 "http://json-schema.org/draft-00/hyper-schema#") ||
+             vocabularies.contains("http://json-schema.org/draft-00/schema#")) {
     frame.analyse(schema, walker, resolver, default_dialect);
     if (frame.standalone()) {
       return;

@@ -4,7 +4,6 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/uri.h>
 
 #include <algorithm> // std::min, std::any_of, std::find
 #include <cassert>   // assert

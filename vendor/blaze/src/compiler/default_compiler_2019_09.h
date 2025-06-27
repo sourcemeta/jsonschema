@@ -83,7 +83,7 @@ auto compiler_2019_09_validation_dependentrequired(
     }
 
     if (!properties.empty()) {
-      dependencies.assign(entry.first, std::move(properties));
+      dependencies.emplace(entry.first, std::move(properties));
     }
   }
 
@@ -110,6 +110,10 @@ auto compiler_2019_09_applicator_contains_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &,
     const bool annotate, const bool track_evaluation) -> Instructions {
+  if (schema_context.is_property_name) {
+    return {};
+  }
+
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() != "array") {

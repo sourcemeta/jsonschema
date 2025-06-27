@@ -11,6 +11,8 @@
 // NOLINTEND(misc-include-cleaner)
 
 #include <cstdint>     // std::uint32_t
+#include <filesystem>  // std::filesystem
+#include <istream>     // std::istream
 #include <memory>      // std::unique_ptr
 #include <optional>    // std::optional
 #include <span>        // std::span
@@ -438,6 +440,19 @@ public:
   /// assert(uri.recompose() == "#foo");
   /// ```
   static auto from_fragment(std::string_view fragment) -> URI;
+
+  /// Create a URI from a file system path. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <filesystem>
+  ///
+  /// const std::filesystem::path path{"/foo/bar"};
+  /// const sourcemeta::core::URI uri{sourcemeta::core::URI::from_path(path)};
+  /// assert(uri.recompose() == "file:///foo/bar");
+  /// ```
+  static auto from_path(const std::filesystem::path &path) -> URI;
 
   /// A convenient method to canonicalize and recompose a URI from a string. For
   /// example:

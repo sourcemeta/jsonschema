@@ -642,7 +642,8 @@ auto sourcemeta::blaze::default_schema_compiler(
       return {};
     }
 
-    if (context.mode == Mode::FastValidation) {
+    if (context.mode == Mode::FastValidation ||
+        schema_context.is_property_name) {
       return {};
     }
 

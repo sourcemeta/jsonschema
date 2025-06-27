@@ -19,6 +19,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <tuple>       // std::tie
+#include <utility>     // std::pair
 #include <vector>      // std::vector
 
 namespace sourcemeta::blaze {
@@ -126,7 +127,9 @@ private:
   const sourcemeta::core::JSON &instance_;
   const sourcemeta::core::WeakPointer base_;
   container_type output;
-  std::map<sourcemeta::core::WeakPointer, bool> mask;
+  std::set<
+      std::pair<sourcemeta::core::WeakPointer, sourcemeta::core::WeakPointer>>
+      mask;
   std::map<Location, std::vector<sourcemeta::core::JSON>> annotations_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

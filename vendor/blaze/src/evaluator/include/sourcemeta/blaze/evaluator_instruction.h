@@ -1,6 +1,10 @@
 #ifndef SOURCEMETA_BLAZE_EVALUATOR_TEMPLATE_H
 #define SOURCEMETA_BLAZE_EVALUATOR_TEMPLATE_H
 
+#ifndef SOURCEMETA_BLAZE_EVALUATOR_EXPORT
+#include <sourcemeta/blaze/evaluator_export.h>
+#endif
+
 #include <sourcemeta/blaze/evaluator_value.h>
 
 #include <sourcemeta/core/jsonpointer.h>

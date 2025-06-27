@@ -579,7 +579,8 @@ auto compiler_draft4_validation_required(const Context &context,
             schema_context.vocabularies,
             schema_context.base,
             schema_context.labels,
-            schema_context.references};
+            schema_context.references,
+            schema_context.is_property_name};
         const DynamicContext new_dynamic_context{
             "properties", sourcemeta::core::empty_pointer,
             sourcemeta::core::empty_pointer, false};
@@ -889,6 +890,10 @@ auto compiler_draft4_applicator_properties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &current,
     const bool annotate, const bool track_evaluation) -> Instructions {
+  if (schema_context.is_property_name) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_object());
   if (schema_context.schema.at(dynamic_context.keyword).empty()) {
     return {};
@@ -909,7 +914,7 @@ auto compiler_draft4_applicator_properties_with_options(
     for (auto &&[name, substeps] : compile_properties(
              context, schema_context, relative_dynamic_context(dynamic_context),
              current)) {
-      indexes.assign(name, cursor);
+      indexes.emplace(name, cursor);
 
       if (track_evaluation) {
         substeps.push_back(
@@ -1542,6 +1547,10 @@ auto compiler_draft4_applicator_items_array(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
     const bool track_evaluation) -> Instructions {
+  if (schema_context.is_property_name) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_array());
   const auto items_size{
       schema_context.schema.at(dynamic_context.keyword).size()};
@@ -1870,7 +1879,7 @@ auto compiler_draft4_applicator_dependencies(
       }
 
       if (!properties.empty()) {
-        dependencies.assign(entry.first, std::move(properties));
+        dependencies.emplace(entry.first, std::move(properties));
       }
     }
   }

@@ -23,8 +23,8 @@ public:
                 "http://json-schema.org/draft-06/schema#",
                 "http://json-schema.org/draft-04/schema#",
                 "http://json-schema.org/draft-03/schema#",
-                "http://json-schema.org/draft-02/hyper-schema#",
-                "http://json-schema.org/draft-01/hyper-schema#"}) &&
+                "http://json-schema.org/draft-02/schema#",
+                "http://json-schema.org/draft-01/schema#"}) &&
            schema.is_object() && schema.defines("type") &&
            schema.at("type").is_string() &&
            schema.at("type").to_string() == "null" && !schema.defines("enum") &&

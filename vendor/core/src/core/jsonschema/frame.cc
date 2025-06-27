@@ -76,7 +76,11 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
       const sourcemeta::core::URI identifier(schema.at("$id").to_string());
       if (identifier.is_fragment_only()) {
         result.insert(
-            {sourcemeta::core::JSON::String{identifier.fragment().value()},
+            {sourcemeta::core::JSON::String{
+                 identifier.fragment()
+                     .value()}, // NOLINT(bugprone-unchecked-optional-access):
+                                // Check for optional is happening
+                                // inside is_fragment_only()
              AnchorType::Static});
       }
     }
@@ -91,7 +95,11 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
       const sourcemeta::core::URI identifier(schema.at("id").to_string());
       if (identifier.is_fragment_only()) {
         result.insert(
-            {sourcemeta::core::JSON::String{identifier.fragment().value()},
+            {sourcemeta::core::JSON::String{
+                 identifier.fragment()
+                     .value()}, // NOLINT(bugprone-unchecked-optional-access):
+                                // Check for optional is happening
+                                // inside is_fragment_only()
              AnchorType::Static});
       }
     }
@@ -322,6 +330,26 @@ auto repopulate_instance_locations(
 
 namespace sourcemeta::core {
 
+auto to_json(const SchemaReferenceType value) -> JSON {
+  return JSON{value == SchemaReferenceType::Static ? "static" : "dynamic"};
+}
+
+auto to_json(const SchemaFrame::LocationType value) -> JSON {
+  switch (value) {
+    case SchemaFrame::LocationType::Resource:
+      return JSON{"resource"};
+    case SchemaFrame::LocationType::Anchor:
+      return JSON{"anchor"};
+    case SchemaFrame::LocationType::Pointer:
+      return JSON{"pointer"};
+    case SchemaFrame::LocationType::Subschema:
+      return JSON{"subschema"};
+    default:
+      assert(false);
+      return JSON{nullptr};
+  }
+}
+
 auto SchemaFrame::to_json() const -> JSON {
   auto root{JSON::make_object()};
 
@@ -329,71 +357,31 @@ auto SchemaFrame::to_json() const -> JSON {
   for (const auto &location : this->locations_) {
     auto entry{JSON::make_object()};
     entry.assign("referenceType",
-                 JSON{location.first.first == SchemaReferenceType::Static
-                          ? "static"
-                          : "dynamic"});
-    entry.assign("uri", JSON{location.first.second});
-
-    if (location.second.parent.has_value()) {
-      entry.assign("parent", JSON{to_string(location.second.parent.value())});
-    } else {
-      entry.assign("parent", JSON{nullptr});
-    }
-
-    switch (location.second.type) {
-      case LocationType::Resource:
-        entry.assign("type", JSON{"resource"});
-        break;
-      case LocationType::Anchor:
-        entry.assign("type", JSON{"anchor"});
-        break;
-      case LocationType::Pointer:
-        entry.assign("type", JSON{"pointer"});
-        break;
-      case LocationType::Subschema:
-        entry.assign("type", JSON{"subschema"});
-        break;
-      default:
-        assert(false);
-    }
-
-    if (location.second.root.has_value()) {
-      entry.assign("root", JSON{location.second.root.value()});
-    } else {
-      entry.assign("root", JSON{nullptr});
-    }
-
-    entry.assign("base", JSON{location.second.base});
-    entry.assign("pointer", JSON{to_string(location.second.pointer)});
+                 sourcemeta::core::to_json(location.first.first));
+    entry.assign("uri", sourcemeta::core::to_json(location.first.second));
+    entry.assign("parent", sourcemeta::core::to_json(location.second.parent));
+    entry.assign("type", sourcemeta::core::to_json(location.second.type));
+    entry.assign("root", sourcemeta::core::to_json(location.second.root));
+    entry.assign("base", sourcemeta::core::to_json(location.second.base));
+    entry.assign("pointer", sourcemeta::core::to_json(location.second.pointer));
     entry.assign("relativePointer",
-                 JSON{to_string(location.second.relative_pointer)});
-    entry.assign("dialect", JSON{location.second.dialect});
-    entry.assign("baseDialect", JSON{location.second.base_dialect});
+                 sourcemeta::core::to_json(location.second.relative_pointer));
+    entry.assign("dialect", sourcemeta::core::to_json(location.second.dialect));
+    entry.assign("baseDialect",
+                 sourcemeta::core::to_json(location.second.base_dialect));
     root.at("locations").push_back(std::move(entry));
   }
 
   root.assign("references", JSON::make_array());
   for (const auto &reference : this->references_) {
     auto entry{JSON::make_object()};
-    entry.assign("type",
-                 JSON{reference.first.first == SchemaReferenceType::Static
-                          ? "static"
-                          : "dynamic"});
-    entry.assign("origin", JSON{to_string(reference.first.second)});
-    entry.assign("destination", JSON{reference.second.destination});
-
-    if (reference.second.base.has_value()) {
-      entry.assign("base", JSON{reference.second.base.value()});
-    } else {
-      entry.assign("base", JSON{nullptr});
-    }
-
-    if (reference.second.fragment.has_value()) {
-      entry.assign("fragment", JSON{reference.second.fragment.value()});
-    } else {
-      entry.assign("fragment", JSON{nullptr});
-    }
-
+    entry.assign("type", sourcemeta::core::to_json(reference.first.first));
+    entry.assign("origin", sourcemeta::core::to_json(reference.first.second));
+    entry.assign("destination",
+                 sourcemeta::core::to_json(reference.second.destination));
+    entry.assign("base", sourcemeta::core::to_json(reference.second.base));
+    entry.assign("fragment",
+                 sourcemeta::core::to_json(reference.second.fragment));
     root.at("references").push_back(std::move(entry));
   }
 
@@ -408,7 +396,7 @@ auto SchemaFrame::to_json() const -> JSON {
       // TODO: Overload .to_string() for PointerTemplate
       std::ostringstream result;
       sourcemeta::core::stringify(pointer, result);
-      entry.push_back(JSON{result.str()});
+      entry.push_back(sourcemeta::core::to_json(result.str()));
     }
 
     root.at("instances").assign(to_string(instance.first), std::move(entry));
@@ -468,15 +456,15 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       if (this->mode_ == SchemaFrame::Mode::Instances) {
         store(this->locations_, this->instances_, SchemaReferenceType::Static,
               SchemaFrame::LocationType::Resource, default_id_canonical,
-              root_id.value(), root_id.value(), path,
-              sourcemeta::core::empty_pointer, root_dialect.value(),
-              root_base_dialect.value(), {{}}, std::nullopt);
+              root_id, root_id.value(), path, sourcemeta::core::empty_pointer,
+              root_dialect.value(), root_base_dialect.value(), {{}},
+              std::nullopt);
       } else {
         store(this->locations_, this->instances_, SchemaReferenceType::Static,
               SchemaFrame::LocationType::Resource, default_id_canonical,
-              root_id.value(), root_id.value(), path,
-              sourcemeta::core::empty_pointer, root_dialect.value(),
-              root_base_dialect.value(), {}, std::nullopt);
+              root_id, root_id.value(), path, sourcemeta::core::empty_pointer,
+              root_dialect.value(), root_base_dialect.value(), {},
+              std::nullopt);
       }
 
       base_uris.insert({path, {default_id_canonical}});

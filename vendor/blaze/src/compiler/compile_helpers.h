@@ -31,9 +31,9 @@ inline auto property_relative_dynamic_context() -> DynamicContext {
 
 inline auto schema_resource_id(const Context &context,
                                const std::string &resource) -> std::size_t {
-  const auto iterator{
-      std::find(context.resources.cbegin(), context.resources.cend(),
-                sourcemeta::core::URI{resource}.canonicalize().recompose())};
+  const auto iterator{std::find(context.resources.cbegin(),
+                                context.resources.cend(),
+                                sourcemeta::core::URI::canonicalize(resource))};
   if (iterator == context.resources.cend()) {
     assert(resource.empty());
     return 0;
