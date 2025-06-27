@@ -40,7 +40,7 @@ auto ValidDefault::condition(
                                               location.dialect)};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::FastValidation,
-                                     location.dialect)};
+                                     location.dialect, location.base)};
   const auto &instance{schema.at("default")};
   Evaluator evaluator;
   const std::string ref{"$ref"};

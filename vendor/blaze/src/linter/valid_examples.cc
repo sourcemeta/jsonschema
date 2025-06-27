@@ -48,7 +48,7 @@ auto ValidExamples::condition(
                                               location.dialect)};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::FastValidation,
-                                     location.dialect)};
+                                     location.dialect, location.base)};
 
   Evaluator evaluator;
   std::size_t cursor{0};

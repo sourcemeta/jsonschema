@@ -107,14 +107,15 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler,
              const sourcemeta::core::SchemaFrame &frame, const Mode mode,
-             const std::optional<std::string> &default_dialect) -> Template {
+             const std::optional<std::string> &default_dialect,
+             const std::optional<std::string> &default_id) -> Template {
   assert(is_schema(schema));
 
   const std::string base{sourcemeta::core::URI::canonicalize(
       sourcemeta::core::identify(
           schema, resolver,
           sourcemeta::core::SchemaIdentificationStrategy::Strict,
-          default_dialect)
+          default_dialect, default_id)
           .value_or(""))};
 
   assert(frame.locations().contains(
@@ -271,21 +272,22 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaWalker &walker,
              const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler, const Mode mode,
-             const std::optional<std::string> &default_dialect) -> Template {
+             const std::optional<std::string> &default_dialect,
+             const std::optional<std::string> &default_id) -> Template {
   assert(is_schema(schema));
 
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here
-  const sourcemeta::core::JSON result{
-      sourcemeta::core::bundle(schema, walker, resolver, default_dialect)};
+  const sourcemeta::core::JSON result{sourcemeta::core::bundle(
+      schema, walker, resolver, default_dialect, default_id)};
 
   // Perform framing to resolve references later on
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::References};
-  frame.analyse(result, walker, resolver, default_dialect);
+  frame.analyse(result, walker, resolver, default_dialect, default_id);
 
   return compile(result, walker, resolver, compiler, frame, mode,
-                 default_dialect);
+                 default_dialect, default_id);
 }
 
 auto compile(const Context &context, const SchemaContext &schema_context,

@@ -100,9 +100,10 @@ auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
 auto SchemaTransformer::check(
     const JSON &schema, const SchemaWalker &walker,
     const SchemaResolver &resolver, const SchemaTransformer::Callback &callback,
-    const std::optional<std::string> &default_dialect) const -> bool {
+    const std::optional<JSON::String> &default_dialect,
+    const std::optional<JSON::String> &default_id) const -> bool {
   SchemaFrame frame{SchemaFrame::Mode::Locations};
-  frame.analyse(schema, walker, resolver, default_dialect);
+  frame.analyse(schema, walker, resolver, default_dialect, default_id);
 
   bool result{true};
   for (const auto &entry : frame.locations()) {
@@ -142,7 +143,8 @@ auto SchemaTransformer::check(
 auto SchemaTransformer::apply(
     JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
     const SchemaTransformer::Callback &callback,
-    const std::optional<std::string> &default_dialect) const -> bool {
+    const std::optional<JSON::String> &default_dialect,
+    const std::optional<JSON::String> &default_id) const -> bool {
   // There is no point in applying an empty bundle
   assert(!this->rules.empty());
   std::set<std::pair<Pointer, JSON::String>> processed_rules;
@@ -150,7 +152,7 @@ auto SchemaTransformer::apply(
   bool result{true};
   while (true) {
     SchemaFrame frame{SchemaFrame::Mode::References};
-    frame.analyse(schema, walker, resolver, default_dialect);
+    frame.analyse(schema, walker, resolver, default_dialect, default_id);
 
     bool applied{false};
     for (const auto &entry : frame.locations()) {
