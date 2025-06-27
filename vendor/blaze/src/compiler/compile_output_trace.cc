@@ -5,13 +5,6 @@
 #include <utility> // std::move
 #include <variant> // std::visit
 
-static auto step_name(const sourcemeta::blaze::Instruction &instruction)
-    -> std::string_view {
-  return sourcemeta::blaze::InstructionNames
-      [static_cast<std::underlying_type_t<sourcemeta::blaze::InstructionIndex>>(
-          instruction.type)];
-}
-
 static auto try_vocabulary(
     const std::optional<
         std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame,
@@ -64,7 +57,9 @@ auto TraceOutput::operator()(
     const sourcemeta::core::WeakPointer &instance_location,
     const sourcemeta::core::JSON &annotation) -> void {
 
-  const auto short_step_name{step_name(step)};
+  const auto short_step_name{
+      InstructionNames[static_cast<std::underlying_type_t<InstructionIndex>>(
+          step.type)]};
   auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
 
   // Attempt to get vocabulary information if we can get it

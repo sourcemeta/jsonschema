@@ -4,7 +4,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/regex.h>
-#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/evaluator_string_set.h>
 
@@ -20,7 +19,16 @@ namespace sourcemeta::blaze {
 
 /// @ingroup evaluator
 /// @brief Represents a compiler step empty value
-struct ValueNone {};
+struct ValueNone {
+  auto to_json() const -> sourcemeta::core::JSON {
+    return sourcemeta::core::JSON{nullptr};
+  }
+
+  static auto from_json(const sourcemeta::core::JSON &)
+      -> std::optional<ValueNone> {
+    return ValueNone{};
+  }
+};
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON value
@@ -63,7 +71,31 @@ using ValueType = sourcemeta::core::JSON::Type;
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
 /// purposes)
-using ValueRegex = std::pair<sourcemeta::core::Regex<ValueString>, std::string>;
+struct ValueRegex {
+  using second_type = ValueString;
+  using first_type = sourcemeta::core::Regex<second_type>;
+  const first_type first;
+  const second_type second;
+
+  auto to_json() const -> sourcemeta::core::JSON {
+    return sourcemeta::core::to_json(this->second);
+  }
+
+  static auto from_json(const sourcemeta::core::JSON &value)
+      -> std::optional<ValueRegex> {
+    if (!value.is_string()) {
+      return std::nullopt;
+    }
+
+    auto string{value.to_string()};
+    auto regex{sourcemeta::core::to_regex(string)};
+    if (!regex.has_value()) {
+      return std::nullopt;
+    }
+
+    return ValueRegex{std::move(regex).value(), std::move(string)};
+  }
+};
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON unsigned integer value
@@ -117,9 +149,8 @@ using ValueTypedProperties = std::pair<ValueType, ValueStringSet>;
 
 /// @ingroup evaluator
 /// Represents a compiler step types property hashes value
-using ValueStringHashes =
-    std::pair<std::vector<ValueStringSet::hash_type>,
-              std::vector<std::pair<std::size_t, std::size_t>>>;
+using ValueStringHashes = std::pair<std::vector<ValueStringSet::hash_type>,
+                                    std::vector<ValueIndexPair>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step types property hashes value

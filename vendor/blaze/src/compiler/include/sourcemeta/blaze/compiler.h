@@ -45,6 +45,8 @@ struct SchemaContext {
   std::set<std::size_t> labels;
   /// The set of references destinations traversed so far
   std::set<std::string> references;
+  /// Whether the current schema targets a property name
+  bool is_property_name;
 };
 
 /// @ingroup compiler
@@ -182,6 +184,16 @@ compile(const Context &context, const SchemaContext &schema_context,
         const sourcemeta::core::Pointer &instance_suffix =
             sourcemeta::core::empty_pointer,
         const std::optional<std::string> &uri = std::nullopt) -> Instructions;
+
+/// @ingroup compiler
+/// Serialise a template as JSON
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT to_json(const Template &schema_template)
+    -> sourcemeta::core::JSON;
+
+/// @ingroup compiler
+/// Parse a template from JSON
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT
+from_json(const sourcemeta::core::JSON &json) -> std::optional<Template>;
 
 } // namespace sourcemeta::blaze
 

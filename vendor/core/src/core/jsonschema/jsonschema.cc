@@ -383,7 +383,24 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
   }
 
   /*
-   * (1) If the base dialect is pre-vocabularies, then the
+   * (1) If the dialect is pre-vocabularies, then the
+   * dialect itself is conceptually the only vocabulary
+   */
+
+  // This is an exhaustive list of all official dialects in the pre-vocabulary
+  // world
+  if (dialect == "http://json-schema.org/draft-07/schema#" ||
+      dialect == "http://json-schema.org/draft-06/schema#" ||
+      dialect == "http://json-schema.org/draft-04/schema#" ||
+      dialect == "http://json-schema.org/draft-03/schema#" ||
+      dialect == "http://json-schema.org/draft-02/schema#" ||
+      dialect == "http://json-schema.org/draft-01/schema#" ||
+      dialect == "http://json-schema.org/draft-00/schema#") {
+    return {{dialect, true}};
+  }
+
+  /*
+   * (2) If the base dialect is pre-vocabularies, then the
    * base dialect itself is conceptually the only vocabulary
    */
 
@@ -403,7 +420,7 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
   }
 
   /*
-   * (2) If the dialect is vocabulary aware, then fetch such dialect
+   * (3) If the dialect is vocabulary aware, then fetch such dialect
    */
 
   const std::optional<sourcemeta::core::JSON> maybe_schema_dialect{
@@ -421,7 +438,7 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
          schema_dialect.at("$id").to_string() == dialect);
 
   /*
-   * (3) Retrieve the vocabularies explicitly or implicitly declared by the
+   * (4) Retrieve the vocabularies explicitly or implicitly declared by the
    * dialect
    */
 

@@ -402,8 +402,11 @@ auto compiler_draft6_validation_propertynames(
     return {};
   }
 
+  // TODO: How can we avoid this copy?
+  auto nested_schema_context = schema_context;
+  nested_schema_context.is_property_name = true;
   Instructions children{compile(
-      context, schema_context, property_relative_dynamic_context(),
+      context, nested_schema_context, property_relative_dynamic_context(),
       sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
 
   if (children.empty()) {

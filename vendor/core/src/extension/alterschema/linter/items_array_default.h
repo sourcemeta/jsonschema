@@ -21,7 +21,9 @@ public:
                 "http://json-schema.org/draft-06/schema#",
                 "http://json-schema.org/draft-04/schema#",
                 "http://json-schema.org/draft-03/schema#",
+                "http://json-schema.org/draft-02/schema#",
                 "http://json-schema.org/draft-02/hyper-schema#",
+                "http://json-schema.org/draft-01/schema#",
                 "http://json-schema.org/draft-01/hyper-schema#"}) &&
            schema.is_object() && schema.defines("items") &&
            schema.at("items").is_array() && schema.at("items").empty();

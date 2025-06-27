@@ -47,7 +47,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
   const auto current_base_dialect{
       is_schema_resource
           ? sourcemeta::core::base_dialect(subschema, resolver, current_dialect)
-                .value()
+                .value_or(base_dialect)
           : base_dialect};
 
   const auto vocabularies{sourcemeta::core::vocabularies(
@@ -410,7 +410,7 @@ sourcemeta::core::SchemaIterator::SchemaIterator(
     this->subschemas.push_back(std::move(entry));
   } else {
     const auto base_dialect{
-        sourcemeta::core::base_dialect(schema, resolver, dialect.value())};
+        sourcemeta::core::base_dialect(schema, resolver, dialect)};
     assert(base_dialect.has_value());
     walk(std::nullopt, pointer, instance_location, instance_location,
          this->subschemas, schema, walker, resolver, dialect.value(),
@@ -429,7 +429,7 @@ sourcemeta::core::SchemaIteratorFlat::SchemaIteratorFlat(
     sourcemeta::core::Pointer pointer;
     sourcemeta::core::PointerTemplate instance_location;
     const auto base_dialect{
-        sourcemeta::core::base_dialect(schema, resolver, dialect.value())};
+        sourcemeta::core::base_dialect(schema, resolver, dialect)};
     assert(base_dialect.has_value());
     walk(std::nullopt, pointer, instance_location, instance_location,
          this->subschemas, schema, walker, resolver, dialect.value(),

@@ -65,32 +65,23 @@ auto SimpleOutput::operator()(
     const auto &keyword{evaluate_path.back().to_property()};
     // To ease the output
     if (keyword == "anyOf" || keyword == "oneOf" || keyword == "not" ||
-        keyword == "if") {
-      this->mask.emplace(evaluate_path, true);
-    } else if (keyword == "contains") {
-      this->mask.emplace(evaluate_path, false);
+        keyword == "if" || keyword == "contains") {
+      this->mask.emplace(evaluate_path, instance_location);
     }
   } else if (type == EvaluationType::Post &&
-             this->mask.contains(evaluate_path)) {
-    this->mask.erase(evaluate_path);
+             this->mask.contains({evaluate_path, instance_location})) {
+    this->mask.erase({evaluate_path, instance_location});
   }
 
   if (result) {
     return;
   }
 
-  if (std::any_of(this->mask.cbegin(), this->mask.cend(),
-                  [&evaluate_path](const auto &entry) {
-                    return evaluate_path.starts_with(entry.first) &&
-                           !entry.second;
-                  })) {
-    return;
-  }
-
   if (type == EvaluationType::Post && !this->annotations_.empty()) {
     for (auto iterator = this->annotations_.begin();
          iterator != this->annotations_.end();) {
-      if (iterator->first.evaluate_path.starts_with_initial(evaluate_path)) {
+      if (iterator->first.evaluate_path.starts_with_initial(evaluate_path) &&
+          iterator->first.instance_location == instance_location) {
         iterator = this->annotations_.erase(iterator);
       } else {
         iterator++;

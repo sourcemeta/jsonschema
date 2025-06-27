@@ -188,6 +188,8 @@ struct SchemaWalkerResult {
   /// The keywords a given keyword depends on (if any) during the evaluation
   /// process
   const std::set<std::string> dependencies;
+  /// The JSON instance types that this keyword applies to (or to all of them)
+  const std::set<JSON::Type> instances;
 };
 
 /// @ingroup jsonschema

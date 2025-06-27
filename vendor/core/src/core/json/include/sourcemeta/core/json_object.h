@@ -42,7 +42,7 @@ public:
   FlatMap(std::initializer_list<value_type> entries) {
     this->data.reserve(entries.size());
     for (auto &&entry : entries) {
-      this->assign(std::move(entry.first), std::move(entry.second));
+      this->emplace(std::move(entry.first), std::move(entry.second));
     }
   }
 
@@ -55,7 +55,7 @@ public:
     return this->hasher(key);
   }
 
-  auto assign(key_type &&key, mapped_type &&value) -> hash_type {
+  auto emplace(key_type &&key, mapped_type &&value) -> hash_type {
     const auto key_hash{this->hash(key)};
 
     if (this->hasher.is_perfect(key_hash)) {
@@ -78,7 +78,7 @@ public:
     return key_hash;
   }
 
-  auto assign(const key_type &key, const mapped_type &value) -> hash_type {
+  auto emplace(const key_type &key, const mapped_type &value) -> hash_type {
     const auto key_hash{this->hash(key)};
 
     if (this->hasher.is_perfect(key_hash)) {
