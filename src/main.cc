@@ -50,6 +50,11 @@ Commands:
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
 
+   compile <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
+           [--ignore/-i <schemas-or-directories>] [--fast/-f]
+
+       Compile the given schema into an internal optimised representation.
+
    test [schemas-or-directories...] [--http/-h] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
 
@@ -108,6 +113,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::validate(arguments);
   } else if (command == "metaschema") {
     return sourcemeta::jsonschema::cli::metaschema(arguments);
+  } else if (command == "compile") {
+    return sourcemeta::jsonschema::cli::compile(arguments);
   } else if (command == "test") {
     return sourcemeta::jsonschema::cli::test(arguments);
   } else if (command == "encode") {

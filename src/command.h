@@ -12,6 +12,7 @@ auto test(const std::span<const std::string> &arguments) -> int;
 auto lint(const std::span<const std::string> &arguments) -> int;
 auto validate(const std::span<const std::string> &arguments) -> int;
 auto metaschema(const std::span<const std::string> &arguments) -> int;
+auto compile(const std::span<const std::string> &arguments) -> int;
 auto encode(const std::span<const std::string> &arguments) -> int;
 auto decode(const std::span<const std::string> &arguments) -> int;
 } // namespace sourcemeta::jsonschema::cli
