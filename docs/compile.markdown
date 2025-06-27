@@ -5,7 +5,7 @@ Compiling
 > JSON Schema Draft 3 and older are not supported at this point in time.
 
 ```sh
-jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] 
+jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
 ```
@@ -18,11 +18,11 @@ the low-level template to standard output.
 
 **The low-level template is not stable across versions of this JSON Schema CLI.
 While it might work, we don't necessarily support evaluating templates
-generated with another version of this tool.** 
+generated with another version of this tool.**
 
-> [!IMPORTANT]  
-> We plan to extend the `validate` command to take a template as argument.
-> Until then, this command is only for internal debugging purposes.
+You can pass the compiled template to the [`validate`](./validate.markdown)
+command to avoid expensive schema compilation if you need to perform validation
+multiple times with the same schema.
 
 > [!WARNING]
 > By default, schemas are compiled in exhaustive mode, which results in better
