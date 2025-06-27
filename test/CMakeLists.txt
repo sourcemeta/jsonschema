@@ -91,6 +91,12 @@ add_jsonschema_test_unix(validate/fail_many_verbose)
 add_jsonschema_test_unix(validate/fail_yaml)
 add_jsonschema_test_unix(validate/pass_json_ref_yaml)
 add_jsonschema_test_unix(validate/pass_process_substitution)
+add_jsonschema_test_unix(validate/pass_2020_12_fast_with_template)
+add_jsonschema_test_unix(validate/pass_2020_12_with_template)
+add_jsonschema_test_unix(validate/pass_trace_with_template)
+add_jsonschema_test_unix(validate/pass_verbose_with_template)
+add_jsonschema_test_unix(validate/pass_with_invalid_template)
+add_jsonschema_test_unix(validate/pass_with_invalid_template_verbose)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)

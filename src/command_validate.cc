@@ -14,8 +14,58 @@
 #include "command.h"
 #include "utils.h"
 
+namespace {
+
+auto get_precompiled_schema_template_path(
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> std::optional<std::filesystem::path> {
+  if (options.contains("template") && !options.at("template").empty()) {
+    return options.at("template").front();
+  } else if (options.contains("m") && !options.at("m").empty()) {
+    return options.at("m").front();
+  } else {
+    return std::nullopt;
+  }
+}
+
+auto get_schema_template(
+    const sourcemeta::core::JSON &bundled,
+    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::core::SchemaFrame &frame,
+    const std::optional<std::string> &default_dialect, const bool fast_mode,
+    const std::map<std::string, std::vector<std::string>> &options)
+    -> sourcemeta::blaze::Template {
+  const auto precompiled{get_precompiled_schema_template_path(options)};
+  if (precompiled.has_value()) {
+    sourcemeta::jsonschema::cli::log_verbose(options)
+        << "Parsing pre-compiled schema template: "
+        << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+               precompiled.value())
+               .string()
+        << "\n";
+    const auto schema_template{
+        sourcemeta::jsonschema::cli::read_file(precompiled.value())};
+    const auto precompiled_result{
+        sourcemeta::blaze::from_json(schema_template)};
+    if (precompiled_result.has_value()) {
+      return precompiled_result.value();
+    } else {
+      std::cerr << "warning: Failed to parse pre-compiled schema template. "
+                   "Compiling from scratch\n";
+    }
+  }
+
+  return sourcemeta::blaze::compile(
+      bundled, sourcemeta::core::schema_official_walker, resolver,
+      sourcemeta::blaze::default_schema_compiler, frame,
+      fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                : sourcemeta::blaze::Mode::Exhaustive,
+      default_dialect);
+}
+
+} // namespace
+
 // TODO: Add a flag to emit output using the standard JSON Schema output format
-// TODO: Add a flag to take a pre-compiled schema as input
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
@@ -64,12 +114,8 @@ auto sourcemeta::jsonschema::cli::validate(
       sourcemeta::core::SchemaFrame::Mode::References};
   frame.analyse(bundled, sourcemeta::core::schema_official_walker,
                 custom_resolver, dialect);
-  const auto schema_template{sourcemeta::blaze::compile(
-      bundled, sourcemeta::core::schema_official_walker, custom_resolver,
-      sourcemeta::blaze::default_schema_compiler, frame,
-      fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive,
-      dialect)};
+  const auto schema_template{get_schema_template(
+      bundled, custom_resolver, frame, dialect, fast_mode, options)};
 
   sourcemeta::blaze::Evaluator evaluator;
 

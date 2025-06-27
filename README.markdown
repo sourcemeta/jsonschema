@@ -71,6 +71,7 @@ documentation:
 - [`jsonschema version`](./docs/version.markdown)
 - [`jsonschema validate`](./docs/validate.markdown)
 - [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
+- [`jsonschema compile`](./docs/compile.markdown) (for pre-compiling schemas)
 - [`jsonschema test`](./docs/test.markdown) (write unit tests for your schemas)
 - [`jsonschema fmt`](./docs/format.markdown)
 - [`jsonschema lint`](./docs/lint.markdown)

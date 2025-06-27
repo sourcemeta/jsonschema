@@ -35,6 +35,7 @@ Commands:
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
+            [--template/-m <template.json>]
 
        Validate one or more instances against the given schema.
 
@@ -42,6 +43,11 @@ Commands:
        better error messages, at the expense of speed. The --fast/-f option
        makes the schema compiler optimise for speed, at the expense of error
        messages.
+
+       You may additionally pass a pre-compiled schema template (see the
+       `compile` command). However, you still need to pass the original schema
+       for error reporting purposes. Make sure they match or you will get
+       non-sense results.
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]

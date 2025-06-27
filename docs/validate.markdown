@@ -9,7 +9,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-  [--default-dialect/-d <uri>]
+  [--default-dialect/-d <uri>] [--template/-m <template.json>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -32,6 +32,13 @@ code 2.
 > By default, schemas are validated in exhaustive mode, which results in better
 > error messages, at the expense of speed. The `--fast`/`-f` option makes the
 > schema compiler optimise for speed, at the expense of error messages.
+
+To speed-up the compilation process, you may pre-compile a schema using the
+[`compile`](./compile.markdown) command and pass the result using the
+`--template`/`-m` option. However, you still need to pass the original schema
+for error reporting purposes. Make sure they match and that the compilation and
+evaluation were done with the same version of this tool or you might get
+non-sense results.
 
 Examples
 --------
@@ -67,6 +74,14 @@ error: The target document is expected to be of the given type
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json
+```
+
+### Validate a JSON instance against a schema with a pre-compiled template
+
+```sh
+jsonschema compile path/to/my/schema.json > template.json
+jsonschema validate path/to/my/schema.json path/to/my/instance.json \
+  --template template.json
 ```
 
 ### Validate a JSON instance against a schema in fast mode
