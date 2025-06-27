@@ -211,3 +211,20 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-cli.outputs.tags }}
           labels: ${{ steps.meta-cli.outputs.labels }}
+
+      - name: Publish to Snap (Stable)
+        run: |
+          snapcraft whoami
+          snapcraft upload build/out/jsonschema_*_amd64.snap --release stable
+          snapcraft upload build/out/jsonschema_*_arm64.snap --release stable
+        if: github.ref_type == 'tag'
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+      - name: Publish to Snap (Continuous)
+        run: |
+          snapcraft whoami
+          snapcraft upload build/out/jsonschema_*_amd64.snap --release continuous
+          snapcraft upload build/out/jsonschema_*_arm64.snap --release continuous
+        if: github.ref_type == 'branch'
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
