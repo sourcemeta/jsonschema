@@ -326,7 +326,8 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
       log_verbose(options) << "Detecting schema resources from file: "
                            << entry.first.string() << "\n";
       const auto result = dynamic_resolver.add(
-          entry.second, default_dialect, std::nullopt,
+          entry.second, default_dialect,
+          sourcemeta::core::URI::from_path(entry.first).recompose(),
           [&options](const auto &identifier) {
             log_verbose(options)
                 << "Importing schema into the resolution context: "

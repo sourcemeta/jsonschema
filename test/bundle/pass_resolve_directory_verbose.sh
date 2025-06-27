@@ -28,6 +28,7 @@ EOF
 
 cat << EOF > "$TMP/expected.json"
 Detecting schema resources from file: $(realpath "$TMP")/schemas/remote.json
+Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/remote.json
 Importing schema into the resolution context: https://example.com/nested
 {
   "\$schema": "https://json-schema.org/draft/2020-12/schema",
