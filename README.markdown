@@ -180,6 +180,18 @@ Replace `vX.Y.Z` with your desired version. You can mount any directory as `/wor
 > formatting. Plus a TTY is not required for running a tool like the JSON
 > Schema CLI.
 
+### From Snap
+
+Starting from v9.4.0, we publish Ubuntu Snaps to [GitHub
+Releases](https://github.com/sourcemeta/jsonschema/releases/tag/v9.4.0)
+(`amd64` and `arm64`) which you can manually install as follows:
+
+```sh
+sudo snap install --dangerous --classic jsonschema_<version>_<arch>.snap
+```
+
+We are currently exploring publishing these Snaps to the Snap store.
+
 ### Building from source
 
 ```sh
