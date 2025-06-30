@@ -28,6 +28,7 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
+Looking for target: https://example.com/unknown
 $(realpath "$TMP")/test.json:
 error: Could not resolve the requested schema
   https://example.com/unknown

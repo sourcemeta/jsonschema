@@ -556,17 +556,24 @@ auto URI::canonicalize() -> URI & {
 }
 
 auto URI::resolve_from(const URI &base) -> URI & {
+  const bool is_file{base.scheme_ == "file"};
+  auto copy = base;
+  if (is_file) {
+    // Huge hack, but otherwise `uriparser` will resolve in a weird way
+    copy.host_ = "placeholder";
+  }
+
   UriUriA absoluteDest;
   // Looks like this function allocates to the output variable
   // even on failure.
   // See https://uriparser.github.io/doc/api/latest/
   switch (uriAddBaseUriExA(&absoluteDest, &this->internal->uri,
-                           &base.internal->uri, URI_RESOLVE_STRICTLY)) {
+                           &copy.internal->uri, URI_RESOLVE_STRICTLY)) {
     case URI_SUCCESS:
       break;
     case URI_ERROR_ADDBASE_REL_BASE:
       uriFreeUriMembersA(&absoluteDest);
-      assert(!base.is_absolute());
+      assert(!copy.is_absolute());
       throw URIError{"Base URI is not absolute"};
     default:
       uriFreeUriMembersA(&absoluteDest);
