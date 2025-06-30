@@ -27,7 +27,7 @@ cat << 'EOF' > "$TMP/expected.json"
       "s": "/$ref",
       "i": "",
       "k": "https://example.com#/$ref",
-      "r": 1,
+      "r": 2,
       "v": {
         "t": 0,
         "v": null
@@ -38,7 +38,7 @@ cat << 'EOF' > "$TMP/expected.json"
           "s": "/type",
           "i": "",
           "k": "https://example.com#/$defs/string/type",
-          "r": 1,
+          "r": 2,
           "v": {
             "t": 8,
             "v": 4
