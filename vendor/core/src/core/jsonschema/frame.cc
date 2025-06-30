@@ -467,7 +467,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               std::nullopt);
       }
 
-      base_uris.insert({path, {default_id_canonical}});
+      base_uris.insert({path, {root_id.value(), default_id_canonical}});
     }
 
     std::vector<std::size_t> current_subschema_entries;
@@ -569,8 +569,13 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               }
             }
 
-            if (base_uris.contains(entry.common.pointer)) {
-              base_uris.at(entry.common.pointer).push_back(new_id);
+            auto base_uri_match{base_uris.find(entry.common.pointer)};
+            if (base_uri_match != base_uris.cend()) {
+              if (std::find(base_uri_match->second.cbegin(),
+                            base_uri_match->second.cend(),
+                            new_id) == base_uri_match->second.cend()) {
+                base_uri_match->second.push_back(new_id);
+              }
             } else {
               base_uris.insert({entry.common.pointer, {new_id}});
             }

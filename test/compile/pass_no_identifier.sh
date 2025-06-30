@@ -9,17 +9,16 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
-  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": {
     "type": "string"
   }
 }
 EOF
 
-"$1" compile "$TMP/schema.json" \
-  --default-dialect "https://json-schema.org/draft/2020-12/schema" > "$TMP/template.json"
+"$1" compile "$TMP/schema.json" > "$TMP/template.json"
 
-cat << 'EOF' > "$TMP/expected.json"
+cat << EOF > "$TMP/expected.json"
 {
   "dynamic": false,
   "track": true,
@@ -28,8 +27,8 @@ cat << 'EOF' > "$TMP/expected.json"
       "t": 61,
       "s": "/additionalProperties",
       "i": "",
-      "k": "https://example.com#/additionalProperties",
-      "r": 2,
+      "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties",
+      "r": 1,
       "v": {
         "t": 0,
         "v": null
@@ -39,8 +38,8 @@ cat << 'EOF' > "$TMP/expected.json"
           "t": 11,
           "s": "/type",
           "i": "",
-          "k": "https://example.com#/additionalProperties/type",
-          "r": 2,
+          "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties/type",
+          "r": 1,
           "v": {
             "t": 8,
             "v": 4
@@ -51,8 +50,8 @@ cat << 'EOF' > "$TMP/expected.json"
           "t": 46,
           "s": "",
           "i": "",
-          "k": "https://example.com#/additionalProperties",
-          "r": 2,
+          "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties",
+          "r": 1,
           "v": {
             "t": 0,
             "v": null

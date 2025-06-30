@@ -9,6 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
+  "$id": "https://example.com",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": {
     "type": "string"
@@ -27,8 +28,8 @@ cat << 'EOF' > "$TMP/expected.json"
       "t": 61,
       "s": "/additionalProperties",
       "i": "",
-      "k": "#/additionalProperties",
-      "r": 0,
+      "k": "https://example.com#/additionalProperties",
+      "r": 2,
       "v": {
         "t": 0,
         "v": null
@@ -38,8 +39,8 @@ cat << 'EOF' > "$TMP/expected.json"
           "t": 11,
           "s": "/type",
           "i": "",
-          "k": "#/additionalProperties/type",
-          "r": 0,
+          "k": "https://example.com#/additionalProperties/type",
+          "r": 2,
           "v": {
             "t": 8,
             "v": 4
@@ -50,8 +51,8 @@ cat << 'EOF' > "$TMP/expected.json"
           "t": 46,
           "s": "",
           "i": "",
-          "k": "#/additionalProperties",
-          "r": 0,
+          "k": "https://example.com#/additionalProperties",
+          "r": 2,
           "v": {
             "t": 0,
             "v": null

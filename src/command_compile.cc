@@ -42,7 +42,10 @@ auto sourcemeta::jsonschema::cli::compile(
       sourcemeta::blaze::default_schema_compiler,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
                 : sourcemeta::blaze::Mode::Exhaustive,
-      dialect)};
+      dialect,
+      sourcemeta::core::URI::from_path(
+          sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+          .recompose())};
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};
   sourcemeta::core::prettify(template_json, std::cout);

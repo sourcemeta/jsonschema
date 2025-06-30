@@ -186,6 +186,7 @@ add_jsonschema_test_unix(inspect/fail_unknown_metaschema)
 
 # Compile
 add_jsonschema_test_unix(compile/pass)
+add_jsonschema_test_unix(compile/pass_no_identifier)
 add_jsonschema_test_unix(compile/pass_fast)
 add_jsonschema_test_unix(compile/pass_default_dialect)
 add_jsonschema_test_unix(compile/pass_yaml)
