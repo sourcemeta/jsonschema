@@ -20,12 +20,17 @@ auto sourcemeta::jsonschema::cli::bundle(
     return EXIT_FAILURE;
   }
 
+  const std::filesystem::path schema_path{options.at("").front()};
   const auto custom_resolver{resolver(
       options, options.contains("h") || options.contains("http"), dialect)};
-  auto schema{sourcemeta::jsonschema::cli::read_file(options.at("").front())};
+  auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
 
-  sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
-                           custom_resolver, dialect);
+  sourcemeta::core::bundle(
+      schema, sourcemeta::core::schema_official_walker, custom_resolver,
+      dialect,
+      sourcemeta::core::URI::from_path(
+          sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+          .recompose());
 
   if (options.contains("w") || options.contains("without-id")) {
     std::cerr << "warning: You are opting in to remove schema identifiers in "
