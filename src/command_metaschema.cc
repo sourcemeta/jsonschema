@@ -4,6 +4,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <cassert>  // assert
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <map>      // std::map
@@ -13,11 +14,12 @@
 #include "command.h"
 #include "utils.h"
 
-// TODO: Add a flag to emit output using the standard JSON Schema output format
 auto sourcemeta::jsonschema::cli::metaschema(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http", "t", "trace"})};
+  const auto options{
+      parse_options(arguments, {"h", "http", "t", "trace", "j", "json"})};
   const auto trace{options.contains("t") || options.contains("trace")};
+  const auto json_output{options.contains("j") || options.contains("json")};
   const auto default_dialect_option{default_dialect(options)};
   const auto custom_resolver{
       resolver(options, options.contains("h") || options.contains("http"),
@@ -71,6 +73,22 @@ auto sourcemeta::jsonschema::cli::metaschema(
       result = evaluator.validate(cache.at(dialect.value()), entry.second,
                                   std::ref(output));
       print(output, std::cout);
+    } else if (json_output) {
+      // Otherwise its impossible to correlate the output
+      // when validating i.e. a directory of schemas
+      std::cerr << entry.first.string() << "\n";
+      const auto output{sourcemeta::blaze::standard(
+          evaluator, cache.at(dialect.value()), entry.second,
+          sourcemeta::blaze::StandardOutput::Basic)};
+      assert(output.is_object());
+      assert(output.defines("valid"));
+      assert(output.at("valid").is_boolean());
+      if (!output.at("valid").to_boolean()) {
+        result = false;
+      }
+
+      sourcemeta::core::prettify(output, std::cout);
+      std::cout << "\n";
     } else {
       sourcemeta::blaze::SimpleOutput output{entry.second};
       if (evaluator.validate(cache.at(dialect.value()), entry.second,

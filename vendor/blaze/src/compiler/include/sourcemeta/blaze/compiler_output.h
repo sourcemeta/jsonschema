@@ -81,6 +81,7 @@ public:
     const std::string message;
     const sourcemeta::core::WeakPointer instance_location;
     const sourcemeta::core::WeakPointer evaluate_path;
+    const std::reference_wrapper<const std::string> schema_location;
   };
 
   auto operator()(const EvaluationType type, const bool result,
@@ -104,14 +105,14 @@ public:
     auto operator<(const Location &other) const noexcept -> bool {
       // Perform a lexicographical comparison
       return std::tie(this->instance_location, this->evaluate_path,
-                      this->schema_location) < std::tie(other.instance_location,
-                                                        other.evaluate_path,
-                                                        other.schema_location);
+                      this->schema_location.get()) <
+             std::tie(other.instance_location, other.evaluate_path,
+                      other.schema_location.get());
     }
 
     const sourcemeta::core::WeakPointer instance_location;
     const sourcemeta::core::WeakPointer evaluate_path;
-    const std::string schema_location;
+    const std::reference_wrapper<const std::string> schema_location;
   };
 
   auto stacktrace(std::ostream &stream,
@@ -262,6 +263,71 @@ describe(const bool valid, const Instruction &step,
          const sourcemeta::core::WeakPointer &instance_location,
          const sourcemeta::core::JSON &instance,
          const sourcemeta::core::JSON &annotation) -> std::string;
+
+/// @ingroup compiler
+/// Represents standard output formats
+/// See
+/// https://json-schema.org/draft/2020-12/json-schema-core#name-output-structure
+/// See
+/// https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.10
+enum class StandardOutput {
+  Flag,
+  Basic
+  // TODO: Implement the "detailed" and "verbose" output formats
+};
+
+// TODO: Integrate with
+// https://github.com/json-schema-org/JSON-Schema-Test-Suite/tree/main/output-tests
+
+/// @ingroup compiler
+/// Perform JSON Schema evaluation using Standard Output formats. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/blaze/evaluator.h>
+/// #include <sourcemeta/blaze/compiler.h>
+///
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+///
+/// #include <cassert>
+/// #include <iostream>
+///
+/// const sourcemeta::core::JSON schema =
+///     sourcemeta::core::parse_json(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "type": "string"
+/// })JSON");
+///
+/// const auto schema_template{sourcemeta::blaze::compile(
+///     schema, sourcemeta::core::schema_official_walker,
+///     sourcemeta::core::schema_official_resolver,
+///     sourcemeta::core::default_schema_compiler)};
+///
+/// const sourcemeta::core::JSON instance{"foo bar"};
+///
+/// sourcemeta::blaze::Evaluator evaluator;
+///
+/// const auto result{sourcemeta::blaze::standard(
+///   evaluator, schema_template, instance,
+///   sourcemeta::blaze::StandardOutput::Basic)};
+///
+/// assert(result.is_object());
+/// assert(result.defines("valid"));
+/// assert(result.at("valid").is_boolean());
+/// assert(result.at("valid").to_boolean());
+///
+/// sourcemeta::core::prettify(result,
+///   std::cout, sourcemeta::blaze::standard_output_compare);
+/// std::cout << "\n";
+/// ```
+///
+/// Note that this output format is not a class like the others
+/// in order to have additional control over how and whether to
+/// pass a callback to the evaluator instance.
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT
+standard(Evaluator &evaluator, const Template &schema,
+         const sourcemeta::core::JSON &instance, const StandardOutput format)
+    -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze
 

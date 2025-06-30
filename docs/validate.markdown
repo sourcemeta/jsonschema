@@ -9,13 +9,18 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-  [--default-dialect/-d <uri>] [--template/-m <template.json>]
+  [--default-dialect/-d <uri>] [--template/-m <template.json>] [--json/-j]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
 JSON Schema CLI offers a `validate` command to evaluate one or many JSON
 instances or JSONL datasets against a JSON Schema, presenting human-friendly
 information on unsuccessful validation.
+
+The `--json`/`-j` option outputs the evaluation result using the JSON Schema
+[`Flag`](https://json-schema.org/draft/2020-12/json-schema-core#section-12.4.1) or
+[`Basic`](https://json-schema.org/draft/2020-12/json-schema-core#section-12.4.2)
+standard format depending on whether the `--fast`/`-f` option is set.
 
 **If you want to validate that a schema adheres to its metaschema, use the
 [`metaschema`](./metaschema.markdown) command instead.**
@@ -74,6 +79,12 @@ error: The target document is expected to be of the given type
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json
+```
+
+### Validate a JSON instance against a schema and print the result as JSON
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json --json
 ```
 
 ### Validate a JSON instance against a schema with a pre-compiled template
