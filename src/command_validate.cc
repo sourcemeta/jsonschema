@@ -32,7 +32,8 @@ auto get_schema_template(
     const sourcemeta::core::JSON &bundled,
     const sourcemeta::core::SchemaResolver &resolver,
     const sourcemeta::core::SchemaFrame &frame,
-    const std::optional<std::string> &default_dialect, const bool fast_mode,
+    const std::optional<std::string> &default_dialect,
+    const std::optional<std::string> &default_id, const bool fast_mode,
     const std::map<std::string, std::vector<std::string>> &options)
     -> sourcemeta::blaze::Template {
   const auto precompiled{get_precompiled_schema_template_path(options)};
@@ -60,7 +61,7 @@ auto get_schema_template(
       sourcemeta::blaze::default_schema_compiler, frame,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
                 : sourcemeta::blaze::Mode::Exhaustive,
-      default_dialect);
+      default_dialect, default_id);
 }
 
 } // namespace
@@ -107,15 +108,20 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
 
+  const auto default_id{
+      sourcemeta::core::URI::from_path(
+          sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+          .recompose()};
   const sourcemeta::core::JSON bundled{
       sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
-                               custom_resolver, dialect)};
+                               custom_resolver, dialect, default_id)};
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::References};
   frame.analyse(bundled, sourcemeta::core::schema_official_walker,
-                custom_resolver, dialect);
-  const auto schema_template{get_schema_template(
-      bundled, custom_resolver, frame, dialect, fast_mode, options)};
+                custom_resolver, dialect, default_id);
+  const auto schema_template{get_schema_template(bundled, custom_resolver,
+                                                 frame, dialect, default_id,
+                                                 fast_mode, options)};
 
   sourcemeta::blaze::Evaluator evaluator;
 
