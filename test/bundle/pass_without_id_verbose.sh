@@ -28,6 +28,7 @@ EOF
 
 cat << EOF > "$TMP/expected.json"
 Detecting schema resources from file: $(realpath "$TMP")/schemas/remote.json
+Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/remote.json
 Importing schema into the resolution context: https://example.com/nested
 warning: You are opting in to remove schema identifiers in the bundled schema.
 The only legit use case of this advanced feature we know of it to workaround
