@@ -99,7 +99,8 @@ auto SimpleOutput::operator()(
   this->output.push_back(
       {describe(result, step, evaluate_path, instance_location, this->instance_,
                 annotation),
-       instance_location, std::move(effective_evaluate_path)});
+       instance_location, std::move(effective_evaluate_path),
+       step.keyword_location});
 }
 
 auto SimpleOutput::stacktrace(std::ostream &stream,

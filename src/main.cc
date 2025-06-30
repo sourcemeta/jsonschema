@@ -35,7 +35,7 @@ Commands:
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
             [--benchmark/-b] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-            [--template/-m <template.json>]
+            [--template/-m <template.json>] [--json/-j]
 
        Validate one or more instances against the given schema.
 
@@ -51,7 +51,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
-              [--ignore/-i <schemas-or-directories>] [--trace/-t]
+              [--ignore/-i <schemas-or-directories>] [--trace/-t] [--json/-j]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.

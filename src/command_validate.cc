@@ -66,11 +66,11 @@ auto get_schema_template(
 
 } // namespace
 
-// TODO: Add a flag to emit output using the standard JSON Schema output format
 auto sourcemeta::jsonschema::cli::validate(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(
-      arguments, {"h", "http", "b", "benchmark", "t", "trace", "f", "fast"})};
+  const auto options{
+      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace",
+                                "f", "fast", "j", "json"})};
 
   if (options.at("").size() < 1) {
     std::cerr
@@ -107,6 +107,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto fast_mode{options.contains("f") || options.contains("fast")};
   const auto benchmark{options.contains("b") || options.contains("benchmark")};
   const auto trace{options.contains("t") || options.contains("trace")};
+  const auto json_output{options.contains("j") || options.contains("json")};
 
   const auto default_id{
       sourcemeta::core::URI::from_path(
@@ -164,7 +165,7 @@ auto sourcemeta::jsonschema::cli::validate(
                                            std::ref(trace_output));
           } else if (fast_mode) {
             subresult = evaluator.validate(schema_template, instance);
-          } else {
+          } else if (!json_output) {
             subresult =
                 evaluator.validate(schema_template, instance, std::ref(output));
           }
@@ -172,6 +173,22 @@ auto sourcemeta::jsonschema::cli::validate(
           if (trace) {
             print(trace_output, std::cout);
             result = subresult;
+          } else if (json_output) {
+            const auto suboutput{sourcemeta::blaze::standard(
+                evaluator, schema_template, instance,
+                fast_mode ? sourcemeta::blaze::StandardOutput::Flag
+                          : sourcemeta::blaze::StandardOutput::Basic)};
+            assert(suboutput.is_object());
+            assert(suboutput.defines("valid"));
+            assert(suboutput.at("valid").is_boolean());
+
+            sourcemeta::core::prettify(suboutput, std::cout);
+            std::cout << "\n";
+
+            if (!suboutput.at("valid").to_boolean()) {
+              result = false;
+              break;
+            }
           } else if (subresult) {
             log_verbose(options)
                 << "ok: " << safe_weakly_canonical(instance_path).string()
@@ -226,7 +243,7 @@ auto sourcemeta::jsonschema::cli::validate(
                                        std::ref(trace_output));
       } else if (fast_mode) {
         subresult = evaluator.validate(schema_template, instance);
-      } else {
+      } else if (!json_output) {
         subresult =
             evaluator.validate(schema_template, instance, std::ref(output));
       }
@@ -234,6 +251,20 @@ auto sourcemeta::jsonschema::cli::validate(
       if (trace) {
         print(trace_output, std::cout);
         result = subresult;
+      } else if (json_output) {
+        const auto suboutput{sourcemeta::blaze::standard(
+            evaluator, schema_template, instance,
+            fast_mode ? sourcemeta::blaze::StandardOutput::Flag
+                      : sourcemeta::blaze::StandardOutput::Basic)};
+        assert(suboutput.is_object());
+        assert(suboutput.defines("valid"));
+        assert(suboutput.at("valid").is_boolean());
+        if (!suboutput.at("valid").to_boolean()) {
+          result = false;
+        }
+
+        sourcemeta::core::prettify(suboutput, std::cout);
+        std::cout << "\n";
       } else if (subresult) {
         log_verbose(options)
             << "ok: " << safe_weakly_canonical(instance_path).string()

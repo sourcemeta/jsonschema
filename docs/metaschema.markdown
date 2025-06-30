@@ -8,15 +8,14 @@ Metaschema
 jsonschema metaschema [schemas-or-directories...]
   [--http/-h] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
-  [--default-dialect/-d <uri>]
+  [--default-dialect/-d <uri>] [--json/-j]
 ```
 
 Ensure that a schema or a set of schemas are considered valid with regards to
-their metaschemas.
-
-> [!NOTE]
-> This command won't collect annotations. To do so, use the
-> [`validate`](./validate.markdown) command instead.
+their metaschemas. The `--json`/`-j` option outputs the evaluation result using
+the JSON Schema
+[`Basic`](https://json-schema.org/draft/2020-12/json-schema-core#section-12.4.2)
+standard format.
 
 > [!WARNING]
 > The point of this command is to help schema writers make sure their schemas
@@ -96,4 +95,10 @@ jsonschema metaschema --extension .schema.json
 
 ```sh
 jsonschema metaschema path/to/my/schema.json --trace
+```
+
+### Validate the metaschema of a JSON Schema and print the result as JSON
+
+```sh
+jsonschema metaschema path/to/my/schema.json --json
 ```
