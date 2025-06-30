@@ -176,6 +176,7 @@ add_jsonschema_test_unix(bundle/fail_bigint)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
+add_jsonschema_test_unix(inspect/pass_no_identifier)
 add_jsonschema_test_unix(inspect/pass_default_dialect)
 add_jsonschema_test_unix(inspect/pass_yaml)
 add_jsonschema_test_unix(inspect/pass_json_output)

@@ -134,18 +134,32 @@ auto sourcemeta::jsonschema::cli::inspect(
     return EXIT_FAILURE;
   }
 
+  const std::filesystem::path schema_path{options.at("").front()};
   const sourcemeta::core::JSON schema{
-      sourcemeta::jsonschema::cli::read_file(options.at("").front())};
+      sourcemeta::jsonschema::cli::read_file(schema_path)};
+
+  const auto dialect{default_dialect(options)};
+  const auto custom_resolver{resolver(
+      options, options.contains("h") || options.contains("http"), dialect)};
+  const auto identifier{sourcemeta::core::identify(
+      schema, custom_resolver,
+      sourcemeta::core::SchemaIdentificationStrategy::Strict, dialect)};
 
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::Instances};
 
-  const auto dialect{default_dialect(options)};
-  frame.analyse(schema, sourcemeta::core::schema_official_walker,
-                resolver(options,
-                         options.contains("h") || options.contains("http"),
-                         dialect),
-                dialect);
+  frame.analyse(
+      schema, sourcemeta::core::schema_official_walker, custom_resolver,
+      dialect,
+
+      // Only use the file-based URI if the schema has no identifier,
+      // as otherwise we make the output unnecessarily hard when it
+      // comes to debugging schemas
+      identifier.has_value()
+          ? std::optional<sourcemeta::core::JSON::String>(std::nullopt)
+          : sourcemeta::core::URI::from_path(
+                sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+                .recompose());
 
   if (options.contains("json") || options.contains("j")) {
     sourcemeta::core::prettify(frame.to_json(), std::cout);
