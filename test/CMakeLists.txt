@@ -155,6 +155,8 @@ add_jsonschema_test_unix(test/pass_single_data_path)
 add_jsonschema_test_unix(test/pass_single_data_path_verbose)
 add_jsonschema_test_unix(test/pass_multi_directory_resolve)
 add_jsonschema_test_unix(test/pass_multi_directory_resolve_verbose)
+add_jsonschema_test_unix(test/pass_file_target)
+add_jsonschema_test_unix(test/pass_file_target_fragment)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)

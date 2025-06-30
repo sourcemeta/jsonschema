@@ -54,9 +54,9 @@ auto sourcemeta::jsonschema::cli::test(
                                          parse_extensions(options))) {
     const sourcemeta::core::JSON test{
         sourcemeta::jsonschema::cli::read_file(entry.first)};
-    std::cout << entry.first.string() << ":";
 
     if (!test.is_object()) {
+      std::cout << entry.first.string() << ":";
       std::cout << "\nerror: The test document must be an object\n\n";
       std::cout << "Learn more here: "
                    "https://github.com/sourcemeta/jsonschema/blob/main/"
@@ -65,6 +65,7 @@ auto sourcemeta::jsonschema::cli::test(
     }
 
     if (!test.defines("target")) {
+      std::cout << entry.first.string() << ":";
       std::cout
           << "\nerror: The test document must contain a `target` property\n\n";
       std::cout << "Learn more here: "
@@ -74,6 +75,7 @@ auto sourcemeta::jsonschema::cli::test(
     }
 
     if (!test.at("target").is_string()) {
+      std::cout << entry.first.string() << ":";
       std::cout
           << "\nerror: The test document `target` property must be a URI\n\n";
       std::cout << "Learn more here: "
@@ -83,6 +85,7 @@ auto sourcemeta::jsonschema::cli::test(
     }
 
     if (!test.defines("tests")) {
+      std::cout << entry.first.string() << ":";
       std::cout
           << "\nerror: The test document must contain a `tests` property\n\n";
       std::cout << "Learn more here: "
@@ -92,6 +95,7 @@ auto sourcemeta::jsonschema::cli::test(
     }
 
     if (!test.at("tests").is_array()) {
+      std::cout << entry.first.string() << ":";
       std::cout
           << "\nerror: The test document `tests` property must be an array\n\n";
       std::cout << "Learn more here: "
@@ -100,8 +104,17 @@ auto sourcemeta::jsonschema::cli::test(
       return EXIT_FAILURE;
     }
 
+    const auto test_path_uri{sourcemeta::core::URI::from_path(entry.first)};
     sourcemeta::core::URI schema_uri{test.at("target").to_string()};
+    schema_uri.resolve_from(test_path_uri);
     schema_uri.canonicalize();
+
+    if (verbose) {
+      std::cerr << "Looking for target: " << schema_uri.recompose() << "\n";
+    }
+
+    std::cout << entry.first.string() << ":";
+
     const auto schema{sourcemeta::core::wrap(schema_uri.recompose())};
 
     unsigned int pass_count{0};

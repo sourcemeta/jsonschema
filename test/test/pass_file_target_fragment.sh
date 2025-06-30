@@ -9,15 +9,17 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
-  "id": "https://example.com",
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "string"
+  "items": {
+    "type": "string"
+  }
 }
 EOF
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "target": "https://example.com",
+  "target": "./schema.json#/items",
+  "$comment": "A random comment",
   "tests": [
     {
       "valid": true,
@@ -36,8 +38,7 @@ EOF
 cat << EOF > "$TMP/expected.txt"
 Detecting schema resources from file: $(realpath "$TMP")/schema.json
 Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
-Importing schema into the resolution context: https://example.com
-Looking for target: https://example.com
+Looking for target: file://$(realpath "$TMP")/schema.json#/items
 $(realpath "$TMP")/test.json:
   1/2 PASS <no description>
   2/2 PASS <no description>
