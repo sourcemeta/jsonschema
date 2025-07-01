@@ -1,4 +1,4 @@
-#include <sourcemeta/hydra/httpclient.h>
+#include <sourcemeta/hydra/http.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>

@@ -25,7 +25,7 @@
 #include <type_traits> // std::is_same_v
 
 /// @defgroup jsonpointer JSON Pointer
-/// @brief An growing implementation of RFC 6901 JSON Pointer.
+/// @brief A growing implementation of RFC 6901 JSON Pointer.
 ///
 /// This functionality is included as follows:
 ///

@@ -4,16 +4,7 @@ project(hydra VERSION 0.0.1 LANGUAGES C CXX
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
-option(HYDRA_CRYPTO "Build the Hydra crypto library" ON)
-option(HYDRA_HTTPCLIENT "Build the Hydra HTTP client library" ON)
-if(WIN32)
-  # TODO: Make it work on Windows. Main challenge is that uSockets
-  # relies on libuv for that platform.
-  option(HYDRA_HTTPSERVER "Build the Hydra HTTP server library" OFF)
-else()
-  option(HYDRA_HTTPSERVER "Build the Hydra HTTP server library" ON)
-endif()
-option(HYDRA_BUCKET "Build the Hydra bucket library" ON)
+option(HYDRA_HTTP "Build the Hydra HTTP library" ON)
 option(HYDRA_TESTS "Build the Hydra tests" OFF)
 option(HYDRA_DOCS "Build the Hydra docs" OFF)
 option(HYDRA_INSTALL "Install the Hydra library" ON)
@@ -39,34 +30,9 @@ if(HYDRA_INSTALL)
     COMPONENT sourcemeta_hydra_dev)
 endif()
 
-if(HYDRA_HTTPCLIENT OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
-  add_subdirectory(src/http)
-endif()
-
-if(HYDRA_CRYPTO OR HYDRA_HTTPCLIENT OR HYDRA_BUCKET)
-  find_package(BearSSL REQUIRED)
-endif()
-
-if(HYDRA_CRYPTO OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
-  add_subdirectory(src/crypto)
-endif()
-
-if(HYDRA_HTTPCLIENT OR HYDRA_BUCKET)
-  find_package(ZLIB REQUIRED)
+if(HYDRA_HTTP)
   find_package(CURL REQUIRED)
-  add_subdirectory(src/httpclient)
-endif()
-
-if(HYDRA_HTTPSERVER)
-  find_package(ZLIB REQUIRED)
-  find_package(uSockets REQUIRED)
-  find_package(uWebSockets REQUIRED)
-  add_subdirectory(src/httpserver)
-endif()
-
-if(HYDRA_BUCKET)
-  find_package(Core REQUIRED COMPONENTS json uri)
-  add_subdirectory(src/bucket)
+  add_subdirectory(src/http)
 endif()
 
 if(HYDRA_ADDRESS_SANITIZER)
@@ -90,30 +56,9 @@ endif()
 if(HYDRA_TESTS)
   enable_testing()
 
-  if(HYDRA_HTTPCLIENT OR HYDRA_HTTPSERVER OR HYDRA_BUCKET)
+  if(HYDRA_HTTP)
     add_subdirectory(test/unit/http)
-  endif()
-
-  if(HYDRA_CRYPTO)
-    add_subdirectory(test/unit/crypto)
-  endif()
-
-  if(HYDRA_HTTPCLIENT)
-    add_subdirectory(test/e2e/httpclient)
-  endif()
-
-  if(HYDRA_HTTPSERVER)
-    add_subdirectory(test/unit/httpserver)
-    find_package(Core REQUIRED COMPONENTS json)
-    # Because we need to test with an HTTP client
-    if(HYDRA_HTTPCLIENT)
-      add_subdirectory(test/e2e/httpserver)
-    endif()
-  endif()
-
-  if(HYDRA_BUCKET)
-    add_subdirectory(test/unit/bucket)
-    add_subdirectory(test/e2e/bucket)
+    add_subdirectory(test/e2e/http)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)
