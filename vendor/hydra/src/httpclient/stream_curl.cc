@@ -317,6 +317,11 @@ auto ClientStream::send() -> std::future<Status> {
   handle_curl(
       curl_easy_setopt(this->internal->handle, CURLOPT_ACCEPT_ENCODING, ""));
 
+  // Follow re-directs
+  // See https://curl.se/libcurl/c/CURLOPT_FOLLOWLOCATION.html
+  handle_curl(curl_easy_setopt(this->internal->handle, CURLOPT_FOLLOWLOCATION,
+                               CURLFOLLOW_ALL));
+
   // Otherwise cURL will hang for some seconds waiting for a response when
   // performing a HEAD request
   if (this->internal->method == Method::HEAD) {
@@ -361,7 +366,8 @@ auto ClientStream::send() -> std::future<Status> {
   assert(code > 0);
   assert(this->internal->status.has_value());
   assert(code == static_cast<std::underlying_type_t<Status>>(
-                     this->internal->status.value()));
+                     this->internal->status.value()) ||
+         this->internal->status.value() == Status::MOVED_PERMANENTLY);
   result.set_value(Status{static_cast<std::underlying_type_t<Status>>(code)});
   return result.get_future();
 }
