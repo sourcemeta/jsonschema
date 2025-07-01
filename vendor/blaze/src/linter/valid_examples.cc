@@ -25,7 +25,7 @@ ValidExamples::ValidExamples(Compiler compiler)
 auto ValidExamples::condition(
     const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
     const sourcemeta::core::Vocabularies &vocabularies,
-    const sourcemeta::core::SchemaFrame &,
+    const sourcemeta::core::SchemaFrame &frame,
     const sourcemeta::core::SchemaFrame::Location &location,
     const sourcemeta::core::SchemaWalker &walker,
     const sourcemeta::core::SchemaResolver &resolver) const
@@ -44,11 +44,23 @@ auto ValidExamples::condition(
     return false;
   }
 
+  const auto &root_base_dialect{frame.traverse(location.root.value_or(""))
+                                    .value_or(location)
+                                    .get()
+                                    .base_dialect};
+  std::optional<std::string> default_id{location.base};
+  if (sourcemeta::core::identify(root, root_base_dialect).has_value()) {
+    // We want to only set a default identifier if the root schema does not
+    // have an explicit identifier. Otherwise, we can get into corner case
+    // when wrapping the schema
+    default_id = std::nullopt;
+  }
+
   const auto subschema{sourcemeta::core::wrap(root, location.pointer, resolver,
                                               location.dialect)};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::FastValidation,
-                                     location.dialect, location.base)};
+                                     location.dialect, default_id)};
 
   Evaluator evaluator;
   std::size_t cursor{0};
