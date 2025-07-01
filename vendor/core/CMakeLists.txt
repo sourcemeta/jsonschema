@@ -3,6 +3,9 @@ project(core VERSION 0.0.0 LANGUAGES C CXX DESCRIPTION "Sourcemeta Core")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
+option(SOURCEMETA_CORE_UUID "Build the Sourcemeta Core UUID library" ON)
+option(SOURCEMETA_CORE_GZIP "Build the Sourcemeta Core GZIP library" ON)
+option(SOURCEMETA_CORE_MD5 "Build the Sourcemeta Core MD5 library" ON)
 option(SOURCEMETA_CORE_REGEX "Build the Sourcemeta Core Regex library" ON)
 option(SOURCEMETA_CORE_URI "Build the Sourcemeta Core URI library" ON)
 option(SOURCEMETA_CORE_JSON "Build the Sourcemeta Core JSON library" ON)
@@ -17,6 +20,8 @@ option(SOURCEMETA_CORE_DOCS "Build the Sourcemeta Core docs" OFF)
 option(SOURCEMETA_CORE_INSTALL "Install the Sourcemeta Core library" ON)
 option(SOURCEMETA_CORE_ADDRESS_SANITIZER "Build Sourcemeta Core with an address sanitizer" OFF)
 option(SOURCEMETA_CORE_UNDEFINED_SANITIZER "Build Sourcemeta Core with an undefined behavior sanitizer" OFF)
+option(SOURCEMETA_CORE_CONTRIB_ZLIB "Build the ZLIB library for downstream consumers" OFF)
+option(SOURCEMETA_CORE_CONTRIB_BEARSSL "Build the BearSSL library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLETEST "Build the GoogleTest library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK "Build the GoogleBenchmark library for downstream consumers" OFF)
 
@@ -43,6 +48,20 @@ if(SOURCEMETA_CORE_INSTALL)
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     COMPONENT sourcemeta_${PROJECT_NAME}_dev)
+endif()
+
+if(SOURCEMETA_CORE_UUID)
+  add_subdirectory(src/core/uuid)
+endif()
+
+if(SOURCEMETA_CORE_GZIP OR SOURCEMETA_CORE_CONTRIB_ZLIB)
+  find_package(ZLIB REQUIRED)
+  add_subdirectory(src/core/gzip)
+endif()
+
+if(SOURCEMETA_CORE_MD5 OR SOURCEMETA_CORE_CONTRIB_BEARSSL)
+  find_package(BearSSL REQUIRED)
+  add_subdirectory(src/core/md5)
 endif()
 
 if(SOURCEMETA_CORE_REGEX)
@@ -111,6 +130,18 @@ endif()
 
 if(SOURCEMETA_CORE_TESTS)
   enable_testing()
+
+  if(SOURCEMETA_CORE_UUID)
+    add_subdirectory(test/uuid)
+  endif()
+
+  if(SOURCEMETA_CORE_GZIP)
+    add_subdirectory(test/gzip)
+  endif()
+
+  if(SOURCEMETA_CORE_MD5)
+    add_subdirectory(test/md5)
+  endif()
 
   if(SOURCEMETA_CORE_REGEX)
     add_subdirectory(test/regex)
