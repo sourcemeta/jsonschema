@@ -777,7 +777,7 @@ auto JSON::push_back_if_unique(const JSON &value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
   auto &array_data{this->as_array().data};
-  const auto match{std::find(array_data.cbegin(), array_data.cend(), value)};
+  const auto match{std::ranges::find(array_data, value)};
   if (match == array_data.cend()) {
     array_data.push_back(value);
     return {array_data.back(), true};
@@ -790,7 +790,7 @@ auto JSON::push_back_if_unique(JSON &&value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
   auto &array_data{this->as_array().data};
-  const auto match{std::find(array_data.cbegin(), array_data.cend(), value)};
+  const auto match{std::ranges::find(array_data, value)};
   if (match == array_data.cend()) {
     array_data.push_back(std::move(value));
     return {array_data.back(), true};

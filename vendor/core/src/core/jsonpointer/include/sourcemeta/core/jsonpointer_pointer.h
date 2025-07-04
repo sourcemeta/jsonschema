@@ -275,10 +275,10 @@ public:
   /// assert(pointer.at(1).to_property() == "bar");
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
-  template <typename OtherT,
-            typename = std::enable_if_t<std::is_same_v<
-                PropertyT, std::reference_wrapper<const OtherT>>>>
-  auto push_back(const GenericPointer<OtherT, Hash> &other) -> void {
+  template <typename OtherT>
+  auto push_back(const GenericPointer<OtherT, Hash> &other) -> void
+    requires std::is_same_v<PropertyT, std::reference_wrapper<const OtherT>>
+  {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {

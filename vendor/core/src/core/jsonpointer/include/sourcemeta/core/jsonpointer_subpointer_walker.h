@@ -20,13 +20,13 @@ public:
   GenericSubPointerIterator(pointer input) : data{input} {}
 
   /// Get the current subpointer as a reference
-  reference operator*() const { return *(this->data); }
+  auto operator*() const -> reference { return *(this->data); }
 
   /// Get the current subpointer as a pointer
-  pointer operator->() { return this->data; }
+  auto operator->() -> pointer { return this->data; }
 
   /// Advance the iterator to the next subpointer
-  GenericSubPointerIterator &operator++() {
+  auto operator++() -> GenericSubPointerIterator & {
     if (this->data->empty()) {
       // Turn the instance into the impossible subpointer iterator
       this->data = nullptr;
@@ -37,8 +37,8 @@ public:
     return *this;
   }
 
-  friend bool operator==(const GenericSubPointerIterator &left,
-                         const GenericSubPointerIterator &right) {
+  friend auto operator==(const GenericSubPointerIterator &left,
+                         const GenericSubPointerIterator &right) -> bool {
     return (!left.data && !right.data) ||
            (left.data && right.data && *(left.data) == *(right.data));
   };
@@ -52,12 +52,12 @@ private:
 template <typename PointerT> class GenericSubPointerWalker {
 public:
   using const_iterator = GenericSubPointerIterator<PointerT>;
-  GenericSubPointerWalker(const PointerT &pointer) : data{pointer} {}
+  GenericSubPointerWalker(PointerT pointer) : data{std::move(pointer)} {}
 
-  const_iterator begin() { return {&this->data}; }
-  const_iterator end() { return {nullptr}; }
-  const_iterator cbegin() { return {&this->data}; }
-  const_iterator cend() { return {nullptr}; }
+  auto begin() -> const_iterator { return {&this->data}; }
+  auto end() -> const_iterator { return {nullptr}; }
+  auto cbegin() -> const_iterator { return {&this->data}; }
+  auto cend() -> const_iterator { return {nullptr}; }
 
 private:
   PointerT data;

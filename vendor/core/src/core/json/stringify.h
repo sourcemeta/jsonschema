@@ -425,7 +425,7 @@ auto stringify(
     std::transform(std::cbegin(document), std::cend(document),
                    std::back_inserter(keys),
                    [](const auto &property) { return property.first; });
-    std::sort(std::begin(keys), std::end(keys), compare);
+    std::ranges::sort(keys, compare);
     const auto end{std::cend(keys)};
     for (auto iterator = std::cbegin(keys); iterator != end; ++iterator) {
       stringify<Allocator>(*iterator, stream);
@@ -529,7 +529,7 @@ auto prettify(
     std::transform(std::cbegin(document), std::cend(document),
                    std::back_inserter(keys),
                    [](const auto &property) { return property.first; });
-    std::sort(std::begin(keys), std::end(keys), compare);
+    std::ranges::sort(keys, compare);
     const auto end{std::cend(keys)};
     for (auto iterator = std::cbegin(keys); iterator != end; ++iterator) {
       stream.put(internal::token_whitespace_line_feed<typename JSON::Char>);

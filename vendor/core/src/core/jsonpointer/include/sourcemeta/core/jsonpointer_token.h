@@ -17,9 +17,9 @@ public:
   /// This constructor creates an JSON Pointer token from a string given its
   /// precomputed hash. This is advanced functionality that should be used with
   /// care.
-  GenericToken(const Property &value,
-               const typename Hash::hash_type property_hash)
-      : as_property{true}, property{value}, hash{property_hash}, index{0} {}
+  GenericToken(Property value, const typename Hash::hash_type property_hash)
+      : as_property{true}, property{std::move(value)}, hash{property_hash},
+        index{0} {}
 
   /// This constructor creates an JSON Pointer token from a string. For
   /// example:

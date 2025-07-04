@@ -471,7 +471,7 @@ auto sourcemeta::core::schema_format_compare(
     const sourcemeta::core::JSON::String &left,
     const sourcemeta::core::JSON::String &right) -> bool {
   using Rank =
-      std::map<JSON::String, std::uint64_t, std::less<JSON::String>,
+      std::map<JSON::String, std::uint64_t, std::less<>,
                JSON::Allocator<std::pair<const JSON::String, std::uint64_t>>>;
   static Rank rank{// Most core keywords tend to come first
                    {"$schema", 0},
