@@ -734,7 +734,7 @@ auto URI::from_path(const std::filesystem::path &path) -> URI {
   const auto is_unc{normalized.starts_with("\\\\")};
   const auto is_windows_absolute{normalized.size() >= 2 &&
                                  normalized[1] == ':'};
-  std::replace(normalized.begin(), normalized.end(), '\\', '/');
+  std::ranges::replace(normalized, '\\', '/');
   const auto is_unix_absolute{normalized.starts_with("/")};
   if (!is_unix_absolute && !is_windows_absolute && !is_unc) {
     throw URIError(

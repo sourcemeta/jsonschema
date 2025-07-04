@@ -7,8 +7,8 @@ namespace sourcemeta::core {
 
 SchemaMapResolver::SchemaMapResolver() = default;
 
-SchemaMapResolver::SchemaMapResolver(const SchemaResolver &resolver)
-    : default_resolver{resolver} {}
+SchemaMapResolver::SchemaMapResolver(SchemaResolver resolver)
+    : default_resolver{std::move(resolver)} {}
 
 auto SchemaMapResolver::add(
     const JSON &schema, const std::optional<std::string> &default_dialect,

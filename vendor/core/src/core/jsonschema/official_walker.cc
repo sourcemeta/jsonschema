@@ -396,10 +396,10 @@ auto sourcemeta::core::schema_official_walker(
   if ((vocabularies.contains(HTTP_BASE "draft-07/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-07/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::SchemaKeywordType::Unknown,
-            std::nullopt,
-            {"$ref"},
-            {}};
+    return {.type = sourcemeta::core::SchemaKeywordType::Unknown,
+            .vocabulary = std::nullopt,
+            .dependencies = {"$ref"},
+            .instances = {}};
   }
 
   // Draft6
@@ -519,10 +519,10 @@ auto sourcemeta::core::schema_official_walker(
   if ((vocabularies.contains(HTTP_BASE "draft-06/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-06/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::SchemaKeywordType::Unknown,
-            std::nullopt,
-            {"$ref"},
-            {}};
+    return {.type = sourcemeta::core::SchemaKeywordType::Unknown,
+            .vocabulary = std::nullopt,
+            .dependencies = {"$ref"},
+            .instances = {}};
   }
 
   // Draft4
@@ -619,10 +619,10 @@ auto sourcemeta::core::schema_official_walker(
   if ((vocabularies.contains(HTTP_BASE "draft-04/schema#") ||
        vocabularies.contains(HTTP_BASE "draft-04/hyper-schema#")) &&
       keyword != "$ref") {
-    return {sourcemeta::core::SchemaKeywordType::Unknown,
-            std::nullopt,
-            {"$ref"},
-            {}};
+    return {.type = sourcemeta::core::SchemaKeywordType::Unknown,
+            .vocabulary = std::nullopt,
+            .dependencies = {"$ref"},
+            .instances = {}};
   }
 
   // Draft3
@@ -686,10 +686,10 @@ auto sourcemeta::core::schema_official_walker(
   // $ref also takes precedence over any unknown keyword
   if (vocabularies.contains(HTTP_BASE "draft-03/schema#") &&
       keyword != "$ref") {
-    return {sourcemeta::core::SchemaKeywordType::Unknown,
-            std::nullopt,
-            {"$ref"},
-            {}};
+    return {.type = sourcemeta::core::SchemaKeywordType::Unknown,
+            .vocabulary = std::nullopt,
+            .dependencies = {"$ref"},
+            .instances = {}};
   }
 
   // Draft2
@@ -877,5 +877,8 @@ auto sourcemeta::core::schema_official_walker(
 #undef WALK
 #undef WALK_ANY
 #undef WALK_MAYBE_DEPENDENT
-  return {sourcemeta::core::SchemaKeywordType::Unknown, std::nullopt, {}, {}};
+  return {.type = sourcemeta::core::SchemaKeywordType::Unknown,
+          .vocabulary = std::nullopt,
+          .dependencies = {},
+          .instances = {}};
 }

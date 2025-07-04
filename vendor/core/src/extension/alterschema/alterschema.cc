@@ -6,14 +6,14 @@
 #include <algorithm>
 #include <cmath>
 #include <iterator>
+#include <utility>
 namespace sourcemeta::core {
 static auto
 contains_any(const Vocabularies &container,
              const std::set<typename Vocabularies::key_type> &values) -> bool {
-  return std::any_of(std::cbegin(container), std::cend(container),
-                     [&values](const auto &element) {
-                       return values.contains(element.first);
-                     });
+  return std::ranges::any_of(container, [&values](const auto &element) {
+    return values.contains(element.first);
+  });
 }
 
 template <typename T>

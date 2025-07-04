@@ -14,7 +14,7 @@ auto PointerPositionTracker::operator()(const JSON::ParsePhase phase,
                                         const std::uint64_t column,
                                         const JSON &value) -> void {
   if (phase == JSON::ParsePhase::Pre) {
-    this->stack.push({line, column});
+    this->stack.emplace(line, column);
     if (value.is_string()) {
       this->current.push_back(value.to_string());
     } else if (value.is_integer()) {
