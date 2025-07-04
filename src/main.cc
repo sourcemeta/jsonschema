@@ -157,6 +157,17 @@ auto main(int argc, char *argv[]) noexcept -> int {
     sourcemeta::core::stringify(error.location(), std::cerr);
     std::cerr << "\"\n";
     return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::cli::FileError<
+           sourcemeta::core::SchemaResolutionError> &error) {
+    std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
+    std::cerr << "  at "
+              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                     error.path())
+                     .string()
+              << "\n";
+    std::cerr << "\nThis is likely because you forgot to import such schema "
+                 "using --resolve/-r\n";
+    return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
     std::cerr << "\nThis is likely because you forgot to import such schema "
@@ -171,7 +182,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   } catch (const sourcemeta::jsonschema::cli::FileError<
            sourcemeta::core::SchemaUnknownBaseDialectError> &error) {
     std::cerr << "error: " << error.what() << "\n";
-    std::cerr << "  "
+    std::cerr << "  at "
               << sourcemeta::jsonschema::cli::safe_weakly_canonical(
                      error.path())
                      .string()

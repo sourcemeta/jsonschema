@@ -16,7 +16,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema
-  $(realpath "$TMP/schema.json")
+  at $(realpath "$TMP/schema.json")
 
 Are you sure the input is a valid JSON Schema and its base dialect is known?
 If the input does not declare the \$schema keyword, you might want to
