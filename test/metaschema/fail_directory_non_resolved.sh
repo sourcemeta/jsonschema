@@ -21,7 +21,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema
-  http://example.com
+  uri http://example.com
   at $(realpath "$TMP")/schemas/schema_1.json
 
 This is likely because you forgot to import such schema using --resolve/-r

@@ -3,6 +3,7 @@
 #include <sourcemeta/core/uri_escape.h>
 
 #include <algorithm> // std::copy
+#include <array>     // std::array
 #include <cassert>   // assert
 #include <cctype>    // std::isalnum
 #include <istream>   // std::istream
@@ -14,7 +15,8 @@ namespace sourcemeta::core {
 
 auto uri_escape(const char character, std::ostream &output,
                 const URIEscapeMode mode) -> void {
-  constexpr char HEX[] = "0123456789ABCDEF";
+  const std::array<char, 16> HEX = {{'0', '1', '2', '3', '4', '5', '6', '7',
+                                     '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}};
 
   // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
@@ -87,10 +89,9 @@ auto uri_unescape(std::istream &input, std::ostream &output) -> void {
   }
 
   const std::string input_string{input_stream.str()};
-  std::string::value_type *const buffer =
-      new std::string::value_type[input_string.size() + 1];
+  auto const buffer = new std::string::value_type[input_string.size() + 1];
   try {
-    std::copy(input_string.cbegin(), input_string.cend(), buffer);
+    std::ranges::copy(input_string, buffer);
   } catch (...) {
     delete[] buffer;
     throw;

@@ -4,6 +4,7 @@ extern "C" {
 #include <zlib.h>
 }
 
+#include <array>   // std::array
 #include <cstring> // std::memset
 #include <sstream> // std::ostringstream
 
@@ -21,14 +22,14 @@ auto gzip(std::string_view input) -> std::optional<std::string> {
   stream.next_in = reinterpret_cast<Bytef *>(const_cast<char *>(input.data()));
   stream.avail_in = static_cast<uInt>(input.size());
 
-  char buffer[4096];
+  std::array<char, 4096> buffer;
   std::ostringstream compressed;
 
   do {
-    stream.next_out = reinterpret_cast<Bytef *>(buffer);
+    stream.next_out = reinterpret_cast<Bytef *>(buffer.data());
     stream.avail_out = sizeof(buffer);
     code = deflate(&stream, Z_FINISH);
-    compressed.write(buffer, sizeof(buffer) - stream.avail_out);
+    compressed.write(buffer.data(), sizeof(buffer) - stream.avail_out);
   } while (code == Z_OK);
 
   if (code != Z_STREAM_END) {

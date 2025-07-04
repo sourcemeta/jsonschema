@@ -141,7 +141,7 @@ auto find_every_base(
   for (const auto &subpointer : sourcemeta::core::SubPointerWalker{pointer}) {
     if (bases.contains(subpointer)) {
       for (const auto &base : bases.at(subpointer)) {
-        result.push_back({base, subpointer});
+        result.emplace_back(base, subpointer);
       }
     }
   }
@@ -149,7 +149,7 @@ auto find_every_base(
   if (result.empty() ||
       // This means the top-level schema is anonymous
       result.back().second != sourcemeta::core::empty_pointer) {
-    result.push_back({"", sourcemeta::core::empty_pointer});
+    result.emplace_back("", sourcemeta::core::empty_pointer);
   }
 
   return result;
@@ -217,12 +217,17 @@ auto store(
              instance_locations.cbegin(), instance_locations.cend())
              .size() == instance_locations.size());
   const auto canonical{sourcemeta::core::URI::canonicalize(uri)};
-  const auto inserted{
-      frame
-          .insert({{type, canonical},
-                   {parent, entry_type, root_id, base_id, pointer_from_root,
-                    pointer_from_base, dialect, base_dialect}})
-          .second};
+  const auto inserted{frame
+                          .insert({{type, canonical},
+                                   {.parent = parent,
+                                    .type = entry_type,
+                                    .root = root_id,
+                                    .base = base_id,
+                                    .pointer = pointer_from_root,
+                                    .relative_pointer = pointer_from_base,
+                                    .dialect = dialect,
+                                    .base_dialect = base_dialect}})
+                          .second};
   if (!ignore_if_present && !inserted) {
     throw_already_exists(uri);
   }
@@ -245,8 +250,8 @@ auto traverse_origin_instance_locations(
     sourcemeta::core::SchemaFrame::Instances::mapped_type &destination)
     -> void {
   if (accumulator.has_value() &&
-      std::find(destination.cbegin(), destination.cend(),
-                accumulator.value()) == destination.cend()) {
+      std::ranges::find(destination, accumulator.value()) ==
+          destination.cend()) {
     destination.push_back(accumulator.value());
   }
 
@@ -314,8 +319,7 @@ auto repopulate_instance_locations(
         result.emplace_back(token);
       }
 
-      if (std::find(destination.cbegin(), destination.cend(), result) ==
-          destination.cend()) {
+      if (std::ranges::find(destination, result) == destination.cend()) {
         destination.push_back(result);
       }
 
@@ -418,10 +422,9 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   for (const auto &path : paths) {
     // Passing paths that overlap is undefined behavior. No path should
     // start with another one, else you are doing something wrong
-    assert(
-        std::all_of(paths.cbegin(), paths.cend(), [&path](const auto &other) {
-          return path == other || !path.starts_with(other);
-        }));
+    assert(std::ranges::all_of(paths, [&path](const auto &other) {
+      return path == other || !path.starts_with(other);
+    }));
 
     const auto &schema{get(root, path)};
 
@@ -493,12 +496,15 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           entry.pointer.empty() ? default_id : std::nullopt)};
 
       // Store information
-      subschemas.emplace(entry.pointer,
-                         CacheSubschema{entry.instance_location,
-                                        entry.relative_instance_location,
-                                        entry.orphan, entry.parent});
+      subschemas.emplace(
+          entry.pointer,
+          CacheSubschema{.instance_location = entry.instance_location,
+                         .relative_instance_location =
+                             entry.relative_instance_location,
+                         .orphan = entry.orphan,
+                         .parent = entry.parent});
       subschema_entries.emplace_back(
-          InternalEntry{std::move(entry), std::move(id)});
+          InternalEntry{.common = std::move(entry), .id = std::move(id)});
       current_subschema_entries.emplace_back(subschema_entries.size() - 1);
     }
 
@@ -602,9 +608,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               {SchemaReferenceType::Static,
                entry.common.pointer.concat({"$schema"})},
               SchemaFrame::ReferencesEntry{
-                  maybe_metaschema.value(), destination,
-                  metaschema.recompose_without_fragment(),
-                  fragment_string(metaschema)});
+                  .original = maybe_metaschema.value(),
+                  .destination = destination,
+                  .base = metaschema.recompose_without_fragment(),
+                  .fragment = fragment_string(metaschema)});
         }
       }
 
@@ -721,8 +728,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
     const auto pointer_walker{sourcemeta::core::PointerWalker{schema}};
     std::vector<sourcemeta::core::Pointer> pointers{pointer_walker.cbegin(),
                                                     pointer_walker.cend()};
-    std::sort(pointers.begin(), pointers.end(),
-              std::less<sourcemeta::core::Pointer>());
+    std::ranges::sort(pointers, std::less<>());
 
     // Pre-compute every possible pointer to the schema
     for (const auto &relative_pointer : pointers) {
@@ -810,9 +816,11 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         this->references_.insert_or_assign(
             {SchemaReferenceType::Static,
              entry.common.pointer.concat({"$ref"})},
-            SchemaFrame::ReferencesEntry{original, ref.recompose(),
-                                         ref.recompose_without_fragment(),
-                                         fragment_string(ref)});
+            SchemaFrame::ReferencesEntry{.original = original,
+                                         .destination = ref.recompose(),
+                                         .base =
+                                             ref.recompose_without_fragment(),
+                                         .fragment = fragment_string(ref)});
       }
 
       if (entry.common.vocabularies.contains(
@@ -843,9 +851,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         this->references_.insert_or_assign(
             {reference_type, entry.common.pointer.concat({"$recursiveRef"})},
             SchemaFrame::ReferencesEntry{
-                ref, anchor_uri.recompose(),
-                anchor_uri.recompose_without_fragment(),
-                fragment_string(anchor_uri)});
+                .original = ref,
+                .destination = anchor_uri.recompose(),
+                .base = anchor_uri.recompose_without_fragment(),
+                .fragment = fragment_string(anchor_uri)});
       }
 
       if (entry.common.vocabularies.contains(
@@ -879,9 +888,11 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             {behaves_as_static ? SchemaReferenceType::Static
                                : SchemaReferenceType::Dynamic,
              entry.common.pointer.concat({"$dynamicRef"})},
-            SchemaFrame::ReferencesEntry{original, std::move(ref_string),
-                                         ref.recompose_without_fragment(),
-                                         fragment_string(ref)});
+            SchemaFrame::ReferencesEntry{.original = original,
+                                         .destination = std::move(ref_string),
+                                         .base =
+                                             ref.recompose_without_fragment(),
+                                         .fragment = fragment_string(ref)});
       }
     }
   }
@@ -982,19 +993,17 @@ auto SchemaFrame::references() const noexcept -> const References & {
 }
 
 auto SchemaFrame::standalone() const -> bool {
-  return std::all_of(
-      this->references_.cbegin(), this->references_.cend(),
-      [&](const auto &reference) {
-        assert(!reference.first.second.empty());
-        assert(reference.first.second.back().is_property());
-        // TODO: This check might need to be more elaborate given
-        // https://github.com/sourcemeta/core/issues/1390
-        return reference.first.second.back().to_property() == "$schema" ||
-               this->locations_.contains({SchemaReferenceType::Static,
-                                          reference.second.destination}) ||
-               this->locations_.contains({SchemaReferenceType::Dynamic,
-                                          reference.second.destination});
-      });
+  return std::ranges::all_of(this->references_, [&](const auto &reference) {
+    assert(!reference.first.second.empty());
+    assert(reference.first.second.back().is_property());
+    // TODO: This check might need to be more elaborate given
+    // https://github.com/sourcemeta/core/issues/1390
+    return reference.first.second.back().to_property() == "$schema" ||
+           this->locations_.contains(
+               {SchemaReferenceType::Static, reference.second.destination}) ||
+           this->locations_.contains(
+               {SchemaReferenceType::Dynamic, reference.second.destination});
+  });
 }
 
 auto SchemaFrame::vocabularies(const Location &location,

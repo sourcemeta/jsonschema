@@ -46,7 +46,7 @@ public:
   SchemaMapResolver();
 
   /// Construct an empty resolver that has another schema resolver as a fallback
-  SchemaMapResolver(const SchemaResolver &resolver);
+  SchemaMapResolver(SchemaResolver resolver);
 
   /// Register a schema to the map resolver. Returns whether at least one
   /// schema was imported into the resolver

@@ -59,10 +59,10 @@ public:
 
       // If none of the types that the keyword applies to is a valid
       // type for the current schema, then by definition we can remove it
-      if (std::none_of(metadata.instances.cbegin(), metadata.instances.cend(),
-                       [&current_types](const auto keyword_type) {
-                         return current_types.contains(keyword_type);
-                       })) {
+      if (std::ranges::none_of(metadata.instances,
+                               [&current_types](const auto keyword_type) {
+                                 return current_types.contains(keyword_type);
+                               })) {
         this->blacklist.emplace_back(entry.first);
       }
     }

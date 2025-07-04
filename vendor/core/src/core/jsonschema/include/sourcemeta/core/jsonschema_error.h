@@ -79,9 +79,10 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaReferenceError
     : public std::exception {
 public:
-  SchemaReferenceError(std::string identifier, const Pointer &schema_location,
+  SchemaReferenceError(std::string identifier, Pointer schema_location,
                        std::string message)
-      : identifier_{std::move(identifier)}, schema_location_{schema_location},
+      : identifier_{std::move(identifier)},
+        schema_location_{std::move(schema_location)},
         message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_.c_str();

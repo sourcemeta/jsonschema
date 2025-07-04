@@ -54,15 +54,16 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
       resolver, current_base_dialect, current_dialect)};
 
   if (type == SchemaWalkerType_t::Deep || level > 0) {
-    sourcemeta::core::SchemaIteratorEntry entry{parent,
-                                                pointer,
-                                                current_dialect,
-                                                vocabularies,
-                                                current_base_dialect,
-                                                subschema,
-                                                instance_location,
-                                                relative_instance_location,
-                                                orphan};
+    sourcemeta::core::SchemaIteratorEntry entry{
+        .parent = parent,
+        .pointer = pointer,
+        .dialect = current_dialect,
+        .vocabularies = vocabularies,
+        .base_dialect = current_base_dialect,
+        .subschema = subschema,
+        .instance_location = instance_location,
+        .relative_instance_location = relative_instance_location,
+        .orphan = orphan};
     subschemas.push_back(std::move(entry));
   }
 
@@ -405,8 +406,15 @@ sourcemeta::core::SchemaIterator::SchemaIterator(
   // the current schema is a subschema, but cannot walk any further.
   if (!dialect.has_value()) {
     sourcemeta::core::SchemaIteratorEntry entry{
-        std::nullopt, pointer,           std::nullopt,      {},   std::nullopt,
-        schema,       instance_location, instance_location, false};
+        .parent = std::nullopt,
+        .pointer = pointer,
+        .dialect = std::nullopt,
+        .vocabularies = {},
+        .base_dialect = std::nullopt,
+        .subschema = schema,
+        .instance_location = instance_location,
+        .relative_instance_location = instance_location,
+        .orphan = false};
     this->subschemas.push_back(std::move(entry));
   } else {
     const auto base_dialect{
@@ -460,15 +468,21 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
 
   for (const auto &entry : schema.as_object()) {
     sourcemeta::core::SchemaIteratorEntry subschema_entry{
-        std::nullopt, {entry.first}, dialect, vocabularies,
-        base_dialect, entry.second,  {},      {},
-        false};
+        .parent = std::nullopt,
+        .pointer = {entry.first},
+        .dialect = dialect,
+        .vocabularies = vocabularies,
+        .base_dialect = base_dialect,
+        .subschema = entry.second,
+        .instance_location = {},
+        .relative_instance_location = {},
+        .orphan = false};
     this->entries.push_back(std::move(subschema_entry));
   }
 
   // Sort keywords based on priority for correct evaluation
-  std::sort(
-      this->entries.begin(), this->entries.end(),
+  std::ranges::sort(
+      this->entries,
       [&vocabularies, &walker](const auto &left, const auto &right) -> bool {
         // These cannot be empty or indexes, as we created
         // the entries array from a JSON object
