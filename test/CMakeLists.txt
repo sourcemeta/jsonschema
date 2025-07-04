@@ -123,6 +123,7 @@ add_jsonschema_test_unix(metaschema/pass_2020_12_default_dialect)
 add_jsonschema_test_unix(metaschema/pass_json)
 add_jsonschema_test_unix(metaschema/fail_json)
 add_jsonschema_test_unix(metaschema/fail_directory_json)
+add_jsonschema_test_unix(metaschema/fail_directory_non_resolved)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)

@@ -21,7 +21,9 @@ namespace sourcemeta::jsonschema::cli {
 
 template <typename T> class FileError : public T {
 public:
-  FileError(std::filesystem::path path) : T{}, path_{std::move(path)} {
+  template <typename... Args>
+  FileError(std::filesystem::path path, Args &&...args)
+      : T{std::forward<Args>(args)...}, path_{std::move(path)} {
     assert(std::filesystem::exists(this->path_));
   }
 
