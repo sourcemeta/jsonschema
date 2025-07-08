@@ -1,14 +1,14 @@
-#ifndef SOURCEMETA_HYDRA_HTTP_ERROR_H
-#define SOURCEMETA_HYDRA_HTTP_ERROR_H
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_ERROR_H
+#define SOURCEMETA_JSONSCHEMA_HTTP_ERROR_H
 
-#ifndef SOURCEMETA_HYDRA_HTTP_EXPORT
-#include <sourcemeta/hydra/http_export.h>
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_EXPORT
+#include <sourcemeta/jsonschema/http_export.h>
 #endif
 
 #include <exception> // std::exception
 #include <string>    // std::string
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -19,7 +19,7 @@ namespace sourcemeta::hydra::http {
 
 /// @ingroup http
 /// This class represents a general HTTP error.
-class SOURCEMETA_HYDRA_HTTP_EXPORT Error : public std::exception {
+class SOURCEMETA_JSONSCHEMA_HTTP_EXPORT Error : public std::exception {
 public:
   // We don't want to document this internal constructor
 #if !defined(DOXYGEN)
@@ -37,6 +37,6 @@ private:
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http
 
 #endif

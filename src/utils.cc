@@ -1,4 +1,4 @@
-#include <sourcemeta/hydra/http.h>
+#include <sourcemeta/jsonschema/http.h>
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -289,11 +289,11 @@ static auto fallback_resolver(
   }
 
   log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
-  sourcemeta::hydra::http::ClientRequest request{std::string{identifier}};
-  request.method(sourcemeta::hydra::http::Method::GET);
+  sourcemeta::jsonschema::http::ClientRequest request{std::string{identifier}};
+  request.method(sourcemeta::jsonschema::http::Method::GET);
   request.capture("content-type");
-  sourcemeta::hydra::http::ClientResponse response{request.send().get()};
-  if (response.status() != sourcemeta::hydra::http::Status::OK) {
+  sourcemeta::jsonschema::http::ClientResponse response{request.send()};
+  if (response.status() != sourcemeta::jsonschema::http::Status::OK) {
     std::ostringstream error;
     error << response.status() << "\n  at " << identifier;
     throw std::runtime_error(error.str());

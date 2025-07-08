@@ -466,36 +466,5 @@ if(NOT CURL_FOUND)
       C_VISIBILITY_INLINES_HIDDEN FALSE
       EXPORT_NAME curl)
 
-  if(HYDRA_INSTALL)
-    include(GNUInstallDirs)
-    install(TARGETS curl
-      EXPORT curl
-      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/curl"
-        COMPONENT sourcemeta_hydra_dev
-      PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/curl"
-        COMPONENT sourcemeta_hydra_dev
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT curl
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/curl"
-      COMPONENT sourcemeta_hydra_dev)
-
-    # TODO: Why does `find_dependency(ZLIB)` fail to locate ZLIB
-    # if even `CMAKE_PREFIX_PATH` is correct?
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/curl-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/../zlib/zlib-config.cmake\")\n"
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/curl.cmake\")\n"
-      "check_required_components(\"curl\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/curl-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/curl"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
-
   set(CURL_FOUND ON)
 endif()

@@ -310,7 +310,7 @@ auto sourcemeta::core::base_dialect(
       resolver(effective_dialect)};
   if (!metaschema.has_value()) {
     throw sourcemeta::core::SchemaResolutionError(
-        effective_dialect, "Could not resolve the requested schema");
+        effective_dialect, "Could not resolve the metaschema of the schema");
   }
 
   return base_dialect(metaschema.value(), resolver, effective_dialect);
@@ -427,7 +427,7 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
       resolver(dialect)};
   if (!maybe_schema_dialect.has_value()) {
     throw sourcemeta::core::SchemaResolutionError(
-        dialect, "Could not resolve the requested schema");
+        dialect, "Could not resolve the metaschema of the schema");
   }
   const sourcemeta::core::JSON &schema_dialect{maybe_schema_dialect.value()};
   // At this point we are sure that the dialect is vocabulary aware and the

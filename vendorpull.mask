@@ -3,6 +3,10 @@ bin
 docs
 test
 vendor/vendorpull
+vendor/blaze
+vendor/core
+vendor/jsonbinpack
+vendor/curl.mask
 .ackrc
 .editorconfig
 action.yml
@@ -15,6 +19,5 @@ Makefile
 npm-deploy.sh
 README.markdown
 cmake
-vendor
 .pre-commit-hooks.yaml
 snapcraft.yaml

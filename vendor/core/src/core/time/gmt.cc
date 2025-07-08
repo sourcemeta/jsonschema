@@ -1,4 +1,4 @@
-#include <sourcemeta/hydra/http_time.h>
+#include <sourcemeta/core/time.h>
 
 #include <cassert>   // assert
 #include <ctime>     // std::time_t, std::tm, std::gmtime, std::mktime, timegm
@@ -14,7 +14,7 @@ namespace {
 constexpr auto FORMAT_GMT{"%a, %d %b %Y %H:%M:%S GMT"};
 }
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::core {
 
 auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string {
   const std::time_t ctime = std::chrono::system_clock::to_time_t(time);
@@ -50,4 +50,4 @@ auto from_gmt(const std::string &time)
 #endif
 }
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::core

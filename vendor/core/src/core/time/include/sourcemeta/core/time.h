@@ -1,20 +1,30 @@
-#ifndef SOURCEMETA_HYDRA_HTTP_TIME_H
-#define SOURCEMETA_HYDRA_HTTP_TIME_H
+#ifndef SOURCEMETA_CORE_TIME_H_
+#define SOURCEMETA_CORE_TIME_H_
 
-#ifndef SOURCEMETA_HYDRA_HTTP_EXPORT
-#include <sourcemeta/hydra/http_export.h>
+#ifndef SOURCEMETA_CORE_TIME_EXPORT
+#include <sourcemeta/core/time_export.h>
 #endif
 
 #include <chrono> // std::chrono::system_clock::time_point
 #include <string> // std::string
 
-namespace sourcemeta::hydra::http {
+/// @defgroup time Time
+/// @brief A growing implementation of time-related utilities for standard such
+/// as RFC 7231 (GMT).
+///
+/// This functionality is included as follows:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// ```
 
-/// @ingroup http
+namespace sourcemeta::core {
+
+/// @ingroup time
 /// Convert a time point into a GMT string. For example:
 ///
 /// ```cpp
-/// #include <sourcemeta/hydra/http.h>
+/// #include <sourcemeta/core/time.h>
 ///
 /// #include <chrono>
 /// #include <ctime>
@@ -31,26 +41,26 @@ namespace sourcemeta::hydra::http {
 ///
 /// const auto point{std::chrono::system_clock::from_time_t(timegm(&parts))};
 ///
-/// assert(sourcemeta::hydra::http::to_gmt(point) ==
+/// assert(sourcemeta::core::to_gmt(point) ==
 ///   "Wed, 21 Oct 2015 11:28:00 GMT");
 /// ```
 ///
 /// On Windows, you might need to use `_mkgmtime` instead of `timegm`.
-SOURCEMETA_HYDRA_HTTP_EXPORT
+SOURCEMETA_CORE_TIME_EXPORT
 auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string;
 
-/// @ingroup http
+/// @ingroup time
 /// Parse a GMT string into a time point. For example:
 ///
 /// ```cpp
-/// #include <sourcemeta/hydra/http.h>
+/// #include <sourcemeta/core/time.h>
 ///
 /// #include <chrono>
 /// #include <ctime>
 /// #include <cassert>
 ///
 /// const auto point{
-///     sourcemeta::hydra::http::from_gmt("Wed, 21 Oct 2015 11:28:00 GMT")};
+///     sourcemeta::core::from_gmt("Wed, 21 Oct 2015 11:28:00 GMT")};
 ///
 /// std::tm parts = {};
 /// parts.tm_year = 115;
@@ -66,9 +76,9 @@ auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string;
 /// ```
 ///
 /// On Windows, you might need to use `_mkgmtime` instead of `timegm`.
-SOURCEMETA_HYDRA_HTTP_EXPORT
+SOURCEMETA_CORE_TIME_EXPORT
 auto from_gmt(const std::string &time) -> std::chrono::system_clock::time_point;
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::core
 
 #endif

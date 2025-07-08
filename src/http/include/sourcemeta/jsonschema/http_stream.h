@@ -1,35 +1,35 @@
-#ifndef SOURCEMETA_HYDRA_HTTP_STREAM_H
-#define SOURCEMETA_HYDRA_HTTP_STREAM_H
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_STREAM_H
+#define SOURCEMETA_JSONSCHEMA_HTTP_STREAM_H
 
-#ifndef SOURCEMETA_HYDRA_HTTP_EXPORT
-#include <sourcemeta/hydra/http_export.h>
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_EXPORT
+#include <sourcemeta/jsonschema/http_export.h>
 #endif
 
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
-#include <future>      // std::future
 #include <memory>      // std::unique_ptr
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <vector>      // std::vector
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 /// @ingroup http
 /// This class is used to perform a streaming HTTP request.
-class SOURCEMETA_HYDRA_HTTP_EXPORT ClientStream {
+class SOURCEMETA_JSONSCHEMA_HTTP_EXPORT ClientStream {
 public:
   /// Construct a streaming HTTP request to a given URL. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// request.method(sourcemeta::hydra::http::Method::GET);
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
+  /// request.method(sourcemeta::jsonschema::http::Method::GET);
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -39,7 +39,7 @@ public:
   ///   }
   /// });
   ///
-  /// request.on_header([](const sourcemeta::hydra::http::Status status,
+  /// request.on_header([](const sourcemeta::jsonschema::http::Status status,
   ///                      std::string_view key,
   ///                      std::string_view value) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
@@ -55,22 +55,26 @@ public:
   /// Move an instance of this class. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <utility>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// sourcemeta::hydra::http::ClientStream new_request{std::move(request)};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// new_request{std::move(request)};
   /// ```
   ClientStream(ClientStream &&other) noexcept;
 
   /// Move an instance of this class. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <utility>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// sourcemeta::hydra::http::ClientStream new_request = std::move(request);
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream new_request =
+  /// std::move(request);
   /// ```
   auto operator=(ClientStream &&other) noexcept -> ClientStream &;
 
@@ -88,15 +92,16 @@ public:
   /// `GET`. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
   ///
   /// // Send a POST request
-  /// request.method(sourcemeta::hydra::http::Method::POST);
+  /// request.method(sourcemeta::jsonschema::http::Method::POST);
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -113,26 +118,28 @@ public:
   /// Retrieve the HTTP method that the request will be sent with. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   /// #include <cassert>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// request.method(sourcemeta::hydra::http::Method::HEAD);
-  /// assert(request.method() == sourcemeta::hydra::http::Method::HEAD);
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
+  /// request.method(sourcemeta::jsonschema::http::Method::HEAD);
+  /// assert(request.method() == sourcemeta::jsonschema::http::Method::HEAD);
   /// ```
   auto method() const noexcept -> Method;
 
   /// Set an HTTP request header. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// request.header("X-Send-With", "Hydra");
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"}; request.header("X-Send-With",
+  /// "jsonschema");
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -149,13 +156,14 @@ public:
   /// Set an HTTP request header whose value is an integer. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// request.header("X-Favourite-Number", 3);
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"}; request.header("X-Favourite-Number",
+  /// 3);
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -172,11 +180,11 @@ public:
   /// Retrieve the URL that the request will be sent to. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// std::cout << request.url() << "\n";
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"}; std::cout << request.url() << "\n";
   /// ```
   auto url() const -> std::string_view;
 
@@ -184,14 +192,15 @@ public:
   /// For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   /// #include <cassert>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
-  /// request.method(sourcemeta::hydra::http::Method::GET);
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
+  /// request.method(sourcemeta::jsonschema::http::Method::GET);
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -201,7 +210,7 @@ public:
   ///   }
   /// });
   ///
-  /// request.on_header([](const sourcemeta::hydra::http::Status status,
+  /// request.on_header([](const sourcemeta::jsonschema::http::Status status,
   ///                      std::string_view key,
   ///                      std::string_view value) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
@@ -210,9 +219,9 @@ public:
   ///   std::cout << key << " -> " << value << "\n";
   /// });
   ///
-  /// auto status{request.send().get()};
-  /// assert(status == sourcemeta::hydra::http::Status::OK);
-  auto send() -> std::future<Status>;
+  /// auto status{request.send()};
+  /// assert(status == sourcemeta::jsonschema::http::Status::OK);
+  auto send() -> Status;
 
   using DataCallback =
       std::function<void(const Status, std::span<const std::uint8_t>)>;
@@ -227,12 +236,13 @@ public:
   /// behavior. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
   ///
-  /// request.on_data([](const sourcemeta::hydra::http::Status status,
+  /// request.on_data([](const sourcemeta::jsonschema::http::Status status,
   ///                    std::span<const std::uint8_t> buffer) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
   ///
@@ -252,12 +262,13 @@ public:
   /// as it may result in undefined behavior. For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <iostream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
   ///
-  /// request.on_header([](const sourcemeta::hydra::http::Status status,
+  /// request.on_header([](const sourcemeta::jsonschema::http::Status status,
   ///                      std::string_view key,
   ///                      std::string_view value) noexcept {
   ///   std::cerr << "Code: " << status << "\n";
@@ -283,10 +294,11 @@ public:
   /// For example:
   ///
   /// ```cpp
-  /// #include <sourcemeta/hydra/http.h>
+  /// #include <sourcemeta/jsonschema/http.h>
   /// #include <sstream>
   ///
-  /// sourcemeta::hydra::http::ClientStream request{"https://www.example.com"};
+  /// sourcemeta::jsonschema::http::ClientStream
+  /// request{"https://www.example.com"};
   ///
   /// std::istringstream body{"foo bar baz"};
   /// request.on_body([&body](const std::size_t bytes) {
@@ -320,6 +332,6 @@ public:
 #endif
 };
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http
 
 #endif

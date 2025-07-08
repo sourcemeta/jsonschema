@@ -1,18 +1,17 @@
-#include <sourcemeta/hydra/http.h>
+#include <sourcemeta/jsonschema/http.h>
 
 #include <algorithm>        // std::copy
 #include <cstdint>          // std::uint8_t
-#include <future>           // std::future, std::promise
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::ostream_iterator
-#include <map>              // std::map
 #include <span>             // std::span
 #include <sstream>          // std::ostringstream
 #include <string>           // std::string
 #include <string_view>      // std::string_view
+#include <unordered_map>    // std::unordered_map
 #include <utility>          // std::move
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 ClientRequest::ClientRequest(std::string url) : stream{std::move(url)} {}
 
@@ -50,7 +49,7 @@ auto ClientRequest::url() const -> std::string_view {
   return this->stream.url();
 }
 
-auto ClientRequest::send(std::istream &body) -> std::future<ClientResponse> {
+auto ClientRequest::send(std::istream &body) -> ClientResponse {
   std::ostringstream output;
   this->stream.on_data(
       [&output](const Status, std::span<const std::uint8_t> buffer) noexcept {
@@ -58,7 +57,7 @@ auto ClientRequest::send(std::istream &body) -> std::future<ClientResponse> {
                   std::ostream_iterator<char>(output));
       });
 
-  std::map<std::string, std::string> headers;
+  std::unordered_map<std::string, std::string> headers;
   this->stream.on_header([&headers, this](const Status, std::string_view key,
                                           std::string_view value) noexcept {
     std::string header{key};
@@ -77,13 +76,10 @@ auto ClientRequest::send(std::istream &body) -> std::future<ClientResponse> {
     return result;
   });
 
-  std::promise<ClientResponse> response;
-  response.set_value(
-      {this->stream.send().get(), std::move(headers), std::move(output)});
-  return response.get_future();
+  return {this->stream.send(), std::move(headers), std::move(output)};
 }
 
-auto ClientRequest::send() -> std::future<ClientResponse> {
+auto ClientRequest::send() -> ClientResponse {
   std::ostringstream output;
   this->stream.on_data(
       [&output](const Status, std::span<const std::uint8_t> buffer) noexcept {
@@ -91,7 +87,7 @@ auto ClientRequest::send() -> std::future<ClientResponse> {
                   std::ostream_iterator<char>(output));
       });
 
-  std::map<std::string, std::string> headers;
+  std::unordered_map<std::string, std::string> headers;
   this->stream.on_header([&headers, this](const Status, std::string_view key,
                                           std::string_view value) noexcept {
     std::string header{key};
@@ -100,10 +96,7 @@ auto ClientRequest::send() -> std::future<ClientResponse> {
     }
   });
 
-  std::promise<ClientResponse> response;
-  response.set_value(
-      {this->stream.send().get(), std::move(headers), std::move(output)});
-  return response.get_future();
+  return {this->stream.send(), std::move(headers), std::move(output)};
 }
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http

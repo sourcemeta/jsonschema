@@ -75,7 +75,7 @@ auto uri_escape(const char character, std::ostream &output,
 
 auto uri_escape(std::istream &input, std::ostream &output,
                 const URIEscapeMode mode) -> void {
-  char character;
+  char character = 0;
   while (input.get(character)) {
     uri_escape(character, output, mode);
   }

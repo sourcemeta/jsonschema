@@ -25,14 +25,13 @@ auto standard(Evaluator &evaluator, const Template &schema,
       auto annotations{sourcemeta::core::JSON::make_array()};
       for (const auto &annotation : output.annotations()) {
         auto unit{sourcemeta::core::JSON::make_object()};
-        unit.assign(
-            "keywordLocation",
-            sourcemeta::core::to_json(annotation.first.evaluate_path).value());
+        unit.assign("keywordLocation",
+                    sourcemeta::core::to_json(annotation.first.evaluate_path));
         unit.assign("absoluteKeywordLocation",
                     sourcemeta::core::JSON{annotation.first.schema_location});
-        unit.assign("instanceLocation", sourcemeta::core::to_json(
-                                            annotation.first.instance_location)
-                                            .value());
+        unit.assign(
+            "instanceLocation",
+            sourcemeta::core::to_json(annotation.first.instance_location));
         unit.assign("annotation", sourcemeta::core::to_json(annotation.second));
         annotations.push_back(std::move(unit));
       }
@@ -49,11 +48,11 @@ auto standard(Evaluator &evaluator, const Template &schema,
       for (const auto &entry : output) {
         auto unit{sourcemeta::core::JSON::make_object()};
         unit.assign("keywordLocation",
-                    sourcemeta::core::to_json(entry.evaluate_path).value());
+                    sourcemeta::core::to_json(entry.evaluate_path));
         unit.assign("absoluteKeywordLocation",
                     sourcemeta::core::JSON{entry.schema_location});
         unit.assign("instanceLocation",
-                    sourcemeta::core::to_json(entry.instance_location).value());
+                    sourcemeta::core::to_json(entry.instance_location));
         unit.assign("error", sourcemeta::core::JSON{entry.message});
         errors.push_back(std::move(unit));
       }

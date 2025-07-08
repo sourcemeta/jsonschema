@@ -44,7 +44,7 @@ namespace sourcemeta::core {
 auto parse_pointer(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> Pointer {
   Pointer result;
-  JSON::Char character;
+  JSON::Char character = 0;
   std::basic_stringstream<JSON::Char> string;
   std::uint64_t column{0};
 

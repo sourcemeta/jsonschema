@@ -1,5 +1,0 @@
-if(NOT Hydra_FOUND)
-  set(HYDRA_INSTALL OFF CACHE BOOL "disable installation")
-  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/hydra")
-  set(Hydra_FOUND ON)
-endif()

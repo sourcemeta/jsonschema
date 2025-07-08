@@ -681,7 +681,7 @@ auto internal_parse_json(
   std::stack<std::reference_wrapper<Result>> frames;
   std::optional<Result> result;
   typename Result::String key{""};
-  typename JSON::Char character;
+  typename JSON::Char character = 0;
 
   /*
    * Parse any JSON document

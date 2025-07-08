@@ -107,7 +107,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
       }
 
       throw sourcemeta::core::SchemaResolutionError(
-          identifier, "Could not resolve the requested schema");
+          identifier, "Could not resolve the reference to an external schema");
     }
 
     // Otherwise, if the target schema does not declare an inline identifier,
