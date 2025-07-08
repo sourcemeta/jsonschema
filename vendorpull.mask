@@ -18,6 +18,8 @@ install
 Makefile
 npm-deploy.sh
 README.markdown
-cmake
+cmake/FindBlaze.cmake
+cmake/FindCore.cmake
+cmake/FindJSONBinPack.cmake
 .pre-commit-hooks.yaml
 snapcraft.yaml
