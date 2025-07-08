@@ -1,4 +1,7 @@
-#include <sourcemeta/hydra/http.h>
+#include <sourcemeta/jsonschema/http_error.h>
+#include <sourcemeta/jsonschema/http_method.h>
+#include <sourcemeta/jsonschema/http_status.h>
+#include <sourcemeta/jsonschema/http_stream.h>
 
 #include <curl/curl.h>
 
@@ -8,7 +11,6 @@
 #include <charconv>     // std::from_chars
 #include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint64_t
-#include <future>       // std::future
 #include <iterator>     // std::back_inserter
 #include <memory>       // std::make_unique
 #include <optional>     // std::optional
@@ -19,7 +21,7 @@
 #include <utility>      // std::move
 
 // The internal implementation of the cURL backend
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 struct ClientStream::Internal {
   CURL *handle{nullptr};
   struct curl_slist *headers{nullptr};
@@ -33,18 +35,18 @@ struct ClientStream::Internal {
 };
 
 std::uint64_t ClientStream::Internal::count = 0;
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http
 
 namespace {
 inline auto handle_curl(CURLcode code) -> void {
   if (code != CURLE_OK) {
-    throw sourcemeta::hydra::http::Error(curl_easy_strerror(code));
+    throw sourcemeta::jsonschema::http::Error(curl_easy_strerror(code));
   }
 }
 
 auto callback_on_response_body(
     const void *const data, const std::size_t size, const std::size_t count,
-    const sourcemeta::hydra::http::ClientStream *const request) noexcept
+    const sourcemeta::jsonschema::http::ClientStream *const request) noexcept
     -> std::size_t {
   const std::size_t total_size{size * count};
   if (request->internal->on_data) {
@@ -63,7 +65,7 @@ auto callback_on_response_body(
 
 auto callback_on_header(
     const void *const data, const std::size_t size, const std::size_t count,
-    sourcemeta::hydra::http::ClientStream *const request) noexcept
+    sourcemeta::jsonschema::http::ClientStream *const request) noexcept
     -> std::size_t {
   const std::size_t total_size{size * count};
   const std::string_view line{static_cast<const char *>(data), total_size};
@@ -75,7 +77,7 @@ auto callback_on_header(
       return total_size;
     }
 
-    std::underlying_type_t<sourcemeta::hydra::http::Status> code{0};
+    std::underlying_type_t<sourcemeta::jsonschema::http::Status> code{0};
     if (line.starts_with("HTTP/2 ")) {
       if (std::from_chars(line.data() + 7, line.data() + 10, code).ec !=
           std::errc()) {
@@ -92,7 +94,8 @@ auto callback_on_header(
 
     try {
       assert(code > 0);
-      request->internal->status.emplace(sourcemeta::hydra::http::Status{code});
+      request->internal->status.emplace(
+          sourcemeta::jsonschema::http::Status{code});
       return total_size;
     } catch (...) {
       return 0;
@@ -132,7 +135,7 @@ auto callback_on_header(
 
 auto callback_on_request_body(
     char *buffer, const std::size_t size, const std::size_t count,
-    sourcemeta::hydra::http::ClientStream *const request) noexcept
+    sourcemeta::jsonschema::http::ClientStream *const request) noexcept
     -> std::size_t {
   assert(buffer);
   assert(request->internal->on_body);
@@ -154,7 +157,7 @@ auto callback_on_request_body(
 
 } // namespace
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 ClientStream::ClientStream(std::string url)
     : internal{std::make_unique<ClientStream::Internal>()} {
@@ -259,7 +262,7 @@ auto ClientStream::url() const -> std::string_view {
   return this->internal->url;
 }
 
-auto ClientStream::send() -> std::future<Status> {
+auto ClientStream::send() -> Status {
   switch (this->internal->method) {
     case Method::GET:
       handle_curl(curl_easy_setopt(this->internal->handle,
@@ -359,7 +362,6 @@ auto ClientStream::send() -> std::future<Status> {
   handle_curl(curl_easy_perform(this->internal->handle));
 
   // Get status code
-  std::promise<Status> result;
   long code{0};
   handle_curl(
       curl_easy_getinfo(this->internal->handle, CURLINFO_RESPONSE_CODE, &code));
@@ -368,8 +370,7 @@ auto ClientStream::send() -> std::future<Status> {
   assert(code == static_cast<std::underlying_type_t<Status>>(
                      this->internal->status.value()) ||
          this->internal->status.value() == Status::MOVED_PERMANENTLY);
-  result.set_value(Status{static_cast<std::underlying_type_t<Status>>(code)});
-  return result.get_future();
+  return Status{static_cast<std::underlying_type_t<Status>>(code)};
 }
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http

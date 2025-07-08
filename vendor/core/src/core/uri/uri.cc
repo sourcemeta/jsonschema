@@ -23,7 +23,7 @@ auto uri_normalize(UriUriA *uri) -> void {
 }
 
 auto uri_to_string(const UriUriA *const uri) -> std::string {
-  int size;
+  int size = 0;
   if (uriToStringCharsRequiredA(uri, &size) != URI_SUCCESS) {
     throw sourcemeta::core::URIError{"Could not determine URI size"};
   }
@@ -51,7 +51,7 @@ auto uri_text_range(const UriTextRangeA *const range)
 }
 
 auto uri_parse(const std::string &data, UriUriA *uri) -> void {
-  const char *error_position;
+  const char *error_position = nullptr;
   switch (uriParseSingleUriA(uri, data.c_str(), &error_position)) {
     case URI_ERROR_SYNTAX:
       // TODO: Test the positions of this error

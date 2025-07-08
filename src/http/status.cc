@@ -1,10 +1,10 @@
-#include <sourcemeta/hydra/http_status.h>
+#include <sourcemeta/jsonschema/http_status.h>
 
 #include <cassert>     // assert
 #include <ostream>     // std::ostream
 #include <type_traits> // std::underlying_type_t
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 auto operator<<(std::ostream &stream, const Status value) -> std::ostream & {
   switch (value) {
@@ -141,4 +141,4 @@ auto operator<<(std::ostream &stream, const Status value) -> std::ostream & {
   }
 }
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http

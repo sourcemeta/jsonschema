@@ -26,7 +26,7 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: Could not resolve the requested schema
+error: Could not resolve the reference to an external schema
   https://example.com/nested
 
 This is likely because you forgot to import such schema using --resolve/-r

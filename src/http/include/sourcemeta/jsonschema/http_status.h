@@ -1,14 +1,14 @@
-#ifndef SOURCEMETA_HYDRA_HTTP_STATUS_H
-#define SOURCEMETA_HYDRA_HTTP_STATUS_H
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_STATUS_H
+#define SOURCEMETA_JSONSCHEMA_HTTP_STATUS_H
 
-#ifndef SOURCEMETA_HYDRA_HTTP_EXPORT
-#include <sourcemeta/hydra/http_export.h>
+#ifndef SOURCEMETA_JSONSCHEMA_HTTP_EXPORT
+#include <sourcemeta/jsonschema/http_export.h>
 #endif
 
 #include <cstdint> // std::uint16_t
 #include <ostream> // std::ostream
 
-namespace sourcemeta::hydra::http {
+namespace sourcemeta::jsonschema::http {
 
 /// @ingroup http
 /// The list of possible HTTP response statuses.
@@ -87,10 +87,10 @@ enum class Status : std::uint16_t {
 };
 
 /// @ingroup http
-auto SOURCEMETA_HYDRA_HTTP_EXPORT operator<<(std::ostream &stream,
-                                             const Status value)
+auto SOURCEMETA_JSONSCHEMA_HTTP_EXPORT operator<<(std::ostream &stream,
+                                                  const Status value)
     -> std::ostream &;
 
-} // namespace sourcemeta::hydra::http
+} // namespace sourcemeta::jsonschema::http
 
 #endif

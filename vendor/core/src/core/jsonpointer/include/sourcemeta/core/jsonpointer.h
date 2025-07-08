@@ -579,7 +579,7 @@ auto to_json(const T &value) -> JSON {
 /// Serialise a WeakPointer as JSON
 template <typename T>
   requires std::is_same_v<T, WeakPointer>
-auto to_json(const T &value) -> std::optional<JSON> {
+auto to_json(const T &value) -> JSON {
   return JSON{to_string(value)};
 }
 
