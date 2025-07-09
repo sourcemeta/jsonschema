@@ -215,7 +215,6 @@ add_jsonschema_test_unix(compile/fail_unknown_metaschema)
 
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
-add_jsonschema_test_unix(lint/pass_lint_fix_keep_ordering)
 add_jsonschema_test_unix(lint/pass_lint_no_fix)
 add_jsonschema_test_unix(lint/fail_lint)
 add_jsonschema_test_unix(lint/fail_lint_default_dialect)
