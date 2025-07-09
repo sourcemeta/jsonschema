@@ -146,7 +146,7 @@ For convenience, we also provide a POSIX shell script capable of installing the
 latest pre-built binaries, which you can run as follows:
 
 ```sh
-/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install -H "Cache-Control: no-cache, no-store, must-revalidate")"
+curl -fsSL https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install -H 'Cache-Control: no-cache, no-store, must-revalidate' | /bin/sh
 ```
 
 Keep in mind that it is hard to provide binaries that work across GNU/Linux
