@@ -13,6 +13,14 @@ auto sourcemeta::core::is_schema(const sourcemeta::core::JSON &schema) -> bool {
   return schema.is_object() || schema.is_boolean();
 }
 
+// TODO: Make this function detect schemas only using identifier/comment
+// keywords, etc
+auto sourcemeta::core::is_empty_schema(const sourcemeta::core::JSON &schema)
+    -> bool {
+  return (schema.is_boolean() && schema.to_boolean()) ||
+         (schema.is_object() && schema.empty());
+}
+
 namespace {
 
 auto id_keyword_guess(const sourcemeta::core::JSON &schema)

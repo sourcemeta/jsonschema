@@ -78,6 +78,39 @@ public:
     return key_hash;
   }
 
+  auto try_emplace_before(const key_type &key, const mapped_type &value,
+                          const key_type &suffix) -> hash_type {
+    const auto key_hash{this->hash(key)};
+    const auto suffix_hash{this->hash(suffix)};
+
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash) {
+          iterator->second = value;
+          return key_hash;
+        } else if (iterator->hash == suffix_hash && iterator->first == suffix) {
+          this->data.insert(iterator, {key, value, key_hash});
+          return key_hash;
+        }
+      }
+    } else {
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash && iterator->first == key) {
+          iterator->second = value;
+          return key_hash;
+        } else if (iterator->hash == suffix_hash && iterator->first == suffix) {
+          this->data.insert(iterator, {key, value, key_hash});
+          return key_hash;
+        }
+      }
+    }
+
+    this->data.push_back({key, value, key_hash});
+    return key_hash;
+  }
+
   auto emplace(const key_type &key, const mapped_type &value) -> hash_type {
     const auto key_hash{this->hash(key)};
 

@@ -1291,6 +1291,22 @@ public:
   /// ```
   auto assign(const String &key, JSON &&value) -> void;
 
+  /// This method sets or updates an object key. However, it will try to insert
+  /// the key _before_ the given one if possible.
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": true }");
+  /// const sourcemeta::core::JSON value{false};
+  /// document.try_assign_before("bar", value, "foo");
+  /// assert(document.as_object().cbegin()->first == "bar");
+  /// ```
+  auto try_assign_before(const String &key, const JSON &value,
+                         const String &other) -> void;
+
   /// This method sets an object key if it is not already defined. For example:
   ///
   /// ```cpp
@@ -1426,6 +1442,23 @@ public:
   /// ```
   auto erase(typename Array::const_iterator first,
              typename Array::const_iterator last) -> typename Array::iterator;
+
+  /// This method deletes a set of array elements given a predicate. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON array =
+  ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
+  /// array.erase_if(array,
+  ///   [](const auto &item) { return item.to_integer() % 2 == 0; });
+  /// assert(array.size(), 2);
+  /// assert(array.at(0), 1);
+  /// assert(array.at(1), 3);
+  /// ```
+  auto erase_if(const std::function<bool(const JSON &)> &predicate) -> void;
 
   /// This method deletes all members of an object or all elements of an array,
   /// leaving them empty. For example:
