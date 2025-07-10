@@ -11,21 +11,18 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
   "type": "string",
-  "enum": [ "foo" ]
+  "const": "foo",
+  "title": "I should not be moved up"
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --fix > "$TMP/result.txt" 2>&1
-
-cat << 'EOF' > "$TMP/output.txt"
-EOF
-
-diff "$TMP/result.txt" "$TMP/output.txt"
+"$1" lint "$TMP/schema.json" --fix
 
 cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
-  "const": "foo"
+  "const": "foo",
+  "title": "I should not be moved up"
 }
 EOF
 

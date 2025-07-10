@@ -1,7 +1,6 @@
 #ifndef SOURCEMETA_CORE_JSON_OBJECT_H_
 #define SOURCEMETA_CORE_JSON_OBJECT_H_
 
-#include <algorithm>        // std::swap
 #include <cassert>          // assert
 #include <cstddef>          // std::size_t
 #include <initializer_list> // std::initializer_list
@@ -294,18 +293,18 @@ public:
     const auto current_size{this->size()};
 
     if (this->hasher.is_perfect(key_hash)) {
-      for (auto &entry : this->data) {
-        if (entry.hash == key_hash) {
-          std::swap(entry, this->data.back());
-          this->data.pop_back();
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash) {
+          this->data.erase(iterator);
           return current_size - 1;
         }
       }
     } else {
-      for (auto &entry : this->data) {
-        if (entry.hash == key_hash && entry.first == key) {
-          std::swap(entry, this->data.back());
-          this->data.pop_back();
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash && iterator->first == key) {
+          this->data.erase(iterator);
           return current_size - 1;
         }
       }

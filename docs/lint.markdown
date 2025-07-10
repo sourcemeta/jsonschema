@@ -5,8 +5,7 @@ Linting
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--json/-j] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--exclude/-x <rule-name>] [--keep-ordering/-k] [--list/-l]
-  [--default-dialect/-d <uri>]
+  [--exclude/-x <rule-name>] [--list/-l] [--default-dialect/-d <uri>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional

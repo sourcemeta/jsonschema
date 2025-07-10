@@ -87,8 +87,8 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(
-      arguments, {"f", "fix", "json", "j", "k", "keep-ordering", "l", "list"})};
+  const auto options{
+      parse_options(arguments, {"f", "fix", "json", "j", "l", "list"})};
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -165,12 +165,7 @@ auto sourcemeta::jsonschema::cli::lint(
       }
 
       std::ofstream output{entry.first};
-      if (options.contains("k") || options.contains("keep-ordering")) {
-        sourcemeta::core::prettify(copy, output);
-      } else {
-        sourcemeta::core::prettify(copy, output,
-                                   sourcemeta::core::schema_format_compare);
-      }
+      sourcemeta::core::prettify(copy, output);
       output << "\n";
     }
   } else {
