@@ -29,11 +29,18 @@ public:
   }
 
   auto transform(JSON &schema) const -> void override {
-    auto collection = schema.at("enum");
-    std::sort(collection.as_array().begin(), collection.as_array().end());
-    auto last =
-        std::unique(collection.as_array().begin(), collection.as_array().end());
-    collection.erase(last, collection.as_array().end());
-    schema.at("enum").into(std::move(collection));
+    // We want to be super careful to maintain the current ordering
+    // as we delete the duplicates
+    auto &enumeration{schema.at("enum")};
+    std::unordered_set<JSON, HashJSON<JSON>> cache;
+    for (auto iterator = enumeration.as_array().cbegin();
+         iterator != enumeration.as_array().cend();) {
+      if (cache.contains(*iterator)) {
+        iterator = enumeration.erase(iterator);
+      } else {
+        cache.emplace(*iterator);
+        iterator++;
+      }
+    }
   }
 };
