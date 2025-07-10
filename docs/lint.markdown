@@ -5,7 +5,7 @@ Linting
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--json/-j] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--exclude/-x <rule-name>] [--keep-ordering/-k]
+  [--exclude/-x <rule-name>] [--keep-ordering/-k] [--list/-l]
   [--default-dialect/-d <uri>]
 ```
 
@@ -37,6 +37,9 @@ automatically fix many of them.
 > external references, you will have to import them using the `--resolve`/`-r`
 > options as you would normally do when making use of other commands like
 > `validate` and `test`.
+
+Use `--list/-l` to print all the available rules and brief descriptions about
+them.
 
 Examples
 --------
@@ -119,4 +122,10 @@ jsonschema lint path/to/my/schema.json --fix
 
 ```sh
 jsonschema lint path/to/my/schema.json --fix --keep-ordering
+```
+
+### Print a summary of all enabled rules
+
+```sh
+jsonschema lint --list
 ```
