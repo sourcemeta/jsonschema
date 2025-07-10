@@ -242,6 +242,9 @@ public:
              const std::optional<JSON::String> &default_id = std::nullopt) const
       -> bool;
 
+  auto begin() const -> auto { return this->rules.cbegin(); }
+  auto end() const -> auto { return this->rules.cend(); }
+
 private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
