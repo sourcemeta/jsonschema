@@ -74,11 +74,12 @@ Commands:
 
    lint [schemas-or-directories...] [--fix/-f] [--json/-j]
         [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-        [--exclude/-x <rule-name>] [--keep-ordering/-k]
+        [--exclude/-x <rule-name>] [--keep-ordering/-k] [--list/-l]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
        Use --json/-j to output lint errors in JSON.
+       Use --list/-l to print a summary of all enabled rules.
        The --keep-ordering/-k option is only used when --fix/-f is
        also present.
 

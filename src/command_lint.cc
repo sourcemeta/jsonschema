@@ -88,7 +88,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 auto sourcemeta::jsonschema::cli::lint(
     const std::span<const std::string> &arguments) -> int {
   const auto options{parse_options(
-      arguments, {"f", "fix", "json", "j", "k", "keep-ordering"})};
+      arguments, {"f", "fix", "json", "j", "k", "keep-ordering", "l", "list"})};
   const bool output_json = options.contains("json") || options.contains("j");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -107,6 +107,32 @@ auto sourcemeta::jsonschema::cli::lint(
   if (options.contains("x")) {
     disable_lint_rules(bundle, options, options.at("x").cbegin(),
                        options.at("x").cend());
+  }
+
+  if (options.contains("list") || options.contains("l")) {
+    std::vector<std::pair<std::reference_wrapper<const std::string>,
+                          std::reference_wrapper<const std::string>>>
+        rules;
+    for (const auto &entry : bundle) {
+      rules.emplace_back(entry.first, entry.second->message());
+    }
+
+    std::sort(rules.begin(), rules.end(),
+              [](const auto &left, const auto &right) {
+                return left.first.get() < right.first.get() ||
+                       (left.first.get() == right.first.get() &&
+                        left.second.get() < right.second.get());
+              });
+
+    std::size_t count{0};
+    for (const auto &entry : rules) {
+      std::cout << entry.first.get() << "\n";
+      std::cout << "  " << entry.second.get() << "\n\n";
+      count += 1;
+    }
+
+    std::cout << "Number of rules: " << count << "\n";
+    return EXIT_SUCCESS;
   }
 
   bool result{true};
