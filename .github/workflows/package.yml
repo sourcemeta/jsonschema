@@ -188,6 +188,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - run: sudo snap install snapcraft --classic
       - name: Publish to Snap (Stable)
         run: |
           snapcraft whoami
