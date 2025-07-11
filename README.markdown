@@ -7,6 +7,8 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/sourcemeta/jsonschema.svg)](https://github.com/sourcemeta/jsonschema/graphs/contributors/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/sourcemeta/jsonschema/blob/main/.pre-commit-hooks.yaml)
 
+[![Get it from the Snap Store](https://snapcraft.io/en/light/install.svg)](https://snapcraft.io/jsonschema)
+
 The command-line tool for working with [JSON Schema](https://json-schema.org),
 the world most popular schema language. It is a comprehensive solution for
 maintaining **repositories of schemas** and ensuring their quality, both during
@@ -183,15 +185,15 @@ Replace `vX.Y.Z` with your desired version. You can mount any directory as `/wor
 
 ### From Snap
 
-Starting from v9.4.0, we publish Ubuntu Snaps to [GitHub
-Releases](https://github.com/sourcemeta/jsonschema/releases/tag/v9.4.0)
-(`amd64` and `arm64`) which you can manually install as follows:
+Starting from v10.0.0, we publish to the Snap store:
 
 ```sh
-sudo snap install --dangerous --classic jsonschema_<version>_<arch>.snap
+sudo snap install jsonschema
 ```
 
-We are currently exploring publishing these Snaps to the Snap store.
+Keep in mind that due to [Snap
+confinement](https://snapcraft.io/docs/snap-confinement) requirements, the Snap
+is only able to access files under your `$HOME` directory.
 
 ### Building from source
 
