@@ -188,21 +188,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: sudo snap install snapcraft --classic
-      - name: Publish to Snap (Stable)
+      - name: Publish to Snap
         run: |
+          sudo snap install snapcraft --classic
           snapcraft whoami
           snapcraft upload build/out/jsonschema_*_amd64.snap --release stable
           snapcraft upload build/out/jsonschema_*_arm64.snap --release stable
         if: github.ref_type == 'tag'
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-      - name: Publish to Snap (Continuous)
-        run: |
-          snapcraft whoami
-          snapcraft upload build/out/jsonschema_*_amd64.snap --release continuous
-          snapcraft upload build/out/jsonschema_*_arm64.snap --release continuous
-        if: github.ref_type == 'branch'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
 
