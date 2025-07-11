@@ -123,5 +123,6 @@ jobs:
         id: snapcraft
       - run: sudo snap install --dangerous --classic ${{ steps.snapcraft.outputs.snap }}
       - run: jsonschema version
-      - run: ./test/bundle/pass_resolve_single.sh jsonschema
-      - run: ./test/ci/pass_validate_http_verbose.sh jsonschema
+      - run: mkdir "$PWD/build"
+      - run: TMPDIR="$PWD/build" ./test/bundle/pass_resolve_single.sh jsonschema
+      - run: TMPDIR="$PWD/build" ./test/ci/pass_validate_http_verbose.sh jsonschema
