@@ -188,6 +188,23 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Publish to Snap (Stable)
+        run: |
+          snapcraft whoami
+          snapcraft upload build/out/jsonschema_*_amd64.snap --release stable
+          snapcraft upload build/out/jsonschema_*_arm64.snap --release stable
+        if: github.ref_type == 'tag'
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+      - name: Publish to Snap (Continuous)
+        run: |
+          snapcraft whoami
+          snapcraft upload build/out/jsonschema_*_amd64.snap --release continuous
+          snapcraft upload build/out/jsonschema_*_arm64.snap --release continuous
+        if: github.ref_type == 'branch'
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+
       - uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         if: github.ref_type == 'tag'
         with:
@@ -211,20 +228,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta-cli.outputs.tags }}
           labels: ${{ steps.meta-cli.outputs.labels }}
-
-      - name: Publish to Snap (Stable)
-        run: |
-          snapcraft whoami
-          snapcraft upload build/out/jsonschema_*_amd64.snap --release stable
-          snapcraft upload build/out/jsonschema_*_arm64.snap --release stable
-        if: github.ref_type == 'tag'
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-      - name: Publish to Snap (Continuous)
-        run: |
-          snapcraft whoami
-          snapcraft upload build/out/jsonschema_*_amd64.snap --release continuous
-          snapcraft upload build/out/jsonschema_*_arm64.snap --release continuous
-        if: github.ref_type == 'branch'
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
