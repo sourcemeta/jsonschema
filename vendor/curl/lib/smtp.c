@@ -68,7 +68,6 @@
 #include "mime.h"
 #include "socks.h"
 #include "smtp.h"
-#include "strcase.h"
 #include "vtls/vtls.h"
 #include "cfilters.h"
 #include "connect.h"
@@ -483,7 +482,7 @@ static CURLcode smtp_perform_upgrade_tls(struct Curl_easy *data,
            result, ssldone));
   if(!result && ssldone) {
     smtpc->ssldone = ssldone;
-    /* perform EHLO now, changes smpt->state out of SMTP_UPGRADETLS */
+    /* perform EHLO now, changes smtp->state out of SMTP_UPGRADETLS */
     result = smtp_perform_ehlo(data, smtpc);
   }
 out:
@@ -601,7 +600,7 @@ static CURLcode smtp_perform_authentication(struct Curl_easy *data,
  *
  * smtp_perform_command()
  *
- * Sends a SMTP based command.
+ * Sends an SMTP based command.
  */
 static CURLcode smtp_perform_command(struct Curl_easy *data,
                                      struct smtp_conn *smtpc,
@@ -1036,7 +1035,7 @@ static CURLcode smtp_state_ehlo_resp(struct Curl_easy *data,
 
     if(smtpcode != 1) {
       if(data->set.use_ssl && !Curl_conn_is_ssl(data->conn, FIRSTSOCKET)) {
-        /* We do not have a SSL/TLS connection yet, but SSL is requested */
+        /* We do not have an SSL/TLS connection yet, but SSL is requested */
         if(smtpc->tls_supported)
           /* Switch to TLS connection now */
           result = smtp_perform_starttls(data, smtpc);
@@ -1625,13 +1624,12 @@ static CURLcode smtp_disconnect(struct Curl_easy *data,
      bad in any way, sending quit and waiting around here will make the
      disconnect wait in vain and cause more problems than we need to. */
 
-  if(!dead_connection && conn->bits.protoconnstart) {
+  if(!dead_connection && conn->bits.protoconnstart &&
+     !Curl_pp_needs_flush(data, &smtpc->pp)) {
     if(!smtp_perform_quit(data, smtpc))
       (void)smtp_block_statemach(data, smtpc, TRUE); /* ignore on QUIT */
   }
 
-  /* Cleanup the SASL module */
-  Curl_sasl_cleanup(conn, smtpc->sasl.authused);
   CURL_TRC_SMTP(data, "smtp_disconnect(), finished");
   return CURLE_OK;
 }
@@ -1776,7 +1774,7 @@ static CURLcode smtp_parse_url_options(struct connectdata *conn,
     while(*ptr && *ptr != ';')
       ptr++;
 
-    if(strncasecompare(key, "AUTH=", 5))
+    if(curl_strnequal(key, "AUTH=", 5))
       result = Curl_sasl_parse_url_auth_option(&smtpc->sasl,
                                                value, ptr - value);
     else
@@ -2007,7 +2005,7 @@ static CURLcode cr_eob_read(struct Curl_easy *data,
           eob = &SMTP_EOB[2];
           break;
         case 3:
-          /* ended with '\r\n.', we should escpe the last '.' */
+          /* ended with '\r\n.', we should escape the last '.' */
           eob = "." SMTP_EOB;
           break;
         default:

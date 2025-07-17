@@ -26,8 +26,8 @@
 
 #ifndef CURL_DISABLE_PROXY
 
+#include <curl/curl.h>  /* for curl_strnequal() */
 #include "curlx/inet_pton.h"
-#include "strcase.h"
 #include "noproxy.h"
 #include "curlx/strparse.h"
 
@@ -205,12 +205,12 @@ bool Curl_check_noproxy(const char *name, const char *no_proxy)
           */
           if(tokenlen == namelen)
             /* case A, exact match */
-            match = strncasecompare(token, name, namelen);
+            match = curl_strnequal(token, name, namelen);
           else if(tokenlen < namelen) {
             /* case B, tailmatch domain */
             match = (name[namelen - tokenlen - 1] == '.') &&
-              strncasecompare(token, name + (namelen - tokenlen),
-                              tokenlen);
+              curl_strnequal(token, name + (namelen - tokenlen),
+                             tokenlen);
           }
           /* case C passes through, not a match */
           break;
@@ -234,7 +234,7 @@ bool Curl_check_noproxy(const char *name, const char *no_proxy)
             /* if the bits variable gets a crazy value here, that is fine as
                the value will then be rejected in the cidr function */
             bits = (unsigned int)atoi(slash + 1);
-            *slash = 0; /* null terminate there */
+            *slash = 0; /* null-terminate there */
           }
           if(type == TYPE_IPV6)
             match = Curl_cidr6_match(name, check, bits);

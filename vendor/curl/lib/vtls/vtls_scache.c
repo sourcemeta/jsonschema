@@ -29,9 +29,6 @@
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_STAT_H
-#include <sys/stat.h>
-#endif
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -108,7 +105,7 @@ static struct Curl_ssl_scache *cf_ssl_scache_get(struct Curl_easy *data)
   return scache;
 }
 
-static void cf_ssl_scache_sesssion_ldestroy(void *udata, void *obj)
+static void cf_ssl_scache_session_ldestroy(void *udata, void *obj)
 {
   struct Curl_ssl_session *s = obj;
   (void)udata;
@@ -161,7 +158,7 @@ Curl_ssl_session_create2(void *sdata, size_t sdata_len,
   if(alpn) {
     s->alpn = strdup(alpn);
     if(!s->alpn) {
-      cf_ssl_scache_sesssion_ldestroy(NULL, s);
+      cf_ssl_scache_session_ldestroy(NULL, s);
       return CURLE_OUT_OF_MEMORY;
     }
   }
@@ -176,7 +173,7 @@ void Curl_ssl_session_destroy(struct Curl_ssl_session *s)
     if(Curl_node_llist(&s->list))
       Curl_node_remove(&s->list);
     else {
-      cf_ssl_scache_sesssion_ldestroy(NULL, s);
+      cf_ssl_scache_session_ldestroy(NULL, s);
     }
   }
 }
@@ -341,7 +338,7 @@ CURLcode Curl_ssl_scache_create(size_t max_peers,
   for(i = 0; i < scache->peer_count; ++i) {
     scache->peers[i].max_sessions = max_sessions_per_peer;
     Curl_llist_init(&scache->peers[i].sessions,
-                    cf_ssl_scache_sesssion_ldestroy);
+                    cf_ssl_scache_session_ldestroy);
   }
 
   *pscache = scache;
@@ -376,9 +373,9 @@ void Curl_ssl_scache_unlock(struct Curl_easy *data)
 }
 
 static CURLcode cf_ssl_peer_key_add_path(struct dynbuf *buf,
-                                          const char *name,
-                                          char *path,
-                                          bool *is_local)
+                                         const char *name,
+                                         char *path,
+                                         bool *is_local)
 {
   if(path && path[0]) {
     /* We try to add absolute paths, so that the session key can stay
@@ -410,8 +407,8 @@ static CURLcode cf_ssl_peer_key_add_path(struct dynbuf *buf,
 }
 
 static CURLcode cf_ssl_peer_key_add_hash(struct dynbuf *buf,
-                                          const char *name,
-                                          struct curl_blob *blob)
+                                         const char *name,
+                                         struct curl_blob *blob)
 {
   CURLcode r = CURLE_OK;
   if(blob && blob->len) {
@@ -598,9 +595,8 @@ CURLcode Curl_ssl_peer_key_make(struct Curl_cfilter *cf,
     goto out;
 
   *ppeer_key = curlx_dyn_take(&buf, &key_len);
-  /* we just added printable char, and dynbuf always 0 terminates,
-   * no need to track length */
-
+  /* we just added printable char, and dynbuf always null-terminates, no need
+   * to track length */
 
 out:
   curlx_dyn_free(&buf);
@@ -650,7 +646,7 @@ cf_ssl_find_peer_by_key(struct Curl_easy *data,
   /* check for entries with known peer_key */
   for(i = 0; scache && i < scache->peer_count; i++) {
     if(scache->peers[i].ssl_peer_key &&
-       strcasecompare(ssl_peer_key, scache->peers[i].ssl_peer_key) &&
+       curl_strequal(ssl_peer_key, scache->peers[i].ssl_peer_key) &&
        cf_ssl_scache_match_auth(&scache->peers[i], conn_config)) {
       /* yes, we have a cached session for this! */
       *ppeer = &scache->peers[i];
@@ -869,9 +865,9 @@ CURLcode Curl_ssl_scache_put(struct Curl_cfilter *cf,
 }
 
 void Curl_ssl_scache_return(struct Curl_cfilter *cf,
-                           struct Curl_easy *data,
-                           const char *ssl_peer_key,
-                           struct Curl_ssl_session *s)
+                            struct Curl_easy *data,
+                            const char *ssl_peer_key,
+                            struct Curl_ssl_session *s)
 {
   /* See RFC 8446 C.4:
    * "Clients SHOULD NOT reuse a ticket for multiple connections." */

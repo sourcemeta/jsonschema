@@ -9,7 +9,7 @@
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
- * are also available at https://curl.haxx.se/docs/copyright.html.
+ * are also available at https://curl.se/docs/copyright.html.
  *
  * You may opt to use, copy, modify, merge, publish, distribute and/or sell
  * copies of the Software, and permit persons to whom the Software is
@@ -133,7 +133,7 @@ static void trim_headers(struct curl_slist *head)
       else
         *store++ = *value++;
     }
-    *store = 0; /* null terminate */
+    *store = 0; /* null-terminate */
   }
 }
 
@@ -537,8 +537,8 @@ static int compare_func(const void *a, const void *b)
 }
 
 UNITTEST CURLcode canon_path(const char *q, size_t len,
-                              struct dynbuf *new_path,
-                              bool do_uri_encode)
+                             struct dynbuf *new_path,
+                             bool do_uri_encode)
 {
   CURLcode result = CURLE_OK;
 

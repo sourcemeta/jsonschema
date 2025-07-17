@@ -257,7 +257,7 @@ static void doh_probe_done(struct Curl_easy *data,
 
     if(!dohp->pending) {
       /* DoH completed, run the transfer picking up the results */
-      Curl_expire(data, 0, EXPIRE_RUN_NOW);
+      Curl_multi_mark_dirty(data);
     }
   }
 }
@@ -377,8 +377,6 @@ static CURLcode doh_probe_run(struct Curl_easy *data,
      options should be added to check doh proxy insecure separately,
      CURLOPT_DOH_PROXY_SSL_VERIFYHOST and CURLOPT_DOH_PROXY_SSL_VERIFYPEER.
      */
-  if(data->set.ssl.falsestart)
-    ERROR_CHECK_SETOPT(CURLOPT_SSL_FALSESTART, 1L);
   if(data->set.str[STRING_SSL_CAFILE]) {
     ERROR_CHECK_SETOPT(CURLOPT_CAINFO,
                        data->set.str[STRING_SSL_CAFILE]);
@@ -590,7 +588,7 @@ static void doh_store_a(const unsigned char *doh, int index,
 }
 
 static void doh_store_aaaa(const unsigned char *doh, int index,
-                              struct dohentry *d)
+                           struct dohentry *d)
 {
   /* silently ignore addresses over the limit */
   if(d->numaddr < DOH_MAX_ADDR) {
@@ -921,7 +919,7 @@ static void doh_show(struct Curl_easy *data,
  * This function returns a pointer to the first element of a newly allocated
  * Curl_addrinfo struct linked list filled with the data from a set of DoH
  * lookups. Curl_addrinfo is meant to work like the addrinfo struct does for
- * a IPv6 stack, but usable also for IPv4, all hosts and environments.
+ * an IPv6 stack, but usable also for IPv4, all hosts and environments.
  *
  * The memory allocated by this function *MUST* be free'd later on calling
  * Curl_freeaddrinfo(). For each successful call to this function there
