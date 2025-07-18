@@ -178,6 +178,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: python -m pip install --upgrade pip setuptools twine
+      - name: Publish to PyPI
+        run: ./pip-deploy.sh ${{ github.ref_name }}
+        if: github.ref_type == 'tag'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'

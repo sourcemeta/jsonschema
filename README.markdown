@@ -3,6 +3,7 @@
 [![GitHub Release](https://img.shields.io/github/v/release/sourcemeta/jsonschema)](https://github.com/sourcemeta/jsonschema/releases)
 [![NPM Version](https://img.shields.io/npm/v/@sourcemeta/jsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
 [![NPM Downloads](https://img.shields.io/npm/dm/%40sourcemeta%2Fjsonschema)](https://www.npmjs.com/package/@sourcemeta/jsonschema)
+[![PyPI Version](https://img.shields.io/pypi/v/sourcemeta-jsonschema.svg)](https://pypi.org/project/sourcemeta-jsonschema)
 [![GitHub Actions](https://github.com/sourcemeta/jsonschema/actions/workflows/test.yml/badge.svg)](https://github.com/sourcemeta/jsonschema/actions)
 [![GitHub contributors](https://img.shields.io/github/contributors/sourcemeta/jsonschema.svg)](https://github.com/sourcemeta/jsonschema/graphs/contributors/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/sourcemeta/jsonschema/blob/main/.pre-commit-hooks.yaml)
@@ -135,6 +136,12 @@ Where `X.Y.Z` is replaced with the desired version. For example:
 
 ```sh
 npm install --global @sourcemeta/jsonschema
+```
+
+### From PyPI
+
+```sh
+pip install sourcemeta-jsonschema
 ```
 
 ### From GitHub Releases
