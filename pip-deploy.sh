@@ -33,17 +33,16 @@ unzip -o "$OUTPUT/pypi/artifacts/linux-arm64.zip" -d "$OUTPUT/pypi/artifacts"
 unzip -o "$OUTPUT/pypi/artifacts/windows-x86_64.zip" -d "$OUTPUT/pypi/artifacts"
 ls -l "$OUTPUT/pypi/artifacts"
 
-
 # (2) Stage package contents
 PKG="sourcemeta_jsonschema"
 STAGE="$OUTPUT/pypi/staging/$PKG"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/$PKG"
 
-install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-darwin-arm64/bin/jsonschema"     "$STAGE/$PKG/jsonschema-darwin-arm64"
-install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-darwin-x86_64/bin/jsonschema"   "$STAGE/$PKG/jsonschema-darwin-x86_64"
-install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-linux-x86_64/bin/jsonschema"    "$STAGE/$PKG/jsonschema-linux-x86_64"
-install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-linux-arm64/bin/jsonschema"      "$STAGE/$PKG/jsonschema-linux-arm64"
+install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-darwin-arm64/bin/jsonschema" "$STAGE/$PKG/jsonschema-darwin-arm64"
+install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-darwin-x86_64/bin/jsonschema" "$STAGE/$PKG/jsonschema-darwin-x86_64"
+install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-linux-x86_64/bin/jsonschema" "$STAGE/$PKG/jsonschema-linux-x86_64"
+install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-linux-arm64/bin/jsonschema" "$STAGE/$PKG/jsonschema-linux-arm64"
 install -m 0755 "$OUTPUT/pypi/artifacts/jsonschema-$VERSION-windows-x86_64/bin/jsonschema.exe" "$STAGE/$PKG/jsonschema-windows-x86_64.exe"
 
 cat > "$STAGE/$PKG/__main__.py" << 'EOF'
@@ -64,6 +63,7 @@ if __name__=="__main__":
     main()
 EOF
 
+# (3) Build the package
 cp README.markdown "$STAGE/README.md"
 touch "$STAGE/$PKG/__init__.py"
 cat > "$STAGE/MANIFEST.in" << EOF
@@ -71,7 +71,6 @@ include README.md
 recursive-include $PKG *.exe
 recursive-include $PKG jsonschema-*
 EOF
-
 cat > "$STAGE/setup.py" << EOF
 from setuptools import setup, find_packages
 
@@ -96,13 +95,11 @@ setup(
     }
 )
 EOF
-
-# 4) build dist
 cd "$STAGE"
 python3 setup.py sdist bdist_wheel
 cd -
 
-# Try the wheel before publishing it
+# (4) Try the wheel before publishing it
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
@@ -113,5 +110,5 @@ pip install "$STAGE/dist/$PKG-$VERSION-py3-none-any.whl"
 "$TMP/bin/jsonschema" version
 "$TMP/bin/jsonschema" help
 
-# Publish
+# (5) Publish the package
 twine upload "$STAGE/dist/*"
