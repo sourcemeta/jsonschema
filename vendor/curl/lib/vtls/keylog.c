@@ -94,7 +94,7 @@ Curl_tls_keylog_write_line(const char *line)
 
   linelen = strlen(line);
   if(linelen == 0 || linelen > sizeof(buf) - 2) {
-    /* Empty line or too big to fit in a LF and NUL. */
+    /* Empty line or too big to fit in an LF and NUL. */
     return FALSE;
   }
 
@@ -134,14 +134,14 @@ Curl_tls_keylog_write(const char *label,
 
   /* Client Random */
   for(i = 0; i < CLIENT_RANDOM_SIZE; i++) {
-    Curl_hexbyte(&line[pos], client_random[i], FALSE);
+    Curl_hexbyte(&line[pos], client_random[i]);
     pos += 2;
   }
   line[pos++] = ' ';
 
   /* Secret */
   for(i = 0; i < secretlen; i++) {
-    Curl_hexbyte(&line[pos], secret[i], FALSE);
+    Curl_hexbyte(&line[pos], secret[i]);
     pos += 2;
   }
   line[pos++] = '\n';

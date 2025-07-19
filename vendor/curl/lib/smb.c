@@ -543,7 +543,7 @@ static CURLcode smb_recv_message(struct Curl_easy *data,
                                  void **msg)
 {
   char *buf = smbc->recv_buf;
-  ssize_t bytes_read;
+  size_t bytes_read;
   size_t nbt_size;
   size_t msg_size;
   size_t len = MAX_MESSAGE_SIZE - smbc->got;
@@ -723,7 +723,7 @@ static CURLcode smb_send_setup(struct Curl_easy *data)
                  "%s%c"  /* OS */
                  "%s", /* client name */
                  smbc->user, 0, smbc->domain, 0, CURL_OS, 0, CLIENTNAME);
-  p++; /* count the final null termination */
+  p++; /* count the final null-termination */
   DEBUGASSERT(byte_count == (size_t)(p - msg.bytes));
   msg.byte_count = smb_swap16((unsigned short)byte_count);
 
@@ -754,7 +754,7 @@ static CURLcode smb_send_tree_connect(struct Curl_easy *data,
                  "%s%c"      /* share */
                  "%s",       /* service */
                  conn->host.name, smbc->share, 0, SERVICENAME);
-  p++; /* count the final null termination */
+  p++; /* count the final null-termination */
   DEBUGASSERT(byte_count == (size_t)(p - msg.bytes));
   msg.byte_count = smb_swap16((unsigned short)byte_count);
 
@@ -999,8 +999,8 @@ static CURLcode smb_connection_state(struct Curl_easy *data, bool *done)
  */
 static void get_posix_time(time_t *out, curl_off_t timestamp)
 {
-  if(timestamp >= CURL_OFF_T_C(116444736000000000)) {
-    timestamp -= CURL_OFF_T_C(116444736000000000);
+  if(timestamp >= (curl_off_t)116444736000000000) {
+    timestamp -= (curl_off_t)116444736000000000;
     timestamp /= 10000000;
 #if SIZEOF_TIME_T < SIZEOF_CURL_OFF_T
     if(timestamp > TIME_T_MAX)

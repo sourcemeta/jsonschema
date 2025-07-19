@@ -26,7 +26,6 @@
 
 #include "urldata.h"
 #include "strdup.h"
-#include "strcase.h"
 #include "sendf.h"
 #include "headers.h"
 #include "curlx/strparse.h"
@@ -88,7 +87,7 @@ CURLHcode curl_easy_header(CURL *easy,
   /* we need a first round to count amount of this header */
   for(e = Curl_llist_head(&data->state.httphdrs); e; e = Curl_node_next(e)) {
     hs = Curl_node_elem(e);
-    if(strcasecompare(hs->name, name) &&
+    if(curl_strequal(hs->name, name) &&
        (hs->type & type) &&
        (hs->request == request)) {
       amount++;
@@ -107,7 +106,7 @@ CURLHcode curl_easy_header(CURL *easy,
   else {
     for(e = Curl_llist_head(&data->state.httphdrs); e; e = Curl_node_next(e)) {
       hs = Curl_node_elem(e);
-      if(strcasecompare(hs->name, name) &&
+      if(curl_strequal(hs->name, name) &&
          (hs->type & type) &&
          (hs->request == request) &&
          (match++ == nameindex)) {
@@ -173,7 +172,7 @@ struct curl_header *curl_easy_nextheader(CURL *easy,
      the index for the currently selected entry */
   for(e = Curl_llist_head(&data->state.httphdrs); e; e = Curl_node_next(e)) {
     struct Curl_header_store *check = Curl_node_elem(e);
-    if(strcasecompare(hs->name, check->name) &&
+    if(curl_strequal(hs->name, check->name) &&
        (check->request == request) &&
        (check->type & type))
       amount++;
@@ -217,7 +216,7 @@ static CURLcode namevalue(char *header, size_t hlen, unsigned int type,
 
   /* skip all trailing space letters */
   while((end > header) && ISBLANK(*end))
-    *end-- = 0; /* nul terminate */
+    *end-- = 0; /* null-terminate */
   return CURLE_OK;
 }
 
@@ -323,7 +322,7 @@ CURLcode Curl_headers_push(struct Curl_easy *data, const char *header,
   if(!hs)
     return CURLE_OUT_OF_MEMORY;
   memcpy(hs->buffer, header, hlen);
-  hs->buffer[hlen] = 0; /* nul terminate */
+  hs->buffer[hlen] = 0; /* null-terminate */
 
   result = namevalue(hs->buffer, hlen, type, &name, &value);
   if(!result) {
