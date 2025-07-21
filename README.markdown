@@ -132,7 +132,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
 - run: jsonschema fmt path/to/schemas --check
 ```
 
-### From NPM
+### From npm
 
 ```sh
 npm install --global @sourcemeta/jsonschema
@@ -142,6 +142,12 @@ npm install --global @sourcemeta/jsonschema
 
 ```sh
 pip install sourcemeta-jsonschema
+```
+
+### From mise
+
+```sh
+mise use jsonschema
 ```
 
 ### From GitHub Releases
