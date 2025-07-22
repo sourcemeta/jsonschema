@@ -10,6 +10,9 @@ trap clean EXIT
 "$1" lint --list --exclude blaze/valid_default --exclude blaze/valid_examples > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
+additional_items_with_schema_items
+  The `additionalItems` keyword is ignored when the `items` keyword is set to a schema
+
 additional_properties_default
   Setting the `additionalProperties` keyword to the true schema does not add any further constraint
 
@@ -37,6 +40,9 @@ dependent_required_default
 dependent_required_tautology
   Defining requirements for a property using `dependentRequired` that is already marked as required is an unnecessarily complex use of `dependentRequired`
 
+draft_official_dialect_without_empty_fragment
+  The official dialect URI of Draft 7 and older versions must contain the empty fragment
+
 duplicate_allof_branches
   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
 
@@ -48,6 +54,9 @@ duplicate_enum_values
 
 duplicate_required_values
   Setting duplicate values in `required` is considered an anti-pattern
+
+else_empty
+  Setting the `else` keyword to the empty schema does not add any further constraint
 
 else_without_if
   The `else` keyword is meaningless without the presence of the `if` keyword
@@ -88,6 +97,9 @@ min_contains_without_contains
 minimum_real_for_integer
   If an instance is guaranteed to be an integer, setting a real number lower bound is the same as a ceil of that lower bound
 
+modern_official_dialect_with_empty_fragment
+  The official dialect URI of 2019-09 and newer versions must not contain the empty fragment
+
 multiple_of_default
   Setting `multipleOf` to 1 does not add any further constraint
 
@@ -102,6 +114,9 @@ properties_default
 
 single_type_array
   Setting `type` to an array of a single type is the same as directly declaring such type
+
+then_empty
+  Setting the `then` keyword to the empty schema does not add any further constraint
 
 then_without_if
   The `then` keyword is meaningless without the presence of the `if` keyword
@@ -127,7 +142,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 39
+Number of rules: 44
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

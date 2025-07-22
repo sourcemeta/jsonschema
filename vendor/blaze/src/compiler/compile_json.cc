@@ -70,13 +70,11 @@ auto instructions_from_json(const sourcemeta::core::JSON &instructions)
     const auto children{instruction.try_at("c")};
 
     if (!type || !relative_schema_location || !relative_instance_location ||
-        !keyword_location || !schema_resource || !value || !children) {
-      return std::nullopt;
-    } else if (!type->is_positive() || !relative_schema_location->is_string() ||
-               !relative_instance_location->is_string() ||
-               !keyword_location->is_string() ||
-               !schema_resource->is_positive() || !value->is_object() ||
-               !children->is_array()) {
+        !keyword_location || !schema_resource || !value || !children ||
+        !type->is_positive() || !relative_schema_location->is_string() ||
+        !relative_instance_location->is_string() ||
+        !keyword_location->is_string() || !schema_resource->is_positive() ||
+        !value->is_object() || !children->is_array()) {
       return std::nullopt;
     }
 
@@ -187,8 +185,9 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     return std::nullopt;
   }
 
-  return Template{std::move(instructions_result).value(), dynamic->to_boolean(),
-                  track->to_boolean()};
+  return Template{.instructions = std::move(instructions_result).value(),
+                  .dynamic = dynamic->to_boolean(),
+                  .track = track->to_boolean()};
 }
 
 } // namespace sourcemeta::blaze

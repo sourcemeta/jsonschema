@@ -1,3 +1,5 @@
+#include <sourcemeta/core/io.h>
+
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/json_value.h>
@@ -43,29 +45,9 @@ auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
   return parse_json(input, line, column, callback);
 }
 
-auto read_file(const std::filesystem::path &path)
-    -> std::basic_ifstream<JSON::Char, JSON::CharTraits> {
-  if (std::filesystem::is_directory(path)) {
-    throw std::filesystem::filesystem_error(
-        "Cannot parse a directory as JSON", path,
-        std::make_error_code(std::errc::is_a_directory));
-  }
-
-  std::ifstream stream{
-      // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
-      // cannot be
-      // made canonical
-      // See https://github.com/sourcemeta/jsonschema/issues/252
-      std::filesystem::is_fifo(path) ? path : std::filesystem::canonical(path)};
-  stream.exceptions(std::ifstream::badbit);
-  assert(!stream.fail());
-  assert(stream.is_open());
-  return stream;
-}
-
 auto read_json(const std::filesystem::path &path,
                const JSON::ParseCallback &callback) -> JSON {
-  auto stream{read_file(path)};
+  auto stream{read_file<JSON::Char, JSON::CharTraits>(path)};
   try {
     return parse_json(stream, callback);
   } catch (const JSONParseIntegerLimitError &error) {

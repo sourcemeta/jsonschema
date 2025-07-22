@@ -28,7 +28,6 @@ add_subdirectory(src)
 if(JSONSCHEMA_DEVELOPMENT)
   sourcemeta_target_clang_format(SOURCES
     src/*.h src/*.cc)
-  sourcemeta_target_clang_tidy(SOURCES src/*.cc)
   sourcemeta_target_shellcheck(SOURCES
     test/*.sh install *.sh)
 endif()

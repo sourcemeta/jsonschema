@@ -19,7 +19,7 @@ public:
   StringSet() = default;
 
   using string_type = sourcemeta::core::JSON::String;
-  using hash_type = sourcemeta::core::JSON::Object::Container::hash_type;
+  using hash_type = sourcemeta::core::JSON::Object::hash_type;
   using value_type = std::pair<string_type, hash_type>;
   using underlying_type = std::vector<value_type>;
   using size_type = typename underlying_type::size_type;

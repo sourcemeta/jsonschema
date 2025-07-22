@@ -39,10 +39,10 @@ auto Encoder::write(const sourcemeta::core::JSON &document,
     HANDLE_ENCODING(20, FIXED_TYPED_ARBITRARY_OBJECT)
     HANDLE_ENCODING(21, VARINT_TYPED_ARBITRARY_OBJECT)
 #undef HANDLE_ENCODING
+    default:
+      // We should never get here. If so, it is definitely a bug
+      unreachable();
   }
-
-  // We should never get here. If so, it is definitely a bug
-  unreachable();
 }
 
 } // namespace sourcemeta::jsonbinpack

@@ -29,7 +29,8 @@ auto gzip(std::string_view input) -> std::optional<std::string> {
     stream.next_out = reinterpret_cast<Bytef *>(buffer.data());
     stream.avail_out = sizeof(buffer);
     code = deflate(&stream, Z_FINISH);
-    compressed.write(buffer.data(), sizeof(buffer) - stream.avail_out);
+    compressed.write(buffer.data(),
+                     static_cast<long>(sizeof(buffer)) - stream.avail_out);
   } while (code == Z_OK);
 
   if (code != Z_STREAM_END) {

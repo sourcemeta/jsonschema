@@ -77,10 +77,9 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
       if (identifier.is_fragment_only()) {
         result.insert(
             {sourcemeta::core::JSON::String{
-                 identifier.fragment()
-                     .value()}, // NOLINT(bugprone-unchecked-optional-access):
-                                // Check for optional is happening
-                                // inside is_fragment_only()
+                 // Check for optional is happening inside is_fragment_only()
+                 // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+                 identifier.fragment().value()},
              AnchorType::Static});
       }
     }
@@ -96,10 +95,9 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
       if (identifier.is_fragment_only()) {
         result.insert(
             {sourcemeta::core::JSON::String{
-                 identifier.fragment()
-                     .value()}, // NOLINT(bugprone-unchecked-optional-access):
-                                // Check for optional is happening
-                                // inside is_fragment_only()
+                 // Check for optional is happening inside is_fragment_only()
+                 // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+                 identifier.fragment().value()},
              AnchorType::Static});
       }
     }

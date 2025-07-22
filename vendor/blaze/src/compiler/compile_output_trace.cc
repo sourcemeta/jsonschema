@@ -32,12 +32,13 @@ static auto try_vocabulary(
 namespace sourcemeta::blaze {
 
 TraceOutput::TraceOutput(
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver,
-    const sourcemeta::core::WeakPointer &base,
+    sourcemeta::core::SchemaWalker walker,
+    sourcemeta::core::SchemaResolver resolver,
+    sourcemeta::core::WeakPointer base,
     const std::optional<
         std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame)
-    : walker_{walker}, resolver_{resolver}, base_{base}, frame_{frame} {}
+    : walker_{std::move(walker)}, resolver_{std::move(resolver)},
+      base_{std::move(base)}, frame_{frame} {}
 
 auto TraceOutput::begin() const -> const_iterator {
   return this->output.begin();

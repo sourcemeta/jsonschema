@@ -18,16 +18,17 @@ namespace sourcemeta::core {
 
 auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string {
   const std::time_t ctime = std::chrono::system_clock::to_time_t(time);
-#if defined(_MSC_VER)
   std::tm buffer;
+#if defined(_MSC_VER)
   if (gmtime_s(&buffer, &ctime) != 0) {
     throw std::runtime_error("Could not convert time point to GMT");
   }
-
-  std::tm *parts = &buffer;
 #else
-  std::tm *parts = std::gmtime(&ctime);
+  if (gmtime_r(&ctime, &buffer) == nullptr) {
+    throw std::runtime_error("Could not convert time point to GMT");
+  }
 #endif
+  std::tm *parts = &buffer;
   assert(parts);
   std::ostringstream stream;
   stream << std::put_time(parts, FORMAT_GMT);

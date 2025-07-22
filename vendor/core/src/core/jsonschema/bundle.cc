@@ -9,7 +9,7 @@ namespace {
 auto embed_schema(sourcemeta::core::JSON &root,
                   const sourcemeta::core::Pointer &container,
                   const std::string &identifier,
-                  const sourcemeta::core::JSON &target) -> void {
+                  sourcemeta::core::JSON &&target) -> std::string {
   auto *current{&root};
   for (const auto &token : container) {
     if (token.is_property()) {
@@ -34,13 +34,15 @@ auto embed_schema(sourcemeta::core::JSON &root,
     key << "/x";
   }
 
-  current->assign(key.str(), target);
+  current->assign(key.str(), std::move(target));
+  return key.str();
 }
 
 auto is_official_metaschema_reference(const sourcemeta::core::Pointer &pointer,
                                       const std::string &destination) -> bool {
-  return !pointer.empty() && pointer.back().is_property() &&
-         pointer.back().to_property() == "$schema" &&
+  assert(!pointer.empty());
+  assert(pointer.back().is_property());
+  return pointer.back().to_property() == "$schema" &&
          sourcemeta::core::schema_official_resolver(destination).has_value();
 }
 
@@ -53,6 +55,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
                    const std::optional<std::string> &default_dialect,
                    const std::optional<std::string> &default_id,
                    const sourcemeta::core::SchemaFrame::Paths &paths,
+                   const sourcemeta::core::BundleCallback &callback,
                    const std::size_t depth = 0) -> void {
   // Keep in mind that the resulting frame does miss some information. For
   // example, when we recurse to framing embedded schemas, we will frame them
@@ -65,12 +68,12 @@ auto bundle_schema(sourcemeta::core::JSON &root,
         // We only want to frame in "wrapper" mode for the top level object
         paths);
   } else {
-    // Note that we only apply the default identifier to the top-level frame
-    frame.analyse(subschema, walker, resolver, default_dialect);
+    frame.analyse(subschema, walker, resolver, default_dialect, default_id);
   }
 
   // Otherwise, given recursion, we would be modifying the
   // references list *while* looping on it
+  // TODO: How can we avoid this very expensive copy?
   const auto references_copy = frame.references();
   for (const auto &[key, reference] : references_copy) {
     if (frame.traverse(reference.destination).has_value() ||
@@ -97,8 +100,8 @@ auto bundle_schema(sourcemeta::core::JSON &root,
     }
 
     assert(reference.base.has_value());
-    const auto identifier{reference.base.value()};
-    const auto remote{resolver(identifier)};
+    const auto &identifier{reference.base.value()};
+    auto remote{resolver(identifier)};
     if (!remote.has_value()) {
       if (frame.traverse(identifier).has_value()) {
         throw sourcemeta::core::SchemaReferenceError(
@@ -110,32 +113,39 @@ auto bundle_schema(sourcemeta::core::JSON &root,
           identifier, "Could not resolve the reference to an external schema");
     }
 
-    // Otherwise, if the target schema does not declare an inline identifier,
-    // references to that identifier from the outer schema won't resolve.
-    sourcemeta::core::JSON copy{remote.value()};
-
-    if (!sourcemeta::core::is_schema(copy)) {
+    if (!sourcemeta::core::is_schema(remote.value())) {
       throw sourcemeta::core::SchemaReferenceError(
           identifier, key.second,
           "The JSON document is not a valid JSON Schema");
     }
 
-    const auto dialect{sourcemeta::core::dialect(copy, default_dialect)};
-    if (!dialect.has_value()) {
+    const auto base_dialect{sourcemeta::core::base_dialect(
+        remote.value(), resolver, default_dialect)};
+    if (!base_dialect.has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
           identifier, key.second,
           "The JSON document is not a valid JSON Schema");
     }
 
-    if (copy.is_object()) {
+    if (remote.value().is_object()) {
       // Always insert an identifier, as a schema might refer to another schema
       // using another URI (i.e. due to relying on HTTP re-directions, etc)
-      sourcemeta::core::reidentify(copy, identifier, resolver, default_dialect);
+      sourcemeta::core::reidentify(remote.value(), identifier,
+                                   base_dialect.value());
     }
 
-    embed_schema(root, container, identifier, copy);
-    bundle_schema(root, container, copy, frame, walker, resolver,
-                  default_dialect, default_id, paths, depth + 1);
+    bundle_schema(root, container, remote.value(), frame, walker, resolver,
+                  default_dialect, identifier, paths, callback, depth + 1);
+    auto embed_key{
+        embed_schema(root, container, identifier, std::move(remote).value())};
+
+    if (callback) {
+      const auto origin{sourcemeta::core::identify(
+          subschema, resolver,
+          sourcemeta::core::SchemaIdentificationStrategy::Strict,
+          default_dialect, default_id)};
+      callback(origin, key.second, identifier, container.concat({embed_key}));
+    }
   }
 }
 
@@ -143,20 +153,20 @@ auto bundle_schema(sourcemeta::core::JSON &root,
 
 namespace sourcemeta::core {
 
-auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
+auto bundle(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect,
             const std::optional<std::string> &default_id,
             const std::optional<Pointer> &default_container,
-            const SchemaFrame::Paths &paths) -> void {
-  sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References};
+            const SchemaFrame::Paths &paths, const BundleCallback &callback)
+    -> void {
+  SchemaFrame frame{SchemaFrame::Mode::References};
 
   if (default_container.has_value()) {
     // This is undefined behavior
     assert(!default_container.value().empty());
     bundle_schema(schema, default_container.value(), schema, frame, walker,
-                  resolver, default_dialect, default_id, paths);
+                  resolver, default_dialect, default_id, paths, callback);
     return;
   }
 
@@ -167,7 +177,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
       vocabularies.contains(
           "https://json-schema.org/draft/2019-09/vocab/core")) {
     bundle_schema(schema, {"$defs"}, schema, frame, walker, resolver,
-                  default_dialect, default_id, paths);
+                  default_dialect, default_id, paths, callback);
     return;
   } else if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
              vocabularies.contains(
@@ -179,7 +189,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
              vocabularies.contains(
                  "http://json-schema.org/draft-04/hyper-schema#")) {
     bundle_schema(schema, {"definitions"}, schema, frame, walker, resolver,
-                  default_dialect, default_id, paths);
+                  default_dialect, default_id, paths, callback);
     return;
   } else if (vocabularies.contains(
                  "http://json-schema.org/draft-03/hyper-schema#") ||
@@ -201,19 +211,20 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
 
   // We don't attempt to bundle on dialects where we
   // don't know where to put the embedded schemas
-  throw sourcemeta::core::SchemaError(
+  throw SchemaError(
       "Could not determine how to perform bundling in this dialect");
 }
 
-auto bundle(const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
+auto bundle(const JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
             const std::optional<std::string> &default_dialect,
             const std::optional<std::string> &default_id,
             const std::optional<Pointer> &default_container,
-            const SchemaFrame::Paths &paths) -> sourcemeta::core::JSON {
-  sourcemeta::core::JSON copy = schema;
+            const SchemaFrame::Paths &paths, const BundleCallback &callback)
+    -> JSON {
+  JSON copy = schema;
   bundle(copy, walker, resolver, default_dialect, default_id, default_container,
-         paths);
+         paths, callback);
   return copy;
 }
 

@@ -35,21 +35,7 @@ auto SchemaMapResolver::add(
     // resolve their dialect and identifiers, otherwise the
     // consumer might have no idea what to do with them
     subschema.assign("$schema", JSON{entry.dialect});
-    // TODO: De-duplicate this id-set functionality from bundle.cc too
-    if (subschema_vocabularies.contains(
-            "http://json-schema.org/draft-04/schema#") ||
-        subschema_vocabularies.contains(
-            "http://json-schema.org/draft-03/schema#") ||
-        subschema_vocabularies.contains(
-            "http://json-schema.org/draft-02/schema#") ||
-        subschema_vocabularies.contains(
-            "http://json-schema.org/draft-01/schema#") ||
-        subschema_vocabularies.contains(
-            "http://json-schema.org/draft-00/schema#")) {
-      subschema.assign("id", JSON{key.second});
-    } else {
-      subschema.assign("$id", JSON{key.second});
-    }
+    reidentify(subschema, key.second, entry.base_dialect);
 
     const auto result{this->schemas.emplace(key.second, subschema)};
     if (!result.second && result.first->second != schema) {

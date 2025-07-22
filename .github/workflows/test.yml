@@ -11,11 +11,6 @@ jobs:
         platform:
           - os: ubuntu-22.04
             type: native
-            cc: clang
-            cxx: clang++
-            shell: sh
-          - os: ubuntu-22.04
-            type: native
             cc: gcc
             cxx: g++
             shell: sh

@@ -65,8 +65,7 @@ auto callback_on_response_body(
 
 auto callback_on_header(
     const void *const data, const std::size_t size, const std::size_t count,
-    sourcemeta::jsonschema::http::ClientStream *const request) noexcept
-    -> std::size_t {
+    sourcemeta::jsonschema::http::ClientStream *const request) -> std::size_t {
   const std::size_t total_size{size * count};
   const std::string_view line{static_cast<const char *>(data), total_size};
   const std::size_t colon{line.find(':')};
@@ -116,11 +115,10 @@ auto callback_on_header(
 
       // Convert headers to lowercase
       std::string key_lowercase;
-      std::transform(key.cbegin(), key.cend(),
-                     std::back_inserter(key_lowercase),
-                     [](unsigned char character) {
-                       return static_cast<char>(std::tolower(character));
-                     });
+      std::ranges::transform(
+          key, std::back_inserter(key_lowercase), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+          });
 
       request->internal->on_header(
           request->internal->status.value(), key_lowercase,
@@ -144,7 +142,7 @@ auto callback_on_request_body(
   try {
     const auto bytes{request->internal->on_body(total_size)};
     assert(bytes.size() <= total_size);
-    std::copy(bytes.cbegin(), bytes.cend(), buffer);
+    std::ranges::copy(bytes, buffer);
     return bytes.size();
   } catch (...) {
     // The read callback may return CURL_READFUNC_ABORT to stop the current
@@ -367,8 +365,9 @@ auto ClientStream::send() -> Status {
       curl_easy_getinfo(this->internal->handle, CURLINFO_RESPONSE_CODE, &code));
   assert(code > 0);
   assert(this->internal->status.has_value());
-  assert(code == static_cast<std::underlying_type_t<Status>>(
-                     this->internal->status.value()) ||
+  assert(static_cast<std::underlying_type_t<Status>>(code) ==
+             static_cast<std::underlying_type_t<Status>>(
+                 this->internal->status.value()) ||
          this->internal->status.value() == Status::MOVED_PERMANENTLY);
   return Status{static_cast<std::underlying_type_t<Status>>(code)};
 }

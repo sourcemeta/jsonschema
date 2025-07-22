@@ -37,10 +37,10 @@ auto Decoder::read(const Encoding &encoding) -> sourcemeta::core::JSON {
     HANDLE_DECODING(20, FIXED_TYPED_ARBITRARY_OBJECT)
     HANDLE_DECODING(21, VARINT_TYPED_ARBITRARY_OBJECT)
 #undef HANDLE_DECODING
+    default:
+      // We should never get here. If so, it is definitely a bug
+      unreachable();
   }
-
-  // We should never get here. If so, it is definitely a bug
-  unreachable();
 }
 
 } // namespace sourcemeta::jsonbinpack

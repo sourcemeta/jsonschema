@@ -70,7 +70,7 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_COMPILER_EXPORT SimpleOutput {
 public:
   SimpleOutput(const sourcemeta::core::JSON &instance,
-               const sourcemeta::core::WeakPointer &base =
+               sourcemeta::core::WeakPointer base =
                    sourcemeta::core::empty_weak_pointer);
 
   // Prevent accidental copies
@@ -196,12 +196,13 @@ class SOURCEMETA_BLAZE_COMPILER_EXPORT TraceOutput {
 public:
   // Passing a frame of the schema is optional, but allows the output
   // formatter to give you back additional information
-  TraceOutput(const sourcemeta::core::SchemaWalker &walker,
-              const sourcemeta::core::SchemaResolver &resolver,
-              const sourcemeta::core::WeakPointer &base =
-                  sourcemeta::core::empty_weak_pointer,
-              const std::optional<std::reference_wrapper<
-                  const sourcemeta::core::SchemaFrame>> &frame = std::nullopt);
+  TraceOutput(
+      sourcemeta::core::SchemaWalker walker,
+      sourcemeta::core::SchemaResolver resolver,
+      sourcemeta::core::WeakPointer base = sourcemeta::core::empty_weak_pointer,
+      const std::optional<
+          std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame =
+          std::nullopt);
 
   // Prevent accidental copies
   TraceOutput(const TraceOutput &) = delete;

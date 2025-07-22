@@ -132,29 +132,6 @@ SOURCEMETA_CORE_JSON_EXPORT
 auto read_json(const std::filesystem::path &path,
                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
-// TODO: Move this function to a system integration component, as it
-// is not JSON specific
-
-/// @ingroup json
-///
-/// A convenience function to read a document from a file. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <cassert>
-/// #include <iostream>
-///
-/// auto stream = sourcemeta::core::read_file("/tmp/foo.json");
-/// const auto document = sourcemeta::core::parse_json(stream);
-/// sourcemeta::core::stringify(document, std::cout);
-/// std::cout << std::endl;
-/// ```
-///
-/// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
-SOURCEMETA_CORE_JSON_EXPORT
-auto read_file(const std::filesystem::path &path)
-    -> std::basic_ifstream<JSON::Char, JSON::CharTraits>;
-
 /// @ingroup json
 ///
 /// Stringify the input JSON document into a given C++ standard output stream in

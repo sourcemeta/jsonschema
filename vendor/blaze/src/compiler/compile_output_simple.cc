@@ -10,8 +10,8 @@
 namespace sourcemeta::blaze {
 
 SimpleOutput::SimpleOutput(const sourcemeta::core::JSON &instance,
-                           const sourcemeta::core::WeakPointer &base)
-    : instance_{instance}, base_{base} {}
+                           sourcemeta::core::WeakPointer base)
+    : instance_{instance}, base_{std::move(base)} {}
 
 auto SimpleOutput::begin() const -> const_iterator {
   return this->output.begin();
@@ -44,8 +44,9 @@ auto SimpleOutput::operator()(
 
   if (is_annotation(step.type)) {
     if (type == EvaluationType::Post) {
-      Location location{instance_location, std::move(effective_evaluate_path),
-                        step.keyword_location};
+      Location location{.instance_location = instance_location,
+                        .evaluate_path = std::move(effective_evaluate_path),
+                        .schema_location = step.keyword_location};
       const auto match{this->annotations_.find(location)};
       if (match == this->annotations_.cend()) {
         this->annotations_[std::move(location)].push_back(annotation);
@@ -89,10 +90,9 @@ auto SimpleOutput::operator()(
     }
   }
 
-  if (std::any_of(this->mask.cbegin(), this->mask.cend(),
-                  [&evaluate_path](const auto &entry) {
-                    return evaluate_path.starts_with(entry.first);
-                  })) {
+  if (std::ranges::any_of(this->mask, [&evaluate_path](const auto &entry) {
+        return evaluate_path.starts_with(entry.first);
+      })) {
     return;
   }
 

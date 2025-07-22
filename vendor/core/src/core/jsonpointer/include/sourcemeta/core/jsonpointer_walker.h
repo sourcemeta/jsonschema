@@ -19,10 +19,18 @@ public:
   GenericPointerWalker(const JSON &document) { this->walk(document, {}); }
 
   using const_iterator = typename internal::const_iterator;
-  auto begin() const -> const_iterator { return this->pointers.begin(); };
-  auto end() const -> const_iterator { return this->pointers.end(); };
-  auto cbegin() const -> const_iterator { return this->pointers.cbegin(); };
-  auto cend() const -> const_iterator { return this->pointers.cend(); };
+  [[nodiscard]] auto begin() const -> const_iterator {
+    return this->pointers.begin();
+  };
+  [[nodiscard]] auto end() const -> const_iterator {
+    return this->pointers.end();
+  };
+  [[nodiscard]] auto cbegin() const -> const_iterator {
+    return this->pointers.cbegin();
+  };
+  [[nodiscard]] auto cend() const -> const_iterator {
+    return this->pointers.cend();
+  };
 
 private:
   auto walk(const JSON &document, const PointerT &pointer) -> void {

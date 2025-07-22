@@ -83,7 +83,7 @@ JSON::JSON(const Array &value) : current_type{Type::Array} {
   new (&this->data_array) Array{value};
 }
 
-JSON::JSON(std::initializer_list<typename Object::Container::value_type> values)
+JSON::JSON(std::initializer_list<typename Object::pair_value_type> values)
     : current_type{Type::Object} {
   new (&this->data_object) Object{values};
 }
@@ -475,35 +475,33 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   assert(this->is_object());
   assert(this->defines(key));
   const auto &object{this->data_object};
-  return object.data.at(key, object.data.hash(key));
+  return object.at(key, object.hash(key));
 }
 
-[[nodiscard]] auto
-JSON::at(const String &key,
-         const typename Object::Container::hash_type hash) const
+[[nodiscard]] auto JSON::at(const String &key,
+                            const typename Object::hash_type hash) const
     -> const JSON & {
   assert(this->is_object());
   assert(this->defines(key));
-  return this->data_object.data.at(key, hash);
+  return this->data_object.at(key, hash);
 }
 
 [[nodiscard]] auto JSON::at(const JSON::String &key) -> JSON & {
   assert(this->is_object());
   assert(this->defines(key));
   auto &object{this->data_object};
-  return object.data.at(key, object.data.hash(key));
+  return object.at(key, object.hash(key));
 }
 
 [[nodiscard]] auto JSON::at(const String &key,
-                            const typename Object::Container::hash_type hash)
-    -> JSON & {
+                            const typename Object::hash_type hash) -> JSON & {
   assert(this->is_object());
   assert(this->defines(key));
-  return this->data_object.data.at(key, hash);
+  return this->data_object.at(key, hash);
 }
 
 [[nodiscard]] auto JSON::at_or(const String &key,
-                               const typename Object::Container::hash_type hash,
+                               const typename Object::hash_type hash,
                                const JSON &otherwise) const -> const JSON & {
   assert(this->is_object());
   const auto result{this->try_at(key, hash)};
@@ -513,7 +511,7 @@ JSON::at(const String &key,
 [[nodiscard]] auto JSON::at_or(const String &key, const JSON &otherwise) const
     -> const JSON & {
   assert(this->is_object());
-  return this->at_or(key, this->data_object.data.hash(key), otherwise);
+  return this->at_or(key, this->data_object.hash(key), otherwise);
 }
 
 [[nodiscard]] auto JSON::front() -> JSON & {
@@ -671,7 +669,7 @@ JSON::at(const String &key,
 
 [[nodiscard]] auto JSON::empty() const -> bool {
   if (this->is_object()) {
-    return this->data_object.data.empty();
+    return this->data_object.empty();
   } else if (this->is_array()) {
     return this->data_array.data.empty();
   } else {
@@ -682,28 +680,26 @@ JSON::at(const String &key,
 [[nodiscard]] auto JSON::try_at(const JSON::String &key) const -> const JSON * {
   assert(this->is_object());
   const auto &object{this->data_object};
-  return object.data.try_at(key, object.data.hash(key));
+  return object.try_at(key, object.hash(key));
 }
 
-[[nodiscard]] auto
-JSON::try_at(const String &key,
-             const typename Object::Container::hash_type hash) const
+[[nodiscard]] auto JSON::try_at(const String &key,
+                                const typename Object::hash_type hash) const
     -> const JSON * {
   assert(this->is_object());
   const auto &object{this->data_object};
-  return object.data.try_at(key, hash);
+  return object.try_at(key, hash);
 }
 
 [[nodiscard]] auto JSON::defines(const JSON::String &key) const -> bool {
   assert(this->is_object());
   const auto &object{this->data_object};
-  return object.data.contains(key, object.data.hash(key));
+  return object.defines(key, object.hash(key));
 }
 
 [[nodiscard]] auto
 JSON::defines(const JSON::String &key,
-              const typename JSON::Object::Container::hash_type hash) const
-    -> bool {
+              const typename JSON::Object::hash_type hash) const -> bool {
   assert(this->is_object());
   return this->data_object.defines(key, hash);
 }
@@ -801,18 +797,18 @@ auto JSON::push_back_if_unique(JSON &&value)
 
 auto JSON::assign(const JSON::String &key, const JSON &value) -> void {
   assert(this->is_object());
-  this->data_object.data.emplace(key, value);
+  this->data_object.emplace(key, value);
 }
 
 auto JSON::assign(const JSON::String &key, JSON &&value) -> void {
   assert(this->is_object());
-  this->data_object.data.emplace(key, value);
+  this->data_object.emplace(key, value);
 }
 
 auto JSON::try_assign_before(const String &key, const JSON &value,
                              const String &other) -> void {
   assert(this->is_object());
-  this->data_object.data.try_emplace_before(key, value, other);
+  this->data_object.try_emplace_before(key, value, other);
 }
 
 auto JSON::assign_if_missing(const JSON::String &key, const JSON &value)
@@ -832,7 +828,7 @@ auto JSON::assign_if_missing(const JSON::String &key, JSON &&value) -> void {
 
 auto JSON::erase(const JSON::String &key) -> typename Object::size_type {
   assert(this->is_object());
-  return this->data_object.data.erase(key);
+  return this->data_object.erase(key);
 }
 
 auto JSON::erase_keys(std::initializer_list<JSON::String> keys) -> void {
@@ -860,7 +856,7 @@ auto JSON::erase_if(const std::function<bool(const JSON &)> &predicate)
 
 auto JSON::clear() -> void {
   if (this->is_object()) {
-    this->data_object.data.clear();
+    this->data_object.clear();
   } else {
     this->data_array.data.clear();
   }
@@ -900,8 +896,7 @@ auto JSON::trim() -> const JSON::String & {
 auto JSON::rename(const JSON::String &key, JSON::String &&to) -> void {
   assert(this->is_object());
   auto &object{this->data_object};
-  object.data.rename(key, object.data.hash(key), std::move(to),
-                     object.data.hash(to));
+  object.rename(key, object.hash(key), std::move(to), object.hash(to));
 }
 
 auto JSON::into(const JSON &other) -> void { this->operator=(other); }

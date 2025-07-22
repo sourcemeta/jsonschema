@@ -101,7 +101,7 @@ function(sourcemeta_target_clang_format)
   file(GLOB_RECURSE SOURCEMETA_TARGET_CLANG_FORMAT_FILES
     ${SOURCEMETA_TARGET_CLANG_FORMAT_SOURCES})
 
-  set(CLANG_FORMAT_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-format.config")
+  set(CLANG_FORMAT_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-format.json")
   if(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
     # Because `clang-format` is typically a Windows `.exe`, transform the path accordingly
     execute_process(COMMAND cygpath -w "${CLANG_FORMAT_CONFIG}"

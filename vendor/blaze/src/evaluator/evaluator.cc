@@ -8,6 +8,7 @@
 #include <algorithm> // std::min, std::any_of, std::find
 #include <cassert>   // assert
 #include <limits>    // std::numeric_limits
+#include <ranges>    // std::ranges
 
 namespace sourcemeta::blaze {
 using namespace sourcemeta::core;
@@ -22,6 +23,7 @@ inline auto resolve_target(const JSON::String *property_target,
     return Evaluator::empty_string;
   }
 
+  // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
   return instance;
 }
 
@@ -44,7 +46,7 @@ resolve_string_target(const JSON::String *property_target, const JSON &instance,
 } // namespace sourcemeta::blaze
 
 #define SOURCEMETA_STRINGIFY(x) #x
-#define SOURCEMETA_MAYBE_UNUSED(variable) (void)variable;
+#define SOURCEMETA_MAYBE_UNUSED(variable) (void)(variable);
 
 #include "evaluator_complete.h"
 #include "evaluator_dynamic.h"
@@ -100,14 +102,18 @@ auto Evaluator::hash(const std::size_t resource,
 }
 
 auto Evaluator::evaluate(const sourcemeta::core::JSON *target) -> void {
-  Evaluation mark{target, this->evaluate_path, false};
+  Evaluation mark{
+      .instance = target, .evaluate_path = this->evaluate_path, .skip = false};
   this->evaluated_.push_back(std::move(mark));
 }
 
 auto Evaluator::is_evaluated(const sourcemeta::core::JSON *target) const
     -> bool {
-  for (auto iterator = this->evaluated_.crbegin();
-       iterator != this->evaluated_.crend(); ++iterator) {
+  // Using `std::ranges::reverse_view` doesn't work on Clang 14.0.0 on
+  // Ubuntu 22.04
+  // NOLINTNEXTLINE(modernize-loop-convert)
+  for (auto iterator = this->evaluated_.rbegin();
+       iterator != this->evaluated_.rend(); ++iterator) {
     if (target == iterator->instance && !iterator->skip &&
         // Its not possible to affect cousins
         iterator->evaluate_path.starts_with_initial(this->evaluate_path)) {

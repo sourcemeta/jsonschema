@@ -83,10 +83,9 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       case SUBTYPE_LONG_STRING_BASE_EXPONENT_10:
         return sourcemeta::core::JSON{
             this->get_string_utf8(this->get_varint() + 1024)};
+      default:
+        unreachable();
     }
-
-    // We should never get here. If so, it is definitely a bug
-    unreachable();
   } else {
     switch (type) {
       case TYPE_POSITIVE_INTEGER_BYTE:
@@ -97,9 +96,10 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
             subtype > 0 ? static_cast<std::int64_t>(-subtype)
                         : static_cast<std::int64_t>(-this->get_byte() - 1)};
       case TYPE_SHARED_STRING: {
-        const auto length = subtype == 0
-                                ? this->get_varint() - 1 + uint_max<5> * 2
-                                : subtype - 1;
+        const auto length =
+            subtype == 0 ? this->get_varint() - 1 +
+                               static_cast<std::uint64_t>(uint_max<5>) * 2
+                         : subtype - 1;
         const std::uint64_t position{this->position()};
         const std::uint64_t current{this->rewind(this->get_varint(), position)};
         const sourcemeta::core::JSON value{this->get_string_utf8(length)};
@@ -109,46 +109,46 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       case TYPE_STRING:
         return subtype == 0
                    ? this->FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-                         {uint_max<5> * 2})
+                         {static_cast<std::uint64_t>(uint_max<5>) * 2})
                    : sourcemeta::core::JSON{this->get_string_utf8(subtype - 1)};
       case TYPE_LONG_STRING:
         return sourcemeta::core::JSON{
             this->get_string_utf8(subtype + uint_max<5>)};
       case TYPE_ARRAY:
-        return subtype == 0 ? this->FIXED_TYPED_ARRAY(
-                                  {this->get_varint() + uint_max<5>,
-                                   std::make_shared<Encoding>(
-                                       sourcemeta::jsonbinpack::
-                                           ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}),
-                                   {}})
-                            : this->FIXED_TYPED_ARRAY(
-                                  {static_cast<std::uint64_t>(subtype - 1),
-                                   std::make_shared<Encoding>(
-                                       sourcemeta::jsonbinpack::
-                                           ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}),
-                                   {}});
+        return subtype == 0
+                   ? this->FIXED_TYPED_ARRAY(
+                         {.size = this->get_varint() + uint_max<5>,
+                          .encoding = std::make_shared<Encoding>(
+                              sourcemeta::jsonbinpack::
+                                  ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}),
+                          .prefix_encodings = {}})
+                   : this->FIXED_TYPED_ARRAY(
+                         {.size = static_cast<std::uint64_t>(subtype - 1),
+                          .encoding = std::make_shared<Encoding>(
+                              sourcemeta::jsonbinpack::
+                                  ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}),
+                          .prefix_encodings = {}});
       case TYPE_OBJECT:
         return subtype == 0
                    ? this->FIXED_TYPED_ARBITRARY_OBJECT(
-                         {this->get_varint() + uint_max<5>,
-                          std::make_shared<Encoding>(
+                         {.size = this->get_varint() + uint_max<5>,
+                          .key_encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   PREFIX_VARINT_LENGTH_STRING_SHARED{}),
-                          std::make_shared<Encoding>(
+                          .encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   ANY_PACKED_TYPE_TAG_BYTE_PREFIX{})})
                    : this->FIXED_TYPED_ARBITRARY_OBJECT(
-                         {static_cast<std::uint64_t>(subtype - 1),
-                          std::make_shared<Encoding>(
+                         {.size = static_cast<std::uint64_t>(subtype - 1),
+                          .key_encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   PREFIX_VARINT_LENGTH_STRING_SHARED{}),
-                          std::make_shared<Encoding>(
+                          .encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   ANY_PACKED_TYPE_TAG_BYTE_PREFIX{})});
+      default:
+        unreachable();
     }
-
-    // We should never get here. If so, it is definitely a bug
-    unreachable();
   }
 }
 

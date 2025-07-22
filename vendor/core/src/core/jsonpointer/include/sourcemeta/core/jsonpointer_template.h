@@ -5,6 +5,7 @@
 
 #include <algorithm>        // std::copy, std::all_of
 #include <cassert>          // assert
+#include <cstdint>          // std::uint8_t
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::back_inserter
 #include <optional>         // std::optional, std::nullopt
@@ -16,7 +17,7 @@ namespace sourcemeta::core {
 /// @ingroup jsonpointer
 template <typename PointerT> class GenericPointerTemplate {
 public:
-  enum class Wildcard { Property, Item, Key };
+  enum class Wildcard : std::uint8_t { Property, Item, Key };
   struct Condition {
     auto operator==(const Condition &) const noexcept -> bool = default;
     auto operator<(const Condition &) const noexcept -> bool { return false; }
@@ -85,31 +86,39 @@ public:
   /// Get a mutable end iterator on the pointer
   auto end() noexcept -> iterator { return this->data.end(); }
   /// Get a constant begin iterator on the pointer
-  auto begin() const noexcept -> const_iterator { return this->data.begin(); }
+  [[nodiscard]] auto begin() const noexcept -> const_iterator {
+    return this->data.begin();
+  }
   /// Get a constant end iterator on the pointer
-  auto end() const noexcept -> const_iterator { return this->data.end(); }
+  [[nodiscard]] auto end() const noexcept -> const_iterator {
+    return this->data.end();
+  }
   /// Get a constant begin iterator on the pointer
-  auto cbegin() const noexcept -> const_iterator { return this->data.cbegin(); }
+  [[nodiscard]] auto cbegin() const noexcept -> const_iterator {
+    return this->data.cbegin();
+  }
   /// Get a constant end iterator on the pointer
-  auto cend() const noexcept -> const_iterator { return this->data.cend(); }
+  [[nodiscard]] auto cend() const noexcept -> const_iterator {
+    return this->data.cend();
+  }
   /// Get a mutable reverse begin iterator on the pointer
   auto rbegin() noexcept -> reverse_iterator { return this->data.rbegin(); }
   /// Get a mutable reverse end iterator on the pointer
   auto rend() noexcept -> reverse_iterator { return this->data.rend(); }
   /// Get a constant reverse begin iterator on the pointer
-  auto rbegin() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator {
     return this->data.rbegin();
   }
   /// Get a constant reverse end iterator on the pointer
-  auto rend() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator {
     return this->data.rend();
   }
   /// Get a constant reverse begin iterator on the pointer
-  auto crbegin() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator {
     return this->data.crbegin();
   }
   /// Get a constant reverse end iterator on the pointer
-  auto crend() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator {
     return this->data.crend();
   }
 
@@ -172,7 +181,8 @@ public:
   ///
   /// assert(left.concat(right) == expected);
   /// ```
-  auto concat(const GenericPointerTemplate<PointerT> &&other) const
+  [[nodiscard]] auto
+  concat(const GenericPointerTemplate<PointerT> &&other) const
       -> GenericPointerTemplate<PointerT> {
     GenericPointerTemplate<PointerT> result{*this};
     result.data.reserve(result.data.size() + other.data.size());

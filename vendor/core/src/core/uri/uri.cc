@@ -688,8 +688,6 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     this->scheme_ = base.scheme_;
     this->query_ = base.query_;
     return *this;
-  } else if (base.path().has_value() && base.path().value().starts_with("..")) {
-    return *this;
   } else if (base.is_relative() && this->is_relative() &&
              base.path_.has_value() && this->path_.has_value() &&
              this->path_.value().find('/') == std::string::npos &&

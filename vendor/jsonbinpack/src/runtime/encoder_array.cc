@@ -30,8 +30,10 @@ auto Encoder::BOUNDED_8BITS_TYPED_ARRAY(
   assert(is_within(size, options.minimum, options.maximum));
   assert(is_byte(options.maximum - options.minimum));
   this->put_byte(static_cast<std::uint8_t>(size - options.minimum));
-  this->FIXED_TYPED_ARRAY(document, {size, std::move(options.encoding),
-                                     std::move(options.prefix_encodings)});
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
 }
 
 auto Encoder::FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &document,
@@ -40,8 +42,10 @@ auto Encoder::FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &document,
   const auto size{document.size()};
   assert(size >= options.minimum);
   this->put_varint(size - options.minimum);
-  this->FIXED_TYPED_ARRAY(document, {size, std::move(options.encoding),
-                                     std::move(options.prefix_encodings)});
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
 }
 
 auto Encoder::ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &document,
@@ -49,8 +53,10 @@ auto Encoder::ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &document,
   const auto size{document.size()};
   assert(size <= options.maximum);
   this->put_varint(options.maximum - size);
-  this->FIXED_TYPED_ARRAY(document, {size, std::move(options.encoding),
-                                     std::move(options.prefix_encodings)});
+  this->FIXED_TYPED_ARRAY(document,
+                          {.size = size,
+                           .encoding = options.encoding,
+                           .prefix_encodings = options.prefix_encodings});
 }
 
 } // namespace sourcemeta::jsonbinpack

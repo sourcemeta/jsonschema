@@ -1,6 +1,7 @@
 // See https://pyyaml.org/wiki/LibYAML for basic documentation
 #include <yaml.h>
 
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/yaml.h>
 

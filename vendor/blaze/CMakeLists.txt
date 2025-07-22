@@ -73,7 +73,6 @@ if(PROJECT_IS_TOP_LEVEL)
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
     test/*.h test/*.cc)
-  sourcemeta_target_clang_tidy(SOURCES src/*.cc)
 endif()
 
 # Testing

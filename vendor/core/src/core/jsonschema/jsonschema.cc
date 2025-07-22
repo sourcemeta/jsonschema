@@ -443,7 +443,8 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
   // complexity of the generic `id` function.
   assert(schema_dialect.defines("$id") &&
          schema_dialect.at("$id").is_string() &&
-         schema_dialect.at("$id").to_string() == dialect);
+         URI::canonicalize(schema_dialect.at("$id").to_string()) ==
+             URI::canonicalize(dialect));
 
   /*
    * (4) Retrieve the vocabularies explicitly or implicitly declared by the

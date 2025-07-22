@@ -45,7 +45,7 @@ public:
   /// The object type used by the JSON document.
   using Object = JSONObject<String, JSON, PropertyHashJSON<JSON::String>>;
   /// The parsing phase of a JSON document.
-  enum class ParsePhase { Pre, Post };
+  enum class ParsePhase : std::uint8_t { Pre, Post };
   // The enumeration indexes must stay in sync with the internal variant
   /// The different types of a JSON instance.
   enum class Type : std::uint8_t {
@@ -209,8 +209,7 @@ public:
   ///
   /// assert(my_object.is_object());
   /// ```
-  explicit JSON(
-      std::initializer_list<typename Object::Container::value_type> values);
+  explicit JSON(std::initializer_list<typename Object::pair_value_type> values);
 
   /// A copy constructor for the object type.
   explicit JSON(const Object &value);
@@ -727,7 +726,7 @@ public:
   ///  my_object.as_object().hash("bar")).to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key,
-                        const typename Object::Container::hash_type hash) const
+                        const typename Object::hash_type hash) const
       -> const JSON &;
 
   /// This method retrieves an object element.
@@ -759,8 +758,7 @@ public:
   ///   my_object.as_object().hash("bar")).to_integer() == 2);
   /// ```
   [[nodiscard]] auto at(const String &key,
-                        const typename Object::Container::hash_type hash)
-      -> JSON &;
+                        const typename Object::hash_type hash) -> JSON &;
 
   /// This method retrieves an object property or a user provided value if such
   /// property is not defined.
@@ -796,7 +794,7 @@ public:
   ///   default_value).to_integer() == 1);
   /// ```
   [[nodiscard]] auto at_or(const String &key,
-                           const typename Object::Container::hash_type hash,
+                           const typename Object::hash_type hash,
                            const JSON &otherwise) const -> const JSON &;
 
   // Constant reference parameters can accept xvalues which will be destructed
@@ -807,7 +805,7 @@ public:
   // This overload avoids mis-uses of retuning const reference parameter as
   // constant reference.
   [[nodiscard]] auto at_or(const String &key,
-                           const typename Object::Container::hash_type hash,
+                           const typename Object::hash_type hash,
                            JSON &&otherwise) const -> const JSON & = delete;
 
   /// This method retrieves a reference to the first element of a JSON array.
@@ -1044,9 +1042,8 @@ public:
   ///   document.as_object().hash("foo"));
   /// EXPECT_TRUE(result);
   /// EXPECT_EQ(result->to_integer(), 1);
-  [[nodiscard]] auto
-  try_at(const String &key,
-         const typename Object::Container::hash_type hash) const
+  [[nodiscard]] auto try_at(const String &key,
+                            const typename Object::hash_type hash) const
       -> const JSON *;
 
   /// This method checks whether an input JSON object defines a specific key.
@@ -1077,9 +1074,9 @@ public:
   /// assert(document.defines("bar",
   ///   document.as_object().hash("bar")));
   /// ```
-  [[nodiscard]] auto
-  defines(const String &key,
-          const typename Object::Container::hash_type hash) const -> bool;
+  [[nodiscard]] auto defines(const String &key,
+                             const typename Object::hash_type hash) const
+      -> bool;
 
   /// This method checks whether an input JSON object defines a specific integer
   /// key. For example:
@@ -1386,7 +1383,7 @@ public:
   auto erase_keys(Iterator first, Iterator last) -> void {
     assert(this->is_object());
     for (auto iterator = first; iterator != last; ++iterator) {
-      this->data_object.data.erase(*iterator);
+      this->data_object.erase(*iterator);
     }
   }
 
