@@ -8,6 +8,7 @@
 #include <cstdint>   // std::uint8_t, std::int64_t, std::uint64_t
 #include <iterator>  // std::cbegin, std::cend, std::distance
 #include <memory>    // std::make_shared
+#include <ranges>    // std::ranges
 #include <utility>   // std::move
 
 namespace sourcemeta::jsonbinpack {
@@ -17,9 +18,7 @@ auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
     -> void {
   assert(!options.choices.empty());
   assert(is_byte(options.choices.size()));
-  const auto iterator{std::find_if(
-      std::cbegin(options.choices), std::cend(options.choices),
-      [&document](const auto &choice) { return choice == document; })};
+  const auto iterator{std::ranges::find(options.choices, document)};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
   assert(
@@ -31,9 +30,10 @@ auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                  const struct LARGE_CHOICE_INDEX &options)
     -> void {
   assert(options.choices.size() > 0);
-  const auto iterator{std::find_if(
-      std::cbegin(options.choices), std::cend(options.choices),
-      [&document](const auto &choice) { return choice == document; })};
+  const auto iterator{
+      std::ranges::find_if(options.choices, [&document](const auto &choice) {
+        return choice == document;
+      })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
   assert(is_within(cursor, static_cast<std::uint64_t>(0),
@@ -46,9 +46,10 @@ auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
   assert(options.choices.size() > 0);
   assert(is_byte(options.choices.size()));
-  const auto iterator{std::find_if(
-      std::cbegin(options.choices), std::cend(options.choices),
-      [&document](auto const &choice) { return choice == document; })};
+  const auto iterator{
+      std::ranges::find_if(options.choices, [&document](auto const &choice) {
+        return choice == document;
+      })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
   assert(is_within(cursor, 0,
@@ -117,7 +118,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       this->put_varint(absolute);
     }
   } else if (document.is_string()) {
-    const sourcemeta::core::JSON::String value{document.to_string()};
+    const sourcemeta::core::JSON::String &value{document.to_string()};
     const auto size{document.byte_size()};
     const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
     if (size < uint_max<5>) {
@@ -131,7 +132,8 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
         this->cache_.record(value, this->position(), Cache::Type::Standalone);
         this->put_string_utf8(value, size);
       }
-    } else if (size >= uint_max<5> && size < uint_max<5> * 2 &&
+    } else if (size >= uint_max<5> &&
+               size < static_cast<std::uint64_t>(uint_max<5>) * 2 &&
                !shared.has_value()) {
       this->put_byte(static_cast<std::uint8_t>(
           TYPE_LONG_STRING | ((size - uint_max<5>) << type_size)));
@@ -154,8 +156,8 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       }
 
       // If we got this far, the string is at least a certain length
-      return FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(document,
-                                                    {uint_max<5> * 2});
+      return FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
+          document, {static_cast<std::uint64_t>(uint_max<5> * 2)});
     }
   } else if (document.is_array()) {
     const auto size{document.size()};
@@ -170,7 +172,9 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
     Encoding encoding{
         sourcemeta::jsonbinpack::ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}};
     this->FIXED_TYPED_ARRAY(
-        document, {size, std::make_shared<Encoding>(std::move(encoding)), {}});
+        document, {.size = size,
+                   .encoding = std::make_shared<Encoding>(std::move(encoding)),
+                   .prefix_encodings = {}});
   } else if (document.is_object()) {
     const auto size{document.size()};
     if (size >= uint_max<5>) {
@@ -186,8 +190,10 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
     Encoding value_encoding{
         sourcemeta::jsonbinpack::ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}};
     this->FIXED_TYPED_ARBITRARY_OBJECT(
-        document, {size, std::make_shared<Encoding>(std::move(key_encoding)),
-                   std::make_shared<Encoding>(std::move(value_encoding))});
+        document,
+        {.size = size,
+         .key_encoding = std::make_shared<Encoding>(std::move(key_encoding)),
+         .encoding = std::make_shared<Encoding>(std::move(value_encoding))});
   } else {
     // We should never get here
     unreachable();

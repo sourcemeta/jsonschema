@@ -5,3 +5,5 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME json
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME json)
 endif()
+
+target_link_libraries(sourcemeta_core_json PRIVATE sourcemeta::core::io)

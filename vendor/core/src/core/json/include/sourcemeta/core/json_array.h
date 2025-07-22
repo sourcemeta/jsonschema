@@ -56,31 +56,39 @@ public:
   /// Get a mutable end iterator on the array
   auto end() noexcept -> iterator { return this->data.end(); }
   /// Get a constant begin iterator on the array
-  auto begin() const noexcept -> const_iterator { return this->data.begin(); }
+  [[nodiscard]] auto begin() const noexcept -> const_iterator {
+    return this->data.begin();
+  }
   /// Get a constant end iterator on the array
-  auto end() const noexcept -> const_iterator { return this->data.end(); }
+  [[nodiscard]] auto end() const noexcept -> const_iterator {
+    return this->data.end();
+  }
   /// Get a constant begin iterator on the array
-  auto cbegin() const noexcept -> const_iterator { return this->data.cbegin(); }
+  [[nodiscard]] auto cbegin() const noexcept -> const_iterator {
+    return this->data.cbegin();
+  }
   /// Get a constant end iterator on the array
-  auto cend() const noexcept -> const_iterator { return this->data.cend(); }
+  [[nodiscard]] auto cend() const noexcept -> const_iterator {
+    return this->data.cend();
+  }
   /// Get a mutable reverse begin iterator on the array
   auto rbegin() noexcept -> reverse_iterator { return this->data.rbegin(); }
   /// Get a mutable reverse end iterator on the array
   auto rend() noexcept -> reverse_iterator { return this->data.rend(); }
   /// Get a constant reverse begin iterator on the array
-  auto rbegin() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator {
     return this->data.rbegin();
   }
   /// Get a constant reverse end iterator on the array
-  auto rend() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator {
     return this->data.rend();
   }
   /// Get a constant reverse begin iterator on the array
-  auto crbegin() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator {
     return this->data.crbegin();
   }
   /// Get a constant reverse end iterator on the array
-  auto crend() const noexcept -> const_reverse_iterator {
+  [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator {
     return this->data.crend();
   }
 

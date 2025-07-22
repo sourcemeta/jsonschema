@@ -650,21 +650,21 @@ auto parse_number(
 
 #define CALLBACK_PRE(value_type, value)                                        \
   if (callback) {                                                              \
-    assert(value.is_null() || value.is_string() || value.is_integer());        \
+    assert((value).is_null() || (value).is_string() || (value).is_integer());  \
     callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
              value);                                                           \
   }
 
 #define CALLBACK_PRE_WITH_POSITION(value_type, line, column, value)            \
   if (callback) {                                                              \
-    assert(value.is_null() || value.is_string() || value.is_integer());        \
+    assert((value).is_null() || (value).is_string() || (value).is_integer());  \
     callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
              value);                                                           \
   }
 
 #define CALLBACK_POST(value_type, value)                                       \
   if (callback) {                                                              \
-    assert(value.type() == JSON::Type::value_type);                            \
+    assert((value).type() == JSON::Type::value_type);                          \
     callback(JSON::ParsePhase::Post, JSON::Type::value_type, line, column,     \
              value);                                                           \
   }

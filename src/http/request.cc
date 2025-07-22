@@ -53,13 +53,12 @@ auto ClientRequest::send(std::istream &body) -> ClientResponse {
   std::ostringstream output;
   this->stream.on_data(
       [&output](const Status, std::span<const std::uint8_t> buffer) noexcept {
-        std::copy(buffer.begin(), buffer.end(),
-                  std::ostream_iterator<char>(output));
+        std::ranges::copy(buffer, std::ostream_iterator<char>(output));
       });
 
   std::unordered_map<std::string, std::string> headers;
   this->stream.on_header([&headers, this](const Status, std::string_view key,
-                                          std::string_view value) noexcept {
+                                          std::string_view value) {
     std::string header{key};
     if (this->capture_.contains(header) || this->capture_all_) {
       headers.insert_or_assign(std::move(header), std::string{value});
@@ -83,13 +82,12 @@ auto ClientRequest::send() -> ClientResponse {
   std::ostringstream output;
   this->stream.on_data(
       [&output](const Status, std::span<const std::uint8_t> buffer) noexcept {
-        std::copy(buffer.begin(), buffer.end(),
-                  std::ostream_iterator<char>(output));
+        std::ranges::copy(buffer, std::ostream_iterator<char>(output));
       });
 
   std::unordered_map<std::string, std::string> headers;
   this->stream.on_header([&headers, this](const Status, std::string_view key,
-                                          std::string_view value) noexcept {
+                                          std::string_view value) {
     std::string header{key};
     if (this->capture_.contains(header) || this->capture_all_) {
       headers.insert_or_assign(std::move(header), std::string{value});

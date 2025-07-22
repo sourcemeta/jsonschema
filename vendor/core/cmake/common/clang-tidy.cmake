@@ -1,4 +1,4 @@
-function(sourcemeta_target_clang_tidy_attempt_install)
+function(sourcemeta_clang_tidy_attempt_install)
   cmake_parse_arguments(SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL "" "OUTPUT_DIRECTORY" "" ${ARGN})
   if(NOT SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL_OUTPUT_DIRECTORY)
     message(FATAL_ERROR "You must pass the output directory in the OUTPUT_DIRECTORY option")
@@ -76,55 +76,42 @@ function(sourcemeta_target_clang_tidy_attempt_install)
   message(STATUS "Installed `clang-tidy` pre-built binary to ${CLANG_TIDY_BINARY_OUTPUT}")
 endfunction()
 
-function(sourcemeta_target_clang_tidy)
-  cmake_parse_arguments(SOURCEMETA_TARGET_CLANG_TIDY "REQUIRED" "" "SOURCES" ${ARGN})
-  sourcemeta_target_clang_tidy_attempt_install(OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+function(sourcemeta_clang_tidy_attempt_enable)
+  cmake_parse_arguments(SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE "" "TARGET" "" ${ARGN})
+  if(NOT SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET)
+    message(FATAL_ERROR "You must pass the target name using the TARGET option")
+  endif()
 
-  if(SOURCEMETA_TARGET_CLANG_TIDY_REQUIRED)
-    find_program(CLANG_TIDY_BIN NAMES clang-tidy NO_DEFAULT_PATH
-      PATHS "${CMAKE_CURRENT_BINARY_DIR}/bin")
-    if(NOT CLANG_TIDY_BIN)
-      find_program(CLANG_TIDY_BIN NAMES clang-tidy REQUIRED)
-    endif()
+  # TODO: Support other platforms too, like Linux
+  if(APPLE AND SOURCEMETA_COMPILER_LLVM)
+    message(STATUS "Enabling ClangTidy alongside compilation for target ${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET}")
   else()
-    find_program(CLANG_TIDY_BIN NAMES clang-tidy NO_DEFAULT_PATH
-      PATHS "${CMAKE_CURRENT_BINARY_DIR}/bin")
-    if(NOT CLANG_TIDY_BIN)
-      find_program(CLANG_TIDY_BIN NAMES clang-tidy)
-    endif()
+    return()
   endif()
 
+  # We rely on this cache variable to not pre-compute the ClangTidy
+  # setup over and over again for every single target
+  if(NOT SOURCEMETA_CXX_CLANG_TIDY)
+    sourcemeta_clang_tidy_attempt_install(
+      OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    find_program(CLANG_TIDY_BIN NAMES clang-tidy
+        NO_DEFAULT_PATH
+        PATHS "${PROJECT_BINARY_DIR}/bin"
+        REQUIRED)
 
-  # This covers the empty list too
-  if(NOT SOURCEMETA_TARGET_CLANG_TIDY_SOURCES)
-    message(FATAL_ERROR "You must pass file globs to analyze in the SOURCES option")
-  endif()
-  file(GLOB_RECURSE SOURCEMETA_TARGET_CLANG_TIDY_FILES
-    ${SOURCEMETA_TARGET_CLANG_TIDY_SOURCES})
-
-  set(CLANG_TIDY_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-tidy.config")
-
-  if(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
-    # Because `clang-tidy` is typically a Windows `.exe`, transform the path accordingly
-    execute_process(COMMAND cygpath -w "${CLANG_TIDY_CONFIG}"
-      OUTPUT_VARIABLE CLANG_TIDY_CONFIG OUTPUT_STRIP_TRAILING_WHITESPACE)
-  endif()
-
-  if(CLANG_TIDY_BIN)
-    add_custom_target(clang_tidy
-      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-      VERBATIM
-      COMMAND "${CLANG_TIDY_BIN}" -p "${PROJECT_BINARY_DIR}"
-        --config-file "${CLANG_TIDY_CONFIG}"
-        ${SOURCEMETA_TARGET_CLANG_TIDY_FILES}
-        COMMENT "Analyzing sources using ClangTidy")
-  else()
-    add_custom_target(clang_tidy
-      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-      VERBATIM
-      COMMAND "${CMAKE_COMMAND}" -E echo "Could not locate ClangTidy"
-      COMMAND "${CMAKE_COMMAND}" -E false)
+    set(CLANG_TIDY_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-tidy.json")
+    execute_process(COMMAND xcrun --show-sdk-path
+        OUTPUT_VARIABLE MACOSX_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
+        OUTPUT_VARIABLE MACOSX_RESOURCE_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(SOURCEMETA_CXX_CLANG_TIDY
+        "${CLANG_TIDY_BIN};--config-file=${CLANG_TIDY_CONFIG};-header-filter=${PROJECT_SOURCE_DIR}/src/*"
+        "--extra-arg=-isysroot"
+        "--extra-arg=${MACOSX_SDK_PATH}"
+        "--extra-arg=-resource-dir=${MACOSX_RESOURCE_PATH}"
+        CACHE STRING "CXX_CLANG_TIDY")
   endif()
 
-  set_target_properties(clang_tidy PROPERTIES FOLDER "Linting")
+  set_target_properties("${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_ENABLE_TARGET}"
+    PROPERTIES CXX_CLANG_TIDY "${SOURCEMETA_CXX_CLANG_TIDY}")
 endfunction()

@@ -508,6 +508,16 @@ auto reference_visit(
 // TODO: Optionally let users bundle the metaschema too
 
 /// @ingroup jsonschema
+/// A callback to get runtime reporting out of schema bundling:
+/// - Origin URI
+/// - Pointer (reference keyword from the origin)
+/// - Target URI
+/// - Embed pointer
+using BundleCallback =
+    std::function<void(const std::optional<JSON::String> &, const Pointer &,
+                       const JSON::String &, const Pointer &)>;
+
+/// @ingroup jsonschema
 ///
 /// This function bundles a JSON Schema (starting from Draft 4) by embedding
 /// every remote reference into the top level schema resource, handling circular
@@ -562,7 +572,8 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
             const std::optional<std::string> &default_dialect = std::nullopt,
             const std::optional<std::string> &default_id = std::nullopt,
             const std::optional<Pointer> &default_container = std::nullopt,
-            const SchemaFrame::Paths &paths = {empty_pointer}) -> void;
+            const SchemaFrame::Paths &paths = {empty_pointer},
+            const BundleCallback &callback = nullptr) -> void;
 
 /// @ingroup jsonschema
 ///
@@ -621,7 +632,8 @@ auto bundle(const JSON &schema, const SchemaWalker &walker,
             const std::optional<std::string> &default_dialect = std::nullopt,
             const std::optional<std::string> &default_id = std::nullopt,
             const std::optional<Pointer> &default_container = std::nullopt,
-            const SchemaFrame::Paths &paths = {empty_pointer}) -> JSON;
+            const SchemaFrame::Paths &paths = {empty_pointer},
+            const BundleCallback &callback = nullptr) -> JSON;
 
 /// @ingroup jsonschema
 ///

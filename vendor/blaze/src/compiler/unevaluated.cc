@@ -153,10 +153,12 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     for (const auto &pair : subschema.as_object()) {
       const auto keyword_uri{frame.uri(entry.second, {pair.first})};
       SchemaUnevaluatedEntry unevaluated;
+
       if ((subschema_vocabularies.contains(
                "https://json-schema.org/draft/2020-12/vocab/unevaluated") &&
            subschema_vocabularies.contains(
                "https://json-schema.org/draft/2020-12/vocab/applicator")) &&
+          // NOLINTNEXTLINE(bugprone-branch-clone)
           pair.first == "unevaluatedProperties") {
         find_adjacent_dependencies(
             pair.first, schema, frame, walker, resolver,

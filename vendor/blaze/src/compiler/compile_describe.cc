@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/compiler.h>
 
-#include <algorithm> // std::any_of
+#include <algorithm> // std::ranges::any_of
 #include <cassert>   // assert
 #include <sstream>   // std::ostringstream
 #include <variant>   // std::visit
@@ -64,10 +64,10 @@ auto describe_types_check(
   assert(expected.size() > 1);
   auto copy = expected;
 
-  const auto match_real{std::find(copy.cbegin(), copy.cend(),
-                                  sourcemeta::core::JSON::Type::Real)};
-  const auto match_integer{std::find(copy.cbegin(), copy.cend(),
-                                     sourcemeta::core::JSON::Type::Integer)};
+  const auto match_real{
+      std::ranges::find(copy, sourcemeta::core::JSON::Type::Real)};
+  const auto match_integer{
+      std::ranges::find(copy, sourcemeta::core::JSON::Type::Integer)};
   if (match_real != copy.cend() && match_integer != copy.cend()) {
     copy.erase(match_integer);
   }
@@ -93,8 +93,8 @@ auto describe_types_check(
   }
 
   if (valid && current == sourcemeta::core::JSON::Type::Integer &&
-      std::find(copy.cbegin(), copy.cend(),
-                sourcemeta::core::JSON::Type::Real) != copy.cend()) {
+      std::ranges::find(copy, sourcemeta::core::JSON::Type::Real) !=
+          copy.cend()) {
     message << "number";
   } else {
     message << to_string(current);
@@ -111,11 +111,9 @@ auto describe_reference(const sourcemeta::core::JSON &target) -> std::string {
 
 auto is_within_keyword(const sourcemeta::core::WeakPointer &evaluate_path,
                        const std::string &keyword) -> bool {
-  return std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                     [&keyword](const auto &token) {
-                       return token.is_property() &&
-                              token.to_property() == keyword;
-                     });
+  return std::ranges::any_of(evaluate_path, [&keyword](const auto &token) {
+    return token.is_property() && token.to_property() == keyword;
+  });
 }
 
 auto unknown() -> std::string {
@@ -231,11 +229,11 @@ auto describe(const bool valid, const Instruction &step,
     assert(!step.children.empty());
     std::ostringstream message;
 
-    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                    [](const auto &token) {
-                      return token.is_property() &&
-                             token.to_property() == "propertyNames";
-                    }) &&
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
         !instance_location.empty() && instance_location.back().is_property()) {
       message << "The property name "
               << escape_string(instance_location.back().to_property());
@@ -1038,7 +1036,7 @@ auto describe(const bool valid, const Instruction &step,
       value_vector.push_back(entry.first);
     }
 
-    std::sort(value_vector.begin(), value_vector.end());
+    std::ranges::sort(value_vector);
     std::ostringstream message;
     message << "The object value was expected to only define properties ";
     for (auto iterator = value_vector.cbegin(); iterator != value_vector.cend();
@@ -1062,7 +1060,7 @@ auto describe(const bool valid, const Instruction &step,
       value_vector.push_back(entry.first);
     }
 
-    std::sort(value_vector.begin(), value_vector.end());
+    std::ranges::sort(value_vector);
     std::ostringstream message;
     message << "The value was expected to be an object that only defines "
                "properties ";
@@ -1226,11 +1224,11 @@ auto describe(const bool valid, const Instruction &step,
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionRegex) {
-    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                    [](const auto &token) {
-                      return token.is_property() &&
-                             token.to_property() == "propertyNames";
-                    }) &&
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
         !instance_location.empty() && instance_location.back().is_property()) {
       std::ostringstream message;
       message << "The property name "
@@ -1429,7 +1427,7 @@ auto describe(const bool valid, const Instruction &step,
         for (const auto &entry : target.as_object()) {
           properties.push_back(entry.first);
         }
-        std::sort(properties.begin(), properties.end());
+        std::ranges::sort(properties);
 
         for (auto iterator = properties.cbegin(); iterator != properties.cend();
              ++iterator) {
@@ -1477,7 +1475,7 @@ auto describe(const bool valid, const Instruction &step,
         for (const auto &entry : target.as_object()) {
           properties.push_back(entry.first);
         }
-        std::sort(properties.begin(), properties.end());
+        std::ranges::sort(properties);
 
         for (auto iterator = properties.cbegin(); iterator != properties.cend();
              ++iterator) {
@@ -1499,11 +1497,11 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
 
-    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                    [](const auto &token) {
-                      return token.is_property() &&
-                             token.to_property() == "propertyNames";
-                    }) &&
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
         !instance_location.empty() && instance_location.back().is_property()) {
       message << "The property name "
               << escape_string(instance_location.back().to_property());
@@ -1627,11 +1625,11 @@ auto describe(const bool valid, const Instruction &step,
     const auto &value{instruction_value<ValueSet>(step)};
     assert(!value.empty());
 
-    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                    [](const auto &token) {
-                      return token.is_property() &&
-                             token.to_property() == "propertyNames";
-                    }) &&
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
         !instance_location.empty() && instance_location.back().is_property()) {
       message << "The property name "
               << escape_string(instance_location.back().to_property());
@@ -1651,7 +1649,7 @@ auto describe(const bool valid, const Instruction &step,
       } else {
         message << " was expected to equal one of the following values: ";
         std::vector<sourcemeta::core::JSON> copy{value.cbegin(), value.cend()};
-        std::sort(copy.begin(), copy.end());
+        std::ranges::sort(copy);
         for (auto iterator = copy.cbegin(); iterator != copy.cend();
              ++iterator) {
           if (std::next(iterator) == copy.cend()) {
@@ -1674,11 +1672,11 @@ auto describe(const bool valid, const Instruction &step,
     const auto &value{instruction_value<ValueStringHashes>(step).first};
     assert(!value.empty());
 
-    if (std::any_of(evaluate_path.cbegin(), evaluate_path.cend(),
-                    [](const auto &token) {
-                      return token.is_property() &&
-                             token.to_property() == "propertyNames";
-                    }) &&
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
         !instance_location.empty() && instance_location.back().is_property()) {
       message << "The property name "
               << escape_string(instance_location.back().to_property());

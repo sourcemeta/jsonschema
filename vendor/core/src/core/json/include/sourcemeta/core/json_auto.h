@@ -161,7 +161,7 @@ auto from_json(const JSON &value) -> std::optional<T> {
 // JSON?
 /// @ingroup json
 template <typename T>
-  requires std::is_same_v<T, JSON::Object::Container::hash_type>
+  requires std::is_same_v<T, JSON::Object::hash_type>
 auto to_json(const T &hash) -> JSON {
   auto result{JSON::make_array()};
 #if defined(__SIZEOF_INT128__)
@@ -182,7 +182,7 @@ auto to_json(const T &hash) -> JSON {
 // JSON?
 /// @ingroup json
 template <typename T>
-  requires std::is_same_v<T, JSON::Object::Container::hash_type>
+  requires std::is_same_v<T, JSON::Object::hash_type>
 auto from_json(const JSON &value) -> std::optional<T> {
   if (!value.is_array() || value.size() != 4 || !value.at(0).is_integer() ||
       !value.at(1).is_integer() || !value.at(2).is_integer() ||
@@ -209,9 +209,18 @@ auto from_json(const JSON &value) -> std::optional<T> {
 
 /// @ingroup json
 template <typename T>
-  requires std::constructible_from<JSON, T>
+  requires(std::constructible_from<JSON, T> &&
+           // Otherwise MSVC gets confused
+           !std::is_same_v<T, unsigned long long>)
 auto to_json(const T &value) -> JSON {
   return JSON{value};
+}
+
+/// @ingroup json
+template <typename T>
+  requires std::is_same_v<T, unsigned long long>
+auto to_json(const T value) -> JSON {
+  return JSON{static_cast<std::int64_t>(value)};
 }
 
 /// @ingroup json

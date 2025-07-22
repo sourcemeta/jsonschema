@@ -41,14 +41,19 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     assert(!schema_context.base.fragment().has_value());
     for (auto &&step : context.compiler(
              context,
-             {schema_context.relative_pointer.concat({keyword}),
-              schema_context.schema, entry.vocabularies, schema_context.base,
+             {.relative_pointer =
+                  schema_context.relative_pointer.concat({keyword}),
+              .schema = schema_context.schema,
+              .vocabularies = entry.vocabularies,
+              .base = schema_context.base,
               // TODO: This represents a copy
-              schema_context.labels, schema_context.references,
-              schema_context.is_property_name},
-             {keyword, dynamic_context.base_schema_location,
-              dynamic_context.base_instance_location,
-              dynamic_context.property_as_target},
+              .labels = schema_context.labels,
+              .references = schema_context.references,
+              .is_property_name = schema_context.is_property_name},
+             {.keyword = keyword,
+              .base_schema_location = dynamic_context.base_schema_location,
+              .base_instance_location = dynamic_context.base_instance_location,
+              .property_as_target = dynamic_context.property_as_target},
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
       assert(context.frame.locations().contains(
@@ -80,13 +85,13 @@ auto precompile(
   auto nested_vocabularies{sourcemeta::core::vocabularies(
       subschema, context.resolver, entry.second.dialect)};
   const sourcemeta::blaze::SchemaContext nested_schema_context{
-      entry.second.relative_pointer,
-      std::move(subschema),
-      std::move(nested_vocabularies),
-      entry.second.base,
-      {},
-      {},
-      schema_context.is_property_name};
+      .relative_pointer = entry.second.relative_pointer,
+      .schema = std::move(subschema),
+      .vocabularies = std::move(nested_vocabularies),
+      .base = entry.second.base,
+      .labels = {},
+      .references = {},
+      .is_property_name = schema_context.is_property_name};
 
   return {make(sourcemeta::blaze::InstructionIndex::ControlMark, context,
                nested_schema_context, dynamic_context,
@@ -135,13 +140,13 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   SchemaContext schema_context{
-      sourcemeta::core::empty_pointer,
-      schema,
-      vocabularies(schema, resolver, root_frame_entry.dialect),
-      sourcemeta::core::URI::canonicalize(root_frame_entry.base),
-      {},
-      {},
-      false};
+      .relative_pointer = sourcemeta::core::empty_pointer,
+      .schema = schema,
+      .vocabularies = vocabularies(schema, resolver, root_frame_entry.dialect),
+      .base = sourcemeta::core::URI::canonicalize(root_frame_entry.base),
+      .labels = {},
+      .references = {},
+      .is_property_name = false};
 
   std::vector<std::string> resources;
   for (const auto &entry : frame.locations()) {
@@ -153,9 +158,9 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   // Rule out any duplicates as we will use this list as the
   // source for a perfect hash function on schema resources.
-  std::sort(resources.begin(), resources.end());
-  resources.erase(std::unique(resources.begin(), resources.end()),
-                  resources.end());
+  std::ranges::sort(resources);
+  auto [first, last] = std::ranges::unique(resources);
+  resources.erase(first, last);
   assert(resources.size() ==
          std::set<std::string>(resources.cbegin(), resources.cend()).size());
 
@@ -182,10 +187,10 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
   std::vector<std::pair<std::string, std::size_t>> top_static_destinations(
       static_references_count.cbegin(), static_references_count.cend());
-  std::sort(top_static_destinations.begin(), top_static_destinations.end(),
-            [](const auto &left, const auto &right) {
-              return left.second > right.second;
-            });
+  std::ranges::sort(top_static_destinations,
+                    [](const auto &left, const auto &right) {
+                      return left.second > right.second;
+                    });
   constexpr auto MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE{5};
   std::set<std::string> precompiled_static_schemas;
   for (auto iterator = top_static_destinations.cbegin();
@@ -202,16 +207,17 @@ auto compile(const sourcemeta::core::JSON &schema,
   auto unevaluated{
       sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
-  const Context context{schema,
-                        frame,
-                        std::move(resources),
-                        walker,
-                        resolver,
-                        compiler,
-                        mode,
-                        uses_dynamic_scopes,
-                        std::move(unevaluated),
-                        std::move(precompiled_static_schemas)};
+  const Context context{.root = schema,
+                        .frame = frame,
+                        .resources = std::move(resources),
+                        .walker = walker,
+                        .resolver = resolver,
+                        .compiler = compiler,
+                        .mode = mode,
+                        .uses_dynamic_scopes = uses_dynamic_scopes,
+                        .unevaluated = std::move(unevaluated),
+                        .precompiled_static_schemas =
+                            std::move(precompiled_static_schemas)};
   const DynamicContext dynamic_context{relative_dynamic_context()};
   Instructions compiler_template;
 
@@ -254,17 +260,19 @@ auto compile(const sourcemeta::core::JSON &schema,
       requires_evaluation(context, schema_context) ||
       // TODO: This expression should go away if we start properly compiling
       // `unevaluatedItems` like we compile `unevaluatedProperties`
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
   if (compiler_template.empty()) {
-    return {std::move(children), uses_dynamic_scopes, track};
+    return {.instructions = std::move(children),
+            .dynamic = uses_dynamic_scopes,
+            .track = track};
   } else {
     compiler_template.reserve(compiler_template.size() + children.size());
-    std::move(children.begin(), children.end(),
-              std::back_inserter(compiler_template));
-    return {std::move(compiler_template), uses_dynamic_scopes, track};
+    std::ranges::move(children, std::back_inserter(compiler_template));
+    return {.instructions = std::move(compiler_template),
+            .dynamic = uses_dynamic_scopes,
+            .track = track};
   }
 }
 
@@ -331,16 +339,22 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   return compile_subschema(
       context,
-      {entry.relative_pointer, new_schema,
-       vocabularies(new_schema, context.resolver, entry.dialect),
-       sourcemeta::core::URI{entry.base}.recompose_without_fragment().value_or(
-           ""),
+      {.relative_pointer = entry.relative_pointer,
+       .schema = new_schema,
+       .vocabularies =
+           vocabularies(new_schema, context.resolver, entry.dialect),
+       .base = sourcemeta::core::URI{entry.base}
+                   .recompose_without_fragment()
+                   .value_or(""),
        // TODO: This represents a copy
-       schema_context.labels, schema_context.references,
-       schema_context.is_property_name},
-      {dynamic_context.keyword, destination_pointer,
-       dynamic_context.base_instance_location.concat(instance_suffix),
-       dynamic_context.property_as_target},
+       .labels = schema_context.labels,
+       .references = schema_context.references,
+       .is_property_name = schema_context.is_property_name},
+      {.keyword = dynamic_context.keyword,
+       .base_schema_location = destination_pointer,
+       .base_instance_location =
+           dynamic_context.base_instance_location.concat(instance_suffix),
+       .property_as_target = dynamic_context.property_as_target},
       entry.dialect);
 }
 

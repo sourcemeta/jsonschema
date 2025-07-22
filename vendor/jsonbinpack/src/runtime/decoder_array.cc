@@ -30,7 +30,9 @@ auto Decoder::BOUNDED_8BITS_TYPED_ARRAY(
   const std::uint64_t size{byte + options.minimum};
   assert(is_within(size, options.minimum, options.maximum));
   return this->FIXED_TYPED_ARRAY(
-      {size, std::move(options.encoding), std::move(options.prefix_encodings)});
+      {.size = size,
+       .encoding = options.encoding,
+       .prefix_encodings = options.prefix_encodings});
 };
 
 auto Decoder::FLOOR_TYPED_ARRAY(const struct FLOOR_TYPED_ARRAY &options)
@@ -40,7 +42,9 @@ auto Decoder::FLOOR_TYPED_ARRAY(const struct FLOOR_TYPED_ARRAY &options)
   assert(size >= value);
   assert(size >= options.minimum);
   return this->FIXED_TYPED_ARRAY(
-      {size, std::move(options.encoding), std::move(options.prefix_encodings)});
+      {.size = size,
+       .encoding = options.encoding,
+       .prefix_encodings = options.prefix_encodings});
 };
 
 auto Decoder::ROOF_TYPED_ARRAY(const struct ROOF_TYPED_ARRAY &options)
@@ -49,7 +53,9 @@ auto Decoder::ROOF_TYPED_ARRAY(const struct ROOF_TYPED_ARRAY &options)
   const std::uint64_t size{options.maximum - value};
   assert(size <= options.maximum);
   return this->FIXED_TYPED_ARRAY(
-      {size, std::move(options.encoding), std::move(options.prefix_encodings)});
+      {.size = size,
+       .encoding = options.encoding,
+       .prefix_encodings = options.prefix_encodings});
 };
 
 } // namespace sourcemeta::jsonbinpack

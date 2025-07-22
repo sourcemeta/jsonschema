@@ -17,6 +17,7 @@ Dockerfile
 install
 Makefile
 npm-deploy.sh
+pip-deploy.sh
 README.markdown
 cmake/FindBlaze.cmake
 cmake/FindCore.cmake

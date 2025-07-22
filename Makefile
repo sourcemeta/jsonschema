@@ -28,9 +28,6 @@ compile: .always
 		--component sourcemeta_jsonschema
 	$(CPACK) --config build/CPackConfig.cmake -B build/out -C $(PRESET)
 
-lint: .always
-	$(CMAKE) --build ./build --config $(PRESET) --target clang_tidy
-
 test: .always
 	$(CTEST) --test-dir ./build --build-config $(PRESET) \
 		--output-on-failure --progress --parallel

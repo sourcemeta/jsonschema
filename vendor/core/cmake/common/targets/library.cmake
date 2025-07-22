@@ -115,6 +115,8 @@ function(sourcemeta_library)
     target_include_directories(${TARGET_NAME}
       PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
   endif()
+
+  sourcemeta_clang_tidy_attempt_enable(TARGET "${TARGET_NAME}")
 endfunction()
 
 function(sourcemeta_library_install)

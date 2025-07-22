@@ -149,7 +149,7 @@ auto compiler_2019_09_applicator_contains_with_options(
                  schema_context, dynamic_context, ValueNone{})};
   }
 
-  if (minimum == 0 && !maximum.has_value()) {
+  if (minimum == 0 && !maximum.has_value() && !track_evaluation) {
     return {};
   }
 

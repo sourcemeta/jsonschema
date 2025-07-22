@@ -16,11 +16,13 @@
 
 #include <sourcemeta/core/jsonschema.h>
 
+#include <cstdint> // std::uint8_t
+
 namespace sourcemeta::core {
 
 /// @ingroup alterschema
 /// The category of a built-in transformation rule
-enum class AlterSchemaMode {
+enum class AlterSchemaMode : std::uint8_t {
   /// Rules that simplify the given schema for both human readability and
   /// performance
   Readability,

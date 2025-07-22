@@ -35,6 +35,7 @@ contains_any(const Vocabularies &container,
 #include "canonicalizer/type_union_implicit.h"
 
 // Linter
+#include "linter/additional_items_with_schema_items.h"
 #include "linter/additional_properties_default.h"
 #include "linter/const_with_type.h"
 #include "linter/content_media_type_without_encoding.h"
@@ -44,10 +45,12 @@ contains_any(const Vocabularies &container,
 #include "linter/dependencies_property_tautology.h"
 #include "linter/dependent_required_default.h"
 #include "linter/dependent_required_tautology.h"
+#include "linter/draft_official_dialect_without_empty_fragment.h"
 #include "linter/duplicate_allof_branches.h"
 #include "linter/duplicate_anyof_branches.h"
 #include "linter/duplicate_enum_values.h"
 #include "linter/duplicate_required_values.h"
+#include "linter/else_empty.h"
 #include "linter/else_without_if.h"
 #include "linter/enum_to_const.h"
 #include "linter/enum_with_type.h"
@@ -61,11 +64,13 @@ contains_any(const Vocabularies &container,
 #include "linter/maximum_real_for_integer.h"
 #include "linter/min_contains_without_contains.h"
 #include "linter/minimum_real_for_integer.h"
+#include "linter/modern_official_dialect_with_empty_fragment.h"
 #include "linter/multiple_of_default.h"
 #include "linter/non_applicable_type_specific_keywords.h"
 #include "linter/pattern_properties_default.h"
 #include "linter/properties_default.h"
 #include "linter/single_type_array.h"
+#include "linter/then_empty.h"
 #include "linter/then_without_if.h"
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
@@ -84,6 +89,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   // Common rules that apply to all modes
   bundle.add<ContentMediaTypeWithoutEncoding>();
   bundle.add<ContentSchemaWithoutMediaType>();
+  bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
   bundle.add<NonApplicableTypeSpecificKeywords>();
   bundle.add<UnnecessaryAllOfWrapperModern>();
   bundle.add<UnnecessaryAllOfWrapperDraft>();
@@ -94,6 +100,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   bundle.add<IfWithoutThenElse>();
   bundle.add<MaxContainsWithoutContains>();
   bundle.add<MinContainsWithoutContains>();
+  bundle.add<ThenEmpty>();
+  bundle.add<ElseEmpty>();
   bundle.add<ThenWithoutIf>();
   bundle.add<DependenciesPropertyTautology>();
   bundle.add<DependentRequiredTautology>();
@@ -105,6 +113,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   bundle.add<DuplicateEnumValues>();
   bundle.add<DuplicateRequiredValues>();
   bundle.add<ConstWithType>();
+  bundle.add<AdditionalItemsWithSchemaItems>();
+  bundle.add<ModernOfficialDialectWithEmptyFragment>();
   bundle.add<ExclusiveMaximumNumberAndMaximum>();
   bundle.add<ExclusiveMinimumNumberAndMinimum>();
 

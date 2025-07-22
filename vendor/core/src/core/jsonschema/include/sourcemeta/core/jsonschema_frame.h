@@ -105,12 +105,12 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrame {
 public:
   /// The mode of framing. More extensive analysis can be compute and memory
   /// intensive
-  enum class Mode { Locations, References, Instances };
+  enum class Mode : std::uint8_t { Locations, References, Instances };
 
   SchemaFrame(const Mode mode) : mode_{mode} {}
 
   // Query the current mode that the schema frame was configured with
-  auto mode() const noexcept -> Mode { return this->mode_; }
+  [[nodiscard]] auto mode() const noexcept -> Mode { return this->mode_; }
 
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
@@ -166,12 +166,15 @@ public:
     JSON::String base_dialect;
   };
 
-  // TODO: Indexing locations by reference type is wrong. We can index by just
-  // URI, and introduce a new `DynamicAnchor` location type
   /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,
   /// JSON Pointers within the schema, and subschemas dialects. We call it
   /// reference frame as this mapping is essential for resolving references.
   using Locations =
+      // While it might seem weird that we namespace the location URIs with a
+      // reference type, it is essential for distinguishing schema resource URIs
+      // from `$recursiveRef: true` on another place of the schema schema
+      // resource, as otherwise they would both have the exact same URI, but
+      // point to different places.
       std::map<std::pair<SchemaReferenceType, JSON::String>, Location>;
 
   // TODO: Turn the mapped value into a proper set
@@ -182,7 +185,7 @@ public:
   using Paths = std::set<Pointer>;
 
   /// Export the frame entries as JSON
-  auto to_json() const -> JSON;
+  [[nodiscard]] auto to_json() const -> JSON;
 
   /// Analyse a schema or set of schemas from a given root. Passing
   /// multiple paths that have any overlap is undefined behaviour
@@ -194,45 +197,47 @@ public:
           const Paths &paths = {empty_pointer}) -> void;
 
   /// Access the analysed schema locations
-  auto locations() const noexcept -> const Locations &;
+  [[nodiscard]] auto locations() const noexcept -> const Locations &;
 
   /// Access the analysed schema references
-  auto references() const noexcept -> const References &;
+  [[nodiscard]] auto references() const noexcept -> const References &;
 
   /// Check whether the analysed schema has no external references
-  auto standalone() const -> bool;
+  [[nodiscard]] auto standalone() const -> bool;
 
   /// Get the vocabularies associated with a location entry
-  auto vocabularies(const Location &location,
-                    const SchemaResolver &resolver) const -> Vocabularies;
+  [[nodiscard]] auto vocabularies(const Location &location,
+                                  const SchemaResolver &resolver) const
+      -> Vocabularies;
 
   /// Get the URI associated with a location entry
-  auto uri(const Location &location,
-           const Pointer &relative_schema_location = empty_pointer) const
+  [[nodiscard]] auto
+  uri(const Location &location,
+      const Pointer &relative_schema_location = empty_pointer) const
       -> JSON::String;
 
   /// Get the location associated by traversing a pointer from another location
-  auto traverse(const Location &location,
-                const Pointer &relative_schema_location) const
+  [[nodiscard]] auto traverse(const Location &location,
+                              const Pointer &relative_schema_location) const
       -> const Location &;
 
   /// Get the location associated with a given URI
-  auto traverse(const JSON::String &uri) const
+  [[nodiscard]] auto traverse(const JSON::String &uri) const
       -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Try to dereference a reference location into its destination location
-  auto
+  [[nodiscard]] auto
   dereference(const Location &location,
               const Pointer &relative_schema_location = empty_pointer) const
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 
   /// Get the unresolved instance locations associated with a location entry
-  auto instance_locations(const Location &location) const -> const
+  [[nodiscard]] auto instance_locations(const Location &location) const -> const
       typename Instances::mapped_type &;
 
   /// Find all references to a given location pointer
-  auto references_to(const Pointer &pointer) const -> std::vector<
+  [[nodiscard]] auto references_to(const Pointer &pointer) const -> std::vector<
       std::reference_wrapper<const typename References::value_type>>;
 
 private:

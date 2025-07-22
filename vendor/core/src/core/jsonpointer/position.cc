@@ -1,5 +1,5 @@
 #include <sourcemeta/core/json_value.h>
-#include <sourcemeta/core/jsonpointer_position.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <cassert>  // assert
 #include <cstddef>  // std::size_t
@@ -42,6 +42,15 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
 
 auto PointerPositionTracker::size() const -> std::size_t {
   return this->data.size();
+}
+
+auto PointerPositionTracker::to_json() const -> JSON {
+  auto result{JSON::make_object()};
+  for (const auto &entry : this->data) {
+    result.assign(to_string(entry.first),
+                  sourcemeta::core::to_json(entry.second));
+  }
+  return result;
 }
 
 } // namespace sourcemeta::core

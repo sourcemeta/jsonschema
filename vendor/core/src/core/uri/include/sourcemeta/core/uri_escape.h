@@ -5,13 +5,14 @@
 #include <sourcemeta/core/uri_export.h>
 #endif
 
+#include <cstdint> // std::uint8_t
 #include <istream> // std::istream
 #include <ostream> // std::ostream
 
 namespace sourcemeta::core {
 
 /// @ingroup uri
-enum class URIEscapeMode {
+enum class URIEscapeMode : std::uint8_t {
   // Escape every characted that is not in the URI "unreserved" ABNF category
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   SkipUnreserved,
