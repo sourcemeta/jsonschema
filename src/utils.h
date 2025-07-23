@@ -46,16 +46,16 @@ auto for_each_json(const std::vector<std::string> &arguments,
                    const std::set<std::string> &extensions)
     -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
 
-auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
-    -> void;
+auto print(const sourcemeta::blaze::SimpleOutput &output,
+           std::ostream &stream) -> void;
 
 auto print_annotations(
     const sourcemeta::blaze::SimpleOutput &output,
     const std::map<std::string, std::vector<std::string>> &options,
     std::ostream &stream) -> void;
 
-auto print(const sourcemeta::blaze::TraceOutput &output, std::ostream &stream)
-    -> void;
+auto print(const sourcemeta::blaze::TraceOutput &output,
+           std::ostream &stream) -> void;
 
 auto resolver(const std::map<std::string, std::vector<std::string>> &options,
               const bool remote,
@@ -65,20 +65,17 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
 auto log_verbose(const std::map<std::string, std::vector<std::string>> &options)
     -> std::ostream &;
 
-auto parse_extensions(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::string>;
+auto parse_extensions(const std::map<std::string, std::vector<std::string>>
+                          &options) -> std::set<std::string>;
 
-auto parse_ignore(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::set<std::filesystem::path>;
+auto parse_ignore(const std::map<std::string, std::vector<std::string>>
+                      &options) -> std::set<std::filesystem::path>;
 
 auto safe_weakly_canonical(const std::filesystem::path &input)
     -> std::filesystem::path;
 
-auto default_dialect(
-    const std::map<std::string, std::vector<std::string>> &options)
-    -> std::optional<std::string>;
+auto default_dialect(const std::map<std::string, std::vector<std::string>>
+                         &options) -> std::optional<std::string>;
 
 } // namespace sourcemeta::jsonschema::cli
 

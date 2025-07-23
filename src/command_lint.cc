@@ -29,8 +29,8 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
 }
 
 static auto reindent(const std::string_view &value,
-                     const std::string &indentation, std::ostream &stream)
-    -> void {
+                     const std::string &indentation,
+                     std::ostream &stream) -> void {
   if (!value.empty()) {
     stream << indentation;
   }
