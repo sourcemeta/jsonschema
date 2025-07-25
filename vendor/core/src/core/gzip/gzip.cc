@@ -114,8 +114,8 @@ auto gzip(std::istream &stream) -> std::string {
   return output.str();
 }
 
-auto gzip(std::string input) -> std::string {
-  std::istringstream stream{std::move(input)};
+auto gzip(const std::string &input) -> std::string {
+  std::istringstream stream{input};
   return gzip(stream);
 }
 
@@ -125,8 +125,8 @@ auto gunzip(std::istream &stream) -> std::string {
   return output.str();
 }
 
-auto gunzip(std::string input) -> std::string {
-  std::istringstream stream{std::move(input)};
+auto gunzip(const std::string &input) -> std::string {
+  std::istringstream stream{input};
   return gunzip(stream);
 }
 

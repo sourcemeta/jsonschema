@@ -70,7 +70,7 @@ SOURCEMETA_CORE_GZIP_EXPORT auto gzip(std::istream &stream) -> std::string;
 /// const auto result{sourcemeta::core::gzip("Hello World")};
 /// assert(!result.empty());
 /// ```
-SOURCEMETA_CORE_GZIP_EXPORT auto gzip(std::string input) -> std::string;
+SOURCEMETA_CORE_GZIP_EXPORT auto gzip(const std::string &input) -> std::string;
 
 /// @ingroup gzip
 ///
@@ -118,7 +118,8 @@ SOURCEMETA_CORE_GZIP_EXPORT auto gunzip(std::istream &stream) -> std::string;
 /// const auto result{sourcemeta::core::gunzip("Hello World")};
 /// assert(result == "Hello World");
 /// ```
-SOURCEMETA_CORE_GZIP_EXPORT auto gunzip(std::string input) -> std::string;
+SOURCEMETA_CORE_GZIP_EXPORT auto gunzip(const std::string &input)
+    -> std::string;
 
 } // namespace sourcemeta::core
 

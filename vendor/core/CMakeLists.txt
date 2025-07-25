@@ -64,13 +64,19 @@ if(SOURCEMETA_CORE_UUID)
   add_subdirectory(src/core/uuid)
 endif()
 
-if(SOURCEMETA_CORE_GZIP OR SOURCEMETA_CORE_CONTRIB_ZLIB)
+if(SOURCEMETA_CORE_CONTRIB_ZLIB OR SOURCEMETA_CORE_GZIP)
   find_package(ZLIB REQUIRED)
+endif()
+
+if(SOURCEMETA_CORE_GZIP)
   add_subdirectory(src/core/gzip)
 endif()
 
-if(SOURCEMETA_CORE_MD5 OR SOURCEMETA_CORE_CONTRIB_BEARSSL)
+if(SOURCEMETA_CORE_CONTRIB_BEARSSL OR SOURCEMETA_CORE_MD5)
   find_package(BearSSL REQUIRED)
+endif()
+
+if(SOURCEMETA_CORE_MD5)
   add_subdirectory(src/core/md5)
 endif()
 
@@ -121,8 +127,6 @@ if(SOURCEMETA_CORE_DOCS)
 endif()
 
 if(PROJECT_IS_TOP_LEVEL)
-  # TODO: Try once more to enable this per target,
-  # so, we don't need to manually disable it here
   sourcemeta_target_clang_format(SOURCES
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
