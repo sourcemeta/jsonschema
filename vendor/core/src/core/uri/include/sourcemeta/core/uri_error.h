@@ -8,7 +8,7 @@
 #include <cstdint>   // std::uint64_t
 #include <exception> // std::exception
 #include <string>    // std::string
-#include <utility>   // std::string
+#include <utility>   // std::move
 
 namespace sourcemeta::core {
 

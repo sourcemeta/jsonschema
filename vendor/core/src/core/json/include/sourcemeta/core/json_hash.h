@@ -51,7 +51,6 @@ template <typename T> struct PropertyHashJSON {
       -> hash_type {
     hash_type result;
     assert(!value.empty());
-    assert(value.size() <= 31);
     // Copy starting a byte 2
     std::memcpy(reinterpret_cast<char *>(&result) + 1, value.data(), size);
     return result;
@@ -128,11 +127,13 @@ template <typename T> struct PropertyHashJSON {
         // This case is specifically designed to be constant with regards to
         // string length, and to exploit the fact that most JSON objects don't
         // have a lot of entries, so hash collision is not as common
-        return {1 +
-                (size + static_cast<typename hash_type::type>(value.front()) +
+        auto hash = this->perfect(value, 31);
+        hash.a |=
+            1 + (size + static_cast<typename hash_type::type>(value.front()) +
                  static_cast<typename hash_type::type>(value.back())) %
                     // Make sure the property hash can never exceed 8 bits
-                    255};
+                    255;
+        return hash;
     }
   }
 
@@ -140,7 +141,7 @@ template <typename T> struct PropertyHashJSON {
   inline auto is_perfect(const hash_type &hash) const noexcept -> bool {
     // If there is anything written past the first byte,
     // then it is a perfect hash
-    return hash.a > 255;
+    return (hash.a & 255) == 0;
   }
 };
 
