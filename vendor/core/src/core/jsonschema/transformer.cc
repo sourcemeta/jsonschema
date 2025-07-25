@@ -21,6 +21,16 @@ auto is_true(const sourcemeta::core::SchemaTransformRule::Result &result)
   }
 }
 
+auto calculate_health_percentage(const std::size_t subschemas,
+                                 const std::size_t failed_subschemas)
+    -> std::uint8_t {
+  assert(failed_subschemas <= subschemas);
+  const auto result{100 - (failed_subschemas * 100 / subschemas)};
+  assert(result >= 0);
+  assert(result <= 100);
+  return static_cast<std::uint8_t>(result);
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -101,20 +111,26 @@ auto SchemaTransformer::check(
     const JSON &schema, const SchemaWalker &walker,
     const SchemaResolver &resolver, const SchemaTransformer::Callback &callback,
     const std::optional<JSON::String> &default_dialect,
-    const std::optional<JSON::String> &default_id) const -> bool {
+    const std::optional<JSON::String> &default_id) const
+    -> std::pair<bool, std::uint8_t> {
   SchemaFrame frame{SchemaFrame::Mode::Locations};
   frame.analyse(schema, walker, resolver, default_dialect, default_id);
 
   bool result{true};
+  std::size_t subschema_count{0};
+  std::size_t subschema_failures{0};
   for (const auto &entry : frame.locations()) {
     if (entry.second.type != SchemaFrame::LocationType::Resource &&
         entry.second.type != SchemaFrame::LocationType::Subschema) {
       continue;
     }
 
+    subschema_count += 1;
+
     const auto &current{get(schema, entry.second.pointer)};
     const auto current_vocabularies{
         vocabularies(schema, resolver, entry.second.dialect)};
+    bool subresult{true};
     for (const auto &[name, rule] : this->rules) {
       const auto outcome{rule->check(current, schema, current_vocabularies,
                                      walker, resolver, frame, entry.second)};
@@ -122,22 +138,28 @@ auto SchemaTransformer::check(
         case 0:
           assert(std::holds_alternative<bool>(outcome));
           if (*std::get_if<bool>(&outcome)) {
-            result = false;
+            subresult = false;
             callback(entry.second.pointer, name, rule->message(), "");
           }
 
           break;
         default:
           assert(std::holds_alternative<std::string>(outcome));
-          result = false;
+          subresult = false;
           callback(entry.second.pointer, name, rule->message(),
                    *std::get_if<std::string>(&outcome));
           break;
       }
     }
+
+    if (!subresult) {
+      subschema_failures += 1;
+      result = false;
+    }
   }
 
-  return result;
+  return {result,
+          calculate_health_percentage(subschema_count, subschema_failures)};
 }
 
 auto SchemaTransformer::apply(
@@ -147,7 +169,7 @@ auto SchemaTransformer::apply(
     const std::optional<JSON::String> &default_id) const -> bool {
   // There is no point in applying an empty bundle
   assert(!this->rules.empty());
-  std::set<std::pair<Pointer, JSON::String>> processed_rules;
+  std::set<std::pair<const JSON *, const JSON::String *>> processed_rules;
 
   bool result{true};
   while (true) {
@@ -183,7 +205,8 @@ auto SchemaTransformer::apply(
           continue;
         }
 
-        if (processed_rules.contains({entry.second.pointer, name})) {
+        std::pair<const JSON *, const JSON::String *> mark{&current, &name};
+        if (processed_rules.contains(mark)) {
           // TODO: Throw a better custom error that also highlights the schema
           // location
           std::ostringstream error;
@@ -221,7 +244,7 @@ auto SchemaTransformer::apply(
           set(schema, reference.first.second, JSON{original.recompose()});
         }
 
-        processed_rules.emplace(entry.second.pointer, name);
+        processed_rules.emplace(std::move(mark));
         goto core_transformer_start_again;
       }
     }

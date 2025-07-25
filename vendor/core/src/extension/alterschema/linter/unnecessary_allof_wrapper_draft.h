@@ -28,6 +28,17 @@ public:
 
     for (const auto &entry : schema.at("allOf").as_array()) {
       if (entry.is_object()) {
+        // It is dangerous to extract type-specific keywords from a schema that
+        // declares a type into another schema that also declares a type if
+        // the types are different. As we might lead to those type-keywords
+        // getting incorrectly removed if they don't apply to the target type
+        if (schema.defines("type") && entry.defines("type") &&
+            // TODO: Ideally we also check for intersection of types in type
+            // arrays or whether one is contained in the other
+            schema.at("type") != entry.at("type")) {
+          continue;
+        }
+
         for (const auto &subentry : entry.as_object()) {
           if (subentry.first != "$ref" && !schema.defines(subentry.first)) {
             return true;

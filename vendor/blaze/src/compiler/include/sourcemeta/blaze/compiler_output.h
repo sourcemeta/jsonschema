@@ -256,8 +256,11 @@ private:
 
 /// @ingroup compiler
 ///
-/// This function translates a step execution into a human-readable string.
-/// Useful as the building block for producing user-friendly evaluation results.
+/// This function translates a "post" step execution into a human-readable
+/// string. Useful as the building block for producing user-friendly evaluation
+/// results.
+///
+/// Note that describing a "pre" step execution is NOT supported.
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 describe(const bool valid, const Instruction &step,
          const sourcemeta::core::WeakPointer &evaluate_path,

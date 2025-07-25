@@ -176,13 +176,13 @@ auto sourcemeta::jsonschema::cli::lint(
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       try {
-        const bool subresult = bundle.check(
+        const auto subresult = bundle.check(
             entry.second, sourcemeta::core::schema_official_walker,
             resolver(options, options.contains("h") || options.contains("http"),
                      dialect),
             get_lint_callback(errors_array, entry.first, output_json), dialect,
             sourcemeta::core::URI::from_path(entry.first).recompose());
-        if (!subresult) {
+        if (!subresult.first) {
           result = false;
         }
       } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {

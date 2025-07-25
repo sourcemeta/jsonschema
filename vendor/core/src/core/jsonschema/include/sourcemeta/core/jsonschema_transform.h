@@ -242,7 +242,9 @@ public:
         const SchemaResolver &resolver, const Callback &callback,
         const std::optional<JSON::String> &default_dialect = std::nullopt,
         const std::optional<JSON::String> &default_id = std::nullopt) const
-      -> bool;
+      // Note that we only calculate a health score on "check", as "apply" would
+      // by definition change the score
+      -> std::pair<bool, std::uint8_t>;
 
   [[nodiscard]] auto begin() const -> auto { return this->rules.cbegin(); }
   [[nodiscard]] auto end() const -> auto { return this->rules.cend(); }

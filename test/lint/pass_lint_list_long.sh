@@ -118,6 +118,12 @@ pattern_properties_default
 properties_default
   Setting the `properties` keyword to the empty object does not add any further constraint
 
+property_names_default
+  Setting the `propertyNames` keyword to the empty object does not add any further constraint
+
+property_names_type_default
+  Setting the `type` keyword to `string` inside `propertyNames` does not add any further constraint
+
 single_type_array
   Setting `type` to an array of a single type is the same as directly declaring such type
 
@@ -148,7 +154,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 46
+Number of rules: 48
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
