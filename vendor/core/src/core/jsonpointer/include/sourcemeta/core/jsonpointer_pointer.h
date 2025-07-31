@@ -180,7 +180,7 @@ public:
   /// assert(token.is_property());
   /// ```
   template <class... Args> auto emplace_back(Args &&...args) -> reference {
-    return this->data.emplace_back(args...);
+    return this->data.emplace_back(std::forward<Args>(args)...);
   }
 
   /// Reserve capacity for a JSON Pointer. For example:

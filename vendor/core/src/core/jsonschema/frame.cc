@@ -236,8 +236,8 @@ auto store(
 // Check misunderstood struct to be a function
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct InternalEntry {
-  const sourcemeta::core::SchemaIteratorEntry common;
-  const std::optional<sourcemeta::core::JSON::String> id;
+  sourcemeta::core::SchemaIteratorEntry common;
+  std::optional<sourcemeta::core::JSON::String> id;
 };
 
 auto traverse_origin_instance_locations(
@@ -273,10 +273,10 @@ auto traverse_origin_instance_locations(
 // Check misunderstood struct to be a function
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct CacheSubschema {
-  const sourcemeta::core::PointerTemplate instance_location{};
-  const sourcemeta::core::PointerTemplate relative_instance_location{};
-  const bool orphan{};
-  const std::optional<sourcemeta::core::Pointer> parent{};
+  sourcemeta::core::PointerTemplate instance_location{};
+  sourcemeta::core::PointerTemplate relative_instance_location{};
+  bool orphan{};
+  std::optional<sourcemeta::core::Pointer> parent{};
 };
 
 auto repopulate_instance_locations(

@@ -1,5 +1,6 @@
 {
-  "Checks": "-*, bugprone-*, -bugprone-easily-swappable-parameters,-bugprone-unchecked-optional-access, concurrency-*, modernize-*, performance-*, portability-*",
+  "Checks": "-*, bugprone-*, -bugprone-easily-swappable-parameters,-bugprone-unchecked-optional-access, concurrency-*,cppcoreguidelines-missing-std-forward,
+ cppcoreguidelines-avoid-const-or-ref-data-members, modernize-*, performance-*, portability-*",
   "WarningsAsErrors": "*",
   "FormatStyle": "none",
   "UseColor": true

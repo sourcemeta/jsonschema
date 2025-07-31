@@ -1,8 +1,8 @@
-class EqualNumericBoundsToEnum final : public SchemaTransformRule {
+class EqualNumericBoundsToConst final : public SchemaTransformRule {
 public:
-  EqualNumericBoundsToEnum()
+  EqualNumericBoundsToConst()
       : SchemaTransformRule{
-            "equal_numeric_bounds_to_enum",
+            "equal_numeric_bounds_to_const",
             "Setting `minimum` and `maximum` to the same number only leaves "
             "one possible value"} {};
 
@@ -15,11 +15,14 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(vocabularies,
-                        {"http://json-schema.org/draft-04/schema#",
-                         "http://json-schema.org/draft-03/schema#",
-                         "http://json-schema.org/draft-02/schema#",
-                         "http://json-schema.org/draft-01/schema#"}) &&
+    return contains_any(
+               vocabularies,
+               {
+                   "https://json-schema.org/draft/2020-12/vocab/validation",
+                   "https://json-schema.org/draft/2019-09/vocab/validation",
+                   "http://json-schema.org/draft-07/schema#",
+                   "http://json-schema.org/draft-06/schema#",
+               }) &&
            schema.is_object() && schema.defines("type") &&
            schema.at("type").is_string() &&
            (schema.at("type").to_string() == "integer" ||
@@ -30,11 +33,8 @@ public:
   }
 
   auto transform(JSON &schema) const -> void override {
-    sourcemeta::core::JSON values = sourcemeta::core::JSON::make_array();
-    values.push_back(schema.at("minimum"));
-    schema.assign("enum", std::move(values));
+    schema.rename("minimum", "const");
     schema.erase("type");
-    schema.erase("minimum");
     schema.erase("maximum");
   }
 };

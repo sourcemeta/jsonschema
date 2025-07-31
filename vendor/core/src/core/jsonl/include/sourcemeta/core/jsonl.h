@@ -57,6 +57,7 @@ public:
   auto cend() -> const_iterator;
 
 private:
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   std::basic_istream<JSON::Char, JSON::CharTraits> &data;
 };
 

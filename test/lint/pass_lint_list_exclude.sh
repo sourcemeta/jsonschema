@@ -43,6 +43,9 @@ dependent_required_tautology
 draft_official_dialect_without_empty_fragment
   The official dialect URI of Draft 7 and older versions must contain the empty fragment
 
+draft_ref_siblings
+  In Draft 7 and older dialects, keywords sibling to $ref are never evaluated
+
 duplicate_allof_branches
   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
 
@@ -66,6 +69,9 @@ enum_to_const
 
 enum_with_type
   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types
+
+equal_numeric_bounds_to_const
+  Setting `minimum` and `maximum` to the same number only leaves one possible value
 
 equal_numeric_bounds_to_enum
   Setting `minimum` and `maximum` to the same number only leaves one possible value
@@ -104,7 +110,7 @@ multiple_of_default
   Setting `multipleOf` to 1 does not add any further constraint
 
 non_applicable_type_specific_keywords
-  Avoid keywords that don't apply to the current explicitly declared type
+  Avoid keywords that don't apply to the type or types that the current subschema expects
 
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
@@ -148,7 +154,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 46
+Number of rules: 48
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
