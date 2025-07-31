@@ -26,7 +26,6 @@ auto calculate_health_percentage(const std::size_t subschemas,
     -> std::uint8_t {
   assert(failed_subschemas <= subschemas);
   const auto result{100 - (failed_subschemas * 100 / subschemas)};
-  assert(result >= 0);
   assert(result <= 100);
   return static_cast<std::uint8_t>(result);
 }

@@ -46,6 +46,7 @@ contains_any(const Vocabularies &container,
 #include "linter/dependent_required_default.h"
 #include "linter/dependent_required_tautology.h"
 #include "linter/draft_official_dialect_without_empty_fragment.h"
+#include "linter/draft_ref_siblings.h"
 #include "linter/duplicate_allof_branches.h"
 #include "linter/duplicate_anyof_branches.h"
 #include "linter/duplicate_enum_values.h"
@@ -54,6 +55,7 @@ contains_any(const Vocabularies &container,
 #include "linter/else_without_if.h"
 #include "linter/enum_to_const.h"
 #include "linter/enum_with_type.h"
+#include "linter/equal_numeric_bounds_to_const.h"
 #include "linter/equal_numeric_bounds_to_enum.h"
 #include "linter/exclusive_maximum_number_and_maximum.h"
 #include "linter/exclusive_minimum_number_and_minimum.h"
@@ -119,11 +121,13 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   bundle.add<ModernOfficialDialectWithEmptyFragment>();
   bundle.add<ExclusiveMaximumNumberAndMaximum>();
   bundle.add<ExclusiveMinimumNumberAndMinimum>();
+  bundle.add<DraftRefSiblings>();
 
   switch (mode) {
     case AlterSchemaMode::StaticAnalysis:
       bundle.add<BooleanTrue>();
       bundle.add<ConstAsEnum>();
+      bundle.add<EqualNumericBoundsToConst>();
       bundle.add<ExclusiveMaximumIntegerToMaximum>();
       bundle.add<ExclusiveMinimumIntegerToMinimum>();
       bundle.add<TypeArrayToAnyOf_2020_12>();
@@ -140,6 +144,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
       bundle.add<TypeUnionImplicit>();
       break;
     case AlterSchemaMode::Readability:
+      bundle.add<EqualNumericBoundsToConst>();
       bundle.add<AdditionalPropertiesDefault>();
       bundle.add<ContentSchemaDefault>();
       bundle.add<DependenciesDefault>();

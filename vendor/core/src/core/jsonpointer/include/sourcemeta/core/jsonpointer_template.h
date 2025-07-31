@@ -132,7 +132,7 @@ public:
   /// pointer.emplace_back(sourcemeta::core::PointerTemplate::Wildcard::Property);
   /// ```
   template <class... Args> auto emplace_back(Args &&...args) -> reference {
-    return this->data.emplace_back(args...);
+    return this->data.emplace_back(std::forward<Args>(args)...);
   }
 
   /// Push a copy of a JSON Pointer into the back of a JSON Pointer template.

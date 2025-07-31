@@ -1,13 +1,13 @@
 #include <sourcemeta/core/jsonschema.h>
 
-#include <cassert>     // assert
-#include <cstdint>     // std::uint64_t
-#include <functional>  // std::less
-#include <limits>      // std::numeric_limits
-#include <numeric>     // std::accumulate
-#include <sstream>     // std::ostringstream
-#include <type_traits> // std::remove_reference_t
-#include <utility>     // std::move
+#include <cassert>       // assert
+#include <cstdint>       // std::uint64_t
+#include <limits>        // std::numeric_limits
+#include <numeric>       // std::accumulate
+#include <sstream>       // std::ostringstream
+#include <type_traits>   // std::remove_reference_t
+#include <unordered_map> // std::unordered_map
+#include <utility>       // std::move
 
 auto sourcemeta::core::is_schema(const sourcemeta::core::JSON &schema) -> bool {
   return schema.is_object() || schema.is_boolean();
@@ -476,12 +476,10 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
   return result;
 }
 
-auto sourcemeta::core::schema_format_compare(
-    const sourcemeta::core::JSON::String &left,
-    const sourcemeta::core::JSON::String &right) -> bool {
+static auto keyword_rank(const sourcemeta::core::JSON::String &keyword,
+                         const std::uint64_t otherwise) -> std::uint64_t {
   using Rank =
-      std::map<JSON::String, std::uint64_t, std::less<>,
-               JSON::Allocator<std::pair<const JSON::String, std::uint64_t>>>;
+      std::unordered_map<sourcemeta::core::JSON::String, std::uint64_t>;
   static Rank rank{// Most core keywords tend to come first
                    {"$schema", 0},
                    {"$id", 1},
@@ -501,88 +499,114 @@ auto sourcemeta::core::schema_format_compare(
                    {"writeOnly", 14},
                    {"default", 15},
 
+                   // This is a placeholder for "x-"-prefixed unknown keywords,
+                   // as they are almost always metadata
+                   {"x", 16},
+
                    // Then references
-                   {"$ref", 16},
-                   {"$dynamicRef", 17},
-                   {"$recursiveRef", 18},
+                   {"$ref", 17},
+                   {"$dynamicRef", 18},
+                   {"$recursiveRef", 19},
 
                    // Then keywords that apply to any type
-                   {"type", 19},
-                   {"disallow", 20},
-                   {"extends", 21},
-                   {"const", 22},
-                   {"enum", 23},
-                   {"optional", 0},
-                   {"requires", 0},
-                   {"allOf", 24},
-                   {"anyOf", 25},
-                   {"oneOf", 26},
-                   {"not", 27},
-                   {"if", 28},
-                   {"then", 29},
-                   {"else", 30},
+                   {"type", 20},
+                   {"disallow", 21},
+                   {"extends", 22},
+                   {"const", 23},
+                   {"enum", 24},
+                   {"optional", 25},
+                   {"requires", 26},
+                   {"allOf", 27},
+                   {"anyOf", 28},
+                   {"oneOf", 29},
+                   {"not", 30},
+                   {"if", 31},
+                   {"then", 32},
+                   {"else", 33},
 
                    // Then keywords about numbers
-                   {"exclusiveMaximum", 31},
-                   {"maximum", 32},
-                   {"maximumCanEqual", 33},
-                   {"exclusiveMinimum", 34},
-                   {"minimum", 35},
-                   {"minimumCanEqual", 36},
-                   {"multipleOf", 37},
-                   {"divisibleBy", 38},
-                   {"maxDecimal", 39},
+                   {"exclusiveMaximum", 34},
+                   {"maximum", 35},
+                   {"maximumCanEqual", 36},
+                   {"exclusiveMinimum", 37},
+                   {"minimum", 38},
+                   {"minimumCanEqual", 39},
+                   {"multipleOf", 40},
+                   {"divisibleBy", 41},
+                   {"maxDecimal", 42},
 
                    // Then keywords about strings
-                   {"pattern", 40},
-                   {"format", 41},
-                   {"maxLength", 42},
-                   {"minLength", 43},
-                   {"contentEncoding", 44},
-                   {"contentMediaType", 45},
-                   {"contentSchema", 46},
+                   {"pattern", 43},
+                   {"format", 44},
+                   {"maxLength", 45},
+                   {"minLength", 46},
+                   {"contentEncoding", 47},
+                   {"contentMediaType", 48},
+                   {"contentSchema", 49},
 
                    // Then keywords about arrays
-                   {"maxItems", 47},
-                   {"minItems", 48},
-                   {"uniqueItems", 49},
-                   {"maxContains", 50},
-                   {"minContains", 51},
-                   {"contains", 52},
-                   {"prefixItems", 53},
-                   {"items", 54},
-                   {"additionalItems", 55},
-                   {"unevaluatedItems", 56},
+                   {"maxItems", 50},
+                   {"minItems", 51},
+                   {"uniqueItems", 52},
+                   {"maxContains", 53},
+                   {"minContains", 54},
+                   {"contains", 55},
+                   {"prefixItems", 56},
+                   {"items", 57},
+                   {"additionalItems", 58},
+                   {"unevaluatedItems", 59},
 
                    // Object
-                   {"required", 57},
-                   {"maxProperties", 58},
-                   {"minProperties", 59},
-                   {"propertyNames", 60},
-                   {"properties", 61},
-                   {"patternProperties", 62},
-                   {"additionalProperties", 63},
-                   {"unevaluatedProperties", 64},
-                   {"dependentRequired", 65},
-                   {"dependencies", 66},
-                   {"dependentSchemas", 67},
+                   {"required", 60},
+                   {"maxProperties", 61},
+                   {"minProperties", 62},
+                   {"propertyNames", 63},
+                   {"properties", 64},
+                   {"patternProperties", 65},
+                   {"additionalProperties", 66},
+                   {"unevaluatedProperties", 67},
+                   {"dependentRequired", 68},
+                   {"dependencies", 69},
+                   {"dependentSchemas", 70},
 
                    // Reusable utilities go last
-                   {"$defs", 68},
-                   {"definitions", 69}};
+                   {"$defs", 71},
+                   {"definitions", 72}};
 
-  if (rank.contains(left) || rank.contains(right)) {
-    constexpr auto DEFAULT{std::numeric_limits<Rank::mapped_type>::max()};
-    const auto left_rank{rank.contains(left) ? rank.at(left) : DEFAULT};
-    const auto right_rank{rank.contains(right) ? rank.at(right) : DEFAULT};
-    // If the ranks are equal, then either the keywords are the same or
-    // none of them are recognized keywords.
-    assert((left_rank != right_rank) ||
-           (left == right || left_rank == DEFAULT));
-    return left_rank < right_rank;
+  // A common pattern that seems to come up often in practice is schema authors
+  // coming up with unknown annotation keywords that are meant to extend or
+  // complement existing ones. For example, `title:en` for `title`, etc. By
+  // checking the prefixes of a keyword, we can accomodate that pattern very
+  // nicely by keeping them right besides the keywords they are supposed to
+  // extend. For performance reasons, we only apply such logic to keywords
+  // that have certain special characters that are commonly used for these kind
+  // of extensions
+  const auto pivot{keyword.find_first_of("-_:")};
+  if (pivot != std::string::npos) {
+    const auto match{rank.find(keyword.substr(0, pivot))};
+    if (match != rank.cend()) {
+      return match->second;
+    }
+  }
+
+  const auto match{rank.find(keyword)};
+  if (match != rank.cend()) {
+    return match->second;
   } else {
-    // For unknown keywords, go alphabetically
+    return otherwise;
+  }
+}
+
+auto sourcemeta::core::schema_format_compare(
+    const sourcemeta::core::JSON::String &left,
+    const sourcemeta::core::JSON::String &right) -> bool {
+  constexpr auto DEFAULT{std::numeric_limits<std::uint64_t>::max()};
+  const auto left_rank{keyword_rank(left, DEFAULT)};
+  const auto right_rank{keyword_rank(right, DEFAULT)};
+  if (left_rank == right_rank) {
     return left < right;
+  } else {
+    return left_rank < right_rank;
   }
 }
 
