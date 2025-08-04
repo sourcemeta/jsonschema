@@ -182,14 +182,14 @@ using SchemaVisitorReference = std::function<void(
 /// A structure that encapsulates the result of walker over a specific keyword
 struct SchemaWalkerResult {
   /// The walker strategy to continue traversing across the schema
-  const SchemaKeywordType type;
+  SchemaKeywordType type;
   /// The vocabulary associated with the keyword, if any
-  const std::optional<std::string> vocabulary;
+  std::optional<std::string> vocabulary;
   /// The keywords a given keyword depends on (if any) during the evaluation
   /// process
-  const std::set<std::string> dependencies;
+  std::set<std::string> dependencies;
   /// The JSON instance types that this keyword applies to (or to all of them)
-  const std::set<JSON::Type> instances;
+  std::set<JSON::Type> instances;
 };
 
 /// @ingroup jsonschema
