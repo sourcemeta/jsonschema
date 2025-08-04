@@ -104,6 +104,11 @@ auto sourcemeta::jsonschema::cli::metaschema(
           result = false;
         }
       }
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                 &error) {
+      throw FileError<
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+          entry.first, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
                                                                error);

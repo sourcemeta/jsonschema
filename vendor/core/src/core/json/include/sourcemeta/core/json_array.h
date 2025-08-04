@@ -92,6 +92,11 @@ public:
     return this->data.crend();
   }
 
+  /// Get array size
+  [[nodiscard]] auto size() const noexcept -> size_type {
+    return this->data.size();
+  }
+
 private:
   friend Value;
 // Exporting symbols that depends on the standard C++ library is considered

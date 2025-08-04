@@ -55,6 +55,19 @@ private:
 };
 
 /// @ingroup jsonschema
+/// An error that represents a relative meta-schema resolution failure event
+/// Relative references to meta-schemas are invalid as per the specification
+/// See https://json-schema.org/draft/2020-12/json-schema-core#section-8.1.1-2
+class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaRelativeMetaschemaResolutionError
+    : public SchemaResolutionError {
+public:
+  SchemaRelativeMetaschemaResolutionError(std::string identifier)
+      : SchemaResolutionError{std::move(identifier),
+                              "Relative meta-schema URIs are not valid "
+                              "according to the JSON Schema specification"} {}
+};
+
+/// @ingroup jsonschema
 /// An error that represents a schema vocabulary error
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaVocabularyError
     : public std::exception {

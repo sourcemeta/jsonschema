@@ -355,12 +355,11 @@ auto to_json(const SchemaFrame::LocationType value) -> JSON {
 auto SchemaFrame::to_json() const -> JSON {
   auto root{JSON::make_object()};
 
-  root.assign("locations", JSON::make_array());
+  root.assign("locations", JSON::make_object());
+  root.at("locations").assign("static", JSON::make_object());
+  root.at("locations").assign("dynamic", JSON::make_object());
   for (const auto &location : this->locations_) {
     auto entry{JSON::make_object()};
-    entry.assign("referenceType",
-                 sourcemeta::core::to_json(location.first.first));
-    entry.assign("uri", sourcemeta::core::to_json(location.first.second));
     entry.assign("parent", sourcemeta::core::to_json(location.second.parent));
     entry.assign("type", sourcemeta::core::to_json(location.second.type));
     entry.assign("root", sourcemeta::core::to_json(location.second.root));
@@ -371,7 +370,21 @@ auto SchemaFrame::to_json() const -> JSON {
     entry.assign("dialect", sourcemeta::core::to_json(location.second.dialect));
     entry.assign("baseDialect",
                  sourcemeta::core::to_json(location.second.base_dialect));
-    root.at("locations").push_back(std::move(entry));
+
+    switch (location.first.first) {
+      case SchemaReferenceType::Static:
+        root.at("locations")
+            .at("static")
+            .assign(location.first.second, std::move(entry));
+        break;
+      case SchemaReferenceType::Dynamic:
+        root.at("locations")
+            .at("dynamic")
+            .assign(location.first.second, std::move(entry));
+        break;
+      default:
+        assert(false);
+    }
   }
 
   root.assign("references", JSON::make_array());
