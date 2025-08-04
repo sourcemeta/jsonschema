@@ -126,6 +126,7 @@ add_jsonschema_test_unix(metaschema/fail_directory_json)
 add_jsonschema_test_unix(metaschema/fail_directory_non_resolved)
 add_jsonschema_test_unix(metaschema/pass_2020_12_with_fragment)
 add_jsonschema_test_unix(metaschema/pass_draft7_without_fragment)
+add_jsonschema_test_unix(metaschema/fail_relative_file_metaschema_ref)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -202,6 +203,7 @@ add_jsonschema_test_unix(inspect/pass_json_output)
 add_jsonschema_test_unix(inspect/fail_no_schema)
 add_jsonschema_test_unix(inspect/fail_schema_invalid_json)
 add_jsonschema_test_unix(inspect/fail_unknown_metaschema)
+add_jsonschema_test_unix(inspect/fail_relative_file_metaschema_ref)
 
 # Compile
 add_jsonschema_test_unix(compile/pass)

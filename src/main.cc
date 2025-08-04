@@ -157,6 +157,19 @@ auto main(int argc, char *argv[]) noexcept -> int {
     std::cerr << "\"\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsonschema::cli::FileError<
+           sourcemeta::core::SchemaRelativeMetaschemaResolutionError> &error) {
+    std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
+    std::cerr << "  at "
+              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
+                     error.path())
+                     .string()
+              << "\n";
+    return EXIT_FAILURE;
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::cli::FileError<
            sourcemeta::core::SchemaResolutionError> &error) {
     std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
     std::cerr << "  at "

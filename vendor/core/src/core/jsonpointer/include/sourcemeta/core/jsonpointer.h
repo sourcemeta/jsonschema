@@ -304,6 +304,57 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto set(JSON &document, const Pointer &pointer, JSON &&value) -> void;
 
 /// @ingroup jsonpointer
+/// Remove a value from a JSON document using a JSON Pointer.
+/// Returns true if a value is removed, false otherwise.
+///
+/// Removing an empty pointer `Pointer{}`, i.e. the root, is a noop.
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"[ { \"foo\": 1, \"baz\": 1 }, { \"bar\": 2 } ]"};
+/// sourcemeta::core::JSON document =
+///   sourcemeta::core::parse_json(stream);
+/// assert(document.at(0).defines("foo"));
+///
+/// const sourcemeta::core::Pointer pointer{0, "foo"};
+/// sourcemeta::core::remove(document, pointer);
+/// assert(!document.at(0).defines("foo"));
+/// assert(document.at(0).defines("baz"));
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto remove(JSON &document, const Pointer &pointer) -> bool;
+
+/// @ingroup jsonpointer
+/// Remove a value from a JSON document using a JSON WeakPointer.
+/// Returns true if a value is removed, false otherwise.
+///
+/// Removing an empty pointer `WeakPointer{}`, i.e. the root, is a noop.
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"[ { \"foo\": 1, \"baz\": 1 }, { \"bar\": 2 } ]"};
+/// sourcemeta::core::JSON document =
+///   sourcemeta::core::parse_json(stream);
+/// assert(document.at(0).defines("foo"));
+///
+/// const std::string foo = "foo";
+/// const sourcemeta::core::WeakPointer pointer{0, std::cref(foo)};
+/// sourcemeta::core::remove(document, pointer);
+/// assert(!document.at(0).defines("foo"));
+/// assert(document.at(0).defines("baz"));
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto remove(JSON &document, const WeakPointer &pointer) -> bool;
+
+/// @ingroup jsonpointer
 /// Create a JSON Pointer from a JSON string value. For example:
 ///
 /// ```cpp
