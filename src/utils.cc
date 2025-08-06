@@ -74,11 +74,7 @@ auto handle_json_entry(
       throw std::runtime_error(error.str());
     }
 
-    if (std::any_of(extensions.cbegin(), extensions.cend(),
-                    [&canonical](const auto &extension) {
-                      return canonical.string().ends_with(extension);
-                    }) &&
-        std::none_of(blacklist.cbegin(), blacklist.cend(),
+    if (std::none_of(blacklist.cbegin(), blacklist.cend(),
                      [&canonical](const auto &prefix) {
                        return prefix == canonical ||
                               path_starts_with(canonical, prefix);
