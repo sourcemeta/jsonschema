@@ -138,6 +138,8 @@ auto sourcemeta::jsonschema::cli::lint(
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
   const auto dialect{default_dialect(options)};
+  const auto custom_resolver{resolver(
+      options, options.contains("h") || options.contains("http"), dialect)};
 
   if (options.contains("f") || options.contains("fix")) {
     for (const auto &entry :
@@ -154,9 +156,7 @@ auto sourcemeta::jsonschema::cli::lint(
 
       try {
         bundle.apply(
-            copy, sourcemeta::core::schema_official_walker,
-            resolver(options, options.contains("h") || options.contains("http"),
-                     dialect),
+            copy, sourcemeta::core::schema_official_walker, custom_resolver,
             get_lint_callback(errors_array, entry.first, output_json), dialect,
             sourcemeta::core::URI::from_path(entry.first).recompose());
       } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
@@ -178,8 +178,7 @@ auto sourcemeta::jsonschema::cli::lint(
       try {
         const auto subresult = bundle.check(
             entry.second, sourcemeta::core::schema_official_walker,
-            resolver(options, options.contains("h") || options.contains("http"),
-                     dialect),
+            custom_resolver,
             get_lint_callback(errors_array, entry.first, output_json), dialect,
             sourcemeta::core::URI::from_path(entry.first).recompose());
         if (!subresult.first) {
