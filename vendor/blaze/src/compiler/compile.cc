@@ -166,41 +166,45 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   // Calculate the top static reference destinations for precompilation purposes
   // TODO: Replace this logic with `.frame()` `destination_of` information
-  std::map<std::string, std::size_t> static_references_count;
-  for (const auto &reference : frame.references()) {
-    if (reference.first.first !=
-            sourcemeta::core::SchemaReferenceType::Static ||
-        !frame.locations().contains(
-            {sourcemeta::core::SchemaReferenceType::Static,
-             reference.second.destination})) {
-      continue;
-    }
+  std::set<std::string> precompiled_static_schemas;
+  // As a workaround, we avoid pre-compiling schemas on schemas
+  // that look like they are just wrapping other schemas
+  if (schema.is_object() && !schema.defines("$ref")) {
+    std::map<std::string, std::size_t> static_references_count;
+    for (const auto &reference : frame.references()) {
+      if (reference.first.first !=
+              sourcemeta::core::SchemaReferenceType::Static ||
+          !frame.locations().contains(
+              {sourcemeta::core::SchemaReferenceType::Static,
+               reference.second.destination})) {
+        continue;
+      }
 
-    const auto &entry{
-        frame.locations().at({sourcemeta::core::SchemaReferenceType::Static,
-                              reference.second.destination})};
-    for (const auto &subreference : frame.references()) {
-      if (subreference.first.second.starts_with(entry.pointer)) {
-        static_references_count[reference.second.destination] += 1;
+      const auto &entry{
+          frame.locations().at({sourcemeta::core::SchemaReferenceType::Static,
+                                reference.second.destination})};
+      for (const auto &subreference : frame.references()) {
+        if (subreference.first.second.starts_with(entry.pointer)) {
+          static_references_count[reference.second.destination] += 1;
+        }
       }
     }
-  }
-  std::vector<std::pair<std::string, std::size_t>> top_static_destinations(
-      static_references_count.cbegin(), static_references_count.cend());
-  std::ranges::sort(top_static_destinations,
-                    [](const auto &left, const auto &right) {
-                      return left.second > right.second;
-                    });
-  constexpr auto MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE{5};
-  std::set<std::string> precompiled_static_schemas;
-  for (auto iterator = top_static_destinations.cbegin();
-       iterator != top_static_destinations.cend() &&
-       iterator != top_static_destinations.cbegin() +
-                       MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE;
-       ++iterator) {
-    // Only consider highly referenced schemas
-    if (iterator->second > 100) {
-      precompiled_static_schemas.insert(iterator->first);
+    std::vector<std::pair<std::string, std::size_t>> top_static_destinations(
+        static_references_count.cbegin(), static_references_count.cend());
+    std::ranges::sort(top_static_destinations,
+                      [](const auto &left, const auto &right) {
+                        return left.second > right.second;
+                      });
+    constexpr auto MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE{5};
+    for (auto iterator = top_static_destinations.cbegin();
+         iterator != top_static_destinations.cend() &&
+         iterator != top_static_destinations.cbegin() +
+                         MAXIMUM_NUMBER_OF_SCHEMAS_TO_PRECOMPILE;
+         ++iterator) {
+      // Only consider highly referenced schemas
+      if (iterator->second > 100) {
+        precompiled_static_schemas.insert(iterator->first);
+      }
     }
   }
 
