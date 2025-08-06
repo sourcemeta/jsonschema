@@ -249,6 +249,7 @@ add_jsonschema_test_unix(lint/pass_lint_list_exclude)
 add_jsonschema_test_unix(lint/pass_lint_list_long)
 add_jsonschema_test_unix(lint/pass_lint_list_short)
 add_jsonschema_test_unix(lint/pass_lint_fix_no_reformat)
+add_jsonschema_test_unix(lint/pass_lint_directory_resolve_many)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
