@@ -7,7 +7,6 @@
 
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/uri_error.h>
-#include <sourcemeta/core/uri_escape.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <cstdint>     // std::uint32_t

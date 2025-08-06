@@ -2,6 +2,8 @@
 
 #include <sourcemeta/core/uri.h>
 
+#include "escaping.h"
+
 #include <algorithm>  // std::replace
 #include <cassert>    // assert
 #include <cstdint>    // std::uint32_t
@@ -392,9 +394,9 @@ auto URI::fragment(const std::string &fragment) -> URI & {
   if (fragment.empty()) {
     this->fragment_ = "";
   } else if (fragment.starts_with('#')) {
-    this->fragment_ = URI{fragment}.fragment_;
+    this->fragment_ = fragment.substr(1);
   } else {
-    this->fragment_ = URI{"#" + fragment}.fragment_;
+    this->fragment_ = fragment;
   }
 
   return *this;
@@ -404,9 +406,9 @@ auto URI::fragment(std::string &&fragment) -> URI & {
   if (fragment.empty()) {
     this->fragment_ = "";
   } else if (fragment.starts_with('#')) {
-    this->fragment_ = URI{std::move(fragment)}.fragment_;
+    this->fragment_ = std::move(fragment).substr(1);
   } else {
-    this->fragment_ = URI{"#" + std::move(fragment)}.fragment_;
+    this->fragment_ = std::move(fragment);
   }
 
   return *this;
@@ -427,7 +429,25 @@ auto URI::recompose() const -> std::string {
   // Fragment
   const auto result_fragment{this->fragment()};
   if (result_fragment.has_value()) {
-    result << '#' << result_fragment.value();
+    result << '#';
+    const auto end{result_fragment.value().cend()};
+    for (auto iterator = result_fragment.value().cbegin(); iterator != end;
+         ++iterator) {
+      // TODO: We shouldn't need to manually do these look-aheads here.
+      // It should all be taking care off by the escaper logic
+      if (*iterator == '%') {
+        auto next_1 = std::next(iterator, 1);
+        auto next_2 = std::next(iterator, 2);
+        if (next_1 != end && next_2 != end &&
+            std::isxdigit(static_cast<unsigned char>(*next_1)) &&
+            std::isxdigit(static_cast<unsigned char>(*next_2))) {
+          result << '%';
+          continue;
+        }
+      }
+
+      uri_escape(*iterator, result, URIEscapeMode::Fragment);
+    }
   }
 
   return result.str();
@@ -458,9 +478,9 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
     if (this->is_ipv6()) {
       // By default uriparser will parse the IPv6 address without brackets
       // so we need to add them manually, as said in the RFC 2732:
-      // "To use a literal IPv6 address in a URL, the literal address should be
-      // enclosed in "[" and "]" characters."
-      // See https://tools.ietf.org/html/rfc2732#section-2
+      // "To use a literal IPv6 address in a URL, the literal address should
+      // be enclosed in "[" and "]" characters." See
+      // https://tools.ietf.org/html/rfc2732#section-2
       result << '[' << result_host.value() << ']';
     } else {
       result << result_host.value();
@@ -630,9 +650,9 @@ auto URI::relative_to(const URI &base) -> URI & {
   copy.parse();
 
   // `uriparser` has this weird thing where it will only look at scheme and
-  // authority, incorrectly thinking that a certain URI is a base of another one
-  // if the path of the former exceeds the path of the latter. This is an ugly
-  // workaround to prevent this non-sense.
+  // authority, incorrectly thinking that a certain URI is a base of another
+  // one if the path of the former exceeds the path of the latter. This is an
+  // ugly workaround to prevent this non-sense.
   if (!copy.recompose().empty() || base.recompose() == this->recompose()) {
     this->data = std::move(copy.data);
     this->parse();
@@ -666,20 +686,17 @@ auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
 
 auto URI::from_fragment(std::string_view fragment) -> URI {
   assert(fragment.empty() || fragment.front() != '#');
-  std::ostringstream uri;
-  uri << "#" << fragment;
-  return {uri.str()};
+  URI result{""};
+  result.fragment(std::string{fragment});
+  return result;
 }
 
 auto URI::try_resolve_from(const URI &base) -> URI & {
-  if (base.is_absolute()) {
-    return this->resolve_from(base);
+  // TODO: This only handles a very specific case. We should generalize this
+  // function to perform proper base resolution on relative bases instead of
+  // doing these one-off workarounds
 
-    // TODO: This only handles a very specific case. We should generalize this
-    // function to perform proper base resolution on relative bases instead of
-    // doing these one-off workarounds
-
-  } else if (this->is_fragment_only() && !base.fragment().has_value()) {
+  if (this->is_fragment_only() && !base.fragment().has_value()) {
     this->data = base.data;
     this->path_ = base.path_;
     this->userinfo_ = base.userinfo_;
@@ -688,6 +705,8 @@ auto URI::try_resolve_from(const URI &base) -> URI & {
     this->scheme_ = base.scheme_;
     this->query_ = base.query_;
     return *this;
+  } else if (base.is_absolute()) {
+    return this->resolve_from(base);
   } else if (base.is_relative() && this->is_relative() &&
              base.path_.has_value() && this->path_.has_value() &&
              this->path_.value().find('/') == std::string::npos &&

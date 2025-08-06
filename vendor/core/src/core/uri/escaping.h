@@ -1,14 +1,37 @@
 #include <uriparser/Uri.h>
 
-#include <sourcemeta/core/uri_escape.h>
-
 #include <cctype>   // std::isalnum
+#include <cstdint>  // std::uint8_t
 #include <istream>  // std::istream
 #include <iterator> // std::istream_iterator
 #include <ostream>  // std::ostream
 #include <string>   // std::string
 
 namespace sourcemeta::core {
+
+// TODO: Escaping algorithm is broken here as we don't support lookaheads and we
+// can't properly avoid re-escaping %<hex><hex>
+
+enum class URIEscapeMode : std::uint8_t {
+  // Escape every characted that is not in the URI "unreserved" ABNF category
+  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+  SkipUnreserved,
+  // Escape every characted that is not in either the URI "unreserved" nor
+  // "sub-delims" ABNF categories
+  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+  SkipSubDelims,
+  // Escape every characted that is not in either the URI "fragment" category
+  //
+  // unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
+  // pct-encoded = "%" HEXDIG HEXDIG
+  // sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" /
+  // "="
+  // pchar       = unreserved / pct-encoded / sub-delims / ":" / "@"
+  // fragment    = *( pchar / "/" / "?" )
+  //
+  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+  Fragment
+};
 
 auto uri_escape(const char character, std::ostream &output,
                 const URIEscapeMode mode) -> void {
@@ -20,9 +43,10 @@ auto uri_escape(const char character, std::ostream &output,
     return;
   }
 
-  if (mode == URIEscapeMode::SkipSubDelims) {
+  if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Fragment) {
     // sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" /
-    // "=" See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+    // "="
+    // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
     if (character == '!' || character == '$' || character == '&' ||
         character == '\'' || character == '(' || character == ')' ||
         character == '*' || character == '+' || character == ',' ||
@@ -31,6 +55,19 @@ auto uri_escape(const char character, std::ostream &output,
       return;
     }
   }
+
+  if (mode == URIEscapeMode::Fragment) {
+    // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+    if (
+        // pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
+        character == ':' || character == '@' ||
+        // fragment    = *( pchar / "/" / "?" )
+        character == '/' || character == '?') {
+      output << character;
+      return;
+    }
+  }
+
   // percent encode -> % followed by the hex code of the character
   output << '%' << std::hex << std::uppercase
          << +(static_cast<unsigned char>(character));

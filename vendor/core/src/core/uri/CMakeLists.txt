@@ -1,6 +1,6 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME uri
-  PRIVATE_HEADERS escape.h error.h
-  SOURCES uri.cc escaping.cc)
+  PRIVATE_HEADERS error.h
+  SOURCES uri.cc escaping.h)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME uri)
