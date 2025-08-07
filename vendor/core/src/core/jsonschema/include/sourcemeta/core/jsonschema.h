@@ -19,6 +19,7 @@
 // NOLINTEND(misc-include-cleaner)
 
 #include <cstdint>     // std::uint8_t
+#include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt
 #include <set>         // std::set
 #include <string>      // std::string
@@ -556,6 +557,30 @@ auto wrap(const JSON &schema, const Pointer &pointer,
           const SchemaResolver &resolver,
           const std::optional<std::string> &default_dialect = std::nullopt)
     -> JSON;
+
+/// @ingroup jsonschema
+///
+/// Parse a JSON Schema `type` string into one or more native JSON type
+/// definition. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonschema.h>
+/// #include <cassert>
+/// #include <set>
+///
+/// std::set<sourcemeta::core::JSON::Type> types;
+/// sourcemeta::core::parse_schema_type("number",
+///   [&types](const auto type) { types.emplace(type); });
+///
+/// assert(types.size() == 2);
+/// assert(types.contains(sourcemeta::core::JSON::Type::Integer));
+/// assert(types.contains(sourcemeta::core::JSON::Type::Real));
+/// ```
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT
+auto parse_schema_type(const JSON::String &type,
+                       const std::function<void(const JSON::Type)> &callback)
+    -> void;
 
 } // namespace sourcemeta::core
 

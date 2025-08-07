@@ -41,6 +41,7 @@ contains_any(const Vocabularies &container,
 #include "linter/content_media_type_without_encoding.h"
 #include "linter/content_schema_default.h"
 #include "linter/content_schema_without_media_type.h"
+#include "linter/definitions_to_defs.h"
 #include "linter/dependencies_default.h"
 #include "linter/dependencies_property_tautology.h"
 #include "linter/dependent_required_default.h"
@@ -147,6 +148,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
       bundle.add<EqualNumericBoundsToConst>();
       bundle.add<AdditionalPropertiesDefault>();
       bundle.add<ContentSchemaDefault>();
+      bundle.add<DefinitionsToDefs>();
       bundle.add<DependenciesDefault>();
       bundle.add<DependentRequiredDefault>();
       bundle.add<ItemsArrayDefault>();

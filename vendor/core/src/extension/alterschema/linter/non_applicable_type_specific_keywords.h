@@ -35,11 +35,16 @@ public:
                       "http://json-schema.org/draft-00/hyper-schema#"}) &&
         schema.defines("type")) {
       if (schema.at("type").is_string()) {
-        this->emplace_type(schema.at("type").to_string(), current_types);
+        parse_schema_type(
+            schema.at("type").to_string(),
+            [&current_types](const auto type) { current_types.emplace(type); });
       } else if (schema.at("type").is_array()) {
         for (const auto &entry : schema.at("type").as_array()) {
           if (entry.is_string()) {
-            this->emplace_type(entry.to_string(), current_types);
+            parse_schema_type(entry.to_string(),
+                              [&current_types](const auto type) {
+                                current_types.emplace(type);
+                              });
           }
         }
       }
@@ -113,24 +118,4 @@ public:
 
 private:
   mutable std::vector<JSON::String> blacklist;
-
-  template <typename T>
-  auto emplace_type(const JSON::String &type, T &container) const -> void {
-    if (type == "null") {
-      container.emplace(JSON::Type::Null);
-    } else if (type == "boolean") {
-      container.emplace(JSON::Type::Boolean);
-    } else if (type == "object") {
-      container.emplace(JSON::Type::Object);
-    } else if (type == "array") {
-      container.emplace(JSON::Type::Array);
-    } else if (type == "number") {
-      container.emplace(JSON::Type::Integer);
-      container.emplace(JSON::Type::Real);
-    } else if (type == "integer") {
-      container.emplace(JSON::Type::Integer);
-    } else if (type == "string") {
-      container.emplace(JSON::Type::String);
-    }
-  }
 };
