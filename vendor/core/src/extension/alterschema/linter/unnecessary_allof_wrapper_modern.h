@@ -1,16 +1,17 @@
 class UnnecessaryAllOfWrapperModern final : public SchemaTransformRule {
 public:
   UnnecessaryAllOfWrapperModern()
-      : SchemaTransformRule{"unnecessary_allof_wrapper_modern",
-                            "Wrapping any keyword in `allOf` is unnecessary"} {
-        };
+      : SchemaTransformRule{
+            "unnecessary_allof_wrapper_modern",
+            "Wrapping any keyword in `allOf` is unnecessary and may even "
+            "introduce a minor evaluation performance overhead"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::Vocabularies &vocabularies,
             const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
@@ -31,7 +32,11 @@ public:
         {"https://json-schema.org/draft/2020-12/vocab/validation",
          "https://json-schema.org/draft/2019-09/vocab/validation"})};
 
-    for (const auto &entry : schema.at("allOf").as_array()) {
+    std::ostringstream message;
+    bool applies{false};
+    const auto &all_of{schema.at("allOf")};
+    for (std::size_t index = 0; index < all_of.size(); index++) {
+      const auto &entry{all_of.at(index)};
       if (entry.is_object()) {
         // It is dangerous to extract type-specific keywords from a schema that
         // declares a type into another schema that also declares a type if
@@ -48,13 +53,21 @@ public:
           // TODO: Have another rule that removes a keyword if its exactly
           // equal to an instance of the same keyword outside the wrapper
           if (!schema.defines(subentry.first)) {
-            return true;
+            applies = true;
+            message << "- ";
+            message << to_string(
+                location.pointer.concat({"allOf", index, subentry.first}));
+            message << "\n";
           }
         }
       }
     }
 
-    return false;
+    if (applies) {
+      return message.str();
+    } else {
+      return false;
+    }
   }
 
   auto transform(JSON &schema) const -> void override {

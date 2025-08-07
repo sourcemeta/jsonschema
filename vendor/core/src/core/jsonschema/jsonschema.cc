@@ -820,3 +820,25 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
 
   return result;
 }
+
+auto sourcemeta::core::parse_schema_type(
+    const sourcemeta::core::JSON::String &type,
+    const std::function<void(const sourcemeta::core::JSON::Type)> &callback)
+    -> void {
+  if (type == "null") {
+    callback(sourcemeta::core::JSON::Type::Null);
+  } else if (type == "boolean") {
+    callback(sourcemeta::core::JSON::Type::Boolean);
+  } else if (type == "object") {
+    callback(sourcemeta::core::JSON::Type::Object);
+  } else if (type == "array") {
+    callback(sourcemeta::core::JSON::Type::Array);
+  } else if (type == "number") {
+    callback(sourcemeta::core::JSON::Type::Integer);
+    callback(sourcemeta::core::JSON::Type::Real);
+  } else if (type == "integer") {
+    callback(sourcemeta::core::JSON::Type::Integer);
+  } else if (type == "string") {
+    callback(sourcemeta::core::JSON::Type::String);
+  }
+}

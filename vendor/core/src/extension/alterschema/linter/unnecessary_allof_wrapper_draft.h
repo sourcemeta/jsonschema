@@ -3,14 +3,15 @@ public:
   UnnecessaryAllOfWrapperDraft()
       : SchemaTransformRule{"unnecessary_allof_wrapper_draft",
                             "Wrapping any keyword other than `$ref` in `allOf` "
-                            "is unnecessary"} {};
+                            "is unnecessary and may even introduce a minor "
+                            "evaluation performance overhead"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::Vocabularies &vocabularies,
             const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
@@ -26,7 +27,11 @@ public:
       return false;
     }
 
-    for (const auto &entry : schema.at("allOf").as_array()) {
+    std::ostringstream message;
+    bool applies{false};
+    const auto &all_of{schema.at("allOf")};
+    for (std::size_t index = 0; index < all_of.size(); index++) {
+      const auto &entry{all_of.at(index)};
       if (entry.is_object()) {
         // It is dangerous to extract type-specific keywords from a schema that
         // declares a type into another schema that also declares a type if
@@ -41,13 +46,21 @@ public:
 
         for (const auto &subentry : entry.as_object()) {
           if (subentry.first != "$ref" && !schema.defines(subentry.first)) {
-            return true;
+            applies = true;
+            message << "- ";
+            message << to_string(
+                location.pointer.concat({"allOf", index, subentry.first}));
+            message << "\n";
           }
         }
       }
     }
 
-    return false;
+    if (applies) {
+      return message.str();
+    } else {
+      return false;
+    }
   }
 
   auto transform(JSON &schema) const -> void override {

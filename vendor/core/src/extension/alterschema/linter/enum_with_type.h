@@ -15,44 +15,43 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(
-               vocabularies,
-               {"https://json-schema.org/draft/2020-12/vocab/validation",
-                "https://json-schema.org/draft/2019-09/vocab/validation",
-                "http://json-schema.org/draft-07/schema#",
-                "http://json-schema.org/draft-06/schema#",
-                "http://json-schema.org/draft-04/schema#",
-                "http://json-schema.org/draft-03/schema#",
-                "http://json-schema.org/draft-02/schema#",
-                "http://json-schema.org/draft-01/schema#"}) &&
-           schema.is_object() && schema.defines("type") &&
-           schema.defines("enum") &&
+    if (!contains_any(vocabularies,
+                      {"https://json-schema.org/draft/2020-12/vocab/validation",
+                       "https://json-schema.org/draft/2019-09/vocab/validation",
+                       "http://json-schema.org/draft-07/schema#",
+                       "http://json-schema.org/draft-06/schema#",
+                       "http://json-schema.org/draft-04/schema#",
+                       "http://json-schema.org/draft-03/schema#",
+                       "http://json-schema.org/draft-02/schema#",
+                       "http://json-schema.org/draft-01/schema#"})) {
+      return false;
+    }
 
-           // Guard against cases where not all of the enumeration members
-           // match the desired type, in which case the type is adding
-           // an extra constraint and cannot be safely removed
-           schema.at("type").is_string() && schema.at("enum").is_array() &&
-           std::all_of(schema.at("enum").as_array().cbegin(),
+    if (!schema.is_object() || !schema.defines("type") ||
+        !schema.defines("enum") || !schema.at("enum").is_array()) {
+      return false;
+    }
+
+    std::set<JSON::Type> current_types;
+    if (schema.at("type").is_string()) {
+      parse_schema_type(
+          schema.at("type").to_string(),
+          [&current_types](const auto type) { current_types.emplace(type); });
+    } else if (schema.at("type").is_array()) {
+      for (const auto &entry : schema.at("type").as_array()) {
+        if (entry.is_string()) {
+          parse_schema_type(entry.to_string(),
+                            [&current_types](const auto type) {
+                              current_types.emplace(type);
+                            });
+        }
+      }
+    }
+
+    return std::all_of(schema.at("enum").as_array().cbegin(),
                        schema.at("enum").as_array().cend(),
-                       [&schema](const auto &item) {
-                         const auto &type{schema.at("type").to_string()};
-                         if (type == "object") {
-                           return item.is_object();
-                         } else if (type == "array") {
-                           return item.is_array();
-                         } else if (type == "string") {
-                           return item.is_string();
-                         } else if (type == "boolean") {
-                           return item.is_boolean();
-                         } else if (type == "null") {
-                           return item.is_null();
-                         } else if (type == "number") {
-                           return item.is_number();
-                         } else if (type == "integer") {
-                           return item.is_integer();
-                         } else {
-                           return false;
-                         }
+                       [&current_types](const auto &item) {
+                         return current_types.contains(item.type());
                        });
   }
 
