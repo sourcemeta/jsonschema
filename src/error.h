@@ -37,13 +37,25 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
                      error.path())
                      .string()
               << "\n";
-    std::cerr << "\nThis is likely because you forgot to import such schema "
-                 "using --resolve/-r\n";
+
+    if (error.id().starts_with("file://")) {
+      std::cerr << "\nThis is likely because the file does not exist\n";
+    } else {
+      std::cerr << "\nThis is likely because you forgot to import such schema "
+                   "using --resolve/-r\n";
+    }
+
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
-    std::cerr << "\nThis is likely because you forgot to import such schema "
-                 "using --resolve/-r\n";
+
+    if (error.id().starts_with("file://")) {
+      std::cerr << "\nThis is likely because the file does not exist\n";
+    } else {
+      std::cerr << "\nThis is likely because you forgot to import such schema "
+                   "using --resolve/-r\n";
+    }
+
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaUnknownDialectError &error) {
     std::cerr << "error: " << error.what() << "\n";

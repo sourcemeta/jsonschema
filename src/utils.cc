@@ -308,6 +308,17 @@ auto resolver(const std::map<std::string, std::vector<std::string>> &options,
     -> sourcemeta::core::SchemaResolver {
   sourcemeta::core::SchemaMapResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
+        const sourcemeta::core::URI uri{std::string{identifier}};
+        if (uri.is_file()) {
+          const auto path{uri.to_path()};
+          log_verbose(options)
+              << "Attempting to read file reference from disk: "
+              << path.string() << "\n";
+          if (std::filesystem::exists(path)) {
+            return std::optional<sourcemeta::core::JSON>{read_file(path)};
+          }
+        }
+
         if (remote) {
           return fallback_resolver(options, identifier);
         } else {
