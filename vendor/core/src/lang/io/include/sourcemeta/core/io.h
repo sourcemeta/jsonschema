@@ -1,6 +1,10 @@
 #ifndef SOURCEMETA_CORE_IO_H_
 #define SOURCEMETA_CORE_IO_H_
 
+#ifndef SOURCEMETA_CORE_IO_EXPORT
+#include <sourcemeta/core/io_export.h>
+#endif
+
 #include <cassert>    // assert
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::basic_ifstream
@@ -16,6 +20,52 @@
 /// ```
 
 namespace sourcemeta::core {
+
+/// @ingroup io
+///
+/// A safe variant of `std::filesystem::canonical` that takes into account
+/// platform-specific oddities like FIFO on GNU/Linux. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// const auto output{sourcemeta::core::canonical("/tmp/../foo.json")};
+/// assert(output == "/foo.json");
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto canonical(const std::filesystem::path &path) -> std::filesystem::path;
+
+/// @ingroup io
+///
+/// A safe variant of `std::filesystem::weakly_canonical` that takes into
+/// account platform-specific oddities like FIFO on GNU/Linux. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// const auto output{sourcemeta::core::weakly_canonical("/tmp/../foo.json")};
+/// assert(output == "/foo.json");
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto weakly_canonical(const std::filesystem::path &path)
+    -> std::filesystem::path;
+
+/// @ingroup io
+///
+/// Check if a file path starts with another path. This function assumes the
+/// paths are canonicalised. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::starts_with("/foo/bar", "/foo"));
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto starts_with(const std::filesystem::path &path,
+                 const std::filesystem::path &prefix) -> bool;
 
 /// @ingroup io
 ///
@@ -37,12 +87,7 @@ auto read_file(const std::filesystem::path &path)
         std::make_error_code(std::errc::is_a_directory));
   }
 
-  std::ifstream stream{
-      // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
-      // cannot be
-      // made canonical
-      // See https://github.com/sourcemeta/jsonschema/issues/252
-      std::filesystem::is_fifo(path) ? path : std::filesystem::canonical(path)};
+  std::ifstream stream{sourcemeta::core::canonical(path)};
   stream.exceptions(std::ifstream::badbit);
   assert(!stream.fail());
   assert(stream.is_open());

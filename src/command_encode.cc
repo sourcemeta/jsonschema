@@ -2,6 +2,8 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/yaml.h>
+
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
 
@@ -42,12 +44,14 @@ auto sourcemeta::jsonschema::cli::encode(
   std::cerr << "original file size: " << original_size << " bytes\n";
 
   if (document.extension() == ".jsonl") {
-    log_verbose(options) << "Interpreting input as JSONL: "
-                         << safe_weakly_canonical(document).string() << "\n";
+    log_verbose(options)
+        << "Interpreting input as JSONL: "
+        << sourcemeta::core::weakly_canonical(document).string() << "\n";
 
     auto stream{sourcemeta::core::read_file(document)};
-    std::ofstream output_stream(safe_weakly_canonical(options.at("").at(1)),
-                                std::ios::binary);
+    std::ofstream output_stream(
+        sourcemeta::core::weakly_canonical(options.at("").at(1)),
+        std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     std::size_t count{0};
@@ -66,9 +70,10 @@ auto sourcemeta::jsonschema::cli::encode(
               << "%\n";
   } else {
     const auto entry{
-        sourcemeta::jsonschema::cli::read_file(options.at("").front())};
-    std::ofstream output_stream(safe_weakly_canonical(options.at("").at(1)),
-                                std::ios::binary);
+        sourcemeta::core::read_yaml_or_json(options.at("").front())};
+    std::ofstream output_stream(
+        sourcemeta::core::weakly_canonical(options.at("").at(1)),
+        std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     encoder.write(entry, encoding);

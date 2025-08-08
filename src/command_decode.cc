@@ -1,5 +1,7 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
 
@@ -49,21 +51,23 @@ auto sourcemeta::jsonschema::cli::decode(
                dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
-  std::ifstream input_stream{sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                                 options.at("").front()),
-                             std::ios::binary};
+  std::ifstream input_stream{
+      sourcemeta::core::weakly_canonical(options.at("").front()),
+      std::ios::binary};
   assert(!input_stream.fail());
   assert(input_stream.is_open());
 
   const std::filesystem::path output{options.at("").at(1)};
-  std::ofstream output_stream(safe_weakly_canonical(output), std::ios::binary);
+  std::ofstream output_stream(sourcemeta::core::weakly_canonical(output),
+                              std::ios::binary);
   output_stream.exceptions(std::ios_base::badbit);
   sourcemeta::jsonbinpack::Decoder decoder{input_stream};
 
   if (output.extension() == ".jsonl") {
     log_verbose(options)
         << "Interpreting input as JSONL: "
-        << safe_weakly_canonical(options.at("").front()).string() << "\n";
+        << sourcemeta::core::weakly_canonical(options.at("").front()).string()
+        << "\n";
 
     std::size_t count{0};
     while (has_data(input_stream)) {

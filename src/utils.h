@@ -35,8 +35,6 @@ private:
   std::filesystem::path path_;
 };
 
-auto read_file(const std::filesystem::path &path) -> sourcemeta::core::JSON;
-
 auto parse_options(const std::span<const std::string> &arguments,
                    const std::set<std::string> &flags)
     -> std::map<std::string, std::vector<std::string>>;
@@ -72,9 +70,6 @@ auto parse_extensions(
 auto parse_ignore(
     const std::map<std::string, std::vector<std::string>> &options)
     -> std::set<std::filesystem::path>;
-
-auto safe_weakly_canonical(const std::filesystem::path &input)
-    -> std::filesystem::path;
 
 auto default_dialect(
     const std::map<std::string, std::vector<std::string>> &options)
