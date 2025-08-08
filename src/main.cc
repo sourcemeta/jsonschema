@@ -11,6 +11,7 @@
 
 #include "command.h"
 #include "configure.h"
+#include "error.h"
 #include "utils.h"
 
 constexpr std::string_view USAGE_DETAILS{R"EOF(
@@ -144,128 +145,11 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 }
 
 auto main(int argc, char *argv[]) noexcept -> int {
-  try {
+  return sourcemeta::jsonschema::try_catch([argc, &argv]() {
     const std::string program{argv[0]};
     const std::string command{argc > 1 ? argv[1] : "help"};
     const std::vector<std::string> arguments{argv + std::min(2, argc),
                                              argv + argc};
     return jsonschema_main(program, command, arguments);
-  } catch (const sourcemeta::core::SchemaReferenceError &error) {
-    std::cerr << "error: " << error.what() << "\n  " << error.id()
-              << "\n    at schema location \"";
-    sourcemeta::core::stringify(error.location(), std::cerr);
-    std::cerr << "\"\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
-           sourcemeta::core::SchemaRelativeMetaschemaResolutionError> &error) {
-    std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
-    std::cerr << "  at "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                     error.path())
-                     .string()
-              << "\n";
-    return EXIT_FAILURE;
-  } catch (
-      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
-           sourcemeta::core::SchemaResolutionError> &error) {
-    std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
-    std::cerr << "  at "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                     error.path())
-                     .string()
-              << "\n";
-    std::cerr << "\nThis is likely because you forgot to import such schema "
-                 "using --resolve/-r\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
-    std::cerr << "\nThis is likely because you forgot to import such schema "
-                 "using --resolve/-r\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &error) {
-    std::cerr << "error: " << error.what() << "\n";
-    std::cerr
-        << "\nThis is likely because you forgot to import such meta-schema "
-           "using --resolve/-r\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
-           sourcemeta::core::SchemaUnknownBaseDialectError> &error) {
-    std::cerr << "error: " << error.what() << "\n";
-    std::cerr << "  at "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                     error.path())
-                     .string()
-              << "\n";
-    std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
-                 "base dialect is known?\n";
-    std::cerr << "If the input does not declare the $schema keyword, you might "
-                 "want to\n";
-    std::cerr
-        << "explicitly declare a default dialect using --default-dialect/-d\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &error) {
-    std::cerr << "error: " << error.what() << "\n";
-    std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
-                 "base dialect is known?\n";
-    std::cerr << "If the input does not declare the $schema keyword, you might "
-                 "want to\n";
-    std::cerr
-        << "explicitly declare a default dialect using --default-dialect/-d\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::SchemaError &error) {
-    std::cerr << "error: " << error.what() << "\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-    std::cerr << "error: " << error.what() << "\n  " << error.uri()
-              << "\n\nTo request support for it, please open an issue "
-                 "at\nhttps://github.com/sourcemeta/jsonschema\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::URIParseError &error) {
-    std::cerr << "error: " << error.what() << " at column " << error.column()
-              << "\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::JSONFileParseError &error) {
-    std::cerr << "error: " << error.what() << " at line " << error.line()
-              << " and column " << error.column() << "\n  "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                     error.path())
-                     .string()
-              << "\n";
-    return EXIT_FAILURE;
-  } catch (const sourcemeta::core::JSONParseError &error) {
-    std::cerr << "error: " << error.what() << " at line " << error.line()
-              << " and column " << error.column() << "\n";
-    return EXIT_FAILURE;
-  } catch (const std::filesystem::filesystem_error &error) {
-    // See https://en.cppreference.com/w/cpp/error/errc
-    if (error.code() == std::errc::no_such_file_or_directory) {
-      std::cerr << "error: " << error.code().message() << "\n  "
-                << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                       error.path1())
-                       .string()
-                << "\n";
-    } else if (error.code() == std::errc::is_a_directory) {
-      std::cerr << "error: The input was supposed to be a file but it is a "
-                   "directory\n  "
-                << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                       error.path1())
-                       .string()
-                << "\n";
-    } else {
-      std::cerr << "error: " << error.what() << "\n";
-    }
-
-    return EXIT_FAILURE;
-  } catch (const std::runtime_error &error) {
-    std::cerr << "error: " << error.what() << "\n";
-    return EXIT_FAILURE;
-  } catch (const std::exception &error) {
-    std::cerr << "unexpected error: " << error.what()
-              << "\nPlease report it at "
-              << "https://github.com/sourcemeta/jsonschema\n";
-    return EXIT_FAILURE;
-  }
+  });
 }
