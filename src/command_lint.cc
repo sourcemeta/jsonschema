@@ -11,6 +11,7 @@
 #include <sstream>  // std::ostringstream
 
 #include "command.h"
+#include "error.h"
 #include "utils.h"
 
 template <typename Options, typename Iterator>
@@ -154,14 +155,25 @@ auto sourcemeta::jsonschema::cli::lint(
 
       auto copy = entry.second;
 
-      try {
-        bundle.apply(
-            copy, sourcemeta::core::schema_official_walker, custom_resolver,
-            get_lint_callback(errors_array, entry.first, output_json), dialect,
-            sourcemeta::core::URI::from_path(entry.first).recompose());
-      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.first);
+      const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {
+        try {
+          bundle.apply(
+              copy, sourcemeta::core::schema_official_walker, custom_resolver,
+              get_lint_callback(errors_array, entry.first, output_json),
+              dialect,
+              sourcemeta::core::URI::from_path(entry.first).recompose());
+          return EXIT_SUCCESS;
+        } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+              entry.first);
+        } catch (const sourcemeta::core::SchemaResolutionError &error) {
+          throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
+                                                                   error);
+        }
+      });
+
+      if (wrapper_result != EXIT_SUCCESS) {
+        result = false;
       }
 
       if (copy != entry.second) {
@@ -175,18 +187,31 @@ auto sourcemeta::jsonschema::cli::lint(
          for_each_json(options.at(""), parse_ignore(options),
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
-      try {
-        const auto subresult = bundle.check(
-            entry.second, sourcemeta::core::schema_official_walker,
-            custom_resolver,
-            get_lint_callback(errors_array, entry.first, output_json), dialect,
-            sourcemeta::core::URI::from_path(entry.first).recompose());
-        if (!subresult.first) {
-          result = false;
+
+      const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {
+        try {
+          const auto subresult = bundle.check(
+              entry.second, sourcemeta::core::schema_official_walker,
+              custom_resolver,
+              get_lint_callback(errors_array, entry.first, output_json),
+              dialect,
+              sourcemeta::core::URI::from_path(entry.first).recompose());
+          if (subresult.first) {
+            return EXIT_SUCCESS;
+          } else {
+            return EXIT_FAILURE;
+          }
+        } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+              entry.first);
+        } catch (const sourcemeta::core::SchemaResolutionError &error) {
+          throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
+                                                                   error);
         }
-      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.first);
+      });
+
+      if (wrapper_result != EXIT_SUCCESS) {
+        result = false;
       }
     }
   }
