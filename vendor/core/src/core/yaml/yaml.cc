@@ -146,4 +146,10 @@ auto read_yaml(const std::filesystem::path &path) -> JSON {
   return parse_yaml(buffer.str());
 }
 
+auto read_yaml_or_json(const std::filesystem::path &path) -> JSON {
+  return path.extension() == ".yaml" || path.extension() == ".yml"
+             ? read_yaml(path)
+             : read_json(path);
+}
+
 } // namespace sourcemeta::core

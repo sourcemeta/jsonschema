@@ -1,5 +1,7 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/yaml.h>
 
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cout
@@ -136,7 +138,7 @@ auto sourcemeta::jsonschema::cli::inspect(
 
   const std::filesystem::path schema_path{options.at("").front()};
   const sourcemeta::core::JSON schema{
-      sourcemeta::jsonschema::cli::read_file(schema_path)};
+      sourcemeta::core::read_yaml_or_json(schema_path)};
 
   const auto dialect{default_dialect(options)};
   const auto custom_resolver{resolver(
@@ -158,7 +160,7 @@ auto sourcemeta::jsonschema::cli::inspect(
       identifier.has_value()
           ? std::optional<sourcemeta::core::JSON::String>(std::nullopt)
           : sourcemeta::core::URI::from_path(
-                sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+                sourcemeta::core::weakly_canonical(schema_path))
                 .recompose());
 
   if (options.contains("json") || options.contains("j")) {

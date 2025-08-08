@@ -2,6 +2,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
@@ -41,12 +42,10 @@ auto get_schema_template(
   if (precompiled.has_value()) {
     sourcemeta::jsonschema::cli::log_verbose(options)
         << "Parsing pre-compiled schema template: "
-        << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-               precompiled.value())
-               .string()
+        << sourcemeta::core::weakly_canonical(precompiled.value()).string()
         << "\n";
     const auto schema_template{
-        sourcemeta::jsonschema::cli::read_file(precompiled.value())};
+        sourcemeta::core::read_yaml_or_json(precompiled.value())};
     const auto precompiled_result{
         sourcemeta::blaze::from_json(schema_template)};
     if (precompiled_result.has_value()) {
@@ -94,13 +93,12 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto custom_resolver{resolver(
       options, options.contains("h") || options.contains("http"), dialect)};
 
-  const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
+  const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
                  "valid JSON Schema\n  "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path)
-                     .string()
+              << sourcemeta::core::weakly_canonical(schema_path).string()
               << "\n";
     return EXIT_FAILURE;
   }
@@ -110,10 +108,9 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto trace{options.contains("t") || options.contains("trace")};
   const auto json_output{options.contains("j") || options.contains("json")};
 
-  const auto default_id{
-      sourcemeta::core::URI::from_path(
-          sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
-          .recompose()};
+  const auto default_id{sourcemeta::core::URI::from_path(
+                            sourcemeta::core::weakly_canonical(schema_path))
+                            .recompose()};
   const sourcemeta::core::JSON bundled{
       sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
                                custom_resolver, dialect, default_id)};
@@ -134,9 +131,9 @@ auto sourcemeta::jsonschema::cli::validate(
   for (; iterator != options.at("").cend(); ++iterator) {
     const std::filesystem::path instance_path{*iterator};
     if (instance_path.extension() == ".jsonl") {
-      log_verbose(options) << "Interpreting input as JSONL: "
-                           << safe_weakly_canonical(instance_path).string()
-                           << "\n";
+      log_verbose(options)
+          << "Interpreting input as JSONL: "
+          << sourcemeta::core::weakly_canonical(instance_path).string() << "\n";
       std::size_t index{0};
       auto stream{sourcemeta::core::read_file(instance_path)};
       try {
@@ -192,15 +189,18 @@ auto sourcemeta::jsonschema::cli::validate(
             }
           } else if (subresult) {
             log_verbose(options)
-                << "ok: " << safe_weakly_canonical(instance_path).string()
+                << "ok: "
+                << sourcemeta::core::weakly_canonical(instance_path).string()
                 << " (entry #" << index << ")"
-                << "\n  matches " << safe_weakly_canonical(schema_path).string()
+                << "\n  matches "
+                << sourcemeta::core::weakly_canonical(schema_path).string()
                 << "\n";
             print_annotations(output, options, std::cerr);
           } else {
-            std::cerr << "fail: "
-                      << safe_weakly_canonical(instance_path).string()
-                      << " (entry #" << index << ")\n\n";
+            std::cerr
+                << "fail: "
+                << sourcemeta::core::weakly_canonical(instance_path).string()
+                << " (entry #" << index << ")\n\n";
             sourcemeta::core::prettify(instance, std::cerr);
             std::cerr << "\n\n";
             std::cerr << error.str();
@@ -218,8 +218,7 @@ auto sourcemeta::jsonschema::cli::validate(
         log_verbose(options) << "warning: The JSONL file is empty\n";
       }
     } else {
-      const auto instance{
-          sourcemeta::jsonschema::cli::read_file(instance_path)};
+      const auto instance{sourcemeta::core::read_yaml_or_json(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
@@ -268,12 +267,14 @@ auto sourcemeta::jsonschema::cli::validate(
         std::cout << "\n";
       } else if (subresult) {
         log_verbose(options)
-            << "ok: " << safe_weakly_canonical(instance_path).string()
-            << "\n  matches " << safe_weakly_canonical(schema_path).string()
-            << "\n";
+            << "ok: "
+            << sourcemeta::core::weakly_canonical(instance_path).string()
+            << "\n  matches "
+            << sourcemeta::core::weakly_canonical(schema_path).string() << "\n";
         print_annotations(output, options, std::cerr);
       } else {
-        std::cerr << "fail: " << safe_weakly_canonical(instance_path).string()
+        std::cerr << "fail: "
+                  << sourcemeta::core::weakly_canonical(instance_path).string()
                   << "\n";
         std::cerr << error.str();
         print(output, std::cerr);

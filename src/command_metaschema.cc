@@ -1,3 +1,4 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
@@ -34,9 +35,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
     if (!sourcemeta::core::is_schema(entry.second)) {
       std::cerr << "error: The schema file you provided does not represent a "
                    "valid JSON Schema\n  "
-                << sourcemeta::jsonschema::cli::safe_weakly_canonical(
-                       entry.first)
-                       .string()
+                << sourcemeta::core::weakly_canonical(entry.first).string()
                 << "\n";
       return EXIT_FAILURE;
     }
@@ -95,10 +94,12 @@ auto sourcemeta::jsonschema::cli::metaschema(
         if (evaluator.validate(cache.at(dialect.value()), entry.second,
                                std::ref(output))) {
           log_verbose(options)
-              << "ok: " << safe_weakly_canonical(entry.first).string()
+              << "ok: "
+              << sourcemeta::core::weakly_canonical(entry.first).string()
               << "\n  matches " << dialect.value() << "\n";
         } else {
-          std::cerr << "fail: " << safe_weakly_canonical(entry.first).string()
+          std::cerr << "fail: "
+                    << sourcemeta::core::weakly_canonical(entry.first).string()
                     << "\n";
           print(output, std::cerr);
           result = false;

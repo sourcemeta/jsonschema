@@ -1,5 +1,7 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
 
@@ -25,13 +27,12 @@ auto sourcemeta::jsonschema::cli::compile(
   const auto custom_resolver{resolver(
       options, options.contains("h") || options.contains("http"), dialect)};
 
-  const auto schema{sourcemeta::jsonschema::cli::read_file(schema_path)};
+  const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
     std::cerr << "error: The schema file you provided does not represent a "
                  "valid JSON Schema\n  "
-              << sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path)
-                     .string()
+              << sourcemeta::core::weakly_canonical(schema_path).string()
               << "\n";
     return EXIT_FAILURE;
   }
@@ -44,7 +45,7 @@ auto sourcemeta::jsonschema::cli::compile(
                 : sourcemeta::blaze::Mode::Exhaustive,
       dialect,
       sourcemeta::core::URI::from_path(
-          sourcemeta::jsonschema::cli::safe_weakly_canonical(schema_path))
+          sourcemeta::core::weakly_canonical(schema_path))
           .recompose())};
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};
