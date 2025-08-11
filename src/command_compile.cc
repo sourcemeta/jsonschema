@@ -12,20 +12,18 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::compile(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {"h", "http", "f", "fast"})};
-
-  if (options.at("").size() < 1) {
+    const sourcemeta::core::Options &options) -> int {
+  if (options.positional().size() < 1) {
     std::cerr
         << "error: This command expects a path to a schema. For example:\n\n"
         << "  jsonschema compile path/to/schema.json\n";
     return EXIT_FAILURE;
   }
 
-  const auto &schema_path{options.at("").at(0)};
+  const auto &schema_path{options.positional().at(0)};
   const auto dialect{default_dialect(options)};
-  const auto custom_resolver{resolver(
-      options, options.contains("h") || options.contains("http"), dialect)};
+  const auto custom_resolver{
+      resolver(options, options.contains("http"), dialect)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
@@ -37,7 +35,7 @@ auto sourcemeta::jsonschema::cli::compile(
     return EXIT_FAILURE;
   }
 
-  const auto fast_mode{options.contains("f") || options.contains("fast")};
+  const auto fast_mode{options.contains("fast")};
   const auto schema_template{sourcemeta::blaze::compile(
       schema, sourcemeta::core::schema_official_walker, custom_resolver,
       sourcemeta::blaze::default_schema_compiler,

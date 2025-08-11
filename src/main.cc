@@ -1,13 +1,11 @@
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/options.h>
 
-#include <algorithm>   // std::min
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
 #include <iostream>    // std::cerr, std::cout
-#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <vector>      // std::vector
 
 #include "command.h"
 #include "configure.h"
@@ -106,27 +104,70 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
 auto jsonschema_main(const std::string &program, const std::string &command,
-                     const std::span<const std::string> &arguments) -> int {
+                     int argc, char *argv[]) -> int {
+  sourcemeta::core::Options app;
+  app.flag("http", {"h"});
+  app.flag("verbose", {"v"});
+  app.option("resolve", {"r"});
+  app.option("default-dialect", {"d"});
+
   if (command == "fmt") {
-    return sourcemeta::jsonschema::cli::fmt(arguments);
+    app.flag("check", {"c"});
+    app.flag("keep-ordering", {"k"});
+    app.option("extension", {"e"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::fmt(app);
   } else if (command == "inspect") {
-    return sourcemeta::jsonschema::cli::inspect(arguments);
+    app.flag("json", {"j"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::inspect(app);
   } else if (command == "bundle") {
-    return sourcemeta::jsonschema::cli::bundle(arguments);
+    app.flag("without-id", {"w"});
+    app.option("extension", {"e"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::bundle(app);
   } else if (command == "lint") {
-    return sourcemeta::jsonschema::cli::lint(arguments);
+    app.flag("json", {"j"});
+    app.flag("fix", {"f"});
+    app.flag("list", {"l"});
+    app.option("extension", {"e"});
+    app.option("exclude", {"x"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::lint(app);
   } else if (command == "validate") {
-    return sourcemeta::jsonschema::cli::validate(arguments);
+    app.flag("json", {"j"});
+    app.flag("benchmark", {"b"});
+    app.flag("trace", {"t"});
+    app.flag("fast", {"f"});
+    app.option("extension", {"e"});
+    app.option("template", {"m"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::validate(app);
   } else if (command == "metaschema") {
-    return sourcemeta::jsonschema::cli::metaschema(arguments);
+    app.flag("json", {"j"});
+    app.flag("trace", {"t"});
+    app.option("extension", {"e"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::metaschema(app);
   } else if (command == "compile") {
-    return sourcemeta::jsonschema::cli::compile(arguments);
+    app.flag("fast", {"f"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::compile(app);
   } else if (command == "test") {
-    return sourcemeta::jsonschema::cli::test(arguments);
+    app.option("extension", {"e"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::test(app);
   } else if (command == "encode") {
-    return sourcemeta::jsonschema::cli::encode(arguments);
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::encode(app);
   } else if (command == "decode") {
-    return sourcemeta::jsonschema::cli::decode(arguments);
+    app.parse(argc, argv, {.skip = 1});
+    return sourcemeta::jsonschema::cli::decode(app);
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
@@ -148,8 +189,6 @@ auto main(int argc, char *argv[]) noexcept -> int {
   return sourcemeta::jsonschema::try_catch([argc, &argv]() {
     const std::string program{argv[0]};
     const std::string command{argc > 1 ? argv[1] : "help"};
-    const std::vector<std::string> arguments{argv + std::min(2, argc),
-                                             argv + argc};
-    return jsonschema_main(program, command, arguments);
+    return jsonschema_main(program, command, argc, argv);
   });
 }

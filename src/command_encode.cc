@@ -16,10 +16,8 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::encode(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{parse_options(arguments, {})};
-
-  if (options.at("").size() < 2) {
+    const sourcemeta::core::Options &options) -> int {
+  if (options.positional().size() < 2) {
     std::cerr
         << "error: This command expects a path to a JSON document and an "
            "output path. For example:\n\n"
@@ -35,11 +33,10 @@ auto sourcemeta::jsonschema::cli::encode(
   const auto dialect{default_dialect(options)};
   sourcemeta::jsonbinpack::compile(
       schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("h") || options.contains("http"),
-               dialect));
+      resolver(options, options.contains("http"), dialect));
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
-  const std::filesystem::path document{options.at("").front()};
+  const std::filesystem::path document{options.positional().front()};
   const auto original_size{std::filesystem::file_size(document)};
   std::cerr << "original file size: " << original_size << " bytes\n";
 
@@ -50,7 +47,7 @@ auto sourcemeta::jsonschema::cli::encode(
 
     auto stream{sourcemeta::core::read_file(document)};
     std::ofstream output_stream(
-        sourcemeta::core::weakly_canonical(options.at("").at(1)),
+        sourcemeta::core::weakly_canonical(options.positional().at(1)),
         std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
@@ -70,9 +67,9 @@ auto sourcemeta::jsonschema::cli::encode(
               << "%\n";
   } else {
     const auto entry{
-        sourcemeta::core::read_yaml_or_json(options.at("").front())};
+        sourcemeta::core::read_yaml_or_json(options.positional().front())};
     std::ofstream output_stream(
-        sourcemeta::core::weakly_canonical(options.at("").at(1)),
+        sourcemeta::core::weakly_canonical(options.positional().at(1)),
         std::ios::binary);
     output_stream.exceptions(std::ios_base::badbit);
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};

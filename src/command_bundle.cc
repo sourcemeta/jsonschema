@@ -10,21 +10,19 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::bundle(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "w", "without-id"})};
+    const sourcemeta::core::Options &options) -> int {
   const auto dialect{default_dialect(options)};
 
-  if (options.at("").size() < 1) {
+  if (options.positional().size() < 1) {
     std::cerr
         << "error: This command expects a path to a schema. For example:\n\n"
         << "  jsonschema bundle path/to/schema.json\n";
     return EXIT_FAILURE;
   }
 
-  const std::filesystem::path schema_path{options.at("").front()};
-  const auto custom_resolver{resolver(
-      options, options.contains("h") || options.contains("http"), dialect)};
+  const std::filesystem::path schema_path{options.positional().front()};
+  const auto custom_resolver{
+      resolver(options, options.contains("http"), dialect)};
   auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
@@ -33,7 +31,7 @@ auto sourcemeta::jsonschema::cli::bundle(
                                sourcemeta::core::weakly_canonical(schema_path))
                                .recompose());
 
-  if (options.contains("w") || options.contains("without-id")) {
+  if (options.contains("without-id")) {
     std::cerr << "warning: You are opting in to remove schema identifiers in "
                  "the bundled schema.\n";
     std::cerr << "The only legit use case of this advanced feature we know of "
