@@ -28,7 +28,7 @@ EOF
   --trace --template "$TMP/template.json" > "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties" (LogicalAnd)
+-> (push) "/properties" (LogicalWhenType)
    at ""
    at keyword location "https://example.com#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
@@ -49,7 +49,7 @@ cat << EOF > "$TMP/expected.txt"
    at keyword location "https://example.com#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 
-<- (pass) "/properties" (LogicalAnd)
+<- (pass) "/properties" (LogicalWhenType)
    at ""
    at keyword location "https://example.com#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"

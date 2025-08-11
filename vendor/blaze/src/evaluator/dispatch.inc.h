@@ -147,18 +147,19 @@ INSTRUCTION_HANDLER(AssertionDefinesExactlyStrict) {
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionDefinesExactlyStrict);
   const auto &target{get(instance, instruction.relative_instance_location)};
-  const auto &value{*std::get_if<ValueStringSet>(&instruction.value)};
-  // Otherwise we are we even emitting this instruction?
-  assert(value.size() > 1);
-  assert(target.is_object());
-  const auto &object{target.as_object()};
+  if (target.is_object()) {
+    const auto &value{*std::get_if<ValueStringSet>(&instruction.value)};
+    // Otherwise we are we even emitting this instruction?
+    assert(value.size() > 1);
+    const auto &object{target.as_object()};
 
-  if (value.size() == object.size()) {
-    result = true;
-    for (const auto &property : value) {
-      if (!object.defines(property.first, property.second)) {
-        result = false;
-        break;
+    if (value.size() == object.size()) {
+      result = true;
+      for (const auto &property : value) {
+        if (!object.defines(property.first, property.second)) {
+          result = false;
+          break;
+        }
       }
     }
   }
@@ -175,30 +176,32 @@ INSTRUCTION_HANDLER(AssertionDefinesExactlyStrictHash3) {
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionDefinesExactlyStrictHash3);
   const auto &target{get(instance, instruction.relative_instance_location)};
-  // TODO: Take advantage of the table of contents structure to speed up checks
-  const auto &value{*std::get_if<ValueStringHashes>(&instruction.value)};
-  assert(value.first.size() == 3);
-  assert(target.is_object());
-  const auto &object{target.as_object()};
+  if (target.is_object()) {
+    // TODO: Take advantage of the table of contents structure to speed up
+    // checks
+    const auto &value{*std::get_if<ValueStringHashes>(&instruction.value)};
+    assert(value.first.size() == 3);
+    const auto &object{target.as_object()};
 
-  result = object.size() == 3 && ((value.first.at(0) == object.at(0).hash &&
-                                   value.first.at(1) == object.at(1).hash &&
-                                   value.first.at(2) == object.at(2).hash) ||
-                                  (value.first.at(0) == object.at(0).hash &&
-                                   value.first.at(1) == object.at(2).hash &&
-                                   value.first.at(2) == object.at(1).hash) ||
-                                  (value.first.at(0) == object.at(1).hash &&
-                                   value.first.at(1) == object.at(0).hash &&
-                                   value.first.at(2) == object.at(2).hash) ||
-                                  (value.first.at(0) == object.at(1).hash &&
-                                   value.first.at(1) == object.at(2).hash &&
-                                   value.first.at(2) == object.at(0).hash) ||
-                                  (value.first.at(0) == object.at(2).hash &&
-                                   value.first.at(1) == object.at(0).hash &&
-                                   value.first.at(2) == object.at(1).hash) ||
-                                  (value.first.at(0) == object.at(2).hash &&
-                                   value.first.at(1) == object.at(1).hash &&
-                                   value.first.at(2) == object.at(0).hash));
+    result = object.size() == 3 && ((value.first.at(0) == object.at(0).hash &&
+                                     value.first.at(1) == object.at(1).hash &&
+                                     value.first.at(2) == object.at(2).hash) ||
+                                    (value.first.at(0) == object.at(0).hash &&
+                                     value.first.at(1) == object.at(2).hash &&
+                                     value.first.at(2) == object.at(1).hash) ||
+                                    (value.first.at(0) == object.at(1).hash &&
+                                     value.first.at(1) == object.at(0).hash &&
+                                     value.first.at(2) == object.at(2).hash) ||
+                                    (value.first.at(0) == object.at(1).hash &&
+                                     value.first.at(1) == object.at(2).hash &&
+                                     value.first.at(2) == object.at(0).hash) ||
+                                    (value.first.at(0) == object.at(2).hash &&
+                                     value.first.at(1) == object.at(0).hash &&
+                                     value.first.at(2) == object.at(1).hash) ||
+                                    (value.first.at(0) == object.at(2).hash &&
+                                     value.first.at(1) == object.at(1).hash &&
+                                     value.first.at(2) == object.at(0).hash));
+  }
 
   EVALUATE_END(AssertionDefinesExactlyStrictHash3);
 }

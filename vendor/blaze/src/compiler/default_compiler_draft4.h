@@ -1166,9 +1166,9 @@ auto compiler_draft4_applicator_properties_with_options(
   } else if (children.empty()) {
     return {};
   } else {
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
+    return {make(sourcemeta::blaze::InstructionIndex::LogicalWhenType, context,
+                 schema_context, dynamic_context,
+                 sourcemeta::core::JSON::Type::Object, std::move(children))};
   }
 }
 
