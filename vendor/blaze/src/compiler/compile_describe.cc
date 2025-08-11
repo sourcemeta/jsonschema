@@ -195,29 +195,6 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "properties") {
-      assert(!step.children.empty());
-      if (!target.is_object()) {
-        std::ostringstream message;
-        describe_type_check(valid, target.type(),
-                            sourcemeta::core::JSON::Type::Object, message);
-        return message.str();
-      }
-
-      std::ostringstream message;
-      message << "The object value was expected to validate against the ";
-      if (step.children.size() == 1) {
-        message << "single defined property subschema";
-      } else {
-        // We cannot provide the specific number of properties,
-        // as the number of children might be flatten out
-        // for performance reasons
-        message << "defined properties subschemas";
-      }
-
-      return message.str();
-    }
-
     if (keyword == "$ref") {
       return describe_reference(target);
     }
@@ -1912,6 +1889,29 @@ auto describe(const bool valid, const Instruction &step,
       std::ostringstream message;
       describe_type_check(valid, target.type(),
                           instruction_value<ValueType>(step), message);
+      return message.str();
+    }
+
+    if (keyword == "properties") {
+      assert(!step.children.empty());
+      if (!target.is_object()) {
+        std::ostringstream message;
+        describe_type_check(valid, target.type(),
+                            sourcemeta::core::JSON::Type::Object, message);
+        return message.str();
+      }
+
+      std::ostringstream message;
+      message << "The object value was expected to validate against the ";
+      if (step.children.size() == 1) {
+        message << "single defined property subschema";
+      } else {
+        // We cannot provide the specific number of properties,
+        // as the number of children might be flatten out
+        // for performance reasons
+        message << "defined properties subschemas";
+      }
+
       return message.str();
     }
 

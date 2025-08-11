@@ -27,7 +27,7 @@ EOF
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties" (LogicalAnd)
+-> (push) "/properties" (LogicalWhenType)
    at ""
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
@@ -42,7 +42,7 @@ cat << EOF > "$TMP/expected.txt"
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties/foo/type"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 
-<- (fail) "/properties" (LogicalAnd)
+<- (fail) "/properties" (LogicalWhenType)
    at ""
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"

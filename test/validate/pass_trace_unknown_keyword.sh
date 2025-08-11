@@ -26,7 +26,7 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace > "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
--> (push) "/properties" (LogicalAnd)
+-> (push) "/properties" (LogicalWhenType)
    at ""
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
@@ -53,7 +53,7 @@ cat << EOF > "$TMP/expected.txt"
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 
-<- (pass) "/properties" (LogicalAnd)
+<- (pass) "/properties" (LogicalWhenType)
    at ""
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
