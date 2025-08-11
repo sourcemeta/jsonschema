@@ -11,6 +11,6 @@ runs:
           --output "${GITHUB_WORKSPACE}/install.sh" \
           "https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install"
         chmod +x "${GITHUB_WORKSPACE}/install.sh"
-        "${GITHUB_WORKSPACE}/install.sh" 11.1.0 "${INSTALL_DIR}"
+        "${GITHUB_WORKSPACE}/install.sh" 11.1.1 "${INSTALL_DIR}"
         rm "${GITHUB_WORKSPACE}/install.sh"
         echo "${INSTALL_DIR}/bin" >> "$GITHUB_PATH"
