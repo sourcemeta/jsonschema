@@ -23,7 +23,6 @@ option(SOURCEMETA_CORE_INSTALL "Install the Sourcemeta Core library" ON)
 option(SOURCEMETA_CORE_ADDRESS_SANITIZER "Build Sourcemeta Core with an address sanitizer" OFF)
 option(SOURCEMETA_CORE_UNDEFINED_SANITIZER "Build Sourcemeta Core with an undefined behavior sanitizer" OFF)
 option(SOURCEMETA_CORE_CONTRIB_ZLIB "Build the ZLIB library for downstream consumers" OFF)
-option(SOURCEMETA_CORE_CONTRIB_BEARSSL "Build the BearSSL library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLETEST "Build the GoogleTest library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK "Build the GoogleBenchmark library for downstream consumers" OFF)
 
@@ -70,10 +69,6 @@ endif()
 
 if(SOURCEMETA_CORE_GZIP)
   add_subdirectory(src/core/gzip)
-endif()
-
-if(SOURCEMETA_CORE_CONTRIB_BEARSSL OR SOURCEMETA_CORE_MD5)
-  find_package(BearSSL REQUIRED)
 endif()
 
 if(SOURCEMETA_CORE_MD5)
