@@ -71,16 +71,6 @@ auto handle_json_entry(
   }
 }
 
-auto normalize_extension(const std::string_view &extension) -> std::string {
-  if (extension.starts_with('.')) {
-    return std::string{extension};
-  }
-
-  std::ostringstream result;
-  result << '.' << extension;
-  return result.str();
-}
-
 } // namespace
 
 namespace sourcemeta::jsonschema::cli {
@@ -292,7 +282,13 @@ auto parse_extensions(const sourcemeta::core::Options &options)
   if (options.contains("extension")) {
     for (const auto &extension : options.at("extension")) {
       log_verbose(options) << "Using extension: " << extension << "\n";
-      result.insert(normalize_extension(extension));
+      if (extension.starts_with('.')) {
+        result.emplace(extension);
+      } else {
+        std::ostringstream normalised_extension;
+        normalised_extension << '.' << extension;
+        result.emplace(normalised_extension.str());
+      }
     }
   }
 
@@ -322,7 +318,6 @@ auto parse_ignore(const sourcemeta::core::Options &options)
 
 auto default_dialect(const sourcemeta::core::Options &options)
     -> std::optional<std::string> {
-
   if (options.contains("default-dialect")) {
     return std::string{options.at("default-dialect").front()};
   }
