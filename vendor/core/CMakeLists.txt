@@ -16,6 +16,7 @@ option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer libra
 option(SOURCEMETA_CORE_JSONL "Build the Sourcemeta Core JSONL library" ON)
 option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
 option(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA "Build the Sourcemeta Core AlterSchema library" ON)
+option(SOURCEMETA_CORE_EXTENSION_OPTIONS "Build the Sourcemeta Core Options library" ON)
 option(SOURCEMETA_CORE_TESTS "Build the Sourcemeta Core tests" OFF)
 option(SOURCEMETA_CORE_BENCHMARK "Build the Sourcemeta Core benchmarks" OFF)
 option(SOURCEMETA_CORE_DOCS "Build the Sourcemeta Core docs" OFF)
@@ -110,6 +111,10 @@ if(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA)
   add_subdirectory(src/extension/alterschema)
 endif()
 
+if(SOURCEMETA_CORE_EXTENSION_OPTIONS)
+  add_subdirectory(src/extension/options)
+endif()
+
 if(SOURCEMETA_CORE_ADDRESS_SANITIZER)
   sourcemeta_sanitizer(TYPE address)
 elseif(SOURCEMETA_CORE_UNDEFINED_SANITIZER)
@@ -191,6 +196,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA)
     add_subdirectory(test/alterschema)
+  endif()
+
+  if(SOURCEMETA_CORE_EXTENSION_OPTIONS)
+    add_subdirectory(test/options)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

@@ -9,29 +9,26 @@
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <map>      // std::map
-#include <set>      // std::set
 #include <string>   // std::string
 
 #include "command.h"
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::metaschema(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "t", "trace", "j", "json"})};
-  const auto trace{options.contains("t") || options.contains("trace")};
-  const auto json_output{options.contains("j") || options.contains("json")};
+    const sourcemeta::core::Options &options) -> int {
+  const auto trace{options.contains("trace")};
+  const auto json_output{options.contains("json")};
   const auto default_dialect_option{default_dialect(options)};
   const auto custom_resolver{
-      resolver(options, options.contains("h") || options.contains("http"),
-               default_dialect_option)};
+      resolver(options, options.contains("http"), default_dialect_option)};
   bool result{true};
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
 
-  for (const auto &entry : for_each_json(options.at(""), parse_ignore(options),
-                                         parse_extensions(options))) {
+  for (const auto &entry :
+       for_each_json(options.positional(), parse_ignore(options),
+                     parse_extensions(options))) {
     if (!sourcemeta::core::is_schema(entry.second)) {
       std::cerr << "error: The schema file you provided does not represent a "
                    "valid JSON Schema\n  "

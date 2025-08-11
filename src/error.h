@@ -2,6 +2,7 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
 #include <sourcemeta/core/io.h>
+#include <sourcemeta/core/options.h>
 
 #include <functional> // std::function
 
@@ -120,6 +121,18 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
       std::cerr << "error: " << error.what() << "\n";
     }
 
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::OptionsUnexpectedValueFlagError &error) {
+    std::cerr << "error: " << error.what() << " '" << error.name() << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::OptionsMissingOptionValueError &error) {
+    std::cerr << "error: " << error.what() << " '" << error.name() << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::OptionsUnknownOptionError &error) {
+    std::cerr << "error: " << error.what() << " '" << error.name() << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
     return EXIT_FAILURE;
   } catch (const std::runtime_error &error) {
     std::cerr << "error: " << error.what() << "\n";

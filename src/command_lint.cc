@@ -19,7 +19,7 @@ static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
                                const Options &options, Iterator first,
                                Iterator last) -> void {
   for (auto iterator = first; iterator != last; ++iterator) {
-    if (bundle.remove(*iterator)) {
+    if (bundle.remove(std::string{*iterator})) {
       sourcemeta::jsonschema::cli::log_verbose(options)
           << "Disabling rule: " << *iterator << "\n";
     } else {
@@ -86,11 +86,9 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
-auto sourcemeta::jsonschema::cli::lint(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"f", "fix", "json", "j", "l", "list"})};
-  const bool output_json = options.contains("json") || options.contains("j");
+auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
+    -> int {
+  const bool output_json = options.contains("json");
 
   sourcemeta::core::SchemaTransformer bundle;
   sourcemeta::core::add(bundle, sourcemeta::core::AlterSchemaMode::Readability);
@@ -105,12 +103,7 @@ auto sourcemeta::jsonschema::cli::lint(
                        options.at("exclude").cend());
   }
 
-  if (options.contains("x")) {
-    disable_lint_rules(bundle, options, options.at("x").cbegin(),
-                       options.at("x").cend());
-  }
-
-  if (options.contains("list") || options.contains("l")) {
+  if (options.contains("list")) {
     std::vector<std::pair<std::reference_wrapper<const std::string>,
                           std::reference_wrapper<const std::string>>>
         rules;
@@ -139,12 +132,12 @@ auto sourcemeta::jsonschema::cli::lint(
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
   const auto dialect{default_dialect(options)};
-  const auto custom_resolver{resolver(
-      options, options.contains("h") || options.contains("http"), dialect)};
+  const auto custom_resolver{
+      resolver(options, options.contains("http"), dialect)};
 
-  if (options.contains("f") || options.contains("fix")) {
+  if (options.contains("fix")) {
     for (const auto &entry :
-         for_each_json(options.at(""), parse_ignore(options),
+         for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       if (entry.first.extension() == ".yaml" ||
@@ -184,7 +177,7 @@ auto sourcemeta::jsonschema::cli::lint(
     }
   } else {
     for (const auto &entry :
-         for_each_json(options.at(""), parse_ignore(options),
+         for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
 

@@ -10,7 +10,6 @@
 #include <chrono>   // std::chrono
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
-#include <set>      // std::set
 #include <string>   // std::string
 
 #include "command.h"
@@ -19,24 +18,22 @@
 namespace {
 
 auto get_precompiled_schema_template_path(
-    const std::map<std::string, std::vector<std::string>> &options)
+    const sourcemeta::core::Options &options)
     -> std::optional<std::filesystem::path> {
   if (options.contains("template") && !options.at("template").empty()) {
     return options.at("template").front();
-  } else if (options.contains("m") && !options.at("m").empty()) {
-    return options.at("m").front();
   } else {
     return std::nullopt;
   }
 }
 
-auto get_schema_template(
-    const sourcemeta::core::JSON &bundled,
-    const sourcemeta::core::SchemaResolver &resolver,
-    const sourcemeta::core::SchemaFrame &frame,
-    const std::optional<std::string> &default_dialect,
-    const std::optional<std::string> &default_id, const bool fast_mode,
-    const std::map<std::string, std::vector<std::string>> &options)
+auto get_schema_template(const sourcemeta::core::JSON &bundled,
+                         const sourcemeta::core::SchemaResolver &resolver,
+                         const sourcemeta::core::SchemaFrame &frame,
+                         const std::optional<std::string> &default_dialect,
+                         const std::optional<std::string> &default_id,
+                         const bool fast_mode,
+                         const sourcemeta::core::Options &options)
     -> sourcemeta::blaze::Template {
   const auto precompiled{get_precompiled_schema_template_path(options)};
   if (precompiled.has_value()) {
@@ -67,12 +64,8 @@ auto get_schema_template(
 } // namespace
 
 auto sourcemeta::jsonschema::cli::validate(
-    const std::span<const std::string> &arguments) -> int {
-  const auto options{
-      parse_options(arguments, {"h", "http", "b", "benchmark", "t", "trace",
-                                "f", "fast", "j", "json"})};
-
-  if (options.at("").size() < 1) {
+    const sourcemeta::core::Options &options) -> int {
+  if (options.positional().size() < 1) {
     std::cerr
         << "error: This command expects a path to a schema and a path to an\n"
         << "instance to validate against the schema. For example:\n\n"
@@ -80,7 +73,7 @@ auto sourcemeta::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  if (options.at("").size() < 2) {
+  if (options.positional().size() < 2) {
     std::cerr
         << "error: In addition to the schema, you must also pass an argument\n"
         << "that represents the instance to validate against. For example:\n\n"
@@ -88,10 +81,10 @@ auto sourcemeta::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  const auto &schema_path{options.at("").at(0)};
+  const auto &schema_path{options.positional().at(0)};
   const auto dialect{default_dialect(options)};
-  const auto custom_resolver{resolver(
-      options, options.contains("h") || options.contains("http"), dialect)};
+  const auto custom_resolver{
+      resolver(options, options.contains("http"), dialect)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
@@ -103,10 +96,10 @@ auto sourcemeta::jsonschema::cli::validate(
     return EXIT_FAILURE;
   }
 
-  const auto fast_mode{options.contains("f") || options.contains("fast")};
-  const auto benchmark{options.contains("b") || options.contains("benchmark")};
-  const auto trace{options.contains("t") || options.contains("trace")};
-  const auto json_output{options.contains("j") || options.contains("json")};
+  const auto fast_mode{options.contains("fast")};
+  const auto benchmark{options.contains("benchmark")};
+  const auto trace{options.contains("trace")};
+  const auto json_output{options.contains("json")};
 
   const auto default_id{sourcemeta::core::URI::from_path(
                             sourcemeta::core::weakly_canonical(schema_path))
@@ -126,9 +119,9 @@ auto sourcemeta::jsonschema::cli::validate(
 
   bool result{true};
 
-  auto iterator{options.at("").cbegin()};
+  auto iterator{options.positional().cbegin()};
   std::advance(iterator, 1);
-  for (; iterator != options.at("").cend(); ++iterator) {
+  for (; iterator != options.positional().cend(); ++iterator) {
     const std::filesystem::path instance_path{*iterator};
     if (instance_path.extension() == ".jsonl") {
       log_verbose(options)
