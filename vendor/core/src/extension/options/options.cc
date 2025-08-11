@@ -27,6 +27,8 @@ auto find_canonical_name(const T &aliases, const typename T::key_type &alias)
 
 namespace sourcemeta::core {
 
+const std::vector<std::string_view> Options::EMPTY = {};
+
 auto Options::option(std::string &&name,
                      std::initializer_list<std::string> aliases) -> void {
   assert(!name.empty());

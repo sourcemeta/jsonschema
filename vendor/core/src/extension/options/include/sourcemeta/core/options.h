@@ -110,7 +110,7 @@ private:
 #pragma warning(disable : 4251 4275)
 #endif
   static constexpr std::string_view POSITIONAL_ARGUMENT_NAME{""};
-  static constexpr std::vector<std::string_view> EMPTY{};
+  static const std::vector<std::string_view> EMPTY;
 
   std::vector<std::unique_ptr<std::string>> storage;
   std::unordered_map<std::string_view, std::string_view> aliases_;
