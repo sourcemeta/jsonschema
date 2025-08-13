@@ -9,6 +9,8 @@
 #include <unordered_map> // std::unordered_map
 #include <utility>       // std::move
 
+#include <iostream>
+
 auto sourcemeta::core::is_schema(const sourcemeta::core::JSON &schema) -> bool {
   return schema.is_object() || schema.is_boolean();
 }
@@ -599,7 +601,8 @@ static auto keyword_rank(const sourcemeta::core::JSON::String &keyword,
   // of extensions
   const auto pivot{keyword.find_first_of("-_:")};
   if (pivot != std::string::npos) {
-    const auto match{rank.find(keyword.substr(0, pivot))};
+    const auto prefix{keyword.substr(0, pivot)};
+    const auto match{rank.find(prefix)};
     if (match != rank.cend()) {
       return match->second;
     }

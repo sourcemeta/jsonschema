@@ -73,7 +73,7 @@ Commands:
 
    lint [schemas-or-directories...] [--fix/-f] [--json/-j]
         [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-        [--exclude/-x <rule-name>] [--list/-l]
+        [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
@@ -134,6 +134,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("list", {"l"});
     app.option("extension", {"e"});
     app.option("exclude", {"x"});
+    app.option("only", {"o"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
     return sourcemeta::jsonschema::cli::lint(app);
