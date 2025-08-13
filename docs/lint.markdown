@@ -5,7 +5,8 @@ Linting
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--json/-j] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--exclude/-x <rule-name>] [--list/-l] [--default-dialect/-d <uri>]
+  [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
+  [--default-dialect/-d <uri>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -79,6 +80,12 @@ jsonschema lint path/to/my/schema_1.json path/to/my/schema_2.json
 
 ```sh
 jsonschema lint path/to/my/schema.json --exclude enum_with_type --exclude const_with_type
+```
+
+### Lint with only a set of preselected rules
+
+```sh
+jsonschema lint path/to/my/schema.json --only enum_with_type --only const_with_type
 ```
 
 ### Lint with JSON output

@@ -98,7 +98,30 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   bundle.add<sourcemeta::blaze::ValidDefault>(
       sourcemeta::blaze::default_schema_compiler);
 
-  if (options.contains("exclude")) {
+  if (options.contains("only")) {
+    if (options.contains("exclude")) {
+      std::cerr << "error: Cannot use --only and --exclude at the same time\n";
+      return EXIT_FAILURE;
+    }
+
+    std::unordered_set<std::string_view> blacklist;
+    for (const auto &entry : bundle) {
+      blacklist.emplace(entry.first);
+    }
+
+    for (const auto &only : options.at("only")) {
+      log_verbose(options) << "Only enabling rule: " << only << "\n";
+      if (blacklist.erase(only) == 0) {
+        std::cerr << "error: The following linting rule does not exist\n";
+        std::cerr << "  " << only << "\n";
+        return EXIT_FAILURE;
+      }
+    }
+
+    for (const auto &name : blacklist) {
+      bundle.remove(std::string{name});
+    }
+  } else if (options.contains("exclude")) {
     disable_lint_rules(bundle, options, options.at("exclude").cbegin(),
                        options.at("exclude").cend());
   }
