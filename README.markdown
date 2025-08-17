@@ -208,6 +208,16 @@ Keep in mind that due to [Snap
 confinement](https://snapcraft.io/docs/snap-confinement) requirements, the Snap
 is only able to access files under your `$HOME` directory.
 
+### With gah
+
+If you are using [gah](https://github.com/marverix/gah):
+
+```sh
+gah install jsonschema
+```
+
+gah does not require sudo, but you need to have `$HOME/.local/bin/` in your `PATH`.
+
 ### Building from source
 
 ```sh
