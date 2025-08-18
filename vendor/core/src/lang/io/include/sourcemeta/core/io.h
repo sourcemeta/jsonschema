@@ -94,6 +94,19 @@ auto read_file(const std::filesystem::path &path)
   return stream;
 }
 
+/// @ingroup io
+///
+/// Flush an existing file to disk, beyond just to the operating system. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+///
+/// sourcemeta::core::flush("/foo/bar.txt");
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto flush(const std::filesystem::path &path) -> void;
+
 } // namespace sourcemeta::core
 
 #endif

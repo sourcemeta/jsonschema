@@ -70,6 +70,7 @@ contains_any(const Vocabularies &container,
 #include "linter/modern_official_dialect_with_empty_fragment.h"
 #include "linter/multiple_of_default.h"
 #include "linter/non_applicable_type_specific_keywords.h"
+#include "linter/not_false.h"
 #include "linter/pattern_properties_default.h"
 #include "linter/properties_default.h"
 #include "linter/property_names_default.h"
@@ -105,6 +106,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode)
   bundle.add<IfWithoutThenElse>();
   bundle.add<MaxContainsWithoutContains>();
   bundle.add<MinContainsWithoutContains>();
+  bundle.add<NotFalse>();
   bundle.add<ThenEmpty>();
   bundle.add<ElseEmpty>();
   bundle.add<ThenWithoutIf>();
