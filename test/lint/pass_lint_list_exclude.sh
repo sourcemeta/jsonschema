@@ -115,6 +115,9 @@ multiple_of_default
 non_applicable_type_specific_keywords
   Avoid keywords that don't apply to the type or types that the current subschema expects
 
+not_false
+  Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
+
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
 
@@ -157,7 +160,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 49
+Number of rules: 50
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

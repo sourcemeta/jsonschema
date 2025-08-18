@@ -7,6 +7,7 @@ vendor/blaze
 vendor/core
 vendor/jsonbinpack
 vendor/curl.mask
+vendor/bearssl.mask
 .ackrc
 .editorconfig
 action.yml
