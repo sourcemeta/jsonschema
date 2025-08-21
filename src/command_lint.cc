@@ -91,7 +91,14 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   const bool output_json = options.contains("json");
 
   sourcemeta::core::SchemaTransformer bundle;
-  sourcemeta::core::add(bundle, sourcemeta::core::AlterSchemaMode::Readability);
+
+  if (options.contains("strict")) {
+    sourcemeta::core::add(bundle,
+                          sourcemeta::core::AlterSchemaMode::ReadabilityStrict);
+  } else {
+    sourcemeta::core::add(bundle,
+                          sourcemeta::core::AlterSchemaMode::Readability);
+  }
 
   bundle.add<sourcemeta::blaze::ValidExamples>(
       sourcemeta::blaze::default_schema_compiler);

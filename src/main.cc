@@ -74,11 +74,13 @@ Commands:
    lint [schemas-or-directories...] [--fix/-f] [--json/-j]
         [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
         [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
+        [--strict/-s]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
        Use --json/-j to output lint errors in JSON.
        Use --list/-l to print a summary of all enabled rules.
+       Use --strict/-s to enable additional opinionated strict rules.
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -132,6 +134,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("json", {"j"});
     app.flag("fix", {"f"});
     app.flag("list", {"l"});
+    app.flag("strict", {"s"});
     app.option("extension", {"e"});
     app.option("exclude", {"x"});
     app.option("only", {"o"});

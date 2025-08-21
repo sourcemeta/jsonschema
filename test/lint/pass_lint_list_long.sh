@@ -53,7 +53,7 @@ draft_official_dialect_without_empty_fragment
   The official dialect URI of Draft 7 and older versions must contain the empty fragment
 
 draft_ref_siblings
-  In Draft 7 and older dialects, keywords sibling to $ref are never evaluated
+  In Draft 7 and older dialects, keywords sibling to `$ref` are never evaluated
 
 duplicate_allof_branches
   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result

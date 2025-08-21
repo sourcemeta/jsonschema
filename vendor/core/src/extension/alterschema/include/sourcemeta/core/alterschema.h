@@ -27,10 +27,16 @@ enum class AlterSchemaMode : std::uint8_t {
   /// performance
   Readability,
 
-  /// Rules that surface implicit constraints and simplifies keywords that are
-  /// syntax sugar to other keywords, potentially decreasing human readability
-  /// in favor of explicitness
-  StaticAnalysis
+  /// Rules that simplify the given schema for both human readability and
+  /// performance while also including opinionated rules that enforce tighter
+  /// conventions to help with
+  /// correctness
+  ReadabilityStrict,
+
+  /// Rules that surface implicit constraints and simplifies keywords that
+  /// are syntax sugar to other keywords, potentially decreasing human
+  /// readability in favor of explicitness
+  StaticAnalysis,
 };
 
 /// @ingroup alterschema
