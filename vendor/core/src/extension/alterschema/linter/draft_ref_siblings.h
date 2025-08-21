@@ -3,7 +3,7 @@ public:
   DraftRefSiblings()
       : SchemaTransformRule{"draft_ref_siblings",
                             "In Draft 7 and older dialects, keywords sibling "
-                            "to $ref are never evaluated"} {}
+                            "to `$ref` are never evaluated"} {}
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,

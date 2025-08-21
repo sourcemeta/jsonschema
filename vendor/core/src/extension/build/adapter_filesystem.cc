@@ -30,6 +30,11 @@ auto BuildAdapterFilesystem::read_dependencies(const node_type &path) const
     BuildDependencies<node_type> deps;
     std::string line;
     while (std::getline(stream, line)) {
+      // Prevent CRLF on Windows
+      if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+      }
+
       if (!line.empty()) {
         deps.emplace_back(line);
       }

@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-"$1" lint -l > "$TMP/output.txt"
+"$1" lint --list --strict > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
 additional_items_with_schema_items
@@ -139,6 +139,9 @@ property_names_type_default
 single_type_array
   Setting `type` to an array of a single type is the same as directly declaring such type
 
+strict/required_properties_in_properties
+  Every property listed in the `required` keyword must be explicitly defined using the `properties` keyword
+
 then_empty
   Setting the `then` keyword to the empty schema does not add any further constraint
 
@@ -166,7 +169,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 52
+Number of rules: 53
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
