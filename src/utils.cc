@@ -46,8 +46,8 @@ auto handle_json_entry(
         // TODO: Print a verbose message for what is getting parsed
         auto contents{sourcemeta::core::read_yaml_or_json(canonical,
                                                           std::ref(positions))};
-        result.emplace_back(std::move(canonical), std::move(contents),
-                            std::move(positions));
+        result.push_back(
+            {std::move(canonical), std::move(contents), std::move(positions)});
       }
     }
   } else {
@@ -70,8 +70,8 @@ auto handle_json_entry(
       // TODO: Print a verbose message for what is getting parsed
       auto contents{
           sourcemeta::core::read_yaml_or_json(canonical, std::ref(positions))};
-      result.emplace_back(std::move(canonical), std::move(contents),
-                          std::move(positions));
+      result.push_back(
+          {std::move(canonical), std::move(contents), std::move(positions)});
     }
   }
 }
