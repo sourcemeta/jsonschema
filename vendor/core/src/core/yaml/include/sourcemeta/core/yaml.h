@@ -104,7 +104,8 @@ auto read_yaml(const std::filesystem::path &path) -> JSON;
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto read_yaml_or_json(const std::filesystem::path &path) -> JSON;
+auto read_yaml_or_json(const std::filesystem::path &path,
+                       const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 } // namespace sourcemeta::core
 

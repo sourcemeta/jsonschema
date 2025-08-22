@@ -12,7 +12,7 @@ public:
             const sourcemeta::core::Vocabularies &vocabularies,
             const sourcemeta::core::SchemaFrame &,
             const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     if (!contains_any(
@@ -35,6 +35,7 @@ public:
     std::ostringstream message;
     bool applies{false};
     const auto &all_of{schema.at("allOf")};
+    bool multi_ref_only{all_of.size() > 1};
     for (std::size_t index = 0; index < all_of.size(); index++) {
       const auto &entry{all_of.at(index)};
       if (entry.is_object()) {
@@ -46,10 +47,16 @@ public:
             // TODO: Ideally we also check for intersection of types in type
             // arrays or whether one is contained in the other
             schema.at("type") != entry.at("type")) {
+          multi_ref_only = false;
           continue;
         }
 
         for (const auto &subentry : entry.as_object()) {
+          if (walker(subentry.first, vocabularies).type !=
+              SchemaKeywordType::Reference) {
+            multi_ref_only = false;
+          }
+
           // TODO: Have another rule that removes a keyword if its exactly
           // equal to an instance of the same keyword outside the wrapper
           if (!schema.defines(subentry.first)) {
@@ -63,7 +70,7 @@ public:
       }
     }
 
-    if (applies) {
+    if (applies && !multi_ref_only) {
       return message.str();
     } else {
       return false;

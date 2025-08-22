@@ -4,6 +4,7 @@
 
 #include <cassert> // assert
 #include <fstream> // std::ofstream
+#include <mutex>   // std::unique_lock
 
 namespace sourcemeta::core {
 
@@ -76,24 +77,30 @@ auto BuildAdapterFilesystem::refresh(const node_type &path) -> void {
   // too much on file-system specific non-sense
   const auto value{std::filesystem::file_time_type::clock::now()};
   // Because builds are typically ran in parallel
-  std::lock_guard<std::mutex> lock{this->mutex};
+  std::unique_lock lock{this->mutex};
   this->marks.insert_or_assign(path, value);
 }
 
-auto BuildAdapterFilesystem::mark(const node_type &path) const
+auto BuildAdapterFilesystem::mark(const node_type &path)
     -> std::optional<mark_type> {
   assert(path.is_absolute());
-  if (std::filesystem::exists(path)) {
+
+  {
+    // Because a read operation while a write operation is taking place is
+    // undefined behaviour
+    std::shared_lock lock{this->mutex};
     const auto match{this->marks.find(path)};
-    if (match == this->marks.cend()) {
-      // Keep in mind that depending on the OS, filesystem, and even standard
-      // library implementation, this value might not be very reliable. In fact,
-      // in many cases it can be outdated. Therefore, we never cache this value
-      return std::filesystem::last_write_time(path);
-    } else {
+    if (match != this->marks.end()) {
       return match->second;
     }
-  } else {
+  }
+
+  try {
+    // Keep in mind that depending on the OS, filesystem, and even standard
+    // library implementation, this value might not be very reliable. In fact,
+    // in many cases it can be outdated. Therefore, we never cache this value
+    return std::filesystem::last_write_time(path);
+  } catch (const std::filesystem::filesystem_error &) {
     return std::nullopt;
   }
 }

@@ -24,7 +24,7 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:
+schema.json:4:12:
   Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
     at schema location "/properties/foo"
     Invalid example instance at index 0

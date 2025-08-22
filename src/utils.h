@@ -36,10 +36,19 @@ private:
   std::filesystem::path path_;
 };
 
+struct InputJSON {
+  std::filesystem::path first;
+  sourcemeta::core::JSON second;
+  sourcemeta::core::PointerPositionTracker positions;
+  auto operator<(const InputJSON &other) const noexcept -> bool {
+    return this->first < other.first;
+  }
+};
+
 auto for_each_json(const std::vector<std::string_view> &arguments,
                    const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
-    -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>;
+    -> std::vector<InputJSON>;
 
 auto print(const sourcemeta::blaze::SimpleOutput &output, std::ostream &stream)
     -> void;
