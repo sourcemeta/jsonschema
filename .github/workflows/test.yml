@@ -4,6 +4,13 @@ on:
   pull_request:
 
 jobs:
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get update && sudo apt-get install --yes codespell
+      - uses: actions/checkout@v4
+      - run: codespell docs README.markdown
+
   test:
     strategy:
       fail-fast: false
