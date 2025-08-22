@@ -19,11 +19,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
+cd "$TMP"
 "$1" lint "$TMP/schema.json" >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-$(realpath "$TMP")/schema.json:
+schema.json:
   Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
     at schema location "/properties/foo"
     Invalid example instance at index 0

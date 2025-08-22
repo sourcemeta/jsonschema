@@ -16,11 +16,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
+cd "$TMP"
 "$1" lint "$TMP/schema.json" --exclude enum_to_const -x enum_with_type >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-$(realpath "$TMP")/schema.json:
+schema.json:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location ""
 EOF
