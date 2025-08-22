@@ -71,7 +71,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 
       errors_array.push_back(error_obj);
     } else {
-      std::cout << path.string() << ":\n";
+      std::cout << std::filesystem::relative(path).string() << ":\n";
       std::cout << "  " << message << " (" << name << ")\n";
       std::cout << "    at schema location \"";
       sourcemeta::core::stringify(pointer, std::cout);
