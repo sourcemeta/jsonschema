@@ -9,7 +9,7 @@ jobs:
     steps:
       - run: sudo apt-get update && sudo apt-get install --yes codespell
       - uses: actions/checkout@v4
-      - run: codespell docs README.markdown
+      - run: codespell docs *.markdown
 
   test:
     strategy:

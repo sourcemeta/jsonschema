@@ -20,8 +20,8 @@ check their adherence on a continuous integration environment.
 Examples
 --------
 
-For example, consider this fictitious JSON Schema with inconsistent identation,
-spacing, keyword ordering, and more:
+For example, consider this fictitious JSON Schema with inconsistent
+indentation, spacing, keyword ordering, and more:
 
 ```json
 { "$schema":"https://json-schema.org/draft/2020-12/schema",
