@@ -146,10 +146,12 @@ auto read_yaml(const std::filesystem::path &path) -> JSON {
   return parse_yaml(buffer.str());
 }
 
-auto read_yaml_or_json(const std::filesystem::path &path) -> JSON {
+auto read_yaml_or_json(const std::filesystem::path &path,
+                       const JSON::ParseCallback &callback) -> JSON {
   return path.extension() == ".yaml" || path.extension() == ".yml"
+             // TODO: We should be able to pass a parse callback to YAML
              ? read_yaml(path)
-             : read_json(path);
+             : read_json(path, callback);
 }
 
 } // namespace sourcemeta::core

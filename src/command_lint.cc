@@ -45,16 +45,18 @@ static auto reindent(const std::string_view &value,
   }
 }
 
-static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
-                              const std::filesystem::path &path,
-                              const bool output_json) -> auto {
-  return [&path, &errors_array,
+static auto
+get_lint_callback(sourcemeta::core::JSON &errors_array,
+                  const sourcemeta::jsonschema::cli::InputJSON &entry,
+                  const bool output_json) -> auto {
+  return [&entry, &errors_array,
           output_json](const auto &pointer, const auto &name,
                        const auto &message, const auto &description) {
+    const auto position{entry.positions.get(pointer)};
     if (output_json) {
       auto error_obj = sourcemeta::core::JSON::make_object();
 
-      error_obj.assign("path", sourcemeta::core::JSON{path.string()});
+      error_obj.assign("path", sourcemeta::core::JSON{entry.first.string()});
       error_obj.assign("id", sourcemeta::core::JSON{name});
       error_obj.assign("message", sourcemeta::core::JSON{message});
 
@@ -68,10 +70,25 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
       sourcemeta::core::stringify(pointer, pointer_stream);
       error_obj.assign("schemaLocation",
                        sourcemeta::core::JSON{pointer_stream.str()});
-
+      if (position.has_value()) {
+        error_obj.assign("position",
+                         sourcemeta::core::to_json(position.value()));
+      } else {
+        error_obj.assign("position", sourcemeta::core::to_json(nullptr));
+      }
       errors_array.push_back(error_obj);
     } else {
-      std::cout << std::filesystem::relative(path).string() << ":\n";
+      std::cout << std::filesystem::relative(entry.first).string();
+      if (position.has_value()) {
+        std::cout << ":";
+        std::cout << std::get<0>(position.value());
+        std::cout << ":";
+        std::cout << std::get<1>(position.value());
+      } else {
+        std::cout << ":<unknown>:<unknown>";
+      }
+
+      std::cout << ":\n";
       std::cout << "  " << message << " (" << name << ")\n";
       std::cout << "    at schema location \"";
       sourcemeta::core::stringify(pointer, std::cout);
@@ -182,8 +199,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
         try {
           bundle.apply(
               copy, sourcemeta::core::schema_official_walker, custom_resolver,
-              get_lint_callback(errors_array, entry.first, output_json),
-              dialect,
+              get_lint_callback(errors_array, entry, output_json), dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose());
           return EXIT_SUCCESS;
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
@@ -216,8 +232,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
           const auto subresult = bundle.check(
               entry.second, sourcemeta::core::schema_official_walker,
               custom_resolver,
-              get_lint_callback(errors_array, entry.first, output_json),
-              dialect,
+              get_lint_callback(errors_array, entry, output_json), dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose());
           if (subresult.first) {
             return EXIT_SUCCESS;

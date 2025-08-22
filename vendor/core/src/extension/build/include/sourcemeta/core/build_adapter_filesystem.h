@@ -10,8 +10,8 @@
 // NOLINTEND(misc-include-cleaner)
 
 #include <filesystem>    // std::filesystem
-#include <mutex>         // std::mutex, std::lock_guard
 #include <optional>      // std::optional
+#include <shared_mutex>  // std::shared_mutex
 #include <string>        // std::string
 #include <unordered_map> // std::unordered_map
 
@@ -34,10 +34,7 @@ public:
                           const BuildDependencies<node_type> &dependencies)
       -> void;
   auto refresh(const node_type &path) -> void;
-
-  [[nodiscard]] auto mark(const node_type &path) const
-      -> std::optional<mark_type>;
-
+  [[nodiscard]] auto mark(const node_type &path) -> std::optional<mark_type>;
   [[nodiscard]] auto is_newer_than(const mark_type left,
                                    const mark_type right) const -> bool;
 
@@ -50,7 +47,7 @@ private:
 #endif
   std::string extension{".deps"};
   std::unordered_map<node_type, mark_type> marks;
-  std::mutex mutex;
+  std::shared_mutex mutex;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

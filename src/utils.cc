@@ -23,12 +23,11 @@ auto handle_json_entry(
     const std::filesystem::path &entry_path,
     const std::set<std::filesystem::path> &blacklist,
     const std::set<std::string> &extensions,
-    std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>>
-        &result) -> void {
+    std::vector<sourcemeta::jsonschema::cli::InputJSON> &result) -> void {
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
-      const auto canonical{sourcemeta::core::weakly_canonical(entry.path())};
+      auto canonical{sourcemeta::core::weakly_canonical(entry.path())};
       if (!std::filesystem::is_directory(entry) &&
           std::any_of(extensions.cbegin(), extensions.cend(),
                       [&canonical](const auto &extension) {
@@ -43,9 +42,12 @@ auto handle_json_entry(
           continue;
         }
 
+        sourcemeta::core::PointerPositionTracker positions;
         // TODO: Print a verbose message for what is getting parsed
-        result.emplace_back(canonical,
-                            sourcemeta::core::read_yaml_or_json(canonical));
+        auto contents{sourcemeta::core::read_yaml_or_json(canonical,
+                                                          std::ref(positions))};
+        result.emplace_back(std::move(canonical), std::move(contents),
+                            std::move(positions));
       }
     }
   } else {
@@ -64,9 +66,12 @@ auto handle_json_entry(
         return;
       }
 
+      sourcemeta::core::PointerPositionTracker positions;
       // TODO: Print a verbose message for what is getting parsed
-      result.emplace_back(canonical,
-                          sourcemeta::core::read_yaml_or_json(canonical));
+      auto contents{
+          sourcemeta::core::read_yaml_or_json(canonical, std::ref(positions))};
+      result.emplace_back(std::move(canonical), std::move(contents),
+                          std::move(positions));
     }
   }
 }
@@ -78,8 +83,8 @@ namespace sourcemeta::jsonschema::cli {
 auto for_each_json(const std::vector<std::string_view> &arguments,
                    const std::set<std::filesystem::path> &blacklist,
                    const std::set<std::string> &extensions)
-    -> std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> {
-  std::vector<std::pair<std::filesystem::path, sourcemeta::core::JSON>> result;
+    -> std::vector<InputJSON> {
+  std::vector<InputJSON> result;
 
   if (arguments.empty()) {
     handle_json_entry(std::filesystem::current_path(), blacklist, extensions,

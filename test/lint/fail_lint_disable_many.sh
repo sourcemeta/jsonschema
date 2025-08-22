@@ -21,7 +21,7 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:
+schema.json:1:1:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location ""
 EOF

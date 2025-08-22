@@ -23,10 +23,10 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 Disabling rule: enum_to_const
 Linting: $(realpath "$TMP")/schema.json
-schema.json:
+schema.json:1:1:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location ""
-schema.json:
+schema.json:1:1:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at schema location ""
 EOF
