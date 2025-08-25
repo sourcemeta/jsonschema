@@ -225,6 +225,10 @@ public:
   [[nodiscard]] auto traverse(const JSON::String &uri) const
       -> std::optional<std::reference_wrapper<const Location>>;
 
+  /// Turn an absolute pointer into a location URI
+  [[nodiscard]] auto uri(const Pointer &pointer) const
+      -> std::optional<std::reference_wrapper<const JSON::String>>;
+
   /// Try to dereference a reference location into its destination location
   [[nodiscard]] auto
   dereference(const Location &location,

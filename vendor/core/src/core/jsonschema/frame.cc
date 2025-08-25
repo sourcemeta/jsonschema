@@ -1065,6 +1065,19 @@ auto SchemaFrame::traverse(const JSON::String &uri) const
   return std::nullopt;
 }
 
+auto SchemaFrame::uri(const Pointer &pointer) const
+    -> std::optional<std::reference_wrapper<const JSON::String>> {
+  // TODO: This is potentially very slow. Traversing by pointer shouldn't
+  // require an O(N) operation
+  for (const auto &entry : this->locations_) {
+    if (entry.second.pointer == pointer) {
+      return entry.first.second;
+    }
+  }
+
+  return std::nullopt;
+}
+
 auto SchemaFrame::dereference(const Location &location,
                               const Pointer &relative_schema_location) const
     -> std::pair<SchemaReferenceType,
