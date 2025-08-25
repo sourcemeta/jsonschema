@@ -19,6 +19,7 @@ EOF
 cat << EOF > "$TMP/expected.json"
 {
   "valid": true,
+  "health": 100,
   "errors": []
 }
 EOF

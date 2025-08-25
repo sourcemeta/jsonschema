@@ -7,24 +7,32 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' > "$TMP/schema.json"
+mkdir "$TMP/schemas"
+
+cat << 'EOF' > "$TMP/schemas/foo.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "http://json-schema.org/draft-06/schema#",
   "type": "string",
-  "enum": [ "foo" ]
+  "enum": [ "foo", "bar", "baz" ]
 }
 EOF
 
-"$1" lint "$TMP/schema.json" --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
+cat << 'EOF' > "$TMP/schemas/bar.json"
+{
+  "$schema": "http://json-schema.org/draft-06/schema#"
+}
+EOF
+
+"$1" lint "$TMP/schemas" --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {
   "valid": false,
-  "health": 0,
+  "health": 50,
   "errors": [
     {
-      "path": "$(realpath "$TMP")/schema.json",
+      "path": "$(realpath "$TMP")/schemas/foo.json",
       "id": "enum_with_type",
       "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,

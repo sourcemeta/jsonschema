@@ -8,6 +8,7 @@
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout
+#include <numeric>  // std::accumulate
 #include <sstream>  // std::ostringstream
 
 #include "command.h"
@@ -178,6 +179,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
 
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
+  std::vector<std::uint8_t> scores;
   const auto dialect{default_dialect(options)};
   const auto custom_resolver{
       resolver(options, options.contains("http"), dialect)};
@@ -234,6 +236,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
               custom_resolver,
               get_lint_callback(errors_array, entry, output_json), dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose());
+          scores.emplace_back(subresult.second);
           if (subresult.first) {
             return EXIT_SUCCESS;
           } else {
@@ -257,6 +260,16 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   if (output_json) {
     auto output_json_object = sourcemeta::core::JSON::make_object();
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
+
+    if (scores.empty()) {
+      output_json_object.assign("health", sourcemeta::core::JSON{nullptr});
+    } else {
+      const auto health{std::accumulate(scores.cbegin(), scores.cend(), 0ull) /
+                        scores.size()};
+      output_json_object.assign(
+          "health", sourcemeta::core::JSON{static_cast<std::size_t>(health)});
+    }
+
     output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
     sourcemeta::core::prettify(output_json_object, std::cout);
     std::cout << "\n";
