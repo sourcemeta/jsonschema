@@ -16,7 +16,8 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (contains_any(
+    ONLY_CONTINUE_IF(
+        contains_any(
             vocabularies,
             // TODO: Make this work on older dialects. Right we can't do that
             // safely for Draft 7 and earlier if `properties` is a sibling of
@@ -25,23 +26,27 @@ public:
              "https://json-schema.org/draft/2019-09/vocab/applicator"}) &&
         schema.is_object() && schema.defines("allOf") &&
         schema.at("allOf").is_array() && schema.defines("properties") &&
-        schema.at("properties").is_object()) {
-      for (const auto &entry : schema.at("allOf").as_array()) {
-        if (entry.is_object() && entry.defines("properties") &&
-            entry.at("properties").is_object()) {
-          for (const auto &subentry : entry.at("properties").as_object()) {
-            if (!schema.at("properties").defines(subentry.first)) {
-              return true;
-            }
+        schema.at("properties").is_object());
+
+    std::size_t cursor{0};
+    for (const auto &entry : schema.at("allOf").as_array()) {
+      if (entry.is_object() && entry.defines("properties") &&
+          entry.at("properties").is_object()) {
+        for (const auto &subentry : entry.at("properties").as_object()) {
+          if (!schema.at("properties").defines(subentry.first)) {
+            return APPLIES_TO_POINTERS(
+                {{"allOf", cursor, "properties", subentry.first}});
           }
         }
       }
+
+      cursor += 1;
     }
 
     return false;
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     for (auto &entry : schema.at("allOf").as_array()) {
       if (entry.is_object() && entry.defines("properties")) {
         std::vector<JSON::String> blacklist;

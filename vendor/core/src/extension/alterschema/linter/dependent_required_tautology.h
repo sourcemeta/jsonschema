@@ -16,23 +16,25 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(
-               vocabularies,
-               {"https://json-schema.org/draft/2020-12/vocab/validation",
-                "https://json-schema.org/draft/2019-09/vocab/validation"}) &&
-           schema.is_object() && schema.defines("dependentRequired") &&
-           schema.at("dependentRequired").is_object() &&
-           schema.defines("required") && schema.at("required").is_array() &&
-           std::any_of(schema.at("required").as_array().cbegin(),
-                       schema.at("required").as_array().cend(),
-                       [&schema](const auto &element) {
-                         return element.is_string() &&
-                                schema.at("dependentRequired")
-                                    .defines(element.to_string());
-                       });
+    ONLY_CONTINUE_IF(
+        contains_any(
+            vocabularies,
+            {"https://json-schema.org/draft/2020-12/vocab/validation",
+             "https://json-schema.org/draft/2019-09/vocab/validation"}) &&
+        schema.is_object() && schema.defines("dependentRequired") &&
+        schema.at("dependentRequired").is_object() &&
+        schema.defines("required") && schema.at("required").is_array());
+    ONLY_CONTINUE_IF(std::any_of(
+        schema.at("required").as_array().cbegin(),
+        schema.at("required").as_array().cend(),
+        [&schema](const auto &element) {
+          return element.is_string() &&
+                 schema.at("dependentRequired").defines(element.to_string());
+        }));
+    return APPLIES_TO_KEYWORDS("dependentRequired", "required");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     auto requirements{schema.at("required")};
     while (true) {
       bool match{false};

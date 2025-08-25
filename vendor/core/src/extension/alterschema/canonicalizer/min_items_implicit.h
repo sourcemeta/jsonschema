@@ -13,20 +13,22 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(vocabularies,
-                        {"http://json-schema.org/draft-07/schema#",
-                         "http://json-schema.org/draft-06/schema#",
-                         "http://json-schema.org/draft-04/schema#",
-                         "http://json-schema.org/draft-03/schema#",
-                         "http://json-schema.org/draft-02/schema#",
-                         "http://json-schema.org/draft-01/schema#"}) &&
-           schema.is_object() && schema.defines("type") &&
-           schema.at("type").is_string() &&
-           schema.at("type").to_string() == "array" &&
-           !schema.defines("minItems");
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"http://json-schema.org/draft-07/schema#",
+                      "http://json-schema.org/draft-06/schema#",
+                      "http://json-schema.org/draft-04/schema#",
+                      "http://json-schema.org/draft-03/schema#",
+                      "http://json-schema.org/draft-02/schema#",
+                      "http://json-schema.org/draft-01/schema#"}) &&
+        schema.is_object() && schema.defines("type") &&
+        schema.at("type").is_string() &&
+        schema.at("type").to_string() == "array" &&
+        !schema.defines("minItems"));
+    return true;
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     schema.assign("minItems", sourcemeta::core::JSON{0});
   }
 };

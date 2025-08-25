@@ -19,7 +19,9 @@ public:
            schema.at("enum").size() == 1;
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema,
+                 const sourcemeta::core::SchemaTransformRule::Result &) const
+      -> void override {
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("value", schema.at("enum").at(0));
     make_encoding(schema, "CONST_NONE", options);

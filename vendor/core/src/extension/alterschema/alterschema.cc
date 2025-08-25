@@ -14,6 +14,24 @@ contains_any(const Vocabularies &container,
   });
 }
 
+template <typename... Args>
+auto APPLIES_TO_KEYWORDS(Args &&...args) -> SchemaTransformRule::Result {
+  std::vector<Pointer> result;
+  result.reserve(sizeof...(args));
+  (result.push_back(Pointer{std::forward<Args>(args)}), ...);
+  return result;
+}
+
+inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
+    -> SchemaTransformRule::Result {
+  return {std::move(keywords)};
+}
+
+#define ONLY_CONTINUE_IF(condition)                                            \
+  if (!(condition)) {                                                          \
+    return false;                                                              \
+  }
+
 // Canonicalizer
 #include "canonicalizer/boolean_true.h"
 #include "canonicalizer/const_as_enum.h"
@@ -78,6 +96,7 @@ contains_any(const Vocabularies &container,
 #include "linter/then_without_if.h"
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
+#include "linter/unknown_keywords_prefix.h"
 #include "linter/unnecessary_allof_wrapper_draft.h"
 #include "linter/unnecessary_allof_wrapper_modern.h"
 #include "linter/unnecessary_allof_wrapper_properties.h"
@@ -86,6 +105,8 @@ contains_any(const Vocabularies &container,
 
 // Strict
 #include "strict/required_properties_in_properties.h"
+
+#undef ONLY_CONTINUE_IF
 } // namespace sourcemeta::core
 
 namespace sourcemeta::core {
@@ -124,6 +145,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<ExclusiveMaximumNumberAndMaximum>();
   bundle.add<ExclusiveMinimumNumberAndMinimum>();
   bundle.add<DraftRefSiblings>();
+  bundle.add<UnknownKeywordsPrefix>();
 
   if (mode == AlterSchemaMode::StaticAnalysis) {
     bundle.add<BooleanTrue>();

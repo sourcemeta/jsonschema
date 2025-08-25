@@ -15,21 +15,23 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(vocabularies,
-                        {"http://json-schema.org/draft-04/schema#",
-                         "http://json-schema.org/draft-03/schema#",
-                         "http://json-schema.org/draft-02/schema#",
-                         "http://json-schema.org/draft-01/schema#"}) &&
-           schema.is_object() && schema.defines("type") &&
-           schema.at("type").is_string() &&
-           (schema.at("type").to_string() == "integer" ||
-            schema.at("type").to_string() == "number") &&
-           schema.defines("minimum") && schema.at("minimum").is_number() &&
-           schema.defines("maximum") && schema.at("maximum").is_number() &&
-           schema.at("minimum") == schema.at("maximum");
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"http://json-schema.org/draft-04/schema#",
+                      "http://json-schema.org/draft-03/schema#",
+                      "http://json-schema.org/draft-02/schema#",
+                      "http://json-schema.org/draft-01/schema#"}) &&
+        schema.is_object() && schema.defines("type") &&
+        schema.at("type").is_string() &&
+        (schema.at("type").to_string() == "integer" ||
+         schema.at("type").to_string() == "number") &&
+        schema.defines("minimum") && schema.at("minimum").is_number() &&
+        schema.defines("maximum") && schema.at("maximum").is_number() &&
+        schema.at("minimum") == schema.at("maximum"));
+    return APPLIES_TO_KEYWORDS("minimum", "maximum");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     sourcemeta::core::JSON values = sourcemeta::core::JSON::make_array();
     values.push_back(schema.at("minimum"));
     schema.assign("enum", std::move(values));

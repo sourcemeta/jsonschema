@@ -14,12 +14,9 @@ public:
             const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (!schema.is_object()) {
-      return false;
-    }
+    ONLY_CONTINUE_IF(schema.is_object());
 
     std::set<JSON::Type> current_types;
-
     if (contains_any(vocabularies,
                      {"https://json-schema.org/draft/2020-12/vocab/validation",
                       "https://json-schema.org/draft/2019-09/vocab/validation",
@@ -76,11 +73,9 @@ public:
 
     // This means that the schema has no explicit type constraints,
     // so we cannot remove anything from it.
-    if (current_types.empty()) {
-      return false;
-    }
+    ONLY_CONTINUE_IF(!current_types.empty());
 
-    this->blacklist.clear();
+    std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {
       const auto metadata{walker(entry.first, vocabularies)};
 
@@ -95,27 +90,17 @@ public:
                                [&current_types](const auto keyword_type) {
                                  return current_types.contains(keyword_type);
                                })) {
-        this->blacklist.emplace_back(entry.first);
+        positions.push_back(Pointer{entry.first});
       }
     }
 
-    if (this->blacklist.empty()) {
-      return false;
-    }
-
-    // Print the offending keyword
-    std::ostringstream message;
-    for (const auto &entry : this->blacklist) {
-      message << "- " << entry << "\n";
-    }
-
-    return message.str();
+    ONLY_CONTINUE_IF(!positions.empty());
+    return APPLIES_TO_POINTERS(std::move(positions));
   }
 
-  auto transform(JSON &schema) const -> void override {
-    schema.erase_keys(this->blacklist.cbegin(), this->blacklist.cend());
+  auto transform(JSON &schema, const Result &result) const -> void override {
+    for (const auto &location : result.locations) {
+      schema.erase(location.at(0).to_property());
+    }
   }
-
-private:
-  mutable std::vector<JSON::String> blacklist;
 };

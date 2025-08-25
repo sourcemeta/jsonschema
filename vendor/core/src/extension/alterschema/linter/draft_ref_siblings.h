@@ -14,48 +14,34 @@ public:
             const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (!contains_any(vocabularies,
-                      {"http://json-schema.org/draft-07/schema#",
-                       "http://json-schema.org/draft-06/schema#",
-                       "http://json-schema.org/draft-04/schema#",
-                       "http://json-schema.org/draft-03/schema#",
-                       "http://json-schema.org/draft-02/schema#",
-                       "http://json-schema.org/draft-01/schema#",
-                       "http://json-schema.org/draft-00/schema#"})) {
-      return false;
-    }
+    ONLY_CONTINUE_IF(contains_any(vocabularies,
+                                  {"http://json-schema.org/draft-07/schema#",
+                                   "http://json-schema.org/draft-06/schema#",
+                                   "http://json-schema.org/draft-04/schema#",
+                                   "http://json-schema.org/draft-03/schema#",
+                                   "http://json-schema.org/draft-02/schema#",
+                                   "http://json-schema.org/draft-01/schema#",
+                                   "http://json-schema.org/draft-00/schema#"}));
+    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref"));
 
-    if (!schema.is_object() || !schema.defines("$ref")) {
-      return false;
-    }
-
-    // Clear and populate the preserve_keywords set
-    this->preserve_keywords.clear();
-    bool has_removable_siblings = false;
-
-    // Loop over the object properties in schema
+    std::vector<Pointer> locations;
     for (const auto &entry : schema.as_object()) {
-      const auto &key = entry.first;
-
-      // Run the walker and only add to preserve_keywords the keywords whose
-      // type is Other or Reference
-      const auto metadata = walker(key, vocabularies);
+      const auto metadata{walker(entry.first, vocabularies)};
       if (metadata.type == sourcemeta::core::SchemaKeywordType::Other ||
           metadata.type == sourcemeta::core::SchemaKeywordType::Reference) {
-        this->preserve_keywords.insert(key);
+        continue;
       } else {
-        has_removable_siblings = true;
+        locations.push_back(Pointer{entry.first});
       }
     }
 
-    return has_removable_siblings;
+    ONLY_CONTINUE_IF(!locations.empty());
+    return APPLIES_TO_POINTERS(std::move(locations));
   }
 
-  auto transform(JSON &schema) const -> void override {
-    schema.clear_except(this->preserve_keywords.cbegin(),
-                        this->preserve_keywords.cend());
+  auto transform(JSON &schema, const Result &result) const -> void override {
+    for (const auto &location : result.locations) {
+      schema.erase(location.at(0).to_property());
+    }
   }
-
-private:
-  mutable std::unordered_set<std::string> preserve_keywords;
 };

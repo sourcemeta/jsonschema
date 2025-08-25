@@ -6,10 +6,11 @@
 
 #include "encoding.h"
 
-static auto transformer_callback_noop(const sourcemeta::core::Pointer &,
-                                      const std::string_view,
-                                      const std::string_view,
-                                      const std::string_view) -> void {
+static auto
+transformer_callback_noop(const sourcemeta::core::Pointer &,
+                          const std::string_view, const std::string_view,
+                          const sourcemeta::core::SchemaTransformRule::Result &)
+    -> void {
   // This callback should never be called, as all the transformation rules
   // we define in this project can indeed be transformed
   assert(false);

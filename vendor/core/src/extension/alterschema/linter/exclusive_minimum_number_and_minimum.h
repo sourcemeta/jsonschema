@@ -15,19 +15,20 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(
-               vocabularies,
-               {"https://json-schema.org/draft/2020-12/vocab/validation",
-                "https://json-schema.org/draft/2019-09/vocab/validation",
-                "http://json-schema.org/draft-07/schema#",
-                "http://json-schema.org/draft-06/schema#"}) &&
-           schema.is_object() && schema.defines("minimum") &&
-           schema.defines("exclusiveMinimum") &&
-           schema.at("minimum").is_number() &&
-           schema.at("exclusiveMinimum").is_number();
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"https://json-schema.org/draft/2020-12/vocab/validation",
+                      "https://json-schema.org/draft/2019-09/vocab/validation",
+                      "http://json-schema.org/draft-07/schema#",
+                      "http://json-schema.org/draft-06/schema#"}) &&
+        schema.is_object() && schema.defines("minimum") &&
+        schema.defines("exclusiveMinimum") &&
+        schema.at("minimum").is_number() &&
+        schema.at("exclusiveMinimum").is_number());
+    return APPLIES_TO_KEYWORDS("exclusiveMinimum", "minimum");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     if (schema.at("exclusiveMinimum") < schema.at("minimum")) {
       schema.erase("exclusiveMinimum");
     } else {

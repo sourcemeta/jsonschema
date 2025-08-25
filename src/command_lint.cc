@@ -52,31 +52,29 @@ get_lint_callback(sourcemeta::core::JSON &errors_array,
                   const bool output_json) -> auto {
   return [&entry, &errors_array,
           output_json](const auto &pointer, const auto &name,
-                       const auto &message, const auto &description) {
-    const auto position{entry.positions.get(pointer)};
+                       const auto &message, const auto &result) {
+    const auto schema_location{result.locations.empty()
+                                   ? pointer
+                                   : pointer.concat(result.locations.front())};
+    const auto position{entry.positions.get(schema_location)};
+
     if (output_json) {
       auto error_obj = sourcemeta::core::JSON::make_object();
 
       error_obj.assign("path", sourcemeta::core::JSON{entry.first.string()});
       error_obj.assign("id", sourcemeta::core::JSON{name});
       error_obj.assign("message", sourcemeta::core::JSON{message});
-
-      if (description.empty()) {
-        error_obj.assign("description", sourcemeta::core::JSON{nullptr});
-      } else {
-        error_obj.assign("description", sourcemeta::core::JSON{message});
-      }
-
-      std::ostringstream pointer_stream;
-      sourcemeta::core::stringify(pointer, pointer_stream);
+      error_obj.assign("description",
+                       sourcemeta::core::to_json(result.description));
       error_obj.assign("schemaLocation",
-                       sourcemeta::core::JSON{pointer_stream.str()});
+                       sourcemeta::core::to_json(schema_location));
       if (position.has_value()) {
         error_obj.assign("position",
                          sourcemeta::core::to_json(position.value()));
       } else {
         error_obj.assign("position", sourcemeta::core::to_json(nullptr));
       }
+
       errors_array.push_back(error_obj);
     } else {
       std::cout << std::filesystem::relative(entry.first).string();
@@ -92,11 +90,12 @@ get_lint_callback(sourcemeta::core::JSON &errors_array,
       std::cout << ":\n";
       std::cout << "  " << message << " (" << name << ")\n";
       std::cout << "    at schema location \"";
-      sourcemeta::core::stringify(pointer, std::cout);
+      sourcemeta::core::stringify(schema_location, std::cout);
       std::cout << "\"\n";
-      if (!description.empty()) {
-        reindent(description, "    ", std::cout);
-        if (description.back() != '\n') {
+
+      if (result.description.has_value()) {
+        reindent(result.description.value(), "    ", std::cout);
+        if (result.description.value().back() != '\n') {
           std::cout << "\n";
         }
       }

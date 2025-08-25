@@ -14,110 +14,70 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (!schema.is_object()) {
-      return false;
-    }
-
-    if (contains_any(vocabularies,
-                     {"https://json-schema.org/draft/2020-12/vocab/validation",
-                      "https://json-schema.org/draft/2019-09/vocab/validation",
-                      "http://json-schema.org/draft-07/schema#",
-                      "http://json-schema.org/draft-06/schema#",
-                      "http://json-schema.org/draft-04/schema#",
-                      "http://json-schema.org/draft-03/schema#",
-                      "http://json-schema.org/draft-02/schema#",
-                      "http://json-schema.org/draft-01/schema#",
-                      "http://json-schema.org/draft-00/schema#"})) {
-      if (schema.defines("type")) {
-        return false;
-      }
-
-      // Don't apply if we don't have the necessary vocabularies
-    } else {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2020-12/vocab/core") &&
-        schema.defines_any({"$ref", "$dynamicRef"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2020-12/vocab/applicator") &&
-        schema.defines_any(
-            {"anyOf", "oneOf", "allOf", "if", "then", "else", "not"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2020-12/vocab/validation") &&
-        schema.defines_any({"enum", "const"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2019-09/vocab/core") &&
-        schema.defines_any({"$ref", "$recursiveRef"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2019-09/vocab/applicator") &&
-        schema.defines_any(
-            {"anyOf", "oneOf", "allOf", "if", "then", "else", "not"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "https://json-schema.org/draft/2019-09/vocab/validation") &&
-        schema.defines_any({"enum", "const"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-07/schema#") &&
-        schema.defines_any({"$ref", "enum", "const", "anyOf", "oneOf", "allOf",
-                            "if", "then", "else", "not"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-06/schema#") &&
-        schema.defines_any(
-            {"$ref", "enum", "const", "anyOf", "oneOf", "allOf", "not"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-04/schema#") &&
-        schema.defines_any(
-            {"$ref", "enum", "anyOf", "oneOf", "allOf", "not"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-03/schema#") &&
-        schema.defines_any({"$ref", "enum", "disallow", "extends"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-02/schema#") &&
-        schema.defines_any({"enum", "disallow", "extends"})) {
-      return false;
-    }
-
-    if (vocabularies.contains("http://json-schema.org/draft-01/schema#") &&
-        schema.defines_any({"enum", "disallow", "extends"})) {
-      return false;
-    }
-
-    if (vocabularies.contains(
-            "http://json-schema.org/draft-00/hyper-schema#") &&
-        schema.defines_any({"enum", "disallow", "extends"})) {
-      return false;
-    }
-
+    ONLY_CONTINUE_IF(schema.is_object());
+    ONLY_CONTINUE_IF(contains_any(
+        vocabularies, {"https://json-schema.org/draft/2020-12/vocab/validation",
+                       "https://json-schema.org/draft/2019-09/vocab/validation",
+                       "http://json-schema.org/draft-07/schema#",
+                       "http://json-schema.org/draft-06/schema#",
+                       "http://json-schema.org/draft-04/schema#",
+                       "http://json-schema.org/draft-03/schema#",
+                       "http://json-schema.org/draft-02/schema#",
+                       "http://json-schema.org/draft-01/schema#",
+                       "http://json-schema.org/draft-00/schema#"}));
+    ONLY_CONTINUE_IF(!schema.defines("type"));
+    ONLY_CONTINUE_IF(!vocabularies.contains(
+                         "https://json-schema.org/draft/2020-12/vocab/core") ||
+                     !schema.defines_any({"$ref", "$dynamicRef"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains(
+            "https://json-schema.org/draft/2020-12/vocab/applicator") ||
+        !schema.defines_any(
+            {"anyOf", "oneOf", "allOf", "if", "then", "else", "not"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains(
+            "https://json-schema.org/draft/2020-12/vocab/validation") ||
+        !schema.defines_any({"enum", "const"}));
+    ONLY_CONTINUE_IF(!vocabularies.contains(
+                         "https://json-schema.org/draft/2019-09/vocab/core") ||
+                     !schema.defines_any({"$ref", "$recursiveRef"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains(
+            "https://json-schema.org/draft/2019-09/vocab/applicator") ||
+        !schema.defines_any(
+            {"anyOf", "oneOf", "allOf", "if", "then", "else", "not"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains(
+            "https://json-schema.org/draft/2019-09/vocab/validation") ||
+        !schema.defines_any({"enum", "const"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
+        !schema.defines_any({"$ref", "enum", "const", "anyOf", "oneOf", "allOf",
+                             "if", "then", "else", "not"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-06/schema#") ||
+        !schema.defines_any(
+            {"$ref", "enum", "const", "anyOf", "oneOf", "allOf", "not"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-04/schema#") ||
+        !schema.defines_any(
+            {"$ref", "enum", "anyOf", "oneOf", "allOf", "not"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-03/schema#") ||
+        !schema.defines_any({"$ref", "enum", "disallow", "extends"}))
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-02/schema#") ||
+        !schema.defines_any({"enum", "disallow", "extends"}));
+    ONLY_CONTINUE_IF(
+        !vocabularies.contains("http://json-schema.org/draft-01/schema#") ||
+        !schema.defines_any({"enum", "disallow", "extends"}));
+    ONLY_CONTINUE_IF(!vocabularies.contains(
+                         "http://json-schema.org/draft-00/hyper-schema#") ||
+                     !schema.defines_any({"enum", "disallow", "extends"}));
     return true;
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     auto types{sourcemeta::core::JSON::make_array()};
 
     // All possible JSON Schema types

@@ -82,7 +82,7 @@ auto ValidExamples::condition(
       std::ostringstream message;
       message << "Invalid example instance at index " << cursor << "\n";
       output.stacktrace(message, "  ");
-      return message.str();
+      return {{{"examples", cursor}}, std::move(message).str()};
     }
 
     cursor += 1;
@@ -91,7 +91,9 @@ auto ValidExamples::condition(
   return false;
 }
 
-auto ValidExamples::transform(sourcemeta::core::JSON &schema) const -> void {
+auto ValidExamples::transform(
+    sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaTransformRule::Result &) const -> void {
   schema.erase("examples");
 }
 

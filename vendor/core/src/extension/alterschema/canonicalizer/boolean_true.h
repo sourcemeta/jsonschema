@@ -17,7 +17,7 @@ public:
     return schema.is_boolean() && schema.to_boolean();
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     schema.into(sourcemeta::core::JSON::make_object());
   }
 };

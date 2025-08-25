@@ -154,6 +154,9 @@ unevaluated_items_default
 unevaluated_properties_default
   Setting the `unevaluatedProperties` keyword to the true schema does not add any further constraint
 
+unknown_keywords_prefix
+  Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix
+
 unnecessary_allof_wrapper_draft
   Wrapping any keyword other than `$ref` in `allOf` is unnecessary and may even introduce a minor evaluation performance overhead
 
@@ -169,7 +172,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 53
+Number of rules: 54
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

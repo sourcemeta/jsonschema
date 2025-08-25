@@ -16,30 +16,30 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(vocabularies,
-                        {"http://json-schema.org/draft-07/schema#",
-                         "http://json-schema.org/draft-06/schema#",
-                         "http://json-schema.org/draft-04/schema#",
-                         "http://json-schema.org/draft-03/schema#"}) &&
-           schema.is_object() && schema.defines("dependencies") &&
-           schema.at("dependencies").is_object() &&
-           schema.defines("required") && schema.at("required").is_array() &&
-           std::any_of(schema.at("required").as_array().cbegin(),
-                       schema.at("required").as_array().cend(),
-                       [&schema](const auto &element) {
-                         return element.is_string() &&
-                                schema.at("dependencies")
-                                    .defines(element.to_string()) &&
-                                (schema.at("dependencies")
-                                     .at(element.to_string())
-                                     .is_array() ||
-                                 schema.at("dependencies")
-                                     .at(element.to_string())
-                                     .is_string());
-                       });
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"http://json-schema.org/draft-07/schema#",
+                      "http://json-schema.org/draft-06/schema#",
+                      "http://json-schema.org/draft-04/schema#",
+                      "http://json-schema.org/draft-03/schema#"}) &&
+        schema.is_object() && schema.defines("dependencies") &&
+        schema.at("dependencies").is_object() && schema.defines("required") &&
+        schema.at("required").is_array());
+    ONLY_CONTINUE_IF(std::ranges::any_of(
+        schema.at("required").as_array(), [&schema](const auto &element) {
+          return element.is_string() &&
+                 schema.at("dependencies").defines(element.to_string()) &&
+                 (schema.at("dependencies")
+                      .at(element.to_string())
+                      .is_array() ||
+                  schema.at("dependencies")
+                      .at(element.to_string())
+                      .is_string());
+        }));
+    return APPLIES_TO_KEYWORDS("dependencies", "required");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     auto requirements{schema.at("required")};
     while (true) {
       bool match{false};

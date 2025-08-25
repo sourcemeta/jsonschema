@@ -23,7 +23,9 @@ public:
            schema.defines("multipleOf") && schema.at("multipleOf").is_integer();
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema,
+                 const sourcemeta::core::SchemaTransformRule::Result &) const
+      -> void override {
     auto minimum = schema.at("minimum");
     auto multiplier = schema.at("multipleOf");
     auto options = sourcemeta::core::JSON::make_object();
