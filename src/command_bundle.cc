@@ -1,3 +1,4 @@
+#include <sourcemeta/core/editorschema.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -43,7 +44,7 @@ auto sourcemeta::jsonschema::cli::bundle(
     std::cerr << "you will be unable to reference the resulting schema from "
                  "other schemas\n";
     std::cerr << "using the --resolve/-r option.\n";
-    sourcemeta::core::unidentify(schema,
+    sourcemeta::core::for_editor(schema,
                                  sourcemeta::core::schema_official_walker,
                                  custom_resolver, dialect);
   }
