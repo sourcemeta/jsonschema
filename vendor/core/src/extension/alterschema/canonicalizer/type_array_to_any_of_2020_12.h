@@ -22,29 +22,30 @@ public:
     // a type union declaration alongside of an `anyOf` where one branch defines
     // `$id` or `$anchor`. We will end up duplicating identifiers (leading to
     // invalid schemas) and there is no silver bullet to avoid these cases.
-    const auto has_identifiers{std::any_of(
-        frame.locations().cbegin(), frame.locations().cend(),
-        [](const auto &entry) {
+    const auto has_identifiers{
+        std::ranges::any_of(frame.locations(), [](const auto &entry) {
           return entry.second.type ==
                      sourcemeta::core::SchemaFrame::LocationType::Resource ||
                  entry.second.type ==
                      sourcemeta::core::SchemaFrame::LocationType::Anchor;
         })};
 
-    return contains_any(
-               vocabularies,
-               {"https://json-schema.org/draft/2020-12/vocab/validation",
-                "https://json-schema.org/draft/2020-12/vocab/applicator"}) &&
-           !has_identifiers && schema.is_object() && schema.defines("type") &&
-           schema.at("type").is_array() &&
-           // Non type-specific applicators can leads to invalid schemas
-           !schema.defines("$defs") && !schema.defines("$ref") &&
-           !schema.defines("if") && !schema.defines("then") &&
-           !schema.defines("else") && !schema.defines("allOf") &&
-           !schema.defines("oneOf") && !schema.defines("anyOf");
+    ONLY_CONTINUE_IF(
+        contains_any(
+            vocabularies,
+            {"https://json-schema.org/draft/2020-12/vocab/validation",
+             "https://json-schema.org/draft/2020-12/vocab/applicator"}) &&
+        !has_identifiers && schema.is_object() && schema.defines("type") &&
+        schema.at("type").is_array() &&
+        // Non type-specific applicators can leads to invalid schemas
+        !schema.defines("$defs") && !schema.defines("$ref") &&
+        !schema.defines("if") && !schema.defines("then") &&
+        !schema.defines("else") && !schema.defines("allOf") &&
+        !schema.defines("oneOf") && !schema.defines("anyOf"));
+    return APPLIES_TO_KEYWORDS("type");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     const std::set<std::string> keep{"$schema", "$id", "$anchor",
                                      "$dynamicAnchor", "$vocabulary"};
     auto disjunctors{sourcemeta::core::JSON::make_array()};

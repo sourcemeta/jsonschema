@@ -9,18 +9,6 @@
 
 namespace {
 
-auto is_true(const sourcemeta::core::SchemaTransformRule::Result &result)
-    -> bool {
-  switch (result.index()) {
-    case 0:
-      assert(std::holds_alternative<bool>(result));
-      return *std::get_if<bool>(&result);
-    default:
-      assert(std::holds_alternative<std::string>(result));
-      return true;
-  }
-}
-
 auto calculate_health_percentage(const std::size_t subschemas,
                                  const std::size_t failed_subschemas)
     -> std::uint8_t {
@@ -51,7 +39,7 @@ auto SchemaTransformRule::message() const -> const std::string & {
   return this->message_;
 }
 
-auto SchemaTransformRule::transform(JSON &) const -> void {
+auto SchemaTransformRule::transform(JSON &, const Result &) const -> void {
   throw SchemaAbortError("This rule cannot be automatically transformed");
 }
 
@@ -71,20 +59,21 @@ auto SchemaTransformRule::apply(JSON &schema, const JSON &root,
     -> std::pair<bool, Result> {
   auto outcome{this->condition(schema, root, vocabularies, frame, location,
                                walker, resolver)};
-  if (!is_true(outcome)) {
+  if (!outcome.applies) {
     return {true, std::move(outcome)};
   }
 
   try {
-    this->transform(schema);
+    this->transform(schema, outcome);
   } catch (const SchemaAbortError &) {
     return {false, std::move(outcome)};
   }
 
   // The condition must always be false after applying the
   // transformation in order to avoid infinite loops
-  if (is_true(this->condition(schema, root, vocabularies, frame, location,
-                              walker, resolver))) {
+  if (this->condition(schema, root, vocabularies, frame, location, walker,
+                      resolver)
+          .applies) {
     // TODO: Throw a better custom error that also highlights the schema
     // location
     std::ostringstream error;
@@ -133,21 +122,9 @@ auto SchemaTransformer::check(
     for (const auto &[name, rule] : this->rules) {
       const auto outcome{rule->check(current, schema, current_vocabularies,
                                      walker, resolver, frame, entry.second)};
-      switch (outcome.index()) {
-        case 0:
-          assert(std::holds_alternative<bool>(outcome));
-          if (*std::get_if<bool>(&outcome)) {
-            subresult = false;
-            callback(entry.second.pointer, name, rule->message(), "");
-          }
-
-          break;
-        default:
-          assert(std::holds_alternative<std::string>(outcome));
-          subresult = false;
-          callback(entry.second.pointer, name, rule->message(),
-                   *std::get_if<std::string>(&outcome));
-          break;
+      if (outcome.applies) {
+        subresult = false;
+        callback(entry.second.pointer, name, rule->message(), outcome);
       }
     }
 
@@ -191,13 +168,11 @@ auto SchemaTransformer::apply(
                                          entry.second)};
         // This means the rule is fixable
         if (subresult.first) {
-          applied = is_true(subresult.second) || applied;
+          applied = subresult.second.applies || applied;
         } else {
           result = false;
           callback(entry.second.pointer, name, rule->message(),
-                   subresult.second.index() == 0
-                       ? ""
-                       : *std::get_if<std::string>(&subresult.second));
+                   subresult.second);
         }
 
         if (!applied) {

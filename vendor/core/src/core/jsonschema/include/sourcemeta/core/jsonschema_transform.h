@@ -11,8 +11,9 @@
 #include <sourcemeta/core/jsonschema_resolver.h>
 
 #include <cassert>     // assert
-#include <concepts>    // std::derived_from
+#include <concepts>    // std::derived_from, std::same_as
 #include <functional>  // std::function
+#include <iterator>    // std::make_move_iterator, std::begin, std::end
 #include <map>         // std::map
 #include <memory>      // std::make_unique, std::unique_ptr
 #include <optional>    // std::optional, std::nullopt
@@ -20,7 +21,6 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::forward, std::pair
-#include <variant>     // std::variant
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -83,7 +83,32 @@ public:
   [[nodiscard]] auto message() const -> const std::string &;
 
   /// The result of evaluating a rule
-  using Result = std::variant<bool, std::string>;
+  struct Result {
+    Result(const bool applies_) : applies{applies_} {}
+    Result(Pointer pointer) : applies{true}, locations{std::move(pointer)} {
+      assert(this->locations.size() == 1);
+    }
+
+    template <typename T>
+      requires std::same_as<typename T::value_type, Pointer>
+    Result(T &&container) : applies{true} {
+      auto &&input = std::forward<T>(container);
+      if constexpr (requires { input.size(); }) {
+        locations.reserve(input.size());
+      }
+
+      locations.assign(std::make_move_iterator(std::begin(input)),
+                       std::make_move_iterator(std::end(input)));
+    }
+
+    Result(std::vector<Pointer> &&locations_, JSON::String &&description_)
+        : applies{true}, locations{std::move(locations_)},
+          description{std::move(description_)} {}
+
+    bool applies;
+    std::vector<Pointer> locations;
+    std::optional<JSON::String> description;
+  };
 
   /// Apply the rule to a schema
   auto apply(JSON &schema, const JSON &root, const Vocabularies &vocabularies,
@@ -115,7 +140,7 @@ private:
 
   /// The rule transformation. If this virtual method is not overriden,
   /// then the rule condition is considered to not be fixable.
-  virtual auto transform(JSON &schema) const -> void;
+  virtual auto transform(JSON &schema, const Result &result) const -> void;
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -224,10 +249,10 @@ public:
   /// - The JSON Pointer to the given subschema
   /// - The name of the rule
   /// - The message of the rule
-  /// - The longer description of the rule (if any)
-  using Callback =
-      std::function<void(const Pointer &, const std::string_view,
-                         const std::string_view, const std::string_view)>;
+  /// - The rule evaluation result
+  using Callback = std::function<void(const Pointer &, const std::string_view,
+                                      const std::string_view,
+                                      const SchemaTransformRule::Result &)>;
 
   /// Apply the bundle of rules to a schema
   auto apply(JSON &schema, const SchemaWalker &walker,

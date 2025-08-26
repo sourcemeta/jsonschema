@@ -21,7 +21,9 @@ public:
            !is_byte(schema.at("enum").size() - 1);
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema,
+                 const sourcemeta::core::SchemaTransformRule::Result &) const
+      -> void override {
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("choices", schema.at("enum"));
     make_encoding(schema, "LARGE_CHOICE_INDEX", options);

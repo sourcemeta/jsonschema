@@ -15,22 +15,21 @@ public:
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (!schema.is_object() || !schema.defines("$schema") ||
-        !schema.at("$schema").is_string()) {
-      return false;
-    }
-
-    const auto &schema_value = schema.at("$schema").to_string();
-    return (
-        schema_value == "https://json-schema.org/draft/2019-09/schema#" ||
-        schema_value == "https://json-schema.org/draft/2019-09/hyper-schema#" ||
-        schema_value == "https://json-schema.org/draft/2020-12/schema#" ||
-        schema_value == "https://json-schema.org/draft/2020-12/hyper-schema#");
+    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
+                     schema.at("$schema").is_string());
+    const auto &dialect{schema.at("$schema").to_string()};
+    ONLY_CONTINUE_IF(
+        dialect == "https://json-schema.org/draft/2019-09/schema#" ||
+        dialect == "https://json-schema.org/draft/2019-09/hyper-schema#" ||
+        dialect == "https://json-schema.org/draft/2020-12/schema#" ||
+        dialect == "https://json-schema.org/draft/2020-12/hyper-schema#");
+    return APPLIES_TO_KEYWORDS("$schema");
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    auto schema_value = schema.at("$schema").to_string();
-    schema_value.pop_back();
-    schema.at("$schema").into(sourcemeta::core::JSON{schema_value});
+  auto transform(sourcemeta::core::JSON &schema, const Result &) const
+      -> void override {
+    auto dialect{std::move(schema.at("$schema")).to_string()};
+    dialect.pop_back();
+    schema.at("$schema").into(sourcemeta::core::JSON{dialect});
   }
 };

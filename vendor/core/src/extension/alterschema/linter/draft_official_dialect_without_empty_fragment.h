@@ -14,31 +14,31 @@ public:
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    if (!schema.is_object() || !schema.defines("$schema") ||
-        !schema.at("$schema").is_string()) {
-      return false;
-    }
-
-    const auto &schema_value = schema.at("$schema").to_string();
-    return (schema_value == "http://json-schema.org/draft-07/schema" ||
-            schema_value == "http://json-schema.org/draft-07/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-06/schema" ||
-            schema_value == "http://json-schema.org/draft-06/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-04/schema" ||
-            schema_value == "http://json-schema.org/draft-04/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-03/schema" ||
-            schema_value == "http://json-schema.org/draft-03/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-02/schema" ||
-            schema_value == "http://json-schema.org/draft-02/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-01/schema" ||
-            schema_value == "http://json-schema.org/draft-01/hyper-schema" ||
-            schema_value == "http://json-schema.org/draft-00/schema" ||
-            schema_value == "http://json-schema.org/draft-00/hyper-schema");
+    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
+                     schema.at("$schema").is_string());
+    const auto &dialect{schema.at("$schema").to_string()};
+    ONLY_CONTINUE_IF(
+        dialect == "http://json-schema.org/draft-07/schema" ||
+        dialect == "http://json-schema.org/draft-07/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-06/schema" ||
+        dialect == "http://json-schema.org/draft-06/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-04/schema" ||
+        dialect == "http://json-schema.org/draft-04/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-03/schema" ||
+        dialect == "http://json-schema.org/draft-03/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-02/schema" ||
+        dialect == "http://json-schema.org/draft-02/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-01/schema" ||
+        dialect == "http://json-schema.org/draft-01/hyper-schema" ||
+        dialect == "http://json-schema.org/draft-00/schema" ||
+        dialect == "http://json-schema.org/draft-00/hyper-schema");
+    return APPLIES_TO_KEYWORDS("$schema");
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
-    auto schema_value = schema.at("$schema").to_string();
-    schema_value += "#";
-    schema.at("$schema").into(sourcemeta::core::JSON{schema_value});
+  auto transform(sourcemeta::core::JSON &schema, const Result &) const
+      -> void override {
+    auto dialect{std::move(schema.at("$schema")).to_string()};
+    dialect += "#";
+    schema.at("$schema").into(sourcemeta::core::JSON{dialect});
   }
 };

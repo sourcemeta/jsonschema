@@ -17,18 +17,20 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(
-               vocabularies,
-               {"https://json-schema.org/draft/2020-12/vocab/applicator",
-                "https://json-schema.org/draft/2019-09/vocab/applicator",
-                "http://json-schema.org/draft-07/schema#",
-                "http://json-schema.org/draft-06/schema#",
-                "http://json-schema.org/draft-04/schema#"}) &&
-           schema.is_object() && schema.defines("anyOf") &&
-           schema.at("anyOf").is_array() && !schema.at("anyOf").unique();
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"https://json-schema.org/draft/2020-12/vocab/applicator",
+                      "https://json-schema.org/draft/2019-09/vocab/applicator",
+                      "http://json-schema.org/draft-07/schema#",
+                      "http://json-schema.org/draft-06/schema#",
+                      "http://json-schema.org/draft-04/schema#"}) &&
+        schema.is_object() && schema.defines("anyOf") &&
+        schema.at("anyOf").is_array() && !schema.at("anyOf").unique());
+    // TODO: Highlight which specific entries in `anyOf` are duplicated
+    return APPLIES_TO_KEYWORDS("anyOf");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     auto collection = schema.at("anyOf");
     std::sort(collection.as_array().begin(), collection.as_array().end());
     auto last =

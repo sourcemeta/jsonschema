@@ -75,10 +75,12 @@ auto ValidDefault::condition(
 
   std::ostringstream message;
   output.stacktrace(message);
-  return message.str();
+  return {{{"default"}}, std::move(message).str()};
 }
 
-auto ValidDefault::transform(sourcemeta::core::JSON &schema) const -> void {
+auto ValidDefault::transform(
+    sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaTransformRule::Result &) const -> void {
   schema.erase("default");
 }
 

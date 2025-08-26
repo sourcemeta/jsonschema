@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "http://json-schema.org/draft-06/schema#",
   "properties": {
     "foo": {
       "type": "string",
@@ -28,7 +28,7 @@ diff "$TMP/result.txt" "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "http://json-schema.org/draft-06/schema#",
   "properties": {
     "foo": {
       "type": "string",

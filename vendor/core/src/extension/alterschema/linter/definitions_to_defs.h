@@ -14,14 +14,16 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    return contains_any(vocabularies,
-                        {"https://json-schema.org/draft/2020-12/vocab/core",
-                         "https://json-schema.org/draft/2019-09/vocab/core"}) &&
-           schema.is_object() && schema.defines("definitions") &&
-           !schema.defines("$defs");
+    ONLY_CONTINUE_IF(
+        contains_any(vocabularies,
+                     {"https://json-schema.org/draft/2020-12/vocab/core",
+                      "https://json-schema.org/draft/2019-09/vocab/core"}) &&
+        schema.is_object() && schema.defines("definitions") &&
+        !schema.defines("$defs"));
+    return APPLIES_TO_KEYWORDS("definitions");
   }
 
-  auto transform(JSON &schema) const -> void override {
+  auto transform(JSON &schema, const Result &) const -> void override {
     schema.rename("definitions", "$defs");
   }
 

@@ -21,7 +21,9 @@ public:
            !schema.defines("multipleOf");
   }
 
-  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+  auto transform(sourcemeta::core::JSON &schema,
+                 const sourcemeta::core::SchemaTransformRule::Result &) const
+      -> void override {
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("multiplier", sourcemeta::core::JSON{1});
     make_encoding(schema, "ARBITRARY_MULTIPLE_ZIGZAG_VARINT", options);
