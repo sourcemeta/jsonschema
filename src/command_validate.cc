@@ -108,6 +108,10 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto fast_mode{options.contains("fast")};
   const auto benchmark{options.contains("benchmark")};
   const auto benchmark_loop{parse_loop(options)};
+  if (benchmark_loop == 0) {
+    throw std::runtime_error("The loop number cannot be zero");
+  }
+
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
