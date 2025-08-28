@@ -18,23 +18,24 @@ EOF
 
 "$1" bundle "$TMP/schema.json" --http > "$TMP/result.json"
 
-cat << 'EOF' > "$TMP/expected.json"
+cat << EOF > "$TMP/expected.json"
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "\$schema": "http://json-schema.org/draft-07/schema#",
+  "\$id": "file://$(realpath "$TMP")/schema.json",
   "allOf": [
     {
-      "$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json"
+      "\$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json"
     }
   ],
   "definitions": {
     "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json": {
-      "$schema": "http://json-schema.org/draft-04/schema#",
+      "\$schema": "http://json-schema.org/draft-04/schema#",
       "id": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json",
       "description": "Core schema meta-schema",
       "default": {},
       "type": "object",
       "properties": {
-        "$schema": {
+        "\$schema": {
           "type": "string"
         },
         "id": {
@@ -50,14 +51,14 @@ cat << 'EOF' > "$TMP/expected.json"
         "type": {
           "anyOf": [
             {
-              "$ref": "#/definitions/simpleTypes"
+              "\$ref": "#/definitions/simpleTypes"
             },
             {
               "type": "array",
               "minItems": 1,
               "uniqueItems": true,
               "items": {
-                "$ref": "#/definitions/simpleTypes"
+                "\$ref": "#/definitions/simpleTypes"
               }
             }
           ]
@@ -68,16 +69,16 @@ cat << 'EOF' > "$TMP/expected.json"
           "uniqueItems": true
         },
         "allOf": {
-          "$ref": "#/definitions/schemaArray"
+          "\$ref": "#/definitions/schemaArray"
         },
         "anyOf": {
-          "$ref": "#/definitions/schemaArray"
+          "\$ref": "#/definitions/schemaArray"
         },
         "oneOf": {
-          "$ref": "#/definitions/schemaArray"
+          "\$ref": "#/definitions/schemaArray"
         },
         "not": {
-          "$ref": ""
+          "\$ref": ""
         },
         "exclusiveMaximum": {
           "default": false,
@@ -106,16 +107,16 @@ cat << 'EOF' > "$TMP/expected.json"
           "type": "string"
         },
         "maxLength": {
-          "$ref": "#/definitions/positiveInteger"
+          "\$ref": "#/definitions/positiveInteger"
         },
         "minLength": {
-          "$ref": "#/definitions/positiveIntegerDefault0"
+          "\$ref": "#/definitions/positiveIntegerDefault0"
         },
         "maxItems": {
-          "$ref": "#/definitions/positiveInteger"
+          "\$ref": "#/definitions/positiveInteger"
         },
         "minItems": {
-          "$ref": "#/definitions/positiveIntegerDefault0"
+          "\$ref": "#/definitions/positiveIntegerDefault0"
         },
         "uniqueItems": {
           "default": false,
@@ -125,10 +126,10 @@ cat << 'EOF' > "$TMP/expected.json"
           "default": {},
           "anyOf": [
             {
-              "$ref": ""
+              "\$ref": ""
             },
             {
-              "$ref": "#/definitions/schemaArray"
+              "\$ref": "#/definitions/schemaArray"
             }
           ]
         },
@@ -139,31 +140,31 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "boolean"
             },
             {
-              "$ref": ""
+              "\$ref": ""
             }
           ]
         },
         "required": {
-          "$ref": "#/definitions/stringArray"
+          "\$ref": "#/definitions/stringArray"
         },
         "maxProperties": {
-          "$ref": "#/definitions/positiveInteger"
+          "\$ref": "#/definitions/positiveInteger"
         },
         "minProperties": {
-          "$ref": "#/definitions/positiveIntegerDefault0"
+          "\$ref": "#/definitions/positiveIntegerDefault0"
         },
         "properties": {
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "$ref": ""
+            "\$ref": ""
           }
         },
         "patternProperties": {
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "$ref": ""
+            "\$ref": ""
           }
         },
         "additionalProperties": {
@@ -173,7 +174,7 @@ cat << 'EOF' > "$TMP/expected.json"
               "type": "boolean"
             },
             {
-              "$ref": ""
+              "\$ref": ""
             }
           ]
         },
@@ -182,10 +183,10 @@ cat << 'EOF' > "$TMP/expected.json"
           "additionalProperties": {
             "anyOf": [
               {
-                "$ref": ""
+                "\$ref": ""
               },
               {
-                "$ref": "#/definitions/stringArray"
+                "\$ref": "#/definitions/stringArray"
               }
             ]
           }
@@ -194,7 +195,7 @@ cat << 'EOF' > "$TMP/expected.json"
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "$ref": ""
+            "\$ref": ""
           }
         }
       },
@@ -210,7 +211,7 @@ cat << 'EOF' > "$TMP/expected.json"
         "positiveIntegerDefault0": {
           "allOf": [
             {
-              "$ref": "#/definitions/positiveInteger"
+              "\$ref": "#/definitions/positiveInteger"
             },
             {
               "default": 0
@@ -221,7 +222,7 @@ cat << 'EOF' > "$TMP/expected.json"
           "type": "array",
           "minItems": 1,
           "items": {
-            "$ref": ""
+            "\$ref": ""
           }
         },
         "simpleTypes": {
