@@ -42,7 +42,7 @@ Commands:
        better error messages, at the expense of speed. The --fast/-f option
        makes the schema compiler optimise for speed, at the expense of error
        messages. Looping in benchmark mode allows to collect the execution time
-       average and standard deviation for the fast mode on basic JSON data.
+       average and standard deviation over multiple runs.
 
        You may additionally pass a pre-compiled schema template (see the
        `compile` command). However, you still need to pass the original schema
