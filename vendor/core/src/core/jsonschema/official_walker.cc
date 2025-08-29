@@ -258,6 +258,9 @@ auto sourcemeta::core::schema_official_walker(
        TYPES(JSON::Type::String), Annotation)
   WALK(HTTPS_BASE "2019-09/vocab/content", "contentEncoding",
        TYPES(JSON::Type::String), Annotation)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "base", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "links", {},
+       ApplicatorElementsInPlace)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "hrefSchema", {},
        ApplicatorValueInPlaceOther)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetSchema", {},
@@ -266,6 +269,16 @@ auto sourcemeta::core::schema_official_walker(
        ApplicatorValueInPlaceOther)
   WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "submissionSchema", {},
        ApplicatorValueInPlaceOther)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "anchor", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "anchorPointer", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "href", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "rel", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "submissionMediaType", {},
+       Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetHints", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "targetMediaType", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "templatePointers", {}, Other)
+  WALK(HTTPS_BASE "2019-09/vocab/hyper-schema", "templateRequired", {}, Other)
 
 #undef HTTPS_BASE
 
@@ -379,18 +392,28 @@ auto sourcemeta::core::schema_official_walker(
            "writeOnly", {}, Comment, "$ref")
   WALK_ANY(HTTP_BASE "draft-07/schema#", HTTP_BASE "draft-07/hyper-schema#",
            "examples", {}, Comment, "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "hrefSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-07/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "targetSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-07/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "headerSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-07/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-07/hyper-schema#", "submissionSchema",
-                       {}, ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-07/schema#", "$ref")
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "base", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace, "$ref")
+  // Keywords from the Link Description Object are not affected by `$ref`, as
+  // `$ref` is not permitted there
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "hrefSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "targetSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "headerSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "submissionSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "anchor", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "anchorPointer", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "submissionMediaType", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "targetHints", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "targetMediaType", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "templatePointers", {}, Other)
+  WALK(HTTP_BASE "draft-07/hyper-schema#", "templateRequired", {}, Other)
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-07/schema#") ||
@@ -505,15 +528,22 @@ auto sourcemeta::core::schema_official_walker(
            "writeOnly", {}, Comment, "$ref")
   WALK_ANY(HTTP_BASE "draft-06/schema#", HTTP_BASE "draft-06/hyper-schema#",
            "examples", {}, Comment, "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "hrefSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-06/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "targetSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-06/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-06/hyper-schema#", "submissionSchema",
-                       {}, ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-06/schema#", "$ref")
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "base", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace, "$ref")
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "media", {}, Other, "$ref")
+  // Keywords from the Link Description Object are not affected by `$ref`, as
+  // `$ref` is not permitted there
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "hrefSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "targetSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "submissionSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "submissionEncType", {}, Other)
+  WALK(HTTP_BASE "draft-06/hyper-schema#", "mediaType", {}, Other)
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-06/schema#") ||
@@ -608,12 +638,23 @@ auto sourcemeta::core::schema_official_walker(
            "description", {}, Comment, "$ref")
   WALK_ANY(HTTP_BASE "draft-04/schema#", HTTP_BASE "draft-04/hyper-schema#",
            "default", {}, Comment, "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-04/hyper-schema#", "targetSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-04/schema#", "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-04/hyper-schema#", "schema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-04/schema#", "$ref")
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "fragmentResolution", {}, Other,
+       "$ref")
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace, "$ref")
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "media", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "pathStart", {}, Other, "$ref")
+  // Keywords from the Link Description Object are not affected by `$ref`, as
+  // `$ref` is not permitted there
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "encType", {}, Other)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "mediaType", {}, Other)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "method", {}, Other)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "schema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-04/hyper-schema#", "targetSchema", {},
+       ApplicatorValueInPlaceOther)
 
   // $ref also takes precedence over any unknown keyword
   if ((vocabularies.contains(HTTP_BASE "draft-04/schema#") ||
@@ -626,62 +667,93 @@ auto sourcemeta::core::schema_official_walker(
   }
 
   // Draft3
-  WALK(HTTP_BASE "draft-03/schema#", "id", {}, Other, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "$schema", {}, Other, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "$ref", {}, Reference)
-  WALK(HTTP_BASE "draft-03/schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "type", {}, ApplicatorElementsInPlaceSome,
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "id", {}, Other, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "$schema", {}, Other, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "$ref", {}, Reference)
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "extends", {}, ApplicatorValueOrElementsInPlace, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "type", {}, ApplicatorElementsInPlaceSome, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "disallow", {}, ApplicatorElementsInPlaceSomeNegate, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "properties", TYPES(JSON::Type::Object),
+           ApplicatorMembersTraversePropertyStatic, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "patternProperties", TYPES(JSON::Type::Object),
+           ApplicatorMembersTraversePropertyRegex, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "additionalProperties", TYPES(JSON::Type::Object),
+           ApplicatorValueTraverseSomeProperty, "properties",
+           "patternProperties")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "items", TYPES(JSON::Type::Array),
+           ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "additionalItems", TYPES(JSON::Type::Array),
+           ApplicatorValueTraverseSomeItem, "items")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "minItems", TYPES(JSON::Type::Array), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "maxItems", TYPES(JSON::Type::Array), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "uniqueItems", TYPES(JSON::Type::Array), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "required", TYPES(JSON::Type::Object), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "dependencies", TYPES(JSON::Type::Object),
+           ApplicatorMembersInPlaceSome, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "enum", {}, Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "pattern", TYPES(JSON::Type::String), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "minLength", TYPES(JSON::Type::String), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "maxLength", TYPES(JSON::Type::String), Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "divisibleBy", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "minimum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion,
+           "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "exclusiveMinimum", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "maximum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion,
+           "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "exclusiveMaximum", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "format", TYPES(JSON::Type::String), Other, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "description", {}, Comment, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "title", {}, Comment, "$ref")
+  WALK_ANY(HTTP_BASE "draft-03/schema#", HTTP_BASE "draft-03/hyper-schema#",
+           "default", {}, Comment, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "fragmentResolution", {}, Other,
        "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "disallow", {},
-       ApplicatorElementsInPlaceSomeNegate, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "properties", TYPES(JSON::Type::Object),
-       ApplicatorMembersTraversePropertyStatic, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "patternProperties",
-       TYPES(JSON::Type::Object), ApplicatorMembersTraversePropertyRegex,
-       "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties", "patternProperties")
-  WALK(HTTP_BASE "draft-03/schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "additionalItems",
-       TYPES(JSON::Type::Array), ApplicatorValueTraverseSomeItem, "items")
-  WALK(HTTP_BASE "draft-03/schema#", "minItems", TYPES(JSON::Type::Array),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "maxItems", TYPES(JSON::Type::Array),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "uniqueItems", TYPES(JSON::Type::Array),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "required", TYPES(JSON::Type::Object),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "dependencies", TYPES(JSON::Type::Object),
-       ApplicatorMembersInPlaceSome, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "enum", {}, Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "pattern", TYPES(JSON::Type::String),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "minLength", TYPES(JSON::Type::String),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "maxLength", TYPES(JSON::Type::String),
-       Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "divisibleBy",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "minimum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "exclusiveMinimum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "maximum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "exclusiveMaximum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "format", TYPES(JSON::Type::String), Other,
-       "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "description", {}, Comment, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "title", {}, Comment, "$ref")
-  WALK(HTTP_BASE "draft-03/schema#", "default", {}, Comment, "$ref")
-  WALK_MAYBE_DEPENDENT(HTTP_BASE "draft-03/hyper-schema#", "targetSchema", {},
-                       ApplicatorValueInPlaceOther,
-                       HTTP_BASE "draft-03/schema#", "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "root", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "readonly", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "contentEncoding", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "pathStart", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "mediaType", {}, Other, "$ref")
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace, "$ref")
+  // Keywords from the Link Description Object are not affected by `$ref`, as
+  // `$ref` is not permitted there
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "targetSchema", {},
+       ApplicatorValueInPlaceOther)
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "method", {}, Other)
+  WALK(HTTP_BASE "draft-03/hyper-schema#", "enctype", {}, Other)
 
   // $ref also takes precedence over any unknown keyword
   if (vocabularies.contains(HTTP_BASE "draft-03/schema#") &&
@@ -693,186 +765,229 @@ auto sourcemeta::core::schema_official_walker(
   }
 
   // Draft2
-  WALK(HTTP_BASE "draft-02/schema#", "$schema", {}, Other)
-  WALK(HTTP_BASE "draft-02/schema#", "id", {}, Other)
-  WALK(HTTP_BASE "draft-02/schema#", "$ref", {}, Reference)
-  WALK(HTTP_BASE "draft-02/schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-02/schema#", "properties", TYPES(JSON::Type::Object),
-       ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-02/schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
-  WALK(HTTP_BASE "draft-02/schema#", "type", {}, ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-02/schema#", "enum", {}, Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "maximum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "minimum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "maximumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "minimumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "maxLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "minLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "pattern", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "maxItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "minItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "uniqueItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "requires", TYPES(JSON::Type::Object),
-       ApplicatorValueTraverseParent)
-  WALK(HTTP_BASE "draft-02/schema#", "format", TYPES(JSON::Type::String), Other)
-  WALK(HTTP_BASE "draft-02/schema#", "title", {}, Comment)
-  WALK(HTTP_BASE "draft-02/schema#", "description", {}, Comment)
-  WALK(HTTP_BASE "draft-02/schema#", "default", {}, Comment)
-  WALK(HTTP_BASE "draft-02/schema#", "divisibleBy",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "disallow", {}, Assertion)
-  WALK(HTTP_BASE "draft-02/schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-02/schema#", "contentEncoding",
-       TYPES(JSON::Type::String), Comment)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "requires",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "$schema", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "id", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "$ref", {}, Reference)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "items", TYPES(JSON::Type::Array),
+           ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "properties", TYPES(JSON::Type::Object),
+           ApplicatorMembersTraversePropertyStatic)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "additionalProperties", TYPES(JSON::Type::Object),
+           ApplicatorValueTraverseSomeProperty, "properties")
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "type", {}, ApplicatorElementsInPlaceSome)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "enum", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "maximum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "minimum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "maximumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "minimumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "maxLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "minLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "pattern", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "maxItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "minItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "uniqueItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "requires", TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "format", TYPES(JSON::Type::String), Other)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "title", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "description", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "default", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "divisibleBy", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "disallow", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "extends", {}, ApplicatorValueOrElementsInPlace)
+  WALK_ANY(HTTP_BASE "draft-02/schema#", HTTP_BASE "draft-02/hyper-schema#",
+           "contentEncoding", TYPES(JSON::Type::String), Comment)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "fragmentResolution", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "root", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "readonly", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "pathStart", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "mediaType", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "alternate", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "rel", {}, Other)
   WALK(HTTP_BASE "draft-02/hyper-schema#", "targetSchema", {},
        ApplicatorValueInPlaceOther)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "type", {},
-       ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "properties",
-       TYPES(JSON::Type::Object), ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-02/hyper-schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "method", {}, Other)
+  WALK(HTTP_BASE "draft-02/hyper-schema#", "enctype", {}, Other)
 
   // Draft1
-  WALK(HTTP_BASE "draft-01/schema#", "$schema", {}, Other)
-  WALK(HTTP_BASE "draft-01/schema#", "id", {}, Other)
-  WALK(HTTP_BASE "draft-01/schema#", "$ref", {}, Reference)
-  WALK(HTTP_BASE "draft-01/schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-01/schema#", "properties", TYPES(JSON::Type::Object),
-       ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-01/schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
-  WALK(HTTP_BASE "draft-01/schema#", "type", {}, ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-01/schema#", "enum", {}, Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "maximum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "minimum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "maximumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "minimumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "maxLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "minLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "pattern", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "maxItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "minItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "requires", TYPES(JSON::Type::Object),
-       ApplicatorValueTraverseParent)
-  WALK(HTTP_BASE "draft-01/schema#", "format", TYPES(JSON::Type::String), Other)
-  WALK(HTTP_BASE "draft-01/schema#", "title", {}, Comment)
-  WALK(HTTP_BASE "draft-01/schema#", "description", {}, Comment)
-  WALK(HTTP_BASE "draft-01/schema#", "default", {}, Comment)
-  WALK(HTTP_BASE "draft-01/schema#", "disallow", {}, Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-01/schema#", "contentEncoding",
-       TYPES(JSON::Type::String), Comment)
-  WALK(HTTP_BASE "draft-01/schema#", "optional", TYPES(JSON::Type::Object),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/schema#", "maxDecimal", TYPES(JSON::Type::Real),
-       Assertion)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "type", {},
-       ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "properties",
-       TYPES(JSON::Type::Object), ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "requires",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
-  WALK(HTTP_BASE "draft-01/hyper-schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "$schema", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "id", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "$ref", {}, Reference)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "items", TYPES(JSON::Type::Array),
+           ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "properties", TYPES(JSON::Type::Object),
+           ApplicatorMembersTraversePropertyStatic)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "additionalProperties", TYPES(JSON::Type::Object),
+           ApplicatorValueTraverseSomeProperty, "properties")
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "type", {}, ApplicatorElementsInPlaceSome)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "enum", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "maximum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "minimum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "maximumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "minimumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "maxLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "minLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "pattern", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "maxItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "minItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "requires", TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "format", TYPES(JSON::Type::String), Other)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "title", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "description", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "default", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "disallow", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "extends", {}, ApplicatorValueOrElementsInPlace)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "contentEncoding", TYPES(JSON::Type::String), Comment)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "optional", TYPES(JSON::Type::Object), Assertion)
+  WALK_ANY(HTTP_BASE "draft-01/schema#", HTTP_BASE "draft-01/hyper-schema#",
+           "maxDecimal", TYPES(JSON::Type::Real), Assertion)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "fragmentResolution", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "root", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "readonly", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "pathStart", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "mediaType", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "alternate", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "method", {}, Other)
+  WALK(HTTP_BASE "draft-01/hyper-schema#", "enctype", {}, Other)
 
   // Draft0
-  WALK(HTTP_BASE "draft-00/schema#", "$schema", {}, Other)
-  WALK(HTTP_BASE "draft-00/schema#", "id", {}, Other)
-  WALK(HTTP_BASE "draft-00/schema#", "$ref", {}, Reference)
-  WALK(HTTP_BASE "draft-00/schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-00/schema#", "properties", TYPES(JSON::Type::Object),
-       ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-00/schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
-  WALK(HTTP_BASE "draft-00/schema#", "type", {}, ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-00/schema#", "enum", {}, Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "maximum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "minimum",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "maximumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "minimumCanEqual",
-       TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "maxLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "minLength", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "pattern", TYPES(JSON::Type::String),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "maxItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "minItems", TYPES(JSON::Type::Array),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "requires", TYPES(JSON::Type::Object),
-       ApplicatorValueTraverseParent)
-  WALK(HTTP_BASE "draft-00/schema#", "format", TYPES(JSON::Type::String), Other)
-  WALK(HTTP_BASE "draft-00/schema#", "title", {}, Comment)
-  WALK(HTTP_BASE "draft-00/schema#", "description", {}, Comment)
-  WALK(HTTP_BASE "draft-00/schema#", "default", {}, Comment)
-  WALK(HTTP_BASE "draft-00/schema#", "disallow", {}, Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-00/schema#", "contentEncoding",
-       TYPES(JSON::Type::String), Comment)
-  WALK(HTTP_BASE "draft-00/schema#", "optional", TYPES(JSON::Type::Object),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/schema#", "maxDecimal", TYPES(JSON::Type::Real),
-       Assertion)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "type", {},
-       ApplicatorElementsInPlaceSome)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "items", TYPES(JSON::Type::Array),
-       ApplicatorValueOrElementsTraverseAnyItemOrItem)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "properties",
-       TYPES(JSON::Type::Object), ApplicatorMembersTraversePropertyStatic)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "extends", {},
-       ApplicatorValueOrElementsInPlace)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "requires",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
-  WALK(HTTP_BASE "draft-00/hyper-schema#", "additionalProperties",
-       TYPES(JSON::Type::Object), ApplicatorValueTraverseSomeProperty,
-       "properties")
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "$schema", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "id", {}, Other)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "$ref", {}, Reference)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "items", TYPES(JSON::Type::Array),
+           ApplicatorValueOrElementsTraverseAnyItemOrItem)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "properties", TYPES(JSON::Type::Object),
+           ApplicatorMembersTraversePropertyStatic)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "additionalProperties", TYPES(JSON::Type::Object),
+           ApplicatorValueTraverseSomeProperty, "properties")
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "type", {}, ApplicatorElementsInPlaceSome)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "enum", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "maximum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "minimum", TYPES(JSON::Type::Integer, JSON::Type::Real), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "maximumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "minimumCanEqual", TYPES(JSON::Type::Integer, JSON::Type::Real),
+           Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "maxLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "minLength", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "pattern", TYPES(JSON::Type::String), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "maxItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "minItems", TYPES(JSON::Type::Array), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "requires", TYPES(JSON::Type::Object), ApplicatorValueTraverseParent)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "format", TYPES(JSON::Type::String), Other)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "title", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "description", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "default", {}, Comment)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "disallow", {}, Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "extends", {}, ApplicatorValueOrElementsInPlace)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "contentEncoding", TYPES(JSON::Type::String), Comment)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "optional", TYPES(JSON::Type::Object), Assertion)
+  WALK_ANY(HTTP_BASE "draft-00/schema#", HTTP_BASE "draft-00/hyper-schema#",
+           "maxDecimal", TYPES(JSON::Type::Real), Assertion)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "fragmentResolution", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "root", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "readonly", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "pathStart", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "mediaType", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "alternate", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "links", {},
+       ApplicatorElementsInPlace)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "href", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "rel", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "method", {}, Other)
+  WALK(HTTP_BASE "draft-00/hyper-schema#", "enctype", {}, Other)
 #undef HTTP_BASE
 #undef WALK
 #undef WALK_ANY

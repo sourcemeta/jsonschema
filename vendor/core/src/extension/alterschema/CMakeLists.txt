@@ -68,6 +68,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     linter/draft_ref_siblings.h
     linter/definitions_to_defs.h
     linter/unknown_keywords_prefix.h
+    linter/non_applicable_enum_validation_keywords.h
 
     # Strict
     strict/required_properties_in_properties.h)

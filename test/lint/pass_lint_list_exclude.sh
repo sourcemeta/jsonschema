@@ -112,6 +112,9 @@ modern_official_dialect_with_empty_fragment
 multiple_of_default
   Setting `multipleOf` to 1 does not add any further constraint
 
+non_applicable_enum_validation_keywords
+  Setting validation keywords that do not apply to any item in `enum` is considered an anti-pattern
+
 non_applicable_type_specific_keywords
   Avoid keywords that don't apply to the type or types that the current subschema expects
 
@@ -163,7 +166,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 51
+Number of rules: 52
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
