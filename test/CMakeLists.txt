@@ -179,7 +179,10 @@ add_jsonschema_test_unix(test/pass_single_data_path)
 add_jsonschema_test_unix(test/pass_single_data_path_verbose)
 add_jsonschema_test_unix(test/pass_multi_directory_resolve)
 add_jsonschema_test_unix(test/pass_multi_directory_resolve_verbose)
-add_jsonschema_test_unix(test/pass_file_target)
+add_jsonschema_test_unix(test/pass_file_target_with_resolve)
+add_jsonschema_test_unix(test/pass_file_target_with_resolve_verbose)
+add_jsonschema_test_unix(test/pass_file_target_without_resolve)
+add_jsonschema_test_unix(test/pass_file_target_without_resolve_verbose)
 add_jsonschema_test_unix(test/pass_file_target_fragment)
 
 # Bundle

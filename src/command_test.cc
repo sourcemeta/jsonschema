@@ -115,8 +115,6 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
       std::cerr << "Looking for target: " << schema_uri.recompose() << "\n";
     }
 
-    std::cout << entry.first.string() << ":";
-
     const auto schema{sourcemeta::core::wrap(schema_uri.recompose())};
 
     unsigned int pass_count{0};
@@ -124,6 +122,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     const auto total{test.at("tests").size()};
 
     if (test.at("tests").empty()) {
+      std::cout << entry.first.string() << ":";
       std::cout << " NO TESTS\n";
       continue;
     }
@@ -138,6 +137,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
           error.id() == schema_uri.recompose()) {
+        std::cout << entry.first.string() << ":";
         std::cout << "\n";
         throw sourcemeta::core::SchemaResolutionError(
             test.at("target").to_string(),
@@ -146,10 +146,12 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
 
       throw;
     } catch (...) {
+      std::cout << entry.first.string() << ":";
       std::cout << "\n";
       throw;
     }
 
+    std::cout << entry.first.string() << ":";
     if (verbose) {
       std::cout << "\n";
     }
