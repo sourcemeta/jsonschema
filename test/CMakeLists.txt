@@ -112,6 +112,10 @@ add_jsonschema_test_unix(validate/pass_jsonl_json)
 add_jsonschema_test_unix(validate/pass_jsonl_json_verbose)
 add_jsonschema_test_unix(validate/fail_jsonl_one_json)
 add_jsonschema_test_unix(validate/fail_jsonl_one_json_verbose)
+add_jsonschema_test_unix(validate/pass_benchmark)
+add_jsonschema_test_unix(validate/fail_benchmark)
+add_jsonschema_test_unix(validate/pass_benchmark_loop)
+add_jsonschema_test_unix(validate/fail_benchmark_zero)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)

@@ -8,6 +8,7 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <chrono>   // std::chrono
+#include <cmath>    // std::sqrt
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <string>   // std::string
@@ -61,6 +62,14 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
       default_dialect, default_id);
 }
 
+auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
+  if (options.contains("loop")) {
+    return std::stoull(options.at("loop").front().data());
+  } else {
+    return 1;
+  }
+}
+
 } // namespace
 
 auto sourcemeta::jsonschema::cli::validate(
@@ -98,6 +107,11 @@ auto sourcemeta::jsonschema::cli::validate(
 
   const auto fast_mode{options.contains("fast")};
   const auto benchmark{options.contains("benchmark")};
+  const auto benchmark_loop{parse_loop(options)};
+  if (benchmark_loop == 0) {
+    throw std::runtime_error("The loop number cannot be zero");
+  }
+
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
@@ -219,15 +233,50 @@ auto sourcemeta::jsonschema::cli::validate(
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
-        const auto timestamp_start{std::chrono::high_resolution_clock::now()};
-        subresult = evaluator.validate(schema_template, instance);
-        const auto timestamp_end{std::chrono::high_resolution_clock::now()};
-        const auto duration_us{
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                timestamp_end - timestamp_start)};
-        if (subresult) {
-          std::cout << "took: " << duration_us.count() << "us\n";
-        } else {
+        // Data collection for average and standard deviation
+        double sum = 0.0, sum2 = 0.0, empty = 0.0;
+
+        // Overhead evaluation, if not to optimize out!
+        for (auto index = benchmark_loop; index; index--) {
+          const auto start{std::chrono::high_resolution_clock::now()};
+          const auto end{std::chrono::high_resolution_clock::now()};
+          empty += static_cast<double>(
+                       std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           end - start)
+                           .count()) /
+                   1000.0;
+        }
+        empty /= static_cast<double>(benchmark_loop);
+
+        for (auto index = benchmark_loop; index; index--) {
+          const auto start{std::chrono::high_resolution_clock::now()};
+          subresult = evaluator.validate(schema_template, instance);
+          const auto end{std::chrono::high_resolution_clock::now()};
+          const auto delay =
+              static_cast<double>(
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(end -
+                                                                       start)
+                      .count()) /
+                  1000.0 -
+              empty;
+
+          sum += delay;
+          sum2 += delay * delay;
+        }
+
+        auto avg = sum / static_cast<double>(benchmark_loop);
+        auto stdev =
+            benchmark_loop == 1
+                ? 0.0
+                : std::sqrt(sum2 / static_cast<double>(benchmark_loop) -
+                            avg * avg);
+
+        std::cout << std::fixed;
+        std::cout.precision(3);
+        std::cout << "took: " << avg << " +- " << stdev << " us (" << empty
+                  << ")\n";
+
+        if (!subresult) {
           error << "error: Schema validation failure\n";
           result = false;
         }
