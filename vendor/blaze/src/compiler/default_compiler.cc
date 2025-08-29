@@ -6,9 +6,9 @@
 #include "default_compiler_draft6.h"
 #include "default_compiler_draft7.h"
 
-#include <cassert> // assert
-#include <set>     // std::set
-#include <string>  // std::string
+#include <cassert>       // assert
+#include <string>        // std::string
+#include <unordered_set> // std::unordered_set
 
 auto sourcemeta::blaze::default_schema_compiler(
     const sourcemeta::blaze::Context &context,
@@ -18,7 +18,7 @@ auto sourcemeta::blaze::default_schema_compiler(
     -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
-  static std::set<std::string> SUPPORTED_VOCABULARIES{
+  static std::unordered_set<std::string> SUPPORTED_VOCABULARIES{
       "https://json-schema.org/draft/2020-12/vocab/core",
       "https://json-schema.org/draft/2020-12/vocab/applicator",
       "https://json-schema.org/draft/2020-12/vocab/validation",

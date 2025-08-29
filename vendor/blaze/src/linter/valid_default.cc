@@ -51,7 +51,8 @@ auto ValidDefault::condition(
                                     .get()
                                     .base_dialect};
   std::optional<std::string> default_id{location.base};
-  if (sourcemeta::core::identify(root, root_base_dialect).has_value()) {
+  if (sourcemeta::core::identify(root, root_base_dialect).has_value() ||
+      default_id.value().empty()) {
     // We want to only set a default identifier if the root schema does not
     // have an explicit identifier. Otherwise, we can get into corner case
     // when wrapping the schema

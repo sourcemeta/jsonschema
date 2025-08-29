@@ -85,6 +85,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/minimum_real_for_integer.h"
 #include "linter/modern_official_dialect_with_empty_fragment.h"
 #include "linter/multiple_of_default.h"
+#include "linter/non_applicable_enum_validation_keywords.h"
 #include "linter/non_applicable_type_specific_keywords.h"
 #include "linter/not_false.h"
 #include "linter/pattern_properties_default.h"
@@ -137,6 +138,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<MinimumRealForInteger>();
   bundle.add<SingleTypeArray>();
   bundle.add<EnumWithType>();
+  bundle.add<NonApplicableEnumValidationKeywords>();
   bundle.add<DuplicateEnumValues>();
   bundle.add<DuplicateRequiredValues>();
   bundle.add<ConstWithType>();
