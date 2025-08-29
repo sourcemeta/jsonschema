@@ -7,9 +7,9 @@ Validating
 ```sh
 jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
-  [--benchmark/-b] [--extension/-e <extension>]
+  [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-  [--default-dialect/-d <uri>] [--template/-m <template.json>] [--json/-j]
+  [--template/-m <template.json>] [--json/-j]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The

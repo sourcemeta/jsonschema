@@ -32,9 +32,10 @@ Commands:
        Print this command reference help.
 
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
-            [--benchmark/-b] [--extension/-e <extension>]
+            [--benchmark/-b] [--loop <iterations>]
+            [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-            [--template/-m <template.json>] [--json/-j] [--loop <iterations>]
+            [--template/-m <template.json>] [--json/-j]
 
        Validate one or more instances against the given schema.
 
