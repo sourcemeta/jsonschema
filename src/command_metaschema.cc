@@ -4,6 +4,7 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
+#include <sourcemeta/blaze/output.h>
 
 #include <cassert>  // assert
 #include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE

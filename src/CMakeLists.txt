@@ -31,6 +31,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::runtime)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::evaluator)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::linter)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonschema::http)
 
 configure_file(configure.h.in configure.h @ONLY)

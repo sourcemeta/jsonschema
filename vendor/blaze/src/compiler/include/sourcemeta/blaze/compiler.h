@@ -6,7 +6,6 @@
 #endif
 
 #include <sourcemeta/blaze/compiler_error.h>
-#include <sourcemeta/blaze/compiler_output.h>
 #include <sourcemeta/blaze/compiler_unevaluated.h>
 
 #include <sourcemeta/blaze/evaluator.h>
@@ -189,11 +188,6 @@ compile(const Context &context, const SchemaContext &schema_context,
 /// Serialise a template as JSON
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT to_json(const Template &schema_template)
     -> sourcemeta::core::JSON;
-
-/// @ingroup compiler
-/// Parse a template from JSON
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-from_json(const sourcemeta::core::JSON &json) -> std::optional<Template>;
 
 } // namespace sourcemeta::blaze
 

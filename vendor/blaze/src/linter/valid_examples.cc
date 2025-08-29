@@ -1,12 +1,9 @@
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/compiler_output.h>
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/linter.h>
-#include <sourcemeta/core/json_value.h>
+#include <sourcemeta/blaze/output.h>
+
 #include <sourcemeta/core/jsonschema.h>
-#include <sourcemeta/core/jsonschema_frame.h>
-#include <sourcemeta/core/jsonschema_transform.h>
-#include <sourcemeta/core/jsonschema_types.h>
 
 #include <cstddef>    // std::size_t
 #include <functional> // std::ref, std::cref

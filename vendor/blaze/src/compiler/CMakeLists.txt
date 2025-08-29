@@ -1,12 +1,9 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   FOLDER "Blaze/Compiler"
-  PRIVATE_HEADERS error.h output.h unevaluated.h
+  PRIVATE_HEADERS error.h unevaluated.h
   SOURCES
-    compile.cc compile_describe.cc compile_json.cc
+    compile.cc compile_json.cc
     compile_helpers.h default_compiler.cc unevaluated.cc
-    compile_output_simple.cc
-    compile_output_trace.cc
-    compile_output_standard.cc
     default_compiler_2020_12.h
     default_compiler_2019_09.h
     default_compiler_draft7.h

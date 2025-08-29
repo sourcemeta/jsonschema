@@ -251,6 +251,20 @@ struct Instruction {
   const Instructions children;
 };
 
+/// @ingroup evaluator
+///
+/// This function translates a "post" step execution into a human-readable
+/// string. Useful as the building block for producing user-friendly evaluation
+/// results.
+///
+/// Note that describing a "pre" step execution is NOT supported.
+auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT
+describe(const bool valid, const Instruction &step,
+         const sourcemeta::core::WeakPointer &evaluate_path,
+         const sourcemeta::core::WeakPointer &instance_location,
+         const sourcemeta::core::JSON &instance,
+         const sourcemeta::core::JSON &annotation) -> std::string;
+
 } // namespace sourcemeta::blaze
 
 #endif

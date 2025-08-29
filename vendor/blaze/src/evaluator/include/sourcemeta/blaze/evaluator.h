@@ -36,6 +36,11 @@ struct Template {
 };
 
 /// @ingroup evaluator
+/// Parse a template from JSON
+auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT
+from_json(const sourcemeta::core::JSON &json) -> std::optional<Template>;
+
+/// @ingroup evaluator
 /// Represents the state of an instruction evaluation
 enum class EvaluationType : std::uint8_t { Pre, Post };
 

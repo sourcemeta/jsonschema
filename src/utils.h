@@ -7,6 +7,7 @@
 #include <sourcemeta/core/options.h>
 
 #include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/output.h>
 
 #include <filesystem> // std::filesystem
 #include <map>        // std::map
