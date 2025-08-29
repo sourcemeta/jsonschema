@@ -27,7 +27,7 @@ EOF
   && CODE="$?" || CODE="$?"
 test "$CODE" = "2" || exit 1
 
-if ! grep -E "^took: [0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)$" "$TMP/output.txt" > /dev/null
+if ! grep -E "/instance\.json: FAIL [0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)$" "$TMP/output.txt" > /dev/null
 then
   cat "$TMP/output.txt" >&2
   exit 1
