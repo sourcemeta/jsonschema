@@ -1,4 +1,5 @@
-#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/output_simple.h>
+#include <sourcemeta/blaze/output_standard.h>
 
 #include <cassert>    // assert
 #include <functional> // std::ref

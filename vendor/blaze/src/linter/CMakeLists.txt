@@ -14,3 +14,5 @@ target_link_libraries(sourcemeta_blaze_linter PUBLIC
   sourcemeta::blaze::compiler)
 target_link_libraries(sourcemeta_blaze_linter PRIVATE
   sourcemeta::blaze::evaluator)
+target_link_libraries(sourcemeta_blaze_linter PRIVATE
+  sourcemeta::blaze::output)

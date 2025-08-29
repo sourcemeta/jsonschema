@@ -6,6 +6,7 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
+#include <sourcemeta/blaze/output.h>
 
 #include <cstdlib>    // EXIT_SUCCESS, EXIT_FAILURE
 #include <filesystem> // std::filesystem

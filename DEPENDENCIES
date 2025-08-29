@@ -1,6 +1,6 @@
 vendorpull https://github.com/sourcemeta/vendorpull dea311b5bfb53b6926a4140267959ae334d3ecf4
 core https://github.com/sourcemeta/core 1eff092153241c8e015adc96ef4bd104aa8d1254
 jsonbinpack https://github.com/sourcemeta/jsonbinpack 56dd83ba8483391a694c017ceceafa46cf743259
-blaze https://github.com/sourcemeta/blaze 8a1c473c5dc952185ebb6d7d279a776f5418afd4
+blaze https://github.com/sourcemeta/blaze 74070b18fa3b20201c6beb3fe5c1baecb6458c05
 curl https://github.com/curl/curl curl-8_14_0
 bearssl https://www.bearssl.org/git/BearSSL 8ef7680081c61b486622f2d983c0d3d21e83caad

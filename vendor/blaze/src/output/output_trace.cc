@@ -1,4 +1,4 @@
-#include <sourcemeta/blaze/compiler_output.h>
+#include <sourcemeta/blaze/output_trace.h>
 
 #include <sourcemeta/core/jsonschema.h>
 

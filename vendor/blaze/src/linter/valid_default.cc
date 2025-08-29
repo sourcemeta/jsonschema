@@ -1,5 +1,6 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/linter.h>
+#include <sourcemeta/blaze/output.h>
 
 #include <functional> // std::ref, std::cref
 #include <sstream>    // std::ostringstream

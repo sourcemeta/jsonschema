@@ -1,4 +1,4 @@
-#include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
 
 #include <algorithm> // std::ranges::any_of
 #include <cassert>   // assert
