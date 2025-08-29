@@ -237,19 +237,21 @@ auto sourcemeta::jsonschema::cli::validate(
           const auto start{std::chrono::high_resolution_clock::now()};
           const auto end{std::chrono::high_resolution_clock::now()};
           empty +=
-              std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-                  .count() /
+              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           end - start)
+                           .count()) /
               1000.0;
         }
-        empty /= benchmark_loop;
+        empty /= (double)benchmark_loop;
 
         for (auto index = benchmark_loop; index; index--) {
           const auto start{std::chrono::high_resolution_clock::now()};
           subresult = evaluator.validate(schema_template, instance);
           const auto end{std::chrono::high_resolution_clock::now()};
           const auto delay =
-              std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-                      .count() /
+              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           end - start)
+                           .count()) /
                   1000.0 -
               empty;
 
@@ -257,8 +259,11 @@ auto sourcemeta::jsonschema::cli::validate(
           sum2 += delay * delay;
         }
 
-        auto avg = sum / benchmark_loop;
-        auto stdev = std::sqrt(sum2 / benchmark_loop - avg * avg);
+        auto avg = sum / (double)benchmark_loop;
+        auto stdev = benchmark_loop == 1
+                         ? 0.0
+                         : std::sqrt(sum2 / (double)benchmark_loop - avg * avg);
+
         std::cout << std::fixed;
         std::cout.precision(3);
         std::cout << "took: " << avg << " +- " << stdev << " us (" << empty
