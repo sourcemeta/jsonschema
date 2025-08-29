@@ -240,22 +240,23 @@ auto sourcemeta::jsonschema::cli::validate(
         for (auto index = benchmark_loop; index; index--) {
           const auto start{std::chrono::high_resolution_clock::now()};
           const auto end{std::chrono::high_resolution_clock::now()};
-          empty +=
-              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
+          empty += static_cast<double>(
+                       std::chrono::duration_cast<std::chrono::nanoseconds>(
                            end - start)
                            .count()) /
-              1000.0;
+                   1000.0;
         }
-        empty /= (double)benchmark_loop;
+        empty /= static_cast<double>(benchmark_loop);
 
         for (auto index = benchmark_loop; index; index--) {
           const auto start{std::chrono::high_resolution_clock::now()};
           subresult = evaluator.validate(schema_template, instance);
           const auto end{std::chrono::high_resolution_clock::now()};
           const auto delay =
-              (double)(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           end - start)
-                           .count()) /
+              static_cast<double>(
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(end -
+                                                                       start)
+                      .count()) /
                   1000.0 -
               empty;
 
@@ -263,10 +264,12 @@ auto sourcemeta::jsonschema::cli::validate(
           sum2 += delay * delay;
         }
 
-        auto avg = sum / (double)benchmark_loop;
-        auto stdev = benchmark_loop == 1
-                         ? 0.0
-                         : std::sqrt(sum2 / (double)benchmark_loop - avg * avg);
+        auto avg = sum / static_cast<double>(benchmark_loop);
+        auto stdev =
+            benchmark_loop == 1
+                ? 0.0
+                : std::sqrt(sum2 / static_cast<double>(benchmark_loop) -
+                            avg * avg);
 
         std::cout << std::fixed;
         std::cout.precision(3);
