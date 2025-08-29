@@ -203,6 +203,23 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
               get_lint_callback(errors_array, entry, output_json), dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose());
           return EXIT_SUCCESS;
+        } catch (const sourcemeta::core::SchemaBrokenReferenceError &error) {
+          std::cerr << "error: Could not autofix the schema without breaking "
+                       "its internal references\n";
+          std::cerr << "  at " << entry.first.string() << "\n";
+          std::cerr << "  at schema location \""
+                    << sourcemeta::core::to_string(error.location())
+                    << "\"\n\n";
+
+          std::cerr << "We are working hard to improve the autofixing "
+                       "functionality to re-phrase\n";
+          std::cerr << "references in all possible edge cases\n\n";
+          std::cerr << "For now, try again without `--fix/-f` and applying "
+                       "the suggestions by hand\n\n";
+          std::cerr << "Also consider consider reporting this problematic case "
+                       "to the issue tracker:\n";
+          std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+          return EXIT_FAILURE;
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
               entry.first);
@@ -212,14 +229,14 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
         }
       });
 
-      if (wrapper_result != EXIT_SUCCESS) {
+      if (wrapper_result == EXIT_SUCCESS) {
+        if (copy != entry.second) {
+          std::ofstream output{entry.first};
+          sourcemeta::core::prettify(copy, output);
+          output << "\n";
+        }
+      } else {
         result = false;
-      }
-
-      if (copy != entry.second) {
-        std::ofstream output{entry.first};
-        sourcemeta::core::prettify(copy, output);
-        output << "\n";
       }
     }
   } else {
