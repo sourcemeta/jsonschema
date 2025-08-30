@@ -115,6 +115,7 @@ add_jsonschema_test_unix(validate/fail_jsonl_one_json_verbose)
 add_jsonschema_test_unix(validate/pass_benchmark)
 add_jsonschema_test_unix(validate/fail_benchmark)
 add_jsonschema_test_unix(validate/pass_benchmark_loop)
+add_jsonschema_test_unix(validate/pass_benchmark_loop_jsonl)
 add_jsonschema_test_unix(validate/fail_benchmark_zero)
 
 # Metaschema

@@ -25,7 +25,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --benchmark > "$TMP/output.txt"
 
-if ! grep -E "^took: [0-9]+\.[0-9]+ \+- [0-9]+\.[0-9]+ us \([0-9]+\.[0-9]+\)$" "$TMP/output.txt" > /dev/null
+if ! grep -E "/instance\.json: PASS [0-9]+\.[0-9]+ \+- 0\.000 us \([0-9]+\.[0-9]+\)$" "$TMP/output.txt" > /dev/null
 then
   cat "$TMP/output.txt" >&2
   exit 1
