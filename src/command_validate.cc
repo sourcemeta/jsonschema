@@ -71,6 +71,59 @@ auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
   }
 }
 
+// validate instance in a loop to measure avg and stdev
+auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
+              const sourcemeta::blaze::Template &schema_template,
+              const sourcemeta::core::JSON &instance,
+              const std::filesystem::path &instance_path,
+              const int64_t instance_index, const uint64_t loop) -> bool {
+  const auto iterations = static_cast<double>(loop);
+  double sum = 0.0, sum2 = 0.0, empty = 0.0;
+  bool result = true;
+
+  // Overhead evaluation, if not to optimize out!
+  for (auto index = loop; index; index--) {
+    const auto start{std::chrono::high_resolution_clock::now()};
+    const auto end{std::chrono::high_resolution_clock::now()};
+    empty +=
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+                .count()) /
+        1000.0;
+  }
+  empty /= iterations;
+
+  // Actual performance loop
+  for (auto index = loop; index; index--) {
+    const auto start{std::chrono::high_resolution_clock::now()};
+    result = evaluator.validate(schema_template, instance);
+    const auto end{std::chrono::high_resolution_clock::now()};
+
+    const auto delay =
+        static_cast<double>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+                .count()) /
+            1000.0 -
+        empty;
+    sum += delay;
+    sum2 += delay * delay;
+  }
+
+  // Display json source, result and performance
+  auto avg = sum / iterations;
+  auto stdev = loop == 1 ? 0.0 : std::sqrt(sum2 / iterations - avg * avg);
+
+  std::cout << instance_path.string();
+  if (instance_index >= 0)
+    std::cout << "[" << instance_index << "]";
+  std::cout << std::fixed;
+  std::cout.precision(3);
+  std::cout << ": " << (result ? "PASS" : "FAIL") << " " << avg << " +- "
+            << stdev << " us (" << empty << ")\n";
+
+  return result;
+}
+
 } // namespace
 
 auto sourcemeta::jsonschema::cli::validate(
@@ -142,7 +195,7 @@ auto sourcemeta::jsonschema::cli::validate(
       log_verbose(options)
           << "Interpreting input as JSONL: "
           << sourcemeta::core::weakly_canonical(instance_path).string() << "\n";
-      std::size_t index{0};
+      std::int64_t index{0};
       auto stream{sourcemeta::core::read_file(instance_path)};
       try {
         for (const auto &instance : sourcemeta::core::JSONL{stream}) {
@@ -154,17 +207,23 @@ auto sourcemeta::jsonschema::cli::validate(
               sourcemeta::core::empty_weak_pointer, frame};
           bool subresult = true;
           if (benchmark) {
-            const auto timestamp_start{
-                std::chrono::high_resolution_clock::now()};
-            subresult = evaluator.validate(schema_template, instance);
-            const auto timestamp_end{std::chrono::high_resolution_clock::now()};
-            const auto duration_us{
-                std::chrono::duration_cast<std::chrono::microseconds>(
-                    timestamp_end - timestamp_start)};
-            if (subresult) {
-              std::cout << "took: " << duration_us.count() << "us\n";
-            } else {
-              error << "error: Schema validation failure\n";
+            if (benchmark_loop > 1)
+              subresult = run_loop(evaluator, schema_template, instance,
+                                   instance_path, index, benchmark_loop);
+            else {
+              const auto timestamp_start{
+                  std::chrono::high_resolution_clock::now()};
+              subresult = evaluator.validate(schema_template, instance);
+              const auto timestamp_end{
+                  std::chrono::high_resolution_clock::now()};
+              const auto duration_us{
+                  std::chrono::duration_cast<std::chrono::microseconds>(
+                      timestamp_end - timestamp_start)};
+              if (subresult) {
+                std::cout << "took: " << duration_us.count() << "us\n";
+              } else {
+                error << "error: Schema validation failure\n";
+              }
             }
           } else if (trace) {
             subresult = evaluator.validate(schema_template, instance,
@@ -234,49 +293,8 @@ auto sourcemeta::jsonschema::cli::validate(
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
-        // Data collection for average and standard deviation
-        double sum = 0.0, sum2 = 0.0, empty = 0.0;
-
-        // Overhead evaluation, if not to optimize out!
-        for (auto index = benchmark_loop; index; index--) {
-          const auto start{std::chrono::high_resolution_clock::now()};
-          const auto end{std::chrono::high_resolution_clock::now()};
-          empty += static_cast<double>(
-                       std::chrono::duration_cast<std::chrono::nanoseconds>(
-                           end - start)
-                           .count()) /
-                   1000.0;
-        }
-        empty /= static_cast<double>(benchmark_loop);
-
-        for (auto index = benchmark_loop; index; index--) {
-          const auto start{std::chrono::high_resolution_clock::now()};
-          subresult = evaluator.validate(schema_template, instance);
-          const auto end{std::chrono::high_resolution_clock::now()};
-          const auto delay =
-              static_cast<double>(
-                  std::chrono::duration_cast<std::chrono::nanoseconds>(end -
-                                                                       start)
-                      .count()) /
-                  1000.0 -
-              empty;
-
-          sum += delay;
-          sum2 += delay * delay;
-        }
-
-        auto avg = sum / static_cast<double>(benchmark_loop);
-        auto stdev =
-            benchmark_loop == 1
-                ? 0.0
-                : std::sqrt(sum2 / static_cast<double>(benchmark_loop) -
-                            avg * avg);
-
-        std::cout << std::fixed;
-        std::cout.precision(3);
-        std::cout << "took: " << avg << " +- " << stdev << " us (" << empty
-                  << ")\n";
-
+        subresult = run_loop(evaluator, schema_template, instance,
+                             instance_path, (int64_t)-1, benchmark_loop);
         if (!subresult) {
           error << "error: Schema validation failure\n";
           result = false;
