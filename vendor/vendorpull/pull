@@ -50,14 +50,16 @@ vendor() {
   rm -rf "$4/$1/.gitmodules"
   rm -rf "$4/$1/.gitattributes"
 
+  OUTPUT="$VENDOR/$1"
+
   # Masking
-  if [ -f "$VENDOR/$1.mask" ]
+  if [ -f "$OUTPUT.mask" ]
   then
     while read -r path
     do
       log "Masking $1: $path"
       rm -rf "$4/$1/${path:?}"
-    done < "$VENDOR/$1.mask"
+    done < "$OUTPUT.mask"
   elif [ -f "$4/$1/vendorpull.mask" ]
   then
     while read -r path
@@ -69,10 +71,10 @@ vendor() {
   fi
 
   # Swap
-  log "Moving $4/$1 to $VENDOR/$1"
-  rm -rf "$VENDOR/${1:?}"
-  mkdir -p "$VENDOR"
-  mv "$4/$1" "$VENDOR/$1"
+  log "Moving $4/$1 to $OUTPUT"
+  rm -rf "$OUTPUT"
+  mkdir -p "$(dirname "$OUTPUT")"
+  mv "$4/$1" "$OUTPUT"
 }
 
 if [ ! -f "$DEPENDENCIES" ]
@@ -89,7 +91,15 @@ then
     fail "Unknown dependency: $DEPENDENCY"
   fi
   NAME="$(echo "$LINE" | cut -d ' ' -f 1)"
-  URL="$(echo "$LINE" | cut -d ' ' -f 2)"
+
+  PULL_LOCATION="${2-}"
+  if [ -n "$PULL_LOCATION" ]
+  then
+    URL="$PULL_LOCATION"
+  else
+    URL="$(echo "$LINE" | cut -d ' ' -f 2)"
+  fi
+
   VERSION="$(echo "$LINE" | cut -d ' ' -f 3)"
   if [ -z "$NAME" ] || [ -z "$URL" ] || [ -z "$VERSION" ]
   then
