@@ -112,7 +112,7 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
   auto avg = sum / iterations;
   auto stdev = loop == 1 ? 0.0 : std::sqrt(sum2 / iterations - avg * avg);
 
-  std::cout << instance_path.c_str();
+  std::cout << instance_path.string();
   if (instance_index >= 0)
     std::cout << "[" << instance_index << "]";
   std::cout << std::fixed;
