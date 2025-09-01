@@ -43,10 +43,12 @@ inline auto schema_resource_id(const Context &context,
                  std::distance(context.resources.cbegin(), iterator));
 }
 
-// Instantiate a value-oriented step
-inline auto make(const InstructionIndex type, const Context &context,
-                 const SchemaContext &schema_context,
-                 const DynamicContext &dynamic_context, const Value &value)
+// Instantiate a value-oriented step with a custom resource
+inline auto make_with_resource(const InstructionIndex type,
+                               const Context &context,
+                               const SchemaContext &schema_context,
+                               const DynamicContext &dynamic_context,
+                               const Value &value, const std::string &resource)
     -> Instruction {
   return {
       type,
@@ -56,9 +58,18 @@ inline auto make(const InstructionIndex type, const Context &context,
                 {dynamic_context.keyword}),
       dynamic_context.base_instance_location,
       to_uri(schema_context.relative_pointer, schema_context.base).recompose(),
-      schema_resource_id(context, schema_context.base.recompose()),
+      schema_resource_id(context, resource),
       value,
       {}};
+}
+
+// Instantiate a value-oriented step
+inline auto make(const InstructionIndex type, const Context &context,
+                 const SchemaContext &schema_context,
+                 const DynamicContext &dynamic_context, const Value &value)
+    -> Instruction {
+  return make_with_resource(type, context, schema_context, dynamic_context,
+                            value, schema_context.base.recompose());
 }
 
 // Instantiate an applicator step
