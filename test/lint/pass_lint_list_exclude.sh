@@ -152,10 +152,10 @@ unknown_keywords_prefix
   Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix
 
 unnecessary_allof_wrapper_draft
-  Wrapping any keyword other than `$ref` in `allOf` is unnecessary and may even introduce a minor evaluation performance overhead
+  Wrapping keywords other than `$ref` in `allOf` is often unnecessary and may even introduce a minor evaluation performance overhead
 
 unnecessary_allof_wrapper_modern
-  Wrapping any keyword in `allOf` is unnecessary and may even introduce a minor evaluation performance overhead
+  Wrapping keywords in `allOf` is often unnecessary and may even introduce a minor evaluation performance overhead
 
 unnecessary_allof_wrapper_properties
   Avoid unnecessarily wrapping object `properties` in `allOf` as it may introduce a minor evaluation performance overhead and even confuse documentation generators
