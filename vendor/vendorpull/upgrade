@@ -1,0 +1,61 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+ROOT="$(git rev-parse --show-toplevel)"
+DEPENDENCIES="$ROOT/DEPENDENCIES"
+
+fail() {
+  echo "$1" 1>&2
+  exit 1
+}
+
+log() {
+  echo "-- $1" 1>&2
+}
+
+if [ ! -f "$DEPENDENCIES" ]
+then
+  fail "File not found: $DEPENDENCIES"
+fi
+
+DEPENDENCY="${1-}"
+if [ -z "$DEPENDENCY" ]
+then
+  fail "Usage: $0 <dependency>"
+fi
+
+LINE="$(grep "^$DEPENDENCY " < "$DEPENDENCIES" || true)"
+if [ -z "$LINE" ]
+then
+  fail "Unknown dependency: $DEPENDENCY"
+fi
+
+NAME="$(echo "$LINE" | cut -d ' ' -f 1)"
+URL="$(echo "$LINE" | cut -d ' ' -f 2)"
+VERSION="$(echo "$LINE" | cut -d ' ' -f 3)"
+if [ -z "$NAME" ] || [ -z "$URL" ] || [ -z "$VERSION" ]
+then
+  fail "Invalid dependency definition: $DEPENDENCY"
+fi
+
+TMP="$(mktemp -d -t vendorpull-clone-XXXXX)"
+log "Setting up temporary directory at $TMP..."
+clean() { rm -rf "$TMP"; }
+trap clean EXIT
+
+log "Fetching the tip of $URL into $TMP/$NAME"
+git clone --depth 1 --jobs 8 "$URL" "$TMP/$NAME"
+
+# Try to determine the tag, otherwise the commit hash
+NEW_VERSION="$(git -C "$TMP/$NAME" describe --tags --exact-match HEAD 2>/dev/null \
+  || git -C "$TMP/$NAME" rev-parse HEAD)"
+
+log "Upgrading $NAME to $NEW_VERSION"
+awk -v name="$NAME" -v version="$NEW_VERSION" \
+  '$1 == name {$3 = version} {print}' \
+  DEPENDENCIES > "$TMP/DEPENDENCIES"
+
+mv "$TMP/DEPENDENCIES" "$DEPENDENCIES"
+git diff "$DEPENDENCIES"
