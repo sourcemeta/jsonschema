@@ -8,6 +8,7 @@ Compiling
 jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
+  [--minify/-m]
 ```
 
 The `validate` command will first compile the schema into an optimised

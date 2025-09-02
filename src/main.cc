@@ -58,7 +58,7 @@ Commands:
        to their metaschemas.
 
    compile <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
-           [--ignore/-i <schemas-or-directories>] [--fast/-f]
+           [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
 
        Compile the given schema into an internal optimised representation.
 
@@ -162,6 +162,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return sourcemeta::jsonschema::cli::metaschema(app);
   } else if (command == "compile") {
     app.flag("fast", {"f"});
+    app.flag("minify", {"m"});
     app.parse(argc, argv, {.skip = 1});
     return sourcemeta::jsonschema::cli::compile(app);
   } else if (command == "test") {
