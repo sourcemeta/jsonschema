@@ -103,6 +103,18 @@ get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
+constexpr std::string_view AUTOFIX_ERROR{R"EOF(
+This is an unexpected error, as making the auto-fix functionality work in all
+cases is tricky. We are working hard to improve the auto-fixing functionality
+to handle all possible edge cases, but for now, try again without `--fix/-f`
+and apply the suggestions by hand.
+
+Also consider consider reporting this problematic case to the issue tracker,
+so we can add it to the test suite and fix it:
+
+https://github.com/sourcemeta/jsonschema/issues
+)EOF"};
+
 auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     -> int {
   const bool output_json = options.contains("json");
@@ -203,22 +215,21 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
               get_lint_callback(errors_array, entry, output_json), dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose());
           return EXIT_SUCCESS;
+        } catch (const sourcemeta::core::SchemaTransformRuleProcessedTwiceError
+                     &error) {
+          std::cerr << "error: " << error.what() << "\n";
+          std::cerr << "  at " << entry.first.string() << "\n";
+          std::cerr << "  at schema location \""
+                    << sourcemeta::core::to_string(error.location()) << "\"\n";
+          std::cerr << AUTOFIX_ERROR;
+          return EXIT_FAILURE;
         } catch (const sourcemeta::core::SchemaBrokenReferenceError &error) {
           std::cerr << "error: Could not autofix the schema without breaking "
                        "its internal references\n";
           std::cerr << "  at " << entry.first.string() << "\n";
           std::cerr << "  at schema location \""
-                    << sourcemeta::core::to_string(error.location())
-                    << "\"\n\n";
-
-          std::cerr << "We are working hard to improve the autofixing "
-                       "functionality to re-phrase\n";
-          std::cerr << "references in all possible edge cases\n\n";
-          std::cerr << "For now, try again without `--fix/-f` and applying "
-                       "the suggestions by hand\n\n";
-          std::cerr << "Also consider consider reporting this problematic case "
-                       "to the issue tracker:\n";
-          std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+                    << sourcemeta::core::to_string(error.location()) << "\"\n";
+          std::cerr << AUTOFIX_ERROR;
           return EXIT_FAILURE;
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(

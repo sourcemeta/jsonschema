@@ -1,11 +1,10 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cassert>   // assert
-#include <set>       // std::set
-#include <sstream>   // std::ostringstream
-#include <stdexcept> // std::runtime_error
-#include <utility>   // std::move, std::pair
+#include <cassert> // assert
+#include <set>     // std::set
+#include <sstream> // std::ostringstream
+#include <utility> // std::move, std::pair
 
 namespace {
 
@@ -181,11 +180,8 @@ auto SchemaTransformer::apply(
 
         std::pair<const JSON *, const JSON::String *> mark{&current, &name};
         if (processed_rules.contains(mark)) {
-          // TODO: Throw a better custom error that also highlights the schema
-          // location
-          std::ostringstream error;
-          error << "Rules must only be processed once: " << name;
-          throw std::runtime_error(error.str());
+          throw SchemaTransformRuleProcessedTwiceError(name,
+                                                       entry.second.pointer);
         }
 
         // Identify and try to address broken references, if any
