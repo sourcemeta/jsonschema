@@ -40,12 +40,14 @@ error: Could not autofix the schema without breaking its internal references
   at $(realpath "$TMP")/schema.json
   at schema location "/properties/bar/\$ref"
 
-We are working hard to improve the autofixing functionality to re-phrase
-references in all possible edge cases
+This is an unexpected error, as making the auto-fix functionality work in all
+cases is tricky. We are working hard to improve the auto-fixing functionality
+to handle all possible edge cases, but for now, try again without \`--fix/-f\`
+and apply the suggestions by hand.
 
-For now, try again without \`--fix/-f\` and applying the suggestions by hand
+Also consider consider reporting this problematic case to the issue tracker,
+so we can add it to the test suite and fix it:
 
-Also consider consider reporting this problematic case to the issue tracker:
 https://github.com/sourcemeta/jsonschema/issues
 EOF
 
