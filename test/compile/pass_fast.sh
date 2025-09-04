@@ -20,24 +20,21 @@ EOF
 "$1" compile "$TMP/schema.json" --fast > "$TMP/template.json"
 
 cat << 'EOF' > "$TMP/expected.json"
-{
-  "dynamic": false,
-  "track": false,
-  "instructions": [
-    {
-      "t": 72,
-      "s": "/additionalProperties",
-      "i": "",
-      "k": "https://example.com#/additionalProperties",
-      "r": 2,
-      "v": {
-        "t": 8,
-        "v": 4
-      },
-      "c": []
-    }
+[
+  false,
+  false,
+  [ "", "https://example.com" ],
+  [
+    [
+      72,
+      "/additionalProperties",
+      "",
+      "#/additionalProperties",
+      2,
+      [ 8, 4 ]
+    ]
   ]
-}
+]
 EOF
 
 diff "$TMP/template.json" "$TMP/expected.json"
