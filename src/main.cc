@@ -69,6 +69,7 @@ Commands:
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
+       [--indentation/-n <spaces>]
 
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
@@ -76,13 +77,14 @@ Commands:
    lint [schemas-or-directories...] [--fix/-f] [--json/-j]
         [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
         [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
-        [--strict/-s]
+        [--strict/-s] [--indentation/-n <spaces>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
        Use --json/-j to output lint errors in JSON.
        Use --list/-l to print a summary of all enabled rules.
        Use --strict/-s to enable additional opinionated strict rules.
+       Use --indentation/-n to keep indentation when auto-fixing
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -120,6 +122,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("keep-ordering", {"k"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
+    app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
     return sourcemeta::jsonschema::cli::fmt(app);
   } else if (command == "inspect") {
@@ -141,6 +144,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("exclude", {"x"});
     app.option("only", {"o"});
     app.option("ignore", {"i"});
+    app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
     return sourcemeta::jsonschema::cli::lint(app);
   } else if (command == "validate") {

@@ -330,4 +330,13 @@ auto default_dialect(const sourcemeta::core::Options &options)
   return std::nullopt;
 }
 
+auto parse_indentation(const sourcemeta::core::Options &options)
+    -> std::size_t {
+  if (options.contains("indentation")) {
+    return std::stoull(std::string{options.at("indentation").front()});
+  }
+
+  return 2;
+}
+
 } // namespace sourcemeta::jsonschema::cli

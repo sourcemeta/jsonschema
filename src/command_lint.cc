@@ -192,6 +192,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   auto errors_array = sourcemeta::core::JSON::make_array();
   std::vector<std::uint8_t> scores;
   const auto dialect{default_dialect(options)};
+  const auto indentation{parse_indentation(options)};
   const auto custom_resolver{
       resolver(options, options.contains("http"), dialect)};
 
@@ -243,7 +244,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
       if (wrapper_result == EXIT_SUCCESS) {
         if (copy != entry.second) {
           std::ofstream output{entry.first};
-          sourcemeta::core::prettify(copy, output);
+          sourcemeta::core::prettify(copy, output, indentation);
           output << "\n";
         }
       } else {
@@ -298,7 +299,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     }
 
     output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
-    sourcemeta::core::prettify(output_json_object, std::cout);
+    sourcemeta::core::prettify(output_json_object, std::cout, indentation);
     std::cout << "\n";
   }
 

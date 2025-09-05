@@ -11,6 +11,7 @@
 
 auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
     -> int {
+  const auto indentation{parse_indentation(options)};
   for (const auto &entry :
        for_each_json(options.positional(), parse_ignore(options),
                      parse_extensions(options))) {
@@ -28,10 +29,11 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
       std::ostringstream expected;
 
       if (options.contains("keep-ordering")) {
-        sourcemeta::core::prettify(entry.second, expected);
+        sourcemeta::core::prettify(entry.second, expected, indentation);
       } else {
         sourcemeta::core::prettify(entry.second, expected,
-                                   sourcemeta::core::schema_format_compare);
+                                   sourcemeta::core::schema_format_compare,
+                                   indentation);
       }
 
       expected << "\n";
@@ -50,10 +52,11 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
       std::ofstream output{entry.first};
 
       if (options.contains("keep-ordering")) {
-        sourcemeta::core::prettify(entry.second, output);
+        sourcemeta::core::prettify(entry.second, output, indentation);
       } else {
         sourcemeta::core::prettify(entry.second, output,
-                                   sourcemeta::core::schema_format_compare);
+                                   sourcemeta::core::schema_format_compare,
+                                   indentation);
       }
 
       output << "\n";
