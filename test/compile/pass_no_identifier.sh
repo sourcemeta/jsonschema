@@ -7,7 +7,9 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' > "$TMP/schema.json"
+mkdir -p "$TMP/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux"
+
+cat << 'EOF' > "$TMP/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": {
@@ -16,52 +18,44 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" compile "$TMP/schema.json" > "$TMP/template.json"
+"$1" compile "$TMP/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json" > "$TMP/template.json"
 
 cat << EOF > "$TMP/expected.json"
-{
-  "dynamic": false,
-  "track": true,
-  "instructions": [
-    {
-      "t": 61,
-      "s": "/additionalProperties",
-      "i": "",
-      "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties",
-      "r": 1,
-      "v": {
-        "t": 0,
-        "v": null
-      },
-      "c": [
-        {
-          "t": 11,
-          "s": "/type",
-          "i": "",
-          "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties/type",
-          "r": 1,
-          "v": {
-            "t": 8,
-            "v": 4
-          },
-          "c": []
-        },
-        {
-          "t": 46,
-          "s": "",
-          "i": "",
-          "k": "file://$(realpath "$TMP")/schema.json#/additionalProperties",
-          "r": 1,
-          "v": {
-            "t": 0,
-            "v": null
-          },
-          "c": []
-        }
+[
+  false,
+  true,
+  [
+    "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json"
+  ],
+  [
+    [
+      61,
+      "/additionalProperties",
+      "",
+      "#/additionalProperties",
+      1,
+      [ 0 ],
+      [
+        [
+          11,
+          "/type",
+          "",
+          "#/additionalProperties/type",
+          1,
+          [ 8, 4 ]
+        ],
+        [
+          46,
+          "",
+          "",
+          "#/additionalProperties",
+          1,
+          [ 0 ]
+        ]
       ]
-    }
+    ]
   ]
-}
+]
 EOF
 
 diff "$TMP/template.json" "$TMP/expected.json"
