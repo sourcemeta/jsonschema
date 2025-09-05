@@ -6,7 +6,7 @@ jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--json/-j] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
-  [--default-dialect/-d <uri>] [--strict/-s]
+  [--default-dialect/-d <uri>] [--strict/-s] [--indentation/-n <spaces>]
 ```
 
 JSON Schema is a surprisingly expressive schema language. Like with traditional
@@ -131,6 +131,12 @@ jsonschema lint --extension .schema.json
 
 ```sh
 jsonschema lint path/to/my/schema.json --fix
+```
+
+### Fix lint warnings on a single schema while indenting on 4 spaces
+
+```sh
+jsonschema lint path/to/my/schema.json --fix --indentation 4
 ```
 
 ### Fix lint warnings on a single schema while preserving keyword ordering

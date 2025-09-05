@@ -5,6 +5,7 @@ Formatting
 jsonschema fmt [schemas-or-directories...]
   [--check/-c] [--verbose/-v] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
+  [--indentation/-n <spaces>]
 ```
 
 Schemas are code. As such, they are expected follow consistent stylistic
@@ -52,6 +53,12 @@ jsonschema fmt path/to/my/schema_1.json path/to/my/schema_2.json
 
 ```sh
 jsonschema fmt path/to/my/schema_1.json path/to/my/schema_2.json --keep-ordering
+```
+
+### Format JSON Schemas in-place while indenting on 4 spaces
+
+```sh
+jsonschema fmt path/to/my/schema_1.json path/to/my/schema_2.json --indentation 4
 ```
 
 ### Format every `.json` file in a given directory (recursively)

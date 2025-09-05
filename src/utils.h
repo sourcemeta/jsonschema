@@ -76,6 +76,8 @@ auto parse_ignore(const sourcemeta::core::Options &options)
 auto default_dialect(const sourcemeta::core::Options &options)
     -> std::optional<std::string>;
 
+auto parse_indentation(const sourcemeta::core::Options &options) -> std::size_t;
+
 } // namespace sourcemeta::jsonschema::cli
 
 #endif
