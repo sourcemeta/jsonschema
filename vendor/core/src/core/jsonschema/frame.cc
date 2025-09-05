@@ -536,6 +536,12 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           const auto bases{
               find_nearest_bases(base_uris, entry.common.pointer, entry.id)};
           for (const auto &base_string : bases.first) {
+            // Otherwise we end up pushing the top-level resource twice
+            if (entry_index == 0 && has_explicit_different_id &&
+                default_id.has_value() && default_id.value() == base_string) {
+              continue;
+            }
+
             const sourcemeta::core::URI base{base_string};
             sourcemeta::core::URI maybe_relative{entry.id.value()};
             const auto maybe_fragment{maybe_relative.fragment()};
