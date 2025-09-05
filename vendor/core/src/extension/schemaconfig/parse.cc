@@ -77,8 +77,14 @@ auto SchemaConfig::from_json(const JSON &value,
 
   if (value.defines("baseUri")) {
     try {
-      result.base =
-          sourcemeta::core::URI::canonicalize(value.at("baseUri").to_string());
+      URI base{value.at("baseUri").to_string()};
+      base.canonicalize();
+      if (!base.is_absolute()) {
+        SCHEMACONFIG_ENSURE(
+            false, "The baseUri property must be an absolute URI", {"baseUri"});
+      }
+
+      result.base = base.recompose();
     } catch (const URIParseError &) {
       SCHEMACONFIG_ENSURE(false,
                           "The baseUri property must represent a valid URI",
@@ -86,8 +92,7 @@ auto SchemaConfig::from_json(const JSON &value,
     }
   } else {
     // Otherwise the base is the directory
-    result.base =
-        sourcemeta::core::URI::from_path(result.absolute_path).recompose();
+    result.base = URI::from_path(result.absolute_path).recompose();
   }
 
   result.default_dialect =
@@ -101,8 +106,8 @@ auto SchemaConfig::from_json(const JSON &value,
                           Pointer({"resolve", pair.first}));
 
       try {
-        result.resolve.emplace(pair.first, sourcemeta::core::URI::canonicalize(
-                                               pair.second.to_string()));
+        result.resolve.emplace(pair.first,
+                               URI::canonicalize(pair.second.to_string()));
       } catch (const URIParseError &) {
         SCHEMACONFIG_ENSURE(
             false, "The values in the resolve object must represent valid URIs",

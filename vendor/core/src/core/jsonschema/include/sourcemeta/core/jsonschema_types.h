@@ -3,7 +3,6 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/uri.h>
 
 #include <cstdint>       // std::uint8_t
 #include <functional>    // std::function, std::reference_wrapper
@@ -165,18 +164,6 @@ enum class SchemaKeywordType : std::uint8_t {
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
-
-/// @ingroup jsonschema
-///
-/// Visit every reference in a schema. The arguments are as follows:
-///
-/// - The current subschema
-/// - The base URI of the current subschema
-/// - The reference vocabulary
-/// - The reference keyword name
-/// - The reference reference destination
-using SchemaVisitorReference = std::function<void(
-    JSON &, const URI &, const JSON::String &, const JSON::String &, URI &)>;
 
 /// @ingroup jsonschema
 /// A structure that encapsulates the result of walker over a specific keyword
