@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(jsonschema VERSION 11.7.0 LANGUAGES C CXX)
+project(jsonschema VERSION 11.8.0 LANGUAGES C CXX)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
