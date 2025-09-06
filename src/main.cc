@@ -15,7 +15,7 @@
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
-   --verbose, -v                  Enable verbose output
+   --verbose                      Enable verbose output
    --resolve, -r                  Import the given JSON Schema (or directory of schemas)
                                   into the resolution context
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
@@ -23,7 +23,7 @@ Global Options:
 
 Commands:
 
-   version / --version
+   version / --version / -v
 
        Print the current version of the JSON Schema CLI.
 
@@ -187,7 +187,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
     return EXIT_SUCCESS;
-  } else if (command == "version" || command == "--version") {
+  } else if (command == "version" || command == "--version" ||
+             command == "-v") {
     std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     return EXIT_SUCCESS;
   } else {
