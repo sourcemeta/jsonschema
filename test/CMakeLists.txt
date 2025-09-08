@@ -41,6 +41,7 @@ add_jsonschema_test_unix(format_check_single_invalid)
 add_jsonschema_test_unix(format_check_single_fail_indentation)
 add_jsonschema_test_unix(format_check_single_pass_indentation)
 add_jsonschema_test_unix(format_single_indentation)
+add_jsonschema_test_unix(format_single_intact_mtime)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)
