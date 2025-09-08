@@ -78,7 +78,7 @@ cat << EOF > "$TMP/expected.json"
           "\$ref": "#/definitions/schemaArray"
         },
         "not": {
-          "\$ref": ""
+          "\$ref": "#"
         },
         "exclusiveMaximum": {
           "default": false,
@@ -126,7 +126,7 @@ cat << EOF > "$TMP/expected.json"
           "default": {},
           "anyOf": [
             {
-              "\$ref": ""
+              "\$ref": "#"
             },
             {
               "\$ref": "#/definitions/schemaArray"
@@ -140,7 +140,7 @@ cat << EOF > "$TMP/expected.json"
               "type": "boolean"
             },
             {
-              "\$ref": ""
+              "\$ref": "#"
             }
           ]
         },
@@ -157,14 +157,14 @@ cat << EOF > "$TMP/expected.json"
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "\$ref": ""
+            "\$ref": "#"
           }
         },
         "patternProperties": {
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "\$ref": ""
+            "\$ref": "#"
           }
         },
         "additionalProperties": {
@@ -174,7 +174,7 @@ cat << EOF > "$TMP/expected.json"
               "type": "boolean"
             },
             {
-              "\$ref": ""
+              "\$ref": "#"
             }
           ]
         },
@@ -183,7 +183,7 @@ cat << EOF > "$TMP/expected.json"
           "additionalProperties": {
             "anyOf": [
               {
-                "\$ref": ""
+                "\$ref": "#"
               },
               {
                 "\$ref": "#/definitions/stringArray"
@@ -195,7 +195,7 @@ cat << EOF > "$TMP/expected.json"
           "default": {},
           "type": "object",
           "additionalProperties": {
-            "\$ref": ""
+            "\$ref": "#"
           }
         }
       },
@@ -222,7 +222,7 @@ cat << EOF > "$TMP/expected.json"
           "type": "array",
           "minItems": 1,
           "items": {
-            "\$ref": ""
+            "\$ref": "#"
           }
         },
         "simpleTypes": {
