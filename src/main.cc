@@ -15,7 +15,7 @@
 constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
-   --verbose                      Enable verbose output
+   --verbose, -v                  Enable verbose output
    --resolve, -r                  Import the given JSON Schema (or directory of schemas)
                                   into the resolution context
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
