@@ -99,12 +99,12 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
     result = evaluator.validate(schema_template, instance);
     const auto end{std::chrono::high_resolution_clock::now()};
 
-    const auto delay =
+    const auto raw_delay =
         static_cast<double>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
                 .count()) /
-            1000.0 -
-        empty;
+        1000.0;
+    const auto delay = std::max(0.0, raw_delay - empty);
     sum += delay;
     sum2 += delay * delay;
   }
