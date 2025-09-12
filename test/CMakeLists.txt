@@ -225,6 +225,7 @@ add_jsonschema_test_unix(inspect/fail_relative_file_metaschema_ref)
 
 # Compile
 add_jsonschema_test_unix(compile/pass)
+add_jsonschema_test_unix(compile/pass_patternproperties)
 add_jsonschema_test_unix(compile/pass_minify)
 add_jsonschema_test_unix(compile/pass_no_identifier)
 add_jsonschema_test_unix(compile/pass_fast)
