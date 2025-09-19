@@ -101,7 +101,17 @@ auto SchemaTransformer::check(
     const std::optional<JSON::String> &default_id) const
     -> std::pair<bool, std::uint8_t> {
   SchemaFrame frame{SchemaFrame::Mode::Locations};
-  frame.analyse(schema, walker, resolver, default_dialect, default_id);
+
+  // If we use the default id when there is already one, framing will duplicate
+  // the locations leading to duplicate check reports
+  if (sourcemeta::core::identify(schema, resolver,
+                                 SchemaIdentificationStrategy::Strict,
+                                 default_dialect)
+          .has_value()) {
+    frame.analyse(schema, walker, resolver, default_dialect);
+  } else {
+    frame.analyse(schema, walker, resolver, default_dialect, default_id);
+  }
 
   bool result{true};
   std::size_t subschema_count{0};
