@@ -329,12 +329,121 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
   }
 }
 
+class CustomResolver {
+public:
+  CustomResolver(const sourcemeta::core::Options &options, const bool remote,
+                 const std::optional<std::string> &default_dialect)
+      : options_{options}, remote_{remote} {
+    if (options.contains("resolve")) {
+      for (const auto &entry :
+           for_each_json(options.at("resolve"), parse_ignore(options),
+                         parse_extensions(options))) {
+        log_verbose(options)
+            << "Detecting schema resources from file: " << entry.first.string()
+            << "\n";
+        const auto result =
+            this->add(entry.second, default_dialect,
+                      sourcemeta::core::URI::from_path(entry.first).recompose(),
+                      [&options](const auto &identifier) {
+                        log_verbose(options)
+                            << "Importing schema into the resolution context: "
+                            << identifier << "\n";
+                      });
+        if (!result) {
+          std::cerr
+              << "warning: No schema resources were imported from this file\n";
+          std::cerr << "  at " << entry.first.string() << "\n";
+          std::cerr << "Are you sure this schema sets any identifiers?\n";
+        }
+      }
+    }
+  }
+
+  auto add(const sourcemeta::core::JSON &schema,
+           const std::optional<std::string> &default_dialect = std::nullopt,
+           const std::optional<std::string> &default_id = std::nullopt,
+           const std::function<void(const sourcemeta::core::JSON::String &)>
+               &callback = nullptr) -> bool {
+    assert(sourcemeta::core::is_schema(schema));
+
+    // Registering the top-level schema is not enough. We need to check
+    // and register every embedded schema resource too
+    sourcemeta::core::SchemaFrame frame{
+        sourcemeta::core::SchemaFrame::Mode::References};
+    frame.analyse(schema, sourcemeta::core::schema_official_walker, *this,
+                  default_dialect, default_id);
+
+    bool added_any_schema{false};
+    for (const auto &[key, entry] : frame.locations()) {
+      if (entry.type != sourcemeta::core::SchemaFrame::LocationType::Resource) {
+        continue;
+      }
+
+      auto subschema{sourcemeta::core::get(schema, entry.pointer)};
+      const auto subschema_vocabularies{frame.vocabularies(entry, *this)};
+
+      // Given we might be resolving embedded resources, we fully
+      // resolve their dialect and identifiers, otherwise the
+      // consumer might have no idea what to do with them
+      subschema.assign("$schema", sourcemeta::core::JSON{entry.dialect});
+      sourcemeta::core::reidentify(subschema, key.second, entry.base_dialect);
+
+      const auto result{this->schemas.emplace(key.second, subschema)};
+      if (!result.second && result.first->second != schema) {
+        std::ostringstream error;
+        error << "Cannot register the same identifier twice: " << key.second;
+        throw sourcemeta::core::SchemaError(error.str());
+      }
+
+      if (callback) {
+        callback(key.second);
+      }
+
+      added_any_schema = true;
+    }
+
+    return added_any_schema;
+  }
+
+  auto operator()(std::string_view identifier) const
+      -> std::optional<sourcemeta::core::JSON> {
+    const std::string string_identifier{identifier};
+    if (this->schemas.contains(string_identifier)) {
+      return this->schemas.at(string_identifier);
+    }
+
+    // Fallback resolution logic
+    const sourcemeta::core::URI uri{std::string{identifier}};
+    if (uri.is_file()) {
+      const auto path{uri.to_path()};
+      log_verbose(this->options_)
+          << "Attempting to read file reference from disk: " << path.string()
+          << "\n";
+      if (std::filesystem::exists(path)) {
+        return std::optional<sourcemeta::core::JSON>{
+            sourcemeta::core::read_yaml_or_json(path)};
+      }
+    }
+
+    if (this->remote_) {
+      return fallback_resolver(this->options_, identifier);
+    } else {
+      return sourcemeta::core::schema_official_resolver(identifier);
+    }
+  }
+
+private:
+  std::map<std::string, sourcemeta::core::JSON> schemas{};
+  const sourcemeta::core::Options &options_;
+  bool remote_{false};
+};
+
 inline auto resolver(const sourcemeta::core::Options &options,
                      const bool remote,
                      const std::optional<std::string> &default_dialect)
-    -> const sourcemeta::core::SchemaMapResolver & {
+    -> const CustomResolver & {
   using CacheKey = std::pair<bool, std::optional<std::string>>;
-  static std::map<CacheKey, sourcemeta::core::SchemaMapResolver> resolver_cache;
+  static std::map<CacheKey, CustomResolver> resolver_cache;
   const CacheKey cache_key{remote, default_dialect};
 
   // Check if resolver is already cached
@@ -343,54 +452,10 @@ inline auto resolver(const sourcemeta::core::Options &options,
     return iterator->second;
   }
 
-  // Create new resolver
-  sourcemeta::core::SchemaMapResolver dynamic_resolver{
-      [remote, &options](std::string_view identifier) {
-        const sourcemeta::core::URI uri{std::string{identifier}};
-        if (uri.is_file()) {
-          const auto path{uri.to_path()};
-          log_verbose(options)
-              << "Attempting to read file reference from disk: "
-              << path.string() << "\n";
-          if (std::filesystem::exists(path)) {
-            return std::optional<sourcemeta::core::JSON>{
-                sourcemeta::core::read_yaml_or_json(path)};
-          }
-        }
-
-        if (remote) {
-          return fallback_resolver(options, identifier);
-        } else {
-          return sourcemeta::core::schema_official_resolver(identifier);
-        }
-      }};
-
-  if (options.contains("resolve")) {
-    for (const auto &entry :
-         for_each_json(options.at("resolve"), parse_ignore(options),
-                       parse_extensions(options))) {
-      log_verbose(options) << "Detecting schema resources from file: "
-                           << entry.first.string() << "\n";
-      const auto result = dynamic_resolver.add(
-          entry.second, default_dialect,
-          sourcemeta::core::URI::from_path(entry.first).recompose(),
-          [&options](const auto &identifier) {
-            log_verbose(options)
-                << "Importing schema into the resolution context: "
-                << identifier << "\n";
-          });
-      if (!result) {
-        std::cerr
-            << "warning: No schema resources were imported from this file\n";
-        std::cerr << "  at " << entry.first.string() << "\n";
-        std::cerr << "Are you sure this schema sets any identifiers?\n";
-      }
-    }
-  }
-
-  // Insert into cache and return reference
-  auto [inserted_iterator, inserted] =
-      resolver_cache.emplace(cache_key, std::move(dynamic_resolver));
+  // Construct resolver directly in cache
+  auto [inserted_iterator, inserted] = resolver_cache.emplace(
+      std::piecewise_construct, std::forward_as_tuple(cache_key),
+      std::forward_as_tuple(options, remote, default_dialect));
   return inserted_iterator->second;
 }
 
