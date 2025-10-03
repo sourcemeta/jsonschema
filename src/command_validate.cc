@@ -145,9 +145,11 @@ auto sourcemeta::jsonschema::cli::validate(
   }
 
   const auto &schema_path{options.positional().at(0)};
-  const auto dialect{default_dialect(options)};
+  const auto configuration_path{find_configuration(schema_path)};
+  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto dialect{default_dialect(options, configuration)};
   const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect)};
+      resolver(options, options.contains("http"), dialect, configuration)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 

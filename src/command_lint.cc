@@ -191,15 +191,19 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
   std::vector<std::uint8_t> scores;
-  const auto dialect{default_dialect(options)};
   const auto indentation{parse_indentation(options)};
 
   if (options.contains("fix")) {
     for (const auto &entry :
          for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
+      const auto configuration_path{find_configuration(entry.first)};
+      const auto &configuration{
+          read_configuration(options, configuration_path)};
+      const auto dialect{default_dialect(options, configuration)};
+
       const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect)};
+          resolver(options, options.contains("http"), dialect, configuration)};
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       if (entry.first.extension() == ".yaml" ||
           entry.first.extension() == ".yml") {
@@ -255,8 +259,12 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     for (const auto &entry :
          for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
+      const auto configuration_path{find_configuration(entry.first)};
+      const auto &configuration{
+          read_configuration(options, configuration_path)};
+      const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect)};
+          resolver(options, options.contains("http"), dialect, configuration)};
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
 
       const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {

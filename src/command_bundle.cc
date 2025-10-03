@@ -12,7 +12,6 @@
 
 auto sourcemeta::jsonschema::cli::bundle(
     const sourcemeta::core::Options &options) -> int {
-  const auto dialect{default_dialect(options)};
 
   if (options.positional().size() < 1) {
     std::cerr
@@ -22,8 +21,11 @@ auto sourcemeta::jsonschema::cli::bundle(
   }
 
   const std::filesystem::path schema_path{options.positional().front()};
+  const auto configuration_path{find_configuration(schema_path)};
+  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto dialect{default_dialect(options, configuration)};
   const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect)};
+      resolver(options, options.contains("http"), dialect, configuration)};
   auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
@@ -36,10 +38,10 @@ auto sourcemeta::jsonschema::cli::bundle(
     std::cerr << "warning: You are opting in to remove schema identifiers in "
                  "the bundled schema.\n";
     std::cerr << "The only legit use case of this advanced feature we know of "
-                 "it to workaround\n";
+                 "is to workaround\n";
     std::cerr << "non-compliant JSON Schema implementations such as Visual "
                  "Studio Code.\n";
-    std::cerr << "In other case, this is not needed and may harm other use "
+    std::cerr << "Otherwise, this is not needed and may harm other use "
                  "cases. For example,\n";
     std::cerr << "you will be unable to reference the resulting schema from "
                  "other schemas\n";

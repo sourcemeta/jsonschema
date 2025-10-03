@@ -41,9 +41,9 @@ EOF
 
 cat << 'EOF' > "$TMP/expected-stderr.txt"
 warning: You are opting in to remove schema identifiers in the bundled schema.
-The only legit use case of this advanced feature we know of it to workaround
+The only legit use case of this advanced feature we know of is to workaround
 non-compliant JSON Schema implementations such as Visual Studio Code.
-In other case, this is not needed and may harm other use cases. For example,
+Otherwise, this is not needed and may harm other use cases. For example,
 you will be unable to reference the resulting schema from other schemas
 using the --resolve/-r option.
 EOF

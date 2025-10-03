@@ -45,15 +45,19 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
 auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     -> int {
   bool result{true};
-  const auto dialect{default_dialect(options)};
-  const auto &test_resolver{
-      resolver(options, options.contains("http"), dialect)};
+
   const auto verbose{options.contains("verbose")};
   sourcemeta::blaze::Evaluator evaluator;
 
   for (const auto &entry :
        for_each_json(options.positional(), parse_ignore(options),
                      parse_extensions(options))) {
+    const auto configuration_path{find_configuration(entry.first)};
+    const auto &configuration{read_configuration(options, configuration_path)};
+    const auto dialect{default_dialect(options, configuration)};
+    const auto &test_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+
     const sourcemeta::core::JSON test{
         sourcemeta::core::read_yaml_or_json(entry.first)};
 
