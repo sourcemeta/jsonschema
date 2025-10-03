@@ -15,6 +15,23 @@ JSON Schema workflows.
 It is meant to be used not only by this CLI but by other JSON Schema tooling
 such as the [Sourcemeta Registry](https://registry.sourcemeta.com).
 
+Example
+-------
+
+The `jsonschema.json` file format looks like this:
+
+```json
+{
+  "title": "My JSON Schema Project",
+  "description": "A collection of schemas for my application",
+  "defaultDialect": "https://json-schema.org/draft/2020-12/schema",
+  "resolve": {
+    "https://example.com/schemas/user": "./schemas/user.json",
+    "https://example.com/schemas/product": "./schemas/product.json"
+  }
+}
+```
+
 Reference
 ---------
 
