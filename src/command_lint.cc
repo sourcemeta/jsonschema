@@ -193,13 +193,13 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   std::vector<std::uint8_t> scores;
   const auto dialect{default_dialect(options)};
   const auto indentation{parse_indentation(options)};
-  const auto custom_resolver{
-      resolver(options, options.contains("http"), dialect)};
 
   if (options.contains("fix")) {
     for (const auto &entry :
          for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect)};
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       if (entry.first.extension() == ".yaml" ||
           entry.first.extension() == ".yml") {
@@ -255,6 +255,8 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     for (const auto &entry :
          for_each_json(options.positional(), parse_ignore(options),
                        parse_extensions(options))) {
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect)};
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
 
       const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {

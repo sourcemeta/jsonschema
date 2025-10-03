@@ -43,9 +43,10 @@ auto sourcemeta::jsonschema::cli::decode(
   })JSON")};
 
   const auto dialect{default_dialect(options)};
+  const auto &custom_resolver{
+      resolver(options, options.contains("http"), dialect)};
   sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::core::schema_official_walker,
-      resolver(options, options.contains("http"), dialect));
+      schema, sourcemeta::core::schema_official_walker, custom_resolver);
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   std::ifstream input_stream{

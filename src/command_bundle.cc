@@ -22,7 +22,7 @@ auto sourcemeta::jsonschema::cli::bundle(
   }
 
   const std::filesystem::path schema_path{options.positional().front()};
-  const auto custom_resolver{
+  const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect)};
   auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 

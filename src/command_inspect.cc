@@ -140,7 +140,7 @@ auto sourcemeta::jsonschema::cli::inspect(
       sourcemeta::core::read_yaml_or_json(schema_path)};
 
   const auto dialect{default_dialect(options)};
-  const auto custom_resolver{
+  const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect)};
   const auto identifier{sourcemeta::core::identify(
       schema, custom_resolver,
