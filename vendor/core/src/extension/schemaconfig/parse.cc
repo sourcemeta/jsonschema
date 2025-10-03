@@ -35,9 +35,7 @@ auto SchemaConfig::from_json(const JSON &value,
   SCHEMACONFIG_ENSURE(!value.defines("website") ||
                           value.at("website").is_string(),
                       "The website property must be a string", {"website"});
-  SCHEMACONFIG_ENSURE(value.defines("path"), "The path property is required",
-                      {"path"});
-  SCHEMACONFIG_ENSURE(value.at("path").is_string(),
+  SCHEMACONFIG_ENSURE(!value.defines("path") || value.at("path").is_string(),
                       "The path property must be a string", {"path"});
   SCHEMACONFIG_ENSURE(!value.defines("baseUri") ||
                           value.at("baseUri").is_string(),
@@ -66,11 +64,16 @@ auto SchemaConfig::from_json(const JSON &value,
       sourcemeta::core::from_json<decltype(result.website)::value_type>(
           value.at_or("website", JSON{nullptr}));
 
-  const std::filesystem::path path{value.at("path").to_string()};
-  if (path.is_absolute()) {
-    result.absolute_path = std::filesystem::weakly_canonical(path);
+  if (value.defines("path")) {
+    const std::filesystem::path path{value.at("path").to_string()};
+    if (path.is_absolute()) {
+      result.absolute_path = std::filesystem::weakly_canonical(path);
+    } else {
+      result.absolute_path =
+          std::filesystem::weakly_canonical(base_path / path);
+    }
   } else {
-    result.absolute_path = std::filesystem::weakly_canonical(base_path / path);
+    result.absolute_path = std::filesystem::weakly_canonical(base_path);
   }
 
   assert(result.absolute_path.is_absolute());
