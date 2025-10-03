@@ -2,7 +2,7 @@ add_subdirectory(http)
 
 add_executable(jsonschema_cli
   main.cc configure.h.in command.h
-  utils.h utils.cc error.h
+  utils.h error.h
   command_fmt.cc
   command_inspect.cc
   command_bundle.cc
