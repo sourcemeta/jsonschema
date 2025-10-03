@@ -20,8 +20,6 @@ auto sourcemeta::jsonschema::cli::metaschema(
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
   const auto default_dialect_option{default_dialect(options)};
-  const auto custom_resolver{
-      resolver(options, options.contains("http"), default_dialect_option)};
   bool result{true};
   sourcemeta::blaze::Evaluator evaluator;
 
@@ -37,6 +35,9 @@ auto sourcemeta::jsonschema::cli::metaschema(
                 << "\n";
       return EXIT_FAILURE;
     }
+
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), default_dialect_option)};
 
     try {
       const auto dialect{

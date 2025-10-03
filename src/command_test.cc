@@ -46,7 +46,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     -> int {
   bool result{true};
   const auto dialect{default_dialect(options)};
-  const auto test_resolver{
+  const auto &test_resolver{
       resolver(options, options.contains("http"), dialect)};
   const auto verbose{options.contains("verbose")};
   sourcemeta::blaze::Evaluator evaluator;

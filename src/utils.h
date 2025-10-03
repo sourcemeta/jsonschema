@@ -332,7 +332,18 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
 inline auto resolver(const sourcemeta::core::Options &options,
                      const bool remote,
                      const std::optional<std::string> &default_dialect)
-    -> sourcemeta::core::SchemaResolver {
+    -> const sourcemeta::core::SchemaMapResolver & {
+  using CacheKey = std::pair<bool, std::optional<std::string>>;
+  static std::map<CacheKey, sourcemeta::core::SchemaMapResolver> resolver_cache;
+  const CacheKey cache_key{remote, default_dialect};
+
+  // Check if resolver is already cached
+  auto iterator{resolver_cache.find(cache_key)};
+  if (iterator != resolver_cache.end()) {
+    return iterator->second;
+  }
+
+  // Create new resolver
   sourcemeta::core::SchemaMapResolver dynamic_resolver{
       [remote, &options](std::string_view identifier) {
         const sourcemeta::core::URI uri{std::string{identifier}};
@@ -377,7 +388,10 @@ inline auto resolver(const sourcemeta::core::Options &options,
     }
   }
 
-  return dynamic_resolver;
+  // Insert into cache and return reference
+  auto [inserted_iterator, inserted] =
+      resolver_cache.emplace(cache_key, std::move(dynamic_resolver));
+  return inserted_iterator->second;
 }
 
 } // namespace sourcemeta::jsonschema::cli

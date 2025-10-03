@@ -22,7 +22,7 @@ auto sourcemeta::jsonschema::cli::compile(
 
   const auto &schema_path{options.positional().at(0)};
   const auto dialect{default_dialect(options)};
-  const auto custom_resolver{
+  const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
