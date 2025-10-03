@@ -20,7 +20,7 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-schema.json:4:27:
+schema.json:4:3:
   Setting the `additionalProperties` keyword to the true schema does not add any further constraint (additional_properties_default)
     at schema location "/additionalProperties"
 EOF

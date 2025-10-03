@@ -21,10 +21,10 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:4:23:
+schema.json:4:3:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location "/contentMediaType"
-schema.json:5:11:
+schema.json:5:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at schema location "/enum"
 EOF
@@ -34,7 +34,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 "$1" lint "$TMP/schema.json" --only content_media_type_without_encoding >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:4:23:
+schema.json:4:3:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location "/contentMediaType"
 EOF

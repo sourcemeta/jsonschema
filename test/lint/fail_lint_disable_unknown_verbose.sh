@@ -23,13 +23,13 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 warning: Cannot exclude unknown rule: foo_bar
 Linting: $(realpath "$TMP")/schema.json
-schema.json:4:23:
+schema.json:4:3:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at schema location "/contentMediaType"
-schema.json:5:11:
+schema.json:5:3:
   An \`enum\` of a single value can be expressed as \`const\` (enum_to_const)
     at schema location "/enum"
-schema.json:5:11:
+schema.json:5:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at schema location "/enum"
 EOF
