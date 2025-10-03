@@ -681,6 +681,8 @@ auto internal_parse_json(
   std::stack<std::reference_wrapper<Result>> frames;
   std::optional<Result> result;
   typename Result::String key{""};
+  std::uint64_t key_line{0};
+  std::uint64_t key_column{0};
   typename JSON::Char character = 0;
 
   /*
@@ -998,6 +1000,8 @@ do_parse_object_property_key:
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
+      key_line = line;
+      key_column = column;
       key = internal::parse_string(line, column, stream);
       goto do_parse_object_property_separator;
 
@@ -1046,25 +1050,25 @@ do_parse_object_property_value:
   switch (character) {
     // Values
     case internal::token_array_begin<typename JSON::Char>:
-      CALLBACK_PRE(Array, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Array, key_line, key_column, JSON{key});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
-      CALLBACK_PRE(Object, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Object, key_line, key_column, JSON{key});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
-      CALLBACK_PRE(Boolean, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_true(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
-      CALLBACK_PRE(Boolean, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_false(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
-      CALLBACK_PRE(Null, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Null, key_line, key_column, JSON{key});
       frames.top().get().assign(key,
                                 internal::parse_null(line, column, stream));
       CALLBACK_POST(Null, frames.top().get().at(key));
@@ -1074,7 +1078,7 @@ do_parse_object_property_value:
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
-      CALLBACK_PRE(String, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(String, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, Result{internal::parse_string(line, column, stream)});
       CALLBACK_POST(String, frames.top().get().at(key));
@@ -1092,16 +1096,12 @@ do_parse_object_property_value:
     case internal::token_number_eight<typename JSON::Char>:
     case internal::token_number_nine<typename JSON::Char>:
       if (callback) {
-        const auto current_line{line};
-        const auto current_column{column};
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
-          CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
-                                     JSON{key});
+          CALLBACK_PRE_WITH_POSITION(Integer, key_line, key_column, JSON{key});
         } else {
-          CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
-                                     JSON{key});
+          CALLBACK_PRE_WITH_POSITION(Real, key_line, key_column, JSON{key});
         }
 
         frames.top().get().assign(key, value);

@@ -14,14 +14,6 @@
 #include <type_traits> // std::false_type, std::true_type, std::void_t, std::is_enum_v, std::underlying_type_t, std::is_same_v, std::is_base_of_v, std::remove_cvref_t
 #include <utility> // std::pair, std:::make_index_sequence, std::index_sequence
 
-// Forward declarations (added as needed)
-#ifndef DOXYGEN
-namespace sourcemeta::core {
-template <typename L, typename R>
-auto to_json(const std::pair<L, R> &value) -> JSON;
-}
-#endif
-
 namespace sourcemeta::core {
 
 /// @ingroup json
@@ -120,6 +112,13 @@ concept json_auto_tuple_poly =
         std::pair<std::tuple_element_t<0, std::remove_cvref_t<T>>,
                   std::tuple_element_t<1, std::remove_cvref_t<T>>>,
         std::remove_cvref_t<T>>);
+
+// Forward declarations for recursive type conversions
+#ifndef DOXYGEN
+template <json_auto_map_like T> auto to_json(const T &value) -> JSON;
+template <typename L, typename R>
+auto to_json(const std::pair<L, R> &value) -> JSON;
+#endif
 
 /// @ingroup json
 /// If the value has a `.to_json()` method, always prefer that
