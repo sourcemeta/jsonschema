@@ -31,6 +31,19 @@ private:
   std::string message_;
 };
 
+/// @ingroup gzip
+/// An error that represents a GZIP archive error event
+class SOURCEMETA_CORE_GZIP_EXPORT GZIPArchiveError : public std::exception {
+public:
+  GZIPArchiveError(std::string message) : message_{std::move(message)} {}
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+private:
+  std::string message_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
