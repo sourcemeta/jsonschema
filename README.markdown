@@ -67,7 +67,7 @@ Usage
 -----
 
 The functionality provided by the JSON Schema CLI is divided into commands. The
-following pages describe each command in detail. Additionally, running the JSON
+following pages describe each feature in detail. Additionally, running the JSON
 Schema CLI without passing a command will print convenient reference
 documentation:
 
@@ -82,6 +82,10 @@ documentation:
 - [`jsonschema inspect`](./docs/inspect.markdown) (for debugging references)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
+
+> See [`jsonschema.json`](./docs/configuration.markdown) for an _experimental_
+manifest for describing JSON Schema data models inspired by NPM's
+`package.json`.
 
 Note that YAML is supported in most commands!
 

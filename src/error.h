@@ -20,6 +20,14 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     std::cerr << "\"\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsonschema::cli::FileError<
+           sourcemeta::core::SchemaConfigParseError> &error) {
+    std::cerr << "error: " << error.what() << "\n  at "
+              << sourcemeta::core::weakly_canonical(error.path()).string()
+              << "\n";
+    std::cerr << "  at location \""
+              << sourcemeta::core::to_string(error.location()) << "\"\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::cli::FileError<
            sourcemeta::core::SchemaRelativeMetaschemaResolutionError> &error) {
     std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
     std::cerr << "  at "

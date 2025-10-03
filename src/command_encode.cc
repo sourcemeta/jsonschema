@@ -30,9 +30,13 @@ auto sourcemeta::jsonschema::cli::encode(
     "$schema": "https://json-schema.org/draft/2020-12/schema"
   })JSON")};
 
-  const auto dialect{default_dialect(options)};
+  const auto configuration_path{
+      find_configuration(options.positional().front())};
+  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto dialect{default_dialect(options, configuration)};
   const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect)};
+      resolver(options, options.contains("http"), dialect, configuration)};
+
   sourcemeta::jsonbinpack::compile(
       schema, sourcemeta::core::schema_official_walker, custom_resolver);
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};

@@ -8,6 +8,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
 
@@ -67,6 +68,47 @@ inline auto log_verbose(const sourcemeta::core::Options &options)
   return null_stream;
 }
 
+inline auto find_configuration(const std::filesystem::path &path)
+    -> std::optional<std::filesystem::path> {
+  return sourcemeta::core::SchemaConfig::find(path);
+}
+
+inline auto read_configuration(
+    const sourcemeta::core::Options &options,
+    const std::optional<std::filesystem::path> &configuration_path)
+    -> const std::optional<sourcemeta::core::SchemaConfig> & {
+  using CacheKey = std::optional<std::filesystem::path>;
+  static std::map<CacheKey, std::optional<sourcemeta::core::SchemaConfig>>
+      configuration_cache;
+
+  // Check if configuration is already cached for this path
+  auto iterator{configuration_cache.find(configuration_path)};
+  if (iterator != configuration_cache.end()) {
+    return iterator->second;
+  }
+
+  // Compute and cache the configuration
+  std::optional<sourcemeta::core::SchemaConfig> result{std::nullopt};
+  if (configuration_path.has_value()) {
+    log_verbose(options) << "Using configuration file: "
+                         << sourcemeta::core::weakly_canonical(
+                                configuration_path.value())
+                                .string()
+                         << "\n";
+    try {
+      result =
+          sourcemeta::core::SchemaConfig::read_json(configuration_path.value());
+    } catch (const sourcemeta::core::SchemaConfigParseError &error) {
+      throw FileError<sourcemeta::core::SchemaConfigParseError>(
+          configuration_path.value(), error);
+    }
+  }
+
+  auto [inserted_iterator, inserted] =
+      configuration_cache.emplace(configuration_path, std::move(result));
+  return inserted_iterator->second;
+}
+
 inline auto parse_extensions(const sourcemeta::core::Options &options)
     -> std::set<std::string> {
   std::set<std::string> result;
@@ -108,10 +150,14 @@ inline auto parse_ignore(const sourcemeta::core::Options &options)
   return result;
 }
 
-inline auto default_dialect(const sourcemeta::core::Options &options)
+inline auto default_dialect(
+    const sourcemeta::core::Options &options,
+    const std::optional<sourcemeta::core::SchemaConfig> &configuration)
     -> std::optional<std::string> {
   if (options.contains("default-dialect")) {
     return std::string{options.at("default-dialect").front()};
+  } else if (configuration.has_value()) {
+    return configuration.value().default_dialect;
   }
 
   return std::nullopt;
@@ -331,9 +377,11 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
 
 class CustomResolver {
 public:
-  CustomResolver(const sourcemeta::core::Options &options, const bool remote,
-                 const std::optional<std::string> &default_dialect)
-      : options_{options}, remote_{remote} {
+  CustomResolver(
+      const sourcemeta::core::Options &options,
+      const std::optional<sourcemeta::core::SchemaConfig> &configuration,
+      const bool remote, const std::optional<std::string> &default_dialect)
+      : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
       for (const auto &entry :
            for_each_json(options.at("resolve"), parse_ignore(options),
@@ -408,6 +456,28 @@ public:
   auto operator()(std::string_view identifier) const
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
+    if (this->configuration_.has_value()) {
+      const auto match{
+          this->configuration_.value().resolve.find(string_identifier)};
+      if (match != this->configuration_.value().resolve.cend()) {
+        const sourcemeta::core::URI new_uri{match->second};
+        if (new_uri.is_relative()) {
+          const auto file_uri{sourcemeta::core::URI::from_path(
+              this->configuration_.value().absolute_path / new_uri.to_path())};
+          const auto result{file_uri.recompose()};
+          log_verbose(this->options_)
+              << "Resolving " << identifier << " as " << result
+              << " given the configuration file\n";
+          return this->operator()(result);
+        } else {
+          log_verbose(this->options_)
+              << "Resolving " << identifier << " as " << match->second
+              << " given the configuration file\n";
+          return this->operator()(match->second);
+        }
+      }
+    }
+
     if (this->schemas.contains(string_identifier)) {
       return this->schemas.at(string_identifier);
     }
@@ -435,12 +505,14 @@ public:
 private:
   std::map<std::string, sourcemeta::core::JSON> schemas{};
   const sourcemeta::core::Options &options_;
+  const std::optional<sourcemeta::core::SchemaConfig> configuration_;
   bool remote_{false};
 };
 
-inline auto resolver(const sourcemeta::core::Options &options,
-                     const bool remote,
-                     const std::optional<std::string> &default_dialect)
+inline auto
+resolver(const sourcemeta::core::Options &options, const bool remote,
+         const std::optional<std::string> &default_dialect,
+         const std::optional<sourcemeta::core::SchemaConfig> &configuration)
     -> const CustomResolver & {
   using CacheKey = std::pair<bool, std::optional<std::string>>;
   static std::map<CacheKey, CustomResolver> resolver_cache;
@@ -455,7 +527,7 @@ inline auto resolver(const sourcemeta::core::Options &options,
   // Construct resolver directly in cache
   auto [inserted_iterator, inserted] = resolver_cache.emplace(
       std::piecewise_construct, std::forward_as_tuple(cache_key),
-      std::forward_as_tuple(options, remote, default_dialect));
+      std::forward_as_tuple(options, configuration, remote, default_dialect));
   return inserted_iterator->second;
 }
 
