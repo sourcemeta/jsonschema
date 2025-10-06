@@ -8,11 +8,4 @@ clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
 "$1" fmt "$TMP/does_not_exist.json" && CODE="$?" || CODE="$?"
-
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-else
-  echo "PASS" 1>&2
-fi
+test "$CODE" = "1" || exit 1
