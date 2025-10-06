@@ -15,11 +15,4 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" fmt "$TMP/schema.json" --check 2>"$TMP/output.txt" && CODE="$?" || CODE="$?"
-
-if [ "$CODE" = "0" ]
-then
-  echo "FAIL" 1>&2
-  exit 1
-fi
-
-echo "PASS" 1>&2
+test "$CODE" = "1" || exit 1
