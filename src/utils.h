@@ -239,14 +239,20 @@ handle_json_entry(const std::filesystem::path &entry_path,
 } // namespace
 
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
-                          const std::set<std::filesystem::path> &blacklist,
-                          const std::set<std::string> &extensions)
+                          const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
+  const auto blacklist{parse_ignore(options)};
+  const auto extensions{parse_extensions(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
-    handle_json_entry(std::filesystem::current_path(), blacklist, extensions,
-                      result);
+    const auto current_path{std::filesystem::current_path()};
+    const auto configuration_path{find_configuration(current_path)};
+    const auto &configuration{read_configuration(options, configuration_path)};
+    handle_json_entry(configuration.has_value()
+                          ? configuration.value().absolute_path
+                          : current_path,
+                      blacklist, extensions, result);
   } else {
     for (const auto &entry : arguments) {
       handle_json_entry(entry, blacklist, extensions, result);
@@ -257,6 +263,11 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
             [](const auto &left, const auto &right) { return left < right; });
 
   return result;
+}
+
+inline auto for_each_json(const sourcemeta::core::Options &options)
+    -> std::vector<InputJSON> {
+  return for_each_json(options.positional(), options);
 }
 
 inline auto print(const sourcemeta::blaze::SimpleOutput &output,
@@ -388,9 +399,7 @@ public:
       const bool remote, const std::optional<std::string> &default_dialect)
       : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
-      for (const auto &entry :
-           for_each_json(options.at("resolve"), parse_ignore(options),
-                         parse_extensions(options))) {
+      for (const auto &entry : for_each_json(options.at("resolve"), options)) {
         log_verbose(options)
             << "Detecting schema resources from file: " << entry.first.string()
             << "\n";

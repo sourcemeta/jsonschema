@@ -46,7 +46,7 @@ describes the available configuration options:
 | `github` | String | GitHub owner and repository | - |
 | `website` | String | Project website URL | - |
 | `baseUri` | String | The base URI for your schemas (**not used in this CLI yet**) | - |
-| `path` | String | Relative path to the directory containing your schemas (**not used in this CLI yet**) | Directory containing `jsonschema.json` |
+| `path` | String | Relative path to the directory containing your schemas | Directory containing `jsonschema.json` |
 | `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema` | - |
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
 

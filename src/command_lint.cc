@@ -194,9 +194,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
   const auto indentation{parse_indentation(options)};
 
   if (options.contains("fix")) {
-    for (const auto &entry :
-         for_each_json(options.positional(), parse_ignore(options),
-                       parse_extensions(options))) {
+    for (const auto &entry : for_each_json(options)) {
       const auto configuration_path{find_configuration(entry.first)};
       const auto &configuration{
           read_configuration(options, configuration_path)};
@@ -256,9 +254,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
       }
     }
   } else {
-    for (const auto &entry :
-         for_each_json(options.positional(), parse_ignore(options),
-                       parse_extensions(options))) {
+    for (const auto &entry : for_each_json(options)) {
       const auto configuration_path{find_configuration(entry.first)};
       const auto &configuration{
           read_configuration(options, configuration_path)};
