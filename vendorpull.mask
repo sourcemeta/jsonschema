@@ -2,10 +2,11 @@ assets
 bin
 docs
 test
-vendor/vendorpull
 vendor/blaze
 vendor/core
+vendor/hydra
 vendor/jsonbinpack
+vendor/vendorpull
 .ackrc
 .editorconfig
 action.yml
