@@ -1,7 +1,11 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
-#include <sourcemeta/jsonschema/http.h>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <cpr/cpr.h>
 
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -358,20 +362,21 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
   }
 
   log_verbose(options) << "Resolving over HTTP: " << identifier << "\n";
-  sourcemeta::jsonschema::http::ClientRequest request{std::string{identifier}};
-  request.method(sourcemeta::jsonschema::http::Method::GET);
-  request.capture("content-type");
-  sourcemeta::jsonschema::http::ClientResponse response{request.send()};
-  if (response.status() != sourcemeta::jsonschema::http::Status::OK) {
+  const cpr::Response response{
+      cpr::Get(cpr::Url{identifier}, cpr::Redirect{true})};
+
+  if (response.status_code != 200) {
     std::ostringstream error;
-    error << response.status() << "\n  at " << identifier;
+    error << "HTTP " << response.status_code << "\n  at " << identifier;
     throw std::runtime_error(error.str());
   }
 
-  if (response.header("content-type").value_or("").starts_with("text/yaml")) {
-    return sourcemeta::core::parse_yaml(response.body());
+  const auto content_type_iterator{response.header.find("content-type")};
+  if (content_type_iterator != response.header.end() &&
+      content_type_iterator->second.starts_with("text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.text);
   } else {
-    return sourcemeta::core::parse_json(response.body());
+    return sourcemeta::core::parse_json(response.text);
   }
 }
 

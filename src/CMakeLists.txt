@@ -1,5 +1,3 @@
-add_subdirectory(http)
-
 add_executable(jsonschema_cli
   main.cc configure.h.in command.h
   utils.h error.h
@@ -33,7 +31,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::evaluator)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::linter)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
-target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonschema::http)
+target_link_libraries(jsonschema_cli PRIVATE CPR::cpr)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

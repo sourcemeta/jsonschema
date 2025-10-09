@@ -22,8 +22,7 @@ endif()
 
 find_package(Blaze REQUIRED)
 find_package(JSONBinPack REQUIRED)
-find_package(BearSSL REQUIRED)
-find_package(CURL REQUIRED)
+find_package(Hydra REQUIRED)
 add_subdirectory(src)
 
 if(JSONSCHEMA_DEVELOPMENT)

@@ -6,8 +6,6 @@ vendor/vendorpull
 vendor/blaze
 vendor/core
 vendor/jsonbinpack
-vendor/curl.mask
-vendor/bearssl.mask
 .ackrc
 .editorconfig
 action.yml
@@ -22,6 +20,7 @@ pip-deploy.sh
 README.markdown
 cmake/FindBlaze.cmake
 cmake/FindCore.cmake
+cmake/FindHydra.cmake
 cmake/FindJSONBinPack.cmake
 .pre-commit-hooks.yaml
 snapcraft.yaml
