@@ -49,9 +49,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
   const auto verbose{options.contains("verbose")};
   sourcemeta::blaze::Evaluator evaluator;
 
-  for (const auto &entry :
-       for_each_json(options.positional(), parse_ignore(options),
-                     parse_extensions(options))) {
+  for (const auto &entry : for_each_json(options)) {
     const auto configuration_path{find_configuration(entry.first)};
     const auto &configuration{read_configuration(options, configuration_path)};
     const auto dialect{default_dialect(options, configuration)};

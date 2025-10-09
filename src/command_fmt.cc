@@ -12,9 +12,7 @@
 auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
     -> int {
   const auto indentation{parse_indentation(options)};
-  for (const auto &entry :
-       for_each_json(options.positional(), parse_ignore(options),
-                     parse_extensions(options))) {
+  for (const auto &entry : for_each_json(options)) {
     if (entry.first.extension() == ".yaml" ||
         entry.first.extension() == ".yml") {
       std::cerr << "This command does not support YAML input files yet\n";

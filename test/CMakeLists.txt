@@ -44,6 +44,7 @@ add_jsonschema_test_unix(format/fail_check_single_indentation)
 add_jsonschema_test_unix(format/pass_check_single_indentation)
 add_jsonschema_test_unix(format/pass_single_indentation)
 add_jsonschema_test_unix(format/pass_single_intact_mtime)
+add_jsonschema_test_unix(format/pass_config_path)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)
@@ -150,6 +151,8 @@ add_jsonschema_test_unix(metaschema/pass_2020_12_with_fragment)
 add_jsonschema_test_unix(metaschema/pass_draft7_without_fragment)
 add_jsonschema_test_unix(metaschema/fail_relative_file_metaschema_ref)
 add_jsonschema_test_unix(metaschema/pass_custom_config_resolve)
+add_jsonschema_test_unix(metaschema/pass_config_path)
+add_jsonschema_test_unix(metaschema/fail_config_path_enoent)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -200,6 +203,7 @@ add_jsonschema_test_unix(test/pass_file_target_without_resolve)
 add_jsonschema_test_unix(test/pass_file_target_without_resolve_verbose)
 add_jsonschema_test_unix(test/pass_file_target_fragment)
 add_jsonschema_test_unix(test/pass_single_resolve_remap)
+add_jsonschema_test_unix(test/pass_config_path)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)
@@ -303,6 +307,7 @@ add_jsonschema_test_unix(lint/fail_lint_only)
 add_jsonschema_test_unix(lint/fail_lint_only_with_exclude)
 add_jsonschema_test_unix(lint/fail_lint_only_unknown)
 add_jsonschema_test_unix(lint/fail_lint_only_unknown_verbose)
+add_jsonschema_test_unix(lint/pass_config_path)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
