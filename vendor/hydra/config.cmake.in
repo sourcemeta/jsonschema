@@ -1,0 +1,44 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(ZLIB CONFIG)
+if(TARGET zlib AND NOT TARGET ZLIB::ZLIB)
+  add_library(ZLIB::ZLIB ALIAS zlib)
+endif()
+
+if(NOT WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "MSYS")
+  find_dependency(MbedTLS CONFIG)
+  if(TARGET mbedtls AND NOT TARGET MbedTLS::mbedtls)
+    add_library(MbedTLS::mbedtls ALIAS mbedtls)
+  endif()
+endif()
+
+find_dependency(Nghttp2 CONFIG)
+if(TARGET nghttp2 AND NOT TARGET Nghttp2::nghttp2)
+  add_library(Nghttp2::nghttp2 ALIAS nghttp2)
+endif()
+
+if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME STREQUAL "MSYS")
+  find_dependency(CAres CONFIG)
+  if(TARGET cares AND NOT TARGET c-ares::cares)
+    add_library(c-ares::cares ALIAS cares)
+  endif()
+endif()
+
+find_dependency(PSL CONFIG)
+if(TARGET psl AND NOT TARGET PSL::psl)
+  add_library(PSL::psl ALIAS psl)
+endif()
+
+find_dependency(CURL CONFIG)
+if(TARGET curl AND NOT TARGET CURL::libcurl)
+  add_library(CURL::libcurl ALIAS curl)
+endif()
+
+find_dependency(CPR CONFIG)
+if(TARGET cpr AND NOT TARGET CPR::cpr)
+  add_library(CPR::cpr ALIAS cpr)
+endif()
+
+check_required_components("@PROJECT_NAME@")

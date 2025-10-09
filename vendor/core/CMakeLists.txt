@@ -7,7 +7,6 @@ option(SOURCEMETA_CORE_LANG_IO "Build the Sourcemeta Core language I/O library" 
 option(SOURCEMETA_CORE_LANG_PARALLEL "Build the Sourcemeta Core language parallel library" ON)
 option(SOURCEMETA_CORE_TIME "Build the Sourcemeta Core time library" ON)
 option(SOURCEMETA_CORE_UUID "Build the Sourcemeta Core UUID library" ON)
-option(SOURCEMETA_CORE_GZIP "Build the Sourcemeta Core GZIP library" ON)
 option(SOURCEMETA_CORE_MD5 "Build the Sourcemeta Core MD5 library" ON)
 option(SOURCEMETA_CORE_REGEX "Build the Sourcemeta Core Regex library" ON)
 option(SOURCEMETA_CORE_URI "Build the Sourcemeta Core URI library" ON)
@@ -27,7 +26,6 @@ option(SOURCEMETA_CORE_DOCS "Build the Sourcemeta Core docs" OFF)
 option(SOURCEMETA_CORE_INSTALL "Install the Sourcemeta Core library" ON)
 option(SOURCEMETA_CORE_ADDRESS_SANITIZER "Build Sourcemeta Core with an address sanitizer" OFF)
 option(SOURCEMETA_CORE_UNDEFINED_SANITIZER "Build Sourcemeta Core with an undefined behavior sanitizer" OFF)
-option(SOURCEMETA_CORE_CONTRIB_ZLIB "Build the ZLIB library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLETEST "Build the GoogleTest library for downstream consumers" OFF)
 option(SOURCEMETA_CORE_CONTRIB_GOOGLEBENCHMARK "Build the GoogleBenchmark library for downstream consumers" OFF)
 
@@ -71,15 +69,6 @@ endif()
 
 if(SOURCEMETA_CORE_UUID)
   add_subdirectory(src/core/uuid)
-endif()
-
-if(SOURCEMETA_CORE_CONTRIB_ZLIB OR SOURCEMETA_CORE_GZIP)
-  find_package(ZLIB REQUIRED)
-endif()
-
-if(SOURCEMETA_CORE_GZIP)
-  find_package(Archive REQUIRED)
-  add_subdirectory(src/core/gzip)
 endif()
 
 if(SOURCEMETA_CORE_MD5)
@@ -182,10 +171,6 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_UUID)
     add_subdirectory(test/uuid)
-  endif()
-
-  if(SOURCEMETA_CORE_GZIP)
-    add_subdirectory(test/gzip)
   endif()
 
   if(SOURCEMETA_CORE_MD5)
