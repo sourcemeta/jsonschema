@@ -652,4 +652,39 @@ auto from_json(const JSON &value) -> std::optional<T> {
 
 } // namespace sourcemeta::core
 
+// This hash specialisation is intentationally constant with a decent tolerance
+// to collisions
+namespace std {
+template <typename PropertyT>
+struct hash<sourcemeta::core::GenericPointer<
+    PropertyT,
+    sourcemeta::core::PropertyHashJSON<sourcemeta::core::JSON::String>>> {
+  auto
+  operator()(const sourcemeta::core::GenericPointer<
+             PropertyT,
+             sourcemeta::core::PropertyHashJSON<sourcemeta::core::JSON::String>>
+                 &pointer) const noexcept -> std::size_t {
+    const auto size{pointer.size()};
+    if (size == 0) {
+      return size;
+    }
+
+    const auto &first{pointer.at(0)};
+    const auto &middle{pointer.at(size / 2)};
+    const auto &last{pointer.at(size - 1)};
+
+    return size +
+           (first.is_property()
+                ? static_cast<std::size_t>(first.property_hash().a)
+                : first.to_index()) +
+           (middle.is_property()
+                ? static_cast<std::size_t>(middle.property_hash().a)
+                : middle.to_index()) +
+           (last.is_property()
+                ? static_cast<std::size_t>(last.property_hash().a)
+                : last.to_index());
+  }
+};
+} // namespace std
+
 #endif

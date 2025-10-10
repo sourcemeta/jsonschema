@@ -10,10 +10,12 @@
 #include "command.h"
 #include "utils.h"
 
-auto operator<<(std::ostream &stream,
-                const sourcemeta::core::SchemaFrame &frame) -> std::ostream & {
+auto print_frame(std::ostream &stream,
+                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::core::PointerPositionTracker &positions)
+    -> void {
   if (frame.locations().empty()) {
-    return stream;
+    return;
   }
 
   for (auto iterator = frame.locations().cbegin();
@@ -54,6 +56,14 @@ auto operator<<(std::ostream &stream,
       stream << "    Pointer           : ";
       sourcemeta::core::stringify(location.second.pointer, stream);
       stream << "\n";
+    }
+
+    const auto position{positions.get(location.second.pointer)};
+    if (position.has_value()) {
+      stream << "    File Position     : " << std::get<0>(position.value())
+             << ":" << std::get<1>(position.value()) << "\n";
+    } else {
+      stream << "    File Position     : <unknown>:<unknown>\n";
     }
 
     stream << "    Base              : " << location.second.base << "\n";
@@ -115,6 +125,14 @@ auto operator<<(std::ostream &stream,
       stream << "    Type              : Dynamic\n";
     }
 
+    const auto position{positions.get(reference.first.second)};
+    if (position.has_value()) {
+      stream << "    File Position     : " << std::get<0>(position.value())
+             << ":" << std::get<1>(position.value()) << "\n";
+    } else {
+      stream << "    File Position     : <unknown>:<unknown>\n";
+    }
+
     stream << "    Destination       : " << reference.second.destination
            << "\n";
     stream << "    - (w/o fragment)  : "
@@ -122,8 +140,6 @@ auto operator<<(std::ostream &stream,
     stream << "    - (fragment)      : "
            << reference.second.fragment.value_or("<NONE>") << "\n";
   }
-
-  return stream;
 }
 
 auto sourcemeta::jsonschema::cli::inspect(
@@ -136,8 +152,9 @@ auto sourcemeta::jsonschema::cli::inspect(
   }
 
   const std::filesystem::path schema_path{options.positional().front()};
+  sourcemeta::core::PointerPositionTracker positions;
   const sourcemeta::core::JSON schema{
-      sourcemeta::core::read_yaml_or_json(schema_path)};
+      sourcemeta::core::read_yaml_or_json(schema_path, std::ref(positions))};
 
   const auto configuration_path{find_configuration(schema_path)};
   const auto &configuration{read_configuration(options, configuration_path)};
@@ -166,10 +183,10 @@ auto sourcemeta::jsonschema::cli::inspect(
                 .recompose());
 
   if (options.contains("json")) {
-    sourcemeta::core::prettify(frame.to_json(), std::cout);
+    sourcemeta::core::prettify(frame.to_json(positions), std::cout);
     std::cout << "\n";
   } else {
-    std::cout << frame;
+    print_frame(std::cout, frame, positions);
   }
 
   return EXIT_SUCCESS;

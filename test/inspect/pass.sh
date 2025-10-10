@@ -25,6 +25,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           :
+    File Position     : 1:1
     Base              : https://example.com
     Relative Pointer  :
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -36,6 +37,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$defs
+    File Position     : 5:3
     Base              : https://example.com
     Relative Pointer  : /$defs
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -46,6 +48,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$defs/string
+    File Position     : 6:5
     Base              : https://example.com
     Relative Pointer  : /$defs/string
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -57,6 +60,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$defs/string/type
+    File Position     : 6:17
     Base              : https://example.com
     Relative Pointer  : /$defs/string/type
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -67,6 +71,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$id
+    File Position     : 3:3
     Base              : https://example.com
     Relative Pointer  : /$id
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -77,6 +82,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$ref
+    File Position     : 4:3
     Base              : https://example.com
     Relative Pointer  : /$ref
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -87,6 +93,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Type              : Static
     Root              : https://example.com
     Pointer           : /$schema
+    File Position     : 2:3
     Base              : https://example.com
     Relative Pointer  : /$schema
     Dialect           : https://json-schema.org/draft/2020-12/schema
@@ -95,12 +102,14 @@ cat << 'EOF' > "$TMP/expected.txt"
 
 (REFERENCE) ORIGIN: /$ref
     Type              : Static
+    File Position     : 4:3
     Destination       : https://example.com#/$defs/string
     - (w/o fragment)  : https://example.com
     - (fragment)      : /$defs/string
 
 (REFERENCE) ORIGIN: /$schema
     Type              : Static
+    File Position     : 2:3
     Destination       : https://json-schema.org/draft/2020-12/schema
     - (w/o fragment)  : https://json-schema.org/draft/2020-12/schema
     - (fragment)      : <NONE>
