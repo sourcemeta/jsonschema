@@ -185,7 +185,9 @@ public:
   using Paths = std::set<Pointer>;
 
   /// Export the frame entries as JSON
-  [[nodiscard]] auto to_json() const -> JSON;
+  [[nodiscard]] auto to_json(
+      const std::optional<PointerPositionTracker> &tracker = std::nullopt) const
+      -> JSON;
 
   /// Analyse a schema or set of schemas from a given root. Passing
   /// multiple paths that have any overlap is undefined behaviour
