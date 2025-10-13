@@ -33,8 +33,6 @@ namespace sourcemeta::core {
 /// @ingroup uri
 class SOURCEMETA_CORE_URI_EXPORT URI {
 public:
-  // TODO: Add a constructor that takes a C++ input stream
-
   /// This constructor creates a URI from a string type. For example:
   ///
   /// ```cpp
@@ -381,24 +379,6 @@ public:
   /// assert(result.recompose() == "https://sourcemeta.com/foo");
   /// ```
   auto resolve_from(const URI &base) -> URI &;
-
-  // TODO: Do we really need this `try_resolve_from` method? There shouldn't
-  // be any reason why resolution cannot happen. This is probably just an
-  // artifact of `uriparser` not supporting relative resolution
-
-  /// Resolve a relative URI against a base URI as established by RFC
-  /// 3986. If the resolution cannot happen, nothing happens. For example:
-  ///
-  /// ```cpp
-  /// #include <sourcemeta/core/uri.h>
-  /// #include <cassert>
-  ///
-  /// const sourcemeta::core::URI base{"bar"};
-  /// sourcemeta::core::URI result{"foo"};
-  /// result.try_resolve_from(base);
-  /// assert(result.recompose() == "foo");
-  /// ```
-  auto try_resolve_from(const URI &base) -> URI &;
 
   /// Attempt to resolve a URI relative to another URI. If the latter URI is not
   /// a base for the former, leave the URI intact. For example:

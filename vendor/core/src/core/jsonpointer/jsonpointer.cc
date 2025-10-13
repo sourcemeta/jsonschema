@@ -382,7 +382,7 @@ auto to_uri(const Pointer &pointer) -> URI {
 }
 
 auto to_uri(const Pointer &pointer, const URI &base) -> URI {
-  return to_uri(pointer).try_resolve_from(base).canonicalize();
+  return to_uri(pointer).resolve_from(base).canonicalize();
 }
 
 } // namespace sourcemeta::core

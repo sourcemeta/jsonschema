@@ -115,6 +115,7 @@ concept json_auto_tuple_poly =
 
 // Forward declarations for recursive type conversions
 #ifndef DOXYGEN
+template <json_auto_list_like T> auto to_json(const T &value) -> JSON;
 template <json_auto_map_like T> auto to_json(const T &value) -> JSON;
 template <typename L, typename R>
 auto to_json(const std::pair<L, R> &value) -> JSON;
