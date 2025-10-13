@@ -84,7 +84,7 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
   assert(schema_context.schema.at(dynamic_context.keyword).is_string());
   sourcemeta::core::URI reference{
       schema_context.schema.at(dynamic_context.keyword).to_string()};
-  reference.try_resolve_from(schema_context.base);
+  reference.resolve_from(schema_context.base);
   reference.canonicalize();
   // We handle the non-anchor variant by not treating it as a dynamic reference
   assert(reference.fragment().has_value());

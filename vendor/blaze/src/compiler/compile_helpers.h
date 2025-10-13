@@ -196,7 +196,7 @@ inline auto find_adjacent(const Context &context,
         sourcemeta::core::to_uri(
             sourcemeta::core::to_pointer(reference.fragment.value_or(""))
                 .concat({keyword}))
-            .try_resolve_from(reference.base.value_or(""))};
+            .resolve_from(reference.base.value_or(""))};
 
     // TODO: When this logic is used by
     // `unevaluatedProperties`/`unevaluatedItems`, how can we let the

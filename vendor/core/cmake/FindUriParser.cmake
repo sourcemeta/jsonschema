@@ -34,7 +34,25 @@ if(NOT UriParser_FOUND)
     "${URIPARSER_DIR}/src/UriQuery.c"
     "${URIPARSER_DIR}/src/UriRecompose.c"
     "${URIPARSER_DIR}/src/UriResolve.c"
-    "${URIPARSER_DIR}/src/UriShorten.c")
+    "${URIPARSER_DIR}/src/UriShorten.c"
+    "${URIPARSER_DIR}/src/UriCopy.c"
+    "${URIPARSER_DIR}/src/UriCopy.h"
+    "${URIPARSER_DIR}/src/UriNormalize.h"
+    "${URIPARSER_DIR}/src/UriSetFragment.c"
+    "${URIPARSER_DIR}/src/UriSetHostAuto.c"
+    "${URIPARSER_DIR}/src/UriSetHostBase.h"
+    "${URIPARSER_DIR}/src/UriSetHostCommon.c"
+    "${URIPARSER_DIR}/src/UriSetHostCommon.h"
+    "${URIPARSER_DIR}/src/UriSetHostIp4.c"
+    "${URIPARSER_DIR}/src/UriSetHostIp6.c"
+    "${URIPARSER_DIR}/src/UriSetHostIpFuture.c"
+    "${URIPARSER_DIR}/src/UriSetHostRegName.c"
+    "${URIPARSER_DIR}/src/UriSetPath.c"
+    "${URIPARSER_DIR}/src/UriSetPort.c"
+    "${URIPARSER_DIR}/src/UriSetQuery.c"
+    "${URIPARSER_DIR}/src/UriSetScheme.c"
+    "${URIPARSER_DIR}/src/UriSetUserInfo.c"
+    "${URIPARSER_DIR}/src/UriVersion.c")
 
   add_library(uriparser ${URIPARSER_SOURCES})
   add_library(uriparser::uriparser ALIAS uriparser)
