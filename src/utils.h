@@ -411,6 +411,13 @@ public:
         log_verbose(options)
             << "Detecting schema resources from file: " << entry.first.string()
             << "\n";
+
+        if (!sourcemeta::core::is_schema(entry.second)) {
+          throw FileError<sourcemeta::core::SchemaError>(
+              entry.first,
+              "The file you provided does not represent a valid JSON Schema");
+        }
+
         const auto result =
             this->add(entry.second, default_dialect,
                       sourcemeta::core::URI::from_path(entry.first).recompose(),

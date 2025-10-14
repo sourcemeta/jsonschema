@@ -92,6 +92,12 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     std::cerr
         << "explicitly declare a default dialect using --default-dialect/-d\n";
     return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::cli::FileError<
+           sourcemeta::core::SchemaError> &error) {
+    std::cerr << "error: " << error.what() << "\n  at "
+              << sourcemeta::core::weakly_canonical(error.path()).string()
+              << "\n";
+    return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaError &error) {
     std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
