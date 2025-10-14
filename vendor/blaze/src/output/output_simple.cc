@@ -103,17 +103,4 @@ auto SimpleOutput::operator()(
        step.keyword_location});
 }
 
-auto SimpleOutput::stacktrace(std::ostream &stream,
-                              const std::string &indentation) const -> void {
-  for (const auto &entry : *this) {
-    stream << indentation << entry.message << "\n";
-    stream << indentation << "  at instance location \"";
-    sourcemeta::core::stringify(entry.instance_location, stream);
-    stream << "\"\n";
-    stream << indentation << "  at evaluate path \"";
-    sourcemeta::core::stringify(entry.evaluate_path, stream);
-    stream << "\"\n";
-  }
-}
-
 } // namespace sourcemeta::blaze

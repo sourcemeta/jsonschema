@@ -114,9 +114,6 @@ public:
     const std::reference_wrapper<const std::string> schema_location;
   };
 
-  auto stacktrace(std::ostream &stream,
-                  const std::string &indentation = "") const -> void;
-
 private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.

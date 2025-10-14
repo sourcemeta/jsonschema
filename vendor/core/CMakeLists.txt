@@ -4,6 +4,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
 option(SOURCEMETA_CORE_LANG_IO "Build the Sourcemeta Core language I/O library" ON)
+option(SOURCEMETA_CORE_LANG_PROCESS "Build the Sourcemeta Core language Process library" ON)
 option(SOURCEMETA_CORE_LANG_PARALLEL "Build the Sourcemeta Core language parallel library" ON)
 option(SOURCEMETA_CORE_TIME "Build the Sourcemeta Core time library" ON)
 option(SOURCEMETA_CORE_UUID "Build the Sourcemeta Core UUID library" ON)
@@ -58,6 +59,10 @@ if(SOURCEMETA_CORE_LANG_IO)
   add_subdirectory(src/lang/io)
 endif()
 
+if(SOURCEMETA_CORE_LANG_PROCESS)
+  add_subdirectory(src/lang/process)
+endif()
+
 if(SOURCEMETA_CORE_LANG_PARALLEL)
   find_package(Threads REQUIRED)
   add_subdirectory(src/lang/parallel)
@@ -81,7 +86,6 @@ if(SOURCEMETA_CORE_REGEX)
 endif()
 
 if(SOURCEMETA_CORE_URI)
-  find_package(UriParser REQUIRED)
   add_subdirectory(src/core/uri)
 endif()
 
@@ -159,6 +163,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_LANG_IO)
     add_subdirectory(test/io)
+  endif()
+
+  if(SOURCEMETA_CORE_LANG_PROCESS)
+    add_subdirectory(test/process)
   endif()
 
   if(SOURCEMETA_CORE_LANG_PARALLEL)
