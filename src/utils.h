@@ -273,7 +273,15 @@ inline auto for_each_json(const sourcemeta::core::Options &options)
 inline auto print(const sourcemeta::blaze::SimpleOutput &output,
                   std::ostream &stream) -> void {
   stream << "error: Schema validation failure\n";
-  output.stacktrace(stream, "  ");
+  for (const auto &entry : output) {
+    stream << "  " << entry.message << "\n";
+    stream << "    at instance location \"";
+    sourcemeta::core::stringify(entry.instance_location, stream);
+    stream << "\"\n";
+    stream << "    at evaluate path \"";
+    sourcemeta::core::stringify(entry.evaluate_path, stream);
+    stream << "\"\n";
+  }
 }
 
 inline auto print_annotations(const sourcemeta::blaze::SimpleOutput &output,

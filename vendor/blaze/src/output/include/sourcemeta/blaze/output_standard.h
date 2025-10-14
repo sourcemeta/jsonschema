@@ -6,6 +6,7 @@
 #endif
 
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
@@ -75,6 +76,16 @@ enum class StandardOutput {
 auto SOURCEMETA_BLAZE_OUTPUT_EXPORT
 standard(Evaluator &evaluator, const Template &schema,
          const sourcemeta::core::JSON &instance, const StandardOutput format)
+    -> sourcemeta::core::JSON;
+
+/// @ingroup output
+///
+/// An overload of the standard output function that includes line and column
+/// position information as an extension.
+auto SOURCEMETA_BLAZE_OUTPUT_EXPORT
+standard(Evaluator &evaluator, const Template &schema,
+         const sourcemeta::core::JSON &instance, const StandardOutput format,
+         const sourcemeta::core::PointerPositionTracker &instanceTracker)
     -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze

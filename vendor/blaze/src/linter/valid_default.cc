@@ -76,7 +76,16 @@ auto ValidDefault::condition(
   }
 
   std::ostringstream message;
-  output.stacktrace(message);
+  for (const auto &entry : output) {
+    message << entry.message << "\n";
+    message << "  at instance location \"";
+    sourcemeta::core::stringify(entry.instance_location, message);
+    message << "\"\n";
+    message << "  at evaluate path \"";
+    sourcemeta::core::stringify(entry.evaluate_path, message);
+    message << "\"\n";
+  }
+
   return {{{"default"}}, std::move(message).str()};
 }
 

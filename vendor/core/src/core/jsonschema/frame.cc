@@ -880,7 +880,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         const auto reference_type{recursive_anchor == this->locations_.end()
                                       ? SchemaReferenceType::Static
                                       : SchemaReferenceType::Dynamic};
-        const sourcemeta::core::URI anchor_uri{std::move(anchor_uri_string)};
+        const sourcemeta::core::URI anchor_uri{anchor_uri_string};
         this->references_.insert_or_assign(
             {reference_type, entry.common.pointer.concat({"$recursiveRef"})},
             SchemaFrame::ReferencesEntry{

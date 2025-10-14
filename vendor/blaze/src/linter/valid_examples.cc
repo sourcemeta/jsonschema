@@ -79,7 +79,18 @@ auto ValidExamples::condition(
     if (!result) {
       std::ostringstream message;
       message << "Invalid example instance at index " << cursor << "\n";
-      output.stacktrace(message, "  ");
+      for (const auto &entry : output) {
+        message << "  " << entry.message << "\n";
+        message << "  "
+                << "  at instance location \"";
+        sourcemeta::core::stringify(entry.instance_location, message);
+        message << "\"\n";
+        message << "  "
+                << "  at evaluate path \"";
+        sourcemeta::core::stringify(entry.evaluate_path, message);
+        message << "\"\n";
+      }
+
       return {{{"examples", cursor}}, std::move(message).str()};
     }
 
