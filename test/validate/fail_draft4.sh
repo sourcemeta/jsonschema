@@ -31,10 +31,10 @@ cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/instance.json
 error: Schema validation failure
   The value was expected to be of type string but it was of type integer
-    at instance location "/foo"
+    at instance location "/foo" (line 1, column 3)
     at evaluate path "/properties/foo/type"
   The object value was expected to validate against the single defined property subschema
-    at instance location ""
+    at instance location "" (line 1, column 1)
     at evaluate path "/properties"
 EOF
 

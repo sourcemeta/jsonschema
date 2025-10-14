@@ -203,6 +203,8 @@ auto sourcemeta::jsonschema::cli::validate(
         for (const auto &instance : sourcemeta::core::JSONL{stream}) {
           index += 1;
           std::ostringstream error;
+          // TODO: Get real positions for JSONL
+          sourcemeta::core::PointerPositionTracker tracker;
           sourcemeta::blaze::SimpleOutput output{instance};
           sourcemeta::blaze::TraceOutput trace_output{
               sourcemeta::core::schema_official_walker, custom_resolver,
@@ -238,7 +240,7 @@ auto sourcemeta::jsonschema::cli::validate(
           }
 
           if (trace) {
-            print(trace_output, std::cout);
+            print(trace_output, tracker, std::cout);
             result = subresult;
           } else if (json_output) {
             // TODO: Get instance positions for JSONL too
@@ -265,7 +267,7 @@ auto sourcemeta::jsonschema::cli::validate(
                 << "\n  matches "
                 << sourcemeta::core::weakly_canonical(schema_path).string()
                 << "\n";
-            print_annotations(output, options, std::cerr);
+            print_annotations(output, options, tracker, std::cerr);
           } else {
             std::cerr
                 << "fail: "
@@ -274,7 +276,7 @@ auto sourcemeta::jsonschema::cli::validate(
             sourcemeta::core::prettify(instance, std::cerr);
             std::cerr << "\n\n";
             std::cerr << error.str();
-            print(output, std::cerr);
+            print(output, tracker, std::cerr);
             result = false;
             break;
           }
@@ -315,7 +317,7 @@ auto sourcemeta::jsonschema::cli::validate(
       }
 
       if (trace) {
-        print(trace_output, std::cout);
+        print(trace_output, tracker, std::cout);
         result = subresult;
       } else if (json_output) {
         const auto suboutput{sourcemeta::blaze::standard(
@@ -338,13 +340,13 @@ auto sourcemeta::jsonschema::cli::validate(
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "
             << sourcemeta::core::weakly_canonical(schema_path).string() << "\n";
-        print_annotations(output, options, std::cerr);
+        print_annotations(output, options, tracker, std::cerr);
       } else {
         std::cerr << "fail: "
                   << sourcemeta::core::weakly_canonical(instance_path).string()
                   << "\n";
         std::cerr << error.str();
-        print(output, std::cerr);
+        print(output, tracker, std::cerr);
         result = false;
       }
     }

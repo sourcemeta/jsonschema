@@ -31,7 +31,7 @@ Parsing pre-compiled schema template: $(realpath "$TMP")/template.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 EOF
 

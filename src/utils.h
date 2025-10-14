@@ -271,22 +271,34 @@ inline auto for_each_json(const sourcemeta::core::Options &options)
 }
 
 inline auto print(const sourcemeta::blaze::SimpleOutput &output,
+                  const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream) -> void {
   stream << "error: Schema validation failure\n";
   for (const auto &entry : output) {
     stream << "  " << entry.message << "\n";
     stream << "    at instance location \"";
     sourcemeta::core::stringify(entry.instance_location, stream);
-    stream << "\"\n";
+    stream << "\"";
+
+    const auto position{
+        tracker.get(sourcemeta::core::to_pointer(entry.instance_location))};
+    if (position.has_value()) {
+      stream << " (line " << std::get<0>(position.value()) << ", column "
+             << std::get<1>(position.value()) << ")";
+    }
+
+    stream << "\n";
     stream << "    at evaluate path \"";
     sourcemeta::core::stringify(entry.evaluate_path, stream);
     stream << "\"\n";
   }
 }
 
-inline auto print_annotations(const sourcemeta::blaze::SimpleOutput &output,
-                              const sourcemeta::core::Options &options,
-                              std::ostream &stream) -> void {
+inline auto
+print_annotations(const sourcemeta::blaze::SimpleOutput &output,
+                  const sourcemeta::core::Options &options,
+                  const sourcemeta::core::PointerPositionTracker &tracker,
+                  std::ostream &stream) -> void {
   if (options.contains("verbose")) {
     for (const auto &annotation : output.annotations()) {
       for (const auto &value : annotation.second) {
@@ -294,7 +306,16 @@ inline auto print_annotations(const sourcemeta::blaze::SimpleOutput &output,
         sourcemeta::core::stringify(value, stream);
         stream << "\n  at instance location \"";
         sourcemeta::core::stringify(annotation.first.instance_location, stream);
-        stream << "\"\n  at evaluate path \"";
+        stream << "\"";
+
+        const auto position{tracker.get(
+            sourcemeta::core::to_pointer(annotation.first.instance_location))};
+        if (position.has_value()) {
+          stream << " (line " << std::get<0>(position.value()) << ", column "
+                 << std::get<1>(position.value()) << ")";
+        }
+
+        stream << "\n  at evaluate path \"";
         sourcemeta::core::stringify(annotation.first.evaluate_path, stream);
         stream << "\"\n";
       }
@@ -302,8 +323,8 @@ inline auto print_annotations(const sourcemeta::blaze::SimpleOutput &output,
   }
 }
 
-// TODO: Move this as an operator<< overload for TraceOutput in Blaze itself
 inline auto print(const sourcemeta::blaze::TraceOutput &output,
+                  const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream) -> void {
   for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
     const auto &entry{*iterator};
@@ -332,7 +353,8 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
 
     stream << "\"";
     sourcemeta::core::stringify(entry.evaluate_path, stream);
-    stream << "\" (" << entry.name << ")\n";
+    stream << "\"";
+    stream << " (" << entry.name << ")\n";
 
     if (entry.annotation.has_value()) {
       stream << "   value ";
@@ -347,9 +369,18 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
       stream << "\n";
     }
 
-    stream << "   at \"";
+    stream << "   at instance location \"";
     sourcemeta::core::stringify(entry.instance_location, stream);
-    stream << "\"\n";
+    stream << "\"";
+
+    const auto position{
+        tracker.get(sourcemeta::core::to_pointer(entry.instance_location))};
+    if (position.has_value()) {
+      stream << " (line " << std::get<0>(position.value()) << ", column "
+             << std::get<1>(position.value()) << ")";
+    }
+
+    stream << "\n";
     stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
 
     if (entry.vocabulary.first) {

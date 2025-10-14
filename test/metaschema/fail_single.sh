@@ -21,10 +21,10 @@ cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.json
 error: Schema validation failure
   The integer value was expected to validate against at least one of the 2 given subschemas
-    at instance location "/type"
+    at instance location "/type" (line 3, column 3)
     at evaluate path "/properties/type/anyOf"
   The object value was expected to validate against the 33 defined properties subschemas
-    at instance location ""
+    at instance location "" (line 1, column 1)
     at evaluate path "/properties"
 EOF
 

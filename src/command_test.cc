@@ -16,7 +16,8 @@
 #include "utils.h"
 
 static auto get_data(const sourcemeta::core::JSON &test_case,
-                     const std::filesystem::path &base, const bool verbose)
+                     const std::filesystem::path &base, const bool verbose,
+                     sourcemeta::core::PointerPositionTracker &tracker)
     -> sourcemeta::core::JSON {
   assert(base.is_absolute());
   assert(test_case.is_object());
@@ -35,7 +36,7 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
   }
 
   try {
-    return sourcemeta::core::read_yaml_or_json(data_path);
+    return sourcemeta::core::read_yaml_or_json(data_path, std::ref(tracker));
   } catch (...) {
     std::cout << "\n";
     throw;
@@ -234,8 +235,9 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
         return EXIT_FAILURE;
       }
 
+      sourcemeta::core::PointerPositionTracker tracker;
       const auto instance{
-          get_data(test_case, entry.first.parent_path(), verbose)};
+          get_data(test_case, entry.first.parent_path(), verbose, tracker)};
       const std::string ref{"$ref"};
       sourcemeta::blaze::SimpleOutput output{instance, {std::cref(ref)}};
       const auto case_result{
@@ -275,7 +277,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
 
         std::cout << "  " << index << "/" << total << " FAIL "
                   << test_case_description.str() << "\n\n";
-        print(output, std::cout);
+        print(output, tracker, std::cout);
 
         if (index != total && verbose) {
           std::cout << "\n";

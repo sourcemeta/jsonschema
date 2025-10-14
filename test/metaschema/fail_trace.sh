@@ -20,69 +20,69 @@ test "$CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 -> (push) "/dependencies" (AssertionPropertyDependencies)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 <- (pass) "/dependencies" (AssertionPropertyDependencies)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 -> (push) "/properties" (LoopPropertiesMatch)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 -> (push) "/properties/$schema/type" (AssertionTypeStrict)
-   at "/$schema"
+   at instance location "/$schema" (line 2, column 3)
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 <- (pass) "/properties/$schema/type" (AssertionTypeStrict)
-   at "/$schema"
+   at instance location "/$schema" (line 2, column 3)
    at keyword location "http://json-schema.org/draft-04/schema#/properties/$schema/type"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 -> (push) "/properties/minimum/type" (AssertionTypeStrictAny)
-   at "/minimum"
+   at instance location "/minimum" (line 3, column 3)
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 <- (fail) "/properties/minimum/type" (AssertionTypeStrictAny)
-   at "/minimum"
+   at instance location "/minimum" (line 3, column 3)
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 
 <- (fail) "/properties" (LoopPropertiesMatch)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
    at vocabulary "http://json-schema.org/draft-04/schema#"
 EOF
 
 cat << 'EOF' > "$TMP/expected-2.txt"
 -> (push) "/dependencies"
-   at ""
+   at instance location ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
 <- (pass) "/dependencies"
-   at ""
+   at instance location ""
    at keyword location "http://json-schema.org/draft-04/schema#/dependencies"
 
 -> (push) "/properties"
-   at ""
+   at instance location ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 
 -> (push) "/properties/minimum/type"
-   at "/minimum"
+   at instance location "/minimum"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
 
 <- (fail) "/properties/minimum/type"
-   at "/minimum"
+   at instance location "/minimum"
    at keyword location "http://json-schema.org/draft-04/schema#/properties/minimum/type"
 
 <- (fail) "/properties"
-   at ""
+   at instance location ""
    at keyword location "http://json-schema.org/draft-04/schema#/properties"
 EOF
 
