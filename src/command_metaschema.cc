@@ -1,5 +1,6 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/compiler.h>
@@ -81,7 +82,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
         std::cerr << entry.first.string() << "\n";
         const auto output{sourcemeta::blaze::standard(
             evaluator, cache.at(dialect.value()), entry.second,
-            sourcemeta::blaze::StandardOutput::Basic)};
+            sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
         assert(output.is_object());
         assert(output.defines("valid"));
         assert(output.at("valid").is_boolean());
