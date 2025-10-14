@@ -40,17 +40,17 @@ cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance_1.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance_2.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance_3.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 EOF
 

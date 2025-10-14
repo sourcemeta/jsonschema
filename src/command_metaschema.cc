@@ -75,7 +75,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
             sourcemeta::core::empty_weak_pointer, frame};
         result = evaluator.validate(cache.at(dialect.value()), entry.second,
                                     std::ref(output));
-        print(output, std::cout);
+        print(output, entry.positions, std::cout);
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
@@ -104,7 +104,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
           std::cerr << "fail: "
                     << sourcemeta::core::weakly_canonical(entry.first).string()
                     << "\n";
-          print(output, std::cerr);
+          print(output, entry.positions, std::cerr);
           result = false;
         }
       }

@@ -35,7 +35,7 @@ warning: Failed to parse pre-compiled schema template. Compiling from scratch
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 EOF
 

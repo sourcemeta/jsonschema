@@ -26,28 +26,28 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 -> (push) "/properties" (LogicalWhenType)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 
 -> (push) "/properties/foo/type" (AssertionTypeStrict)
-   at "/foo"
+   at instance location "/foo" (line 1, column 3)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties/foo/type"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 
 <- (pass) "/properties/foo/type" (AssertionTypeStrict)
-   at "/foo"
+   at instance location "/foo" (line 1, column 3)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties/foo/type"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 
 @- (annotation) "/properties" (AnnotationEmit)
    value "foo"
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 
 <- (pass) "/properties" (LogicalWhenType)
-   at ""
+   at instance location "" (line 1, column 1)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
 EOF

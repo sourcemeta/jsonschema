@@ -36,7 +36,7 @@ Using configuration file: $(realpath "$TMP")/jsonschema.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/level1/level2/level3/schema.json
 annotation: "foo"
-  at instance location ""
+  at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 EOF
 

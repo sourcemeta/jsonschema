@@ -26,12 +26,12 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 -> (push) "/properties/foo/type" (AssertionPropertyTypeStrict)
-   at "/foo"
+   at instance location "/foo" (line 1, column 3)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties/foo/type"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 
 <- (pass) "/properties/foo/type" (AssertionPropertyTypeStrict)
-   at "/foo"
+   at instance location "/foo" (line 1, column 3)
    at keyword location "file://$(realpath "$TMP")/schema.json#/properties/foo/type"
    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
 EOF
