@@ -233,7 +233,8 @@ auto URI::relative_to(const URI &base) -> URI & {
   // Case 1: Check if this_path starts with base_path followed by "/"
   // This handles: base="/foo" and this="/foo/bar" = "bar"
   // But NOT: base="/spec" and this="/spec/" (different resources)
-  const std::string base_with_slash = base_path + "/";
+  const std::string base_with_slash =
+      base_path.ends_with('/') ? base_path : base_path + "/";
   if (this_path.starts_with(base_with_slash) &&
       this_path.length() > base_with_slash.length()) {
     auto relative_path = this_path.substr(base_with_slash.length());
@@ -249,7 +250,32 @@ auto URI::relative_to(const URI &base) -> URI & {
     return *this;
   }
 
-  // Case 2: Base has no path or empty path
+  // Case 2: Check if both paths share the same parent directory (siblings)
+  // This handles: base="/test/bar.json" and this="/test/foo.json" =
+  // "foo.json"
+  const auto base_last_slash = base_path.rfind('/');
+  const auto this_last_slash = this_path.rfind('/');
+  if (base_last_slash != std::string::npos &&
+      this_last_slash != std::string::npos) {
+    const auto base_parent = base_path.substr(0, base_last_slash + 1);
+    const auto this_parent = this_path.substr(0, this_last_slash + 1);
+
+    if (base_parent == this_parent) {
+      auto relative_path = this_path.substr(this_last_slash + 1);
+
+      this->scheme_.reset();
+      this->userinfo_.reset();
+      this->host_.reset();
+      this->port_.reset();
+      this->path_ = relative_path.empty()
+                        ? std::nullopt
+                        : std::optional<std::string>{relative_path};
+
+      return *this;
+    }
+  }
+
+  // Case 3: Base has no path or empty path
   // Examples: "https://example.com" or "schema:"
   // Strip leading slash and make relative
   if (base_path.empty()) {
