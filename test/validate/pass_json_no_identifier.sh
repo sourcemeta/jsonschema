@@ -32,6 +32,7 @@ cat << EOF > "$TMP/expected.json"
       "keywordLocation": "/properties",
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/properties",
       "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "foo" ]
     }
   ]

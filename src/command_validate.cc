@@ -241,6 +241,7 @@ auto sourcemeta::jsonschema::cli::validate(
             print(trace_output, std::cout);
             result = subresult;
           } else if (json_output) {
+            // TODO: Get instance positions for JSONL too
             const auto suboutput{sourcemeta::blaze::standard(
                 evaluator, schema_template, instance,
                 fast_mode ? sourcemeta::blaze::StandardOutput::Flag
@@ -287,7 +288,9 @@ auto sourcemeta::jsonschema::cli::validate(
         log_verbose(options) << "warning: The JSONL file is empty\n";
       }
     } else {
-      const auto instance{sourcemeta::core::read_yaml_or_json(instance_path)};
+      sourcemeta::core::PointerPositionTracker tracker;
+      const auto instance{sourcemeta::core::read_yaml_or_json(
+          instance_path, std::ref(tracker))};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
@@ -318,7 +321,8 @@ auto sourcemeta::jsonschema::cli::validate(
         const auto suboutput{sourcemeta::blaze::standard(
             evaluator, schema_template, instance,
             fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                      : sourcemeta::blaze::StandardOutput::Basic)};
+                      : sourcemeta::blaze::StandardOutput::Basic,
+            tracker)};
         assert(suboutput.is_object());
         assert(suboutput.defines("valid"));
         assert(suboutput.at("valid").is_boolean());

@@ -33,6 +33,7 @@ cat << EOF > "$TMP/expected.json"
       "keywordLocation": "/properties",
       "absoluteKeywordLocation": "https://example.com#/properties",
       "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "foo" ]
     }
   ]

@@ -25,12 +25,14 @@ cat << EOF > "$TMP/expected.json"
       "keywordLocation": "/properties/type/anyOf",
       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/type/anyOf",
       "instanceLocation": "/type",
+      "instancePosition": [ 3, 3, 3, 11 ],
       "error": "The integer value was expected to validate against at least one of the 2 given subschemas"
     },
     {
       "keywordLocation": "/properties",
       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties",
       "instanceLocation": "",
+      "instancePosition": [ 1, 1, 4, 1 ],
       "error": "The object value was expected to validate against the 33 defined properties subschemas"
     }
   ]
