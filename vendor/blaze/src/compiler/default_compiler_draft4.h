@@ -202,7 +202,10 @@ auto compiler_draft4_core_ref(const Context &context,
   const auto &entry{static_frame_entry(context, schema_context)};
   const auto type{sourcemeta::core::SchemaReferenceType::Static};
   if (!context.frame.references().contains({type, entry.pointer})) {
-    assert(schema_context.schema.at(dynamic_context.keyword).is_string());
+    if (!schema_context.schema.at(dynamic_context.keyword).is_string()) {
+      return {};
+    }
+
     throw sourcemeta::core::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
         entry.pointer, "The schema location is inside of an unknown keyword");
@@ -541,7 +544,9 @@ auto compiler_draft4_validation_required(const Context &context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &current)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
@@ -663,7 +668,10 @@ auto compiler_draft4_applicator_allof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
+
   assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions children;
@@ -704,7 +712,10 @@ auto compiler_draft4_applicator_anyof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
+
   assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions disjunctors;
@@ -772,7 +783,10 @@ auto compiler_draft4_applicator_oneof(const Context &context,
                                       const SchemaContext &schema_context,
                                       const DynamicContext &dynamic_context,
                                       const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
+
   assert(!schema_context.schema.at(dynamic_context.keyword).empty());
 
   Instructions disjunctors;
@@ -894,7 +908,10 @@ auto compiler_draft4_applicator_properties_with_options(
     return {};
   }
 
-  assert(schema_context.schema.at(dynamic_context.keyword).is_object());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
+    return {};
+  }
+
   if (schema_context.schema.at(dynamic_context.keyword).empty()) {
     return {};
   }
@@ -1184,7 +1201,10 @@ auto compiler_draft4_applicator_patternproperties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
     const bool track_evaluation) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_object());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
+    return {};
+  }
+
   if (schema_context.schema.at(dynamic_context.keyword).empty()) {
     return {};
   }
@@ -1437,7 +1457,9 @@ auto compiler_draft4_validation_pattern(const Context &context,
                                         const SchemaContext &schema_context,
                                         const DynamicContext &dynamic_context,
                                         const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_string());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_string()) {
+    return {};
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
@@ -1551,7 +1573,10 @@ auto compiler_draft4_applicator_items_array(
     return {};
   }
 
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
+
   const auto items_size{
       schema_context.schema.at(dynamic_context.keyword).size()};
   if (items_size == 0) {
@@ -1856,7 +1881,10 @@ auto compiler_draft4_applicator_dependencies(
     return {};
   }
 
-  assert(schema_context.schema.at(dynamic_context.keyword).is_object());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
+    return {};
+  }
+
   Instructions children;
   ValueStringMap dependencies;
 
@@ -1897,7 +1925,9 @@ auto compiler_draft4_validation_enum(const Context &context,
                                      const SchemaContext &schema_context,
                                      const DynamicContext &dynamic_context,
                                      const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_array());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_array()) {
+    return {};
+  }
 
   if (schema_context.schema.at(dynamic_context.keyword).size() == 1) {
     return {
@@ -1962,8 +1992,11 @@ auto compiler_draft4_validation_maxlength(const Context &context,
                                           const DynamicContext &dynamic_context,
                                           const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -1994,8 +2027,11 @@ auto compiler_draft4_validation_minlength(const Context &context,
                                           const DynamicContext &dynamic_context,
                                           const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -2027,8 +2063,11 @@ auto compiler_draft4_validation_maxitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -2058,8 +2097,11 @@ auto compiler_draft4_validation_minitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -2091,8 +2133,11 @@ auto compiler_draft4_validation_maxproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -2122,8 +2167,11 @@ auto compiler_draft4_validation_minproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-         schema_context.schema.at(dynamic_context.keyword).is_integer_real());
+  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
+        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&
@@ -2155,7 +2203,9 @@ auto compiler_draft4_validation_maximum(const Context &context,
                                         const SchemaContext &schema_context,
                                         const DynamicContext &dynamic_context,
                                         const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_number());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
+    return {};
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
@@ -2187,7 +2237,9 @@ auto compiler_draft4_validation_minimum(const Context &context,
                                         const SchemaContext &schema_context,
                                         const DynamicContext &dynamic_context,
                                         const Instructions &) -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_number());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
+    return {};
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
@@ -2219,7 +2271,10 @@ auto compiler_draft4_validation_multipleof(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_number());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_number()) {
+    return {};
+  }
+
   assert(schema_context.schema.at(dynamic_context.keyword).is_positive());
 
   if (schema_context.schema.defines("type") &&

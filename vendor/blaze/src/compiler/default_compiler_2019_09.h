@@ -13,7 +13,9 @@ auto compiler_2019_09_applicator_dependentschemas(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  assert(schema_context.schema.at(dynamic_context.keyword).is_object());
+  if (!schema_context.schema.at(dynamic_context.keyword).is_object()) {
+    return {};
+  }
 
   if (schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
