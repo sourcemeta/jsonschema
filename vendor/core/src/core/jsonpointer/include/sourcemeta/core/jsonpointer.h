@@ -12,7 +12,6 @@
 #include <sourcemeta/core/jsonpointer_error.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/jsonpointer_position.h>
-#include <sourcemeta/core/jsonpointer_subpointer_walker.h>
 #include <sourcemeta/core/jsonpointer_template.h>
 #include <sourcemeta/core/jsonpointer_walker.h>
 // NOLINTEND(misc-include-cleaner)
@@ -591,32 +590,6 @@ auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 /// assert(subpointers.at(3) == sourcemeta::core::Pointer{2});
 /// ```
 using PointerWalker = GenericPointerWalker<Pointer>;
-
-/// @ingroup jsonpointer
-///
-/// Walk over every subpointer of a JSON Pointer, from the current pointer down
-/// to the empty pointer. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonpointer.h>
-/// #include <cassert>
-/// #include <vector>
-///
-/// const sourcemeta::core::Pointer pointer{"foo", "bar"};
-/// std::vector<sourcemeta::core::Pointer> subpointers;
-///
-/// for (const auto &subpointer :
-///   sourcemeta::core::SubPointerWalker{pointer}) {
-///   subpointers.push_back(subpointer);
-/// }
-///
-/// assert(subpointers.size() == 3);
-/// assert(subpointers.at(0) == sourcemeta::core::Pointer{"foo", "bar"});
-/// assert(subpointers.at(1) == sourcemeta::core::Pointer{"foo"});
-/// assert(subpointers.at(2) == sourcemeta::core::Pointer{});
-/// ```
-using SubPointerWalker = GenericSubPointerWalker<Pointer>;
 
 /// @ingroup jsonpointer
 /// Serialise a Pointer as JSON

@@ -250,11 +250,13 @@ auto URI::relative_to(const URI &base) -> URI & {
     return *this;
   }
 
+  // Find last slash positions (needed for multiple cases below)
+  const auto base_last_slash = base_path.rfind('/');
+  const auto this_last_slash = this_path.rfind('/');
+
   // Case 2: Check if both paths share the same parent directory (siblings)
   // This handles: base="/test/bar.json" and this="/test/foo.json" =
   // "foo.json"
-  const auto base_last_slash = base_path.rfind('/');
-  const auto this_last_slash = this_path.rfind('/');
   if (base_last_slash != std::string::npos &&
       this_last_slash != std::string::npos) {
     const auto base_parent = base_path.substr(0, base_last_slash + 1);
@@ -294,6 +296,81 @@ auto URI::relative_to(const URI &base) -> URI & {
                       : std::optional<std::string>{relative_path};
 
     return *this;
+  }
+
+  // Case 4: General case - compute relative path using .. segments
+  // This handles cases like: base="/schemas/foo.json" and this="/bundling/bar"
+  // Result should be "../bundling/bar"
+  // Note: We don't make URIs relative if the target is just a shallow path
+  // like "/foo" (only one level deep) as that's not meaningfully navigable
+  const auto base_parent = base_last_slash != std::string::npos
+                               ? base_path.substr(0, base_last_slash + 1)
+                               : base_path;
+
+  std::string relative_path;
+  std::string current_base_parent{base_parent};
+
+  while (!current_base_parent.empty() && current_base_parent != "/") {
+    if (this_path.starts_with(current_base_parent)) {
+      const auto remainder{this_path.substr(current_base_parent.length())};
+      if (!remainder.empty()) {
+        // Check if the target is just the base path plus a trailing slash
+        // e.g., base="/foo/bar" and target="/foo/bar/"
+        // These should stay absolute as they represent different resources
+        if (current_base_parent == base_parent &&
+            this_path == base_path + "/") {
+          return *this;
+        }
+
+        relative_path += remainder;
+      }
+
+      this->scheme_.reset();
+      this->userinfo_.reset();
+      this->host_.reset();
+      this->port_.reset();
+      this->path_ = relative_path.empty()
+                        ? std::nullopt
+                        : std::optional<std::string>{relative_path};
+
+      return *this;
+    }
+
+    relative_path += "../";
+    const auto parent_slash{
+        current_base_parent.rfind('/', current_base_parent.length() - 2)};
+    if (parent_slash == std::string::npos) {
+      break;
+    }
+    current_base_parent = current_base_parent.substr(0, parent_slash + 1);
+  }
+
+  // If we reached the root, we can make it relative unless the target path
+  // is ambiguous (i.e., it's a prefix of the base parent directory)
+  // This handles: "/a/b/c.json" vs "/d.json" -> "../../d.json"
+  // And: "/foo/bar" vs "/baz/qux" -> "../../baz/qux"
+  // But NOT: "/foo/bar" vs "/foo" (ambiguous: is /foo a file or directory?)
+  if (current_base_parent == "/" && this_path.starts_with('/')) {
+    // Check if target path is a prefix of the original base parent
+    // If so, it's ambiguous and we should stay absolute
+    const bool is_prefix_of_base_parent =
+        base_parent.starts_with(this_path) &&
+        base_parent.length() > this_path.length() &&
+        (base_parent[this_path.length()] == '/');
+
+    if (!is_prefix_of_base_parent) {
+      relative_path += this_path.substr(1);
+
+      this->scheme_.reset();
+      this->userinfo_.reset();
+      this->host_.reset();
+      this->port_.reset();
+      this->path_ = relative_path.empty()
+                        ? std::nullopt
+                        : std::optional<std::string>{relative_path};
+
+      return *this;
+    }
   }
 
   // If we can't make it relative, return unchanged
