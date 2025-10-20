@@ -174,6 +174,7 @@ auto find_every_base(
   return result;
 }
 
+// TODO: Why do we have this function both here and on `walker.cc`?
 auto ref_overrides_adjacent_keywords(
     const sourcemeta::core::JSON::String &base_dialect) -> bool {
   // In older drafts, the presence of `$ref` would override any sibling
@@ -305,7 +306,7 @@ struct CacheSubschema {
 auto repopulate_instance_locations(
     const sourcemeta::core::SchemaFrame &frame,
     const sourcemeta::core::SchemaFrame::Instances &instances,
-    const std::map<sourcemeta::core::Pointer, CacheSubschema> &cache,
+    const std::unordered_map<sourcemeta::core::Pointer, CacheSubschema> &cache,
     const sourcemeta::core::Pointer &, const CacheSubschema &cache_entry,
     sourcemeta::core::SchemaFrame::Instances::mapped_type &destination,
     const std::optional<sourcemeta::core::PointerTemplate> &accumulator)
@@ -465,7 +466,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                           const std::optional<JSON::String> &default_id,
                           const SchemaFrame::Paths &paths) -> void {
   std::vector<InternalEntry> subschema_entries;
-  std::map<Pointer, CacheSubschema> subschemas;
+  std::unordered_map<Pointer, CacheSubschema> subschemas;
   std::unordered_map<sourcemeta::core::Pointer, std::vector<JSON::String>>
       base_uris;
   std::unordered_map<sourcemeta::core::Pointer, std::vector<JSON::String>>

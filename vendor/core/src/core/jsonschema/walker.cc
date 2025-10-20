@@ -6,6 +6,21 @@
 namespace {
 enum class SchemaWalkerType_t : std::uint8_t { Deep, Flat };
 
+auto ref_overrides_adjacent_keywords(const std::string &base_dialect) -> bool {
+  // In older drafts, the presence of `$ref` would override any sibling
+  // keywords
+  // See
+  // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
+  return base_dialect == "http://json-schema.org/draft-07/schema#" ||
+         base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
+         base_dialect == "http://json-schema.org/draft-06/schema#" ||
+         base_dialect == "http://json-schema.org/draft-06/hyper-schema#" ||
+         base_dialect == "http://json-schema.org/draft-04/schema#" ||
+         base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
+         base_dialect == "http://json-schema.org/draft-03/schema#" ||
+         base_dialect == "http://json-schema.org/draft-03/hyper-schema#";
+}
+
 auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
           const sourcemeta::core::Pointer &pointer,
           const sourcemeta::core::PointerTemplate &instance_location,
@@ -73,8 +88,23 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
     return;
   }
 
+  const auto has_overriding_ref{
+      subschema.defines("$ref") &&
+      ref_overrides_adjacent_keywords(current_base_dialect)};
   for (auto &pair : subschema.as_object()) {
-    switch (walker(pair.first, vocabularies).type) {
+    const auto keyword_info{walker(pair.first, vocabularies)};
+
+    // Ignore the current keyword sibling to `$ref in Draft 7 and older `if its
+    // not a top-level container
+    if (has_overriding_ref &&
+        keyword_info.type != sourcemeta::core::SchemaKeywordType::Reference &&
+        (level > 0 ||
+         keyword_info.type !=
+             sourcemeta::core::SchemaKeywordType::LocationMembers)) {
+      continue;
+    }
+
+    switch (keyword_info.type) {
       case sourcemeta::core::SchemaKeywordType::
           ApplicatorValueTraverseSomeProperty: {
         sourcemeta::core::Pointer new_pointer{pointer};

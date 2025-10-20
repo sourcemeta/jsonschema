@@ -15,12 +15,12 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cstdint>    // std::uint8_t
-#include <functional> // std::function
-#include <optional>   // std::optional, std::nullopt
-#include <set>        // std::set
-#include <string>     // std::string
-#include <vector>     // std::vector
+#include <cstdint>       // std::uint8_t
+#include <functional>    // std::function
+#include <optional>      // std::optional, std::nullopt
+#include <string>        // std::string
+#include <unordered_set> // std::unordered_set
+#include <vector>        // std::vector
 
 /// @defgroup compiler Compiler
 /// @brief Compile a JSON Schema into a set of low-level instructions for fast
@@ -41,9 +41,7 @@ struct SchemaContext {
   /// The schema base URI
   const sourcemeta::core::URI &base;
   /// The set of labels registered so far
-  std::set<std::size_t> labels;
-  /// The set of references destinations traversed so far
-  std::set<std::string> references;
+  std::unordered_set<std::size_t> labels;
   /// Whether the current schema targets a property name
   bool is_property_name;
 };
@@ -84,6 +82,23 @@ enum class Mode : std::uint8_t {
 };
 
 /// @ingroup compiler
+/// Advanced knobs that you can tweak for higher control and optimisations
+struct Tweaks {
+  /// Consider static references that are not circular when precompiling static
+  /// references
+  bool precompile_static_references_non_circular{false};
+  /// The maximum amount of static references to precompile
+  std::size_t precompile_static_references_maximum_schemas{10};
+  /// The minimum amount of references to a destination before considering it
+  /// for precompilation
+  std::size_t precompile_static_references_minimum_reference_count{10};
+  /// Always unroll `properties` in a logical AND operation
+  bool properties_always_unroll{false};
+  /// Attempt to re-order `properties` subschemas to evaluate cheaper ones first
+  bool properties_reorder{true};
+};
+
+/// @ingroup compiler
 /// The static compiler context is the information you have at your
 /// disposal to implement a keyword that will never change throughout
 /// the compilation process
@@ -106,9 +121,10 @@ struct Context {
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
   const SchemaUnevaluatedEntries unevaluated;
-  /// The list of subschemas that are precompiled at the beginning of the
-  /// instruction set
-  const std::set<std::string> precompiled_static_schemas;
+  /// The set of global labels identifier during precompilation
+  std::unordered_set<std::size_t> precompiled_labels;
+  /// The set of global labels identifier during precompilation
+  const Tweaks tweaks;
 };
 
 /// @ingroup compiler
@@ -142,13 +158,14 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 ///
 /// // Evaluate or encode
 /// ```
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
-    const Mode mode = Mode::FastValidation,
-    const std::optional<std::string> &default_dialect = std::nullopt,
-    const std::optional<std::string> &default_id = std::nullopt) -> Template;
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT
+compile(const sourcemeta::core::JSON &schema,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const Compiler &compiler, const Mode mode = Mode::FastValidation,
+        const std::optional<std::string> &default_dialect = std::nullopt,
+        const std::optional<std::string> &default_id = std::nullopt,
+        const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
 ///
@@ -159,14 +176,15 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
 /// behavior.
 ///
 /// Don't use this function unless you know what you are doing.
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
-    const sourcemeta::core::SchemaFrame &frame,
-    const Mode mode = Mode::FastValidation,
-    const std::optional<std::string> &default_dialect = std::nullopt,
-    const std::optional<std::string> &default_id = std::nullopt) -> Template;
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT
+compile(const sourcemeta::core::JSON &schema,
+        const sourcemeta::core::SchemaWalker &walker,
+        const sourcemeta::core::SchemaResolver &resolver,
+        const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
+        const Mode mode = Mode::FastValidation,
+        const std::optional<std::string> &default_dialect = std::nullopt,
+        const std::optional<std::string> &default_id = std::nullopt,
+        const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
 ///

@@ -20,11 +20,6 @@ auto apply_leading_slash_transform(std::optional<std::string> parsed_path,
     if (path_value.empty() || !path_value.starts_with("/")) {
       return "/" + path_value;
     }
-    return parsed_path;
-  }
-
-  if (path_value.starts_with("/")) {
-    return path_value.substr(1);
   }
 
   return parsed_path;
