@@ -11,10 +11,11 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <cstdint>    // std::uint8_t
-#include <functional> // std::function, std::reference_wrapper
-#include <map>        // std::map
-#include <vector>     // std::vector
+#include <chrono>        // std::chrono
+#include <cstdint>       // std::uint8_t
+#include <functional>    // std::function, std::reference_wrapper
+#include <unordered_map> // std::unordered_map
+#include <vector>        // std::vector
 
 /// @defgroup evaluator Evaluator
 /// @brief A high-performance JSON Schema evaluator
@@ -174,7 +175,17 @@ public:
   sourcemeta::core::WeakPointer instance_location;
   const std::hash<sourcemeta::core::JSON::String> hasher_{};
   std::vector<std::size_t> resources;
-  std::map<std::size_t, const std::reference_wrapper<const Instructions>>
+
+  // To speed up the labels map
+  struct IdentityHash {
+    auto operator()(std::size_t value) const noexcept -> std::size_t {
+      return value;
+    }
+  };
+
+  std::unordered_map<std::size_t,
+                     const std::reference_wrapper<const Instructions>,
+                     IdentityHash>
       labels;
 
   struct Evaluation {

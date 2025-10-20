@@ -7,10 +7,11 @@
 #include <sourcemeta/core/regex.h>
 
 #include <algorithm> // std::sort, std::any_of, std::all_of, std::find_if, std::none_of
-#include <cassert> // assert
-#include <set>     // std::set
-#include <sstream> // std::ostringstream
-#include <utility> // std::move
+#include <cassert>       // assert
+#include <set>           // std::set
+#include <sstream>       // std::ostringstream
+#include <unordered_set> // std::unordered_set
+#include <utility>       // std::move
 
 #include "compile_helpers.h"
 
@@ -27,18 +28,6 @@ static auto parse_regex(const std::string &pattern,
   }
 
   return result.value();
-}
-
-static auto collect_jump_labels(const sourcemeta::blaze::Instructions &steps,
-                                std::set<std::size_t> &output) -> void {
-  for (const auto &variant : steps) {
-    if (variant.type == sourcemeta::blaze::InstructionIndex::ControlJump) {
-      output.emplace(
-          std::get<sourcemeta::blaze::ValueUnsignedInteger>(variant.value));
-    } else {
-      collect_jump_labels(variant.children, output);
-    }
-  }
 }
 
 static auto
@@ -119,36 +108,38 @@ compile_properties(const sourcemeta::blaze::Context &context,
   // and some subschemas that are large. To attempt to improve performance,
   // we prefer to evaluate smaller subschemas first, in the hope of failing
   // earlier without spending a lot of time on other subschemas
-  std::sort(properties.begin(), properties.end(),
-            [](const auto &left, const auto &right) {
-              const auto left_size{recursive_template_size(left.second)};
-              const auto right_size{recursive_template_size(right.second)};
-              if (left_size == right_size) {
-                const auto left_direct_enumeration{
-                    defines_direct_enumeration(left.second)};
-                const auto right_direct_enumeration{
-                    defines_direct_enumeration(right.second)};
+  if (context.tweaks.properties_reorder) {
+    std::sort(properties.begin(), properties.end(),
+              [](const auto &left, const auto &right) {
+                const auto left_size{recursive_template_size(left.second)};
+                const auto right_size{recursive_template_size(right.second)};
+                if (left_size == right_size) {
+                  const auto left_direct_enumeration{
+                      defines_direct_enumeration(left.second)};
+                  const auto right_direct_enumeration{
+                      defines_direct_enumeration(right.second)};
 
-                // Enumerations always take precedence
-                if (left_direct_enumeration.has_value() &&
-                    right_direct_enumeration.has_value()) {
-                  // If both options have a direct enumeration, we choose
-                  // the one with the shorter relative schema location
-                  return relative_schema_location_size(
-                             left.second.at(left_direct_enumeration.value())) <
-                         relative_schema_location_size(
-                             right.second.at(right_direct_enumeration.value()));
-                } else if (left_direct_enumeration.has_value()) {
-                  return true;
-                } else if (right_direct_enumeration.has_value()) {
-                  return false;
+                  // Enumerations always take precedence
+                  if (left_direct_enumeration.has_value() &&
+                      right_direct_enumeration.has_value()) {
+                    // If both options have a direct enumeration, we choose
+                    // the one with the shorter relative schema location
+                    return relative_schema_location_size(left.second.at(
+                               left_direct_enumeration.value())) <
+                           relative_schema_location_size(right.second.at(
+                               right_direct_enumeration.value()));
+                  } else if (left_direct_enumeration.has_value()) {
+                    return true;
+                  } else if (right_direct_enumeration.has_value()) {
+                    return false;
+                  }
+
+                  return left.first < right.first;
+                } else {
+                  return left_size < right_size;
                 }
-
-                return left.first < right.first;
-              } else {
-                return left_size < right_size;
-              }
-            });
+              });
+  }
 
   return properties;
 }
@@ -198,7 +189,10 @@ auto compiler_draft4_core_ref(const Context &context,
                               const SchemaContext &schema_context,
                               const DynamicContext &dynamic_context,
                               const Instructions &) -> Instructions {
-  // Determine the label
+  ///////////////////////////////////////////////////////////////////
+  // (1) Determine the label we should try to jump to
+  ///////////////////////////////////////////////////////////////////
+
   const auto &entry{static_frame_entry(context, schema_context)};
   const auto type{sourcemeta::core::SchemaReferenceType::Static};
   if (!context.frame.references().contains({type, entry.pointer})) {
@@ -210,95 +204,64 @@ auto compiler_draft4_core_ref(const Context &context,
         schema_context.schema.at(dynamic_context.keyword).to_string(),
         entry.pointer, "The schema location is inside of an unknown keyword");
   }
-
   const auto &reference{context.frame.references().at({type, entry.pointer})};
-  const auto label{
-      Evaluator{}.hash(schema_resource_id(context, reference.base.value_or("")),
-                       reference.fragment.value_or(""))};
+  const auto label{Evaluator{}.hash(
+      schema_resource_id(context.resources, reference.base.value_or("")),
+      reference.fragment.value_or(""))};
 
-  // The label is already registered, so just jump to it
+  ///////////////////////////////////////////////////////////////////
+  // (2) If we know about such label, then just jump into it
+  ///////////////////////////////////////////////////////////////////
+
   if (schema_context.labels.contains(label) ||
-      context.precompiled_static_schemas.contains(reference.destination)) {
+      context.precompiled_labels.contains(label)) {
     return {make(sourcemeta::blaze::InstructionIndex::ControlJump, context,
                  schema_context, dynamic_context, ValueUnsignedInteger{label})};
   }
 
+  ///////////////////////////////////////////////////////////////////
+  // (3) Compile the target assuming it might be recursive
+  ///////////////////////////////////////////////////////////////////
+
   auto new_schema_context{schema_context};
-  new_schema_context.references.insert(reference.destination);
-
-  // TODO: Replace this logic with `.frame()` `destination_of` information
-  std::size_t direct_children_references{0};
-  if (context.frame.locations().contains({type, reference.destination})) {
-    for (const auto &reference_entry : context.frame.references()) {
-      if (reference_entry.first.second.starts_with(
-              context.frame.locations()
-                  .at({type, reference.destination})
-                  .pointer)) {
-        direct_children_references += 1;
-      }
-    }
-  }
-
-  // If the reference is not a recursive one, we can avoid the extra
-  // overhead of marking the location for future jumps, and pretty much
-  // just expand the reference destination in place.
-  // TODO: Elevate the calculation required to detect recursive references
-  // to Core's `.frame()`
-  // See: https://github.com/sourcemeta/core/issues/1394
-  const bool is_recursive{
-      // This means the reference is directly recursive, by jumping to
-      // a parent of the reference itself.
-      (context.frame.locations().contains({type, reference.destination}) &&
-       entry.pointer.starts_with(context.frame.locations()
-                                     .at({type, reference.destination})
-                                     .pointer)) ||
-      schema_context.references.contains(reference.destination)};
-
-  if (!is_recursive && direct_children_references <= 5) {
-    if (context.mode == Mode::FastValidation &&
-        // Expanding references inline when dynamic scoping is required
-        // may not work, as we might omit the instruction that introduces
-        // one of the necessary schema resources to the evaluator
-        !context.uses_dynamic_scopes) {
-      return compile(context, new_schema_context, dynamic_context,
-                     sourcemeta::core::empty_pointer,
-                     sourcemeta::core::empty_pointer, reference.destination);
-    } else {
-      return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                   schema_context, dynamic_context, ValueNone{},
-                   compile(context, new_schema_context,
-                           relative_dynamic_context(dynamic_context),
-                           sourcemeta::core::empty_pointer,
-                           sourcemeta::core::empty_pointer,
-                           reference.destination))};
-    }
-  }
-
   new_schema_context.labels.insert(label);
-  Instructions children{compile(
-      context, new_schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
-      reference.destination)};
 
-  // If we ended up not using the label after all, then we can ignore the
-  // wrapper, at the expense of compiling the reference instructions once more
-  std::set<std::size_t> used_labels;
-  collect_jump_labels(children, used_labels);
-  if (!used_labels.contains(label)) {
+  ///////////////////////////////////////////////////////////////////
+  // (4) If the resulting instructions may be recursive, label
+  ///////////////////////////////////////////////////////////////////
+
+  std::unordered_set<std::string> visited;
+  if (is_circular(context.frame, entry.pointer, reference, visited)) {
+    auto children{compile(
+        context, new_schema_context, relative_dynamic_context(dynamic_context),
+        sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
+        reference.destination)};
+    return {make(sourcemeta::blaze::InstructionIndex::ControlLabel, context,
+                 new_schema_context, dynamic_context,
+                 ValueUnsignedInteger{label}, std::move(children))};
+  }
+
+  ///////////////////////////////////////////////////////////////////
+  // (5) If the resulting instructions were definitely NOT recursive, inline
+  ///////////////////////////////////////////////////////////////////
+
+  if (context.mode == Mode::FastValidation &&
+      // Expanding references inline when dynamic scoping is required
+      // may not work, as we might omit the instruction that introduces
+      // one of the necessary schema resources to the evaluator
+      !context.uses_dynamic_scopes) {
     return compile(context, schema_context, dynamic_context,
                    sourcemeta::core::empty_pointer,
                    sourcemeta::core::empty_pointer, reference.destination);
+  } else {
+    return {
+        make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+             schema_context, dynamic_context, ValueNone{},
+             compile(context, schema_context,
+                     relative_dynamic_context(dynamic_context),
+                     sourcemeta::core::empty_pointer,
+                     sourcemeta::core::empty_pointer, reference.destination))};
   }
-
-  // The idea to handle recursion is to expand the reference once, and when
-  // doing so, create a "checkpoint" that we can jump back to in a subsequent
-  // recursive reference. While unrolling the reference once may initially
-  // feel weird, we do it so we can handle references purely in this keyword
-  // handler, without having to add logic to every single keyword to check
-  // whether something points to them and add the "checkpoint" themselves.
-  return {make(sourcemeta::blaze::InstructionIndex::ControlLabel, context,
-               schema_context, dynamic_context, ValueUnsignedInteger{label},
-               std::move(children))};
 }
 
 auto compiler_draft4_validation_type(const Context &context,
@@ -584,7 +547,6 @@ auto compiler_draft4_validation_required(const Context &context,
             schema_context.vocabularies,
             schema_context.base,
             schema_context.labels,
-            schema_context.references,
             schema_context.is_property_name};
         const DynamicContext new_dynamic_context{
             "properties", sourcemeta::core::empty_pointer,
@@ -816,6 +778,10 @@ auto compiler_draft4_applicator_oneof(const Context &context,
 auto properties_as_loop(const Context &context,
                         const SchemaContext &schema_context,
                         const sourcemeta::core::JSON &properties) -> bool {
+  if (context.tweaks.properties_always_unroll) {
+    return false;
+  }
+
   const auto size{properties.size()};
   const auto imports_validation_vocabulary =
       schema_context.vocabularies.contains(
