@@ -1,11 +1,17 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/schemaconfig.h>
+
+#include <cassert> // assert
 
 namespace sourcemeta::core {
 
 auto SchemaConfig::find(const std::filesystem::path &path)
     -> std::optional<std::filesystem::path> {
-  auto current =
-      std::filesystem::is_directory(path) ? path : path.parent_path();
+  const auto canonical{sourcemeta::core::weakly_canonical(path)};
+  assert(canonical.is_absolute());
+  auto current = std::filesystem::is_directory(canonical)
+                     ? canonical
+                     : canonical.parent_path();
 
   while (!current.empty()) {
     auto candidate = current / "jsonschema.json";
