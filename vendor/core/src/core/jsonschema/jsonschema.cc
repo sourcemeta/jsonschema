@@ -188,44 +188,6 @@ auto sourcemeta::core::reidentify(JSON &schema,
   assert(is_schema(schema));
   assert(schema.is_object());
   schema.assign(id_keyword(base_dialect), JSON{new_identifier});
-
-  if (schema.defines("$ref")) {
-    // Workaround top-level `$ref` with `allOf`
-    if (base_dialect == "http://json-schema.org/draft-07/schema#" ||
-        base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
-        base_dialect == "http://json-schema.org/draft-06/schema#" ||
-        base_dialect == "http://json-schema.org/draft-06/hyper-schema#" ||
-        base_dialect == "http://json-schema.org/draft-04/schema#" ||
-        base_dialect == "http://json-schema.org/draft-04/hyper-schema#") {
-      // Note that if the schema already has an `allOf`, we can safely
-      // remove it, as it was by definition ignored by `$ref` already
-      if (schema.defines("allOf")) {
-        schema.erase("allOf");
-      }
-
-      schema.assign("allOf", JSON::make_array());
-      auto conjunction{JSON::make_object()};
-      conjunction.assign("$ref", schema.at("$ref"));
-      schema.at("allOf").push_back(std::move(conjunction));
-      schema.erase("$ref");
-    }
-
-    // Workaround top-level `$ref` with `extends`
-    if (base_dialect == "http://json-schema.org/draft-03/schema#" ||
-        base_dialect == "http://json-schema.org/draft-03/hyper-schema#") {
-      // Note that if the schema already has an `extends`, we can safely
-      // remove it, as it was by definition ignored by `$ref` already
-      if (schema.defines("extends")) {
-        schema.erase("extends");
-      }
-
-      schema.assign("extends", JSON::make_object());
-      schema.at("extends").assign("$ref", schema.at("$ref"));
-      schema.erase("$ref");
-    }
-  }
-
-  assert(identify(schema, base_dialect).has_value());
 }
 
 auto sourcemeta::core::dialect(
