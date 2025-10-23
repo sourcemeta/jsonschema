@@ -289,5 +289,9 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     std::cout << "\n";
   }
 
-  return result ? EXIT_SUCCESS : EXIT_FAILURE;
+  if (result) {
+    return EXIT_SUCCESS;
+  } else {
+    throw Fail{EXIT_FAILURE};
+  }
 }
