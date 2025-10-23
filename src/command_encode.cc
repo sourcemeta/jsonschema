@@ -12,11 +12,15 @@
 #include <iostream>   // std::cout, std::endl
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "input.h"
+#include "logger.h"
+#include "resolver.h"
 #include "utils.h"
 
-auto sourcemeta::jsonschema::cli::encode(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
+    -> void {
   if (options.positional().size() < 2) {
     throw PositionalArgumentError{
         "This command expects a path to a JSON document and an output path",
@@ -44,7 +48,7 @@ auto sourcemeta::jsonschema::cli::encode(
   std::cerr << "original file size: " << original_size << " bytes\n";
 
   if (document.extension() == ".jsonl") {
-    log_verbose(options)
+    LOG_VERBOSE(options)
         << "Interpreting input as JSONL: "
         << sourcemeta::core::weakly_canonical(document).string() << "\n";
 
@@ -56,7 +60,7 @@ auto sourcemeta::jsonschema::cli::encode(
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     std::size_t count{0};
     for (const auto &entry : sourcemeta::core::JSONL{stream}) {
-      log_verbose(options) << "Encoding entry #" << count << "\n";
+      LOG_VERBOSE(options) << "Encoding entry #" << count << "\n";
       encoder.write(entry, encoding);
       count += 1;
     }

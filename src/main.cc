@@ -124,19 +124,19 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::fmt(app);
+    sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
   } else if (command == "inspect") {
     app.flag("json", {"j"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::inspect(app);
+    sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;
   } else if (command == "bundle") {
     app.flag("without-id", {"w"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::bundle(app);
+    sourcemeta::jsonschema::bundle(app);
     return EXIT_SUCCESS;
   } else if (command == "lint") {
     app.flag("json", {"j"});
@@ -149,7 +149,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::lint(app);
+    sourcemeta::jsonschema::lint(app);
     return EXIT_SUCCESS;
   } else if (command == "validate") {
     app.flag("json", {"j"});
@@ -160,7 +160,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("template", {"m"});
     app.option("loop", {"l"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::validate(app);
+    sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
   } else if (command == "metaschema") {
     app.flag("json", {"j"});
@@ -168,38 +168,38 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::metaschema(app);
+    sourcemeta::jsonschema::metaschema(app);
     return EXIT_SUCCESS;
   } else if (command == "compile") {
     app.flag("fast", {"f"});
     app.flag("minify", {"m"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::compile(app);
+    sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
   } else if (command == "test") {
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::test(app);
+    sourcemeta::jsonschema::test(app);
     return EXIT_SUCCESS;
   } else if (command == "encode") {
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::encode(app);
+    sourcemeta::jsonschema::encode(app);
     return EXIT_SUCCESS;
   } else if (command == "decode") {
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::cli::decode(app);
+    sourcemeta::jsonschema::decode(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"
-              << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
+              << sourcemeta::jsonschema::PROJECT_VERSION << "\n";
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
     return EXIT_SUCCESS;
   } else if (command == "version" || command == "--version" ||
              command == "-v") {
-    std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
+    std::cout << sourcemeta::jsonschema::PROJECT_VERSION << "\n";
     return EXIT_SUCCESS;
   } else {
     throw sourcemeta::jsonschema::UnknownCommandError{command};

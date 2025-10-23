@@ -8,11 +8,13 @@
 #include <iostream> // std::cerr, std::cout
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "resolver.h"
 #include "utils.h"
 
-auto sourcemeta::jsonschema::cli::compile(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
+    -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema compile path/to/schema.json"};

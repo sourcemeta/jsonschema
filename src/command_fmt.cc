@@ -7,9 +7,11 @@
 
 #include "command.h"
 #include "error.h"
+#include "input.h"
+#include "logger.h"
 #include "utils.h"
 
-auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
+auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     -> void {
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
@@ -24,9 +26,9 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
     buffer << input.rdbuf();
 
     if (options.contains("check")) {
-      log_verbose(options) << "Checking: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Checking: " << entry.first.string() << "\n";
     } else {
-      log_verbose(options) << "Formatting: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Formatting: " << entry.first.string() << "\n";
     }
 
     std::ostringstream expected;
@@ -41,7 +43,7 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
 
     if (options.contains("check")) {
       if (buffer.str() == expected.str()) {
-        log_verbose(options) << "PASS: " << entry.first.string() << "\n";
+        LOG_VERBOSE(options) << "PASS: " << entry.first.string() << "\n";
       } else {
         std::cerr << "FAIL: " << entry.first.string() << "\n";
         std::cerr << "Got:\n"
