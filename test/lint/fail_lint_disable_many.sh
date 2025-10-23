@@ -23,7 +23,7 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 schema.json:4:3:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
-    at schema location "/contentMediaType"
+    at location "/contentMediaType"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

@@ -31,9 +31,9 @@ cat << EOF > "$TMP/expected.txt"
 Looking for target: https://example.com/unknown
 $(realpath "$TMP")/test.json:
 error: Could not resolve the reference to an external schema
-  https://example.com/unknown
+  at identifier https://example.com/unknown
 
-This is likely because you forgot to import such schema using --resolve/-r
+This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

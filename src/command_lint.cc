@@ -92,7 +92,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 
       std::cout << ":\n";
       std::cout << "  " << message << " (" << name << ")\n";
-      std::cout << "    at schema location \"";
+      std::cout << "    at location \"";
       sourcemeta::core::stringify(schema_location, std::cout);
       std::cout << "\"\n";
 

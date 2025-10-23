@@ -24,8 +24,10 @@ then
 fi
 
 cat << EOF > "$TMP/expected.txt"
-error: Unknown command 'unknown_command'
-Use '--help' for usage information
+error: Unknown command
+  at command unknown_command
+
+Run the \`help\` command for usage information
 EOF
 
 diff "$TMP/stderr" "$TMP/expected.txt"

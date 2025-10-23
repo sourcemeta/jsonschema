@@ -22,8 +22,10 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: This flag cannot take a value 'json'
-Use '--help' for usage information
+error: This flag cannot take a value
+  at option json
+
+Run the \`help\` command for usage information
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -24,8 +24,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The JSON document is not a valid JSON Schema
-  https://jsonplaceholder.typicode.com/todos/1
-    at schema location "/allOf/0/\$ref"
+  at identifier https://jsonplaceholder.typicode.com/todos/1
+  at location "/allOf/0/\$ref"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

@@ -32,10 +32,10 @@ cat << EOF > "$TMP/expected.txt"
 Linting: $(realpath "$TMP")/bar.json
 Linting: $(realpath "$TMP")/baz.json
 error: Could not resolve the metaschema of the schema
-  uri https://example.com/unknown
-  at $(realpath "$TMP")/baz.json
+  at identifier https://example.com/unknown
+  at file path $(realpath "$TMP")/baz.json
 
-This is likely because you forgot to import such schema using --resolve/-r
+This is likely because you forgot to import such schema using \`--resolve/-r\`
 Linting: $(realpath "$TMP")/foo.json
 EOF
 

@@ -17,7 +17,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: No such file or directory
-  $(realpath "$TMP")/foo.json
+  at file path $(realpath "$TMP")/foo.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

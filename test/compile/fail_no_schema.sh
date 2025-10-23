@@ -11,9 +11,9 @@ trap clean EXIT
 test "$CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-error: This command expects a path to a schema. For example:
+error: This command expects a path to a schema
 
-  jsonschema compile path/to/schema.json
+For example: jsonschema compile path/to/schema.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

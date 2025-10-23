@@ -25,8 +25,10 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: Failed to parse the JSON document at line 2 and column 9
-  $(realpath "$TMP")/instance.json
+error: Failed to parse the JSON document
+  at line 2
+  at column 9
+  at file path $(realpath "$TMP")/instance.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

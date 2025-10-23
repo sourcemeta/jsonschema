@@ -66,30 +66,30 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
         sourcemeta::core::read_yaml_or_json(entry.first)};
 
     if (!test.is_object()) {
-      std::cout << entry.first.string() << ":";
+      std::cout << entry.first.string() << ":\n";
       throw TestError{"The test document must be an object", std::nullopt};
     }
 
     if (!test.defines("target")) {
-      std::cout << entry.first.string() << ":";
+      std::cout << entry.first.string() << ":\n";
       throw TestError{"The test document must contain a `target` property",
                       std::nullopt};
     }
 
     if (!test.at("target").is_string()) {
-      std::cout << entry.first.string() << ":";
+      std::cout << entry.first.string() << ":\n";
       throw TestError{"The test document `target` property must be a URI",
                       std::nullopt};
     }
 
     if (!test.defines("tests")) {
-      std::cout << entry.first.string() << ":";
+      std::cout << entry.first.string() << ":\n";
       throw TestError{"The test document must contain a `tests` property",
                       std::nullopt};
     }
 
     if (!test.at("tests").is_array()) {
-      std::cout << entry.first.string() << ":";
+      std::cout << entry.first.string() << ":\n";
       throw TestError{"The test document `tests` property must be an array",
                       std::nullopt};
     }
@@ -147,16 +147,19 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
       index += 1;
 
       if (!test_case.is_object()) {
+        std::cout << "\n";
         throw TestError{"Test case documents must be objects", index};
       }
 
       if (!test_case.defines("data") && !test_case.defines("dataPath")) {
+        std::cout << "\n";
         throw TestError{
             "Test case documents must contain a `data` or `dataPath` property",
             index};
       }
 
       if (test_case.defines("data") && test_case.defines("dataPath")) {
+        std::cout << "\n";
         throw TestError{"Test case documents must contain either a `data` or "
                         "`dataPath` property, but not both",
                         index};
@@ -164,6 +167,7 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
 
       if (test_case.defines("dataPath") &&
           !test_case.at("dataPath").is_string()) {
+        std::cout << "\n";
         throw TestError{
             "Test case documents must set the `dataPath` property to a string",
             index};
@@ -171,16 +175,19 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
 
       if (test_case.defines("description") &&
           !test_case.at("description").is_string()) {
+        std::cout << "\n";
         throw TestError{
             "If you set a test case description, it must be a string", index};
       }
 
       if (!test_case.defines("valid")) {
+        std::cout << "\n";
         throw TestError{"Test case documents must contain a `valid` property",
                         index};
       }
 
       if (!test_case.at("valid").is_boolean()) {
+        std::cout << "\n";
         throw TestError{
             "The test case document `valid` property must be a boolean", index};
       }
