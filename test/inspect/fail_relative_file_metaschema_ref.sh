@@ -29,7 +29,7 @@ test "$CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: Relative meta-schema URIs are not valid according to the JSON Schema specification
-  ../meta.json
+  at identifier ../meta.json
 EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"

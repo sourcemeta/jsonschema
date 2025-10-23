@@ -22,8 +22,10 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: This option must take a value 'default-dialect'
-Use '--help' for usage information
+error: This option must take a value
+  at option default-dialect
+
+Run the \`help\` command for usage information
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

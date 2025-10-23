@@ -22,7 +22,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The input was supposed to be a file but it is a directory
-  $(realpath "$TMP")/instance
+  at file path $(realpath "$TMP")/instance
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

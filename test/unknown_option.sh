@@ -22,8 +22,10 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: Unknown option 'hello'
-Use '--help' for usage information
+error: Unknown option
+  at option hello
+
+Run the \`help\` command for usage information
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

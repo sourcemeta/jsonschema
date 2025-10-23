@@ -29,7 +29,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The defaultDialect property must be a string
-  at $(realpath "$TMP")/jsonschema.json
+  at file path $(realpath "$TMP")/jsonschema.json
   at location "/defaultDialect"
 EOF
 

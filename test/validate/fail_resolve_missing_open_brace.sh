@@ -33,7 +33,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The file you provided does not represent a valid JSON Schema
-  at $(realpath "$TMP")/invalid.json
+  at file path $(realpath "$TMP")/invalid.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

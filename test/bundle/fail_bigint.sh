@@ -30,8 +30,10 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The JSON value is not representable by the IETF RFC 8259 interoperable signed integer range at line 5 and column 23
-  $(realpath "$TMP")/invalid.json
+error: The JSON value is not representable by the IETF RFC 8259 interoperable signed integer range
+  at line 5
+  at column 23
+  at file path $(realpath "$TMP")/invalid.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

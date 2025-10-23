@@ -21,10 +21,10 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema
-  uri http://example.com
-  at $(realpath "$TMP")/schemas/schema_1.json
+  at identifier http://example.com
+  at file path $(realpath "$TMP")/schemas/schema_1.json
 
-This is likely because you forgot to import such schema using --resolve/-r
+This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

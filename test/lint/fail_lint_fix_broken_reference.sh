@@ -37,8 +37,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not autofix the schema without breaking its internal references
-  at $(realpath "$TMP")/schema.json
-  at schema location "/properties/bar/\$ref"
+  at file path $(realpath "$TMP")/schema.json
+  at location "/properties/bar/\$ref"
 
 This is an unexpected error, as making the auto-fix functionality work in all
 cases is tricky. We are working hard to improve the auto-fixing functionality
