@@ -7,6 +7,7 @@
 #include <sstream>  // std::ostringstream
 
 #include "command.h"
+#include "error.h"
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
@@ -15,8 +16,8 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
   for (const auto &entry : for_each_json(options)) {
     if (entry.first.extension() == ".yaml" ||
         entry.first.extension() == ".yml") {
-      std::cerr << "This command does not support YAML input files yet\n";
-      return EXIT_FAILURE;
+      throw YAMLInputError{"This command does not support YAML input files yet",
+                           entry.first};
     }
 
     std::ifstream input{entry.first};

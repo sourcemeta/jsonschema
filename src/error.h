@@ -42,6 +42,19 @@ private:
   std::filesystem::path path_;
 };
 
+class YAMLInputError : public std::runtime_error {
+public:
+  YAMLInputError(std::string message, std::filesystem::path path)
+      : std::runtime_error{std::move(message)}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -67,6 +80,11 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsonschema::NotSchemaError &error) {
     std::cerr << "error: " << error.what() << "\n  "
+              << sourcemeta::core::weakly_canonical(error.path()).string()
+              << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::YAMLInputError &error) {
+    std::cerr << error.what() << "\n  "
               << sourcemeta::core::weakly_canonical(error.path()).string()
               << "\n";
     return EXIT_FAILURE;

@@ -205,8 +205,9 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
       log_verbose(options) << "Linting: " << entry.first.string() << "\n";
       if (entry.first.extension() == ".yaml" ||
           entry.first.extension() == ".yml") {
-        std::cerr << "The --fix option is not supported for YAML input files\n";
-        return EXIT_FAILURE;
+        throw YAMLInputError{
+            "The --fix option is not supported for YAML input files",
+            entry.first};
       }
 
       auto copy = entry.second;
