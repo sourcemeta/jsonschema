@@ -55,6 +55,12 @@ private:
   std::filesystem::path path_;
 };
 
+class OptionConflictError : public std::runtime_error {
+public:
+  OptionConflictError(std::string message)
+      : std::runtime_error{std::move(message)} {}
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -87,6 +93,9 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     std::cerr << error.what() << "\n  "
               << sourcemeta::core::weakly_canonical(error.path()).string()
               << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::OptionConflictError &error) {
+    std::cerr << "error: " << error.what() << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
