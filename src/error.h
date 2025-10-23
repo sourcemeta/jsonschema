@@ -96,6 +96,19 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
+class UnknownCommandError : public std::runtime_error {
+public:
+  UnknownCommandError(std::string command)
+      : std::runtime_error{"Unknown command"}, command_{std::move(command)} {}
+
+  [[nodiscard]] auto command() const noexcept -> const std::string & {
+    return this->command_;
+  }
+
+private:
+  std::string command_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -154,6 +167,10 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
                  "the issue tracker,\n";
     std::cerr << "so we can add it to the test suite and fix it:\n\n";
     std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::UnknownCommandError &error) {
+    std::cerr << "error: " << error.what() << " '" << error.command() << "'\n";
+    std::cerr << "Use '--help' for usage information\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
