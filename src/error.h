@@ -26,6 +26,22 @@ private:
   std::string example_;
 };
 
+class NotSchemaError : public std::runtime_error {
+public:
+  NotSchemaError(std::filesystem::path path)
+      : std::runtime_error{"The schema file you provided does not represent a "
+                           "valid JSON "
+                           "Schema"},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -48,6 +64,11 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
   } catch (const sourcemeta::jsonschema::PositionalArgumentError &error) {
     std::cerr << "error: " << error.what() << ". For example:\n\n"
               << "  " << error.example() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::NotSchemaError &error) {
+    std::cerr << "error: " << error.what() << "\n  "
+              << sourcemeta::core::weakly_canonical(error.path()).string()
+              << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()

@@ -153,11 +153,7 @@ auto sourcemeta::jsonschema::cli::validate(
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    std::cerr << "error: The schema file you provided does not represent a "
-                 "valid JSON Schema\n  "
-              << sourcemeta::core::weakly_canonical(schema_path).string()
-              << "\n";
-    return EXIT_FAILURE;
+    throw NotSchemaError{schema_path};
   }
 
   const auto fast_mode{options.contains("fast")};
