@@ -13,11 +13,16 @@
 #include <iostream>   // std::cerr, std::cout
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "input.h"
+#include "logger.h"
+#include "resolver.h"
 #include "utils.h"
 
 static auto get_data(const sourcemeta::core::JSON &test_case,
-                     const std::filesystem::path &base, const bool verbose,
+                     const std::filesystem::path &base,
+                     const sourcemeta::core::Options &options,
                      sourcemeta::core::PointerPositionTracker &tracker)
     -> sourcemeta::core::JSON {
   assert(base.is_absolute());
@@ -32,9 +37,8 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
 
   const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
       base / test_case.at("dataPath").to_string())};
-  if (verbose) {
-    std::cerr << "Reading test instance file: " << data_path.string() << "\n";
-  }
+  sourcemeta::jsonschema::LOG_VERBOSE(options)
+      << "Reading test instance file: " << data_path.string() << "\n";
 
   try {
     return sourcemeta::core::read_yaml_or_json(data_path, std::ref(tracker));
@@ -44,7 +48,7 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
   }
 }
 
-auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
+auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     -> void {
   bool result{true};
 
@@ -95,9 +99,8 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     schema_uri.resolve_from(test_path_uri);
     schema_uri.canonicalize();
 
-    if (verbose) {
-      std::cerr << "Looking for target: " << schema_uri.recompose() << "\n";
-    }
+    LOG_VERBOSE(options) << "Looking for target: " << schema_uri.recompose()
+                         << "\n";
 
     const auto schema{sourcemeta::core::wrap(schema_uri.recompose())};
 
@@ -184,7 +187,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
 
       sourcemeta::core::PointerPositionTracker tracker;
       const auto instance{
-          get_data(test_case, entry.first.parent_path(), verbose, tracker)};
+          get_data(test_case, entry.first.parent_path(), options, tracker)};
       const std::string ref{"$ref"};
       sourcemeta::blaze::SimpleOutput output{instance, {std::cref(ref)}};
       const auto case_result{

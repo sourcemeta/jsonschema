@@ -3,7 +3,7 @@
 
 #include <string_view> // std::string_view
 
-namespace sourcemeta::jsonschema::cli {
+namespace sourcemeta::jsonschema {
 constexpr std::string_view PROJECT_VERSION{"@PROJECT_VERSION@"};
 }
 

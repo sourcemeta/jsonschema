@@ -11,7 +11,10 @@
 #include <iostream>   // std::cout, std::endl
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "logger.h"
+#include "resolver.h"
 #include "utils.h"
 
 static auto has_data(std::ifstream &stream) -> bool {
@@ -27,8 +30,8 @@ static auto has_data(std::ifstream &stream) -> bool {
   return (current_pos < end_pos) && stream.good();
 }
 
-auto sourcemeta::jsonschema::cli::decode(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
+    -> void {
   if (options.positional().size() < 2) {
     throw PositionalArgumentError{
         "This command expects a path to a binary file and an output path",
@@ -64,7 +67,7 @@ auto sourcemeta::jsonschema::cli::decode(
   sourcemeta::jsonbinpack::Decoder decoder{input_stream};
 
   if (output.extension() == ".jsonl") {
-    log_verbose(options) << "Interpreting input as JSONL: "
+    LOG_VERBOSE(options) << "Interpreting input as JSONL: "
                          << sourcemeta::core::weakly_canonical(
                                 options.positional().front())
                                 .string()
@@ -72,7 +75,7 @@ auto sourcemeta::jsonschema::cli::decode(
 
     std::size_t count{0};
     while (has_data(input_stream)) {
-      log_verbose(options) << "Decoding entry #" << count << "\n";
+      LOG_VERBOSE(options) << "Decoding entry #" << count << "\n";
       const auto document{decoder.read(encoding)};
       if (count > 0) {
         output_stream << "\n";

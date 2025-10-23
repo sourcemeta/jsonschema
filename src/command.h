@@ -3,7 +3,7 @@
 
 #include <sourcemeta/core/options.h>
 
-namespace sourcemeta::jsonschema::cli {
+namespace sourcemeta::jsonschema {
 auto fmt(const sourcemeta::core::Options &options) -> void;
 auto inspect(const sourcemeta::core::Options &options) -> void;
 auto bundle(const sourcemeta::core::Options &options) -> void;
@@ -14,6 +14,6 @@ auto metaschema(const sourcemeta::core::Options &options) -> void;
 auto compile(const sourcemeta::core::Options &options) -> void;
 auto encode(const sourcemeta::core::Options &options) -> void;
 auto decode(const sourcemeta::core::Options &options) -> void;
-} // namespace sourcemeta::jsonschema::cli
+} // namespace sourcemeta::jsonschema
 
 #endif

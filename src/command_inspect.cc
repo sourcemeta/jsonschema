@@ -7,7 +7,9 @@
 #include <ostream>  // std::ostream
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "resolver.h"
 #include "utils.h"
 
 auto print_frame(std::ostream &stream,
@@ -142,8 +144,8 @@ auto print_frame(std::ostream &stream,
   }
 }
 
-auto sourcemeta::jsonschema::cli::inspect(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
+    -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema inspect path/to/schema.json"};

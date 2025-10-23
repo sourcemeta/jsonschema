@@ -7,11 +7,13 @@
 #include <iostream> // std::cout
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "resolver.h"
 #include "utils.h"
 
-auto sourcemeta::jsonschema::cli::bundle(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
+    -> void {
 
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",

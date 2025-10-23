@@ -14,7 +14,11 @@
 #include <string>   // std::string
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "input.h"
+#include "logger.h"
+#include "resolver.h"
 #include "utils.h"
 
 namespace {
@@ -39,7 +43,7 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
     -> sourcemeta::blaze::Template {
   const auto precompiled{get_precompiled_schema_template_path(options)};
   if (precompiled.has_value()) {
-    sourcemeta::jsonschema::cli::log_verbose(options)
+    sourcemeta::jsonschema::LOG_VERBOSE(options)
         << "Parsing pre-compiled schema template: "
         << sourcemeta::core::weakly_canonical(precompiled.value()).string()
         << "\n";
@@ -126,8 +130,8 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
 
 } // namespace
 
-auto sourcemeta::jsonschema::cli::validate(
-    const sourcemeta::core::Options &options) -> void {
+auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
+    -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{
         "This command expects a path to a schema and a path to an\n"
@@ -188,7 +192,7 @@ auto sourcemeta::jsonschema::cli::validate(
   for (; iterator != options.positional().cend(); ++iterator) {
     const std::filesystem::path instance_path{*iterator};
     if (instance_path.extension() == ".jsonl") {
-      log_verbose(options)
+      LOG_VERBOSE(options)
           << "Interpreting input as JSONL: "
           << sourcemeta::core::weakly_canonical(instance_path).string() << "\n";
       std::int64_t index{0};
@@ -254,7 +258,7 @@ auto sourcemeta::jsonschema::cli::validate(
               break;
             }
           } else if (subresult) {
-            log_verbose(options)
+            LOG_VERBOSE(options)
                 << "ok: "
                 << sourcemeta::core::weakly_canonical(instance_path).string()
                 << " (entry #" << index << ")"
@@ -281,7 +285,7 @@ auto sourcemeta::jsonschema::cli::validate(
       }
 
       if (index == 0) {
-        log_verbose(options) << "warning: The JSONL file is empty\n";
+        LOG_VERBOSE(options) << "warning: The JSONL file is empty\n";
       }
     } else {
       sourcemeta::core::PointerPositionTracker tracker;
@@ -329,7 +333,7 @@ auto sourcemeta::jsonschema::cli::validate(
         sourcemeta::core::prettify(suboutput, std::cout);
         std::cout << "\n";
       } else if (subresult) {
-        log_verbose(options)
+        LOG_VERBOSE(options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "

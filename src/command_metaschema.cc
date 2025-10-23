@@ -13,10 +13,14 @@
 #include <string>   // std::string
 
 #include "command.h"
+#include "configuration.h"
 #include "error.h"
+#include "input.h"
+#include "logger.h"
+#include "resolver.h"
 #include "utils.h"
 
-auto sourcemeta::jsonschema::cli::metaschema(
+auto sourcemeta::jsonschema::metaschema(
     const sourcemeta::core::Options &options) -> void {
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
@@ -92,7 +96,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
         sourcemeta::blaze::SimpleOutput output{entry.second};
         if (evaluator.validate(cache.at(dialect.value()), entry.second,
                                std::ref(output))) {
-          log_verbose(options)
+          LOG_VERBOSE(options)
               << "ok: "
               << sourcemeta::core::weakly_canonical(entry.first).string()
               << "\n  matches " << dialect.value() << "\n";
