@@ -192,9 +192,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     std::cout << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";
     return EXIT_SUCCESS;
   } else {
-    std::cerr << "error: Unknown command '" << command << "'\n";
-    std::cerr << "Use '--help' for usage information\n";
-    return EXIT_FAILURE;
+    throw sourcemeta::jsonschema::UnknownCommandError{command};
   }
 }
 
