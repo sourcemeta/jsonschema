@@ -9,6 +9,7 @@
 #include "command.h"
 #include "configuration.h"
 #include "error.h"
+#include "logger.h"
 #include "resolver.h"
 #include "utils.h"
 
@@ -35,17 +36,18 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
                                .recompose());
 
   if (options.contains("without-id")) {
-    std::cerr << "warning: You are opting in to remove schema identifiers in "
-                 "the bundled schema.\n";
-    std::cerr << "The only legit use case of this advanced feature we know of "
-                 "is to workaround\n";
-    std::cerr << "non-compliant JSON Schema implementations such as Visual "
-                 "Studio Code.\n";
-    std::cerr << "Otherwise, this is not needed and may harm other use "
-                 "cases. For example,\n";
-    std::cerr << "you will be unable to reference the resulting schema from "
-                 "other schemas\n";
-    std::cerr << "using the --resolve/-r option.\n";
+    sourcemeta::jsonschema::LOG_WARNING()
+        << "You are opting in to remove schema identifiers in "
+           "the bundled schema.\n"
+        << "The only legit use case of this advanced feature we know of "
+           "is to workaround\n"
+        << "non-compliant JSON Schema implementations such as Visual "
+           "Studio Code.\n"
+        << "Otherwise, this is not needed and may harm other use "
+           "cases. For example,\n"
+        << "you will be unable to reference the resulting schema from "
+           "other schemas\n"
+        << "using the --resolve/-r option.\n";
     sourcemeta::core::for_editor(schema,
                                  sourcemeta::core::schema_official_walker,
                                  custom_resolver, dialect);
