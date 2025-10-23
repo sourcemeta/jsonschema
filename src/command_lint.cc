@@ -148,9 +148,8 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     for (const auto &only : options.at("only")) {
       log_verbose(options) << "Only enabling rule: " << only << "\n";
       if (blacklist.erase(only) == 0) {
-        std::cerr << "error: The following linting rule does not exist\n";
-        std::cerr << "  " << only << "\n";
-        return EXIT_FAILURE;
+        throw InvalidLintRuleError{"The following linting rule does not exist",
+                                   std::string{only}};
       }
     }
 

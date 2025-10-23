@@ -61,6 +61,19 @@ public:
       : std::runtime_error{std::move(message)} {}
 };
 
+class InvalidLintRuleError : public std::runtime_error {
+public:
+  InvalidLintRuleError(std::string message, std::string rule)
+      : std::runtime_error{std::move(message)}, rule_{std::move(rule)} {}
+
+  [[nodiscard]] auto rule() const noexcept -> const std::string & {
+    return this->rule_;
+  }
+
+private:
+  std::string rule_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -96,6 +109,10 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     return EXIT_FAILURE;
   } catch (const sourcemeta::jsonschema::OptionConflictError &error) {
     std::cerr << "error: " << error.what() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::InvalidLintRuleError &error) {
+    std::cerr << "error: " << error.what() << "\n";
+    std::cerr << "  " << error.rule() << "\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
