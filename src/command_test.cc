@@ -239,5 +239,9 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     }
   }
 
-  return result ? EXIT_SUCCESS : EXIT_FAILURE;
+  if (result) {
+    return EXIT_SUCCESS;
+  } else {
+    throw Fail{EXIT_FAILURE};
+  }
 }

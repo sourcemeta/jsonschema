@@ -116,8 +116,11 @@ auto sourcemeta::jsonschema::cli::metaschema(
     }
   }
 
-  return result ? EXIT_SUCCESS
-                // Report a different exit code for validation failures, to
-                // distinguish them from other errors
-                : 2;
+  if (result) {
+    return EXIT_SUCCESS;
+  } else {
+    // Report a different exit code for validation failures, to
+    // distinguish them from other errors
+    throw Fail{2};
+  }
 }

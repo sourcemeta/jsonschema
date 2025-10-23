@@ -48,7 +48,7 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
         std::cerr << "Got:\n"
                   << buffer.str() << "\nBut expected:\n"
                   << expected.str() << "\n";
-        return EXIT_FAILURE;
+        throw Fail{EXIT_FAILURE};
       }
     } else {
       if (buffer.str() != expected.str()) {

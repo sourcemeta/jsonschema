@@ -125,6 +125,18 @@ private:
   std::optional<unsigned int> test_number_;
 };
 
+class Fail : public std::runtime_error {
+public:
+  Fail(int exit_code) : std::runtime_error{"Fail"}, exit_code_{exit_code} {}
+
+  [[nodiscard]] auto exit_code() const noexcept -> int {
+    return this->exit_code_;
+  }
+
+private:
+  int exit_code_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -144,6 +156,8 @@ private:
 inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
   try {
     return callback();
+  } catch (const sourcemeta::jsonschema::Fail &error) {
+    return error.exit_code();
   } catch (const sourcemeta::jsonschema::PositionalArgumentError &error) {
     std::cerr << "error: " << error.what() << ". For example:\n\n"
               << "  " << error.example() << "\n";
