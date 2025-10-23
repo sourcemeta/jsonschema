@@ -9,6 +9,7 @@
 #include <cassert>    // assert
 #include <filesystem> // std::filesystem
 #include <functional> // std::function
+#include <optional>   // std::optional
 #include <stdexcept>  // std::runtime_error
 #include <string>     // std::string
 
@@ -109,6 +110,21 @@ private:
   std::string command_;
 };
 
+class TestError : public std::runtime_error {
+public:
+  TestError(std::string message, std::optional<unsigned int> test_number)
+      : std::runtime_error{std::move(message)},
+        test_number_{std::move(test_number)} {}
+
+  [[nodiscard]] auto test_number() const noexcept
+      -> const std::optional<unsigned int> & {
+    return this->test_number_;
+  }
+
+private:
+  std::optional<unsigned int> test_number_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -171,6 +187,16 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
   } catch (const sourcemeta::jsonschema::UnknownCommandError &error) {
     std::cerr << "error: " << error.what() << " '" << error.command() << "'\n";
     std::cerr << "Use '--help' for usage information\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::TestError &error) {
+    std::cout << "\nerror: " << error.what() << "\n";
+    if (error.test_number().has_value()) {
+      std::cout << "  at test case #" << error.test_number().value() << "\n";
+    }
+    std::cout << "\n";
+    std::cout << "Learn more here: "
+                 "https://github.com/sourcemeta/jsonschema/blob/main/"
+                 "docs/test.markdown\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
