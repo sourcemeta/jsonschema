@@ -14,6 +14,7 @@
 #include <string>   // std::string
 
 #include "command.h"
+#include "error.h"
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::metaschema(

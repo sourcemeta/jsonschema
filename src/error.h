@@ -3,12 +3,29 @@
 
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/schemaconfig.h>
 
+#include <cassert>    // assert
+#include <filesystem> // std::filesystem
 #include <functional> // std::function
 
-#include "utils.h"
-
 namespace sourcemeta::jsonschema {
+
+template <typename T> class FileError : public T {
+public:
+  template <typename... Args>
+  FileError(std::filesystem::path path, Args &&...args)
+      : T{std::forward<Args>(args)...}, path_{std::move(path)} {
+    assert(std::filesystem::exists(this->path_));
+  }
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
 
 inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
   try {
@@ -19,7 +36,7 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     sourcemeta::core::stringify(error.location(), std::cerr);
     std::cerr << "\"\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
+  } catch (const sourcemeta::jsonschema::FileError<
            sourcemeta::core::SchemaConfigParseError> &error) {
     std::cerr << "error: " << error.what() << "\n  at "
               << sourcemeta::core::weakly_canonical(error.path()).string()
@@ -27,7 +44,7 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     std::cerr << "  at location \""
               << sourcemeta::core::to_string(error.location()) << "\"\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
+  } catch (const sourcemeta::jsonschema::FileError<
            sourcemeta::core::SchemaRelativeMetaschemaResolutionError> &error) {
     std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
     std::cerr << "  at "
@@ -38,7 +55,7 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id() << "\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
+  } catch (const sourcemeta::jsonschema::FileError<
            sourcemeta::core::SchemaResolutionError> &error) {
     std::cerr << "error: " << error.what() << "\n  uri " << error.id() << "\n";
     std::cerr << "  at "
@@ -70,7 +87,7 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
         << "\nThis is likely because you forgot to import such meta-schema "
            "using --resolve/-r\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
+  } catch (const sourcemeta::jsonschema::FileError<
            sourcemeta::core::SchemaUnknownBaseDialectError> &error) {
     std::cerr << "error: " << error.what() << "\n";
     std::cerr << "  at "
@@ -92,8 +109,9 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
     std::cerr
         << "explicitly declare a default dialect using --default-dialect/-d\n";
     return EXIT_FAILURE;
-  } catch (const sourcemeta::jsonschema::cli::FileError<
-           sourcemeta::core::SchemaError> &error) {
+  } catch (
+      const sourcemeta::jsonschema::FileError<sourcemeta::core::SchemaError>
+          &error) {
     std::cerr << "error: " << error.what() << "\n  at "
               << sourcemeta::core::weakly_canonical(error.path()).string()
               << "\n";
