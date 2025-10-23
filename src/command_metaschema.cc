@@ -29,11 +29,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
 
   for (const auto &entry : for_each_json(options)) {
     if (!sourcemeta::core::is_schema(entry.second)) {
-      std::cerr << "error: The schema file you provided does not represent a "
-                   "valid JSON Schema\n  "
-                << sourcemeta::core::weakly_canonical(entry.first).string()
-                << "\n";
-      return EXIT_FAILURE;
+      throw NotSchemaError{entry.first};
     }
 
     const auto configuration_path{find_configuration(entry.first)};
