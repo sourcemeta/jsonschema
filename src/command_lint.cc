@@ -136,8 +136,8 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
 
   if (options.contains("only")) {
     if (options.contains("exclude")) {
-      std::cerr << "error: Cannot use --only and --exclude at the same time\n";
-      return EXIT_FAILURE;
+      throw OptionConflictError{
+          "Cannot use --only and --exclude at the same time"};
     }
 
     std::unordered_set<std::string_view> blacklist;
