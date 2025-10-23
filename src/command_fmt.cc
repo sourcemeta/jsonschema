@@ -1,7 +1,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <fstream>  // std::ofstream
 #include <iostream> // std::cerr
 #include <sstream>  // std::ostringstream
@@ -11,7 +10,7 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
-    -> int {
+    -> void {
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
     if (entry.first.extension() == ".yaml" ||
@@ -57,6 +56,4 @@ auto sourcemeta::jsonschema::cli::fmt(const sourcemeta::core::Options &options)
       }
     }
   }
-
-  return EXIT_SUCCESS;
 }

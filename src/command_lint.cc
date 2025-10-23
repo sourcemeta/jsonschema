@@ -5,7 +5,7 @@
 
 #include <sourcemeta/blaze/linter.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
+#include <cstdlib>  // EXIT_FAILURE
 #include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout
 #include <numeric>  // std::accumulate
@@ -104,7 +104,7 @@ get_lint_callback(sourcemeta::core::JSON &errors_array,
 }
 
 auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
-    -> int {
+    -> void {
   const bool output_json = options.contains("json");
 
   sourcemeta::core::SchemaTransformer bundle;
@@ -172,7 +172,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     }
 
     std::cout << "Number of rules: " << count << "\n";
-    return EXIT_SUCCESS;
+    return;
   }
 
   bool result{true};
@@ -289,9 +289,7 @@ auto sourcemeta::jsonschema::cli::lint(const sourcemeta::core::Options &options)
     std::cout << "\n";
   }
 
-  if (result) {
-    return EXIT_SUCCESS;
-  } else {
+  if (!result) {
     throw Fail{EXIT_FAILURE};
   }
 }

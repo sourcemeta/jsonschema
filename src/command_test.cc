@@ -8,7 +8,7 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output.h>
 
-#include <cstdlib>    // EXIT_SUCCESS, EXIT_FAILURE
+#include <cstdlib>    // EXIT_FAILURE
 #include <filesystem> // std::filesystem
 #include <iostream>   // std::cerr, std::cout
 
@@ -45,7 +45,7 @@ static auto get_data(const sourcemeta::core::JSON &test_case,
 }
 
 auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
-    -> int {
+    -> void {
   bool result{true};
 
   const auto verbose{options.contains("verbose")};
@@ -239,9 +239,7 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
     }
   }
 
-  if (result) {
-    return EXIT_SUCCESS;
-  } else {
+  if (!result) {
     throw Fail{EXIT_FAILURE};
   }
 }

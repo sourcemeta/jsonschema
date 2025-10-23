@@ -6,7 +6,6 @@
 #include <sourcemeta/jsonbinpack/runtime.h>
 
 #include <cassert>    // assert
-#include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ifstream
 #include <iostream>   // std::cout, std::endl
@@ -29,7 +28,7 @@ static auto has_data(std::ifstream &stream) -> bool {
 }
 
 auto sourcemeta::jsonschema::cli::decode(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
   if (options.positional().size() < 2) {
     throw PositionalArgumentError{
         "This command expects a path to a binary file and an output path",
@@ -92,6 +91,4 @@ auto sourcemeta::jsonschema::cli::decode(
   output_stream << "\n";
   output_stream.flush();
   output_stream.close();
-
-  return EXIT_SUCCESS;
 }

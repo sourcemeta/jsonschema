@@ -4,7 +4,6 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <cstdlib>  // EXIT_SUCCESS
 #include <iostream> // std::cout
 
 #include "command.h"
@@ -12,7 +11,7 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::bundle(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
 
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
@@ -53,5 +52,4 @@ auto sourcemeta::jsonschema::cli::bundle(
   sourcemeta::core::prettify(schema, std::cout,
                              sourcemeta::core::schema_format_compare);
   std::cout << "\n";
-  return EXIT_SUCCESS;
 }
