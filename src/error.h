@@ -2,6 +2,7 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
 #include <sourcemeta/core/io.h>
+#include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/schemaconfig.h>
 
@@ -74,6 +75,27 @@ private:
   std::string rule_;
 };
 
+class LintAutoFixError : public std::runtime_error {
+public:
+  LintAutoFixError(std::string message, std::filesystem::path path,
+                   sourcemeta::core::Pointer location)
+      : std::runtime_error{std::move(message)}, path_{std::move(path)},
+        location_{std::move(location)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -113,6 +135,25 @@ inline auto try_catch(const std::function<int()> &callback) noexcept -> int {
   } catch (const sourcemeta::jsonschema::InvalidLintRuleError &error) {
     std::cerr << "error: " << error.what() << "\n";
     std::cerr << "  " << error.rule() << "\n";
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::jsonschema::LintAutoFixError &error) {
+    std::cerr << "error: " << error.what() << "\n";
+    std::cerr << "  at "
+              << sourcemeta::core::weakly_canonical(error.path()).string()
+              << "\n";
+    std::cerr << "  at schema location \""
+              << sourcemeta::core::to_string(error.location()) << "\"\n\n";
+    std::cerr << "This is an unexpected error, as making the auto-fix "
+                 "functionality work in all\n";
+    std::cerr << "cases is tricky. We are working hard to improve the "
+                 "auto-fixing functionality\n";
+    std::cerr << "to handle all possible edge cases, but for now, try again "
+                 "without `--fix/-f`\n";
+    std::cerr << "and apply the suggestions by hand.\n\n";
+    std::cerr << "Also consider consider reporting this problematic case to "
+                 "the issue tracker,\n";
+    std::cerr << "so we can add it to the test suite and fix it:\n\n";
+    std::cerr << "https://github.com/sourcemeta/jsonschema/issues\n";
     return EXIT_FAILURE;
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     std::cerr << "error: " << error.what() << "\n  " << error.id()
