@@ -17,6 +17,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/error.txt"
 This command does not support YAML input files yet
+  $(realpath "$TMP/schema.yaml")
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/error.txt"
