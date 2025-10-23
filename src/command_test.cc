@@ -13,6 +13,7 @@
 #include <iostream>   // std::cerr, std::cout
 
 #include "command.h"
+#include "error.h"
 #include "utils.h"
 
 static auto get_data(const sourcemeta::core::JSON &test_case,
@@ -62,51 +63,31 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
 
     if (!test.is_object()) {
       std::cout << entry.first.string() << ":";
-      std::cout << "\nerror: The test document must be an object\n\n";
-      std::cout << "Learn more here: "
-                   "https://github.com/sourcemeta/jsonschema/blob/main/"
-                   "docs/test.markdown\n";
-      return EXIT_FAILURE;
+      throw TestError{"The test document must be an object", std::nullopt};
     }
 
     if (!test.defines("target")) {
       std::cout << entry.first.string() << ":";
-      std::cout
-          << "\nerror: The test document must contain a `target` property\n\n";
-      std::cout << "Learn more here: "
-                   "https://github.com/sourcemeta/jsonschema/blob/main/"
-                   "docs/test.markdown\n";
-      return EXIT_FAILURE;
+      throw TestError{"The test document must contain a `target` property",
+                      std::nullopt};
     }
 
     if (!test.at("target").is_string()) {
       std::cout << entry.first.string() << ":";
-      std::cout
-          << "\nerror: The test document `target` property must be a URI\n\n";
-      std::cout << "Learn more here: "
-                   "https://github.com/sourcemeta/jsonschema/blob/main/"
-                   "docs/test.markdown\n";
-      return EXIT_FAILURE;
+      throw TestError{"The test document `target` property must be a URI",
+                      std::nullopt};
     }
 
     if (!test.defines("tests")) {
       std::cout << entry.first.string() << ":";
-      std::cout
-          << "\nerror: The test document must contain a `tests` property\n\n";
-      std::cout << "Learn more here: "
-                   "https://github.com/sourcemeta/jsonschema/blob/main/"
-                   "docs/test.markdown\n";
-      return EXIT_FAILURE;
+      throw TestError{"The test document must contain a `tests` property",
+                      std::nullopt};
     }
 
     if (!test.at("tests").is_array()) {
       std::cout << entry.first.string() << ":";
-      std::cout
-          << "\nerror: The test document `tests` property must be an array\n\n";
-      std::cout << "Learn more here: "
-                   "https://github.com/sourcemeta/jsonschema/blob/main/"
-                   "docs/test.markdown\n";
-      return EXIT_FAILURE;
+      throw TestError{"The test document `tests` property must be an array",
+                      std::nullopt};
     }
 
     const auto test_path_uri{sourcemeta::core::URI::from_path(entry.first)};
@@ -163,76 +144,42 @@ auto sourcemeta::jsonschema::cli::test(const sourcemeta::core::Options &options)
       index += 1;
 
       if (!test_case.is_object()) {
-        std::cout
-            << "\nerror: Test case documents must be objects\n  at test case #"
-            << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{"Test case documents must be objects", index};
       }
 
       if (!test_case.defines("data") && !test_case.defines("dataPath")) {
-        std::cout << "\nerror: Test case documents must contain a `data` or "
-                     "`dataPath` property\n  at test case #"
-                  << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{
+            "Test case documents must contain a `data` or `dataPath` property",
+            index};
       }
 
       if (test_case.defines("data") && test_case.defines("dataPath")) {
-        std::cout
-            << "\nerror: Test case documents must contain either a `data` or "
-               "`dataPath` property, but not both\n  at test case #"
-            << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{"Test case documents must contain either a `data` or "
+                        "`dataPath` property, but not both",
+                        index};
       }
 
       if (test_case.defines("dataPath") &&
           !test_case.at("dataPath").is_string()) {
-        std::cout << "\nerror: Test case documents must set the `dataPath` "
-                     "property to a string\n  at test case #"
-                  << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{
+            "Test case documents must set the `dataPath` property to a string",
+            index};
       }
 
       if (test_case.defines("description") &&
           !test_case.at("description").is_string()) {
-        std::cout << "\nerror: If you set a test case description, it must be "
-                     "a string\n  at test case #"
-                  << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{
+            "If you set a test case description, it must be a string", index};
       }
 
       if (!test_case.defines("valid")) {
-        std::cout << "\nerror: Test case documents must contain a `valid` "
-                     "property\n  at test case #"
-                  << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{"Test case documents must contain a `valid` property",
+                        index};
       }
 
       if (!test_case.at("valid").is_boolean()) {
-        std::cout << "\nerror: The test case document `valid` property must be "
-                     "a boolean\n  at test case #"
-                  << index << "\n\n";
-        std::cout << "Learn more here: "
-                     "https://github.com/sourcemeta/jsonschema/blob/main/"
-                     "docs/test.markdown\n";
-        return EXIT_FAILURE;
+        throw TestError{
+            "The test case document `valid` property must be a boolean", index};
       }
 
       sourcemeta::core::PointerPositionTracker tracker;
