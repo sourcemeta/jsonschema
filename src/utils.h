@@ -19,6 +19,8 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
 
+#include "error.h"
+
 #include <algorithm>  // std::any_of, std::none_of, std::sort
 #include <cassert>    // assert
 #include <filesystem> // std::filesystem
@@ -36,22 +38,6 @@
 #include <vector>     // std::vector
 
 namespace sourcemeta::jsonschema::cli {
-
-template <typename T> class FileError : public T {
-public:
-  template <typename... Args>
-  FileError(std::filesystem::path path, Args &&...args)
-      : T{std::forward<Args>(args)...}, path_{std::move(path)} {
-    assert(std::filesystem::exists(this->path_));
-  }
-
-  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
-    return path_;
-  }
-
-private:
-  std::filesystem::path path_;
-};
 
 struct InputJSON {
   std::filesystem::path first;
