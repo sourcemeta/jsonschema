@@ -10,7 +10,6 @@
 
 #include <chrono>   // std::chrono
 #include <cmath>    // std::sqrt
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <string>   // std::string
 
@@ -128,7 +127,7 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
 } // namespace
 
 auto sourcemeta::jsonschema::cli::validate(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{
         "This command expects a path to a schema and a path to an\n"
@@ -347,9 +346,7 @@ auto sourcemeta::jsonschema::cli::validate(
     }
   }
 
-  if (result) {
-    return EXIT_SUCCESS;
-  } else {
+  if (!result) {
     // Report a different exit code for validation failures, to
     // distinguish them from other errors
     throw Fail{2};

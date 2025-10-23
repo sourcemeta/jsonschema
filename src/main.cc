@@ -124,17 +124,20 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::fmt(app);
+    sourcemeta::jsonschema::cli::fmt(app);
+    return EXIT_SUCCESS;
   } else if (command == "inspect") {
     app.flag("json", {"j"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::inspect(app);
+    sourcemeta::jsonschema::cli::inspect(app);
+    return EXIT_SUCCESS;
   } else if (command == "bundle") {
     app.flag("without-id", {"w"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::bundle(app);
+    sourcemeta::jsonschema::cli::bundle(app);
+    return EXIT_SUCCESS;
   } else if (command == "lint") {
     app.flag("json", {"j"});
     app.flag("fix", {"f"});
@@ -146,7 +149,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::lint(app);
+    sourcemeta::jsonschema::cli::lint(app);
+    return EXIT_SUCCESS;
   } else if (command == "validate") {
     app.flag("json", {"j"});
     app.flag("benchmark", {"b"});
@@ -156,30 +160,36 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("template", {"m"});
     app.option("loop", {"l"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::validate(app);
+    sourcemeta::jsonschema::cli::validate(app);
+    return EXIT_SUCCESS;
   } else if (command == "metaschema") {
     app.flag("json", {"j"});
     app.flag("trace", {"t"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::metaschema(app);
+    sourcemeta::jsonschema::cli::metaschema(app);
+    return EXIT_SUCCESS;
   } else if (command == "compile") {
     app.flag("fast", {"f"});
     app.flag("minify", {"m"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::compile(app);
+    sourcemeta::jsonschema::cli::compile(app);
+    return EXIT_SUCCESS;
   } else if (command == "test") {
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::test(app);
+    sourcemeta::jsonschema::cli::test(app);
+    return EXIT_SUCCESS;
   } else if (command == "encode") {
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::encode(app);
+    sourcemeta::jsonschema::cli::encode(app);
+    return EXIT_SUCCESS;
   } else if (command == "decode") {
     app.parse(argc, argv, {.skip = 1});
-    return sourcemeta::jsonschema::cli::decode(app);
+    sourcemeta::jsonschema::cli::decode(app);
+    return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"
               << sourcemeta::jsonschema::cli::PROJECT_VERSION << "\n";

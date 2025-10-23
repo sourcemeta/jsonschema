@@ -5,7 +5,6 @@
 
 #include <sourcemeta/blaze/compiler.h>
 
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr, std::cout
 
 #include "command.h"
@@ -13,7 +12,7 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::compile(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema compile path/to/schema.json"};
@@ -51,6 +50,4 @@ auto sourcemeta::jsonschema::cli::compile(
   }
 
   std::cout << "\n";
-
-  return EXIT_SUCCESS;
 }

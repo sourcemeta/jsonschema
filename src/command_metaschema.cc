@@ -8,7 +8,6 @@
 #include <sourcemeta/blaze/output.h>
 
 #include <cassert>  // assert
-#include <cstdlib>  // EXIT_SUCCESS, EXIT_FAILURE
 #include <iostream> // std::cerr
 #include <map>      // std::map
 #include <string>   // std::string
@@ -18,7 +17,7 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::metaschema(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
@@ -116,9 +115,7 @@ auto sourcemeta::jsonschema::cli::metaschema(
     }
   }
 
-  if (result) {
-    return EXIT_SUCCESS;
-  } else {
+  if (!result) {
     // Report a different exit code for validation failures, to
     // distinguish them from other errors
     throw Fail{2};

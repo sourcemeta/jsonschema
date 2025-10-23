@@ -7,7 +7,6 @@
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
 
-#include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ofstream
 #include <iostream>   // std::cout, std::endl
@@ -17,7 +16,7 @@
 #include "utils.h"
 
 auto sourcemeta::jsonschema::cli::encode(
-    const sourcemeta::core::Options &options) -> int {
+    const sourcemeta::core::Options &options) -> void {
   if (options.positional().size() < 2) {
     throw PositionalArgumentError{
         "This command expects a path to a JSON document and an output path",
@@ -86,6 +85,4 @@ auto sourcemeta::jsonschema::cli::encode(
               << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
               << "%\n";
   }
-
-  return EXIT_SUCCESS;
 }
