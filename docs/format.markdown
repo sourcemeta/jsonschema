@@ -3,9 +3,9 @@ Formatting
 
 ```sh
 jsonschema fmt [schemas-or-directories...]
-  [--check/-c] [--verbose/-v] [--extension/-e <extension>]
-  [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
-  [--indentation/-n <spaces>]
+  [--check/-c] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>] 
+  [--keep-ordering/-k] [--indentation/-n <spaces>] [--default-dialect/-d <uri>]
 ```
 
 Schemas are code. As such, they are expected follow consistent stylistic

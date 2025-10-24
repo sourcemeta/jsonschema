@@ -12,6 +12,7 @@ mkdir -p "$TMP/bar"
 
 cat << 'EOF' > "$TMP/foo/schema.json"
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "title": "Hello World",
   "properties": {"foo": {}, "bar": {}}
@@ -36,10 +37,11 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hello World",
   "properties": {
-    "bar": {},
-    "foo": {}
+    "foo": {},
+    "bar": {}
   },
   "additionalProperties": false
 }

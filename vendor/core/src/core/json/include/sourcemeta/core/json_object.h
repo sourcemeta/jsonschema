@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_JSON_OBJECT_H_
 #define SOURCEMETA_CORE_JSON_OBJECT_H_
 
+#include <algorithm>        // std::sort
 #include <cassert>          // assert
 #include <cstddef>          // std::size_t
 #include <initializer_list> // std::initializer_list
@@ -404,6 +405,14 @@ public:
   /// Erase an object property
   inline auto erase(const Key &key) -> size_type {
     return this->erase(key, this->hash(key));
+  }
+
+  /// Reorder object properties by keys according to a comparator function
+  template <typename Compare> auto reorder(const Compare &compare) -> void {
+    std::sort(this->data.begin(), this->data.end(),
+              [&compare](const auto &left, const auto &right) {
+                return compare(left.first, right.first);
+              });
   }
 
 private:

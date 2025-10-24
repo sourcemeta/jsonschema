@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/schema_1.json"
 EOF
 
 cat << 'EOF' > "$TMP/schema_2.schema.json"
-{"type": "string", "title": "My String"}
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String"}
 EOF
 
 cd "$TMP"
@@ -32,6 +32,7 @@ EOF
 
 cat << 'EOF' > "$TMP/expected_2.json"
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "My String",
   "type": "string"
 }
