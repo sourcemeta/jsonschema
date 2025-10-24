@@ -54,8 +54,9 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
     if (precompiled_result.has_value()) {
       return precompiled_result.value();
     } else {
-      std::cerr << "warning: Failed to parse pre-compiled schema template. "
-                   "Compiling from scratch\n";
+      sourcemeta::jsonschema::LOG_WARNING()
+          << "Failed to parse pre-compiled schema template. "
+             "Compiling from scratch\n";
     }
   }
 
@@ -285,7 +286,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
 
       if (index == 0) {
-        LOG_VERBOSE(options) << "warning: The JSONL file is empty\n";
+        sourcemeta::jsonschema::LOG_WARNING() << "The JSONL file is empty\n";
       }
     } else {
       sourcemeta::core::PointerPositionTracker tracker;
