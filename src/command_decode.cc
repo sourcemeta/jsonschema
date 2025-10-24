@@ -76,19 +76,17 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
     std::size_t count{0};
     while (has_data(input_stream)) {
       LOG_VERBOSE(options) << "Decoding entry #" << count << "\n";
-      const auto document{decoder.read(encoding)};
+      auto document{decoder.read(encoding)};
       if (count > 0) {
         output_stream << "\n";
       }
 
-      sourcemeta::core::prettify(document, output_stream,
-                                 sourcemeta::core::schema_format_compare);
+      sourcemeta::core::prettify(document, output_stream);
       count += 1;
     }
   } else {
-    const auto document{decoder.read(encoding)};
-    sourcemeta::core::prettify(document, output_stream,
-                               sourcemeta::core::schema_format_compare);
+    auto document{decoder.read(encoding)};
+    sourcemeta::core::prettify(document, output_stream);
   }
 
   output_stream << "\n";

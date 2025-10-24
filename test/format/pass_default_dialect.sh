@@ -9,24 +9,22 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "title": "Hello World",
   "properties": {"foo": {}, "bar": {}}
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --indentation 4
+"$1" fmt "$TMP/schema.json" --default-dialect "https://json-schema.org/draft/2020-12/schema"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "title": "Hello World",
-    "properties": {
-        "foo": {},
-        "bar": {}
-    },
-    "additionalProperties": false
+  "title": "Hello World",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
 }
 EOF
 

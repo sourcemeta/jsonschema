@@ -53,7 +53,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
                                  custom_resolver, dialect);
   }
 
-  sourcemeta::core::prettify(schema, std::cout,
-                             sourcemeta::core::schema_format_compare);
+  sourcemeta::core::format(schema, sourcemeta::core::schema_official_walker,
+                           custom_resolver, dialect);
+  sourcemeta::core::prettify(schema, std::cout);
   std::cout << "\n";
 }

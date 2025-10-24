@@ -131,8 +131,7 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
       if (entry.annotation.value().is_object()) {
         sourcemeta::core::stringify(entry.annotation.value(), stream);
       } else {
-        sourcemeta::core::prettify(entry.annotation.value(), stream,
-                                   sourcemeta::core::schema_format_compare);
+        sourcemeta::core::prettify(entry.annotation.value(), stream);
       }
 
       stream << "\n";

@@ -9,6 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema_1.json"
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "title": "Hello World",
   "properties": {"foo": {}, "bar": {}}
@@ -24,10 +25,11 @@ EOF
 
 cat << 'EOF' > "$TMP/expected_1.json"
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hello World",
   "properties": {
-    "bar": {},
-    "foo": {}
+    "foo": {},
+    "bar": {}
   },
   "additionalProperties": false
 }

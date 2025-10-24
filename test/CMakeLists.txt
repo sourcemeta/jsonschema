@@ -45,6 +45,11 @@ add_jsonschema_test_unix(format/pass_check_single_indentation)
 add_jsonschema_test_unix(format/pass_single_indentation)
 add_jsonschema_test_unix(format/pass_single_intact_mtime)
 add_jsonschema_test_unix(format/pass_config_path)
+add_jsonschema_test_unix(format/fail_no_dialect)
+add_jsonschema_test_unix(format/fail_unknown_metaschema)
+add_jsonschema_test_unix(format/pass_default_dialect)
+add_jsonschema_test_unix(format/pass_default_dialect_config)
+add_jsonschema_test_unix(format/pass_default_dialect_config_relative)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)

@@ -1587,6 +1587,32 @@ public:
   /// ```
   auto trim() -> const JSON::String &;
 
+  /// Reorder the properties of an object by sorting keys according to a
+  /// comparator function. The object is modified in-place. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::JSON::make_object();
+  /// document.assign("zebra", sourcemeta::core::JSON{1});
+  /// document.assign("apple", sourcemeta::core::JSON{2});
+  /// document.assign("banana", sourcemeta::core::JSON{3});
+  ///
+  /// document.reorder([](const auto &left, const auto &right) {
+  ///   return left < right;
+  /// });
+  ///
+  /// auto iterator = document.as_object().cbegin();
+  /// assert(iterator->first == "apple");
+  /// ++iterator;
+  /// assert(iterator->first == "banana");
+  /// ++iterator;
+  /// assert(iterator->first == "zebra");
+  /// ```
+  auto reorder(const KeyComparison &compare) -> void;
+
   /*
    * Transform operations
    */

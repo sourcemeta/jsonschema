@@ -895,6 +895,11 @@ auto JSON::trim() -> const JSON::String & {
   return this->to_string();
 }
 
+auto JSON::reorder(const KeyComparison &compare) -> void {
+  assert(this->is_object());
+  this->data_object.reorder(compare);
+}
+
 auto JSON::rename(const JSON::String &key, JSON::String &&to) -> void {
   assert(this->is_object());
   auto &object{this->data_object};

@@ -41,4 +41,4 @@ EOF
 diff "$TMP/result.json" "$TMP/expected.json"
 
 # Must come out formatted
-"$1" fmt "$TMP/result.json" --check
+"$1" fmt "$TMP/result.json" --check --default-dialect "https://json-schema.org/draft/2020-12/schema"
