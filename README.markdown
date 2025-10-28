@@ -26,7 +26,8 @@ local development and when running on CI/CD pipelines. For example:
 
 ***
 
-> [!TIP] Do you want to level up your JSON Schema skills? Check out
+> [!TIP]
+> Do you want to level up your JSON Schema skills? Check out
 > [learnjsonschema.com](https://www.learnjsonschema.com), our growing JSON
 > Schema documentation website, our [JSON Schema for
 > OpenAPI](https://www.sourcemeta.com/courses/jsonschema-for-openapi) video
