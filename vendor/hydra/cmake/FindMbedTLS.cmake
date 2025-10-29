@@ -81,6 +81,7 @@ if(NOT MbedTLS_FOUND)
     "${MBEDTLS_DIR}/library/sha512.c"
     "${MBEDTLS_DIR}/library/sha3.c"
     "${MBEDTLS_DIR}/library/threading.c"
+    "${MBEDTLS_DIR}/library/threading_internal.h"
     "${MBEDTLS_DIR}/library/timing.c"
     "${MBEDTLS_DIR}/library/version.c"
     "${MBEDTLS_DIR}/library/version_features.c"
