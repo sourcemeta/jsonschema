@@ -24,3 +24,17 @@ error: No such file or directory
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" validate "$TMP/schema.json" "$TMP/foo.json" --json >"$TMP/stdout.txt" \
+  && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "No such file or directory",
+  "filePath": "$(realpath "$TMP")/foo.json"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

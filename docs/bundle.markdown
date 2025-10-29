@@ -5,7 +5,7 @@ Bundling
 jsonschema bundle <schema.json|.yaml>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--without-id/-w] [--default-dialect/-d <uri>]
+  [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
 ```
 
 A schema may contain references to remote schemas outside the scope of the

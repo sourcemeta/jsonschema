@@ -107,12 +107,6 @@ handle_json_entry(const std::filesystem::path &entry_path,
     }
   } else {
     const auto canonical{sourcemeta::core::weakly_canonical(entry_path)};
-    if (!std::filesystem::exists(canonical)) {
-      std::ostringstream error;
-      error << "No such file or directory\n  " << canonical.string();
-      throw std::runtime_error(error.str());
-    }
-
     if (std::none_of(blacklist.cbegin(), blacklist.cend(),
                      [&canonical](const auto &prefix) {
                        return sourcemeta::core::starts_with(canonical, prefix);

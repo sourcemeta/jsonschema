@@ -32,3 +32,20 @@ error: Failed to parse the JSON document
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" bundle "$TMP/schema.json" \
+  --resolve "$TMP/invalid.json" --json >"$TMP/stdout.txt" \
+  && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "Failed to parse the JSON document",
+  "line": 1,
+  "column": 3,
+  "filePath": "$(realpath "$TMP")/invalid.json"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

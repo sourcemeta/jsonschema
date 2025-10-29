@@ -20,6 +20,7 @@ Global Options:
                                   into the resolution context
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
                                   if the `$schema` keyword is not set
+   --json, -j                     Prefer JSON output if supported
 
 Commands:
 
@@ -35,7 +36,7 @@ Commands:
             [--benchmark/-b] [--loop <iterations>]
             [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-            [--template/-m <template.json>] [--json/-j]
+            [--template/-m <template.json>]
 
        Validate one or more instances against the given schema.
 
@@ -52,7 +53,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--http/-h]
               [--extension/-e <extension>]
-              [--ignore/-i <schemas-or-directories>] [--trace/-t] [--json/-j]
+              [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
@@ -74,14 +75,13 @@ Commands:
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
 
-   lint [schemas-or-directories...] [--fix/-f] [--json/-j]
-        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-        [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
-        [--strict/-s] [--indentation/-n <spaces>]
+   lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
+        [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
+        [--only/-o <rule-name>] [--list/-l] [--strict/-s]
+        [--indentation/-n <spaces>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
-       Use --json/-j to output lint errors in JSON.
        Use --list/-l to print a summary of all enabled rules.
        Use --strict/-s to enable additional opinionated strict rules.
        Use --indentation/-n to keep indentation when auto-fixing
@@ -92,11 +92,10 @@ Commands:
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
-   inspect <schema.json|.yaml> [--json/-j]
+   inspect <schema.json|.yaml>
 
        Statically inspect a schema to display schema locations and
        references in a human-readable manner.
-       Use --json/-j to output information in JSON.
 
    encode <document.json|.jsonl> <output.binpack>
 
@@ -110,13 +109,8 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
 auto jsonschema_main(const std::string &program, const std::string &command,
-                     int argc, char *argv[]) -> int {
-  sourcemeta::core::Options app;
-  app.flag("http", {"h"});
-  app.flag("verbose", {"v"});
-  app.option("resolve", {"r"});
-  app.option("default-dialect", {"d"});
-
+                     sourcemeta::core::Options &app, int argc, char *argv[])
+    -> int {
   if (command == "fmt") {
     app.flag("check", {"c"});
     app.flag("keep-ordering", {"k"});
@@ -127,7 +121,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::fmt(app);
     return EXIT_SUCCESS;
   } else if (command == "inspect") {
-    app.flag("json", {"j"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::inspect(app);
     return EXIT_SUCCESS;
@@ -139,7 +132,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::bundle(app);
     return EXIT_SUCCESS;
   } else if (command == "lint") {
-    app.flag("json", {"j"});
     app.flag("fix", {"f"});
     app.flag("list", {"l"});
     app.flag("strict", {"s"});
@@ -152,7 +144,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::lint(app);
     return EXIT_SUCCESS;
   } else if (command == "validate") {
-    app.flag("json", {"j"});
     app.flag("benchmark", {"b"});
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
@@ -163,7 +154,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
   } else if (command == "metaschema") {
-    app.flag("json", {"j"});
     app.flag("trace", {"t"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
@@ -207,9 +197,16 @@ auto jsonschema_main(const std::string &program, const std::string &command,
 }
 
 auto main(int argc, char *argv[]) noexcept -> int {
-  return sourcemeta::jsonschema::try_catch([argc, &argv]() {
+  sourcemeta::core::Options app;
+  app.flag("http", {"h"});
+  app.flag("verbose", {"v"});
+  app.flag("json", {"j"});
+  app.option("resolve", {"r"});
+  app.option("default-dialect", {"d"});
+
+  return sourcemeta::jsonschema::try_catch(app, [&app, argc, &argv]() {
     const std::string program{argv[0]};
     const std::string command{argc > 1 ? argv[1] : "help"};
-    return jsonschema_main(program, command, argc, argv);
+    return jsonschema_main(program, command, app, argc, argv);
   });
 }

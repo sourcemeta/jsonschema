@@ -26,3 +26,17 @@ error: The input was supposed to be a file but it is a directory
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" validate "$TMP/schema.json" "$TMP/instance" --json >"$TMP/stdout.txt" \
+  && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "The input was supposed to be a file but it is a directory",
+  "filePath": "$(realpath "$TMP")/instance"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"
