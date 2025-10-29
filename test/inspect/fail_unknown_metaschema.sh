@@ -26,3 +26,16 @@ This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" inspect "$TMP/schema.json" --json >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "Could not resolve the metaschema of the schema",
+  "identifier": "https://example.com/unknown"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

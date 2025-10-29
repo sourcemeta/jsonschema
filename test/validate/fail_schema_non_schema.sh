@@ -25,3 +25,17 @@ error: The schema file you provided does not represent a valid JSON Schema
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" --json >"$TMP/stdout.txt" \
+  && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "The schema file you provided does not represent a valid JSON Schema",
+  "filePath": "$(realpath "$TMP")/schema.json"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

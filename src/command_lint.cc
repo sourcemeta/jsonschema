@@ -202,29 +202,34 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
       auto copy = entry.second;
 
-      const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {
-        try {
-          bundle.apply(
-              copy, sourcemeta::core::schema_official_walker, custom_resolver,
-              get_lint_callback(errors_array, entry, output_json), dialect,
-              sourcemeta::core::URI::from_path(entry.first).recompose());
-          return EXIT_SUCCESS;
-        } catch (const sourcemeta::core::SchemaTransformRuleProcessedTwiceError
-                     &error) {
-          throw LintAutoFixError{error.what(), entry.first, error.location()};
-        } catch (const sourcemeta::core::SchemaBrokenReferenceError &error) {
-          throw LintAutoFixError{
-              "Could not autofix the schema without breaking its internal "
-              "references",
-              entry.first, error.location()};
-        } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-              entry.first);
-        } catch (const sourcemeta::core::SchemaResolutionError &error) {
-          throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                                   error);
-        }
-      });
+      const auto wrapper_result =
+          sourcemeta::jsonschema::try_catch(options, [&]() {
+            try {
+              bundle.apply(
+                  copy, sourcemeta::core::schema_official_walker,
+                  custom_resolver,
+                  get_lint_callback(errors_array, entry, output_json), dialect,
+                  sourcemeta::core::URI::from_path(entry.first).recompose());
+              return EXIT_SUCCESS;
+            } catch (
+                const sourcemeta::core::SchemaTransformRuleProcessedTwiceError
+                    &error) {
+              throw LintAutoFixError{error.what(), entry.first,
+                                     error.location()};
+            } catch (
+                const sourcemeta::core::SchemaBrokenReferenceError &error) {
+              throw LintAutoFixError{
+                  "Could not autofix the schema without breaking its internal "
+                  "references",
+                  entry.first, error.location()};
+            } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+              throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+                  entry.first);
+            } catch (const sourcemeta::core::SchemaResolutionError &error) {
+              throw FileError<sourcemeta::core::SchemaResolutionError>(
+                  entry.first, error);
+            }
+          });
 
       if (wrapper_result == EXIT_SUCCESS) {
         if (copy != entry.second) {
@@ -246,27 +251,28 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           resolver(options, options.contains("http"), dialect, configuration)};
       LOG_VERBOSE(options) << "Linting: " << entry.first.string() << "\n";
 
-      const auto wrapper_result = sourcemeta::jsonschema::try_catch([&]() {
-        try {
-          const auto subresult = bundle.check(
-              entry.second, sourcemeta::core::schema_official_walker,
-              custom_resolver,
-              get_lint_callback(errors_array, entry, output_json), dialect,
-              sourcemeta::core::URI::from_path(entry.first).recompose());
-          scores.emplace_back(subresult.second);
-          if (subresult.first) {
-            return EXIT_SUCCESS;
-          } else {
-            return EXIT_FAILURE;
-          }
-        } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-              entry.first);
-        } catch (const sourcemeta::core::SchemaResolutionError &error) {
-          throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                                   error);
-        }
-      });
+      const auto wrapper_result =
+          sourcemeta::jsonschema::try_catch(options, [&]() {
+            try {
+              const auto subresult = bundle.check(
+                  entry.second, sourcemeta::core::schema_official_walker,
+                  custom_resolver,
+                  get_lint_callback(errors_array, entry, output_json), dialect,
+                  sourcemeta::core::URI::from_path(entry.first).recompose());
+              scores.emplace_back(subresult.second);
+              if (subresult.first) {
+                return EXIT_SUCCESS;
+              } else {
+                return EXIT_FAILURE;
+              }
+            } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+              throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+                  entry.first);
+            } catch (const sourcemeta::core::SchemaResolutionError &error) {
+              throw FileError<sourcemeta::core::SchemaResolutionError>(
+                  entry.first, error);
+            }
+          });
 
       if (wrapper_result != EXIT_SUCCESS) {
         result = false;

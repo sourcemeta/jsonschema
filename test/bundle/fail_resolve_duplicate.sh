@@ -44,3 +44,16 @@ EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
+# JSON error
+"$1" bundle "$TMP/schema.json" \
+  --resolve "$TMP/schemas" --json >"$TMP/stdout.txt" \
+  && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "Cannot register the same identifier twice: https://example.com/nested"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

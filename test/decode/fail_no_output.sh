@@ -22,3 +22,16 @@ For example: jsonschema decode path/to/output.binpack path/to/document.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" encode "$TMP/document.json" "$TMP/output.binpack"
+"$1" decode "$TMP/output.binpack" --json > "$TMP/stdout.txt" 2>&1 && CODE="$?" || CODE="$?"
+test "$CODE" = "1" || exit 1
+
+cat << 'EOF' > "$TMP/expected.txt"
+{
+  "error": "This command expects a path to a binary file and an output path"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"
