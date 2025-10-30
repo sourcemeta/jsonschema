@@ -107,7 +107,8 @@ if(NOT CPR_FOUND)
       -Wno-newline-eof
       -Wno-implicit-int-conversion
       -Wno-conversion
-      -Wno-strict-overflow)
+      -Wno-strict-overflow
+      -Wno-odr)
 
     if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
       target_compile_options(cpr PRIVATE
