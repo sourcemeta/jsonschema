@@ -7,7 +7,10 @@ COPY src /source/src
 COPY vendor /source/vendor
 COPY CMakeLists.txt /source/CMakeLists.txt
 
-RUN cmake -S /source -B ./build -DCMAKE_BUILD_TYPE:STRING=Release -DBUILD_SHARED_LIBS:BOOL=OFF
+RUN cmake -S /source -B ./build \
+  -DCMAKE_BUILD_TYPE:STRING=Release \
+  -DBUILD_SHARED_LIBS:BOOL=OFF \
+  -DJSONSCHEMA_PORTABLE:BOOL=ON
 RUN cmake --build /build --config Release --parallel 4
 RUN cmake --install /build --prefix /usr/local --config Release --verbose --component sourcemeta_jsonschema
 
