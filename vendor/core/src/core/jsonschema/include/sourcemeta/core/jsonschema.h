@@ -160,6 +160,8 @@ auto identify(const JSON &schema, const SchemaResolver &resolver,
 /// of the schema.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto identify(const JSON &schema, const std::string &base_dialect,
+              const SchemaIdentificationStrategy strategy =
+                  SchemaIdentificationStrategy::Strict,
               const std::optional<std::string> &default_id = std::nullopt)
     -> std::optional<std::string>;
 

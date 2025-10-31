@@ -41,8 +41,8 @@ namespace sourcemeta::core {
 /// assert(document.is_object());
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
-    -> JSON;
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup yaml
 ///
@@ -62,7 +62,8 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto parse_yaml(const JSON::String &input) -> JSON;
+auto parse_yaml(const JSON::String &input,
+                const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup yaml
 ///
@@ -83,7 +84,8 @@ auto parse_yaml(const JSON::String &input) -> JSON;
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto read_yaml(const std::filesystem::path &path) -> JSON;
+auto read_yaml(const std::filesystem::path &path,
+               const JSON::ParseCallback &callback = nullptr) -> JSON;
 
 /// @ingroup yaml
 ///

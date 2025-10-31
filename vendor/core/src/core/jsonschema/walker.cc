@@ -94,7 +94,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
   for (auto &pair : subschema.as_object()) {
     const auto keyword_info{walker(pair.first, vocabularies)};
 
-    // Ignore the current keyword sibling to `$ref in Draft 7 and older `if its
+    // Ignore the current keyword sibling to `$ref in Draft 7 and older if its
     // not a top-level container
     if (has_overriding_ref &&
         keyword_info.type != sourcemeta::core::SchemaKeywordType::Reference &&

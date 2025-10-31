@@ -108,21 +108,12 @@ auto sourcemeta::core::identify(
     return default_id;
   }
 
-  auto result{identify(schema, maybe_base_dialect.value(), default_id)};
-
-  // A last shot supporting identifiers alongside `$ref` in loose mode
-  if (!result.has_value() && strategy == SchemaIdentificationStrategy::Loose) {
-    const auto keyword{id_keyword(maybe_base_dialect.value())};
-    if (schema.defines(keyword) && schema.at(keyword).is_string()) {
-      return schema.at(keyword).to_string();
-    }
-  }
-
-  return result;
+  return identify(schema, maybe_base_dialect.value(), strategy, default_id);
 }
 
 auto sourcemeta::core::identify(const JSON &schema,
                                 const std::string &base_dialect,
+                                const SchemaIdentificationStrategy strategy,
                                 const std::optional<std::string> &default_id)
     -> std::optional<std::string> {
   if (!schema.is_object()) {
@@ -147,7 +138,8 @@ auto sourcemeta::core::identify(const JSON &schema,
   // don't check for base dialects lower than that.
   // See
   // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
-  if (schema.defines("$ref") &&
+  if (strategy == SchemaIdentificationStrategy::Strict &&
+      schema.defines("$ref") &&
       (base_dialect == "http://json-schema.org/draft-07/schema#" ||
        base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
        base_dialect == "http://json-schema.org/draft-06/schema#" ||
@@ -156,7 +148,7 @@ auto sourcemeta::core::identify(const JSON &schema,
        base_dialect == "http://json-schema.org/draft-04/hyper-schema#" ||
        base_dialect == "http://json-schema.org/draft-03/schema#" ||
        base_dialect == "http://json-schema.org/draft-03/hyper-schema#")) {
-    return std::nullopt;
+    return default_id;
   }
 
   return identifier.to_string();
