@@ -490,9 +490,12 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
     std::optional<JSON::String> root_id{
         // If we are dealing with nested schemas, then by definition
         // the root has no identifier
-        !path.empty() ? std::nullopt
-                      : sourcemeta::core::identify(
-                            schema, root_base_dialect.value(), default_id)};
+        !path.empty()
+            ? std::nullopt
+            : sourcemeta::core::identify(
+                  schema, root_base_dialect.value(),
+                  sourcemeta::core::SchemaIdentificationStrategy::Loose,
+                  default_id)};
     if (root_id.has_value()) {
       root_id = URI::canonicalize(root_id.value());
     }
@@ -546,7 +549,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       // Schema identifier
       std::optional<JSON::String> id{sourcemeta::core::identify(
           entry.subschema.get(), entry.base_dialect.value(),
-          entry.pointer.empty() ? default_id : std::nullopt)};
+          sourcemeta::core::SchemaIdentificationStrategy::Strict,
+          entry.pointer.empty() ? root_id : std::nullopt)};
 
       // Store information
       subschemas.emplace(
@@ -564,8 +568,9 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
     for (const auto &entry_index : current_subschema_entries) {
       const auto &entry{subschema_entries[entry_index]};
       if (entry.id.has_value()) {
-        const bool ref_overrides =
-            ref_overrides_adjacent_keywords(entry.common.base_dialect.value());
+        const bool ref_overrides = ref_overrides_adjacent_keywords(
+                                       entry.common.base_dialect.value()) &&
+                                   !entry.common.pointer.empty();
         const bool is_pre_2019_09_location_independent_identifier =
             supports_id_anchors(entry.common.base_dialect.value()) &&
             sourcemeta::core::URI{entry.id.value()}.is_fragment_only();

@@ -122,12 +122,18 @@ auto compile(const sourcemeta::core::JSON &schema,
   // (1) Determine the root frame entry
   ///////////////////////////////////////////////////////////////////
 
-  const std::string base{sourcemeta::core::URI::canonicalize(
-      sourcemeta::core::identify(
-          schema, resolver,
-          sourcemeta::core::SchemaIdentificationStrategy::Strict,
-          default_dialect, default_id)
-          .value_or(""))};
+  const auto base_dialect{
+      sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
+  const auto identifier{
+      base_dialect.has_value()
+          ? sourcemeta::core::identify(
+                schema, base_dialect.value(),
+                // Account for top-level `$id` + `$ref` in Draft 7 and older
+                sourcemeta::core::SchemaIdentificationStrategy::Loose,
+                default_id)
+          : std::optional<std::string>{std::nullopt}};
+  const std::string base{
+      sourcemeta::core::URI::canonicalize(identifier.value_or(""))};
   assert(frame.locations().contains(
       {sourcemeta::core::SchemaReferenceType::Static, base}));
   const auto root_frame_entry{frame.locations().at(
