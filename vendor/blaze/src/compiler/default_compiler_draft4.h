@@ -18,7 +18,7 @@
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::core::URI &base,
                         const sourcemeta::core::Pointer &schema_location)
-    -> sourcemeta::core::Regex<sourcemeta::core::JSON::String> {
+    -> sourcemeta::core::Regex {
   const auto result{sourcemeta::core::to_regex(pattern)};
   if (!result.has_value()) {
     std::ostringstream message;

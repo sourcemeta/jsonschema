@@ -72,7 +72,7 @@ using ValueType = sourcemeta::core::JSON::Type;
 /// purposes)
 struct ValueRegex {
   using second_type = ValueString;
-  using first_type = sourcemeta::core::Regex<second_type>;
+  using first_type = sourcemeta::core::Regex;
   const first_type first;
   const second_type second;
 
