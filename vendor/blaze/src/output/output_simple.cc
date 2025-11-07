@@ -4,7 +4,7 @@
 
 #include <algorithm> // std::any_of, std::sort
 #include <cassert>   // assert
-#include <iterator>  // std::back_inserter
+#include <iterator>  // std::back_inserter, std::make_move_iterator
 #include <utility>   // std::move
 
 namespace sourcemeta::blaze {
@@ -61,17 +61,34 @@ auto SimpleOutput::operator()(
     return;
   }
 
+  const auto &keyword{evaluate_path.back().to_property()};
+
   if (type == EvaluationType::Pre) {
     assert(result);
-    const auto &keyword{evaluate_path.back().to_property()};
     // To ease the output
     if (keyword == "anyOf" || keyword == "oneOf" || keyword == "not" ||
         keyword == "if" || keyword == "contains") {
       this->mask.emplace(evaluate_path, instance_location);
     }
   } else if (type == EvaluationType::Post &&
+             // TODO: Re-use mask_key here
              this->mask.contains({evaluate_path, instance_location})) {
-    this->mask.erase({evaluate_path, instance_location});
+    const auto mask_key{std::make_pair(evaluate_path, instance_location)};
+
+    // Present unexpected traces only when needed
+    if (!result && keyword != "not" && keyword != "if") {
+      auto buffered{this->masked_traces.find(mask_key)};
+      if (buffered != this->masked_traces.end()) {
+        this->output.insert(this->output.end(),
+                            std::make_move_iterator(buffered->second.begin()),
+                            std::make_move_iterator(buffered->second.end()));
+        this->masked_traces.erase(buffered);
+      }
+    } else {
+      this->masked_traces.erase(mask_key);
+    }
+
+    this->mask.erase(mask_key);
   }
 
   if (result) {
@@ -90,10 +107,20 @@ auto SimpleOutput::operator()(
     }
   }
 
-  if (std::ranges::any_of(this->mask, [&evaluate_path](const auto &entry) {
-        return evaluate_path.starts_with(entry.first);
-      })) {
+  if (keyword == "if") {
     return;
+  } else {
+    for (const auto &mask_entry : this->mask) {
+      if (evaluate_path.starts_with(mask_entry.first)) {
+        this->masked_traces[mask_entry].push_back(
+            {describe(result, step, evaluate_path, instance_location,
+                      this->instance_, annotation),
+             instance_location, std::move(effective_evaluate_path),
+             step.keyword_location});
+
+        return;
+      }
+    }
   }
 
   this->output.push_back(

@@ -35,10 +35,10 @@ cat << EOF > "$TMP/expected.json"
       "default": {},
       "type": "object",
       "properties": {
-        "\$schema": {
+        "id": {
           "type": "string"
         },
-        "id": {
+        "\$schema": {
           "type": "string"
         },
         "title": {
@@ -48,63 +48,24 @@ cat << EOF > "$TMP/expected.json"
           "type": "string"
         },
         "default": {},
-        "type": {
-          "anyOf": [
-            {
-              "\$ref": "#/definitions/simpleTypes"
-            },
-            {
-              "type": "array",
-              "minItems": 1,
-              "uniqueItems": true,
-              "items": {
-                "\$ref": "#/definitions/simpleTypes"
-              }
-            }
-          ]
-        },
-        "enum": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "allOf": {
-          "\$ref": "#/definitions/schemaArray"
-        },
-        "anyOf": {
-          "\$ref": "#/definitions/schemaArray"
-        },
-        "oneOf": {
-          "\$ref": "#/definitions/schemaArray"
-        },
-        "not": {
-          "\$ref": "#"
-        },
-        "exclusiveMaximum": {
-          "default": false,
-          "type": "boolean"
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": true,
+          "minimum": 0
         },
         "maximum": {
           "type": "number"
         },
-        "exclusiveMinimum": {
+        "exclusiveMaximum": {
           "default": false,
           "type": "boolean"
         },
         "minimum": {
           "type": "number"
         },
-        "multipleOf": {
-          "type": "number",
-          "exclusiveMinimum": true,
-          "minimum": 0
-        },
-        "pattern": {
-          "type": "string",
-          "format": "regex"
-        },
-        "format": {
-          "type": "string"
+        "exclusiveMinimum": {
+          "default": false,
+          "type": "boolean"
         },
         "maxLength": {
           "\$ref": "#/definitions/positiveInteger"
@@ -112,26 +73,9 @@ cat << EOF > "$TMP/expected.json"
         "minLength": {
           "\$ref": "#/definitions/positiveIntegerDefault0"
         },
-        "maxItems": {
-          "\$ref": "#/definitions/positiveInteger"
-        },
-        "minItems": {
-          "\$ref": "#/definitions/positiveIntegerDefault0"
-        },
-        "uniqueItems": {
-          "default": false,
-          "type": "boolean"
-        },
-        "items": {
-          "default": {},
-          "anyOf": [
-            {
-              "\$ref": "#"
-            },
-            {
-              "\$ref": "#/definitions/schemaArray"
-            }
-          ]
+        "pattern": {
+          "type": "string",
+          "format": "regex"
         },
         "additionalItems": {
           "default": {},
@@ -144,14 +88,53 @@ cat << EOF > "$TMP/expected.json"
             }
           ]
         },
-        "required": {
-          "\$ref": "#/definitions/stringArray"
+        "items": {
+          "default": {},
+          "anyOf": [
+            {
+              "\$ref": "#"
+            },
+            {
+              "\$ref": "#/definitions/schemaArray"
+            }
+          ]
+        },
+        "maxItems": {
+          "\$ref": "#/definitions/positiveInteger"
+        },
+        "minItems": {
+          "\$ref": "#/definitions/positiveIntegerDefault0"
+        },
+        "uniqueItems": {
+          "default": false,
+          "type": "boolean"
         },
         "maxProperties": {
           "\$ref": "#/definitions/positiveInteger"
         },
         "minProperties": {
           "\$ref": "#/definitions/positiveIntegerDefault0"
+        },
+        "required": {
+          "\$ref": "#/definitions/stringArray"
+        },
+        "additionalProperties": {
+          "default": {},
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "\$ref": "#"
+            }
+          ]
+        },
+        "definitions": {
+          "default": {},
+          "type": "object",
+          "additionalProperties": {
+            "\$ref": "#"
+          }
         },
         "properties": {
           "default": {},
@@ -167,17 +150,6 @@ cat << EOF > "$TMP/expected.json"
             "\$ref": "#"
           }
         },
-        "additionalProperties": {
-          "default": {},
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "\$ref": "#"
-            }
-          ]
-        },
         "dependencies": {
           "type": "object",
           "additionalProperties": {
@@ -191,12 +163,40 @@ cat << EOF > "$TMP/expected.json"
             ]
           }
         },
-        "definitions": {
-          "default": {},
-          "type": "object",
-          "additionalProperties": {
-            "\$ref": "#"
-          }
+        "enum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "type": {
+          "anyOf": [
+            {
+              "\$ref": "#/definitions/simpleTypes"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "\$ref": "#/definitions/simpleTypes"
+              }
+            }
+          ]
+        },
+        "format": {
+          "type": "string"
+        },
+        "allOf": {
+          "\$ref": "#/definitions/schemaArray"
+        },
+        "anyOf": {
+          "\$ref": "#/definitions/schemaArray"
+        },
+        "oneOf": {
+          "\$ref": "#/definitions/schemaArray"
+        },
+        "not": {
+          "\$ref": "#"
         }
       },
       "dependencies": {
@@ -204,6 +204,13 @@ cat << EOF > "$TMP/expected.json"
         "exclusiveMinimum": [ "minimum" ]
       },
       "definitions": {
+        "schemaArray": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "\$ref": "#"
+          }
+        },
         "positiveInteger": {
           "type": "integer",
           "minimum": 0
@@ -217,13 +224,6 @@ cat << EOF > "$TMP/expected.json"
               "default": 0
             }
           ]
-        },
-        "schemaArray": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "\$ref": "#"
-          }
         },
         "simpleTypes": {
           "enum": [

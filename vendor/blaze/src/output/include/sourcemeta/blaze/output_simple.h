@@ -77,10 +77,10 @@ public:
   auto operator=(const SimpleOutput &) -> SimpleOutput & = delete;
 
   struct Entry {
-    const std::string message;
-    const sourcemeta::core::WeakPointer instance_location;
-    const sourcemeta::core::WeakPointer evaluate_path;
-    const std::reference_wrapper<const std::string> schema_location;
+    std::string message;
+    sourcemeta::core::WeakPointer instance_location;
+    sourcemeta::core::WeakPointer evaluate_path;
+    std::reference_wrapper<const std::string> schema_location;
   };
 
   auto operator()(const EvaluationType type, const bool result,
@@ -127,6 +127,10 @@ private:
   std::set<
       std::pair<sourcemeta::core::WeakPointer, sourcemeta::core::WeakPointer>>
       mask;
+  std::map<
+      std::pair<sourcemeta::core::WeakPointer, sourcemeta::core::WeakPointer>,
+      std::vector<Entry>>
+      masked_traces;
   std::map<Location, std::vector<sourcemeta::core::JSON>> annotations_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

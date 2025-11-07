@@ -36,6 +36,27 @@ $(realpath "$TMP")/schemas/schema_2.json
   "valid": false,
   "errors": [
     {
+      "keywordLocation": "/properties/type/anyOf/0/\$ref/enum",
+      "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/definitions/simpleTypes/enum",
+      "instanceLocation": "/type",
+      "instancePosition": [ 3, 3, 3, 11 ],
+      "error": "The integer value 1 was expected to equal one of the following values: \"array\", \"boolean\", \"integer\", \"null\", \"number\", \"object\", and \"string\""
+    },
+    {
+      "keywordLocation": "/properties/type/anyOf/0/\$ref",
+      "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/type/anyOf/0/\$ref",
+      "instanceLocation": "/type",
+      "instancePosition": [ 3, 3, 3, 11 ],
+      "error": "The integer value was expected to validate against the statically referenced schema"
+    },
+    {
+      "keywordLocation": "/properties/type/anyOf/1/type",
+      "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/type/anyOf/1/type",
+      "instanceLocation": "/type",
+      "instancePosition": [ 3, 3, 3, 11 ],
+      "error": "The value was expected to be of type array but it was of type integer"
+    },
+    {
       "keywordLocation": "/properties/type/anyOf",
       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/type/anyOf",
       "instanceLocation": "/type",
@@ -54,4 +75,3 @@ $(realpath "$TMP")/schemas/schema_2.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
-
