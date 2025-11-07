@@ -44,6 +44,23 @@ private:
   std::string message_;
 };
 
+/// @ingroup yaml
+/// An error that represents an unknown anchor reference in YAML
+class SOURCEMETA_CORE_YAML_EXPORT YAMLUnknownAnchorError
+    : public YAMLParseError {
+public:
+  YAMLUnknownAnchorError(std::string anchor_name)
+      : YAMLParseError{"YAML alias references undefined anchor"},
+        anchor_name_{std::move(anchor_name)} {}
+
+  [[nodiscard]] auto anchor() const noexcept -> const std::string & {
+    return this->anchor_name_;
+  }
+
+private:
+  std::string anchor_name_;
+};
+
 } // namespace sourcemeta::core
 
 #endif
