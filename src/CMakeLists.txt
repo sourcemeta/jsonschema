@@ -50,7 +50,3 @@ install(FILES "${PROJECT_SOURCE_DIR}/completion/jsonschema.zsh"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/zsh/site-functions"
   RENAME _jsonschema
   COMPONENT sourcemeta_jsonschema)
-
-install(FILES "${PROJECT_SOURCE_DIR}/completion/jsonschema.fish"
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/fish/vendor_completions.d"
-  COMPONENT sourcemeta_jsonschema)
