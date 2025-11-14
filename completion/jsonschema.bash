@@ -1,3 +1,4 @@
+# shellcheck disable=SC2207
 _jsonschema() {
   local current previous commands global_options
   COMPREPLY=()
@@ -16,7 +17,7 @@ _jsonschema() {
 
   if [ "${COMP_CWORD}" -eq 1 ]
   then
-    mapfile -t COMPREPLY < <(compgen -W "${commands}" -- "${current}")
+    COMPREPLY=( $(compgen -W "${commands}" -- "${current}") )
     return 0
   fi
 
@@ -29,19 +30,19 @@ _jsonschema() {
 
   case "${previous}" in
     --extension|-e)
-      mapfile -t COMPREPLY < <(compgen -W ".json .yaml" -- "${current}")
+      COMPREPLY=( $(compgen -W ".json .yaml" -- "${current}") )
       return 0
       ;;
     --resolve|-r|--ignore|-i)
-      mapfile -t COMPREPLY < <(compgen -f -d -- "${current}")
+      COMPREPLY=( $(compgen -f -d -- "${current}") )
       return 0
       ;;
     --default-dialect|-d)
-      mapfile -t COMPREPLY < <(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}")
+      COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}") )
       return 0
       ;;
     --indentation|-n)
-      mapfile -t COMPREPLY < <(compgen -W "2 4 8" -- "${current}")
+      COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
       return 0
       ;;
     --loop|-l)
@@ -51,7 +52,7 @@ _jsonschema() {
       return 0
       ;;
     --template|-m)
-      mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -- "${current}")
+      COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
       return 0
       ;;
   esac
@@ -61,87 +62,87 @@ _jsonschema() {
       local options="--http -h --benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.jsonl' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.jsonl' -- "${current}") )
       fi
       ;;
     metaschema)
       local options="--http -h --extension -e --ignore -i --trace -t"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     compile)
       local options="--http -h --extension -e --ignore -i --fast -f --minify -m"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     test)
       local options="--http -h --extension -e --ignore -i"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     fmt)
       local options="--check -c --extension -e --ignore -i --keep-ordering -k --indentation -n"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     lint)
       local options="--fix -f --extension -e --ignore -i --exclude -x --only -o --list -l --strict -s --indentation -n"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     bundle)
       local options="--http -h --extension -e --ignore -i --without-id -w"
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${options} ${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     inspect)
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
       fi
       ;;
     encode)
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.json' -X '!*.jsonl' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.jsonl' -- "${current}") )
       fi
       ;;
     decode)
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       else
-        mapfile -t COMPREPLY < <(compgen -f -X '!*.binpack' -- "${current}")
+        COMPREPLY=( $(compgen -f -X '!*.binpack' -- "${current}") )
       fi
       ;;
     version|help)
@@ -150,7 +151,7 @@ _jsonschema() {
     *)
       if [[ ${current} == -* ]]
       then
-        mapfile -t COMPREPLY < <(compgen -W "${global_options}" -- "${current}")
+        COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       fi
       ;;
   esac
