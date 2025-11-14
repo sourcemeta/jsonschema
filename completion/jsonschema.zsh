@@ -24,7 +24,7 @@ _jsonschema() {
   local -a global_options
   global_options=(
     '(--verbose -v)'{--verbose,-v}'[Enable verbose output]'
-    '(--resolve -r)'{--resolve,-r}'[Import schemas into resolution context]:schema file:_files -g "*.json *.yaml"'
+    '(--resolve -r)'{--resolve,-r}'[Import schemas into resolution context]:schema file:_files -g "*.json *.yaml *.yml"'
     '(--default-dialect -d)'{--default-dialect,-d}'[Specify default dialect URI]:dialect URI:_jsonschema_dialects'
     '(--json -j)'{--json,-j}'[Prefer JSON output if supported]'
     '(--http -h)'{--http,-h}'[Enable HTTP resolution]'
@@ -52,8 +52,8 @@ _jsonschema() {
             '(--trace -t)'{--trace,-t}'[Enable trace output]' \
             '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
             '(--template -m)'{--template,-m}'[Use pre-compiled schema template]:template file:_files -g "*.json"' \
-            '1:schema file:_files -g "*.json *.yaml"' \
-            '*:instance file:_files -g "*.json *.yaml *.jsonl"'
+            '1:schema file:_files -g "*.json *.yaml *.yml"' \
+            '*:instance file:_files -g "*.json *.yaml *.yml *.jsonl"'
           ;;
         metaschema)
           _arguments \
@@ -61,7 +61,7 @@ _jsonschema() {
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--trace -t)'{--trace,-t}'[Enable trace output]' \
-            '*:schema file:_files -g "*.json *.yaml"'
+            '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         compile)
           _arguments \
@@ -70,14 +70,14 @@ _jsonschema() {
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
             '(--minify -m)'{--minify,-m}'[Minify output]' \
-            '1:schema file:_files -g "*.json *.yaml"'
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         test)
           _arguments \
             ${global_options[@]} \
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
-            '*:schema file:_files -g "*.json *.yaml"'
+            '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         fmt)
           _arguments \
@@ -87,7 +87,7 @@ _jsonschema() {
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--keep-ordering -k)'{--keep-ordering,-k}'[Keep original key ordering]' \
             '(--indentation -n)'{--indentation,-n}'[Specify indentation spaces]:spaces:(2 4 8)' \
-            '*:schema file:_files -g "*.json *.yaml"'
+            '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         lint)
           _arguments \
@@ -100,7 +100,7 @@ _jsonschema() {
             '(--list -l)'{--list,-l}'[List all enabled rules]' \
             '(--strict -s)'{--strict,-s}'[Enable strict mode]' \
             '(--indentation -n)'{--indentation,-n}'[Specify indentation spaces]:spaces:(2 4 8)' \
-            '*:schema file:_files -g "*.json *.yaml"'
+            '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         bundle)
           _arguments \
@@ -108,12 +108,12 @@ _jsonschema() {
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--without-id -w)'{--without-id,-w}'[Bundle without ID]' \
-            '1:schema file:_files -g "*.json *.yaml"'
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         inspect)
           _arguments \
             ${global_options[@]} \
-            '1:schema file:_files -g "*.json *.yaml"'
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         encode)
           _arguments \
@@ -136,7 +136,7 @@ _jsonschema() {
 
 _jsonschema_extensions() {
   local -a extensions
-  extensions=('.json' '.yaml')
+  extensions=('.json' '.yaml' '.yml')
   _describe -t extensions 'file extension' extensions
 }
 

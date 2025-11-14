@@ -30,7 +30,7 @@ _jsonschema() {
 
   case "${previous}" in
     --extension|-e)
-      COMPREPLY=( $(compgen -W ".json .yaml" -- "${current}") )
+      COMPREPLY=( $(compgen -W ".json .yaml .yml" -- "${current}") )
       return 0
       ;;
     --resolve|-r|--ignore|-i)
@@ -64,7 +64,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.jsonl' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -X '!*.jsonl' -- "${current}") )
       fi
       ;;
     metaschema)
@@ -73,7 +73,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     compile)
@@ -82,7 +82,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     test)
@@ -91,7 +91,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     fmt)
@@ -100,7 +100,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     lint)
@@ -109,7 +109,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     bundle)
@@ -118,7 +118,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     inspect)
@@ -126,7 +126,7 @@ _jsonschema() {
       then
         COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       else
-        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -- "${current}") )
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     encode)
