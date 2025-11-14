@@ -98,9 +98,8 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
 #include "linter/unknown_keywords_prefix.h"
-#include "linter/unnecessary_allof_wrapper_draft.h"
-#include "linter/unnecessary_allof_wrapper_modern.h"
-#include "linter/unnecessary_allof_wrapper_properties.h"
+#include "linter/unnecessary_allof_ref_wrapper_draft.h"
+#include "linter/unnecessary_allof_ref_wrapper_modern.h"
 #include "linter/unsatisfiable_max_contains.h"
 #include "linter/unsatisfiable_min_properties.h"
 
@@ -118,9 +117,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<ContentSchemaWithoutMediaType>();
   bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
   bundle.add<NonApplicableTypeSpecificKeywords>();
-  bundle.add<UnnecessaryAllOfWrapperModern>();
-  bundle.add<UnnecessaryAllOfWrapperDraft>();
-  bundle.add<UnnecessaryAllOfWrapperProperties>();
+  bundle.add<UnnecessaryAllOfRefWrapperModern>();
+  bundle.add<UnnecessaryAllOfRefWrapperDraft>();
   bundle.add<DuplicateAllOfBranches>();
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<ElseWithoutIf>();

@@ -25,7 +25,10 @@ public:
         ((schema.at("multipleOf").is_integer() &&
           schema.at("multipleOf").to_integer() == 1) ||
          (schema.at("multipleOf").is_real() &&
-          schema.at("multipleOf").to_real() == 1.0)));
+          schema.at("multipleOf").to_real() == 1.0) ||
+         (schema.at("multipleOf").is_decimal() &&
+          schema.at("multipleOf").to_decimal() ==
+              sourcemeta::core::Decimal{1})));
     return APPLIES_TO_KEYWORDS("multipleOf");
   }
 

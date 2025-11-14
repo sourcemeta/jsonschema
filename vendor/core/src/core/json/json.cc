@@ -50,9 +50,6 @@ auto read_json(const std::filesystem::path &path,
   auto stream{read_file<JSON::Char, JSON::CharTraits>(path)};
   try {
     return parse_json(stream, callback);
-  } catch (const JSONParseIntegerLimitError &error) {
-    // For producing better error messages
-    throw JSONFileParseError(path, error);
   } catch (const JSONParseError &error) {
     // For producing better error messages
     throw JSONFileParseError(path, error);
@@ -94,6 +91,8 @@ auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
       return stream << "integer";
     case sourcemeta::core::JSON::Type::Real:
       return stream << "real";
+    case sourcemeta::core::JSON::Type::Decimal:
+      return stream << "decimal";
     case sourcemeta::core::JSON::Type::String:
       return stream << "string";
     case sourcemeta::core::JSON::Type::Array:

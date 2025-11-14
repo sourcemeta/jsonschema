@@ -30,7 +30,8 @@ public:
                        "http://json-schema.org/draft-04/schema#",
                        "http://json-schema.org/draft-03/schema#"})) &&
         schema.is_object() && schema.defines("required") &&
-        schema.at("required").is_array() && !schema.at("required").empty());
+        schema.at("required").is_array() && !schema.at("required").empty() &&
+        !schema.defines("additionalProperties"));
 
     std::vector<Pointer> locations;
     std::size_t index{0};

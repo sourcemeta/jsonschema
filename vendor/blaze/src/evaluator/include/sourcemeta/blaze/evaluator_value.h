@@ -7,6 +7,7 @@
 
 #include <sourcemeta/blaze/evaluator_string_set.h>
 
+#include <bitset>        // std::bitset
 #include <cstdint>       // std::uint8_t
 #include <optional>      // std::optional
 #include <string>        // std::string
@@ -58,8 +59,8 @@ using ValueStrings = std::vector<ValueString>;
 using ValueStringSet = StringSet;
 
 /// @ingroup evaluator
-/// Represents a compiler step JSON types value
-using ValueTypes = std::vector<sourcemeta::core::JSON::Type>;
+/// Represents a compiler step JSON types value as a bitmask
+using ValueTypes = std::bitset<8>;
 
 /// @ingroup evaluator
 /// Represents a compiler step JSON type value

@@ -70,12 +70,12 @@ auto stringify(
 
 template <template <typename T> typename Allocator>
 auto stringify(
-    const double value, const bool is_integer_real,
+    const double value, const bool is_integral,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
     -> void {
   if (value == static_cast<double>(0.0)) {
     stream.write("0.0", 3);
-  } else if (is_integer_real) {
+  } else if (is_integral) {
     const auto flags{stream.flags()};
     const auto precision{stream.precision()};
     stream << std::fixed << std::setprecision(1) << value;
@@ -540,8 +540,7 @@ auto stringify(
       stringify<Allocator>(document.to_integer(), stream);
       break;
     case JSON::Type::Real:
-      stringify<Allocator>(document.to_real(), document.is_integer_real(),
-                           stream);
+      stringify<Allocator>(document.to_real(), document.is_integral(), stream);
       break;
     case JSON::Type::String:
       stringify<Allocator>(document.to_string(), stream);
@@ -551,6 +550,9 @@ auto stringify(
       break;
     case JSON::Type::Object:
       stringify<Allocator>(document.as_object(), stream);
+      break;
+    case JSON::Type::Decimal:
+      stream << document.to_decimal().to_string();
       break;
   }
 }
@@ -574,8 +576,7 @@ auto prettify(
       stringify<Allocator>(document.to_integer(), stream);
       break;
     case JSON::Type::Real:
-      stringify<Allocator>(document.to_real(), document.is_integer_real(),
-                           stream);
+      stringify<Allocator>(document.to_real(), document.is_integral(), stream);
       break;
     case JSON::Type::String:
       stringify<Allocator>(document.to_string(), stream);
@@ -586,6 +587,9 @@ auto prettify(
       break;
     case JSON::Type::Object:
       prettify<Allocator>(document.as_object(), stream, indentation, indent_by);
+      break;
+    case JSON::Type::Decimal:
+      stream << document.to_decimal().to_string();
       break;
   }
 }

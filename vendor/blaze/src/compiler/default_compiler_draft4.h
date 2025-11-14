@@ -376,11 +376,14 @@ auto compiler_draft4_validation_type(const Context &context,
         return {};
       }
 
+      ValueTypes types{};
+      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::core::JSON::Type>{
-                       sourcemeta::core::JSON::Type::Real,
-                       sourcemeta::core::JSON::Type::Integer})};
+                   context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
@@ -453,11 +456,14 @@ auto compiler_draft4_validation_type(const Context &context,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
     } else if (type == "number") {
+      ValueTypes types{};
+      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::core::JSON::Type>{
-                       sourcemeta::core::JSON::Type::Real,
-                       sourcemeta::core::JSON::Type::Integer})};
+                   context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
@@ -470,33 +476,42 @@ auto compiler_draft4_validation_type(const Context &context,
       return {};
     }
   } else if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    std::vector<sourcemeta::core::JSON::Type> types;
+    ValueTypes types{};
     for (const auto &type :
          schema_context.schema.at(dynamic_context.keyword).as_array()) {
       assert(type.is_string());
       const auto &type_string{type.to_string()};
       if (type_string == "null") {
-        types.push_back(sourcemeta::core::JSON::Type::Null);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Null));
       } else if (type_string == "boolean") {
-        types.push_back(sourcemeta::core::JSON::Type::Boolean);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Boolean));
       } else if (type_string == "object") {
-        types.push_back(sourcemeta::core::JSON::Type::Object);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Object));
       } else if (type_string == "array") {
-        types.push_back(sourcemeta::core::JSON::Type::Array);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Array));
       } else if (type_string == "number") {
-        types.push_back(sourcemeta::core::JSON::Type::Integer);
-        types.push_back(sourcemeta::core::JSON::Type::Real);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       } else if (type_string == "integer") {
-        types.push_back(sourcemeta::core::JSON::Type::Integer);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
       } else if (type_string == "string") {
-        types.push_back(sourcemeta::core::JSON::Type::String);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::String));
       }
     }
 
-    assert(types.size() >=
-           schema_context.schema.at(dynamic_context.keyword).size());
+    assert(types.any());
     return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                 context, schema_context, dynamic_context, std::move(types))};
+                 context, schema_context, dynamic_context, types)};
   }
 
   return {};
@@ -703,33 +718,39 @@ auto compiler_draft4_applicator_anyof(const Context &context,
                                 sourcemeta::blaze::InstructionIndex::
                                     AssertionTypeStrictAny);
                   })) {
-    ValueTypes types;
+    ValueTypes types{};
     for (const auto &instruction : disjunctors) {
       if (instruction.children.front().type ==
           sourcemeta::blaze::InstructionIndex::AssertionTypeStrict) {
         const auto &value{
             *std::get_if<ValueType>(&instruction.children.front().value)};
-        types.push_back(value);
+        types.set(static_cast<std::uint8_t>(value));
       }
 
       if (instruction.children.front().type ==
           sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny) {
         const auto &value{
             *std::get_if<ValueTypes>(&instruction.children.front().value)};
-        for (const auto type : value) {
-          types.push_back(type);
-        }
+        types |= value;
       }
     }
 
-    assert(!types.empty());
-    if (types.size() > 1) {
+    assert(types.any());
+    const auto popcount{types.count()};
+    if (popcount > 1) {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context, std::move(types))};
+                   context, schema_context, dynamic_context, types)};
     } else {
+      std::uint8_t type_index{0};
+      for (std::uint8_t bit{0}; bit < 8; bit++) {
+        if (types.test(bit)) {
+          type_index = bit;
+          break;
+        }
+      }
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
-                   ValueType{*types.cbegin()})};
+                   static_cast<ValueType>(type_index))};
     }
   }
 
@@ -1958,8 +1979,7 @@ auto compiler_draft4_validation_maxlength(const Context &context,
                                           const DynamicContext &dynamic_context,
                                           const Instructions &)
     -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 
@@ -1993,8 +2013,7 @@ auto compiler_draft4_validation_minlength(const Context &context,
                                           const DynamicContext &dynamic_context,
                                           const Instructions &)
     -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 
@@ -2029,8 +2048,7 @@ auto compiler_draft4_validation_maxitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 
@@ -2063,8 +2081,7 @@ auto compiler_draft4_validation_minitems(const Context &context,
                                          const SchemaContext &schema_context,
                                          const DynamicContext &dynamic_context,
                                          const Instructions &) -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 
@@ -2099,8 +2116,7 @@ auto compiler_draft4_validation_maxproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 
@@ -2133,8 +2149,7 @@ auto compiler_draft4_validation_minproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  if (!(schema_context.schema.at(dynamic_context.keyword).is_integer() ||
-        schema_context.schema.at(dynamic_context.keyword).is_integer_real())) {
+  if (!schema_context.schema.at(dynamic_context.keyword).is_integral()) {
     return {};
   }
 

@@ -43,6 +43,18 @@ resolve_string_target(const JSON::String *property_target, const JSON &instance,
   }
 }
 
+inline auto effective_type_strict_real(const JSON &instance) noexcept
+    -> JSON::Type {
+  const auto real_type{instance.type()};
+  switch (real_type) {
+    case JSON::Type::Decimal:
+      return instance.to_decimal().is_integer() ? JSON::Type::Integer
+                                                : JSON::Type::Real;
+    default:
+      return real_type;
+  }
+}
+
 } // namespace sourcemeta::blaze
 
 #define SOURCEMETA_STRINGIFY(x) #x

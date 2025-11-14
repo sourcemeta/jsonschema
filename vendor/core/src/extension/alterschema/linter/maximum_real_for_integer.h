@@ -28,13 +28,30 @@ public:
         schema.is_object() && schema.defines("type") &&
         schema.at("type").is_string() &&
         schema.at("type").to_string() == "integer" &&
-        schema.defines("maximum") && schema.at("maximum").is_real());
+        schema.defines("maximum") &&
+        (schema.at("maximum").is_real() ||
+         (schema.at("maximum").is_decimal() &&
+          !schema.at("maximum").to_decimal().is_integer())));
     return APPLIES_TO_KEYWORDS("maximum");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    const auto current{schema.at("maximum").to_real()};
-    const auto new_value{static_cast<std::int64_t>(std::floor(current))};
-    schema.assign("maximum", sourcemeta::core::JSON{new_value});
+    if (schema.at("maximum").is_decimal()) {
+      auto current{schema.at("maximum").to_decimal()};
+      auto new_value{current.to_integral()};
+      if (new_value > current) {
+        new_value -= sourcemeta::core::Decimal{1};
+      }
+
+      if (new_value.is_int64()) {
+        schema.assign("maximum", sourcemeta::core::JSON{new_value.to_int64()});
+      } else {
+        schema.assign("maximum", sourcemeta::core::JSON{std::move(new_value)});
+      }
+    } else {
+      const auto current{schema.at("maximum").to_real()};
+      const auto new_value{static_cast<std::int64_t>(std::floor(current))};
+      schema.assign("maximum", sourcemeta::core::JSON{new_value});
+    }
   }
 };
