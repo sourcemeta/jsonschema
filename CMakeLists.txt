@@ -29,7 +29,7 @@ if(JSONSCHEMA_DEVELOPMENT)
   sourcemeta_target_clang_format(SOURCES
     src/*.h src/*.cc)
   sourcemeta_target_shellcheck(SOURCES
-    test/*.sh install *.sh)
+    test/*.sh install *.sh completion/jsonschema.bash completion/jsonschema.zsh)
 endif()
 
 # Testing
