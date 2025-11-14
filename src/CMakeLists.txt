@@ -40,3 +40,13 @@ include(GNUInstallDirs)
 install(TARGETS jsonschema_cli
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
   COMPONENT sourcemeta_jsonschema)
+
+install(FILES "${PROJECT_SOURCE_DIR}/completion/jsonschema.bash"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/bash-completion/completions"
+  RENAME jsonschema
+  COMPONENT sourcemeta_jsonschema)
+
+install(FILES "${PROJECT_SOURCE_DIR}/completion/jsonschema.zsh"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/zsh/site-functions"
+  RENAME _jsonschema
+  COMPONENT sourcemeta_jsonschema)

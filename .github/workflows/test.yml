@@ -57,7 +57,7 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-22.04
-          additional-packages: cmake build-essential shellcheck pipx
+          additional-packages: cmake build-essential shellcheck pipx zsh
           wsl-version: 2
 
       - name: Install pre-commit
@@ -77,6 +77,9 @@ jobs:
       - name: Install dependencies (Windows)
         if: runner.os == 'windows' && matrix.platform.type == 'native'
         run: choco install shellcheck
+      - name: Install dependencies (Linux)
+        if: runner.os == 'linux'
+        run: sudo apt-get update --yes && sudo apt-get install --yes zsh
 
       - run: cmake --version
       - name: Configure JSON Schema

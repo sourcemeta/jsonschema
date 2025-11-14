@@ -4,6 +4,7 @@ RUN apt-get --yes update && apt-get install --yes --no-install-recommends \
 
 COPY cmake /source/cmake
 COPY src /source/src
+COPY completion /source/completion
 COPY vendor /source/vendor
 COPY CMakeLists.txt /source/CMakeLists.txt
 

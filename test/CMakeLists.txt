@@ -24,6 +24,8 @@ add_jsonschema_test_unix(unknown_command)
 add_jsonschema_test_unix(unknown_option)
 add_jsonschema_test_unix(option_without_value)
 add_jsonschema_test_unix(flag_with_value)
+add_jsonschema_test_unix(autocomplete_bash)
+add_jsonschema_test_unix(autocomplete_zsh)
 
 # Format
 add_jsonschema_test_unix(format/pass_single)
