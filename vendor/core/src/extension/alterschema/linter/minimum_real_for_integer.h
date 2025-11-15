@@ -28,13 +28,30 @@ public:
         schema.is_object() && schema.defines("type") &&
         schema.at("type").is_string() &&
         schema.at("type").to_string() == "integer" &&
-        schema.defines("minimum") && schema.at("minimum").is_real());
+        schema.defines("minimum") &&
+        (schema.at("minimum").is_real() ||
+         (schema.at("minimum").is_decimal() &&
+          !schema.at("minimum").to_decimal().is_integer())));
     return APPLIES_TO_KEYWORDS("minimum");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    const auto current{schema.at("minimum").to_real()};
-    const auto new_value{static_cast<std::int64_t>(std::ceil(current))};
-    schema.assign("minimum", sourcemeta::core::JSON{new_value});
+    if (schema.at("minimum").is_decimal()) {
+      const auto current{schema.at("minimum").to_decimal()};
+      auto new_value{current.to_integral()};
+      if (new_value < current) {
+        new_value += sourcemeta::core::Decimal{1};
+      }
+
+      if (new_value.is_int64()) {
+        schema.assign("minimum", sourcemeta::core::JSON{new_value.to_int64()});
+      } else {
+        schema.assign("minimum", sourcemeta::core::JSON{new_value});
+      }
+    } else {
+      const auto current{schema.at("minimum").to_real()};
+      const auto new_value{static_cast<std::int64_t>(std::ceil(current))};
+      schema.assign("minimum", sourcemeta::core::JSON{new_value});
+    }
   }
 };

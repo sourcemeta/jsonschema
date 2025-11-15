@@ -36,6 +36,25 @@ public:
       new_minimum += sourcemeta::core::JSON{1};
       schema.at("exclusiveMinimum").into(new_minimum);
       schema.rename("exclusiveMinimum", "minimum");
+    } else if (schema.at("exclusiveMinimum").is_decimal()) {
+      const auto current{schema.at("exclusiveMinimum").to_decimal()};
+      auto new_value{current.to_integral()};
+      if (new_value < current) {
+        new_value += sourcemeta::core::Decimal{1};
+      }
+
+      if (current.is_integer()) {
+        new_value += sourcemeta::core::Decimal{1};
+      }
+
+      if (new_value.is_int64()) {
+        schema.at("exclusiveMinimum")
+            .into(sourcemeta::core::JSON{new_value.to_int64()});
+      } else {
+        schema.at("exclusiveMinimum").into(sourcemeta::core::JSON{new_value});
+      }
+
+      schema.rename("exclusiveMinimum", "minimum");
     } else {
       const auto current{schema.at("exclusiveMinimum").to_real()};
       const auto new_value{static_cast<std::int64_t>(std::ceil(current))};

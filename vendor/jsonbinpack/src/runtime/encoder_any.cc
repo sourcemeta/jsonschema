@@ -81,7 +81,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                                                      : SUBTYPE_FALSE};
     this->put_byte(TYPE_OTHER |
                    static_cast<std::uint8_t>(subtype << type_size));
-  } else if (document.is_integer_real()) {
+  } else if (document.is_real() && document.is_integral()) {
     const auto value{document.as_integer()};
     if (value >= 0 && is_byte(value)) {
       this->put_byte(TYPE_OTHER | SUBTYPE_POSITIVE_REAL_INTEGER_BYTE

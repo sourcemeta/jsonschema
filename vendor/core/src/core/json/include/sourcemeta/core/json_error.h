@@ -52,20 +52,6 @@ private:
 };
 
 /// @ingroup json
-/// This class represents a numeric integer limit parsing error
-class SOURCEMETA_CORE_JSON_EXPORT JSONParseIntegerLimitError
-    : public JSONParseError {
-public:
-  /// Create a parsing error
-  JSONParseIntegerLimitError(const std::uint64_t line,
-                             const std::uint64_t column)
-      : JSONParseError{
-            line, column,
-            "The JSON value is not representable by the IETF RFC 8259 "
-            "interoperable signed integer range"} {}
-};
-
-/// @ingroup json
 /// This class represents a parsing error occurring from parsing a file
 class SOURCEMETA_CORE_JSON_EXPORT JSONFileParseError : public JSONParseError {
 public:

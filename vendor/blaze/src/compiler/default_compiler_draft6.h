@@ -165,27 +165,27 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
+      ValueTypes types{};
+      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::core::JSON::Type>{
-                       sourcemeta::core::JSON::Type::Real,
-                       sourcemeta::core::JSON::Type::Integer})};
+                   context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
           std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
                       schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) {
-                        return value.is_integer() || value.is_integer_real();
-                      })) {
+                      [](const auto &value) { return value.is_integral(); })) {
         return {};
       }
 
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("const") &&
-          (schema_context.schema.at("const").is_integer() ||
-           schema_context.schema.at("const").is_integer_real())) {
+          (schema_context.schema.at("const").is_integral())) {
         return {};
       }
 
@@ -261,11 +261,14 @@ auto compiler_draft6_validation_type(const Context &context,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Array)};
     } else if (type == "number") {
+      ValueTypes types{};
+      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.set(
+          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
-                   context, schema_context, dynamic_context,
-                   std::vector<sourcemeta::core::JSON::Type>{
-                       sourcemeta::core::JSON::Type::Real,
-                       sourcemeta::core::JSON::Type::Integer})};
+                   context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
       return {make(sourcemeta::blaze::InstructionIndex::AssertionType, context,
                    schema_context, dynamic_context,
@@ -282,37 +285,46 @@ auto compiler_draft6_validation_type(const Context &context,
       return {};
     }
   } else if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    std::vector<sourcemeta::core::JSON::Type> types;
+    ValueTypes types{};
     for (const auto &type :
          schema_context.schema.at(dynamic_context.keyword).as_array()) {
       assert(type.is_string());
       const auto &type_string{type.to_string()};
       if (type_string == "null") {
-        types.push_back(sourcemeta::core::JSON::Type::Null);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Null));
       } else if (type_string == "boolean") {
-        types.push_back(sourcemeta::core::JSON::Type::Boolean);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Boolean));
       } else if (type_string == "object") {
-        types.push_back(sourcemeta::core::JSON::Type::Object);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Object));
       } else if (type_string == "array") {
-        types.push_back(sourcemeta::core::JSON::Type::Array);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Array));
       } else if (type_string == "number") {
-        types.push_back(sourcemeta::core::JSON::Type::Integer);
-        types.push_back(sourcemeta::core::JSON::Type::Real);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
       } else if (type_string == "integer") {
-        types.push_back(sourcemeta::core::JSON::Type::Integer);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
       } else if (type_string == "string") {
         if (dynamic_context.property_as_target) {
           continue;
         }
 
-        types.push_back(sourcemeta::core::JSON::Type::String);
+        types.set(
+            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::String));
       }
     }
 
-    assert(types.size() >=
-           schema_context.schema.at(dynamic_context.keyword).size());
+    assert(types.any());
     return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeAny, context,
-                 schema_context, dynamic_context, std::move(types))};
+                 schema_context, dynamic_context, types)};
   }
 
   return {};

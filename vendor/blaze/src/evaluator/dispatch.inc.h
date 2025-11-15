@@ -248,10 +248,14 @@ INSTRUCTION_HANDLER(AssertionType) {
   const auto &target{get(instance, instruction.relative_instance_location)};
   const auto value{*std::get_if<ValueType>(&instruction.value)};
 
+  // TODO: Maybe make this instruction about integers, as it is the
+  // only where where it is actually useful?
+  assert(value == JSON::Type::Integer);
+
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
   result = target.type() == value ||
-           (value == JSON::Type::Integer && target.is_integer_real());
+           (value == JSON::Type::Integer && target.is_integral());
   EVALUATE_END(AssertionType);
 }
 
@@ -263,20 +267,17 @@ INSTRUCTION_HANDLER(AssertionTypeAny) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionTypeAny);
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
-  // Otherwise we are we even emitting this instruction?
-  assert(value.size() > 1);
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   const auto &target{get(instance, instruction.relative_instance_location)};
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
-  for (const auto type : value) {
-    if (type == JSON::Type::Integer && target.is_integer_real()) {
-      result = true;
-      break;
-    } else if (type == target.type()) {
-      result = true;
-      break;
-    }
+  const auto type_index{static_cast<std::uint8_t>(target.type())};
+  if (value.test(type_index)) {
+    result = true;
+  } else if (value.test(static_cast<std::uint8_t>(JSON::Type::Integer)) &&
+             target.is_integral()) {
+    result = true;
   }
 
   EVALUATE_END(AssertionTypeAny);
@@ -292,7 +293,7 @@ INSTRUCTION_HANDLER(AssertionTypeStrict) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionTypeStrict);
   const auto &target{get(instance, instruction.relative_instance_location)};
   const auto value{*std::get_if<ValueType>(&instruction.value)};
-  result = target.type() == value;
+  result = effective_type_strict_real(target) == value;
   EVALUATE_END(AssertionTypeStrict);
 }
 
@@ -304,12 +305,12 @@ INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionTypeStrictAny);
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
-  // Otherwise we are we even emitting this instruction?
-  assert(value.size() > 1);
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   const auto &target{get(instance, instruction.relative_instance_location)};
-  result =
-      (std::find(value.cbegin(), value.cend(), target.type()) != value.cend());
+  const auto type_index{
+      static_cast<std::uint8_t>(effective_type_strict_real(target))};
+  result = value.test(type_index);
   EVALUATE_END(AssertionTypeStrictAny);
 }
 
@@ -709,7 +710,7 @@ INSTRUCTION_HANDLER(AssertionPropertyType) {
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
   result = target_check->type() == value ||
-           (value == JSON::Type::Integer && target_check->is_integer_real());
+           (value == JSON::Type::Integer && target_check->is_integral());
   EVALUATE_END(AssertionPropertyType);
 }
 
@@ -726,7 +727,7 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeEvaluate) {
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
   result = target_check->type() == value ||
-           (value == JSON::Type::Integer && target_check->is_integer_real());
+           (value == JSON::Type::Integer && target_check->is_integral());
 
   if (result) {
     evaluator.evaluate(target_check);
@@ -745,7 +746,9 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrict) {
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrict);
   // Now here we refer to the actual property
   const auto value{*std::get_if<ValueType>(&instruction.value)};
-  result = target_check->type() == value;
+  result = target_check->type() == value ||
+           (value == JSON::Type::Integer && target_check->is_decimal() &&
+            target_check->to_decimal().is_integer());
   EVALUATE_END(AssertionPropertyTypeStrict);
 }
 
@@ -776,10 +779,14 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAny) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAny);
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   // Now here we refer to the actual property
-  result = (std::find(value.cbegin(), value.cend(), target_check->type()) !=
-            value.cend());
+  const auto type_index{static_cast<std::uint8_t>(target_check->type())};
+  result =
+      value.test(type_index) ||
+      (value.test(static_cast<std::uint8_t>(JSON::Type::Integer)) &&
+       target_check->is_decimal() && target_check->to_decimal().is_integer());
   EVALUATE_END(AssertionPropertyTypeStrictAny);
 }
 
@@ -791,10 +798,11 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAnyEvaluate) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_TRY_TARGET(AssertionPropertyTypeStrictAnyEvaluate);
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   // Now here we refer to the actual property
-  result = (std::find(value.cbegin(), value.cend(), target_check->type()) !=
-            value.cend());
+  const auto type_index{static_cast<std::uint8_t>(target_check->type())};
+  result = value.test(type_index);
 
   if (result) {
     evaluator.evaluate(target_check);
@@ -931,6 +939,13 @@ INSTRUCTION_HANDLER(LogicalWhenType) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   const auto value{*std::get_if<ValueType>(&instruction.value)};
+
+  // Not having to worry about numbers in this instruction
+  // makes things a lot simpler
+  assert(value != JSON::Type::Integer);
+  assert(value != JSON::Type::Real);
+  assert(value != JSON::Type::Decimal);
+
   EVALUATE_BEGIN(LogicalWhenType, target.type() == value);
   result = true;
   for (const auto &child : instruction.children) {
@@ -1156,6 +1171,13 @@ INSTRUCTION_HANDLER(ControlGroupWhenType) {
   assert(!instruction.children.empty());
   assert(instruction.relative_instance_location.empty());
   const auto value{*std::get_if<ValueType>(&instruction.value)};
+
+  // Not having to worry about numbers in this instruction
+  // makes things a lot simpler
+  assert(value != JSON::Type::Integer);
+  assert(value != JSON::Type::Real);
+  assert(value != JSON::Type::Decimal);
+
   if (instance.type() == value) {
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, instance)) {
@@ -1868,7 +1890,7 @@ INSTRUCTION_HANDLER(LoopPropertiesType) {
     if (entry.second.type() != value &&
         // In non-strict mode, we consider a real number that represents an
         // integer to be an integer
-        (value != JSON::Type::Integer || !entry.second.is_integer_real())) {
+        (value != JSON::Type::Integer || !entry.second.is_integral())) {
       result = false;
       break;
     }
@@ -1891,7 +1913,7 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeEvaluate) {
     if (entry.second.type() != value &&
         // In non-strict mode, we consider a real number that represents an
         // integer to be an integer
-        (value != JSON::Type::Integer || !entry.second.is_integer_real())) {
+        (value != JSON::Type::Integer || !entry.second.is_integral())) {
       result = false;
       EVALUATE_END(LoopPropertiesTypeEvaluate);
     }
@@ -1921,8 +1943,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrict) {
     assert(!value.second.empty());
     result = true;
     for (const auto &entry : object) {
-      if (entry.second.type() != value.first ||
-          !value.second.contains(entry.first, entry.hash)) {
+      if (effective_type_strict_real(entry.second) != value.first) {
         result = false;
         break;
       }
@@ -1960,7 +1981,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
 
     std::size_t index{0};
     for (const auto &entry : object) {
-      if (entry.second.type() != value.first) {
+      if (effective_type_strict_real(entry.second) != value.first) {
         EVALUATE_END(LoopPropertiesExactlyTypeStrictHash);
       }
 
@@ -2002,7 +2023,7 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrict) {
   result = true;
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   for (const auto &entry : target.as_object()) {
-    if (entry.second.type() != value) {
+    if (effective_type_strict_real(entry.second) != value) {
       result = false;
       break;
     }
@@ -2023,7 +2044,7 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrictEvaluate) {
   result = true;
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   for (const auto &entry : target.as_object()) {
-    if (entry.second.type() != value) {
+    if (effective_type_strict_real(entry.second) != value) {
       result = false;
       EVALUATE_END(LoopPropertiesTypeStrictEvaluate);
     }
@@ -2042,10 +2063,12 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrictAny) {
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NON_STRING(LoopPropertiesTypeStrictAny, target.is_object());
   result = true;
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   for (const auto &entry : target.as_object()) {
-    if (std::find(value.cbegin(), value.cend(), entry.second.type()) ==
-        value.cend()) {
+    const auto type_index{
+        static_cast<std::uint8_t>(effective_type_strict_real(entry.second))};
+    if (!value.test(type_index)) {
       result = false;
       break;
     }
@@ -2064,10 +2087,12 @@ INSTRUCTION_HANDLER(LoopPropertiesTypeStrictAnyEvaluate) {
   EVALUATE_BEGIN_NON_STRING(LoopPropertiesTypeStrictAnyEvaluate,
                             target.is_object());
   result = true;
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
   for (const auto &entry : target.as_object()) {
-    if (std::find(value.cbegin(), value.cend(), entry.second.type()) ==
-        value.cend()) {
+    const auto type_index{
+        static_cast<std::uint8_t>(effective_type_strict_real(entry.second))};
+    if (!value.test(type_index)) {
       result = false;
       EVALUATE_END(LoopPropertiesTypeStrictAnyEvaluate);
     }
@@ -2274,7 +2299,7 @@ INSTRUCTION_HANDLER(LoopItemsType) {
     if (entry.type() != value &&
         // In non-strict mode, we consider a real number that represents an
         // integer to be an integer
-        (value != JSON::Type::Integer || !entry.is_integer_real())) {
+        (value != JSON::Type::Integer || !entry.is_integral())) {
       result = false;
       break;
     }
@@ -2294,7 +2319,7 @@ INSTRUCTION_HANDLER(LoopItemsTypeStrict) {
   result = true;
   const auto value{*std::get_if<ValueType>(&instruction.value)};
   for (const auto &entry : target.as_array()) {
-    if (entry.type() != value) {
+    if (effective_type_strict_real(entry) != value) {
       result = false;
       break;
     }
@@ -2311,12 +2336,14 @@ INSTRUCTION_HANDLER(LoopItemsTypeStrictAny) {
   SOURCEMETA_MAYBE_UNUSED(property_target);
   SOURCEMETA_MAYBE_UNUSED(evaluator);
   EVALUATE_BEGIN_NON_STRING(LoopItemsTypeStrictAny, target.is_array());
-  const auto &value{*std::get_if<ValueTypes>(&instruction.value)};
-  // Otherwise we are we even emitting this instruction?
-  assert(value.size() > 1);
+  const auto value{*std::get_if<ValueTypes>(&instruction.value)};
+  assert(value.any());
+
   result = true;
   for (const auto &entry : target.as_array()) {
-    if (std::find(value.cbegin(), value.cend(), entry.type()) == value.cend()) {
+    const auto type_index{
+        static_cast<std::uint8_t>(effective_type_strict_real(entry))};
+    if (!value.test(type_index)) {
       result = false;
       break;
     }
@@ -2362,7 +2389,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     // Unroll, for performance reasons, for small collections
     if (hashes_size == 3) {
       for (const auto &entry : object) {
-        if (entry.second.type() != value.first) {
+        if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else if (entry.hash != value.second.first[0] &&
@@ -2374,7 +2401,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
       }
     } else if (hashes_size == 2) {
       for (const auto &entry : object) {
-        if (entry.second.type() != value.first) {
+        if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else if (entry.hash != value.second.first[0] &&
@@ -2385,7 +2412,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
       }
     } else if (hashes_size == 1) {
       const auto &entry{*object.cbegin()};
-      if (entry.second.type() != value.first ||
+      if (effective_type_strict_real(entry.second) != value.first ||
           entry.hash != value.second.first[0]) {
         result = false;
         EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2393,7 +2420,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     } else {
       std::size_t index{0};
       for (const auto &entry : object) {
-        if (entry.second.type() != value.first) {
+        if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else if (entry.hash == value.second.first[index]) {
@@ -2447,9 +2474,9 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
     const auto &value_2{object.at(1)};
     const auto &value_3{object.at(2)};
 
-    if (value_1.second.type() != value.first ||
-        value_2.second.type() != value.first ||
-        value_3.second.type() != value.first) {
+    if (effective_type_strict_real(value_1.second) != value.first ||
+        effective_type_strict_real(value_2.second) != value.first ||
+        effective_type_strict_real(value_3.second) != value.first) {
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
     }
 

@@ -109,6 +109,8 @@ auto consume_scalar_event(yaml_event_t *event,
     type = sourcemeta::core::JSON::Type::Integer;
   } else if (result.is_real()) {
     type = sourcemeta::core::JSON::Type::Real;
+  } else if (result.is_decimal()) {
+    type = sourcemeta::core::JSON::Type::Decimal;
   } else if (result.is_string()) {
     type = sourcemeta::core::JSON::Type::String;
   }

@@ -9,6 +9,8 @@
 #include <sourcemeta/core/json_hash.h>
 #include <sourcemeta/core/json_object.h>
 
+#include <sourcemeta/core/numeric.h>
+
 #include <algorithm>        // std::any_of
 #include <cassert>          // assert
 #include <cstddef>          // std::size_t
@@ -55,7 +57,8 @@ public:
     Real = 3,
     String = 4,
     Array = 5,
-    Object = 6
+    Object = 6,
+    Decimal = 7
   };
 
   /// An optional callback that can be passed to parsing functions to obtain
@@ -213,6 +216,12 @@ public:
 
   /// A copy constructor for the object type.
   explicit JSON(const Object &value);
+
+  /// A copy constructor for the decimal type.
+  explicit JSON(const Decimal &value);
+
+  /// A move constructor for the decimal type.
+  explicit JSON(Decimal &&value);
 
   /// Misc constructors
   JSON(const JSON &);
@@ -388,17 +397,17 @@ public:
   /// ```
   [[nodiscard]] auto is_real() const noexcept -> bool;
 
-  /// Check if the input JSON document is a real number that represents an
-  /// integer. For example:
+  /// Check if the input JSON document is an integer, a real number that
+  /// represents an integer, or an integer decimal. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document{5.0};
-  /// assert(document.is_integer_real());
+  /// assert(document.is_integral());
   /// ```
-  [[nodiscard]] auto is_integer_real() const noexcept -> bool;
+  [[nodiscard]] auto is_integral() const noexcept -> bool;
 
   /// Check if the input JSON document is either an integer or a real type. For
   /// example:
@@ -463,6 +472,19 @@ public:
   /// ```
   [[nodiscard]] auto is_object() const noexcept -> bool;
 
+  /// Check if the input JSON document is an arbitrary precision decimal value.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Decimal value{1234567890};
+  /// const sourcemeta::core::JSON document{value};
+  /// assert(document.is_decimal());
+  /// ```
+  [[nodiscard]] auto is_decimal() const noexcept -> bool;
+
   /// Get the type of the JSON document. For example:
   ///
   /// ```cpp
@@ -518,6 +540,20 @@ public:
   /// assert(document.to_real() == 3.14);
   /// ```
   [[nodiscard]] auto to_real() const noexcept -> Real;
+
+  /// Convert a JSON instance into a decimal value. The result of this method
+  /// is undefined unless the JSON instance holds a decimal value. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Decimal value{1234567890};
+  /// const sourcemeta::core::JSON document{value};
+  /// assert(document.is_decimal());
+  /// assert(document.to_decimal().to_int64() == 1234567890);
+  /// ```
+  [[nodiscard]] auto to_decimal() const noexcept -> const Decimal &;
 
   /// Convert a JSON instance into a standard string value. The result of this
   /// method is undefined unless the JSON instance holds a string value. For
@@ -1713,6 +1749,10 @@ private:
     String data_string;
     Array data_array;
     Object data_object;
+    // Move Decimal to the heap to reduce the size of the JSON class.
+    // Dealing with arbitrary precision numbers is not common, so we pay the
+    // indirection cost only when needed.
+    Decimal *data_decimal;
   };
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

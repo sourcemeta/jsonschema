@@ -36,6 +36,25 @@ public:
       new_maximum += sourcemeta::core::JSON{-1};
       schema.at("exclusiveMaximum").into(new_maximum);
       schema.rename("exclusiveMaximum", "maximum");
+    } else if (schema.at("exclusiveMaximum").is_decimal()) {
+      const auto current{schema.at("exclusiveMaximum").to_decimal()};
+      auto new_value{current.to_integral()};
+      if (new_value > current) {
+        new_value -= sourcemeta::core::Decimal{1};
+      }
+
+      if (current.is_integer()) {
+        new_value -= sourcemeta::core::Decimal{1};
+      }
+
+      if (new_value.is_int64()) {
+        schema.at("exclusiveMaximum")
+            .into(sourcemeta::core::JSON{new_value.to_int64()});
+      } else {
+        schema.at("exclusiveMaximum").into(sourcemeta::core::JSON{new_value});
+      }
+
+      schema.rename("exclusiveMaximum", "maximum");
     } else {
       const auto current{schema.at("exclusiveMaximum").to_real()};
       const auto new_value{static_cast<std::int64_t>(std::floor(current))};

@@ -96,6 +96,19 @@ if(NOT PCRE2_FOUND)
   set(SLJIT_SOURCES "${SLJIT_DIR}/sljitLir.c")
 
   add_library(sljit STATIC ${SLJIT_SOURCES})
+  sourcemeta_add_default_options(PRIVATE sljit)
+
+  if(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
+    target_compile_options(sljit PRIVATE -Wno-double-promotion)
+    target_compile_options(sljit PRIVATE -Wno-conditional-uninitialized)
+  endif()
+
+  if(SOURCEMETA_COMPILER_MSVC)
+    target_compile_options(sljit PRIVATE /sdl-)
+    target_compile_options(sljit PRIVATE /wd4701)
+    target_compile_options(sljit PRIVATE /wd4702)
+    target_compile_options(sljit PRIVATE /wd4127)
+  endif()
 
   target_include_directories(sljit PUBLIC
     "$<BUILD_INTERFACE:${SLJIT_DIR}>"
@@ -115,6 +128,26 @@ if(NOT PCRE2_FOUND)
       EXPORT_NAME sljit)
 
   add_library(pcre2 ${PCRE2_SOURCES})
+  sourcemeta_add_default_options(PRIVATE pcre2)
+
+  if(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
+    target_compile_options(pcre2 PRIVATE -Wno-implicit-int-conversion)
+    target_compile_options(pcre2 PRIVATE -Wno-sign-conversion)
+    target_compile_options(pcre2 PRIVATE -Wno-comma)
+    target_compile_options(pcre2 PRIVATE -Wno-conditional-uninitialized)
+    target_compile_options(pcre2 PRIVATE -Wno-overlength-strings)
+    target_compile_options(pcre2 PRIVATE -Wno-conversion)
+    target_compile_options(pcre2 PRIVATE -Wno-type-limits)
+  endif()
+
+  if(SOURCEMETA_COMPILER_MSVC)
+    target_compile_options(pcre2 PRIVATE /sdl-)
+    target_compile_options(pcre2 PRIVATE /wd4127)
+    target_compile_options(pcre2 PRIVATE /wd4244)
+    target_compile_options(pcre2 PRIVATE /wd4389)
+    target_compile_options(pcre2 PRIVATE /wd4701)
+    target_compile_options(pcre2 PRIVATE /wd4702)
+  endif()
 
   target_include_directories(pcre2 PRIVATE
     "${PCRE2_BINARY_DIR}/interface"
