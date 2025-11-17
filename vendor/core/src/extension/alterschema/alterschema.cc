@@ -77,6 +77,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/exclusive_maximum_number_and_maximum.h"
 #include "linter/exclusive_minimum_number_and_minimum.h"
 #include "linter/if_without_then_else.h"
+#include "linter/ignored_metaschema.h"
 #include "linter/items_array_default.h"
 #include "linter/items_schema_default.h"
 #include "linter/max_contains_without_contains.h"
@@ -123,6 +124,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<ElseWithoutIf>();
   bundle.add<IfWithoutThenElse>();
+  bundle.add<IgnoredMetaschema>();
   bundle.add<MaxContainsWithoutContains>();
   bundle.add<MinContainsWithoutContains>();
   bundle.add<NotFalse>();
