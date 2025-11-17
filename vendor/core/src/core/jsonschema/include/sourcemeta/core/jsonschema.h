@@ -142,14 +142,8 @@ auto is_empty_schema(const JSON &schema) -> bool;
 /// assert(id.has_value());
 /// assert(id.value() == "https://sourcemeta.com/example-schema");
 /// ```
-///
-/// You can opt-in to a loose identification strategy to attempt to play a
-/// guessing game. Often useful if you have a schema without a dialect and you
-/// want to at least try to get something.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto identify(const JSON &schema, const SchemaResolver &resolver,
-              const SchemaIdentificationStrategy strategy =
-                  SchemaIdentificationStrategy::Strict,
               const std::optional<std::string> &default_dialect = std::nullopt,
               const std::optional<std::string> &default_id = std::nullopt)
     -> std::optional<std::string>;
@@ -160,8 +154,6 @@ auto identify(const JSON &schema, const SchemaResolver &resolver,
 /// of the schema.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto identify(const JSON &schema, const std::string &base_dialect,
-              const SchemaIdentificationStrategy strategy =
-                  SchemaIdentificationStrategy::Strict,
               const std::optional<std::string> &default_id = std::nullopt)
     -> std::optional<std::string>;
 

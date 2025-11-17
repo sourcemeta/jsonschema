@@ -23,21 +23,6 @@ auto sourcemeta::core::is_empty_schema(const sourcemeta::core::JSON &schema)
 
 namespace {
 
-auto id_keyword_guess(const sourcemeta::core::JSON &schema)
-    -> std::optional<std::string> {
-  if (schema.defines("$id") && schema.at("$id").is_string()) {
-    if (!schema.defines("id") ||
-        (schema.defines("id") && (!schema.at("id").is_string() ||
-                                  schema.at("$id") == schema.at("id")))) {
-      return "$id";
-    }
-  } else if (schema.defines("id") && schema.at("id").is_string()) {
-    return "id";
-  }
-
-  return std::nullopt;
-}
-
 static auto id_keyword(const std::string &base_dialect) -> std::string {
   if (base_dialect == "https://json-schema.org/draft/2020-12/schema" ||
       base_dialect == "https://json-schema.org/draft/2020-12/hyper-schema" ||
@@ -69,51 +54,28 @@ static auto id_keyword(const std::string &base_dialect) -> std::string {
 
 auto sourcemeta::core::identify(
     const sourcemeta::core::JSON &schema, const SchemaResolver &resolver,
-    const SchemaIdentificationStrategy strategy,
     const std::optional<std::string> &default_dialect,
     const std::optional<std::string> &default_id)
     -> std::optional<std::string> {
-  std::optional<std::string> maybe_base_dialect;
-
-  // TODO: Can we avoid a C++ exception as the potential normal way of
-  // operation?
   try {
-    maybe_base_dialect =
-        sourcemeta::core::base_dialect(schema, resolver, default_dialect);
+    const auto maybe_base_dialect{
+        sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
+    if (maybe_base_dialect.has_value()) {
+      return identify(schema, maybe_base_dialect.value(), default_id);
+    } else {
+      return default_id;
+    }
   } catch (const SchemaResolutionError &) {
-    // Attempt to play a heuristic guessing game before giving up
-    if (strategy == SchemaIdentificationStrategy::Loose && schema.is_object()) {
-      const auto keyword{id_keyword_guess(schema)};
-      if (keyword.has_value()) {
-        return schema.at(keyword.value()).to_string();
-      } else {
-        return std::nullopt;
-      }
+    if (default_id.has_value()) {
+      return default_id;
+    } else {
+      throw;
     }
-
-    throw;
   }
-
-  if (!maybe_base_dialect.has_value()) {
-    // Attempt to play a heuristic guessing game before giving up
-    if (strategy == SchemaIdentificationStrategy::Loose && schema.is_object()) {
-      const auto keyword{id_keyword_guess(schema)};
-      if (keyword.has_value()) {
-        return schema.at(keyword.value()).to_string();
-      } else {
-        return std::nullopt;
-      }
-    }
-
-    return default_id;
-  }
-
-  return identify(schema, maybe_base_dialect.value(), strategy, default_id);
 }
 
 auto sourcemeta::core::identify(const JSON &schema,
                                 const std::string &base_dialect,
-                                const SchemaIdentificationStrategy strategy,
                                 const std::optional<std::string> &default_id)
     -> std::optional<std::string> {
   if (!schema.is_object()) {
@@ -138,8 +100,7 @@ auto sourcemeta::core::identify(const JSON &schema,
   // don't check for base dialects lower than that.
   // See
   // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
-  if (strategy == SchemaIdentificationStrategy::Strict &&
-      schema.defines("$ref") &&
+  if (schema.defines("$ref") &&
       (base_dialect == "http://json-schema.org/draft-07/schema#" ||
        base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
        base_dialect == "http://json-schema.org/draft-06/schema#" ||
@@ -180,6 +141,13 @@ auto sourcemeta::core::reidentify(JSON &schema,
   assert(is_schema(schema));
   assert(schema.is_object());
   schema.assign(id_keyword(base_dialect), JSON{new_identifier});
+
+  // If we reidentify, and the identifier is still not retrievable, then
+  // we are facing the Draft 7 `$ref` sibling edge case, and we cannot
+  // really continue
+  if (schema.defines("$ref") && !identify(schema, base_dialect).has_value()) {
+    throw SchemaReferenceObjectResourceError(new_identifier);
+  }
 }
 
 auto sourcemeta::core::dialect(
@@ -504,10 +472,21 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   // other schemas whose top-level identifiers are relative URIs don't
   // get affected. Otherwise, we would cause unintended base resolution.
   constexpr auto WRAPPER_IDENTIFIER{"__sourcemeta-core-wrap__"};
-  const auto id{identify(copy, resolver, SchemaIdentificationStrategy::Strict,
-                         default_dialect)
-                    .value_or(WRAPPER_IDENTIFIER)};
-  reidentify(copy, id, resolver, default_dialect);
+  const auto id{
+      identify(copy, resolver, default_dialect).value_or(WRAPPER_IDENTIFIER)};
+
+  try {
+    reidentify(copy, id, resolver, default_dialect);
+
+    // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
+    // be confusing to end users
+  } catch (const SchemaReferenceObjectResourceError &) {
+    throw SchemaError(
+        "Cannot process a JSON Schema Draft 7 or older with a top-level "
+        "`$ref` (which overrides sibling keywords) without introducing "
+        "undefined behavior");
+  }
+
   result.assign("$defs", JSON::make_object());
   result.at("$defs").assign("schema", std::move(copy));
 

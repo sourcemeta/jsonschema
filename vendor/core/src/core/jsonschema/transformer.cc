@@ -1,10 +1,11 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cassert> // assert
-#include <set>     // std::set
-#include <sstream> // std::ostringstream
-#include <utility> // std::move, std::pair
+#include <cassert>       // assert
+#include <set>           // std::set
+#include <sstream>       // std::ostringstream
+#include <unordered_set> // std::unordered_set
+#include <utility>       // std::move, std::pair
 
 namespace {
 
@@ -104,21 +105,26 @@ auto SchemaTransformer::check(
 
   // If we use the default id when there is already one, framing will duplicate
   // the locations leading to duplicate check reports
-  if (sourcemeta::core::identify(schema, resolver,
-                                 SchemaIdentificationStrategy::Strict,
-                                 default_dialect)
+  if (sourcemeta::core::identify(schema, resolver, default_dialect)
           .has_value()) {
     frame.analyse(schema, walker, resolver, default_dialect);
   } else {
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
   }
 
+  std::unordered_set<Pointer> visited;
   bool result{true};
   std::size_t subschema_count{0};
   std::size_t subschema_failures{0};
   for (const auto &entry : frame.locations()) {
     if (entry.second.type != SchemaFrame::LocationType::Resource &&
         entry.second.type != SchemaFrame::LocationType::Subschema) {
+      continue;
+    }
+
+    // Framing may report resource twice or more given default identifiers and
+    // nested resources, risking reporting the same errors twice
+    if (!visited.insert(entry.second.pointer).second) {
       continue;
     }
 
@@ -160,11 +166,18 @@ auto SchemaTransformer::apply(
   while (true) {
     SchemaFrame frame{SchemaFrame::Mode::References};
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
+    std::unordered_set<Pointer> visited;
 
     bool applied{false};
     for (const auto &entry : frame.locations()) {
       if (entry.second.type != SchemaFrame::LocationType::Resource &&
           entry.second.type != SchemaFrame::LocationType::Subschema) {
+        continue;
+      }
+
+      // Framing may report resource twice or more given default identifiers and
+      // nested resources, risking reporting the same errors twice
+      if (!visited.insert(entry.second.pointer).second) {
         continue;
       }
 

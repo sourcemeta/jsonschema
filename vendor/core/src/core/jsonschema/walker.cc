@@ -49,18 +49,26 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
   // / base dialect and ignore the invalid standalone `$schema`. The caller has
   // enough information to detect those cases and throw an error if they desire
   // to be more strict.
-  const auto maybe_current_dialect{
-      sourcemeta::core::dialect(subschema, dialect)};
+  auto maybe_current_dialect{sourcemeta::core::dialect(subschema, dialect)};
   assert(maybe_current_dialect.has_value());
-  const auto id{sourcemeta::core::identify(
-      subschema, resolver,
-      sourcemeta::core::SchemaIdentificationStrategy::Strict,
-      maybe_current_dialect)};
+
+  // TODO: Note that we determine the identifier here, but the framing does it
+  // all over again. Maybe we should be storing this instead?
+  auto id{
+      sourcemeta::core::identify(subschema, resolver, maybe_current_dialect)};
+  const auto different_parent_dialect{maybe_current_dialect.value() != dialect};
+  if (!id.has_value() && different_parent_dialect) {
+    id = sourcemeta::core::identify(subschema, base_dialect);
+    if (id.has_value()) {
+      maybe_current_dialect = dialect;
+    }
+  }
+
   const auto is_schema_resource{level == 0 || id.has_value()};
-  const auto current_dialect{is_schema_resource ? maybe_current_dialect.value()
-                                                : dialect};
-  const auto current_base_dialect{
-      is_schema_resource
+  const auto &current_dialect{is_schema_resource ? maybe_current_dialect.value()
+                                                 : dialect};
+  auto current_base_dialect{
+      is_schema_resource && current_dialect != dialect
           ? sourcemeta::core::base_dialect(subschema, resolver, current_dialect)
                 .value_or(base_dialect)
           : base_dialect};
@@ -94,13 +102,12 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
   for (auto &pair : subschema.as_object()) {
     const auto keyword_info{walker(pair.first, vocabularies)};
 
-    // Ignore the current keyword sibling to `$ref in Draft 7 and older if its
-    // not a top-level container
+    // Ignore the current keyword sibling to `$ref in Draft 7 and older in EVERY
+    // case. Note that we purposely DO NOT try to add workarounds for the
+    // top-level, `$schema`, or anything else to be purely compliant and avoid
+    // lots of gray areas here
     if (has_overriding_ref &&
-        keyword_info.type != sourcemeta::core::SchemaKeywordType::Reference &&
-        (level > 0 ||
-         keyword_info.type !=
-             sourcemeta::core::SchemaKeywordType::LocationMembers)) {
+        keyword_info.type != sourcemeta::core::SchemaKeywordType::Reference) {
       continue;
     }
 
