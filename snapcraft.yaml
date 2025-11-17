@@ -10,6 +10,7 @@ confinement: strict
 apps:
   jsonschema:
     command: usr/local/bin/jsonschema
+    completer: usr/local/share/bash-completion/completions/jsonschema
     # Means users can only run it on HOME
     plugs: [ home, network ]
 parts:
