@@ -162,9 +162,8 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  const auto identifier{sourcemeta::core::identify(
-      schema, custom_resolver,
-      sourcemeta::core::SchemaIdentificationStrategy::Strict, dialect)};
+  const auto identifier{
+      sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::Instances};

@@ -459,6 +459,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const FileError<sourcemeta::core::SchemaError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

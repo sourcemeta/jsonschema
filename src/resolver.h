@@ -5,7 +5,14 @@
 #define NOMINMAX
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnewline-eof"
+#endif
 #include <cpr/cpr.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>

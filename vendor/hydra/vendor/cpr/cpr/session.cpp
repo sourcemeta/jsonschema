@@ -31,6 +31,7 @@
 #include "cpr/body_view.h"
 #include "cpr/callback.h"
 #include "cpr/connect_timeout.h"
+#include "cpr/connection_pool.h"
 #include "cpr/cookies.h"
 #include "cpr/cprtypes.h"
 #include "cpr/curlholder.h"
@@ -397,6 +398,11 @@ void Session::SetConnectTimeout(const ConnectTimeout& timeout) {
     curl_easy_setopt(curl_->handle, CURLOPT_CONNECTTIMEOUT_MS, timeout.Milliseconds());
 }
 
+void Session::SetConnectionPool(const ConnectionPool& pool) {
+    CURL* curl = curl_->handle;
+    pool.SetupHandler(curl);
+}
+
 void Session::SetAuth(const Authentication& auth) {
     // Ignore here since this has been defined by libcurl.
     switch (auth.GetAuthMode()) {
@@ -522,6 +528,20 @@ void Session::SetSslOptions(const SslOptions& options) {
             curl_easy_setopt(curl_->handle, CURLOPT_SSLCERTTYPE, options.cert_type.c_str());
         }
     }
+#if SUPPORT_CURLOPT_SSLCERT_BLOB
+    else if(!options.cert_blob.empty()) {
+        std::string cert_blob(options.cert_blob);
+        curl_blob blob{};
+        // NOLINTNEXTLINE (readability-container-data-pointer)
+        blob.data = &cert_blob[0];
+        blob.len = cert_blob.length();
+        blob.flags = CURL_BLOB_COPY;
+        curl_easy_setopt(curl_->handle, CURLOPT_SSLCERT_BLOB, &blob);
+        if (!options.cert_type.empty()) {
+            curl_easy_setopt(curl_->handle, CURLOPT_SSLCERTTYPE, options.cert_type.c_str());
+        }
+    }
+#endif
     if (!options.key_file.empty()) {
         curl_easy_setopt(curl_->handle, CURLOPT_SSLKEY, options.key_file.c_str());
         if (!options.key_type.empty()) {
@@ -588,6 +608,16 @@ void Session::SetSslOptions(const SslOptions& options) {
     if (!options.ca_info.empty()) {
         curl_easy_setopt(curl_->handle, CURLOPT_CAINFO, options.ca_info.c_str());
     }
+#if SUPPORT_CURLOPT_CAINFO_BLOB
+    if (!options.ca_info_blob.empty()) {
+        std::string cainfo_blob(options.ca_info_blob);
+        curl_blob blob{};
+        blob.data = cainfo_blob.data();
+        blob.len = cainfo_blob.length();
+        blob.flags = CURL_BLOB_COPY;
+        curl_easy_setopt(curl_->handle, CURLOPT_CAINFO_BLOB, &blob);
+    }
+#endif
     if (!options.ca_path.empty()) {
         curl_easy_setopt(curl_->handle, CURLOPT_CAPATH, options.ca_path.c_str());
     }
@@ -1091,6 +1121,7 @@ void Session::SetOption(const MultiRange& multi_range) { SetMultiRange(multi_ran
 void Session::SetOption(const ReserveSize& reserve_size) { SetReserveSize(reserve_size.size); }
 void Session::SetOption(const AcceptEncoding& accept_encoding) { SetAcceptEncoding(accept_encoding); }
 void Session::SetOption(AcceptEncoding&& accept_encoding) { SetAcceptEncoding(std::move(accept_encoding)); }
+void Session::SetOption(const ConnectionPool& pool) { SetConnectionPool(pool); }
 // clang-format on
 
 void Session::SetCancellationParam(std::shared_ptr<std::atomic_bool> param) {

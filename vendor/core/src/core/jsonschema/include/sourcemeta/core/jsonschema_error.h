@@ -184,6 +184,30 @@ private:
   Pointer location_;
 };
 
+/// @ingroup jsonschema
+/// In JSON Schema Draft 7 and older, a schema that defines `$ref` is a
+/// reference object where every other keywords are ignored
+class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaReferenceObjectResourceError
+    : public std::exception {
+public:
+  SchemaReferenceObjectResourceError(std::string identifier)
+      : identifier_{std::move(identifier)} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "A schema with a top-level `$ref` in JSON Schema Draft 7 and older "
+           "dialects ignores every sibling keywords (like identifiers and "
+           "meta-schema declarations) and therefore many operations, like "
+           "bundling, are not possible without undefined behavior";
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const auto & {
+    return this->identifier_;
+  }
+
+private:
+  std::string identifier_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

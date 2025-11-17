@@ -36,16 +36,6 @@ using Vocabularies = std::unordered_map<JSON::String, bool>;
 using SchemaResolver = std::function<std::optional<JSON>(std::string_view)>;
 
 /// @ingroup jsonschema
-/// The strategy to follow when attempting to identify a schema
-enum class SchemaIdentificationStrategy : std::uint8_t {
-  /// Only proceed if we can guarantee the identifier is valid
-  Strict,
-
-  /// Attempt to guess even if we don't know the base dialect
-  Loose
-};
-
-/// @ingroup jsonschema
 /// The reference type
 enum class SchemaReferenceType : std::uint8_t { Static, Dynamic };
 

@@ -67,6 +67,12 @@
 #ifndef SUPPORT_CURLOPT_SSL_CTX_FUNCTION
 #define SUPPORT_CURLOPT_SSL_CTX_FUNCTION LIBCURL_VERSION_NUM >= 0x070B00 // 7.11.0
 #endif
+#ifndef SUPPORT_CURLOPT_CAINFO_BLOB
+#define SUPPORT_CURLOPT_CAINFO_BLOB LIBCURL_VERSION_NUM >= 0x074D00 // 7.77.0
+#endif
+#ifndef SUPPORT_CURLOPT_SSLCERT_BLOB
+#define SUPPORT_CURLOPT_SSLCERT_BLOB LIBCURL_VERSION_NUM >= 0x074700 // 7.71.0
+#endif
 
 namespace cpr {
 
@@ -113,6 +119,38 @@ class DerCert : public CertFile {
         return "DER";
     }
 };
+
+
+#if SUPPORT_CURLOPT_SSLCERT_BLOB
+class CertBlob {
+public:
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    CertBlob(std::string&& p_blob) : blob(std::move(p_blob)) {}
+
+    virtual ~CertBlob() = default;
+
+    std::string blob;
+
+    virtual const char* GetCertType() const {
+        return "PEM";
+    }
+};
+
+using PemBlob = CertBlob;
+
+class DerBlob : public CertBlob {
+public:
+    template <typename BlobType>
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    DerBlob(BlobType&& p_blob) : CertBlob(std::move(p_blob)) {}
+
+    ~DerBlob() override = default;
+
+    const char* GetCertType() const override {
+        return "DER";
+    }
+};
+#endif
 
 // specify private keyfile for TLS and SSL client cert
 class KeyFile {
@@ -312,6 +350,17 @@ class CaInfo {
     fs::path filename;
 };
 
+#if SUPPORT_CURLOPT_CAINFO_BLOB
+// Certificate Authority (CA) bundle as blob
+class CaInfoBlob {
+public:
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
+    CaInfoBlob(std::string&& p_blob) : blob(std::move(p_blob)) {}
+
+    std::string blob;
+};
+#endif
+
 // specify directory holding CA certificates
 class CaPath {
   public:
@@ -409,6 +458,9 @@ class NoRevoke {
 struct SslOptions {
     // We don't use fs::path here, as this leads to problems using windows
     std::string cert_file;
+#if SUPPORT_CURLOPT_SSLCERT_BLOB
+    util::SecureString cert_blob;
+#endif
     std::string cert_type;
     // We don't use fs::path here, as this leads to problems using windows
     std::string key_file;
@@ -436,6 +488,9 @@ struct SslOptions {
 #endif
     // We don't use fs::path here, as this leads to problems using windows
     std::string ca_info;
+#if SUPPORT_CURLOPT_CAINFO_BLOB
+    std::string ca_info_blob;
+#endif
     // We don't use fs::path here, as this leads to problems using windows
     std::string ca_path;
 #if SUPPORT_CURLOPT_SSL_CTX_FUNCTION
@@ -455,6 +510,12 @@ struct SslOptions {
         cert_file = opt.filename.string();
         cert_type = opt.GetCertType();
     }
+#if SUPPORT_CURLOPT_SSLCERT_BLOB
+    void SetOption(const ssl::CertBlob& opt) {
+        cert_blob = opt.blob;
+        cert_type = opt.GetCertType();
+    }
+#endif
     void SetOption(const ssl::KeyFile& opt) {
         key_file = opt.filename.string();
         key_type = opt.GetKeyType();
@@ -556,6 +617,11 @@ struct SslOptions {
     void SetOption(const ssl::CaInfo& opt) {
         ca_info = opt.filename.string();
     }
+#if SUPPORT_CURLOPT_CAINFO_BLOB
+    void SetOption(const ssl::CaInfoBlob& opt) {
+        ca_info_blob = opt.blob;
+    }
+#endif
     void SetOption(const ssl::CaPath& opt) {
         ca_path = opt.filename.string();
     }

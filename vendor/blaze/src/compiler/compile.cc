@@ -126,11 +126,7 @@ auto compile(const sourcemeta::core::JSON &schema,
       sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
   const auto identifier{
       base_dialect.has_value()
-          ? sourcemeta::core::identify(
-                schema, base_dialect.value(),
-                // Account for top-level `$id` + `$ref` in Draft 7 and older
-                sourcemeta::core::SchemaIdentificationStrategy::Loose,
-                default_id)
+          ? sourcemeta::core::identify(schema, base_dialect.value(), default_id)
           : std::optional<std::string>{std::nullopt}};
   const std::string base{
       sourcemeta::core::URI::canonicalize(identifier.value_or(""))};

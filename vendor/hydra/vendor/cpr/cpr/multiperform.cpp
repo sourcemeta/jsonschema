@@ -27,16 +27,28 @@ MultiPerform::MultiPerform() : multicurl_(new CurlMultiHolder()) {
     first_interceptor_ = interceptors_.end();
 }
 
+MultiPerform::MultiPerform(MultiPerform&& old) noexcept {
+    *this = std::move(old);
+}
+
+MultiPerform& MultiPerform::operator=(MultiPerform&& old) noexcept {
+    sessions_ = std::move(old.sessions_);
+    multicurl_ = std::move(old.multicurl_);
+    interceptors_ = std::move(old.interceptors_);
+    current_interceptor_ = interceptors_.end();
+    first_interceptor_ = interceptors_.end();
+    return *this;
+}
+
 MultiPerform::~MultiPerform() {
     // Unlock all sessions
-    for (const std::pair<std::shared_ptr<Session>, HttpMethod>& pair : sessions_) {
-        pair.first->isUsedInMultiPerform = false;
+    for (const auto& [session, method] : sessions_) {
+        session->isUsedInMultiPerform = false;
 
         // Remove easy handle from multi handle
-        const CURLMcode error_code = curl_multi_remove_handle(multicurl_->handle, pair.first->curl_->handle);
+        const CURLMcode error_code = curl_multi_remove_handle(multicurl_->handle, session->curl_->handle);
         if (error_code) {
             std::cerr << "curl_multi_remove_handle() failed, code " << static_cast<int>(error_code) << '\n';
-            return;
         }
     }
 }
@@ -53,13 +65,6 @@ void MultiPerform::AddSession(std::shared_ptr<Session>& session, HttpMethod meth
         is_download_multi_perform = true;
     }
 
-    // Add easy handle to multi handle
-    const CURLMcode error_code = curl_multi_add_handle(multicurl_->handle, session->curl_->handle);
-    if (error_code) {
-        std::cerr << "curl_multi_add_handle() failed, code " << static_cast<int>(error_code) << '\n';
-        return;
-    }
-
     // Lock session to the multihandle
     session->isUsedInMultiPerform = true;
 
@@ -68,16 +73,8 @@ void MultiPerform::AddSession(std::shared_ptr<Session>& session, HttpMethod meth
 }
 
 void MultiPerform::RemoveSession(const std::shared_ptr<Session>& session) {
-    // Has to be handled before calling curl_multi_remove_handle to avoid it returning something != CURLM_OK.
     if (sessions_.empty()) {
         throw std::invalid_argument("Failed to find session!");
-    }
-
-    // Remove easy handle from multihandle
-    const CURLMcode error_code = curl_multi_remove_handle(multicurl_->handle, session->curl_->handle);
-    if (error_code != CURLM_OK) {
-        std::cerr << "curl_multi_remove_handle() failed, code " << static_cast<int>(error_code) << '\n';
-        return;
     }
 
     // Unlock session
@@ -107,6 +104,12 @@ const std::vector<std::pair<std::shared_ptr<Session>, MultiPerform::HttpMethod>>
 void MultiPerform::DoMultiPerform() {
     // Do multi perform until every handle has finished
     int still_running{0};
+    for (const auto& [session, _] : sessions_) {
+        const CURLMcode error_code = curl_multi_add_handle(multicurl_->handle, session->curl_->handle);
+        if (error_code && error_code != CURLM_ADDED_ALREADY) {
+            std::cerr << "curl_multi_add_handle() failed, code " << static_cast<int>(error_code) << '\n';
+        }
+    }
     do {
         CURLMcode error_code = curl_multi_perform(multicurl_->handle, &still_running);
         if (error_code) {
@@ -157,17 +160,23 @@ std::vector<Response> MultiPerform::ReadMultiInfo(const std::function<Response(S
         }
     } while (info);
 
+    for (const auto& [session, _] : sessions_) {
+        const CURLMcode error_code = curl_multi_remove_handle(multicurl_->handle, session->curl_->handle);
+        if (error_code) {
+            std::cerr << "curl_multi_remove_handle() failed, code " << static_cast<int>(error_code) << '\n';
+        }
+    }
+
     // Sort response objects to match order of added sessions
     std::vector<Response> sorted_responses;
-    for (const std::pair<std::shared_ptr<Session>, HttpMethod>& pair : sessions_) {
-        Session& current_session = *(pair.first);
+    for (const auto& [session, _] : sessions_) {
+        Session& current_session = *session;
         auto it = std::find_if(responses.begin(), responses.end(), [&current_session](const Response& response) { return current_session.curl_->handle == response.curl_->handle; });
-        const Response current_response = *it; // NOLINT (performance-unnecessary-copy-initialization) False possible
+        const Response current_response = *it; // NOLINT (performance-unnecessary-copy-initialization) False positive
         // Erase response from original vector to increase future search speed
         responses.erase(it);
         sorted_responses.push_back(current_response);
     }
-
     return sorted_responses;
 }
 
@@ -192,28 +201,28 @@ std::vector<Response> MultiPerform::MakeDownloadRequest() {
 }
 
 void MultiPerform::PrepareSessions() {
-    for (const std::pair<std::shared_ptr<Session>, HttpMethod>& pair : sessions_) {
-        switch (pair.second) {
+    for (const auto& [session, method] : sessions_) {
+        switch (method) {
             case HttpMethod::GET_REQUEST:
-                pair.first->PrepareGet();
+                session->PrepareGet();
                 break;
             case HttpMethod::POST_REQUEST:
-                pair.first->PreparePost();
+                session->PreparePost();
                 break;
             case HttpMethod::PUT_REQUEST:
-                pair.first->PreparePut();
+                session->PreparePut();
                 break;
             case HttpMethod::DELETE_REQUEST:
-                pair.first->PrepareDelete();
+                session->PrepareDelete();
                 break;
             case HttpMethod::PATCH_REQUEST:
-                pair.first->PreparePatch();
+                session->PreparePatch();
                 break;
             case HttpMethod::HEAD_REQUEST:
-                pair.first->PrepareHead();
+                session->PrepareHead();
                 break;
             case HttpMethod::OPTIONS_REQUEST:
-                pair.first->PrepareOptions();
+                session->PrepareOptions();
                 break;
             default:
                 std::cerr << "PrepareSessions failed: Undefined HttpMethod or download without arguments!" << '\n';
@@ -223,10 +232,10 @@ void MultiPerform::PrepareSessions() {
 }
 
 void MultiPerform::PrepareDownloadSession(size_t sessions_index, const WriteCallback& write) {
-    const std::pair<std::shared_ptr<Session>, HttpMethod>& pair = sessions_[sessions_index];
-    switch (pair.second) {
+    const auto& [session, method] = sessions_[sessions_index];
+    switch (method) {
         case HttpMethod::DOWNLOAD_REQUEST:
-            pair.first->PrepareDownload(write);
+            session->PrepareDownload(write);
             break;
         default:
             std::cerr << "PrepareSessions failed: Undefined HttpMethod or non download method with arguments!" << '\n';
@@ -235,10 +244,10 @@ void MultiPerform::PrepareDownloadSession(size_t sessions_index, const WriteCall
 }
 
 void MultiPerform::PrepareDownloadSession(size_t sessions_index, std::ofstream& file) {
-    const std::pair<std::shared_ptr<Session>, HttpMethod>& pair = sessions_[sessions_index];
-    switch (pair.second) {
+    const auto& [session, method] = sessions_[sessions_index];
+    switch (method) {
         case HttpMethod::DOWNLOAD_REQUEST:
-            pair.first->PrepareDownload(file);
+            session->PrepareDownload(file);
             break;
         default:
             std::cerr << "PrepareSessions failed: Undefined HttpMethod or non download method with arguments!" << '\n';
@@ -247,8 +256,8 @@ void MultiPerform::PrepareDownloadSession(size_t sessions_index, std::ofstream& 
 }
 
 void MultiPerform::SetHttpMethod(HttpMethod method) {
-    for (std::pair<std::shared_ptr<Session>, HttpMethod>& pair : sessions_) {
-        pair.second = method;
+    for (auto& [_, session_method] : sessions_) {
+        session_method = method;
     }
 }
 
@@ -332,8 +341,7 @@ std::vector<Response> MultiPerform::proceed() {
     if (!sessions_.empty()) {
         const bool new_is_download_multi_perform = sessions_.front().second == HttpMethod::DOWNLOAD_REQUEST;
 
-        for (const std::pair<std::shared_ptr<Session>, HttpMethod>& s : sessions_) {
-            const HttpMethod method = s.second;
+        for (const auto& [_, method] : sessions_) {
             if ((new_is_download_multi_perform && method != HttpMethod::DOWNLOAD_REQUEST) || (!new_is_download_multi_perform && method == HttpMethod::DOWNLOAD_REQUEST)) {
                 throw std::invalid_argument("Failed to proceed with session: Cannot mix download and non-download methods!");
             }

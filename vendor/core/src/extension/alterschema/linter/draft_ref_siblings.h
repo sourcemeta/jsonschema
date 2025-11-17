@@ -27,9 +27,11 @@ public:
     std::vector<Pointer> locations;
     for (const auto &entry : schema.as_object()) {
       const auto metadata{walker(entry.first, vocabularies)};
-      if (metadata.type == sourcemeta::core::SchemaKeywordType::Other ||
-          metadata.type == sourcemeta::core::SchemaKeywordType::Reference ||
-          metadata.type == sourcemeta::core::SchemaKeywordType::Comment) {
+      if (metadata.type == sourcemeta::core::SchemaKeywordType::Reference ||
+          metadata.type == sourcemeta::core::SchemaKeywordType::Comment ||
+          // If we disallow this, we end up deleting it and the linter will fail
+          // with an error about not knowing the dialect
+          entry.first == "$schema") {
         continue;
       } else {
         locations.push_back(Pointer{entry.first});
