@@ -56,6 +56,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     linter/duplicate_anyof_branches.h
     linter/else_without_if.h
     linter/if_without_then_else.h
+    linter/ignored_metaschema.h
     linter/max_contains_without_contains.h
     linter/min_contains_without_contains.h
     linter/modern_official_dialect_with_empty_fragment.h

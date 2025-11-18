@@ -94,6 +94,9 @@ exclusive_minimum_number_and_minimum
 if_without_then_else
   The `if` keyword is meaningless without the presence of the `then` or `else` keywords
 
+ignored_metaschema
+  A `$schema` declaration without a sibling identifier (or with a sibling `$ref` in Draft 7 and older dialects), is ignored
+
 items_array_default
   Setting the `items` keyword to the empty array does not add any further constraint
 
@@ -169,7 +172,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 53
+Number of rules: 54
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

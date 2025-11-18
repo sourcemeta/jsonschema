@@ -311,24 +311,19 @@ auto repopulate_instance_locations(
     sourcemeta::core::SchemaFrame::Instances::mapped_type &destination,
     const std::optional<sourcemeta::core::PointerTemplate> &accumulator)
     -> void {
-  if (cache_entry.orphan && cache_entry.instance_location.empty()) {
-    return;
-  } else if (cache_entry.parent.has_value() &&
-             // Don't consider bases from the root subschema, as if that
-             // subschema has any instance location other than "", then it
-             // indicates a recursive reference
-             !cache_entry.parent.value().empty()) {
+  // Check parent first as even orphan schemas can inherit instance locations
+  // from their parents if the parent is in the evaluation flow
+  if (cache_entry.parent.has_value() &&
+      // Don't consider bases from the root subschema, as if that
+      // subschema has any instance location other than "", then it
+      // indicates a recursive reference
+      !cache_entry.parent.value().empty()) {
     const auto match{instances.find(cache_entry.parent.value())};
     if (match == instances.cend()) {
       return;
     }
 
     for (const auto &parent_instance_location : match->second) {
-      // Guard against overly unrolling recursive schemas
-      if (parent_instance_location == cache_entry.instance_location) {
-        continue;
-      }
-
       auto new_accumulator = cache_entry.relative_instance_location;
       if (accumulator.has_value()) {
         for (const auto &token : accumulator.value()) {
@@ -349,6 +344,9 @@ auto repopulate_instance_locations(
           frame, instances, cache, cache_entry.parent.value(),
           cache.at(cache_entry.parent.value()), destination, new_accumulator);
     }
+  } else if (cache_entry.orphan && cache_entry.instance_location.empty()) {
+    // Only return early for orphan schemas if they don't have a parent
+    return;
   }
 }
 
