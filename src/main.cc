@@ -32,7 +32,7 @@ Commands:
 
        Print this command reference help.
 
-   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...> [--http/-h]
+   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...> [--http/-h]
             [--benchmark/-b] [--loop <iterations>]
             [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
@@ -148,6 +148,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
     app.option("extension", {"e"});
+    app.option("ignore", {"i"});
     app.option("template", {"m"});
     app.option("loop", {"l"});
     app.parse(argc, argv, {.skip = 1});

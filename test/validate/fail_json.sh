@@ -24,8 +24,8 @@ cat << 'EOF' > "$TMP/instance.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --json > "$TMP/output.json" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {
