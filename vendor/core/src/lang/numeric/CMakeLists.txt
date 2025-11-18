@@ -1,5 +1,5 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME numeric
-  PRIVATE_HEADERS error.h decimal.h SOURCES decimal.cc)
+  PRIVATE_HEADERS error.h decimal.h parse.h SOURCES decimal.cc parse.cc)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME numeric)
