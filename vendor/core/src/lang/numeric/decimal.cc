@@ -444,12 +444,16 @@ auto Decimal::divisible_by(const Decimal &divisor) const -> bool {
     return false;
   }
 
-  if (this->is_integer() && divisor.is_integer()) {
-    return (*this % divisor).is_zero();
+  Decimal remainder;
+  std::uint32_t status = 0;
+  mpd_qrem(&remainder.data()->value, &this->data()->value,
+           &divisor.data()->value, &max_context, &status);
+
+  if (status & MPD_Invalid_operation) {
+    return false;
   }
 
-  const Decimal quotient{*this / divisor};
-  return quotient.is_finite() && quotient.is_integral();
+  return mpd_iszero(&remainder.data()->value);
 }
 
 auto Decimal::operator+=(const Decimal &other) -> Decimal & {

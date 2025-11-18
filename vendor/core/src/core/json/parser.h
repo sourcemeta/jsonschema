@@ -19,7 +19,7 @@
 #include <sstream>    // std::basic_ostringstream, std::basic_istringstream
 #include <stack>      // std::stack
 #include <stdexcept>  // std::out_of_range
-#include <string>     // std::basic_string, std::stol, std::stod, std::stoul
+#include <string>     // std::basic_string, std::stoul
 
 namespace sourcemeta::core::internal {
 
@@ -292,36 +292,34 @@ auto parse_string(
 }
 
 template <typename CharT, typename Traits>
-auto parse_number_integer(const std::uint64_t line, const std::uint64_t column,
+auto parse_number_decimal(const std::uint64_t line, const std::uint64_t column,
                           const std::basic_string<CharT, Traits> &string)
     -> JSON {
   try {
-    return JSON{static_cast<std::int64_t>(std::stoll(string))};
-  } catch (const std::out_of_range &) {
-    try {
-      return JSON{Decimal{string}};
-    } catch (const DecimalParseError &) {
-      throw JSONParseError(line, column);
-    }
+    return JSON{Decimal{string}};
+  } catch (const DecimalParseError &) {
+    throw JSONParseError(line, column);
+  } catch (const std::invalid_argument &) {
+    throw JSONParseError(line, column);
   }
 }
 
 template <typename CharT, typename Traits>
-auto parse_number_real(const std::uint64_t line, const std::uint64_t column,
-                       const std::basic_string<CharT, Traits> &string) -> JSON {
-  try {
-    return JSON{std::stod(string)};
-  } catch (const std::out_of_range &) {
-    try {
-      return JSON{Decimal{string}};
-    } catch (const DecimalParseError &) {
-      throw JSONParseError(line, column);
-    } catch (const std::invalid_argument &) {
-      throw JSONParseError(line, column);
-    }
-  } catch (const std::invalid_argument &) {
-    throw JSONParseError(line, column);
-  }
+auto parse_number_integer_maybe_decimal(
+    const std::uint64_t line, const std::uint64_t column,
+    const std::basic_string<CharT, Traits> &string) -> JSON {
+  const auto result{sourcemeta::core::to_int64_t(string)};
+  return result.has_value() ? JSON{result.value()}
+                            : parse_number_decimal(line, column, string);
+}
+
+template <typename CharT, typename Traits>
+auto parse_number_real_maybe_decimal(
+    const std::uint64_t line, const std::uint64_t column,
+    const std::basic_string<CharT, Traits> &string) -> JSON {
+  const auto result{sourcemeta::core::to_double(string)};
+  return result.has_value() ? JSON{result.value()}
+                            : parse_number_decimal(line, column, string);
 }
 
 auto parse_number_exponent_rest(
@@ -350,7 +348,11 @@ auto parse_number_exponent_rest(
         column += 1;
         break;
       default:
-        return parse_number_real(line, original_column, result.str());
+        // As a heuristic, if a number has exponential notation, it is almost
+        // always a big number for which `double` is typically a poor
+        // representation. If an exponent is encountered, we just always parse
+        // as a high-precision decimal
+        return parse_number_decimal(line, original_column, result.str());
     }
   }
 
@@ -462,7 +464,8 @@ auto parse_number_fractional(
         column += 1;
         break;
       default:
-        return parse_number_real(line, original_column, result.str());
+        return parse_number_real_maybe_decimal(line, original_column,
+                                               result.str());
     }
   }
 
@@ -502,7 +505,8 @@ auto parse_number_fractional_first(
       return parse_number_fractional(line, column, original_column, stream,
                                      result);
     default:
-      return parse_number_real(line, original_column, result.str());
+      return parse_number_real_maybe_decimal(line, original_column,
+                                             result.str());
   }
 }
 
@@ -544,7 +548,8 @@ auto parse_number_maybe_fractional(
       column += 1;
       throw JSONParseError(line, column);
     default:
-      return JSON{parse_number_integer(line, original_column, result.str())};
+      return JSON{parse_number_integer_maybe_decimal(line, original_column,
+                                                     result.str())};
   }
 }
 
@@ -590,7 +595,8 @@ auto parse_number_any_rest(
         column += 1;
         break;
       default:
-        return JSON{parse_number_integer(line, original_column, result.str())};
+        return JSON{parse_number_integer_maybe_decimal(line, original_column,
+                                                       result.str())};
     }
   }
 
