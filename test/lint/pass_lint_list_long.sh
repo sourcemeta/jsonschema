@@ -160,6 +160,9 @@ unevaluated_properties_default
 unknown_keywords_prefix
   Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix
 
+unknown_local_ref
+  Local references that point to unknown locations are invalid and will result in evaluation failures
+
 unnecessary_allof_ref_wrapper_draft
   Wrapping `$ref` in `allOf` is only necessary if there are other sibling keywords
 
@@ -172,7 +175,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 54
+Number of rules: 55
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
