@@ -31,8 +31,7 @@ as JSON files that follow a specific format:
   into the resolution context using the `--resolve` or `--http` options_.
 
   If the `target` is relative, it will be interpreted as a file path relative
-  to the test file location. For security reasons, the file path still needs be
-  imported into the resolution context using `--resolve`.
+  to the test file location.
 
 - `tests`: An array of tests you want to run.
 
