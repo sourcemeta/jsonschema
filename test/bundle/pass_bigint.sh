@@ -36,7 +36,7 @@ cat << 'EOF' > "$TMP/expected.json"
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://example.com/nested",
       "type": "integer",
-      "exclusiveMaximum": 9223372036854776000
+      "exclusiveMaximum": 9.223372036854776000e+18
     }
   }
 }

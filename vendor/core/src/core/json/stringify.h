@@ -552,7 +552,10 @@ auto stringify(
       stringify<Allocator>(document.as_object(), stream);
       break;
     case JSON::Type::Decimal:
-      stream << document.to_decimal().to_string();
+      // We ALWAYS parse numbers with exponents as decimal, so if we don't
+      // preserve the exponent, we might end up incorrectly treating the number
+      // when parsing it again
+      stream << document.to_decimal().to_scientific_string();
       break;
   }
 }
@@ -589,7 +592,10 @@ auto prettify(
       prettify<Allocator>(document.as_object(), stream, indentation, indent_by);
       break;
     case JSON::Type::Decimal:
-      stream << document.to_decimal().to_string();
+      // We ALWAYS parse numbers with exponents as decimal, so if we don't
+      // preserve the exponent, we might end up incorrectly treating the number
+      // when parsing it again
+      stream << document.to_decimal().to_scientific_string();
       break;
   }
 }

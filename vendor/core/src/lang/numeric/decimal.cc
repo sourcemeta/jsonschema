@@ -299,7 +299,9 @@ auto Decimal::infinity() -> Decimal { return Decimal{"Infinity"}; }
 auto Decimal::negative_infinity() -> Decimal { return Decimal{"-Infinity"}; }
 
 auto Decimal::to_scientific_string() const -> std::string {
-  char *result_string = mpd_to_sci(&this->data()->value, 1);
+  // Note that `mpd_to_sci`, contrary to its name, does NOT guarantee
+  // we get exponential notation. It still avoids it for small-ish numbers
+  char *result_string = mpd_format(&this->data()->value, "e", &max_context);
   if (result_string == nullptr) {
     throw NumericOutOfMemoryError{};
   }
