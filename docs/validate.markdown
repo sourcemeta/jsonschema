@@ -5,7 +5,7 @@ Validating
 > JSON Schema Draft 3 and older are not supported at this point in time.
 
 ```sh
-jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
+jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
   [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
@@ -14,8 +14,8 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml...>
 
 The most popular use case of JSON Schema is to validate JSON documents. The
 JSON Schema CLI offers a `validate` command to evaluate one or many JSON
-instances or JSONL datasets against a JSON Schema, presenting human-friendly
-information on unsuccessful validation.
+instances, directories of instances, or JSONL datasets against a JSON Schema,
+presenting human-friendly information on unsuccessful validation.
 
 The `--json`/`-j` option outputs the evaluation result using the JSON Schema
 [`Flag`](https://json-schema.org/draft/2020-12/json-schema-core#section-12.4.1) or
@@ -162,4 +162,23 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json --benchmark
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json --trace
+```
+
+### Validate a directory of instances against a schema
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/instances/
+```
+
+### Validate a directory of instances with a specific extension
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/instances/ --extension .data.json
+```
+
+### Validate a directory of instances while ignoring certain paths
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/instances/ \
+  --ignore path/to/instances/drafts
 ```

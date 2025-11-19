@@ -21,8 +21,8 @@ cat << 'EOF' > "$TMP/instance.jsonl"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl" 2>"$TMP/stderr.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/instance.jsonl (entry #1)

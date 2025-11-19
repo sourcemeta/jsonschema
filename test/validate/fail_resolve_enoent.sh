@@ -20,8 +20,8 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --resolve "$TMP/test" 2>"$TMP/stderr.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: No such file or directory
@@ -33,8 +33,8 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --resolve "$TMP/test" --json >"$TMP/stdout.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

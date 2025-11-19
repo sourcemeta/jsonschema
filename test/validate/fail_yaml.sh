@@ -20,8 +20,8 @@ foo: 1
 EOF
 
 "$1" validate "$TMP/schema.yaml" "$TMP/instance.yaml" 2> "$TMP/stderr.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/instance.yaml
