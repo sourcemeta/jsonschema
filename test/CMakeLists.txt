@@ -52,6 +52,7 @@ add_jsonschema_test_unix(format/fail_unknown_metaschema)
 add_jsonschema_test_unix(format/pass_default_dialect)
 add_jsonschema_test_unix(format/pass_default_dialect_config)
 add_jsonschema_test_unix(format/pass_default_dialect_config_relative)
+add_jsonschema_test_unix(format/pass_bignum_real)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_directory)

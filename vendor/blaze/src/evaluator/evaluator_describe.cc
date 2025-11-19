@@ -17,6 +17,16 @@ auto instruction_value(const T &step) -> decltype(auto) {
   }
 }
 
+template <typename T>
+auto describe_stringify(const sourcemeta::core::JSON &value, T &stream)
+    -> void {
+  if (value.is_decimal()) {
+    stream << value.to_decimal().to_string();
+  } else {
+    sourcemeta::core::stringify(value, stream);
+  }
+}
+
 auto to_string(const sourcemeta::core::JSON::Type type) -> std::string {
   // Otherwise the type "real" might not make a lot
   // of sense to JSON Schema users
@@ -493,9 +503,9 @@ auto describe(const bool valid, const Instruction &step,
            iterator != annotation.as_array().cend(); ++iterator) {
         if (std::next(iterator) == annotation.as_array().cend()) {
           message << "and ";
-          stringify(*iterator, message);
+          describe_stringify(*iterator, message);
         } else {
-          stringify(*iterator, message);
+          describe_stringify(*iterator, message);
           message << ", ";
         }
       }
@@ -547,7 +557,7 @@ auto describe(const bool valid, const Instruction &step,
       }
 
       message << " was expected to validate against the schema ";
-      stringify(annotation, message);
+      describe_stringify(annotation, message);
       return message.str();
     }
 
@@ -563,14 +573,14 @@ auto describe(const bool valid, const Instruction &step,
       }
 
       message << " was expected to be ";
-      stringify(annotation, message);
+      describe_stringify(annotation, message);
       return message.str();
     }
 
     std::ostringstream message;
     message << "The unrecognized keyword " << escape_string(keyword)
             << " was collected as the annotation ";
-    stringify(annotation, message);
+    describe_stringify(annotation, message);
     return message.str();
   }
 
@@ -1416,7 +1426,7 @@ auto describe(const bool valid, const Instruction &step,
                 << escape_string(instance_location.back().to_property());
       } else {
         message << "The string value ";
-        stringify(target, message);
+        describe_stringify(target, message);
       }
 
       message << " was expected to consist of at most " << maximum
@@ -1458,7 +1468,7 @@ auto describe(const bool valid, const Instruction &step,
                 << escape_string(instance_location.back().to_property());
       } else {
         message << "The string value ";
-        stringify(target, message);
+        describe_stringify(target, message);
       }
 
       message << " was expected to consist of at least " << minimum
@@ -1665,12 +1675,12 @@ auto describe(const bool valid, const Instruction &step,
               << escape_string(instance_location.back().to_property());
     } else {
       message << "The " << to_string(target.type()) << " value ";
-      stringify(target, message);
+      describe_stringify(target, message);
     }
 
     message << " was expected to equal the " << to_string(value.type())
             << " constant ";
-    stringify(value, message);
+    describe_stringify(value, message);
     return message.str();
   }
 
@@ -1678,10 +1688,10 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
     message << "The " << value_type_name(target) << " value ";
-    stringify(target, message);
+    describe_stringify(target, message);
     message << " was expected to be greater than or equal to the "
             << value_type_name(value) << " ";
-    stringify(value, message);
+    describe_stringify(value, message);
     return message.str();
   }
 
@@ -1689,10 +1699,10 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
     message << "The " << value_type_name(target) << " value ";
-    stringify(target, message);
+    describe_stringify(target, message);
     message << " was expected to be less than or equal to the "
             << value_type_name(value) << " ";
-    stringify(value, message);
+    describe_stringify(value, message);
     return message.str();
   }
 
@@ -1700,10 +1710,10 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
     message << "The " << value_type_name(target) << " value ";
-    stringify(target, message);
+    describe_stringify(target, message);
     message << " was expected to be greater than the " << value_type_name(value)
             << " ";
-    stringify(value, message);
+    describe_stringify(value, message);
     if (!valid && value == target) {
       message << ", but they were equal";
     }
@@ -1715,10 +1725,10 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
     message << "The " << value_type_name(target) << " value ";
-    stringify(target, message);
+    describe_stringify(target, message);
     message << " was expected to be less than the " << value_type_name(value)
             << " ";
-    stringify(value, message);
+    describe_stringify(value, message);
     if (!valid && value == target) {
       message << ", but they were equal";
     }
@@ -1748,16 +1758,16 @@ auto describe(const bool valid, const Instruction &step,
       message << "The array value contained the following duplicate";
       if (duplicates.size() == 1) {
         message << " item: ";
-        stringify(*(duplicates.cbegin()), message);
+        describe_stringify(*(duplicates.cbegin()), message);
       } else {
         message << " items: ";
         for (auto subiterator = duplicates.cbegin();
              subiterator != duplicates.cend(); ++subiterator) {
           if (std::next(subiterator) == duplicates.cend()) {
             message << "and ";
-            stringify(*subiterator, message);
+            describe_stringify(*subiterator, message);
           } else {
-            stringify(*subiterator, message);
+            describe_stringify(*subiterator, message);
             message << ", ";
           }
         }
@@ -1771,10 +1781,10 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     const auto &value{instruction_value<ValueJSON>(step)};
     message << "The " << value_type_name(target) << " value ";
-    stringify(target, message);
+    describe_stringify(target, message);
     message << " was expected to be divisible by the " << value_type_name(value)
             << " ";
-    stringify(value, message);
+    describe_stringify(value, message);
     return message.str();
   }
 
@@ -1793,13 +1803,13 @@ auto describe(const bool valid, const Instruction &step,
               << escape_string(instance_location.back().to_property());
     } else {
       message << "The " << to_string(target.type()) << " value ";
-      stringify(target, message);
+      describe_stringify(target, message);
     }
 
     if (value.size() == 1) {
       message << " was expected to equal the "
               << to_string(value.cbegin()->type()) << " constant ";
-      stringify(*(value.cbegin()), message);
+      describe_stringify(*(value.cbegin()), message);
     } else {
       if (valid) {
         message << " was expected to equal one of the " << value.size()
@@ -1812,9 +1822,9 @@ auto describe(const bool valid, const Instruction &step,
              ++iterator) {
           if (std::next(iterator) == copy.cend()) {
             message << "and ";
-            stringify(*iterator, message);
+            describe_stringify(*iterator, message);
           } else {
-            stringify(*iterator, message);
+            describe_stringify(*iterator, message);
             message << ", ";
           }
         }
@@ -1840,7 +1850,7 @@ auto describe(const bool valid, const Instruction &step,
               << escape_string(instance_location.back().to_property());
     } else {
       message << "The " << to_string(target.type()) << " value ";
-      stringify(target, message);
+      describe_stringify(target, message);
     }
 
     if (value.size() == 1) {
