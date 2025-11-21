@@ -21,7 +21,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --verbose 2> "$TMP/output.txt"
+"$1" fmt "$TMP/schema.json" --verbose >"$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.json"
 {
@@ -36,9 +36,9 @@ EOF
 
 diff "$TMP/schema.json" "$TMP/expected.json"
 
-cat << EOF > "$TMP/expected_log.txt"
+cat << EOF > "$TMP/expected_output.txt"
 Formatting: $(realpath "$TMP")/schema.json
 Using configuration file: $(realpath "$TMP")/jsonschema.json
 EOF
 
-diff "$TMP/output.txt" "$TMP/expected_log.txt"
+diff "$TMP/output.txt" "$TMP/expected_output.txt"

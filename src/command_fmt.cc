@@ -2,8 +2,10 @@
 #include <sourcemeta/core/jsonschema.h>
 
 #include <fstream>  // std::ofstream
-#include <iostream> // std::cerr
+#include <iostream> // std::cerr, std::cout
 #include <sstream>  // std::ostringstream
+#include <utility>  // std::move
+#include <vector>   // std::vector
 
 #include "command.h"
 #include "error.h"
@@ -14,6 +16,9 @@
 
 auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     -> void {
+  const bool output_json{options.contains("json")};
+  bool result{true};
+  std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
     if (entry.first.extension() == ".yaml" ||
@@ -51,13 +56,13 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
     if (options.contains("check")) {
       if (current.str() == expected.str()) {
-        LOG_VERBOSE(options) << "PASS: " << entry.first.string() << "\n";
+        LOG_VERBOSE(options) << "ok: " << entry.first.string() << "\n";
+      } else if (output_json) {
+        failed_files.push_back(entry.first.string());
+        result = false;
       } else {
-        std::cerr << "FAIL: " << entry.first.string() << "\n";
-        std::cerr << "Got:\n"
-                  << current.str() << "\nBut expected:\n"
-                  << expected.str() << "\n";
-        throw Fail{EXIT_FAILURE};
+        std::cerr << "fail: " << entry.first.string() << "\n";
+        result = false;
       }
     } else {
       if (current.str() != expected.str()) {
@@ -65,5 +70,32 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         output << expected.str();
       }
     }
+  }
+
+  if (options.contains("check") && output_json) {
+    auto output_json_object{sourcemeta::core::JSON::make_object()};
+    output_json_object.assign("valid", sourcemeta::core::JSON{result});
+
+    if (!result) {
+      auto errors_array{sourcemeta::core::JSON::make_array()};
+      for (auto &file_path : failed_files) {
+        errors_array.push_back(sourcemeta::core::JSON{std::move(file_path)});
+      }
+
+      output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
+    }
+
+    sourcemeta::core::prettify(output_json_object, std::cout, indentation);
+    std::cout << "\n";
+  }
+
+  if (!result) {
+    if (!output_json) {
+      std::cerr << "\nRun the `fmt` command without `--check/-c` to fix the "
+                   "formatting"
+                << "\n";
+    }
+
+    throw Fail{EXIT_FAILURE};
   }
 }

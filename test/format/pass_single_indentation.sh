@@ -16,7 +16,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --indentation 4
+"$1" fmt "$TMP/schema.json" --indentation 4 >"$TMP/output.txt" 2>&1
+
+cat << 'EOF' > "$TMP/expected_output.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected_output.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

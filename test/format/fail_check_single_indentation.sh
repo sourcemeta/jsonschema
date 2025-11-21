@@ -14,26 +14,16 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --indentation 4 --check 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
+"$1" fmt "$TMP/schema.json" --indentation 4 --check >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
-cat << EOF > "$TMP/error.txt"
-FAIL: $(realpath "$TMP")/schema.json
-Got:
-{
-  "\$schema": "http://json-schema.org/draft-04/schema#",
-  "type": 1
-}
+cat << EOF > "$TMP/expected.txt"
+fail: $(realpath "$TMP")/schema.json
 
-But expected:
-{
-    "\$schema": "http://json-schema.org/draft-04/schema#",
-    "type": 1
-}
-
+Run the \`fmt\` command without \`--check/-c\` to fix the formatting
 EOF
 
-diff "$TMP/stderr.txt" "$TMP/error.txt"
+diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

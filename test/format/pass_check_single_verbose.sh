@@ -10,13 +10,15 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "minimum": 1e-05
+  "type": 1
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP/schema.json" --check --verbose >"$TMP/output.txt" 2>&1
 
-cat << 'EOF' > "$TMP/expected_output.txt"
+cat << EOF > "$TMP/expected_output.txt"
+Checking: $(realpath "$TMP")/schema.json
+ok: $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_output.txt"
@@ -24,7 +26,7 @@ diff "$TMP/output.txt" "$TMP/expected_output.txt"
 cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "minimum": 1e-5
+  "type": 1
 }
 EOF
 
