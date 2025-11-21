@@ -238,7 +238,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           output << "\n";
         }
       } else {
-        result = false;
+        // Exception was caught - exit immediately with error code 1
+        throw Fail{EXIT_FAILURE};
       }
     }
   } else {
@@ -263,7 +264,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               if (subresult.first) {
                 return EXIT_SUCCESS;
               } else {
-                return EXIT_FAILURE;
+                // Return 2 for logical lint failures
+                return 2;
               }
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
@@ -274,8 +276,12 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             }
           });
 
-      if (wrapper_result != EXIT_SUCCESS) {
+      if (wrapper_result == 2) {
+        // Logical lint failure
         result = false;
+      } else if (wrapper_result != EXIT_SUCCESS) {
+        // Exception was caught - exit immediately with error code 1
+        throw Fail{EXIT_FAILURE};
       }
     }
   }
@@ -299,6 +305,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   if (!result) {
-    throw Fail{EXIT_FAILURE};
+    // Report a different exit code for linting failures, to
+    // distinguish them from other errors
+    throw Fail{2};
   }
 }

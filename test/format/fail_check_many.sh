@@ -30,7 +30,7 @@ cat << 'EOF' > "$TMP/schemas/3.json"
 EOF
 
 "$1" fmt "$TMP/schemas" --check >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schemas/1.json

@@ -36,7 +36,6 @@ error: Could not resolve the metaschema of the schema
   at file path $(realpath "$TMP")/baz.json
 
 This is likely because you forgot to import such schema using \`--resolve/-r\`
-Linting: $(realpath "$TMP")/foo.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -250,6 +250,8 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
   }
 
   if (!result) {
-    throw Fail{EXIT_FAILURE};
+    // Report a different exit code for test failures, to
+    // distinguish them from other errors
+    throw Fail{2};
   }
 }

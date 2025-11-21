@@ -63,7 +63,7 @@ EOF
 
 "$1" test "$TMP/tests" --resolve "$TMP/schema.json" 1> "$TMP/output.txt" 2>&1 \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/tests/1.json:
