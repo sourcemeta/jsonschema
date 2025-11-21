@@ -20,7 +20,14 @@ cat << 'EOF' > "$TMP/schema_2.schema.json"
 EOF
 
 cd "$TMP"
-"$1" fmt --extension .schema.json -v
+"$1" fmt --extension .schema.json -v >"$TMP/output.txt" 2>&1
+
+cat << EOF > "$TMP/expected_output.txt"
+Using extension: .schema.json
+Formatting: $(realpath "$TMP")/schema_2.schema.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected_output.txt"
 
 cat << 'EOF' > "$TMP/expected_1.json"
 {

@@ -21,7 +21,12 @@ cat << 'EOF' > "$TMP/schema_2.json"
 EOF
 
 cd "$TMP"
-"$1" fmt
+"$1" fmt >"$TMP/output.txt" 2>&1
+
+cat << 'EOF' > "$TMP/expected_output.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected_output.txt"
 
 cat << 'EOF' > "$TMP/expected_1.json"
 {

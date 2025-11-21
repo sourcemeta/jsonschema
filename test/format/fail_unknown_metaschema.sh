@@ -18,7 +18,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
+"$1" fmt "$TMP/schema.json" >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
@@ -28,17 +28,17 @@ error: Could not resolve the metaschema of the schema
 This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
 
-diff "$TMP/stderr.txt" "$TMP/expected.txt"
+diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" fmt "$TMP/schema.json" --json >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
+"$1" fmt "$TMP/schema.json" --json >"$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
-cat << EOF > "$TMP/expected.txt"
+cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "Could not resolve the metaschema of the schema",
   "identifier": "https://example.com/unknown"
 }
 EOF
 
-diff "$TMP/stdout.txt" "$TMP/expected.txt"
+diff "$TMP/output_json.txt" "$TMP/expected_json.txt"

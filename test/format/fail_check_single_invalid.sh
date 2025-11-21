@@ -14,5 +14,14 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --check 2>"$TMP/output.txt" && CODE="$?" || CODE="$?"
+"$1" fmt "$TMP/schema.json" --check >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+error: Failed to parse the JSON document
+  at line 3
+  at column 3
+  at file path $(realpath "$TMP")/schema.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"

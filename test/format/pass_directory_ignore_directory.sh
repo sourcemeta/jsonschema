@@ -21,7 +21,12 @@ cat << 'EOF' > "$TMP/nested/schema_2.json"
 {"type": "string", "title": "My String"}
 EOF
 
-"$1" fmt "$TMP" --ignore "$TMP/nested"
+"$1" fmt "$TMP" --ignore "$TMP/nested" >"$TMP/output.txt" 2>&1
+
+cat << 'EOF' > "$TMP/expected_output.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected_output.txt"
 
 cat << 'EOF' > "$TMP/expected_1.json"
 {
