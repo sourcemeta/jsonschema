@@ -24,7 +24,7 @@ cat << 'EOF' > "$TMP/schemas/bar.json"
 EOF
 
 "$1" lint "$TMP/schemas" --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

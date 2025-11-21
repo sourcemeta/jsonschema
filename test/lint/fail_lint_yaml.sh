@@ -15,7 +15,7 @@ EOF
 
 cd "$TMP"
 "$1" lint "$TMP/schema.yaml" >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 schema.yaml:3:1:

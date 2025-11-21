@@ -96,6 +96,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
                 << "\n";
     }
 
-    throw Fail{EXIT_FAILURE};
+    // Report a different exit code for formatting check failures, to
+    // distinguish them from other errors
+    throw Fail{2};
   }
 }

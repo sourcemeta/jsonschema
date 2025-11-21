@@ -18,7 +18,7 @@ EOF
 
 cd "$TMP"
 "$1" lint "$TMP/schema.json" --verbose --exclude foo_bar >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 warning: Cannot exclude unknown rule: foo_bar

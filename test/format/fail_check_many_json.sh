@@ -30,7 +30,7 @@ cat << 'EOF' > "$TMP/schemas/3.json"
 EOF
 
 "$1" fmt "$TMP/schemas" --check --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

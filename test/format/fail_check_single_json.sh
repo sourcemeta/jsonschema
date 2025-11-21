@@ -18,7 +18,7 @@ EOF
 
 "$1" fmt "$TMP/this/is/a/very/very/very/long/path/schema.json" \
   --check --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

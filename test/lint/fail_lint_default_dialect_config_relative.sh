@@ -23,7 +23,7 @@ EOF
 cd "$TMP"
 "$1" lint schema.json --verbose \
   >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Using configuration file: $(realpath "$TMP")/jsonschema.json
