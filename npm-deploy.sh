@@ -129,8 +129,12 @@ if (PLATFORM === 'darwin') {
   child_process.spawnSync('/usr/bin/xattr', [ '-c', EXECUTABLE ], { stdio: 'inherit' });
 }
 
-const result = child_process.spawnSync(EXECUTABLE,
-  process.argv.slice(2), { stdio: 'inherit' });
+const result = child_process.spawnSync(EXECUTABLE, process.argv.slice(2), {
+  stdio: 'inherit',
+  // Do not open a command prompt on spawning
+  windowsHide: true
+});
+
 process.exit(result.status);
 EOF
 
