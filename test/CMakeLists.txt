@@ -171,6 +171,12 @@ add_jsonschema_test_unix(validate/fail_benchmark_zero)
 add_jsonschema_test_unix(validate/fail_default_dialect_config_extension_mismatch)
 add_jsonschema_test_unix(validate/pass_resolve_remap)
 add_jsonschema_test_unix(validate/pass_resolve_remap_relative)
+add_jsonschema_test_unix(validate/pass_yaml)
+add_jsonschema_test_unix(validate/pass_yaml_verbose)
+add_jsonschema_test_unix(validate/fail_second_yaml)
+add_jsonschema_test_unix(validate/fail_second_yaml_verbose)
+add_jsonschema_test_unix(validate/pass_second_yaml)
+add_jsonschema_test_unix(validate/fail_yaml_linenumbers)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
