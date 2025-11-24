@@ -94,18 +94,27 @@ public:
               "The file you provided does not represent a valid JSON Schema");
         }
 
-        const auto result =
-            this->add(entry.second, default_dialect,
-                      sourcemeta::core::URI::from_path(entry.first).recompose(),
-                      [&options](const auto &identifier) {
-                        LOG_VERBOSE(options)
-                            << "Importing schema into the resolution context: "
-                            << identifier << "\n";
-                      });
-        if (!result) {
-          LOG_WARNING() << "No schema resources were imported from this file\n"
-                        << "  at " << entry.first.string() << "\n"
-                        << "Are you sure this schema sets any identifiers?\n";
+        try {
+          const auto result = this->add(
+              entry.second, default_dialect,
+              sourcemeta::core::URI::from_path(entry.first).recompose(),
+              [&options](const auto &identifier) {
+                LOG_VERBOSE(options)
+                    << "Importing schema into the resolution context: "
+                    << identifier << "\n";
+              });
+          if (!result) {
+            LOG_WARNING()
+                << "No schema resources were imported from this file\n"
+                << "  at " << entry.first.string() << "\n"
+                << "Are you sure this schema sets any identifiers?\n";
+          }
+        } catch (const sourcemeta::core::SchemaFrameError &error) {
+          throw FileError<sourcemeta::core::SchemaFrameError>(
+              entry.first, std::string{error.identifier()}, error.what());
+        } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+              entry.first);
         }
       }
     }
@@ -142,9 +151,8 @@ public:
 
       const auto result{this->schemas.emplace(key.second, subschema)};
       if (!result.second && result.first->second != schema) {
-        std::ostringstream error;
-        error << "Cannot register the same identifier twice: " << key.second;
-        throw sourcemeta::core::SchemaError(error.str());
+        throw sourcemeta::core::SchemaFrameError(
+            key.second, "Cannot register the same identifier twice");
       }
 
       if (callback) {

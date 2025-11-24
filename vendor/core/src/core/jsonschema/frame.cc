@@ -213,16 +213,15 @@ auto fragment_string(const sourcemeta::core::URI &uri)
 
 [[noreturn]]
 auto throw_already_exists(const sourcemeta::core::JSON::String &uri) -> void {
-  std::ostringstream error;
-  error << "Schema identifier already exists: " << uri;
-  throw sourcemeta::core::SchemaError(error.str());
+  throw sourcemeta::core::SchemaFrameError(uri,
+                                           "Schema identifier already exists");
 }
 
 auto store(sourcemeta::core::SchemaFrame::Locations &frame,
            sourcemeta::core::SchemaFrame::Instances &instances,
            const sourcemeta::core::SchemaReferenceType type,
            const sourcemeta::core::SchemaFrame::LocationType entry_type,
-           sourcemeta::core::JSON::String uri,
+           const sourcemeta::core::JSON::String &uri,
            const std::optional<sourcemeta::core::JSON::String> &root_id,
            const sourcemeta::core::JSON::String &base_id,
            const sourcemeta::core::Pointer &pointer_from_root,
@@ -233,9 +232,8 @@ auto store(sourcemeta::core::SchemaFrame::Locations &frame,
            const std::optional<sourcemeta::core::Pointer> &parent,
            const bool ignore_if_present = false,
            const bool already_canonical = false) -> void {
-  const auto canonical{already_canonical
-                           ? std::move(uri)
-                           : sourcemeta::core::URI::canonicalize(uri)};
+  const auto canonical{
+      already_canonical ? uri : sourcemeta::core::URI::canonicalize(uri)};
   const auto inserted{frame
                           .insert({{type, canonical},
                                    {.parent = parent,
@@ -832,8 +830,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                 this->mode_ == SchemaFrame::Mode::Instances) {
               store(this->locations_, this->instances_,
                     SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Subschema, std::move(result),
-                    root_id, current_base, pointer,
+                    SchemaFrame::LocationType::Subschema, result, root_id,
+                    current_base, pointer,
                     pointer.resolve_from(nearest_bases.second),
                     dialects.first.front(), current_base_dialect,
                     {subschema->second.instance_location},
@@ -841,8 +839,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             } else {
               store(this->locations_, this->instances_,
                     SchemaReferenceType::Static,
-                    SchemaFrame::LocationType::Subschema, std::move(result),
-                    root_id, current_base, pointer,
+                    SchemaFrame::LocationType::Subschema, result, root_id,
+                    current_base, pointer,
                     pointer.resolve_from(nearest_bases.second),
                     dialects.first.front(), current_base_dialect, {},
                     subschema->second.parent, false, true);
@@ -850,8 +848,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           } else {
             store(this->locations_, this->instances_,
                   SchemaReferenceType::Static,
-                  SchemaFrame::LocationType::Pointer, std::move(result),
-                  root_id, current_base, pointer,
+                  SchemaFrame::LocationType::Pointer, result, root_id,
+                  current_base, pointer,
                   pointer.resolve_from(nearest_bases.second),
                   dialects.first.front(), current_base_dialect, {},
                   dialects.second, false, true);
@@ -903,9 +901,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         // See
         // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.2.4.2.1
         if (ref != "#") {
-          std::ostringstream error;
-          error << "Invalid recursive reference: " << ref;
-          throw sourcemeta::core::SchemaError(error.str());
+          throw sourcemeta::core::SchemaReferenceError(
+              entry.id.value_or(""),
+              entry.common.pointer.concat({"$recursiveRef"}),
+              "Invalid recursive reference");
         }
 
         auto anchor_uri_string{

@@ -29,6 +29,7 @@ test "$EXIT_CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve schema reference
   at identifier file://$(realpath "$TMP")/schema.json#/definitions/i-dont-exist
+  at file path $(realpath "$TMP")/schema.json
   at location "/properties/foo/\$ref"
 EOF
 
@@ -43,6 +44,7 @@ cat << EOF > "$TMP/expected.txt"
 {
   "error": "Could not resolve schema reference",
   "identifier": "file://$(realpath "$TMP")/schema.json#/definitions/i-dont-exist",
+  "filePath": "$(realpath "$TMP")/schema.json",
   "location": "/properties/foo/\$ref"
 }
 EOF

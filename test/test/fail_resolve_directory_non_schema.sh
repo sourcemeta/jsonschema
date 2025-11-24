@@ -43,6 +43,7 @@ Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/
 Importing schema into the resolution context: https://example.com
 Detecting schema resources from file: $(realpath "$TMP")/schemas/test.json
 error: Could not determine the base dialect of the schema
+  at file path $(realpath "$TMP")/schemas/test.json
 
 Are you sure the input is a valid JSON Schema and its base dialect is known?
 If the input does not declare the \`\$schema\` keyword, you might want to

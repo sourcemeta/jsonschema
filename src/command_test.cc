@@ -59,39 +59,45 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     const auto configuration_path{find_configuration(entry.first)};
     const auto &configuration{read_configuration(options, configuration_path)};
     const auto dialect{default_dialect(options, configuration)};
-    const auto &test_resolver{
-        resolver(options, options.contains("http"), dialect, configuration)};
 
     const sourcemeta::core::JSON test{
         sourcemeta::core::read_yaml_or_json(entry.first)};
 
     if (!test.is_object()) {
       std::cout << entry.first.string() << ":\n";
-      throw TestError{"The test document must be an object", std::nullopt};
+      throw FileError<TestError>{
+          entry.first, "The test document must be an object", std::nullopt};
     }
+
+    const auto &test_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
 
     if (!test.defines("target")) {
       std::cout << entry.first.string() << ":\n";
-      throw TestError{"The test document must contain a `target` property",
-                      std::nullopt};
+      throw FileError<TestError>{
+          entry.first, "The test document must contain a `target` property",
+          std::nullopt};
     }
 
     if (!test.at("target").is_string()) {
       std::cout << entry.first.string() << ":\n";
-      throw TestError{"The test document `target` property must be a URI",
-                      std::nullopt};
+      throw FileError<TestError>{
+          entry.first, "The test document `target` property must be a URI",
+          std::nullopt};
     }
 
     if (!test.defines("tests")) {
       std::cout << entry.first.string() << ":\n";
-      throw TestError{"The test document must contain a `tests` property",
-                      std::nullopt};
+      throw FileError<TestError>{
+          entry.first, "The test document must contain a `tests` property",
+          std::nullopt};
     }
 
     if (!test.at("tests").is_array()) {
       std::cout << entry.first.string() << ":\n";
-      throw TestError{"The test document `tests` property must be an array",
-                      std::nullopt};
+      throw FileError<TestError>{
+          entry.first, "The test document `tests` property must be an array",
+          std::nullopt};
     }
 
     const auto test_path_uri{sourcemeta::core::URI::from_path(entry.first)};
@@ -123,15 +129,32 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
           sourcemeta::blaze::Mode::FastValidation, dialect);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
-          error.id() == schema_uri.recompose()) {
+          error.identifier() == schema_uri.recompose()) {
         std::cout << entry.first.string() << ":";
         std::cout << "\n";
-        throw sourcemeta::core::SchemaResolutionError(
-            test.at("target").to_string(),
-            "Could not resolve schema under test");
+        throw FileError<sourcemeta::core::SchemaResolutionError>{
+            entry.first, test.at("target").to_string(),
+            "Could not resolve schema under test"};
       }
 
       throw;
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                 &error) {
+      std::cout << entry.first.string() << ":";
+      std::cout << "\n";
+      throw FileError<
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{
+          entry.first, error};
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
+      std::cout << entry.first.string() << ":";
+      std::cout << "\n";
+      throw FileError<sourcemeta::core::SchemaResolutionError>{entry.first,
+                                                               error};
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+      std::cout << entry.first.string() << ":";
+      std::cout << "\n";
+      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>{
+          entry.first};
     } catch (...) {
       std::cout << entry.first.string() << ":";
       std::cout << "\n";
@@ -148,27 +171,32 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
 
       if (!test_case.is_object()) {
         std::cout << "\n";
-        throw TestError{"Test case documents must be objects", index};
+        throw FileError<TestError>{
+            entry.first, "Test case documents must be objects", index};
       }
 
       if (!test_case.defines("data") && !test_case.defines("dataPath")) {
         std::cout << "\n";
-        throw TestError{
+        throw FileError<TestError>{
+            entry.first,
             "Test case documents must contain a `data` or `dataPath` property",
             index};
       }
 
       if (test_case.defines("data") && test_case.defines("dataPath")) {
         std::cout << "\n";
-        throw TestError{"Test case documents must contain either a `data` or "
-                        "`dataPath` property, but not both",
-                        index};
+        throw FileError<TestError>{
+            entry.first,
+            "Test case documents must contain either a `data` or "
+            "`dataPath` property, but not both",
+            index};
       }
 
       if (test_case.defines("dataPath") &&
           !test_case.at("dataPath").is_string()) {
         std::cout << "\n";
-        throw TestError{
+        throw FileError<TestError>{
+            entry.first,
             "Test case documents must set the `dataPath` property to a string",
             index};
       }
@@ -176,19 +204,22 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
       if (test_case.defines("description") &&
           !test_case.at("description").is_string()) {
         std::cout << "\n";
-        throw TestError{
+        throw FileError<TestError>{
+            entry.first,
             "If you set a test case description, it must be a string", index};
       }
 
       if (!test_case.defines("valid")) {
         std::cout << "\n";
-        throw TestError{"Test case documents must contain a `valid` property",
-                        index};
+        throw FileError<TestError>{
+            entry.first, "Test case documents must contain a `valid` property",
+            index};
       }
 
       if (!test_case.at("valid").is_boolean()) {
         std::cout << "\n";
-        throw TestError{
+        throw FileError<TestError>{
+            entry.first,
             "The test case document `valid` property must be a boolean", index};
       }
 

@@ -24,6 +24,7 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: The test document \`tests\` property must be an array
+  at file path $(realpath "$TMP")/test.json
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF

@@ -27,8 +27,10 @@ EOF
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
-cat << 'EOF' > "$TMP/expected.txt"
-error: A schema with a top-level `$ref` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior
+cat << EOF > "$TMP/expected.txt"
+error: A schema with a top-level \`\$ref\` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior
+  at identifier file://$(realpath "$TMP")/schema.json
+  at file path $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -37,9 +39,11 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
-cat << 'EOF' > "$TMP/expected.json"
+cat << EOF > "$TMP/expected.json"
 {
-  "error": "A schema with a top-level `$ref` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior"
+  "error": "A schema with a top-level \`\$ref\` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior",
+  "identifier": "file://$(realpath "$TMP")/schema.json",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 

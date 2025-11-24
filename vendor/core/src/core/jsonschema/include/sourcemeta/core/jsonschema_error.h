@@ -25,13 +25,17 @@ namespace sourcemeta::core {
 /// An error that represents a general schema error event
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaError : public std::exception {
 public:
-  SchemaError(std::string message) : message_{std::move(message)} {}
+  SchemaError(const char *message) : message_{message} {}
+  SchemaError(std::string message) = delete;
+  SchemaError(std::string &&message) = delete;
+  SchemaError(std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup jsonschema
@@ -39,19 +43,24 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaResolutionError
     : public std::exception {
 public:
-  SchemaResolutionError(std::string identifier, std::string message)
-      : identifier_{std::move(identifier)}, message_{std::move(message)} {}
+  SchemaResolutionError(std::string identifier, const char *message)
+      : identifier_{std::move(identifier)}, message_{message} {}
+  SchemaResolutionError(std::string identifier, std::string message) = delete;
+  SchemaResolutionError(std::string identifier, std::string &&message) = delete;
+  SchemaResolutionError(std::string identifier,
+                        std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
-  [[nodiscard]] auto id() const noexcept -> std::string_view {
+  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
     return this->identifier_;
   }
 
 private:
   std::string identifier_;
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup jsonschema
@@ -72,10 +81,14 @@ public:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaVocabularyError
     : public std::exception {
 public:
-  SchemaVocabularyError(std::string uri, std::string message)
-      : uri_{std::move(uri)}, message_{std::move(message)} {}
+  SchemaVocabularyError(std::string uri, const char *message)
+      : uri_{std::move(uri)}, message_{message} {}
+  SchemaVocabularyError(std::string uri, std::string message) = delete;
+  SchemaVocabularyError(std::string uri, std::string &&message) = delete;
+  SchemaVocabularyError(std::string uri, std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   [[nodiscard]] auto uri() const noexcept -> std::string_view {
@@ -84,7 +97,7 @@ public:
 
 private:
   std::string uri_;
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup jsonschema
@@ -93,15 +106,21 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaReferenceError
     : public std::exception {
 public:
   SchemaReferenceError(std::string identifier, Pointer schema_location,
-                       std::string message)
+                       const char *message)
       : identifier_{std::move(identifier)},
-        schema_location_{std::move(schema_location)},
-        message_{std::move(message)} {}
+        schema_location_{std::move(schema_location)}, message_{message} {}
+  SchemaReferenceError(std::string identifier, Pointer schema_location,
+                       std::string message) = delete;
+  SchemaReferenceError(std::string identifier, Pointer schema_location,
+                       std::string &&message) = delete;
+  SchemaReferenceError(std::string identifier, Pointer schema_location,
+                       std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
-  [[nodiscard]] auto id() const noexcept -> std::string_view {
+  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
     return this->identifier_;
   }
 
@@ -112,7 +131,7 @@ public:
 private:
   std::string identifier_;
   Pointer schema_location_;
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup jsonschema
@@ -127,13 +146,17 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaBrokenReferenceError
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaAbortError
     : public std::exception {
 public:
-  SchemaAbortError(std::string message) : message_{std::move(message)} {}
+  SchemaAbortError(const char *message) : message_{message} {}
+  SchemaAbortError(std::string message) = delete;
+  SchemaAbortError(std::string &&message) = delete;
+  SchemaAbortError(std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup jsonschema
@@ -142,6 +165,7 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaUnknownDialectError
     : public std::exception {
 public:
   SchemaUnknownDialectError() = default;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Could not determine the dialect of the schema";
   }
@@ -154,6 +178,7 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaUnknownBaseDialectError
     : public std::exception {
 public:
   SchemaUnknownBaseDialectError() = default;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Could not determine the base dialect of the schema";
   }
@@ -206,6 +231,50 @@ public:
 
 private:
   std::string identifier_;
+};
+
+/// @ingroup jsonschema
+/// An error that represents an unrecognized base dialect
+class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaBaseDialectError
+    : public std::exception {
+public:
+  SchemaBaseDialectError(std::string base_dialect)
+      : base_dialect_{std::move(base_dialect)} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "Unrecognized base dialect";
+  }
+
+  [[nodiscard]] auto base_dialect() const noexcept -> std::string_view {
+    return this->base_dialect_;
+  }
+
+private:
+  std::string base_dialect_;
+};
+
+/// @ingroup jsonschema
+/// An error that represents a schema frame error
+class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrameError
+    : public std::exception {
+public:
+  SchemaFrameError(std::string identifier, const char *message)
+      : identifier_{std::move(identifier)}, message_{message} {}
+  SchemaFrameError(std::string identifier, std::string message) = delete;
+  SchemaFrameError(std::string identifier, std::string &&message) = delete;
+  SchemaFrameError(std::string identifier, std::string_view message) = delete;
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
+    return this->identifier_;
+  }
+
+private:
+  std::string identifier_;
+  const char *message_;
 };
 
 #if defined(_MSC_VER)

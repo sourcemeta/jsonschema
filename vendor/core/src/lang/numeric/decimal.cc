@@ -52,11 +52,24 @@ auto Decimal::data() const -> const Data * {
 
 namespace {
 
+// One-time global initialization of MPD_MINALLOC
+// This must happen before any thread-local contexts are initialized
+[[maybe_unused]] static const bool minalloc_initialized = []() {
+  constexpr mpd_ssize_t precision{16};
+  const mpd_ssize_t ideal_minalloc =
+      2 * ((precision + MPD_RDIGITS - 1) / MPD_RDIGITS);
+  mpd_setminalloc(ideal_minalloc);
+  return true;
+}();
+
 // Thread-local context for decimal arithmetic operations
 // Matches the C++ wrapper context_template settings (16 digit precision)
+// Note: We use mpd_defaultcontext + mpd_qsetprec instead of mpd_init
+// to avoid calling mpd_setminalloc multiple times (once per thread)
 thread_local mpd_context_t decimal_context = []() {
   mpd_context_t context;
-  mpd_init(&context, 16);
+  mpd_defaultcontext(&context);
+  mpd_qsetprec(&context, 16);
   context.emax = 999999;
   context.emin = -999999;
   context.round = MPD_ROUND_HALF_EVEN;
@@ -292,11 +305,23 @@ Decimal::Decimal(const std::string &string_value)
 Decimal::Decimal(const std::string_view string_value)
     : Decimal{std::string{string_value}} {}
 
-auto Decimal::nan() -> Decimal { return Decimal{"NaN"}; }
+auto Decimal::nan() -> Decimal {
+  Decimal result;
+  mpd_setspecial(&result.data()->value, MPD_POS, MPD_NAN);
+  return result;
+}
 
-auto Decimal::infinity() -> Decimal { return Decimal{"Infinity"}; }
+auto Decimal::infinity() -> Decimal {
+  Decimal result;
+  mpd_setspecial(&result.data()->value, MPD_POS, MPD_INF);
+  return result;
+}
 
-auto Decimal::negative_infinity() -> Decimal { return Decimal{"-Infinity"}; }
+auto Decimal::negative_infinity() -> Decimal {
+  Decimal result;
+  mpd_setspecial(&result.data()->value, MPD_NEG, MPD_INF);
+  return result;
+}
 
 auto Decimal::to_scientific_string() const -> std::string {
   // Note that `mpd_to_sci`, contrary to its name, does NOT guarantee

@@ -46,6 +46,7 @@ Looking for target: https://example.com#/foo
 $(realpath "$TMP")/test.json:
 error: Could not resolve schema under test
   at identifier https://example.com#/foo
+  at file path $(realpath "$TMP")/test.json
 
 This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF

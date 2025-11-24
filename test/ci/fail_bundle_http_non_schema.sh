@@ -21,6 +21,7 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: The JSON document is not a valid JSON Schema
   at identifier https://schemas.sourcemeta.com/self/api/schemas/stats/jsonschema/2020-12/schema
+  at file path $(realpath "$TMP")/schema.json
   at location "/allOf/0/\$ref"
 EOF
 

@@ -8,8 +8,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <sourcemeta/core/jsonschema_resolver.h>
-
 #include <cassert>     // assert
 #include <concepts>    // std::derived_from, std::same_as
 #include <functional>  // std::function
@@ -85,7 +83,7 @@ public:
   /// The result of evaluating a rule
   struct Result {
     Result(const bool applies_) : applies{applies_} {}
-    Result(Pointer pointer) : applies{true}, locations{std::move(pointer)} {
+    Result(const Pointer &pointer) : applies{true}, locations{pointer} {
       assert(this->locations.size() == 1);
     }
 
