@@ -197,10 +197,8 @@ jobs:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
       - name: Publish to NPM
-        run: ./npm-deploy.sh ${{ github.ref_name }}
+        run: sudo npm install --global npm@latest && ./npm-deploy.sh ${{ github.ref_name }}
         if: github.ref_type == 'tag'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to Snap
         run: |
