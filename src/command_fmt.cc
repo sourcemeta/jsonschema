@@ -33,42 +33,58 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       LOG_VERBOSE(options) << "Formatting: " << entry.first.string() << "\n";
     }
 
-    const auto configuration_path{find_configuration(entry.first)};
-    const auto &configuration{read_configuration(options, configuration_path)};
-    const auto dialect{default_dialect(options, configuration)};
-    const auto &custom_resolver{
-        resolver(options, options.contains("http"), dialect, configuration)};
+    try {
+      const auto configuration_path{find_configuration(entry.first)};
+      const auto &configuration{
+          read_configuration(options, configuration_path)};
+      const auto dialect{default_dialect(options, configuration)};
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect, configuration)};
 
-    std::ostringstream expected;
-    if (options.contains("keep-ordering")) {
-      sourcemeta::core::prettify(entry.second, expected, indentation);
-    } else {
-      auto copy = entry.second;
-      sourcemeta::core::format(copy, sourcemeta::core::schema_official_walker,
-                               custom_resolver, dialect);
-      sourcemeta::core::prettify(copy, expected, indentation);
-    }
-    expected << "\n";
-
-    std::ifstream current_stream{entry.first};
-    std::ostringstream current;
-    current << current_stream.rdbuf();
-
-    if (options.contains("check")) {
-      if (current.str() == expected.str()) {
-        LOG_VERBOSE(options) << "ok: " << entry.first.string() << "\n";
-      } else if (output_json) {
-        failed_files.push_back(entry.first.string());
-        result = false;
+      std::ostringstream expected;
+      if (options.contains("keep-ordering")) {
+        sourcemeta::core::prettify(entry.second, expected, indentation);
       } else {
-        std::cerr << "fail: " << entry.first.string() << "\n";
-        result = false;
+        auto copy = entry.second;
+        sourcemeta::core::format(copy, sourcemeta::core::schema_official_walker,
+                                 custom_resolver, dialect);
+        sourcemeta::core::prettify(copy, expected, indentation);
       }
-    } else {
-      if (current.str() != expected.str()) {
-        std::ofstream output{entry.first};
-        output << expected.str();
+      expected << "\n";
+
+      std::ifstream current_stream{entry.first};
+      std::ostringstream current;
+      current << current_stream.rdbuf();
+
+      if (options.contains("check")) {
+        if (current.str() == expected.str()) {
+          LOG_VERBOSE(options) << "ok: " << entry.first.string() << "\n";
+        } else if (output_json) {
+          failed_files.push_back(entry.first.string());
+          result = false;
+        } else {
+          std::cerr << "fail: " << entry.first.string() << "\n";
+          result = false;
+        }
+      } else {
+        if (current.str() != expected.str()) {
+          std::ofstream output{entry.first};
+          output << expected.str();
+        }
       }
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                 &error) {
+      throw FileError<
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+          entry.first, error);
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
+      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
+                                                               error);
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+          entry.first);
+    } catch (const sourcemeta::core::SchemaError &error) {
+      throw FileError<sourcemeta::core::SchemaError>(entry.first, error.what());
     }
   }
 

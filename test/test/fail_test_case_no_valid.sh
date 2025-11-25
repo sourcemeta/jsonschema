@@ -30,6 +30,7 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: Test case documents must contain a \`valid\` property
   at test case #1
+  at file path $(realpath "$TMP")/test.json
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF

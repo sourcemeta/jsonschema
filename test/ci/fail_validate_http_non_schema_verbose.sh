@@ -26,6 +26,7 @@ cat << EOF > "$TMP/expected.txt"
 Resolving over HTTP: https://schemas.sourcemeta.com/self/api/schemas/stats/jsonschema/2020-12/schema
 error: The JSON document is not a valid JSON Schema
   at identifier https://schemas.sourcemeta.com/self/api/schemas/stats/jsonschema/2020-12/schema
+  at file path $(realpath "$TMP")/schema.json
   at location "/allOf/0/\$ref"
 EOF
 

@@ -28,6 +28,7 @@ test "$EXIT_CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the reference to an external schema
   at identifier https://example.com/nested
+  at file path $(realpath "$TMP")/schema.json
 
 This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
@@ -42,7 +43,8 @@ test "$EXIT_CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "Could not resolve the reference to an external schema",
-  "identifier": "https://example.com/nested"
+  "identifier": "https://example.com/nested",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 

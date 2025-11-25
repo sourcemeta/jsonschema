@@ -25,36 +25,56 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   const auto configuration_path{find_configuration(schema_path)};
   const auto &configuration{read_configuration(options, configuration_path)};
   const auto dialect{default_dialect(options, configuration)};
-  const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect, configuration)};
   auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
-  sourcemeta::core::bundle(schema, sourcemeta::core::schema_official_walker,
-                           custom_resolver, dialect,
-                           sourcemeta::core::URI::from_path(
-                               sourcemeta::core::weakly_canonical(schema_path))
-                               .recompose());
+  try {
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    sourcemeta::core::bundle(
+        schema, sourcemeta::core::schema_official_walker, custom_resolver,
+        dialect,
+        sourcemeta::core::URI::from_path(
+            sourcemeta::core::weakly_canonical(schema_path))
+            .recompose());
 
-  if (options.contains("without-id")) {
-    sourcemeta::jsonschema::LOG_WARNING()
-        << "You are opting in to remove schema identifiers in "
-           "the bundled schema.\n"
-        << "The only legit use case of this advanced feature we know of "
-           "is to workaround\n"
-        << "non-compliant JSON Schema implementations such as Visual "
-           "Studio Code.\n"
-        << "Otherwise, this is not needed and may harm other use "
-           "cases. For example,\n"
-        << "you will be unable to reference the resulting schema from "
-           "other schemas\n"
-        << "using the --resolve/-r option.\n";
-    sourcemeta::core::for_editor(schema,
-                                 sourcemeta::core::schema_official_walker,
-                                 custom_resolver, dialect);
+    if (options.contains("without-id")) {
+      sourcemeta::jsonschema::LOG_WARNING()
+          << "You are opting in to remove schema identifiers in "
+             "the bundled schema.\n"
+          << "The only legit use case of this advanced feature we know of "
+             "is to workaround\n"
+          << "non-compliant JSON Schema implementations such as Visual "
+             "Studio Code.\n"
+          << "Otherwise, this is not needed and may harm other use "
+             "cases. For example,\n"
+          << "you will be unable to reference the resulting schema from "
+             "other schemas\n"
+          << "using the --resolve/-r option.\n";
+      sourcemeta::core::for_editor(schema,
+                                   sourcemeta::core::schema_official_walker,
+                                   custom_resolver, dialect);
+    }
+
+    sourcemeta::core::format(schema, sourcemeta::core::schema_official_walker,
+                             custom_resolver, dialect);
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    throw FileError<sourcemeta::core::SchemaReferenceError>(
+        schema_path, std::string{error.identifier()}, error.location(),
+        error.what());
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+        schema_path, error);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
+                                                             error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+        schema_path);
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
   }
 
-  sourcemeta::core::format(schema, sourcemeta::core::schema_official_walker,
-                           custom_resolver, dialect);
   sourcemeta::core::prettify(schema, std::cout);
   std::cout << "\n";
 }

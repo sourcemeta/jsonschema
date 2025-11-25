@@ -159,27 +159,41 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   const auto configuration_path{find_configuration(schema_path)};
   const auto &configuration{read_configuration(options, configuration_path)};
   const auto dialect{default_dialect(options, configuration)};
-  const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect, configuration)};
-
-  const auto identifier{
-      sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::Instances};
 
-  frame.analyse(
-      schema, sourcemeta::core::schema_official_walker, custom_resolver,
-      dialect,
+  try {
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    const auto identifier{
+        sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
-      // Only use the file-based URI if the schema has no identifier,
-      // as otherwise we make the output unnecessarily hard when it
-      // comes to debugging schemas
-      identifier.has_value()
-          ? std::optional<sourcemeta::core::JSON::String>(std::nullopt)
-          : sourcemeta::core::URI::from_path(
-                sourcemeta::core::weakly_canonical(schema_path))
-                .recompose());
+    frame.analyse(
+        schema, sourcemeta::core::schema_official_walker, custom_resolver,
+        dialect,
+
+        // Only use the file-based URI if the schema has no identifier,
+        // as otherwise we make the output unnecessarily hard when it
+        // comes to debugging schemas
+        identifier.has_value()
+            ? std::optional<sourcemeta::core::JSON::String>(std::nullopt)
+            : sourcemeta::core::URI::from_path(
+                  sourcemeta::core::weakly_canonical(schema_path))
+                  .recompose());
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+        schema_path, error);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
+                                                             error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+        schema_path);
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+  }
 
   if (options.contains("json")) {
     sourcemeta::core::prettify(frame.to_json(positions), std::cout);

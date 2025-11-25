@@ -39,7 +39,9 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: Cannot register the same identifier twice: https://example.com/nested
+error: Cannot register the same identifier twice
+  at identifier https://example.com/nested
+  at file path $(realpath "$TMP")/schemas/remote.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -52,7 +54,9 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "Cannot register the same identifier twice: https://example.com/nested"
+  "error": "Cannot register the same identifier twice",
+  "identifier": "https://example.com/nested",
+  "filePath": "$(realpath "$TMP")/schemas/remote.json"
 }
 EOF
 

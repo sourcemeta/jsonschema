@@ -24,8 +24,6 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   const auto configuration_path{find_configuration(schema_path)};
   const auto &configuration{read_configuration(options, configuration_path)};
   const auto dialect{default_dialect(options, configuration)};
-  const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect, configuration)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
@@ -34,15 +32,33 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   }
 
   const auto fast_mode{options.contains("fast")};
-  const auto schema_template{sourcemeta::blaze::compile(
-      schema, sourcemeta::core::schema_official_walker, custom_resolver,
-      sourcemeta::blaze::default_schema_compiler,
-      fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive,
-      dialect,
-      sourcemeta::core::URI::from_path(
-          sourcemeta::core::weakly_canonical(schema_path))
-          .recompose())};
+
+  sourcemeta::blaze::Template schema_template;
+  try {
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    schema_template = sourcemeta::blaze::compile(
+        schema, sourcemeta::core::schema_official_walker, custom_resolver,
+        sourcemeta::blaze::default_schema_compiler,
+        fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                  : sourcemeta::blaze::Mode::Exhaustive,
+        dialect,
+        sourcemeta::core::URI::from_path(
+            sourcemeta::core::weakly_canonical(schema_path))
+            .recompose());
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+        schema_path, error);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
+                                                             error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+        schema_path);
+  } catch (const sourcemeta::core::SchemaError &error) {
+    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+  }
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};
   if (options.contains("minify")) {

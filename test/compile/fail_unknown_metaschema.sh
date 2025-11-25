@@ -21,6 +21,7 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema
   at identifier https://example.com/unknown
+  at file path $(realpath "$TMP")/schema.json
 
 This is likely because you forgot to import such schema using \`--resolve/-r\`
 EOF
@@ -34,7 +35,8 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "Could not resolve the metaschema of the schema",
-  "identifier": "https://example.com/unknown"
+  "identifier": "https://example.com/unknown",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 

@@ -22,6 +22,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema
+  at file path $(realpath "$TMP")/schema.json
 
 Are you sure the input is a valid JSON Schema and its base dialect is known?
 If the input does not declare the \`\$schema\` keyword, you might want to
@@ -34,9 +35,10 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 "$1" fmt "$TMP/schema.json" --json >"$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
-cat << 'EOF' > "$TMP/expected_json.txt"
+cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "Could not determine the base dialect of the schema"
+  "error": "Could not determine the base dialect of the schema",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 
