@@ -23,6 +23,9 @@ cat << EOF > "$TMP/expected.txt"
 schema.json:4:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/enum"
+schema.json:3:3:
+  Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+    at location "/type"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
