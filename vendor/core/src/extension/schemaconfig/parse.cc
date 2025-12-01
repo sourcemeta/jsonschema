@@ -44,6 +44,10 @@ auto SchemaConfig::from_json(const JSON &value,
                           value.at("defaultDialect").is_string(),
                       "The defaultDialect property must be a string",
                       {"defaultDialect"});
+  SCHEMACONFIG_ENSURE(
+      !value.defines("extension") || value.at("extension").is_array() ||
+          value.at("extension").is_string(),
+      "The extension property must be a string or an array", {"extension"});
   SCHEMACONFIG_ENSURE(!value.defines("resolve") ||
                           value.at("resolve").is_object(),
                       "The resolve property must be an object", {"resolve"});
@@ -101,6 +105,35 @@ auto SchemaConfig::from_json(const JSON &value,
   result.default_dialect =
       sourcemeta::core::from_json<decltype(result.default_dialect)::value_type>(
           value.at_or("defaultDialect", JSON{nullptr}));
+
+  if (value.defines("extension")) {
+    const auto &extension_value{value.at("extension")};
+    if (extension_value.is_string()) {
+      auto extension_string{extension_value.to_string()};
+      if (!extension_string.empty() && extension_string.front() != '.') {
+        extension_string.insert(extension_string.begin(), '.');
+      }
+
+      result.extension.emplace(std::move(extension_string));
+    } else {
+      std::size_t index{0};
+      for (const auto &element : extension_value.as_array()) {
+        SCHEMACONFIG_ENSURE(element.is_string(),
+                            "The values in the extension array must be strings",
+                            Pointer({"extension", index}));
+
+        auto extension_string{element.to_string()};
+        if (!extension_string.empty() && extension_string.front() != '.') {
+          extension_string.insert(extension_string.begin(), '.');
+        }
+
+        result.extension.emplace(std::move(extension_string));
+        index += 1;
+      }
+    }
+  } else {
+    result.extension = {".json", ".yml", ".yaml"};
+  }
 
   if (value.defines("resolve")) {
     for (const auto &pair : value.at("resolve").as_object()) {

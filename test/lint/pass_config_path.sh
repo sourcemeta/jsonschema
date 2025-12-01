@@ -33,6 +33,9 @@ cd "$TMP/bar"
 
 cat << EOF > "$TMP/expected.txt"
 Using configuration file: $(realpath "$TMP")/jsonschema.json
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 Linting: $(realpath "$TMP")/foo/schema.json
 EOF
 
