@@ -30,6 +30,14 @@ cat << EOF > "$TMP/expected.json"
       "description": null,
       "schemaLocation": "/enum",
       "position": [ 4, 3, 4, 19 ]
+    },
+    {
+      "path": "$(realpath "$TMP")/schema.json",
+      "id": "enum_with_type",
+      "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
+      "description": null,
+      "schemaLocation": "/type",
+      "position": [ 3, 3, 3, 18 ]
     }
   ]
 }
