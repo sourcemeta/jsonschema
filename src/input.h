@@ -5,6 +5,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/yaml.h>
 
 #include "configuration.h"
@@ -30,13 +31,14 @@ struct InputJSON {
   }
 };
 
-inline auto parse_extensions(const sourcemeta::core::Options &options)
+inline auto parse_extensions(
+    const sourcemeta::core::Options &options,
+    const std::optional<sourcemeta::core::SchemaConfig> &configuration)
     -> std::set<std::string> {
   std::set<std::string> result;
 
   if (options.contains("extension")) {
     for (const auto &extension : options.at("extension")) {
-      LOG_VERBOSE(options) << "Using extension: " << extension << "\n";
       if (extension.starts_with('.')) {
         result.emplace(extension);
       } else {
@@ -45,6 +47,22 @@ inline auto parse_extensions(const sourcemeta::core::Options &options)
         result.emplace(normalised_extension.str());
       }
     }
+  }
+
+  if (configuration.has_value()) {
+    for (const auto &extension : configuration.value().extension) {
+      if (extension.starts_with('.')) {
+        result.emplace(extension);
+      } else {
+        std::ostringstream normalised_extension;
+        normalised_extension << '.' << extension;
+        result.emplace(normalised_extension.str());
+      }
+    }
+  }
+
+  for (const auto &extension : result) {
+    LOG_VERBOSE(options) << "Using extension: " << extension << "\n";
   }
 
   if (result.empty()) {
@@ -131,18 +149,19 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
   const auto blacklist{parse_ignore(options)};
-  const auto extensions{parse_extensions(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
     const auto current_path{std::filesystem::current_path()};
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
+    const auto extensions{parse_extensions(options, configuration)};
     handle_json_entry(configuration.has_value()
                           ? configuration.value().absolute_path
                           : current_path,
                       blacklist, extensions, result);
   } else {
+    const auto extensions{parse_extensions(options, std::nullopt)};
     for (const auto &entry : arguments) {
       handle_json_entry(entry, blacklist, extensions, result);
     }

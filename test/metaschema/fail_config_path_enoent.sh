@@ -21,6 +21,9 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Using configuration file: $(realpath "$TMP")/jsonschema.json
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 error: No such file or directory
   at file path $(realpath "$TMP")/nonexistent
 EOF

@@ -28,6 +28,9 @@ cd "$TMP/bar"
 
 cat << EOF > "$TMP/expected.txt"
 Using configuration file: $(realpath "$TMP")/jsonschema.json
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 ok: $(realpath "$TMP")/foo/schema.json
   matches http://json-schema.org/draft-04/schema#
 EOF
