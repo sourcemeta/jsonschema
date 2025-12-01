@@ -1,5 +1,5 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME schemaconfig
-  PRIVATE_HEADERS error.h SOURCES parse.cc find.cc)
+  PRIVATE_HEADERS error.h SOURCES parse.cc schemaconfig.cc)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME schemaconfig)

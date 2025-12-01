@@ -156,6 +156,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
     const auto extensions{parse_extensions(options, configuration)};
+
     handle_json_entry(configuration.has_value()
                           ? configuration.value().absolute_path
                           : current_path,

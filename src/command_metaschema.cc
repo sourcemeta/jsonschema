@@ -36,7 +36,8 @@ auto sourcemeta::jsonschema::metaschema(
     }
 
     const auto configuration_path{find_configuration(entry.first)};
-    const auto &configuration{read_configuration(options, configuration_path)};
+    const auto &configuration{
+        read_configuration(options, configuration_path, entry.first)};
     const auto default_dialect_option{default_dialect(options, configuration)};
 
     const auto &custom_resolver{resolver(options, options.contains("http"),
