@@ -11,12 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_type }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  packages: write
-  # See https://docs.npmjs.com/generating-provenance-statements#about-npm-provenance
-  id-token: write
-
 jobs:
   package:
     strategy:
@@ -131,6 +125,8 @@ jobs:
   publish:
     needs: [ package, snap ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -181,37 +177,71 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-      - run: python -m pip install --upgrade pip setuptools twine
-      - name: Publish to PyPI
-        run: ./pip-deploy.sh ${{ github.ref_name }}
-        if: github.ref_type == 'tag'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-
+  publish-npm:
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
       - name: Publish to NPM
         run: sudo npm install --global npm@latest && ./npm-deploy.sh ${{ github.ref_name }}
-        if: github.ref_type == 'tag'
 
+  publish-pypi:
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: python -m pip install --upgrade pip setuptools twine
+      - name: Publish to PyPI
+        run: ./pip-deploy.sh ${{ github.ref_name }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
+  publish-snap:
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: build/out/
+          pattern: "snap-*"
+          merge-multiple: true
       - name: Publish to Snap
         run: |
           sudo snap install snapcraft --classic
           snapcraft whoami
           snapcraft upload build/out/jsonschema_*_amd64.snap --release stable
           snapcraft upload build/out/jsonschema_*_arm64.snap --release stable
-        if: github.ref_type == 'tag'
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
 
+  publish-docker:
+    needs: publish
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
       - uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        if: github.ref_type == 'tag'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -220,12 +250,10 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         id: meta-cli
-        if: github.ref_type == 'tag'
         with:
           images: ghcr.io/${{ github.repository_owner }}/jsonschema
       - uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         id: push-cli
-        if: github.ref_type == 'tag'
         with:
           context: .
           file: Dockerfile
