@@ -24,13 +24,13 @@ test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:4:5:
-  Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix (unknown_keywords_prefix)
+  Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
     at location "/additionalProperties/unknown-1"
 schema.json:5:5:
-  Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix (unknown_keywords_prefix)
+  Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
     at location "/additionalProperties/unknown-2"
 schema.json:6:5:
-  Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix (unknown_keywords_prefix)
+  Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
     at location "/additionalProperties/unknown-3"
 EOF
 

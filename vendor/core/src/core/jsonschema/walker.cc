@@ -497,11 +497,11 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
   const std::optional<std::string> base_dialect{
       sourcemeta::core::base_dialect(schema, resolver, dialect)};
 
-  Vocabularies vocabularies;
-  if (base_dialect.has_value() && dialect.has_value()) {
-    vocabularies.merge(sourcemeta::core::vocabularies(
-        resolver, base_dialect.value(), dialect.value()));
-  }
+  Vocabularies vocabularies{
+      base_dialect.has_value() && dialect.has_value()
+          ? sourcemeta::core::vocabularies(resolver, base_dialect.value(),
+                                           dialect.value())
+          : Vocabularies{}};
 
   for (const auto &entry : schema.as_object()) {
     sourcemeta::core::SchemaIteratorEntry subschema_entry{

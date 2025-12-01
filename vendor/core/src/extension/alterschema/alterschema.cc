@@ -6,12 +6,15 @@
 #include <iterator>
 #include <utility>
 namespace sourcemeta::core {
-static auto
-contains_any(const Vocabularies &container,
-             const std::set<typename Vocabularies::key_type> &values) -> bool {
-  return std::ranges::any_of(container, [&values](const auto &element) {
-    return values.contains(element.first);
-  });
+// TODO: Move this to `Vocabularies::contains_any` or something like that
+static auto contains_any(const Vocabularies &container,
+                         const std::set<std::string> &values) -> bool {
+  for (const auto &value : values) {
+    if (container.contains(value)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 template <typename... Args>

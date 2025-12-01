@@ -161,7 +161,7 @@ unevaluated_properties_default
   Setting the `unevaluatedProperties` keyword to the true schema does not add any further constraint
 
 unknown_keywords_prefix
-  Future versions of JSON Schema will refuse to evaluate unknown keywords that don't have an x- prefix
+  Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix
 
 unknown_local_ref
   Local references that point to unknown locations are invalid and will result in evaluation failures
