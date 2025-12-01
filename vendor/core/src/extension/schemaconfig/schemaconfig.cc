@@ -1,7 +1,9 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/schemaconfig.h>
 
-#include <cassert> // assert
+#include <algorithm> // std::ranges::any_of
+#include <cassert>   // assert
+#include <string>    // std::string
 
 namespace sourcemeta::core {
 
@@ -29,6 +31,13 @@ auto SchemaConfig::find(const std::filesystem::path &path)
   }
 
   return std::nullopt;
+}
+
+auto SchemaConfig::applies_to(const std::filesystem::path &path) const -> bool {
+  const std::string filename{path.filename().string()};
+  return std::ranges::any_of(this->extension, [&filename](const auto &suffix) {
+    return filename.ends_with(suffix);
+  });
 }
 
 } // namespace sourcemeta::core

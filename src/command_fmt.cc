@@ -36,7 +36,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     try {
       const auto configuration_path{find_configuration(entry.first)};
       const auto &configuration{
-          read_configuration(options, configuration_path)};
+          read_configuration(options, configuration_path, entry.first)};
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};

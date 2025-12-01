@@ -21,7 +21,8 @@ inline auto find_configuration(const std::filesystem::path &path)
 
 inline auto read_configuration(
     const sourcemeta::core::Options &options,
-    const std::optional<std::filesystem::path> &configuration_path)
+    const std::optional<std::filesystem::path> &configuration_path,
+    const std::optional<std::filesystem::path> &schema_path = std::nullopt)
     -> const std::optional<sourcemeta::core::SchemaConfig> & {
   using CacheKey = std::optional<std::filesystem::path>;
   static std::map<CacheKey, std::optional<sourcemeta::core::SchemaConfig>>
@@ -47,6 +48,17 @@ inline auto read_configuration(
     } catch (const sourcemeta::core::SchemaConfigParseError &error) {
       throw FileError<sourcemeta::core::SchemaConfigParseError>(
           configuration_path.value(), error);
+    }
+
+    assert(result.has_value());
+    if (schema_path.has_value() &&
+        !result.value().applies_to(schema_path.value())) {
+      LOG_VERBOSE(options)
+          << "Ignoring configuration file given extensions mismatch: "
+          << sourcemeta::core::weakly_canonical(configuration_path.value())
+                 .string()
+          << "\n";
+      result = std::nullopt;
     }
   }
 

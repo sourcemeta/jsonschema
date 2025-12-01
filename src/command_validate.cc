@@ -149,7 +149,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   }
 
   const auto configuration_path{find_configuration(schema_path)};
-  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto &configuration{
+      read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};
 
   const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};

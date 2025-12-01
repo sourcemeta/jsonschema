@@ -49,6 +49,11 @@ struct SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfig {
   std::unordered_map<JSON::String, JSON::String> resolve;
   JSON extra = JSON::make_object();
 
+  /// Check if the given path represents a schema described by this
+  /// configuration
+  [[nodiscard]]
+  auto applies_to(const std::filesystem::path &path) const -> bool;
+
   /// Parse a configuration file from its contents
   [[nodiscard]]
   static auto from_json(const JSON &value,

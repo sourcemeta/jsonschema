@@ -157,7 +157,8 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
       sourcemeta::core::read_yaml_or_json(schema_path, std::ref(positions))};
 
   const auto configuration_path{find_configuration(schema_path)};
-  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto &configuration{
+      read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};
 
   sourcemeta::core::SchemaFrame frame{

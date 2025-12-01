@@ -23,7 +23,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   const std::filesystem::path schema_path{options.positional().front()};
   const auto configuration_path{find_configuration(schema_path)};
-  const auto &configuration{read_configuration(options, configuration_path)};
+  const auto &configuration{
+      read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};
   auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
