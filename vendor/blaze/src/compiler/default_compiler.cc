@@ -18,34 +18,33 @@ auto sourcemeta::blaze::default_schema_compiler(
     -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
-  static std::unordered_set<std::string> SUPPORTED_VOCABULARIES{
-      "https://json-schema.org/draft/2020-12/vocab/core",
-      "https://json-schema.org/draft/2020-12/vocab/applicator",
-      "https://json-schema.org/draft/2020-12/vocab/validation",
-      "https://json-schema.org/draft/2020-12/vocab/meta-data",
-      "https://json-schema.org/draft/2020-12/vocab/unevaluated",
-      "https://json-schema.org/draft/2020-12/vocab/format-annotation",
-      "https://json-schema.org/draft/2020-12/vocab/content",
-      "https://json-schema.org/draft/2019-09/vocab/core",
-      "https://json-schema.org/draft/2019-09/vocab/applicator",
-      "https://json-schema.org/draft/2019-09/vocab/validation",
-      "https://json-schema.org/draft/2019-09/vocab/meta-data",
-      "https://json-schema.org/draft/2019-09/vocab/format",
-      "https://json-schema.org/draft/2019-09/vocab/content",
-      "https://json-schema.org/draft/2019-09/vocab/hyper-schema",
-      "http://json-schema.org/draft-07/schema#",
-      "http://json-schema.org/draft-07/hyper-schema#",
-      "http://json-schema.org/draft-06/schema#",
-      "http://json-schema.org/draft-06/hyper-schema#",
-      "http://json-schema.org/draft-04/schema#",
-      "http://json-schema.org/draft-04/hyper-schema#"};
-  for (const auto &vocabulary : schema_context.vocabularies) {
-    if (!SUPPORTED_VOCABULARIES.contains(vocabulary.first) &&
-        vocabulary.second) {
-      throw sourcemeta::core::SchemaVocabularyError(
-          vocabulary.first, "Cannot compile unsupported vocabulary");
-    }
-  }
+  using Known = sourcemeta::core::Vocabularies::Known;
+  static std::unordered_set<std::variant<sourcemeta::core::JSON::String,
+                                         sourcemeta::core::Vocabularies::Known>>
+      SUPPORTED_VOCABULARIES{Known::JSON_Schema_2020_12_Core,
+                             Known::JSON_Schema_2020_12_Applicator,
+                             Known::JSON_Schema_2020_12_Unevaluated,
+                             Known::JSON_Schema_2020_12_Validation,
+                             Known::JSON_Schema_2020_12_Meta_Data,
+                             Known::JSON_Schema_2020_12_Format_Annotation,
+                             Known::JSON_Schema_2020_12_Format_Assertion,
+                             Known::JSON_Schema_2020_12_Content,
+                             Known::JSON_Schema_2019_09_Core,
+                             Known::JSON_Schema_2019_09_Applicator,
+                             Known::JSON_Schema_2019_09_Validation,
+                             Known::JSON_Schema_2019_09_Meta_Data,
+                             Known::JSON_Schema_2019_09_Format,
+                             Known::JSON_Schema_2019_09_Content,
+                             Known::JSON_Schema_2019_09_Hyper_Schema,
+                             Known::JSON_Schema_Draft_7,
+                             Known::JSON_Schema_Draft_7_Hyper,
+                             Known::JSON_Schema_Draft_6,
+                             Known::JSON_Schema_Draft_6_Hyper,
+                             Known::JSON_Schema_Draft_4,
+                             Known::JSON_Schema_Draft_4_Hyper};
+
+  schema_context.vocabularies.throw_if_any_unsupported(
+      SUPPORTED_VOCABULARIES, "Cannot compile unsupported vocabulary");
 
   using namespace sourcemeta::blaze;
 

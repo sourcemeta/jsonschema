@@ -259,17 +259,66 @@ auto sourcemeta::core::base_dialect(
 }
 
 namespace {
-auto core_vocabulary(std::string_view base_dialect) -> std::string {
+auto core_vocabulary_known(std::string_view base_dialect)
+    -> sourcemeta::core::Vocabularies::Known {
   if (base_dialect == "https://json-schema.org/draft/2020-12/schema" ||
       base_dialect == "https://json-schema.org/draft/2020-12/hyper-schema") {
-    return "https://json-schema.org/draft/2020-12/vocab/core";
+    return sourcemeta::core::Vocabularies::Known::JSON_Schema_2020_12_Core;
   } else if (base_dialect == "https://json-schema.org/draft/2019-09/schema" ||
              base_dialect ==
                  "https://json-schema.org/draft/2019-09/hyper-schema") {
-    return "https://json-schema.org/draft/2019-09/vocab/core";
+    return sourcemeta::core::Vocabularies::Known::JSON_Schema_2019_09_Core;
   } else {
     throw sourcemeta::core::SchemaBaseDialectError(std::string{base_dialect});
   }
+}
+
+auto dialect_to_known(std::string_view dialect)
+    -> std::optional<sourcemeta::core::Vocabularies::Known> {
+  using sourcemeta::core::Vocabularies;
+  if (dialect == "http://json-schema.org/draft-07/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_7;
+  }
+  if (dialect == "http://json-schema.org/draft-07/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_7_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-06/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_6;
+  }
+  if (dialect == "http://json-schema.org/draft-06/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_6_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-04/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_4;
+  }
+  if (dialect == "http://json-schema.org/draft-04/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_4_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-03/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_3;
+  }
+  if (dialect == "http://json-schema.org/draft-03/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_3_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-02/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_2;
+  }
+  if (dialect == "http://json-schema.org/draft-02/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_2_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-01/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_1;
+  }
+  if (dialect == "http://json-schema.org/draft-01/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_1_Hyper;
+  }
+  if (dialect == "http://json-schema.org/draft-00/schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_0;
+  }
+  if (dialect == "http://json-schema.org/draft-00/hyper-schema#") {
+    return Vocabularies::Known::JSON_Schema_Draft_0_Hyper;
+  }
+  return std::nullopt;
 }
 } // namespace
 
@@ -304,21 +353,22 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
   // As a performance optimization shortcut
   if (base_dialect == dialect) {
     if (dialect == "https://json-schema.org/draft/2020-12/schema") {
-      return {{"https://json-schema.org/draft/2020-12/vocab/core", true},
-              {"https://json-schema.org/draft/2020-12/vocab/applicator", true},
-              {"https://json-schema.org/draft/2020-12/vocab/unevaluated", true},
-              {"https://json-schema.org/draft/2020-12/vocab/validation", true},
-              {"https://json-schema.org/draft/2020-12/vocab/meta-data", true},
-              {"https://json-schema.org/draft/2020-12/vocab/format-annotation",
-               true},
-              {"https://json-schema.org/draft/2020-12/vocab/content", true}};
+      return Vocabularies{
+          {Vocabularies::Known::JSON_Schema_2020_12_Core, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Applicator, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Validation, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Meta_Data, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Format_Annotation, true},
+          {Vocabularies::Known::JSON_Schema_2020_12_Content, true}};
     } else if (dialect == "https://json-schema.org/draft/2019-09/schema") {
-      return {{"https://json-schema.org/draft/2019-09/vocab/core", true},
-              {"https://json-schema.org/draft/2019-09/vocab/applicator", true},
-              {"https://json-schema.org/draft/2019-09/vocab/validation", true},
-              {"https://json-schema.org/draft/2019-09/vocab/meta-data", true},
-              {"https://json-schema.org/draft/2019-09/vocab/format", false},
-              {"https://json-schema.org/draft/2019-09/vocab/content", true}};
+      return Vocabularies{
+          {Vocabularies::Known::JSON_Schema_2019_09_Core, true},
+          {Vocabularies::Known::JSON_Schema_2019_09_Applicator, true},
+          {Vocabularies::Known::JSON_Schema_2019_09_Validation, true},
+          {Vocabularies::Known::JSON_Schema_2019_09_Meta_Data, true},
+          {Vocabularies::Known::JSON_Schema_2019_09_Format, false},
+          {Vocabularies::Known::JSON_Schema_2019_09_Content, true}};
     }
   }
 
@@ -336,7 +386,11 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
       dialect == "http://json-schema.org/draft-02/schema#" ||
       dialect == "http://json-schema.org/draft-01/schema#" ||
       dialect == "http://json-schema.org/draft-00/schema#") {
-    return {{dialect, true}};
+    const auto known = dialect_to_known(dialect);
+    if (known.has_value()) {
+      return Vocabularies{{known.value(), true}};
+    }
+    return Vocabularies{{dialect, true}};
   }
 
   /*
@@ -356,7 +410,11 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
       base_dialect == "http://json-schema.org/draft-02/hyper-schema#" ||
       base_dialect == "http://json-schema.org/draft-01/hyper-schema#" ||
       base_dialect == "http://json-schema.org/draft-00/hyper-schema#") {
-    return {{base_dialect, true}};
+    const auto known = dialect_to_known(base_dialect);
+    if (known.has_value()) {
+      return Vocabularies{{known.value(), true}};
+    }
+    return Vocabularies{{base_dialect, true}};
   }
 
   /*
@@ -384,25 +442,28 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
    */
 
   Vocabularies result;
-  const std::string core{core_vocabulary(base_dialect)};
+  const auto core{core_vocabulary_known(base_dialect)};
   if (schema_dialect.defines("$vocabulary")) {
     const sourcemeta::core::JSON &vocabularies{
         schema_dialect.at("$vocabulary")};
     assert(vocabularies.is_object());
     for (const auto &entry : vocabularies.as_object()) {
-      result.insert({entry.first, entry.second.to_boolean()});
+      result.insert(entry.first, entry.second.to_boolean());
     }
   } else {
-    result.insert({core, true});
+    result.insert(core, true);
   }
 
   // The specification recommends these checks
   if (!result.contains(core)) {
     throw sourcemeta::core::SchemaError(
         "The core vocabulary must always be present");
-  } else if (!result.at(core)) {
-    throw sourcemeta::core::SchemaError(
-        "The core vocabulary must always be required");
+  } else {
+    const auto core_status{result.get(core)};
+    if (core_status.has_value() && !core_status.value()) {
+      throw sourcemeta::core::SchemaError(
+          "The core vocabulary must always be required");
+    }
   }
 
   return result;
