@@ -44,7 +44,7 @@ npm-pack: node_modules .always
 	$(CMAKE) -P cmake/fetch-github-releases.cmake
 	$(NODE) npm/cli.js
 	$(NODE) node_modules/eslint/bin/eslint.js npm/*.js npm/*.mjs
-	$(NODE) --test npm/*.js npm/*.mjs
+	$(NODE) --test npm/*.test.js npm/*.test.mjs
 	$(CMAKE) -E make_directory ./build/npm/dist
 	$(NPM) pack --pack-destination ./build/npm/dist
 
