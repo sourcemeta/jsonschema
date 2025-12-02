@@ -52,7 +52,7 @@ install -m 0755 "$OUTPUT/npm/artifacts/jsonschema-$VERSION-windows-x86_64/bin/js
 # (3) Run checks
 npm ci
 npm test
-node cli.js
+node npm/cli.js
 
 # (4) Package
 mkdir -p "$DIRECTORY"
