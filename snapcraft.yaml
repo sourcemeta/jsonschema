@@ -21,4 +21,4 @@ parts:
       - -DCMAKE_BUILD_TYPE:STRING=Release
     override-pull: |
       craftctl default
-      craftctl set version="$(grep "project(jsonschema VERSION" CMakeLists.txt | cut -d ' ' -f 3)"
+      craftctl set version="$(tr -d '\n\r' < VERSION)"
