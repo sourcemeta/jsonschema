@@ -191,7 +191,7 @@ jobs:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
       - name: Publish to NPM
-        run: sudo npm install --global npm@latest && ./npm-deploy.sh ${{ github.ref_name }}
+        run: sudo npm install --global npm@latest && ./npm-pack.sh ./build/npm/dist && npm publish ./build/npm/dist
 
   publish-pypi:
     needs: publish

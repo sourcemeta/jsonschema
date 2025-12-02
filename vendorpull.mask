@@ -16,7 +16,7 @@ DEPENDENCIES
 Dockerfile
 install
 Makefile
-npm-deploy.sh
+npm-pack.sh
 pip-deploy.sh
 README.markdown
 cmake/FindBlaze.cmake
@@ -25,3 +25,8 @@ cmake/FindHydra.cmake
 cmake/FindJSONBinPack.cmake
 .pre-commit-hooks.yaml
 snapcraft.yaml
+.npmignore
+cli.js
+eslint.config.mjs
+package.json
+package-lock.json

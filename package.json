@@ -1,0 +1,68 @@
+{
+  "name": "@sourcemeta/jsonschema",
+  "version": "12.8.1",
+  "description": "The CLI for working with JSON Schema. Covers formatting, linting, testing, and much more for both local development and CI/CD pipelines",
+  "main": "cli.js",
+  "bin": {
+    "jsonschema": "cli.js"
+  },
+  "scripts": {
+    "test": "eslint cli.js"
+  },
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/sourcemeta/jsonschema",
+  "author": {
+    "email": "hello@sourcemeta.com",
+    "name": "Sourcemeta",
+    "url": "https://www.sourcemeta.com"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "funding": "https://github.com/sponsors/sourcemeta",
+  "keywords": [
+    "jsonschema",
+    "json",
+    "schema",
+    "json-schema",
+    "cli",
+    "$ref",
+    "dereference",
+    "reference",
+    "resolve",
+    "json-pointer",
+    "validator",
+    "validation",
+    "bundle",
+    "json-schema-validator",
+    "json-schema-validation",
+    "lint",
+    "format",
+    "draft"
+  ],
+  "bugs": {
+    "url": "https://github.com/sourcemeta/jsonschema/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sourcemeta/jsonschema.git"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "globals": "^16.0.0"
+  }
+}
