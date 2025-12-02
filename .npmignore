@@ -1,0 +1,8 @@
+*
+!LICENSE
+!README.markdown
+!package.json
+!package-lock.json
+!*.js
+!*.mjs
+!build/github-releases/*

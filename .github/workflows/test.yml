@@ -115,6 +115,12 @@ jobs:
       - run: ./test/docker/help.sh
       - run: ./test/docker/bundle_fmt.sh
 
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./npm-pack.sh ./build/npm/dist
+
   snap:
     strategy:
       fail-fast: false
