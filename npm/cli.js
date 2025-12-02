@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 const { spawn } = require('./main.js');
 
 spawn(process.argv.slice(2), { stdio: 'inherit' })
