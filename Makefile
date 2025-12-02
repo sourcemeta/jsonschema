@@ -2,6 +2,8 @@
 CMAKE = cmake
 CTEST = ctest
 CPACK = cpack
+NPM = npm
+NODE = node
 
 # Options
 PRESET = Debug
@@ -34,6 +36,20 @@ test: .always
 
 clean: .always
 	$(CMAKE) -E rm -R -f build
+
+node_modules: package.json package-lock.json
+	$(NPM) ci
+
+npm-pack: node_modules .always
+	$(CMAKE) -P cmake/fetch-github-releases.cmake
+	$(NODE) npm/cli.js
+	$(NODE) node_modules/eslint/bin/eslint.js npm/*.js npm/*.mjs
+	$(NODE) --test npm/*.js npm/*.mjs
+	$(CMAKE) -E make_directory ./build/npm/dist
+	$(NPM) pack --pack-destination ./build/npm/dist
+
+npm-publish: npm-pack
+	$(NPM) publish ./build/npm/dist
 
 # For NMake, which doesn't support .PHONY
 .always:

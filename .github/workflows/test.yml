@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ./npm-pack.sh ./build/npm/dist
+      - run: make npm-pack
 
   snap:
     strategy:

@@ -10,9 +10,6 @@
   "bin": {
     "jsonschema": "npm/cli.js"
   },
-  "scripts": {
-    "test": "eslint npm/*.js npm/*.mjs && node --test npm/*.js npm/*.mjs"
-  },
   "license": "AGPL-3.0",
   "homepage": "https://github.com/sourcemeta/jsonschema",
   "author": {

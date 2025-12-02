@@ -14,6 +14,7 @@ macro(add_jsonschema_test_unix_ci name)
   endif()
 endmacro()
 
+add_jsonschema_test_unix(version_consistency)
 add_jsonschema_test_unix(version_command)
 add_jsonschema_test_unix(version_option_long)
 add_jsonschema_test_unix(version_option_short)

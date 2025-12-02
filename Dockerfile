@@ -7,6 +7,7 @@ COPY src /source/src
 COPY completion /source/completion
 COPY vendor /source/vendor
 COPY CMakeLists.txt /source/CMakeLists.txt
+COPY VERSION /source/VERSION
 
 RUN cmake -S /source -B ./build \
   -DCMAKE_BUILD_TYPE:STRING=Release \
