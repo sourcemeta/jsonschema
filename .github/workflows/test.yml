@@ -57,7 +57,7 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-22.04
-          additional-packages: cmake build-essential shellcheck pipx zsh
+          additional-packages: cmake build-essential shellcheck pipx zsh jq
           wsl-version: 2
 
       - name: Install pre-commit
