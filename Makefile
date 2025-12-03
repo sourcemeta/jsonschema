@@ -41,6 +41,7 @@ node_modules: package.json package-lock.json
 	$(NPM) ci
 
 npm-pack: node_modules .always
+	$(NPM) --version
 	$(CMAKE) -P cmake/fetch-github-releases.cmake
 	$(NODE) npm/cli.js
 	$(NODE) node_modules/eslint/bin/eslint.js npm/*.js npm/*.mjs
