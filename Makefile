@@ -49,7 +49,7 @@ npm-pack: node_modules .always
 	$(NPM) pack --pack-destination ./build/npm/dist
 
 npm-publish: npm-pack
-	$(NPM) publish ./build/npm/dist
+	$(NPM) publish
 
 # For NMake, which doesn't support .PHONY
 .always:
