@@ -13,7 +13,7 @@ configure schema resolution, default dialects, and project metadata for your
 JSON Schema workflows.
 
 It is meant to be used not only by this CLI but by other JSON Schema tooling
-such as the [Sourcemeta Registry](https://registry.sourcemeta.com).
+such as [Sourcemeta One](https://one.sourcemeta.com).
 
 Example
 -------
