@@ -188,7 +188,6 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo npm install --global npm@11.6.4
       - run: npm --version
-      - run: npm whoami
       - run: make npm-pack npm-publish
 
   publish-pypi:
