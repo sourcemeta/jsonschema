@@ -38,9 +38,6 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
-# Extract just the error from JSONL output (skip first 3 lines which is first JSON object)
-tail -n +4 "$TMP/stdout.txt" > "$TMP/error.txt"
-
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "Failed to parse the JSON document",
@@ -50,4 +47,4 @@ cat << EOF > "$TMP/expected.txt"
 }
 EOF
 
-diff "$TMP/error.txt" "$TMP/expected.txt"
+diff "$TMP/stdout.txt" "$TMP/expected.txt"
