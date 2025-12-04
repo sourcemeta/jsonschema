@@ -153,14 +153,59 @@ handle_json_entry(const std::filesystem::path &entry_path,
         if (index == 0) {
           LOG_WARNING() << "The JSONL file is empty\n";
         }
+      } else if (canonical.extension() == ".yaml" ||
+                 canonical.extension() == ".yml") {
+        if (std::filesystem::is_empty(canonical)) {
+          return;
+        }
+        auto stream{sourcemeta::core::read_file(canonical)};
+        std::vector<std::pair<sourcemeta::core::JSON,
+                              sourcemeta::core::PointerPositionTracker>>
+            documents;
+        std::uint64_t line_offset{0};
+        std::uint64_t max_line{0};
+        while (stream.peek() != std::char_traits<char>::eof()) {
+          sourcemeta::core::PointerPositionTracker positions;
+          const std::uint64_t current_offset{line_offset};
+          max_line = 0;
+          auto callback = [&positions, current_offset, &max_line](
+                              const sourcemeta::core::JSON::ParsePhase phase,
+                              const sourcemeta::core::JSON::Type type,
+                              const std::uint64_t line,
+                              const std::uint64_t column,
+                              const sourcemeta::core::JSON &value) {
+            max_line = std::max(max_line, line);
+            positions(phase, type, line + current_offset, column, value);
+          };
+          documents.emplace_back(sourcemeta::core::parse_yaml(stream, callback),
+                                 std::move(positions));
+          // The YAML parser reports the line of the next document separator,
+          // so we subtract 1 to get the actual lines consumed by this document
+          line_offset += max_line > 0 ? max_line - 1 : 0;
+        }
+
+        if (documents.size() > 1) {
+          LOG_VERBOSE(options) << "Interpreting input as YAML multi-document: "
+                               << canonical.string() << "\n";
+          std::size_t index{0};
+          for (auto &entry : documents) {
+            result.push_back({canonical, std::move(entry.first),
+                              std::move(entry.second), index, true});
+            index += 1;
+          }
+        } else if (documents.size() == 1) {
+          result.push_back({std::move(canonical),
+                            std::move(documents.front().first),
+                            std::move(documents.front().second)});
+        }
       } else {
         if (std::filesystem::is_empty(canonical)) {
           return;
         }
         sourcemeta::core::PointerPositionTracker positions;
         // TODO: Print a verbose message for what is getting parsed
-        auto contents{sourcemeta::core::read_yaml_or_json(canonical,
-                                                          std::ref(positions))};
+        auto contents{
+            sourcemeta::core::read_json(canonical, std::ref(positions))};
         result.push_back(
             {std::move(canonical), std::move(contents), std::move(positions)});
       }

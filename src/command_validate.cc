@@ -288,7 +288,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                "given a single instance"};
     }
     if (std::filesystem::is_directory(instance_path) ||
-        instance_path.extension() == ".jsonl") {
+        instance_path.extension() == ".jsonl" ||
+        instance_path.extension() == ".yaml" ||
+        instance_path.extension() == ".yml") {
       for (const auto &entry : for_each_json({instance_path_view}, options)) {
         std::ostringstream error;
         sourcemeta::blaze::SimpleOutput output{entry.second};
