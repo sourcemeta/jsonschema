@@ -287,116 +287,35 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw std::runtime_error{"The `--benchmark/-b` option is only allowed "
                                "given a single instance"};
     }
-    if (instance_path.extension() == ".jsonl") {
-      LOG_VERBOSE(options)
-          << "Interpreting input as JSONL: "
-          << sourcemeta::core::weakly_canonical(instance_path).string() << "\n";
-      std::int64_t index{0};
-      auto stream{sourcemeta::core::read_file(instance_path)};
-      try {
-        for (const auto &instance : sourcemeta::core::JSONL{stream}) {
-          index += 1;
-          std::ostringstream error;
-          // TODO: Get real positions for JSONL
-          sourcemeta::core::PointerPositionTracker tracker;
-          sourcemeta::blaze::SimpleOutput output{instance};
-          sourcemeta::blaze::TraceOutput trace_output{
-              sourcemeta::core::schema_official_walker, custom_resolver,
-              sourcemeta::core::empty_weak_pointer, frame};
-          bool subresult = true;
-          if (benchmark) {
-            if (benchmark_loop > 1)
-              subresult = run_loop(evaluator, schema_template, instance,
-                                   instance_path, index, benchmark_loop);
-            else {
-              const auto timestamp_start{
-                  std::chrono::high_resolution_clock::now()};
-              subresult = evaluator.validate(schema_template, instance);
-              const auto timestamp_end{
-                  std::chrono::high_resolution_clock::now()};
-              const auto duration_us{
-                  std::chrono::duration_cast<std::chrono::microseconds>(
-                      timestamp_end - timestamp_start)};
-              if (subresult) {
-                std::cout << "took: " << duration_us.count() << "us\n";
-              } else {
-                error << "error: Schema validation failure\n";
-              }
-            }
-          } else if (trace) {
-            subresult = evaluator.validate(schema_template, instance,
-                                           std::ref(trace_output));
-          } else if (fast_mode) {
-            subresult = evaluator.validate(schema_template, instance);
-          } else if (!json_output) {
-            subresult =
-                evaluator.validate(schema_template, instance, std::ref(output));
-          }
-
-          if (trace) {
-            print(trace_output, tracker, std::cout);
-            result = subresult;
-          } else if (json_output) {
-            // TODO: Get instance positions for JSONL too
-            const auto suboutput{sourcemeta::blaze::standard(
-                evaluator, schema_template, instance,
-                fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                          : sourcemeta::blaze::StandardOutput::Basic)};
-            assert(suboutput.is_object());
-            assert(suboutput.defines("valid"));
-            assert(suboutput.at("valid").is_boolean());
-
-            sourcemeta::core::prettify(suboutput, std::cout);
-            std::cout << "\n";
-
-            if (!suboutput.at("valid").to_boolean()) {
-              result = false;
-              break;
-            }
-          } else if (subresult) {
-            LOG_VERBOSE(options)
-                << "ok: "
-                << sourcemeta::core::weakly_canonical(instance_path).string()
-                << " (entry #" << index << ")"
-                << "\n  matches "
-                << sourcemeta::core::weakly_canonical(schema_path).string()
-                << "\n";
-            print_annotations(output, options, tracker, std::cerr);
-          } else {
-            std::cerr
-                << "fail: "
-                << sourcemeta::core::weakly_canonical(instance_path).string()
-                << " (entry #" << index << ")\n\n";
-            sourcemeta::core::prettify(instance, std::cerr);
-            std::cerr << "\n\n";
-            std::cerr << error.str();
-            print(output, tracker, std::cerr);
-            result = false;
-            break;
-          }
-        }
-      } catch (const sourcemeta::core::JSONParseError &error) {
-        // For producing better error messages
-        throw sourcemeta::core::JSONFileParseError(instance_path, error);
-      }
-
-      if (index == 0) {
-        sourcemeta::jsonschema::LOG_WARNING() << "The JSONL file is empty\n";
-      }
-    } else if (std::filesystem::is_directory(instance_path)) {
+    if (std::filesystem::is_directory(instance_path) ||
+        instance_path.extension() == ".jsonl") {
       for (const auto &entry : for_each_json({instance_path_view}, options)) {
         std::ostringstream error;
         sourcemeta::blaze::SimpleOutput output{entry.second};
         bool subresult{true};
-        if (fast_mode) {
+        if (benchmark) {
+          subresult = run_loop(
+              evaluator, schema_template, entry.second, entry.first,
+              entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
+                                  : static_cast<std::int64_t>(-1),
+              benchmark_loop);
+          if (!subresult) {
+            error << "error: Schema validation failure\n";
+            result = false;
+          }
+        } else if (fast_mode) {
           subresult = evaluator.validate(schema_template, entry.second);
         } else if (!json_output) {
           subresult = evaluator.validate(schema_template, entry.second,
                                          std::ref(output));
         }
 
-        if (json_output) {
-          std::cerr << entry.first.string() << "\n";
+        if (benchmark) {
+          continue;
+        } else if (json_output) {
+          if (!entry.multidocument) {
+            std::cerr << entry.first.string() << "\n";
+          }
           const auto suboutput{sourcemeta::blaze::standard(
               evaluator, schema_template, entry.second,
               fast_mode ? sourcemeta::blaze::StandardOutput::Flag
@@ -405,27 +324,42 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           assert(suboutput.is_object());
           assert(suboutput.defines("valid"));
           assert(suboutput.at("valid").is_boolean());
-          if (!suboutput.at("valid").to_boolean()) {
-            result = false;
-          }
-
           sourcemeta::core::prettify(suboutput, std::cout);
           std::cout << "\n";
+          if (!suboutput.at("valid").to_boolean()) {
+            result = false;
+            if (entry.multidocument) {
+              break;
+            }
+          }
         } else if (subresult) {
           LOG_VERBOSE(options)
               << "ok: "
-              << sourcemeta::core::weakly_canonical(entry.first).string()
+              << sourcemeta::core::weakly_canonical(entry.first).string();
+          if (entry.multidocument) {
+            LOG_VERBOSE(options) << " (entry #" << entry.index + 1 << ")";
+          }
+          LOG_VERBOSE(options)
               << "\n  matches "
               << sourcemeta::core::weakly_canonical(schema_path).string()
               << "\n";
           print_annotations(output, options, entry.positions, std::cerr);
         } else {
           std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(entry.first).string()
-                    << "\n";
+                    << sourcemeta::core::weakly_canonical(entry.first).string();
+          if (entry.multidocument) {
+            std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
+            sourcemeta::core::prettify(entry.second, std::cerr);
+            std::cerr << "\n\n";
+          } else {
+            std::cerr << "\n";
+          }
           std::cerr << error.str();
           print(output, entry.positions, std::cerr);
           result = false;
+          if (entry.multidocument) {
+            break;
+          }
         }
       }
     } else {
