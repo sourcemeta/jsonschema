@@ -23,7 +23,7 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // 2020-12
   if (schema.is_object() &&
       vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/core")) {
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_2020_12_Core)) {
     if (schema.defines("$dynamicAnchor")) {
       const auto &anchor{schema.at("$dynamicAnchor")};
       if (anchor.is_string()) {
@@ -47,7 +47,7 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // 2019-09
   if (schema.is_object() &&
       vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core")) {
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_2019_09_Core)) {
     if (schema.defines("$recursiveAnchor")) {
       const auto &anchor{schema.at("$recursiveAnchor")};
       assert(anchor.is_boolean());
@@ -73,8 +73,10 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // Draft 7 and 6
   // Old `$id` anchor form
   if (schema.is_object() &&
-      (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
-       vocabularies.contains("http://json-schema.org/draft-06/schema#"))) {
+      (vocabularies.contains(
+           sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_7) ||
+       vocabularies.contains(
+           sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_6))) {
     if (schema.defines("$id")) {
       assert(schema.at("$id").is_string());
       const sourcemeta::core::URI identifier(schema.at("$id").to_string());
@@ -92,7 +94,8 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   // Draft 4
   // Old `id` anchor form
   if (schema.is_object() &&
-      vocabularies.contains("http://json-schema.org/draft-04/schema#")) {
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_4)) {
     if (schema.defines("id")) {
       assert(schema.at("id").is_string());
       const sourcemeta::core::URI identifier(schema.at("id").to_string());
@@ -175,8 +178,7 @@ auto find_every_base(
 }
 
 // TODO: Why do we have this function both here and on `walker.cc`?
-auto ref_overrides_adjacent_keywords(
-    const sourcemeta::core::JSON::String &base_dialect) -> bool {
+auto ref_overrides_adjacent_keywords(std::string_view base_dialect) -> bool {
   // In older drafts, the presence of `$ref` would override any sibling
   // keywords
   // See
@@ -191,8 +193,7 @@ auto ref_overrides_adjacent_keywords(
          base_dialect == "http://json-schema.org/draft-03/hyper-schema#";
 }
 
-auto supports_id_anchors(const sourcemeta::core::JSON::String &base_dialect)
-    -> bool {
+auto supports_id_anchors(std::string_view base_dialect) -> bool {
   return base_dialect == "http://json-schema.org/draft-07/schema#" ||
          base_dialect == "http://json-schema.org/draft-07/hyper-schema#" ||
          base_dialect == "http://json-schema.org/draft-06/schema#" ||
@@ -707,7 +708,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
 
             // Register a dynamic anchor as a static anchor if possible too
             if (entry.common.vocabularies.contains(
-                    "https://json-schema.org/draft/2020-12/vocab/core")) {
+                    Vocabularies::Known::JSON_Schema_2020_12_Core)) {
               store(this->locations_, this->instances_,
                     SchemaReferenceType::Static,
                     SchemaFrame::LocationType::Anchor, relative_anchor_uri,
@@ -760,7 +761,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
 
               // Register a dynamic anchor as a static anchor if possible too
               if (entry.common.vocabularies.contains(
-                      "https://json-schema.org/draft/2020-12/vocab/core")) {
+                      Vocabularies::Known::JSON_Schema_2020_12_Core)) {
                 store(this->locations_, this->instances_,
                       sourcemeta::core::SchemaReferenceType::Static,
                       SchemaFrame::LocationType::Anchor, anchor_uri, root_id,
@@ -890,7 +891,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       }
 
       if (entry.common.vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/core") &&
+              Vocabularies::Known::JSON_Schema_2019_09_Core) &&
           entry.common.subschema.get().defines("$recursiveRef")) {
         assert(entry.common.subschema.get().at("$recursiveRef").is_string());
         const auto &ref{
@@ -925,7 +926,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       }
 
       if (entry.common.vocabularies.contains(
-              "https://json-schema.org/draft/2020-12/vocab/core") &&
+              Vocabularies::Known::JSON_Schema_2020_12_Core) &&
           entry.common.subschema.get().defines("$dynamicRef")) {
         if (entry.common.subschema.get().at("$dynamicRef").is_string()) {
           const auto &original{

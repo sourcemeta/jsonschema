@@ -26,9 +26,6 @@ namespace sourcemeta::core {
 /// @ingroup jsonschema
 /// Optimized vocabulary set using bitflags for known vocabularies
 /// and a fallback `std::unordered_map` for custom vocabularies.
-///
-/// TODO: To maximize performance gains, convert string-based vocabulary checks
-/// throughout the codebase to use enum-based methods.
 struct SOURCEMETA_CORE_JSONSCHEMA_EXPORT Vocabularies {
   enum class Known : std::uint8_t {
     // Pre-vocabulary dialects (treated as vocabularies)
@@ -68,6 +65,10 @@ struct SOURCEMETA_CORE_JSONSCHEMA_EXPORT Vocabularies {
   // NOTE: Must be kept in sync with the Known enum above
   static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 29;
 
+  /// A vocabulary URI type that can be either a known vocabulary enum or a
+  /// custom string URI
+  using URI = std::variant<Known, JSON::String>;
+
 public:
   Vocabularies() = default;
   Vocabularies(const Vocabularies &) = default;
@@ -87,6 +88,11 @@ public:
 
   /// Check if a known vocabulary is enabled
   [[nodiscard]] auto contains(Known vocabulary) const noexcept -> bool;
+
+  /// Check if any of the given known vocabularies are enabled
+  [[nodiscard]] auto
+  contains_any(std::initializer_list<Known> vocabularies) const noexcept
+      -> bool;
 
   /// Insert a vocabulary with its required/optional status
   auto insert(const JSON::String &uri, bool required) noexcept -> void;
@@ -110,9 +116,8 @@ public:
 
   /// Throw if the current vocabularies have required ones outside the given
   /// supported set
-  auto throw_if_any_unsupported(
-      const std::unordered_set<std::variant<JSON::String, Known>> &supported,
-      const char *message) const -> void;
+  auto throw_if_any_unsupported(const std::unordered_set<URI> &supported,
+                                const char *message) const -> void;
 
 private:
   // Invariant: required_known and optional_known must be mutually exclusive
@@ -123,7 +128,8 @@ private:
 #endif
   std::bitset<KNOWN_VOCABULARY_COUNT> required_known{};
   std::bitset<KNOWN_VOCABULARY_COUNT> optional_known{};
-  std::unordered_map<JSON::String, bool> custom;
+  // Lazily initialized only when custom (non-official) vocabularies are used
+  std::optional<std::unordered_map<JSON::String, bool>> custom{std::nullopt};
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif

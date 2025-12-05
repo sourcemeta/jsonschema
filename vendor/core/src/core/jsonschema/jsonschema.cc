@@ -473,7 +473,7 @@ auto sourcemeta::core::schema_keyword_priority(
     std::string_view keyword,
     const sourcemeta::core::Vocabularies &vocabularies,
     const sourcemeta::core::SchemaWalker &walker) -> std::uint64_t {
-  const auto result{walker(keyword, vocabularies)};
+  const auto &result{walker(keyword, vocabularies)};
   return std::accumulate(
       result.dependencies.cbegin(), result.dependencies.cend(),
       static_cast<std::uint64_t>(0),

@@ -31,10 +31,9 @@ public:
         })};
 
     ONLY_CONTINUE_IF(
-        contains_any(
-            vocabularies,
-            {"https://json-schema.org/draft/2020-12/vocab/validation",
-             "https://json-schema.org/draft/2020-12/vocab/applicator"}) &&
+        vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+             Vocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
         !has_identifiers && schema.is_object() && schema.defines("type") &&
         schema.at("type").is_array() &&
         // Non type-specific applicators can leads to invalid schemas

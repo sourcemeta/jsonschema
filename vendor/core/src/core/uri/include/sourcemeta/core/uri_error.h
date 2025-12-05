@@ -5,10 +5,10 @@
 #include <sourcemeta/core/uri_export.h>
 #endif
 
-#include <cstdint>   // std::uint64_t
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <cstdint>     // std::uint64_t
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -42,13 +42,17 @@ private:
 /// An error that represents a general URI error event
 class SOURCEMETA_CORE_URI_EXPORT URIError : public std::exception {
 public:
-  URIError(std::string message) : message_{std::move(message)} {}
+  URIError(const char *message) : message_{message} {}
+  URIError(std::string message) = delete;
+  URIError(std::string &&message) = delete;
+  URIError(std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 #if defined(_MSC_VER)

@@ -15,40 +15,39 @@ public:
             const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        contains_any(vocabularies,
-                     {"https://json-schema.org/draft/2020-12/vocab/validation",
-                      "https://json-schema.org/draft/2019-09/vocab/validation",
-                      "http://json-schema.org/draft-07/schema#",
-                      "http://json-schema.org/draft-06/schema#",
-                      "http://json-schema.org/draft-04/schema#",
-                      "http://json-schema.org/draft-03/schema#",
-                      "http://json-schema.org/draft-02/schema#",
-                      "http://json-schema.org/draft-02/hyper-schema#",
-                      "http://json-schema.org/draft-01/schema#",
-                      "http://json-schema.org/draft-01/hyper-schema#"}) &&
-        schema.is_object() && schema.defines("enum") &&
-        schema.at("enum").is_array());
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
+                          Vocabularies::Known::JSON_Schema_Draft_7,
+                          Vocabularies::Known::JSON_Schema_Draft_6,
+                          Vocabularies::Known::JSON_Schema_Draft_4,
+                          Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_2,
+                          Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
+                          Vocabularies::Known::JSON_Schema_Draft_1,
+                          Vocabularies::Known::JSON_Schema_Draft_1_Hyper}) &&
+                     schema.is_object() && schema.defines("enum") &&
+                     schema.at("enum").is_array());
 
-    std::set<sourcemeta::core::JSON::Type> enum_types;
+    sourcemeta::core::JSON::TypeSet enum_types;
     for (const auto &value : schema.at("enum").as_array()) {
-      enum_types.emplace(value.type());
+      enum_types.set(static_cast<std::size_t>(value.type()));
     }
 
-    ONLY_CONTINUE_IF(!enum_types.empty());
+    ONLY_CONTINUE_IF(enum_types.any());
 
     std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {
-      const auto metadata = walker(entry.first, vocabularies);
+      const auto &metadata = walker(entry.first, vocabularies);
 
-      if (metadata.instances.empty()) {
+      // If instances is empty (none set), the keyword applies to all types
+      if (metadata.instances.none()) {
         continue;
       }
 
-      if (std::ranges::none_of(metadata.instances,
-                               [&enum_types](const auto keyword_type) {
-                                 return enum_types.contains(keyword_type);
-                               })) {
+      // Check if there's any overlap between keyword's applicable types and
+      // enum types
+      if ((metadata.instances & enum_types).none()) {
         positions.push_back(Pointer{entry.first});
       }
     }

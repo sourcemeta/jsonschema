@@ -39,11 +39,16 @@ auto to_regex(const std::string &pattern) -> std::optional<Regex> {
     return RegexTypeRange{minimum, maximum};
   }
 
-  const std::string pcre2_pattern{preprocess_regex(pattern)};
+  const auto pcre2_pattern{preprocess_regex(pattern)};
+  if (!pcre2_pattern.has_value()) {
+    return std::nullopt;
+  }
+
   int pcre2_error_code{0};
   PCRE2_SIZE pcre2_error_offset{0};
   pcre2_code *pcre2_regex_raw{pcre2_compile(
-      reinterpret_cast<PCRE2_SPTR>(pcre2_pattern.c_str()), pcre2_pattern.size(),
+      reinterpret_cast<PCRE2_SPTR>(pcre2_pattern.value().c_str()),
+      pcre2_pattern.value().size(),
       PCRE2_UTF | PCRE2_UCP | PCRE2_NO_AUTO_CAPTURE | PCRE2_DOTALL |
           PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK,
       &pcre2_error_code, &pcre2_error_offset, nullptr)};

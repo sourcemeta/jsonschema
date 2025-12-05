@@ -1848,34 +1848,6 @@ INSTRUCTION_HANDLER(LoopPropertiesExcept) {
   EVALUATE_END(LoopPropertiesExcept);
 }
 
-INSTRUCTION_HANDLER(LoopPropertiesWhitelist) {
-  SOURCEMETA_MAYBE_UNUSED(depth);
-  SOURCEMETA_MAYBE_UNUSED(schema);
-  SOURCEMETA_MAYBE_UNUSED(callback);
-  SOURCEMETA_MAYBE_UNUSED(instance);
-  SOURCEMETA_MAYBE_UNUSED(property_target);
-  SOURCEMETA_MAYBE_UNUSED(evaluator);
-  EVALUATE_BEGIN_NON_STRING(LoopPropertiesWhitelist, target.is_object());
-  const auto &value{*std::get_if<ValueStringSet>(&instruction.value)};
-  // Otherwise why emit this instruction?
-  assert(!value.empty());
-
-  // Otherwise if the number of properties in the instance
-  // is larger than the whitelist, then it already violated
-  // the whitelist?
-  if (target.object_size() <= value.size()) {
-    result = true;
-    for (const auto &entry : target.as_object()) {
-      if (!value.contains(entry.first, entry.hash)) {
-        result = false;
-        break;
-      }
-    }
-  }
-
-  EVALUATE_END(LoopPropertiesWhitelist);
-}
-
 INSTRUCTION_HANDLER(LoopPropertiesType) {
   SOURCEMETA_MAYBE_UNUSED(depth);
   SOURCEMETA_MAYBE_UNUSED(schema);
@@ -2654,7 +2626,6 @@ static constexpr DispatchHandler handlers[95] = {
     LoopPropertiesRegexClosed,
     LoopPropertiesStartsWith,
     LoopPropertiesExcept,
-    LoopPropertiesWhitelist,
     LoopPropertiesType,
     LoopPropertiesTypeEvaluate,
     LoopPropertiesExactlyTypeStrict,

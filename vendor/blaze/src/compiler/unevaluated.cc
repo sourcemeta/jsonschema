@@ -2,6 +2,7 @@
 
 namespace {
 using namespace sourcemeta::core;
+using Known = Vocabularies::Known;
 
 auto find_adjacent_dependencies(
     const JSON::String &current, const JSON &schema, const SchemaFrame &frame,
@@ -23,7 +24,7 @@ auto find_adjacent_dependencies(
     } else if (keywords.contains(property.first)) {
       // In 2019-09, `additionalItems` takes no effect without `items`
       if (subschema_vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/applicator") &&
+              Known::JSON_Schema_2019_09_Applicator) &&
           property.first == "additionalItems" && !subschema.defines("items")) {
         continue;
       }
@@ -155,9 +156,9 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
       SchemaUnevaluatedEntry unevaluated;
 
       if ((subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/unevaluated") &&
+               Known::JSON_Schema_2020_12_Unevaluated) &&
            subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/applicator")) &&
+               Known::JSON_Schema_2020_12_Applicator)) &&
           // NOLINTNEXTLINE(bugprone-branch-clone)
           pair.first == "unevaluatedProperties") {
         find_adjacent_dependencies(
@@ -166,20 +167,18 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
              "unevaluatedProperties"},
             entry.second, entry.second, true, unevaluated);
         result.emplace(keyword_uri, std::move(unevaluated));
-      } else if (
-          (subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/unevaluated") &&
-           subschema_vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/applicator")) &&
-          pair.first == "unevaluatedItems") {
+      } else if ((subschema_vocabularies.contains(
+                      Known::JSON_Schema_2020_12_Unevaluated) &&
+                  subschema_vocabularies.contains(
+                      Known::JSON_Schema_2020_12_Applicator)) &&
+                 pair.first == "unevaluatedItems") {
         find_adjacent_dependencies(
             pair.first, schema, frame, walker, resolver,
             {"prefixItems", "items", "contains", "unevaluatedItems"},
             entry.second, entry.second, true, unevaluated);
         result.emplace(keyword_uri, std::move(unevaluated));
       } else if (subschema_vocabularies.contains(
-                     "https://json-schema.org/draft/2019-09/vocab/"
-                     "applicator") &&
+                     Known::JSON_Schema_2019_09_Applicator) &&
                  pair.first == "unevaluatedProperties") {
         find_adjacent_dependencies(
             pair.first, schema, frame, walker, resolver,
@@ -188,8 +187,7 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
             entry.second, entry.second, true, unevaluated);
         result.emplace(keyword_uri, std::move(unevaluated));
       } else if (subschema_vocabularies.contains(
-                     "https://json-schema.org/draft/2019-09/vocab/"
-                     "applicator") &&
+                     Known::JSON_Schema_2019_09_Applicator) &&
                  pair.first == "unevaluatedItems") {
         find_adjacent_dependencies(
             pair.first, schema, frame, walker, resolver,

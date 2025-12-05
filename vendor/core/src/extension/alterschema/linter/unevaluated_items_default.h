@@ -16,10 +16,9 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        contains_any(
-            vocabularies,
-            {"https://json-schema.org/draft/2020-12/vocab/unevaluated",
-             "https://json-schema.org/draft/2019-09/vocab/applicator"}) &&
+        vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
+             Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
         schema.is_object() && schema.defines("unevaluatedItems") &&
         ((schema.at("unevaluatedItems").is_boolean() &&
           schema.at("unevaluatedItems").to_boolean()) ||

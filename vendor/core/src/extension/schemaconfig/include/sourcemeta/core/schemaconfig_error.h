@@ -7,9 +7,10 @@
 
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -24,11 +25,14 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfigParseError
     : public std::exception {
 public:
-  SchemaConfigParseError(std::string message, Pointer location)
-      : message_{std::move(message)}, location_{std::move(location)} {}
+  SchemaConfigParseError(const char *message, Pointer location)
+      : message_{message}, location_{std::move(location)} {}
+  SchemaConfigParseError(std::string message, Pointer location) = delete;
+  SchemaConfigParseError(std::string &&message, Pointer location) = delete;
+  SchemaConfigParseError(std::string_view message, Pointer location) = delete;
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   [[nodiscard]] auto location() const noexcept -> const auto & {
@@ -36,7 +40,7 @@ public:
   }
 
 private:
-  std::string message_;
+  const char *message_;
   Pointer location_;
 };
 

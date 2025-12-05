@@ -12,6 +12,7 @@
 #include <sourcemeta/core/numeric.h>
 
 #include <algorithm>        // std::any_of
+#include <bitset>           // std::bitset
 #include <cassert>          // assert
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t, std::uint8_t
@@ -48,6 +49,7 @@ public:
   using Object = JSONObject<String, JSON, PropertyHashJSON<JSON::String>>;
   /// The parsing phase of a JSON document.
   enum class ParsePhase : std::uint8_t { Pre, Post };
+
   // The enumeration indexes must stay in sync with the internal variant
   /// The different types of a JSON instance.
   enum class Type : std::uint8_t {
@@ -60,6 +62,9 @@ public:
     Object = 6,
     Decimal = 7
   };
+
+  /// A set of types
+  using TypeSet = std::bitset<8>;
 
   /// An optional callback that can be passed to parsing functions to obtain
   /// metadata during the parsing process. Each subdocument will emit 2 events:

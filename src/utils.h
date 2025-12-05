@@ -12,8 +12,10 @@
 #include <iterator> // std::next
 #include <optional> // std::optional
 #include <ostream>  // std::ostream
+#include <sstream>  // std::ostringstream
 #include <string>   // std::string, std::stoull
 #include <tuple>    // std::get
+#include <variant>  // std::visit
 
 namespace sourcemeta::jsonschema {
 
@@ -152,8 +154,14 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
     stream << "   at keyword location \"" << entry.keyword_location << "\"\n";
 
     if (entry.vocabulary.first) {
-      stream << "   at vocabulary \""
-             << entry.vocabulary.second.value_or("<unknown>") << "\"\n";
+      stream << "   at vocabulary \"";
+      if (entry.vocabulary.second.has_value()) {
+        std::visit([&stream](const auto &vocabulary) { stream << vocabulary; },
+                   entry.vocabulary.second.value());
+      } else {
+        stream << "<unknown>";
+      }
+      stream << "\"\n";
     }
 
     // To make it easier to read

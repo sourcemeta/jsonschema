@@ -11,18 +11,17 @@ public:
             const SchemaFrame &frame, const SchemaFrame::Location &location,
             const SchemaWalker &, const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(contains_any(
-        vocabularies,
-        {"https://json-schema.org/draft/2020-12/vocab/core",
-         "https://json-schema.org/draft/2019-09/vocab/core",
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+        {Vocabularies::Known::JSON_Schema_2020_12_Core,
+         Vocabularies::Known::JSON_Schema_2019_09_Core,
          // In JSON Schema Draft 7 and older, `$ref` overrides siblings.
          // However, we do not need to worry about this case here, as if the
          // `$ref` points to an unknown local location, the entire schema is
          // invalid anyway. We just help at least making the schema valid
-         "http://json-schema.org/draft-07/schema#",
-         "http://json-schema.org/draft-06/schema#",
-         "http://json-schema.org/draft-04/schema#",
-         "http://json-schema.org/draft-03/schema#"}));
+         Vocabularies::Known::JSON_Schema_Draft_7,
+         Vocabularies::Known::JSON_Schema_Draft_6,
+         Vocabularies::Known::JSON_Schema_Draft_4,
+         Vocabularies::Known::JSON_Schema_Draft_3}));
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref") &&
                      schema.at("$ref").is_string());
 

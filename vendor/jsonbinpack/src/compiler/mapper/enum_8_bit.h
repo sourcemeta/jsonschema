@@ -13,8 +13,8 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
-           vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/validation") &&
+           vocabularies.contains(sourcemeta::core::Vocabularies::Known::
+                                     JSON_Schema_2020_12_Validation) &&
            schema.defines("enum") && schema.at("enum").is_array() &&
            !location.pointer.empty() && schema.at("enum").size() > 1 &&
            is_byte(schema.at("enum").size() - 1);

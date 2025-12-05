@@ -19,7 +19,7 @@ public:
         continue;
       }
 
-      const auto metadata = walker(entry.first, vocabularies);
+      const auto &metadata = walker(entry.first, vocabularies);
       if (metadata.type == SchemaKeywordType::Unknown) {
         locations.push_back(Pointer{entry.first});
       }

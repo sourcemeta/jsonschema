@@ -100,7 +100,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
       subschema.defines("$ref") &&
       ref_overrides_adjacent_keywords(current_base_dialect)};
   for (auto &pair : subschema.as_object()) {
-    const auto keyword_info{walker(pair.first, vocabularies)};
+    const auto &keyword_info{walker(pair.first, vocabularies)};
 
     // Ignore the current keyword sibling to `$ref in Draft 7 and older in EVERY
     // case. Note that we purposely DO NOT try to add workarounds for the

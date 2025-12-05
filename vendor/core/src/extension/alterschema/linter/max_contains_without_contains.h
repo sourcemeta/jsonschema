@@ -16,10 +16,9 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        contains_any(
-            vocabularies,
-            {"https://json-schema.org/draft/2020-12/vocab/validation",
-             "https://json-schema.org/draft/2019-09/vocab/validation"}) &&
+        vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+             Vocabularies::Known::JSON_Schema_2019_09_Validation}) &&
         schema.is_object() && schema.defines("maxContains") &&
         !schema.defines("contains"));
     return APPLIES_TO_KEYWORDS("maxContains");

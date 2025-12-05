@@ -11,10 +11,10 @@ public:
             const SchemaWalker &, const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        contains_any(vocabularies,
-                     {"https://json-schema.org/draft/2020-12/vocab/applicator",
-                      "https://json-schema.org/draft/2019-09/vocab/applicator",
-                      "http://json-schema.org/draft-07/schema#"}) &&
+        vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
+             Vocabularies::Known::JSON_Schema_2019_09_Applicator,
+             Vocabularies::Known::JSON_Schema_Draft_7}) &&
         schema.is_object() && schema.defines("then") &&
         is_schema(schema.at("then")) && is_empty_schema(schema.at("then")) &&
         (schema.at("then").is_object() ||

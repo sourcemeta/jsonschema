@@ -106,4 +106,12 @@ auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
   }
 }
 
+auto make_set(std::initializer_list<JSON::Type> types) -> JSON::TypeSet {
+  JSON::TypeSet result;
+  for (const auto type : types) {
+    result.set(static_cast<std::size_t>(type));
+  }
+  return result;
+}
+
 } // namespace sourcemeta::core

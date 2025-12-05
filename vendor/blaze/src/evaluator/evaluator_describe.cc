@@ -742,12 +742,6 @@ auto describe(const bool valid, const Instruction &step,
   }
 
   if (step.type ==
-      sourcemeta::blaze::InstructionIndex::LoopPropertiesWhitelist) {
-    assert(keyword == "additionalProperties");
-    return "The object value was not expected to define additional properties";
-  }
-
-  if (step.type ==
       sourcemeta::blaze::InstructionIndex::LoopPropertiesExactlyTypeStrict) {
     std::ostringstream message;
     message << "The required object properties were expected to be of type "
