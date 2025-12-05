@@ -5,9 +5,10 @@
 #include <sourcemeta/core/yaml_export.h>
 #endif
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -22,26 +23,34 @@ namespace sourcemeta::core {
 /// An error that represents a general YAML error event
 class SOURCEMETA_CORE_YAML_EXPORT YAMLError : public std::exception {
 public:
-  YAMLError(std::string message) : message_{std::move(message)} {}
+  YAMLError(const char *message) : message_{message} {}
+  YAMLError(std::string message) = delete;
+  YAMLError(std::string &&message) = delete;
+  YAMLError(std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup yaml
 /// An error that represents YAML parse error event
 class SOURCEMETA_CORE_YAML_EXPORT YAMLParseError : public std::exception {
 public:
-  YAMLParseError(std::string message) : message_{std::move(message)} {}
+  YAMLParseError(const char *message) : message_{message} {}
+  YAMLParseError(std::string message) = delete;
+  YAMLParseError(std::string &&message) = delete;
+  YAMLParseError(std::string_view message) = delete;
+
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 /// @ingroup yaml

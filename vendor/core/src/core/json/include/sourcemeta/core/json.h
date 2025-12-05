@@ -11,12 +11,13 @@
 #include <sourcemeta/core/json_value.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <cstdint>    // std::uint64_t
-#include <filesystem> // std::filesystem
-#include <fstream>    // std::basic_ifstream
-#include <istream>    // std::basic_istream
-#include <ostream>    // std::basic_ostream
-#include <string>     // std::basic_string
+#include <cstdint>          // std::uint64_t
+#include <filesystem>       // std::filesystem
+#include <fstream>          // std::basic_ifstream
+#include <initializer_list> // std::initializer_list
+#include <istream>          // std::basic_istream
+#include <ostream>          // std::basic_ostream
+#include <string>           // std::basic_string
 
 /// @defgroup json JSON
 /// @brief A full-blown ECMA-404 implementation with read, write, and iterators
@@ -215,6 +216,20 @@ SOURCEMETA_CORE_JSON_EXPORT
 auto operator<<(std::basic_ostream<JSON::Char, JSON::CharTraits> &stream,
                 const JSON::Type type)
     -> std::basic_ostream<JSON::Char, JSON::CharTraits> &;
+
+/// @ingroup json
+///
+/// Create a JSON type set from an initializer list of types. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+///
+/// const auto types = sourcemeta::core::make_set(
+///     {sourcemeta::core::JSON::Type::Object,
+///      sourcemeta::core::JSON::Type::Array});
+/// ```
+SOURCEMETA_CORE_JSON_EXPORT
+auto make_set(std::initializer_list<JSON::Type> types) -> JSON::TypeSet;
 
 } // namespace sourcemeta::core
 

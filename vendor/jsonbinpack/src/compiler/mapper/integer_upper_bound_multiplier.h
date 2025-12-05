@@ -15,8 +15,8 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
-           vocabularies.contains(
-               "https://json-schema.org/draft/2020-12/vocab/validation") &&
+           vocabularies.contains(sourcemeta::core::Vocabularies::Known::
+                                     JSON_Schema_2020_12_Validation) &&
            schema.defines("type") &&
            schema.at("type").to_string() == "integer" &&
            !schema.defines("minimum") && schema.defines("maximum") &&

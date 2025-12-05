@@ -21,15 +21,14 @@ auto ValidDefault::condition(
     const sourcemeta::core::SchemaWalker &walker,
     const sourcemeta::core::SchemaResolver &resolver) const
     -> sourcemeta::core::SchemaTransformRule::Result {
+  using Known = sourcemeta::core::Vocabularies::Known;
   // Technically, the `default` keyword goes back to Draft 1, but Blaze
   // only supports Draft 4 and later
-  if (!vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/meta-data") &&
-      !vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/meta-data") &&
-      !vocabularies.contains("http://json-schema.org/draft-07/schema#") &&
-      !vocabularies.contains("http://json-schema.org/draft-06/schema#") &&
-      !vocabularies.contains("http://json-schema.org/draft-04/schema#")) {
+  if (!vocabularies.contains(Known::JSON_Schema_2020_12_Meta_Data) &&
+      !vocabularies.contains(Known::JSON_Schema_2019_09_Meta_Data) &&
+      !vocabularies.contains(Known::JSON_Schema_Draft_7) &&
+      !vocabularies.contains(Known::JSON_Schema_Draft_6) &&
+      !vocabularies.contains(Known::JSON_Schema_Draft_4)) {
     return false;
   }
 
@@ -38,9 +37,9 @@ auto ValidDefault::condition(
   }
 
   // We have to ignore siblings to `$ref`
-  if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-06/schema#") ||
-      vocabularies.contains("http://json-schema.org/draft-04/schema#")) {
+  if (vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      vocabularies.contains(Known::JSON_Schema_Draft_6) ||
+      vocabularies.contains(Known::JSON_Schema_Draft_4)) {
     if (schema.defines("$ref")) {
       return false;
     }

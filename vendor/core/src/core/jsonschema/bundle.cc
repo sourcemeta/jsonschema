@@ -269,21 +269,25 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
   const auto vocabularies{
       sourcemeta::core::vocabularies(schema, resolver, default_dialect)};
   if (vocabularies.contains(
-          "https://json-schema.org/draft/2020-12/vocab/core") ||
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_2020_12_Core) ||
       vocabularies.contains(
-          "https://json-schema.org/draft/2019-09/vocab/core")) {
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_2019_09_Core)) {
     bundle_schema(schema, {"$defs"}, schema, frame, walker, resolver,
                   default_dialect, default_id, paths);
     return;
-  } else if (vocabularies.contains("http://json-schema.org/draft-07/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-07/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-06/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-06/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-04/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-04/hyper-schema#")) {
+  } else if (
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_7) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_7_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_6) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_6_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_4) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_4_Hyper)) {
     if (schema.is_object() && schema.defines("$ref")) {
       // This is a very specific case in which we can "fix" this
       if (schema.size() == 1) {
@@ -303,18 +307,23 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
     bundle_schema(schema, {"definitions"}, schema, frame, walker, resolver,
                   default_dialect, default_id, paths);
     return;
-  } else if (vocabularies.contains(
-                 "http://json-schema.org/draft-03/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-03/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-02/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-02/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-01/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-01/schema#") ||
-             vocabularies.contains(
-                 "http://json-schema.org/draft-00/hyper-schema#") ||
-             vocabularies.contains("http://json-schema.org/draft-00/schema#")) {
+  } else if (
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_3_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_3) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_2_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_2) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_1_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_1) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_0_Hyper) ||
+      vocabularies.contains(
+          sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_0)) {
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
     if (frame.standalone()) {
       return;

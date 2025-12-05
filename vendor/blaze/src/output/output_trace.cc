@@ -12,7 +12,7 @@ static auto try_vocabulary(
     const sourcemeta::core::SchemaWalker &walker,
     const sourcemeta::core::SchemaResolver &resolver,
     const std::string &keyword_location)
-    -> std::pair<bool, std::optional<std::string>> {
+    -> std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>> {
   if (!frame.has_value() || evaluate_path.empty() ||
       !evaluate_path.back().is_property()) {
     return {false, std::nullopt};
@@ -25,7 +25,7 @@ static auto try_vocabulary(
 
   const auto vocabularies{
       frame.value().get().vocabularies(entry.value().get(), resolver)};
-  const auto result{walker(evaluate_path.back().to_property(), vocabularies)};
+  const auto &result{walker(evaluate_path.back().to_property(), vocabularies)};
   return {true, result.vocabulary};
 }
 

@@ -5,11 +5,12 @@
 #include <sourcemeta/core/json_export.h>
 #endif
 
-#include <cstdint>    // std::uint64_t
-#include <exception>  // std::exception
-#include <filesystem> // std::filesystem::path
-#include <string>     // std::string
-#include <utility>    // std::move
+#include <cstdint>     // std::uint64_t
+#include <exception>   // std::exception
+#include <filesystem>  // std::filesystem::path
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -26,29 +27,38 @@ class SOURCEMETA_CORE_JSON_EXPORT JSONParseError : public std::exception {
 public:
   /// Create a parsing error
   JSONParseError(const std::uint64_t line, const std::uint64_t column)
-      : line_{line}, column_{column} {}
+      : line_{line}, column_{column},
+        message_{"Failed to parse the JSON document"} {}
 
   /// Create a parsing error with a custom error
   JSONParseError(const std::uint64_t line, const std::uint64_t column,
-                 std::string message)
-      : line_{line}, column_{column}, message_{std::move(message)} {}
+                 const char *message)
+      : line_{line}, column_{column}, message_{message} {}
+  JSONParseError(const std::uint64_t line, const std::uint64_t column,
+                 std::string message) = delete;
+  JSONParseError(const std::uint64_t line, const std::uint64_t column,
+                 std::string &&message) = delete;
+  JSONParseError(const std::uint64_t line, const std::uint64_t column,
+                 std::string_view message) = delete;
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   /// Get the line number of the error
-  [[nodiscard]] auto line() const noexcept -> std::uint64_t { return line_; }
+  [[nodiscard]] auto line() const noexcept -> std::uint64_t {
+    return this->line_;
+  }
 
   // Get the column number of the error
   [[nodiscard]] auto column() const noexcept -> std::uint64_t {
-    return column_;
+    return this->column_;
   }
 
 private:
   std::uint64_t line_;
   std::uint64_t column_;
-  std::string message_{"Failed to parse the JSON document"};
+  const char *message_;
 };
 
 /// @ingroup json
@@ -57,9 +67,16 @@ class SOURCEMETA_CORE_JSON_EXPORT JSONFileParseError : public JSONParseError {
 public:
   /// Create a file parsing error
   JSONFileParseError(std::filesystem::path path, const std::uint64_t line,
-                     const std::uint64_t column, std::string message)
-      : JSONParseError{line, column, std::move(message)},
-        path_{std::move(path)} {}
+                     const std::uint64_t column, const char *message)
+      : JSONParseError{line, column, message}, path_{std::move(path)} {}
+  JSONFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column, std::string message) = delete;
+  JSONFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column,
+                     std::string &&message) = delete;
+  JSONFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column,
+                     std::string_view message) = delete;
 
   /// Create a file parsing error from a parse error
   JSONFileParseError(std::filesystem::path path, const JSONParseError &parent)
@@ -68,7 +85,7 @@ public:
 
   /// Get the file path of the error
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
-    return path_;
+    return this->path_;
   }
 
 private:

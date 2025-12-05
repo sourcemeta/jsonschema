@@ -17,11 +17,10 @@ public:
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
-        contains_any(vocabularies,
-                     {"http://json-schema.org/draft-07/schema#",
-                      "http://json-schema.org/draft-06/schema#",
-                      "http://json-schema.org/draft-04/schema#",
-                      "http://json-schema.org/draft-03/schema#"}) &&
+        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_7,
+                                   Vocabularies::Known::JSON_Schema_Draft_6,
+                                   Vocabularies::Known::JSON_Schema_Draft_4,
+                                   Vocabularies::Known::JSON_Schema_Draft_3}) &&
         schema.is_object() && schema.defines("dependencies") &&
         schema.at("dependencies").is_object() && schema.defines("required") &&
         schema.at("required").is_array());

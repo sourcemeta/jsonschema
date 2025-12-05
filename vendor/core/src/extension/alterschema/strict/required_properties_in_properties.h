@@ -17,18 +17,18 @@ public:
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         ((vocabularies.contains(
-              "https://json-schema.org/draft/2020-12/vocab/validation") &&
+              Vocabularies::Known::JSON_Schema_2020_12_Validation) &&
           vocabularies.contains(
-              "https://json-schema.org/draft/2020-12/vocab/applicator")) ||
+              Vocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
          (vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/validation") &&
+              Vocabularies::Known::JSON_Schema_2019_09_Validation) &&
           vocabularies.contains(
-              "https://json-schema.org/draft/2019-09/vocab/applicator")) ||
-         contains_any(vocabularies,
-                      {"http://json-schema.org/draft-07/schema#",
-                       "http://json-schema.org/draft-06/schema#",
-                       "http://json-schema.org/draft-04/schema#",
-                       "http://json-schema.org/draft-03/schema#"})) &&
+              Vocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+         vocabularies.contains_any(
+             {Vocabularies::Known::JSON_Schema_Draft_7,
+              Vocabularies::Known::JSON_Schema_Draft_6,
+              Vocabularies::Known::JSON_Schema_Draft_4,
+              Vocabularies::Known::JSON_Schema_Draft_3})) &&
         schema.is_object() && schema.defines("required") &&
         schema.at("required").is_array() && !schema.at("required").empty() &&
         !schema.defines("additionalProperties"));

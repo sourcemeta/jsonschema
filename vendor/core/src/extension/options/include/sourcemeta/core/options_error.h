@@ -5,9 +5,10 @@
 #include <sourcemeta/core/options_export.h>
 #endif
 
-#include <stdexcept> // std::runtime_error
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -20,9 +21,19 @@ namespace sourcemeta::core {
 
 /// @ingroup options
 /// This class represents a general options error
-struct SOURCEMETA_CORE_OPTIONS_EXPORT OptionsError : public std::runtime_error {
-  explicit OptionsError(const std::string &message)
-      : std::runtime_error{message} {}
+class SOURCEMETA_CORE_OPTIONS_EXPORT OptionsError : public std::exception {
+public:
+  explicit OptionsError(const char *message) : message_{message} {}
+  explicit OptionsError(std::string message) = delete;
+  explicit OptionsError(std::string &&message) = delete;
+  explicit OptionsError(std::string_view message) = delete;
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
+
+private:
+  const char *message_;
 };
 
 /// @ingroup options

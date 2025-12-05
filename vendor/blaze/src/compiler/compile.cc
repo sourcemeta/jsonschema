@@ -280,12 +280,11 @@ auto compile(const sourcemeta::core::JSON &schema,
   // (8) Pre compile dynamic reference locations
   ///////////////////////////////////////////////////////////////////
 
+  using Known = sourcemeta::core::Vocabularies::Known;
   Instructions compiler_template;
   if (uses_dynamic_scopes &&
-      (schema_context.vocabularies.contains(
-           "https://json-schema.org/draft/2019-09/vocab/core") ||
-       schema_context.vocabularies.contains(
-           "https://json-schema.org/draft/2020-12/vocab/core"))) {
+      (schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Core) ||
+       schema_context.vocabularies.contains(Known::JSON_Schema_2020_12_Core))) {
     for (const auto &entry : context.frame.locations()) {
       // We are only trying to find dynamic anchors
       if (entry.second.type !=

@@ -103,7 +103,8 @@ public:
     const std::optional<sourcemeta::core::JSON> annotation;
     // Whether we were able to collect vocabulary information,
     // and the vocabulary URI, if any
-    const std::pair<bool, std::optional<std::string>> vocabulary;
+    const std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>
+        vocabulary;
   };
 
   auto operator()(const EvaluationType type, const bool result,

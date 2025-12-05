@@ -14,20 +14,20 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        contains_any(vocabularies,
-                     {"https://json-schema.org/draft/2020-12/vocab/validation",
-                      "https://json-schema.org/draft/2019-09/vocab/validation",
-                      "http://json-schema.org/draft-07/schema#",
-                      "http://json-schema.org/draft-06/schema#",
-                      "http://json-schema.org/draft-04/schema#",
-                      "http://json-schema.org/draft-03/schema#",
-                      "http://json-schema.org/draft-02/schema#",
-                      "http://json-schema.org/draft-01/schema#",
-                      "http://json-schema.org/draft-00/schema#"}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_array() && schema.at("type").size() == 1 &&
-        schema.at("type").front().is_string());
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
+                          Vocabularies::Known::JSON_Schema_Draft_7,
+                          Vocabularies::Known::JSON_Schema_Draft_6,
+                          Vocabularies::Known::JSON_Schema_Draft_4,
+                          Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_2,
+                          Vocabularies::Known::JSON_Schema_Draft_1,
+                          Vocabularies::Known::JSON_Schema_Draft_0}) &&
+                     schema.is_object() && schema.defines("type") &&
+                     schema.at("type").is_array() &&
+                     schema.at("type").size() == 1 &&
+                     schema.at("type").front().is_string());
     return APPLIES_TO_KEYWORDS("type");
   }
 

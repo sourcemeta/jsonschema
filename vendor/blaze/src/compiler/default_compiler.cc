@@ -19,8 +19,7 @@ auto sourcemeta::blaze::default_schema_compiler(
   assert(!dynamic_context.keyword.empty());
 
   using Known = sourcemeta::core::Vocabularies::Known;
-  static std::unordered_set<std::variant<sourcemeta::core::JSON::String,
-                                         sourcemeta::core::Vocabularies::Known>>
+  static std::unordered_set<sourcemeta::core::Vocabularies::URI>
       SUPPORTED_VOCABULARIES{Known::JSON_Schema_2020_12_Core,
                              Known::JSON_Schema_2020_12_Applicator,
                              Known::JSON_Schema_2020_12_Unevaluated,
@@ -74,568 +73,468 @@ auto sourcemeta::blaze::default_schema_compiler(
   // 2020-12
   // ********************************************
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/core", "$dynamicRef",
+  COMPILE(Known::JSON_Schema_2020_12_Core, "$dynamicRef",
           compiler_2020_12_core_dynamicref);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "prefixItems", compiler_2020_12_applicator_prefixitems);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "items",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "prefixItems",
+          compiler_2020_12_applicator_prefixitems);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "items",
           compiler_2020_12_applicator_items);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "contains",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "contains",
           compiler_2020_12_applicator_contains);
 
   // Same as 2019-09
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "dependentRequired", compiler_2019_09_validation_dependentrequired);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "dependentSchemas", compiler_2019_09_applicator_dependentschemas);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "dependentRequired",
+          compiler_2019_09_validation_dependentrequired);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "dependentSchemas",
+          compiler_2019_09_applicator_dependentschemas);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "properties", compiler_2019_09_applicator_properties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "patternProperties", compiler_2019_09_applicator_patternproperties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "additionalProperties",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "properties",
+          compiler_2019_09_applicator_properties);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "patternProperties",
+          compiler_2019_09_applicator_patternproperties);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "additionalProperties",
           compiler_2019_09_applicator_additionalproperties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/unevaluated",
-          "unevaluatedProperties",
+  COMPILE(Known::JSON_Schema_2020_12_Unevaluated, "unevaluatedProperties",
           compiler_2019_09_applicator_unevaluatedproperties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/unevaluated",
-          "unevaluatedItems", compiler_2019_09_applicator_unevaluateditems);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
-          "contentEncoding", compiler_2019_09_content_contentencoding);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
-          "contentMediaType", compiler_2019_09_content_contentmediatype);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/content",
-          "contentSchema", compiler_2019_09_content_contentschema);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/format-annotation",
-          "format", compiler_2019_09_format_format);
+  COMPILE(Known::JSON_Schema_2020_12_Unevaluated, "unevaluatedItems",
+          compiler_2019_09_applicator_unevaluateditems);
+  COMPILE(Known::JSON_Schema_2020_12_Content, "contentEncoding",
+          compiler_2019_09_content_contentencoding);
+  COMPILE(Known::JSON_Schema_2020_12_Content, "contentMediaType",
+          compiler_2019_09_content_contentmediatype);
+  COMPILE(Known::JSON_Schema_2020_12_Content, "contentSchema",
+          compiler_2019_09_content_contentschema);
+  COMPILE(Known::JSON_Schema_2020_12_Format_Annotation, "format",
+          compiler_2019_09_format_format);
 
   // Same as Draft 7
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "if",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "if",
           compiler_draft7_applicator_if);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "then",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "then",
           compiler_draft7_applicator_then);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "else",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "else",
           compiler_draft7_applicator_else);
 
   // Same as Draft 6
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "propertyNames", compiler_draft6_validation_propertynames);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "propertyNames",
+          compiler_draft6_validation_propertynames);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "type",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "type",
           compiler_draft6_validation_type);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "const",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "const",
           compiler_draft6_validation_const);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "exclusiveMaximum",
+          compiler_draft6_validation_exclusivemaximum);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "exclusiveMinimum",
+          compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
   // As per compatibility optional test
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator",
-          "dependencies", compiler_draft4_applicator_dependencies);
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "dependencies",
+          compiler_draft4_applicator_dependencies);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/core", "$ref",
-          compiler_draft4_core_ref);
+  COMPILE(Known::JSON_Schema_2020_12_Core, "$ref", compiler_draft4_core_ref);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "allOf",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "allOf",
           compiler_draft4_applicator_allof);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "anyOf",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "anyOf",
           compiler_draft4_applicator_anyof);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "oneOf",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "oneOf",
           compiler_draft4_applicator_oneof);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/applicator", "not",
+  COMPILE(Known::JSON_Schema_2020_12_Applicator, "not",
           compiler_draft4_applicator_not);
 
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "enum",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "enum",
           compiler_draft4_validation_enum);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "uniqueItems", compiler_draft4_validation_uniqueitems);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "maxItems",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "uniqueItems",
+          compiler_draft4_validation_uniqueitems);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "maxItems",
           compiler_draft4_validation_maxitems);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "minItems",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "minItems",
           compiler_draft4_validation_minitems);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "required",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "required",
           compiler_draft4_validation_required);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "maxProperties", compiler_draft4_validation_maxproperties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "minProperties", compiler_draft4_validation_minproperties);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "maximum",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "maxProperties",
+          compiler_draft4_validation_maxproperties);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "minProperties",
+          compiler_draft4_validation_minproperties);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "maximum",
           compiler_draft4_validation_maximum);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "minimum",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "minimum",
           compiler_draft4_validation_minimum);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation",
-          "multipleOf", compiler_draft4_validation_multipleof);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "maxLength",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "multipleOf",
+          compiler_draft4_validation_multipleof);
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "maxLength",
           compiler_draft4_validation_maxlength);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "minLength",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "minLength",
           compiler_draft4_validation_minlength);
-  COMPILE("https://json-schema.org/draft/2020-12/vocab/validation", "pattern",
+  COMPILE(Known::JSON_Schema_2020_12_Validation, "pattern",
           compiler_draft4_validation_pattern);
 
   // ********************************************
   // 2019-09
   // ********************************************
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/core", "$recursiveRef",
+  COMPILE(Known::JSON_Schema_2019_09_Core, "$recursiveRef",
           compiler_2019_09_core_recursiveref);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "dependentRequired", compiler_2019_09_validation_dependentrequired);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "dependentSchemas", compiler_2019_09_applicator_dependentschemas);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "contains",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "dependentRequired",
+          compiler_2019_09_validation_dependentrequired);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "dependentSchemas",
+          compiler_2019_09_applicator_dependentschemas);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "contains",
           compiler_2019_09_applicator_contains);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "unevaluatedItems", compiler_2019_09_applicator_unevaluateditems);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "unevaluatedProperties",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "unevaluatedItems",
+          compiler_2019_09_applicator_unevaluateditems);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "unevaluatedProperties",
           compiler_2019_09_applicator_unevaluatedproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "items",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "items",
           compiler_2019_09_applicator_items);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "additionalItems", compiler_2019_09_applicator_additionalitems);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "properties", compiler_2019_09_applicator_properties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "patternProperties", compiler_2019_09_applicator_patternproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "additionalProperties",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "additionalItems",
+          compiler_2019_09_applicator_additionalitems);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "properties",
+          compiler_2019_09_applicator_properties);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "patternProperties",
+          compiler_2019_09_applicator_patternproperties);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "additionalProperties",
           compiler_2019_09_applicator_additionalproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
-          "contentEncoding", compiler_2019_09_content_contentencoding);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
-          "contentMediaType", compiler_2019_09_content_contentmediatype);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/content",
-          "contentSchema", compiler_2019_09_content_contentschema);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/format", "format",
+  COMPILE(Known::JSON_Schema_2019_09_Content, "contentEncoding",
+          compiler_2019_09_content_contentencoding);
+  COMPILE(Known::JSON_Schema_2019_09_Content, "contentMediaType",
+          compiler_2019_09_content_contentmediatype);
+  COMPILE(Known::JSON_Schema_2019_09_Content, "contentSchema",
+          compiler_2019_09_content_contentschema);
+  COMPILE(Known::JSON_Schema_2019_09_Format, "format",
           compiler_2019_09_format_format);
 
   // Same as Draft 7
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "if",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "if",
           compiler_draft7_applicator_if);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "then",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "then",
           compiler_draft7_applicator_then);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "else",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "else",
           compiler_draft7_applicator_else);
 
   // Same as Draft 6
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "propertyNames", compiler_draft6_validation_propertynames);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "type",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "propertyNames",
+          compiler_draft6_validation_propertynames);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "type",
           compiler_draft6_validation_type);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "const",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "const",
           compiler_draft6_validation_const);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "exclusiveMaximum",
+          compiler_draft6_validation_exclusivemaximum);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "exclusiveMinimum",
+          compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
   // As per compatibility optional test
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator",
-          "dependencies", compiler_draft4_applicator_dependencies);
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "dependencies",
+          compiler_draft4_applicator_dependencies);
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/core", "$ref",
-          compiler_draft4_core_ref);
+  COMPILE(Known::JSON_Schema_2019_09_Core, "$ref", compiler_draft4_core_ref);
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "allOf",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "allOf",
           compiler_draft4_applicator_allof);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "anyOf",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "anyOf",
           compiler_draft4_applicator_anyof);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "oneOf",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "oneOf",
           compiler_draft4_applicator_oneof);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/applicator", "not",
+  COMPILE(Known::JSON_Schema_2019_09_Applicator, "not",
           compiler_draft4_applicator_not);
 
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "enum",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "enum",
           compiler_draft4_validation_enum);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "uniqueItems", compiler_draft4_validation_uniqueitems);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maxItems",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "uniqueItems",
+          compiler_draft4_validation_uniqueitems);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "maxItems",
           compiler_draft4_validation_maxitems);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minItems",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "minItems",
           compiler_draft4_validation_minitems);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "required",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "required",
           compiler_draft4_validation_required);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "maxProperties", compiler_draft4_validation_maxproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "minProperties", compiler_draft4_validation_minproperties);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maximum",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "maxProperties",
+          compiler_draft4_validation_maxproperties);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "minProperties",
+          compiler_draft4_validation_minproperties);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "maximum",
           compiler_draft4_validation_maximum);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minimum",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "minimum",
           compiler_draft4_validation_minimum);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation",
-          "multipleOf", compiler_draft4_validation_multipleof);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "maxLength",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "multipleOf",
+          compiler_draft4_validation_multipleof);
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "maxLength",
           compiler_draft4_validation_maxlength);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "minLength",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "minLength",
           compiler_draft4_validation_minlength);
-  COMPILE("https://json-schema.org/draft/2019-09/vocab/validation", "pattern",
+  COMPILE(Known::JSON_Schema_2019_09_Validation, "pattern",
           compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 7
   // ********************************************
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "$ref",
-              compiler_draft4_core_ref);
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-07/schema#", "$ref");
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-07/hyper-schema#",
-                          "$ref");
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "$ref", compiler_draft4_core_ref);
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_7, "$ref");
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_7_Hyper, "$ref");
 
   // Any
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "if",
-              compiler_draft7_applicator_if);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "then",
-              compiler_draft7_applicator_then);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "else",
-              compiler_draft7_applicator_else);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "if", compiler_draft7_applicator_if);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "then", compiler_draft7_applicator_then);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "else", compiler_draft7_applicator_else);
 
   // Same as Draft 6
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "type",
-              compiler_draft6_validation_type);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "const",
-              compiler_draft6_validation_const);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "contains",
-              compiler_draft6_applicator_contains);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "propertyNames",
-              compiler_draft6_validation_propertynames);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "type", compiler_draft6_validation_type);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "const", compiler_draft6_validation_const);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "contains", compiler_draft6_applicator_contains);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "propertyNames", compiler_draft6_validation_propertynames);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "allOf",
-              compiler_draft4_applicator_allof);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "anyOf",
-              compiler_draft4_applicator_anyof);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "oneOf",
-              compiler_draft4_applicator_oneof);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "not",
-              compiler_draft4_applicator_not);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "enum",
-              compiler_draft4_validation_enum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "allOf", compiler_draft4_applicator_allof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "anyOf", compiler_draft4_applicator_anyof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "oneOf", compiler_draft4_applicator_oneof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "not", compiler_draft4_applicator_not);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "enum", compiler_draft4_validation_enum);
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "items",
-              compiler_draft4_applicator_items);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "items", compiler_draft4_applicator_items);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "additionalItems", compiler_draft4_applicator_additionalitems);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "uniqueItems",
-              compiler_draft4_validation_uniqueitems);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "maxItems",
-              compiler_draft4_validation_maxitems);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "minItems",
-              compiler_draft4_validation_minitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "uniqueItems", compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "maxItems", compiler_draft4_validation_maxitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "minItems", compiler_draft4_validation_minitems);
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "required",
-              compiler_draft4_validation_required);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "maxProperties",
-              compiler_draft4_validation_maxproperties);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "minProperties",
-              compiler_draft4_validation_minproperties);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "properties",
-              compiler_draft4_applicator_properties);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "required", compiler_draft4_validation_required);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "maxProperties", compiler_draft4_validation_maxproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "minProperties", compiler_draft4_validation_minproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "properties", compiler_draft4_applicator_properties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "patternProperties",
               compiler_draft4_applicator_patternproperties);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "additionalProperties",
               compiler_draft4_applicator_additionalproperties);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "dependencies",
-              compiler_draft4_applicator_dependencies);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "dependencies", compiler_draft4_applicator_dependencies);
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "maximum",
-              compiler_draft4_validation_maximum);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "minimum",
-              compiler_draft4_validation_minimum);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "multipleOf",
-              compiler_draft4_validation_multipleof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "maximum", compiler_draft4_validation_maximum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "minimum", compiler_draft4_validation_minimum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "multipleOf", compiler_draft4_validation_multipleof);
 
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "maxLength",
-              compiler_draft4_validation_maxlength);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "minLength",
-              compiler_draft4_validation_minlength);
-  COMPILE_ANY("http://json-schema.org/draft-07/schema#",
-              "http://json-schema.org/draft-07/hyper-schema#", "pattern",
-              compiler_draft4_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "maxLength", compiler_draft4_validation_maxlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "minLength", compiler_draft4_validation_minlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "pattern", compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 6
   // ********************************************
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "$ref",
-              compiler_draft4_core_ref);
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-06/schema#", "$ref");
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-06/hyper-schema#",
-                          "$ref");
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "$ref", compiler_draft4_core_ref);
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_6, "$ref");
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_6_Hyper, "$ref");
 
   // Any
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "type",
-              compiler_draft6_validation_type);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "const",
-              compiler_draft6_validation_const);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "type", compiler_draft6_validation_type);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "const", compiler_draft6_validation_const);
 
   // Array
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "contains",
-              compiler_draft6_applicator_contains);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "contains", compiler_draft6_applicator_contains);
 
   // Object
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "propertyNames",
-              compiler_draft6_validation_propertynames);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "propertyNames", compiler_draft6_validation_propertynames);
 
   // Number
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "exclusiveMaximum", compiler_draft6_validation_exclusivemaximum);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "exclusiveMinimum", compiler_draft6_validation_exclusiveminimum);
 
   // Same as Draft 4
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "allOf",
-              compiler_draft4_applicator_allof);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "anyOf",
-              compiler_draft4_applicator_anyof);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "oneOf",
-              compiler_draft4_applicator_oneof);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "not",
-              compiler_draft4_applicator_not);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "enum",
-              compiler_draft4_validation_enum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "allOf", compiler_draft4_applicator_allof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "anyOf", compiler_draft4_applicator_anyof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "oneOf", compiler_draft4_applicator_oneof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "not", compiler_draft4_applicator_not);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "enum", compiler_draft4_validation_enum);
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "items",
-              compiler_draft4_applicator_items);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "items", compiler_draft4_applicator_items);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "additionalItems", compiler_draft4_applicator_additionalitems);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "uniqueItems",
-              compiler_draft4_validation_uniqueitems);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "maxItems",
-              compiler_draft4_validation_maxitems);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "minItems",
-              compiler_draft4_validation_minitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "uniqueItems", compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "maxItems", compiler_draft4_validation_maxitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "minItems", compiler_draft4_validation_minitems);
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "required",
-              compiler_draft4_validation_required);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "maxProperties",
-              compiler_draft4_validation_maxproperties);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "minProperties",
-              compiler_draft4_validation_minproperties);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "properties",
-              compiler_draft4_applicator_properties);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "required", compiler_draft4_validation_required);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "maxProperties", compiler_draft4_validation_maxproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "minProperties", compiler_draft4_validation_minproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "properties", compiler_draft4_applicator_properties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "patternProperties",
               compiler_draft4_applicator_patternproperties);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "additionalProperties",
               compiler_draft4_applicator_additionalproperties);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "dependencies",
-              compiler_draft4_applicator_dependencies);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "dependencies", compiler_draft4_applicator_dependencies);
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "maximum",
-              compiler_draft4_validation_maximum);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "minimum",
-              compiler_draft4_validation_minimum);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "multipleOf",
-              compiler_draft4_validation_multipleof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "maximum", compiler_draft4_validation_maximum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "minimum", compiler_draft4_validation_minimum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "multipleOf", compiler_draft4_validation_multipleof);
 
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "maxLength",
-              compiler_draft4_validation_maxlength);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "minLength",
-              compiler_draft4_validation_minlength);
-  COMPILE_ANY("http://json-schema.org/draft-06/schema#",
-              "http://json-schema.org/draft-06/hyper-schema#", "pattern",
-              compiler_draft4_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "maxLength", compiler_draft4_validation_maxlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "minLength", compiler_draft4_validation_minlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "pattern", compiler_draft4_validation_pattern);
 
   // ********************************************
   // DRAFT 4
   // ********************************************
 
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "$ref",
-              compiler_draft4_core_ref);
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-04/schema#", "$ref");
-  STOP_IF_SIBLING_KEYWORD("http://json-schema.org/draft-04/hyper-schema#",
-                          "$ref");
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "$ref", compiler_draft4_core_ref);
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_4, "$ref");
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_4_Hyper, "$ref");
 
   // Applicators
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "allOf",
-              compiler_draft4_applicator_allof);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "anyOf",
-              compiler_draft4_applicator_anyof);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "oneOf",
-              compiler_draft4_applicator_oneof);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "not",
-              compiler_draft4_applicator_not);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "properties",
-              compiler_draft4_applicator_properties);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "allOf", compiler_draft4_applicator_allof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "anyOf", compiler_draft4_applicator_anyof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "oneOf", compiler_draft4_applicator_oneof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "not", compiler_draft4_applicator_not);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "properties", compiler_draft4_applicator_properties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "patternProperties",
               compiler_draft4_applicator_patternproperties);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "additionalProperties",
               compiler_draft4_applicator_additionalproperties);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "items",
-              compiler_draft4_applicator_items);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#",
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "items", compiler_draft4_applicator_items);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "additionalItems", compiler_draft4_applicator_additionalitems);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "dependencies",
-              compiler_draft4_applicator_dependencies);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "dependencies", compiler_draft4_applicator_dependencies);
 
   // Any
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "type",
-              compiler_draft4_validation_type);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "enum",
-              compiler_draft4_validation_enum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "type", compiler_draft4_validation_type);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "enum", compiler_draft4_validation_enum);
 
   // Object
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "required",
-              compiler_draft4_validation_required);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "maxProperties",
-              compiler_draft4_validation_maxproperties);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "minProperties",
-              compiler_draft4_validation_minproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "required", compiler_draft4_validation_required);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "maxProperties", compiler_draft4_validation_maxproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "minProperties", compiler_draft4_validation_minproperties);
 
   // Array
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "uniqueItems",
-              compiler_draft4_validation_uniqueitems);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "maxItems",
-              compiler_draft4_validation_maxitems);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "minItems",
-              compiler_draft4_validation_minitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "uniqueItems", compiler_draft4_validation_uniqueitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "maxItems", compiler_draft4_validation_maxitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "minItems", compiler_draft4_validation_minitems);
 
   // String
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "pattern",
-              compiler_draft4_validation_pattern);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "maxLength",
-              compiler_draft4_validation_maxlength);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "minLength",
-              compiler_draft4_validation_minlength);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "format",
-              compiler_draft4_validation_format);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "pattern", compiler_draft4_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "maxLength", compiler_draft4_validation_maxlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "minLength", compiler_draft4_validation_minlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "format", compiler_draft4_validation_format);
 
   // Number
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "maximum",
-              compiler_draft4_validation_maximum);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "minimum",
-              compiler_draft4_validation_minimum);
-  COMPILE_ANY("http://json-schema.org/draft-04/schema#",
-              "http://json-schema.org/draft-04/hyper-schema#", "multipleOf",
-              compiler_draft4_validation_multipleof);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "maximum", compiler_draft4_validation_maximum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "minimum", compiler_draft4_validation_minimum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "multipleOf", compiler_draft4_validation_multipleof);
 
 #undef COMPILE
 #undef COMPILE_ANY
 #undef STOP_IF_SIBLING_KEYWORD
 
-  if ((schema_context.vocabularies.contains(
-           "https://json-schema.org/draft/2019-09/vocab/core") ||
-       schema_context.vocabularies.contains(
-           "https://json-schema.org/draft/2020-12/vocab/core")) &&
+  if ((schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Core) ||
+       schema_context.vocabularies.contains(Known::JSON_Schema_2020_12_Core)) &&
       !dynamic_context.keyword.starts_with('$') &&
       dynamic_context.keyword != "definitions") {
 
     // We handle these keywords as part of "contains"
     if ((schema_context.vocabularies.contains(
-             "https://json-schema.org/draft/2019-09/vocab/validation") ||
+             Known::JSON_Schema_2019_09_Validation) ||
          schema_context.vocabularies.contains(
-             "https://json-schema.org/draft/2020-12/vocab/validation")) &&
+             Known::JSON_Schema_2020_12_Validation)) &&
         (dynamic_context.keyword == "minContains" ||
          dynamic_context.keyword == "maxContains")) {
       return {};

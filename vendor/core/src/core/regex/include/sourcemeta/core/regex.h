@@ -65,7 +65,7 @@ enum class RegexIndex : std::uint8_t {
 /// @ingroup regex
 ///
 /// Compile a regular expression from a string. If the regular expression is
-/// invalid, no value is returned. In this function
+/// invalid, no value is returned. In this function:
 ///
 /// - Regexes are NOT automatically anchored
 /// - Regexes assume `DOTALL`

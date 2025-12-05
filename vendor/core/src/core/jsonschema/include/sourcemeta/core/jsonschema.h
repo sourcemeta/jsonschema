@@ -46,7 +46,7 @@ auto schema_official_resolver(std::string_view identifier)
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_official_walker(std::string_view keyword,
                             const Vocabularies &vocabularies)
-    -> SchemaWalkerResult;
+    -> const SchemaWalkerResult &;
 
 /// @ingroup jsonschema
 ///
@@ -303,7 +303,7 @@ auto metaschema(
 ///
 /// assert(base_dialect.has_value());
 /// assert(base_dialect.value() ==
-/// "https://json-schema.org/draft/2020-12/schema");
+///   "https://json-schema.org/draft/2020-12/schema");
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto base_dialect(const JSON &schema, const SchemaResolver &resolver,

@@ -15,13 +15,12 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        contains_any(vocabularies,
-                     {"https://json-schema.org/draft/2020-12/vocab/content",
-                      "https://json-schema.org/draft/2019-09/vocab/content",
-                      "http://json-schema.org/draft-07/schema#"}) &&
-        schema.is_object() && schema.defines("contentMediaType") &&
-        !schema.defines("contentEncoding"));
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_2020_12_Content,
+                          Vocabularies::Known::JSON_Schema_2019_09_Content,
+                          Vocabularies::Known::JSON_Schema_Draft_7}) &&
+                     schema.is_object() && schema.defines("contentMediaType") &&
+                     !schema.defines("contentEncoding"));
     return APPLIES_TO_KEYWORDS("contentMediaType");
   }
 
