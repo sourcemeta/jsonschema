@@ -449,6 +449,8 @@ sourcemeta::core::SchemaIterator::SchemaIterator(
         .vocabularies = {},
         .base_dialect = std::nullopt,
         .subschema = schema,
+        // TODO: Only compute these if needed, i.e. when framing with instance
+        // locations
         .instance_location = instance_location,
         .relative_instance_location = instance_location,
         .orphan = false};
@@ -511,6 +513,8 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
         .vocabularies = vocabularies,
         .base_dialect = base_dialect,
         .subschema = entry.second,
+        // TODO: Only compute these if needed, i.e. when framing with instance
+        // locations
         .instance_location = {},
         .relative_instance_location = {},
         .orphan = false};

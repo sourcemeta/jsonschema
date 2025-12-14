@@ -32,8 +32,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
     sourcemeta::core::bundle(
-        schema, sourcemeta::core::schema_official_walker, custom_resolver,
-        dialect,
+        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
         sourcemeta::core::URI::from_path(
             sourcemeta::core::weakly_canonical(schema_path))
             .recompose());
@@ -51,12 +50,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
           << "you will be unable to reference the resulting schema from "
              "other schemas\n"
           << "using the --resolve/-r option.\n";
-      sourcemeta::core::for_editor(schema,
-                                   sourcemeta::core::schema_official_walker,
+      sourcemeta::core::for_editor(schema, sourcemeta::core::schema_walker,
                                    custom_resolver, dialect);
     }
 
-    sourcemeta::core::format(schema, sourcemeta::core::schema_official_walker,
+    sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw FileError<sourcemeta::core::SchemaReferenceError>(

@@ -38,14 +38,12 @@ namespace sourcemeta::core {
 /// @ingroup jsonschema
 /// A default resolver that relies on built-in official schemas.
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto schema_official_resolver(std::string_view identifier)
-    -> std::optional<JSON>;
+auto schema_resolver(std::string_view identifier) -> std::optional<JSON>;
 
 /// @ingroup jsonschema
 /// A default schema walker with support for a wide range of drafs
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto schema_official_walker(std::string_view keyword,
-                            const Vocabularies &vocabularies)
+auto schema_walker(std::string_view keyword, const Vocabularies &vocabularies)
     -> const SchemaWalkerResult &;
 
 /// @ingroup jsonschema
@@ -72,16 +70,16 @@ auto schema_official_walker(std::string_view keyword,
 ///
 /// const auto vocabularies{
 ///   sourcemeta::core::vocabularies(
-///     document, sourcemeta::core::schema_official_resolver)};
+///     document, sourcemeta::core::schema_resolver)};
 ///
 /// assert(sourcemeta::core::schema_keyword_priority(
 ///   "prefixItems", vocabularies,
-///   sourcemeta::core::schema_official_walker) == 0);
+///   sourcemeta::core::schema_walker) == 0);
 ///
 /// // The "items" keyword must be evaluated after the "prefixItems" keyword
 /// assert(sourcemeta::core::schema_keyword_priority(
 ///   "items", vocabularies,
-///   sourcemeta::core::schema_official_walker) == 1);
+///   sourcemeta::core::schema_walker) == 1);
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto schema_keyword_priority(std::string_view keyword,
@@ -137,7 +135,7 @@ auto is_empty_schema(const JSON &schema) -> bool;
 /// })JSON");
 ///
 /// std::optional<std::string> id{sourcemeta::core::identify(
-///   document, sourcemeta::core::schema_official_resolver)};
+///   document, sourcemeta::core::schema_resolver)};
 /// assert(id.has_value());
 /// assert(id.value() == "https://sourcemeta.com/example-schema");
 /// ```
@@ -178,7 +176,7 @@ auto identify(const JSON &schema, const std::string &base_dialect,
 ///   "https://json-schema.org/draft/2020-12/schema");
 ///
 /// std::optional<std::string> id{sourcemeta::core::identify(
-///   document, sourcemeta::core::schema_official_resolver)};
+///   document, sourcemeta::core::schema_resolver)};
 /// assert(!id.has_value());
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
@@ -202,10 +200,10 @@ auto anonymize(JSON &schema, const std::string &base_dialect) -> void;
 ///
 /// sourcemeta::core::reidentify(document,
 ///   "https://example.com/my-new-id",
-///   sourcemeta::core::schema_official_resolver);
+///   sourcemeta::core::schema_resolver);
 ///
 /// std::optional<std::string> id{sourcemeta::core::identify(
-///   document, sourcemeta::core::schema_official_resolver)};
+///   document, sourcemeta::core::schema_resolver)};
 /// assert(id.has_value());
 /// assert(id.value() == "https://example.com/my-new-id");
 /// ```
@@ -267,7 +265,7 @@ auto dialect(const JSON &schema,
 ///
 /// const sourcemeta::core::JSON metaschema{
 ///   sourcemeta::core::metaschema(
-///     document, sourcemeta::core::schema_official_resolver)};
+///     document, sourcemeta::core::schema_resolver)};
 ///
 /// sourcemeta::core::prettify(metaschema, std::cout);
 /// std::cout << std::endl;
@@ -299,7 +297,7 @@ auto metaschema(
 ///
 /// const std::optional<std::string> base_dialect{
 ///   sourcemeta::core::base_dialect(
-///     document, sourcemeta::core::schema_official_resolver)};
+///     document, sourcemeta::core::schema_resolver)};
 ///
 /// assert(base_dialect.has_value());
 /// assert(base_dialect.value() ==
@@ -332,7 +330,7 @@ auto base_dialect(const JSON &schema, const SchemaResolver &resolver,
 ///
 /// const auto vocabularies{
 ///   sourcemeta::core::vocabularies(
-///     document, sourcemeta::core::schema_official_resolver)};
+///     document, sourcemeta::core::schema_resolver)};
 ///
 /// assert(vocabularies.at("https://json-schema.org/draft/2020-12/vocab/core"));
 /// assert(vocabularies.at("https://json-schema.org/draft/2020-12/vocab/applicator"));
@@ -371,8 +369,8 @@ auto vocabularies(const SchemaResolver &resolver,
 /// sourcemeta::core::JSON schema =
 ///   sourcemeta::core::parse_json(
 ///     "{ \"type\": \"string\", \"minLength\": 3 }");
-/// sourcemeta::core::format(schema, sourcemeta::core::schema_official_walker,
-///                          sourcemeta::core::schema_official_resolver);
+/// sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
+///                          sourcemeta::core::schema_resolver);
 /// std::ostringstream stream;
 /// sourcemeta::core::prettify(schema, stream);
 /// std::cout << stream.str() << std::endl;
@@ -424,7 +422,7 @@ auto wrap(const JSON::String &identifier) -> JSON;
 ///
 /// const sourcemeta::core::JSON result =
 ///   sourcemeta::core::wrap(document, { "items" },
-///     sourcemeta::core::schema_official_resolver);
+///     sourcemeta::core::schema_resolver);
 ///
 /// sourcemeta::core::prettify(result, std::cerr);
 /// std::cerr << "\n";

@@ -16,7 +16,7 @@ auto UTF8_STRING_NO_LENGTH(const sourcemeta::core::JSON &options) -> Encoding {
   assert(size.is_integer());
   assert(size.is_positive());
   return sourcemeta::jsonbinpack::UTF8_STRING_NO_LENGTH{
-      static_cast<std::uint64_t>(size.to_integer())};
+      .size = static_cast<std::uint64_t>(size.to_integer())};
 }
 
 auto FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
@@ -26,7 +26,7 @@ auto FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
   assert(minimum.is_integer());
   assert(minimum.is_positive());
   return sourcemeta::jsonbinpack::FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED{
-      static_cast<std::uint64_t>(minimum.to_integer())};
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer())};
 }
 
 auto ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
@@ -36,7 +36,7 @@ auto ROOF_VARINT_PREFIX_UTF8_STRING_SHARED(
   assert(maximum.is_integer());
   assert(maximum.is_positive());
   return sourcemeta::jsonbinpack::ROOF_VARINT_PREFIX_UTF8_STRING_SHARED{
-      static_cast<std::uint64_t>(maximum.to_integer())};
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer())};
 }
 
 auto BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
@@ -50,8 +50,8 @@ auto BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
   assert(minimum.is_positive());
   assert(maximum.is_positive());
   return sourcemeta::jsonbinpack::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED{
-      static_cast<std::uint64_t>(minimum.to_integer()),
-      static_cast<std::uint64_t>(maximum.to_integer())};
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer())};
 }
 
 auto RFC3339_DATE_INTEGER_TRIPLET(const sourcemeta::core::JSON &) -> Encoding {

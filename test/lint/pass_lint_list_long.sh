@@ -10,9 +10,6 @@ trap clean EXIT
 "$1" lint --list > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
-additional_items_with_schema_items
-  The `additionalItems` keyword is ignored when the `items` keyword is set to a schema
-
 additional_properties_default
   Setting the `additionalProperties` keyword to the true schema does not add any further constraint
 
@@ -121,6 +118,9 @@ modern_official_dialect_with_empty_fragment
 multiple_of_default
   Setting `multipleOf` to 1 does not add any further constraint
 
+non_applicable_additional_items
+  The `additionalItems` keyword is ignored when the `items` keyword is either not present or set to a schema
+
 non_applicable_enum_validation_keywords
   Setting validation keywords that do not apply to any item in `enum` is considered an anti-pattern
 
@@ -141,6 +141,9 @@ property_names_default
 
 property_names_type_default
   Setting the `type` keyword to `string` inside `propertyNames` does not add any further constraint
+
+required_properties_in_properties
+  Every property listed in the `required` keyword must be explicitly defined using the `properties` keyword
 
 single_type_array
   Setting `type` to an array of a single type is the same as directly declaring such type
@@ -175,7 +178,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 55
+Number of rules: 56
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

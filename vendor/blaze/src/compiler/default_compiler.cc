@@ -5,6 +5,7 @@
 #include "default_compiler_draft4.h"
 #include "default_compiler_draft6.h"
 #include "default_compiler_draft7.h"
+#include "default_compiler_openapi.h"
 
 #include <cassert>       // assert
 #include <string>        // std::string
@@ -40,7 +41,9 @@ auto sourcemeta::blaze::default_schema_compiler(
                              Known::JSON_Schema_Draft_6,
                              Known::JSON_Schema_Draft_6_Hyper,
                              Known::JSON_Schema_Draft_4,
-                             Known::JSON_Schema_Draft_4_Hyper};
+                             Known::JSON_Schema_Draft_4_Hyper,
+                             Known::OpenAPI_3_1_Base,
+                             Known::OpenAPI_3_2_Base};
 
   schema_context.vocabularies.throw_if_any_unsupported(
       SUPPORTED_VOCABULARIES, "Cannot compile unsupported vocabulary");
@@ -520,6 +523,19 @@ auto sourcemeta::blaze::default_schema_compiler(
               "minimum", compiler_draft4_validation_minimum);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "multipleOf", compiler_draft4_validation_multipleof);
+
+  // ********************************************
+  // OpenAPI
+  // ********************************************
+
+  COMPILE_ANY(Known::OpenAPI_3_1_Base, Known::OpenAPI_3_2_Base, "discriminator",
+              compiler_openapi_noop);
+  COMPILE_ANY(Known::OpenAPI_3_1_Base, Known::OpenAPI_3_2_Base, "xml",
+              compiler_openapi_noop);
+  COMPILE_ANY(Known::OpenAPI_3_1_Base, Known::OpenAPI_3_2_Base, "externalDocs",
+              compiler_openapi_noop);
+  COMPILE_ANY(Known::OpenAPI_3_1_Base, Known::OpenAPI_3_2_Base, "example",
+              compiler_openapi_noop);
 
 #undef COMPILE
 #undef COMPILE_ANY

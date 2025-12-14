@@ -273,6 +273,7 @@ INSTRUCTION_HANDLER(AssertionTypeAny) {
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
   const auto type_index{static_cast<std::uint8_t>(target.type())};
+  // NOLINTNEXTLINE(bugprone-branch-clone)
   if (value.test(type_index)) {
     result = true;
   } else if (value.test(static_cast<std::uint8_t>(JSON::Type::Integer)) &&
@@ -1970,6 +1971,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
       // Continue where we left
       std::advance(iterator, index);
       for (; iterator != object.cend(); ++iterator) {
+        // NOLINTNEXTLINE(modernize-use-ranges)
         if (std::none_of(value.second.first.cbegin(), value.second.first.cend(),
                          [&iterator](const auto hash) {
                            return hash == iterator->hash;
@@ -2361,6 +2363,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     // Unroll, for performance reasons, for small collections
     if (hashes_size == 3) {
       for (const auto &entry : object) {
+        // NOLINTNEXTLINE(bugprone-branch-clone)
         if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2373,6 +2376,7 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
       }
     } else if (hashes_size == 2) {
       for (const auto &entry : object) {
+        // NOLINTNEXTLINE(bugprone-branch-clone)
         if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2392,12 +2396,14 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     } else {
       std::size_t index{0};
       for (const auto &entry : object) {
+        // NOLINTNEXTLINE(bugprone-branch-clone)
         if (effective_type_strict_real(entry.second) != value.first) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else if (entry.hash == value.second.first[index]) {
           index += 1;
           continue;
+          // NOLINTNEXTLINE(modernize-use-ranges)
         } else if (std::find(value.second.first.cbegin(),
                              value.second.first.cend(),
                              entry.hash) == value.second.first.cend()) {
@@ -2558,6 +2564,7 @@ using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
                                  sourcemeta::blaze::Evaluator &);
 
 // Must have same order as InstructionIndex
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
 static constexpr DispatchHandler handlers[95] = {
     AssertionFail,
     AssertionDefines,

@@ -117,6 +117,7 @@ enum class InstructionIndex : std::uint8_t {
 };
 
 /// @ingroup evaluator
+// NOLINTNEXTLINE(modernize-avoid-c-arrays)
 constexpr std::string_view InstructionNames[] = {
     "AssertionFail",
     "AssertionDefines",
@@ -217,6 +218,7 @@ constexpr std::string_view InstructionNames[] = {
 /// Check if a given instruction type corresponds to an annotation
 inline auto is_annotation(const InstructionIndex type) noexcept -> bool {
   switch (type) {
+    // NOLINTNEXTLINE(bugprone-branch-clone)
     case InstructionIndex::AnnotationBasenameToParent:
       return true;
     case InstructionIndex::AnnotationToParent:
@@ -239,7 +241,9 @@ using Instructions = std::vector<Instruction>;
 
 /// @ingroup evaluator
 /// Represents a single instruction to be evaluated
+// NOLINTNEXTLINE(bugprone-exception-escape)
 struct Instruction {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   const InstructionIndex type;
   const sourcemeta::core::Pointer relative_schema_location;
   const sourcemeta::core::Pointer relative_instance_location;
@@ -247,6 +251,7 @@ struct Instruction {
   const std::size_t schema_resource;
   const Value value;
   const Instructions children;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 
 /// @ingroup evaluator

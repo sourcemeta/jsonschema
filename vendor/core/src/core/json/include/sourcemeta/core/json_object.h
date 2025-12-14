@@ -350,6 +350,21 @@ public:
     return key_hash;
   }
 
+  /// Emplace an object property assuming the key does not already exist
+  inline auto emplace_assume_new(Key &&key, mapped_type &&value) -> hash_type {
+    const auto key_hash{this->hash(key)};
+    this->data.push_back({std::move(key), std::move(value), key_hash});
+    return key_hash;
+  }
+
+  /// Emplace an object property assuming the key does not already exist
+  inline auto emplace_assume_new(const Key &key, mapped_type &&value)
+      -> hash_type {
+    const auto key_hash{this->hash(key)};
+    this->data.push_back({key, std::move(value), key_hash});
+    return key_hash;
+  }
+
   /// Remove every property in the object
   inline auto clear() noexcept -> void { this->data.clear(); }
 

@@ -70,9 +70,12 @@ public:
   /// metadata during the parsing process. Each subdocument will emit 2 events:
   /// a "pre" and a "post". When parsing object and arrays, during the "pre"
   /// event, the value corresponds to the property name or index, respectively.
-  using ParseCallback = std::function<void(
-      const ParsePhase phase, const Type type, const std::uint64_t line,
-      const std::uint64_t column, const JSON &value)>;
+  using ParseCallback =
+      std::function<void(const ParsePhase phase, const Type type,
+                         const std::uint64_t line, const std::uint64_t column,
+                         // TODO: Instead of taking a JSON value, we should take
+                         // either an index or a string view to the key
+                         const JSON &value)>;
   /// A comparison function between object property keys.
   /// See https://en.cppreference.com/w/cpp/named_req/Compare
   using KeyComparison = std::function<bool(const String &, const String &)>;
@@ -1385,6 +1388,39 @@ public:
   /// assert(document.at("bar").is_integer());
   /// ```
   auto assign_if_missing(const String &key, JSON &&value) -> void;
+
+  /// This method sets an object key, assuming the key does not already exist.
+  /// If the key already exists, behavior is undefined. This variant is faster
+  /// than `assign` when building objects with keys known to be unique. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// document.assign_assume_new("foo", sourcemeta::core::JSON{1});
+  /// assert(document.defines("foo"));
+  /// assert(document.at("foo").to_integer() == 1);
+  /// ```
+  auto assign_assume_new(const String &key, JSON &&value) -> void;
+
+  /// This method sets an object key, assuming the key does not already exist.
+  /// If the key already exists, behavior is undefined. This variant is faster
+  /// than `assign` when building objects with keys known to be unique, and
+  /// allows moving the key. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// std::string key{"foo"};
+  /// document.assign_assume_new(std::move(key), sourcemeta::core::JSON{1});
+  /// assert(document.defines("foo"));
+  /// assert(document.at("foo").to_integer() == 1);
+  /// ```
+  auto assign_assume_new(String &&key, JSON &&value) -> void;
 
   /// This method deletes an object key. For example:
   ///

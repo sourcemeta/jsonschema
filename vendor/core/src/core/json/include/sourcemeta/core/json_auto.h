@@ -14,6 +14,7 @@
 #include <tuple> // std::tuple, std::apply, std::tuple_element_t, std::tuple_size, std::tuple_size_v
 #include <type_traits> // std::false_type, std::true_type, std::void_t, std::is_enum_v, std::underlying_type_t, std::is_same_v, std::is_base_of_v, std::remove_cvref_t
 #include <utility> // std::pair, std:::make_index_sequence, std::index_sequence
+#include <variant> // std::variant, std::variant_size_v, std::variant_alternative_t, std::visit
 
 namespace sourcemeta::core {
 
@@ -108,6 +109,13 @@ template <typename U, typename V>
 struct json_auto_is_pair<std::pair<U, V>> : std::true_type {};
 
 /// @ingroup json
+template <typename T> struct json_auto_is_variant : std::false_type {};
+
+/// @ingroup json
+template <typename... Ts>
+struct json_auto_is_variant<std::variant<Ts...>> : std::true_type {};
+
+/// @ingroup json
 template <typename T>
 concept json_auto_tuple_mono = requires {
   typename std::tuple_size<std::remove_cvref_t<T>>::type;
@@ -133,6 +141,9 @@ template <typename L, typename R>
 auto to_json(const std::pair<L, R> &value) -> JSON;
 template <json_auto_tuple_mono T> auto to_json(const T &value) -> JSON;
 template <json_auto_tuple_poly T> auto to_json(const T &value) -> JSON;
+template <typename T>
+  requires json_auto_is_variant<T>::value
+auto to_json(const T &value) -> JSON;
 #endif
 
 /// @ingroup json
@@ -662,6 +673,57 @@ auto from_json(const JSON &value) -> std::optional<T> {
     // TODO: Maybe there is a better way to catch this without using exceptions?
   } catch (const std::bad_optional_access &) {
     return std::nullopt;
+  }
+}
+
+/// @ingroup json
+template <typename T>
+  requires json_auto_is_variant<T>::value
+auto to_json(const T &value) -> JSON {
+  auto result{JSON::make_array()};
+  result.push_back(JSON{static_cast<std::int64_t>(value.index())});
+  std::visit(
+      [&result](const auto &alternative) {
+        result.push_back(to_json(alternative));
+      },
+      value);
+  return result;
+}
+
+#ifndef DOXYGEN
+template <typename T, std::size_t Index = 0>
+auto from_json_variant_impl(const JSON &data, std::size_t index)
+    -> std::optional<T> {
+  if constexpr (Index >= std::variant_size_v<T>) {
+    return std::nullopt;
+  } else {
+    if (Index == index) {
+      auto result{from_json<std::variant_alternative_t<Index, T>>(data)};
+      if (result.has_value()) {
+        return T{std::in_place_index<Index>, std::move(result).value()};
+      }
+
+      return std::nullopt;
+    } else {
+      return from_json_variant_impl<T, Index + 1>(data, index);
+    }
+  }
+}
+#endif
+
+/// @ingroup json
+template <typename T>
+  requires json_auto_is_variant<T>::value
+auto from_json(const JSON &value) -> std::optional<T> {
+  if (!value.is_array() || value.size() != 2 || !value.at(0).is_integer()) {
+    return std::nullopt;
+  }
+
+  const auto index{static_cast<std::size_t>(value.at(0).to_integer())};
+  if (index >= std::variant_size_v<T>) {
+    return std::nullopt;
+  } else {
+    return from_json_variant_impl<T>(value.at(1), index);
   }
 }
 

@@ -2,7 +2,7 @@ class RequiredPropertiesInProperties final : public SchemaTransformRule {
 public:
   RequiredPropertiesInProperties()
       : SchemaTransformRule{
-            "strict/required_properties_in_properties",
+            "required_properties_in_properties",
             "Every property listed in the `required` keyword must be "
             "explicitly defined using the `properties` keyword"} {};
 

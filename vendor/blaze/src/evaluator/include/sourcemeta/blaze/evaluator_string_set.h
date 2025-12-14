@@ -26,27 +26,41 @@ public:
   using difference_type = typename underlying_type::difference_type;
   using const_iterator = typename underlying_type::const_iterator;
 
-  auto contains(const string_type &value, const hash_type hash) const -> bool;
-  inline auto contains(const string_type &value) const -> bool {
+  [[nodiscard]] auto contains(const string_type &value,
+                              const hash_type hash) const -> bool;
+  [[nodiscard]] inline auto contains(const string_type &value) const -> bool {
     return this->contains(value, this->hasher(value));
   }
 
-  inline auto at(const size_type index) const noexcept -> const value_type & {
+  [[nodiscard]] inline auto at(const size_type index) const noexcept
+      -> const value_type & {
     return this->data[index];
   }
 
   auto insert(const string_type &value) -> void;
   auto insert(string_type &&value) -> void;
 
-  inline auto empty() const noexcept -> bool { return this->data.empty(); }
-  inline auto size() const noexcept -> size_type { return this->data.size(); }
+  [[nodiscard]] inline auto empty() const noexcept -> bool {
+    return this->data.empty();
+  }
+  [[nodiscard]] inline auto size() const noexcept -> size_type {
+    return this->data.size();
+  }
 
-  inline auto begin() const -> const_iterator { return this->data.begin(); }
-  inline auto end() const -> const_iterator { return this->data.end(); }
-  inline auto cbegin() const -> const_iterator { return this->data.cbegin(); }
-  inline auto cend() const -> const_iterator { return this->data.cend(); }
+  [[nodiscard]] inline auto begin() const -> const_iterator {
+    return this->data.begin();
+  }
+  [[nodiscard]] inline auto end() const -> const_iterator {
+    return this->data.end();
+  }
+  [[nodiscard]] inline auto cbegin() const -> const_iterator {
+    return this->data.cbegin();
+  }
+  [[nodiscard]] inline auto cend() const -> const_iterator {
+    return this->data.cend();
+  }
 
-  auto to_json() const -> sourcemeta::core::JSON {
+  [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
     return sourcemeta::core::to_json(this->data, [](const auto &item) {
       return sourcemeta::core::to_json(item.first);
     });

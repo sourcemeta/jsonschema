@@ -20,7 +20,7 @@ namespace sourcemeta::blaze {
 /// @ingroup evaluator
 /// @brief Represents a compiler step empty value
 struct ValueNone {
-  auto to_json() const -> sourcemeta::core::JSON {
+  [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
     return sourcemeta::core::JSON{nullptr};
   }
 
@@ -70,13 +70,16 @@ using ValueType = sourcemeta::core::JSON::Type;
 /// original string and the regular expression as standard regular expressions
 /// do not keep a copy of their original value (which we need for serialization
 /// purposes)
+// NOLINTNEXTLINE(bugprone-exception-escape)
 struct ValueRegex {
   using second_type = ValueString;
   using first_type = sourcemeta::core::Regex;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const first_type first;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const second_type second;
 
-  auto to_json() const -> sourcemeta::core::JSON {
+  [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
     return sourcemeta::core::to_json(this->second);
   }
 
@@ -92,6 +95,7 @@ struct ValueRegex {
       return std::nullopt;
     }
 
+    // NOLINTNEXTLINE(modernize-use-designated-initializers)
     return ValueRegex{std::move(regex).value(), std::move(string)};
   }
 };

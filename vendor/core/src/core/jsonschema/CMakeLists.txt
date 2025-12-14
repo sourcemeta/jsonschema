@@ -1,13 +1,13 @@
-set(OFFICIAL_RESOLVER_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/official_resolver.in.cc")
-set(OFFICIAL_RESOLVER_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/official_resolver.cc")
-include(./official_resolver.cmake)
+set(KNOWN_RESOLVER_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/known_resolver.in.cc")
+set(KNOWN_RESOLVER_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/known_resolver.cc")
+include(./known_resolver.cmake)
 
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME jsonschema
   PRIVATE_HEADERS bundle.h walker.h frame.h error.h
                   types.h transform.h vocabularies.h
-  SOURCES jsonschema.cc vocabularies.cc official_walker.cc
+  SOURCES jsonschema.cc vocabularies.cc known_walker.cc
           frame.cc walker.cc bundle.cc transformer.cc format.cc
-    "${CMAKE_CURRENT_BINARY_DIR}/official_resolver.cc")
+    "${CMAKE_CURRENT_BINARY_DIR}/known_resolver.cc")
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME jsonschema)

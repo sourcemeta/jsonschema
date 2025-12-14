@@ -31,7 +31,7 @@ auto compiler_2019_09_applicator_dependentschemas(
        schema_context.schema.at(dynamic_context.keyword).as_object()) {
     dependents.push_back(entry.first);
   }
-  std::sort(dependents.begin(), dependents.end());
+  std::ranges::sort(dependents);
 
   for (const auto &dependent : dependents) {
     const auto &dependency{
@@ -85,7 +85,7 @@ auto compiler_2019_09_validation_dependentrequired(
     }
 
     if (!properties.empty()) {
-      dependencies.emplace(entry.first, std::move(properties));
+      dependencies.emplace(entry.first, properties);
     }
   }
 
@@ -218,10 +218,9 @@ auto compiler_2019_09_applicator_items(const Context &context,
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
   const bool track{
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
 
   if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
     return compiler_draft4_applicator_items_with_options(
@@ -242,10 +241,9 @@ auto compiler_2019_09_applicator_additionalitems(
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
   const bool track{
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
 
   return compiler_draft4_applicator_additionalitems_with_options(
       context, schema_context, dynamic_context,
@@ -273,11 +271,13 @@ auto compiler_2019_09_applicator_unevaluateditems(
     assert(dependency.back().is_property());
     const auto &keyword{dependency.back().to_property()};
     const auto &subschema{sourcemeta::core::get(context.root, dependency)};
+    // NOLINTBEGIN(bugprone-branch-clone)
     if (keyword == "items" && sourcemeta::core::is_schema(subschema)) {
       return {};
     } else if (keyword == "additionalItems" || keyword == "unevaluatedItems") {
       return {};
     }
+    // NOLINTEND(bugprone-branch-clone)
   }
 
   Instructions children{compile(

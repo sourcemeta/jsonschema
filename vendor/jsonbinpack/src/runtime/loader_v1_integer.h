@@ -23,8 +23,9 @@ auto BOUNDED_MULTIPLE_8BITS_ENUM_FIXED(const sourcemeta::core::JSON &options)
   assert(multiplier.is_integer());
   assert(multiplier.is_positive());
   return sourcemeta::jsonbinpack::BOUNDED_MULTIPLE_8BITS_ENUM_FIXED{
-      minimum.to_integer(), maximum.to_integer(),
-      static_cast<std::uint64_t>(multiplier.to_integer())};
+      .minimum = minimum.to_integer(),
+      .maximum = maximum.to_integer(),
+      .multiplier = static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
 auto FLOOR_MULTIPLE_ENUM_VARINT(const sourcemeta::core::JSON &options)
@@ -37,8 +38,8 @@ auto FLOOR_MULTIPLE_ENUM_VARINT(const sourcemeta::core::JSON &options)
   assert(multiplier.is_integer());
   assert(multiplier.is_positive());
   return sourcemeta::jsonbinpack::FLOOR_MULTIPLE_ENUM_VARINT{
-      minimum.to_integer(),
-      static_cast<std::uint64_t>(multiplier.to_integer())};
+      .minimum = minimum.to_integer(),
+      .multiplier = static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
 auto ROOF_MULTIPLE_MIRROR_ENUM_VARINT(const sourcemeta::core::JSON &options)
@@ -51,8 +52,8 @@ auto ROOF_MULTIPLE_MIRROR_ENUM_VARINT(const sourcemeta::core::JSON &options)
   assert(multiplier.is_integer());
   assert(multiplier.is_positive());
   return sourcemeta::jsonbinpack::ROOF_MULTIPLE_MIRROR_ENUM_VARINT{
-      maximum.to_integer(),
-      static_cast<std::uint64_t>(multiplier.to_integer())};
+      .maximum = maximum.to_integer(),
+      .multiplier = static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
 auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(const sourcemeta::core::JSON &options)
@@ -62,7 +63,7 @@ auto ARBITRARY_MULTIPLE_ZIGZAG_VARINT(const sourcemeta::core::JSON &options)
   assert(multiplier.is_integer());
   assert(multiplier.is_positive());
   return sourcemeta::jsonbinpack::ARBITRARY_MULTIPLE_ZIGZAG_VARINT{
-      static_cast<std::uint64_t>(multiplier.to_integer())};
+      .multiplier = static_cast<std::uint64_t>(multiplier.to_integer())};
 }
 
 } // namespace sourcemeta::jsonbinpack::v1

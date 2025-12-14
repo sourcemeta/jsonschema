@@ -75,7 +75,7 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
 
     // Make sure that the top-level schema ALWAYS has a `$schema` declaration
     if (entry.second.pointer.empty() && !subschema.defines("$schema")) {
-      subschema.assign("$schema", JSON{entry.second.base_dialect});
+      subschema.assign_assume_new("$schema", JSON{entry.second.base_dialect});
     }
 
     // Get rid of the keywords we don't want anymore

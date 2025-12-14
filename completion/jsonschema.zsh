@@ -98,7 +98,6 @@ _jsonschema() {
             '(--exclude -x)'{--exclude,-x}'[Exclude specific rule]:rule name:' \
             '(--only -o)'{--only,-o}'[Only run specific rule]:rule name:' \
             '(--list -l)'{--list,-l}'[List all enabled rules]' \
-            '(--strict -s)'{--strict,-s}'[Enable strict mode]' \
             '(--indentation -n)'{--indentation,-n}'[Specify indentation spaces]:spaces:(2 4 8)' \
             '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;

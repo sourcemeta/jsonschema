@@ -120,14 +120,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   const bool output_json = options.contains("json");
 
   sourcemeta::core::SchemaTransformer bundle;
-
-  if (options.contains("strict")) {
-    sourcemeta::core::add(bundle,
-                          sourcemeta::core::AlterSchemaMode::ReadabilityStrict);
-  } else {
-    sourcemeta::core::add(bundle,
-                          sourcemeta::core::AlterSchemaMode::Readability);
-  }
+  sourcemeta::core::add(bundle, sourcemeta::core::AlterSchemaMode::Readability);
 
   bundle.add<sourcemeta::blaze::ValidExamples>(
       sourcemeta::blaze::default_schema_compiler);
@@ -215,8 +208,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           sourcemeta::jsonschema::try_catch(options, [&]() {
             try {
               bundle.apply(
-                  copy, sourcemeta::core::schema_official_walker,
-                  custom_resolver,
+                  copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
                   sourcemeta::core::URI::from_path(entry.first).recompose());
               return EXIT_SUCCESS;
@@ -265,7 +257,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           sourcemeta::jsonschema::try_catch(options, [&]() {
             try {
               const auto subresult = bundle.check(
-                  entry.second, sourcemeta::core::schema_official_walker,
+                  entry.second, sourcemeta::core::schema_walker,
                   custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
                   sourcemeta::core::URI::from_path(entry.first).recompose());

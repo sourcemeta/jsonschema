@@ -85,8 +85,8 @@ public:
   /// })JSON");
   ///
   /// const auto schema_template{sourcemeta::blaze::compile(
-  ///     schema, sourcemeta::core::schema_official_walker,
-  ///     sourcemeta::core::schema_official_resolver,
+  ///     schema, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
   ///     sourcemeta::core::default_schema_compiler)};
   ///
   /// sourcemeta::blaze::Evaluator evaluator;
@@ -117,8 +117,8 @@ public:
   /// })JSON");
   ///
   /// const auto schema_template{sourcemeta::blaze::compile(
-  ///     schema, sourcemeta::core::schema_official_walker,
-  ///     sourcemeta::core::schema_official_resolver,
+  ///     schema, sourcemeta::core::schema_walker,
+  ///     sourcemeta::core::schema_resolver,
   ///     sourcemeta::core::default_schema_compiler)};
   ///
   /// static auto callback(
@@ -157,8 +157,9 @@ public:
   static const sourcemeta::core::JSON null;
   static const sourcemeta::core::JSON empty_string;
 
-  auto hash(const std::size_t resource,
-            const sourcemeta::core::JSON::String &fragment) const noexcept
+  [[nodiscard]] auto
+  hash(const std::size_t resource,
+       const sourcemeta::core::JSON::String &fragment) const noexcept
       -> std::size_t;
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void;
@@ -173,6 +174,7 @@ public:
 #endif
   sourcemeta::core::WeakPointer evaluate_path;
   sourcemeta::core::WeakPointer instance_location;
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const std::hash<sourcemeta::core::JSON::String> hasher_{};
   std::vector<std::size_t> resources;
 

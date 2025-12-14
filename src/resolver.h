@@ -43,7 +43,7 @@ namespace sourcemeta::jsonschema {
 static inline auto fallback_resolver(const sourcemeta::core::Options &options,
                                      std::string_view identifier)
     -> std::optional<sourcemeta::core::JSON> {
-  auto official_result{sourcemeta::core::schema_official_resolver(identifier)};
+  auto official_result{sourcemeta::core::schema_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
   }
@@ -131,7 +131,7 @@ public:
     // and register every embedded schema resource too
     sourcemeta::core::SchemaFrame frame{
         sourcemeta::core::SchemaFrame::Mode::References};
-    frame.analyse(schema, sourcemeta::core::schema_official_walker, *this,
+    frame.analyse(schema, sourcemeta::core::schema_walker, *this,
                   default_dialect, default_id);
 
     bool added_any_schema{false};
@@ -210,7 +210,7 @@ public:
     if (this->remote_) {
       return fallback_resolver(this->options_, identifier);
     } else {
-      return sourcemeta::core::schema_official_resolver(identifier);
+      return sourcemeta::core::schema_resolver(identifier);
     }
   }
 

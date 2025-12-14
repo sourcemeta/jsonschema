@@ -781,6 +781,7 @@ do_parse:
   switch (character) {
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
+        // TODO: Don't create expensive JSON values on the spot
         CALLBACK_PRE(Boolean, JSON{nullptr});
         const auto value{internal::parse_boolean_true(line, column, stream)};
         CALLBACK_POST(Boolean, value);
@@ -790,6 +791,7 @@ do_parse:
       }
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
+        // TODO: Don't create expensive JSON values on the spot
         CALLBACK_PRE(Boolean, JSON{nullptr});
         const auto value{internal::parse_boolean_false(line, column, stream)};
         CALLBACK_POST(Boolean, value);
@@ -799,6 +801,7 @@ do_parse:
       }
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
+        // TODO: Don't create expensive JSON values on the spot
         CALLBACK_PRE(Null, JSON{nullptr});
         const auto value{internal::parse_null(line, column, stream)};
         CALLBACK_POST(Null, value);
@@ -812,6 +815,7 @@ do_parse:
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
       if (callback) {
+        // TODO: Don't create expensive JSON values on the spot
         CALLBACK_PRE(String, JSON{nullptr});
         const Result value{internal::parse_string(line, column, stream)};
         CALLBACK_POST(String, value);
@@ -820,9 +824,11 @@ do_parse:
         return Result{internal::parse_string(line, column, stream)};
       }
     case internal::token_array_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Array, JSON{nullptr});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Object, JSON{nullptr});
       goto do_parse_object;
 
@@ -843,14 +849,17 @@ do_parse:
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
                                      JSON{nullptr});
           CALLBACK_POST(Integer, value);
         } else if (value.is_decimal()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Decimal, current_line, current_column,
                                      JSON{nullptr});
           CALLBACK_POST(Decimal, value);
         } else {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
                                      JSON{nullptr});
           CALLBACK_POST(Real, value);
@@ -923,24 +932,29 @@ do_parse_array_item:
 
     // Values
     case internal::token_array_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Array, JSON{frames.top().get().size()});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Object, JSON{frames.top().get().size()});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           internal::parse_boolean_true(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().back());
       goto do_parse_array_item_separator;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           internal::parse_boolean_false(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().back());
       goto do_parse_array_item_separator;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(Null, JSON{frames.top().get().size()});
       frames.top().get().push_back(internal::parse_null(line, column, stream));
       CALLBACK_POST(Null, frames.top().get().back());
@@ -950,6 +964,7 @@ do_parse_array_item:
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE(String, JSON{frames.top().get().size()});
       frames.top().get().push_back(
           Result{internal::parse_string(line, column, stream)});
@@ -973,12 +988,15 @@ do_parse_array_item:
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
                                      JSON{frames.top().get().size()});
         } else if (value.is_decimal()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Decimal, current_line, current_column,
                                      JSON{frames.top().get().size()});
         } else {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
                                      JSON{frames.top().get().size()});
         }
@@ -1141,24 +1159,29 @@ do_parse_object_property_value:
   switch (character) {
     // Values
     case internal::token_array_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(Array, key_line, key_column, JSON{key});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(Object, key_line, key_column, JSON{key});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_true(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, internal::parse_boolean_false(line, column, stream));
       CALLBACK_POST(Boolean, frames.top().get().at(key));
       goto do_parse_object_property_end;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(Null, key_line, key_column, JSON{key});
       frames.top().get().assign(key,
                                 internal::parse_null(line, column, stream));
@@ -1169,6 +1192,7 @@ do_parse_object_property_value:
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
+      // TODO: Don't create expensive JSON values on the spot
       CALLBACK_PRE_WITH_POSITION(String, key_line, key_column, JSON{key});
       frames.top().get().assign(
           key, Result{internal::parse_string(line, column, stream)});
@@ -1190,10 +1214,13 @@ do_parse_object_property_value:
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Integer, key_line, key_column, JSON{key});
         } else if (value.is_decimal()) {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Decimal, key_line, key_column, JSON{key});
         } else {
+          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Real, key_line, key_column, JSON{key});
         }
 

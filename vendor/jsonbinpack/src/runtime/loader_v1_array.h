@@ -32,8 +32,9 @@ auto FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
                  [](const auto &element) { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::FIXED_TYPED_ARRAY{
-      static_cast<std::uint64_t>(size.to_integer()),
-      std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
+      .size = static_cast<std::uint64_t>(size.to_integer()),
+      .encoding = std::make_shared<Encoding>(load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
 }
 
 auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::core::JSON &options)
@@ -59,9 +60,10 @@ auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::core::JSON &options)
                  [](const auto &element) { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::BOUNDED_8BITS_TYPED_ARRAY{
-      static_cast<std::uint64_t>(minimum.to_integer()),
-      static_cast<std::uint64_t>(maximum.to_integer()),
-      std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer()),
+      .encoding = std::make_shared<Encoding>(load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
 }
 
 auto FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
@@ -82,8 +84,9 @@ auto FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
                  [](const auto &element) { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::FLOOR_TYPED_ARRAY{
-      static_cast<std::uint64_t>(minimum.to_integer()),
-      std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
+      .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
+      .encoding = std::make_shared<Encoding>(load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
 }
 
 auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
@@ -104,8 +107,9 @@ auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
                  [](const auto &element) { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::ROOF_TYPED_ARRAY{
-      static_cast<std::uint64_t>(maximum.to_integer()),
-      std::make_shared<Encoding>(load(array_encoding)), std::move(encodings)};
+      .maximum = static_cast<std::uint64_t>(maximum.to_integer()),
+      .encoding = std::make_shared<Encoding>(load(array_encoding)),
+      .prefix_encodings = std::move(encodings)};
 }
 
 } // namespace sourcemeta::jsonbinpack::v1

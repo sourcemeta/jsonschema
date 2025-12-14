@@ -25,10 +25,9 @@ namespace sourcemeta::blaze {
 /// An error that represents a schema compilation failure event
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerError : public std::exception {
 public:
-  CompilerError(const sourcemeta::core::URI &base,
-                const sourcemeta::core::Pointer &schema_location,
-                std::string message)
-      : base_{base}, schema_location_{schema_location},
+  CompilerError(sourcemeta::core::URI base,
+                sourcemeta::core::Pointer schema_location, std::string message)
+      : base_{std::move(base)}, schema_location_{std::move(schema_location)},
         message_{std::move(message)} {}
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_.c_str();

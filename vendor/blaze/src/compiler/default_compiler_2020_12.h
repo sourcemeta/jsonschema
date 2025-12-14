@@ -17,10 +17,9 @@ auto compiler_2020_12_applicator_prefixitems(
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
   const bool track{
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
 
   return compiler_draft4_applicator_items_array(
       context, schema_context, dynamic_context,
@@ -39,10 +38,9 @@ auto compiler_2020_12_applicator_items(const Context &context,
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
   const bool track{
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
 
   return compiler_draft4_applicator_additionalitems_from_cursor(
       context, schema_context, dynamic_context, cursor,
@@ -58,10 +56,9 @@ auto compiler_2020_12_applicator_contains(const Context &context,
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
   const bool track{
-      std::any_of(context.unevaluated.cbegin(), context.unevaluated.cend(),
-                  [](const auto &dependency) {
-                    return dependency.first.ends_with("unevaluatedItems");
-                  })};
+      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+        return dependency.first.ends_with("unevaluatedItems");
+      })};
 
   return compiler_2019_09_applicator_contains_with_options(
       context, schema_context, dynamic_context, current,

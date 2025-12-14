@@ -17,10 +17,11 @@ namespace sourcemeta::jsonbinpack {
 
 class SOURCEMETA_JSONBINPACK_RUNTIME_EXPORT Cache {
 public:
-  enum class Type { Standalone, PrefixLengthVarintPlusOne };
+  enum class Type : std::uint8_t { Standalone, PrefixLengthVarintPlusOne };
   auto record(const sourcemeta::core::JSON::String &value,
               const std::uint64_t offset, const Type type) -> void;
-  auto find(const sourcemeta::core::JSON::String &value, const Type type) const
+  [[nodiscard]] auto find(const sourcemeta::core::JSON::String &value,
+                          const Type type) const
       -> std::optional<std::uint64_t>;
 
 #ifndef DOXYGEN

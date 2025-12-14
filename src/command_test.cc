@@ -124,7 +124,7 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
 
     try {
       schema_template = sourcemeta::blaze::compile(
-          schema, sourcemeta::core::schema_official_walker, test_resolver,
+          schema, sourcemeta::core::schema_walker, test_resolver,
           sourcemeta::blaze::default_schema_compiler,
           sourcemeta::blaze::Mode::FastValidation, dialect);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {

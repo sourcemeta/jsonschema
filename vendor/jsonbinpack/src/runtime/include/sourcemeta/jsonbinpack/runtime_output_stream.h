@@ -23,7 +23,7 @@ public:
   OutputStream(const OutputStream &) = delete;
   auto operator=(const OutputStream &) -> OutputStream & = delete;
 
-  auto position() const noexcept -> std::uint64_t;
+  [[nodiscard]] auto position() const noexcept -> std::uint64_t;
   auto put_byte(const std::uint8_t byte) -> void;
   auto put_bytes(const std::uint16_t bytes) -> void;
   auto put_varint(const std::uint64_t value) -> void;

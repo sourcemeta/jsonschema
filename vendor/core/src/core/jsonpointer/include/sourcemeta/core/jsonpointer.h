@@ -563,6 +563,7 @@ auto to_uri(const Pointer &pointer) -> URI;
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 
+// TODO: Only support this with weak pointers
 /// @ingroup jsonpointer
 ///
 /// Walk over every element of a JSON document, top-down, using JSON Pointers.

@@ -47,7 +47,7 @@ using DependencyCallback =
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::core::schema_official_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -58,7 +58,7 @@ using DependencyCallback =
 /// })JSON");
 ///
 /// sourcemeta::core::dependencies(document,
-///   sourcemeta::core::schema_official_walker, test_resolver,
+///   sourcemeta::core::schema_walker, test_resolver,
 ///   [](const auto &origin,
 ///      const auto &pointer,
 ///      const auto &target,
@@ -95,7 +95,7 @@ auto dependencies(
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::core::schema_official_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -106,7 +106,7 @@ auto dependencies(
 /// })JSON");
 ///
 /// sourcemeta::core::bundle(document,
-///   sourcemeta::core::schema_official_walker, test_resolver);
+///   sourcemeta::core::schema_walker, test_resolver);
 ///
 /// const sourcemeta::core::JSON expected =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -153,7 +153,7 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
 ///       "type": "string"
 ///     })JSON");
 ///   } else {
-///     return sourcemeta::core::schema_official_resolver(identifier);
+///     return sourcemeta::core::schema_resolver(identifier);
 ///   }
 /// }
 ///
@@ -165,7 +165,7 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
 ///
 /// const sourcemeta::core::JSON result =
 ///   sourcemeta::core::bundle(document,
-///     sourcemeta::core::schema_official_walker, test_resolver);
+///     sourcemeta::core::schema_walker, test_resolver);
 ///
 /// const sourcemeta::core::JSON expected =
 ///     sourcemeta::core::parse_json(R"JSON({
