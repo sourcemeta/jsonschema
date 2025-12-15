@@ -171,8 +171,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
         sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
     frame.analyse(
-        schema, sourcemeta::core::schema_official_walker, custom_resolver,
-        dialect,
+        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
 
         // Only use the file-based URI if the schema has no identifier,
         // as otherwise we make the output unnecessarily hard when it

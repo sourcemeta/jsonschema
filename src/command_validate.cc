@@ -61,7 +61,7 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
   }
 
   return sourcemeta::blaze::compile(
-      bundled, sourcemeta::core::schema_official_walker, resolver,
+      bundled, sourcemeta::core::schema_walker, resolver,
       sourcemeta::blaze::default_schema_compiler, frame,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
                 : sourcemeta::blaze::Mode::Exhaustive,
@@ -178,8 +178,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const sourcemeta::core::JSON bundled{[&]() {
     try {
-      return sourcemeta::core::bundle(schema,
-                                      sourcemeta::core::schema_official_walker,
+      return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
                                       custom_resolver, dialect, default_id);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw FileError<sourcemeta::core::SchemaReferenceError>(
@@ -209,8 +208,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       sourcemeta::core::SchemaFrame::Mode::References};
 
   try {
-    frame.analyse(bundled, sourcemeta::core::schema_official_walker,
-                  custom_resolver, dialect, default_id);
+    frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
+                  dialect, default_id);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
@@ -371,7 +370,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
-          sourcemeta::core::schema_official_walker, custom_resolver,
+          sourcemeta::core::schema_walker, custom_resolver,
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {

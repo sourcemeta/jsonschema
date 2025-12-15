@@ -50,8 +50,8 @@ namespace sourcemeta::core {
 ///   frame{sourcemeta::core::SchemaFrame::Mode::References};
 ///
 /// frame.analyse(document,
-///   sourcemeta::core::schema_official_walker,
-///   sourcemeta::core::schema_official_resolver);
+///   sourcemeta::core::schema_walker,
+///   sourcemeta::core::schema_resolver);
 ///
 /// // IDs
 /// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,

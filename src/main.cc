@@ -77,13 +77,11 @@ Commands:
 
    lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
-        [--only/-o <rule-name>] [--list/-l] [--strict/-s]
-        [--indentation/-n <spaces>]
+        [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
        Use --list/-l to print a summary of all enabled rules.
-       Use --strict/-s to enable additional opinionated strict rules.
        Use --indentation/-n to keep indentation when auto-fixing
 
    bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
@@ -134,7 +132,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "lint") {
     app.flag("fix", {"f"});
     app.flag("list", {"l"});
-    app.flag("strict", {"s"});
     app.option("extension", {"e"});
     app.option("exclude", {"x"});
     app.option("only", {"o"});

@@ -11,6 +11,7 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <cstdint>     // std::uint8_t
 #include <functional>  // std::reference_wrapper
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
@@ -42,8 +43,8 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::core::default_schema_compiler)};
 ///
 /// const sourcemeta::core::JSON instance{5};
@@ -92,9 +93,11 @@ public:
   TraceOutput(const TraceOutput &) = delete;
   auto operator=(const TraceOutput &) -> TraceOutput & = delete;
 
-  enum class EntryType { Push, Pass, Fail, Annotation };
+  enum class EntryType : std::uint8_t { Push, Pass, Fail, Annotation };
 
+  // NOLINTNEXTLINE(bugprone-exception-escape)
   struct Entry {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
     const EntryType type;
     const std::string_view name;
     const sourcemeta::core::WeakPointer instance_location;
@@ -105,6 +108,7 @@ public:
     // and the vocabulary URI, if any
     const std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>
         vocabulary;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
 
   auto operator()(const EvaluationType type, const bool result,
@@ -115,10 +119,10 @@ public:
 
   using container_type = typename std::vector<Entry>;
   using const_iterator = typename container_type::const_iterator;
-  auto begin() const -> const_iterator;
-  auto end() const -> const_iterator;
-  auto cbegin() const -> const_iterator;
-  auto cend() const -> const_iterator;
+  [[nodiscard]] auto begin() const -> const_iterator;
+  [[nodiscard]] auto end() const -> const_iterator;
+  [[nodiscard]] auto cbegin() const -> const_iterator;
+  [[nodiscard]] auto cend() const -> const_iterator;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered

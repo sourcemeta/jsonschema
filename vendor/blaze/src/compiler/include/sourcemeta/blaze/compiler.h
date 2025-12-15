@@ -32,6 +32,7 @@ namespace sourcemeta::blaze {
 /// The schema compiler context is the current subschema information you have at
 /// your disposal to implement a keyword
 struct SchemaContext {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The schema location relative to the base URI
   const sourcemeta::core::Pointer &relative_pointer;
   /// The current subschema
@@ -40,6 +41,7 @@ struct SchemaContext {
   const sourcemeta::core::Vocabularies &vocabularies;
   /// The schema base URI
   const sourcemeta::core::URI &base;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The set of labels registered so far
   std::unordered_set<std::size_t> labels;
   /// Whether the current schema targets a property name
@@ -50,6 +52,7 @@ struct SchemaContext {
 /// The dynamic compiler context is the read-write information you have at your
 /// disposal to implement a keyword
 struct DynamicContext {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The schema keyword
   const std::string keyword;
   /// The schema base keyword path
@@ -58,6 +61,7 @@ struct DynamicContext {
   const sourcemeta::core::Pointer &base_instance_location;
   /// Whether the instance location property acts as the target
   const bool property_as_target;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 
 #if !defined(DOXYGEN)
@@ -103,6 +107,7 @@ struct Tweaks {
 /// disposal to implement a keyword that will never change throughout
 /// the compilation process
 struct Context {
+  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The root schema resource
   const sourcemeta::core::JSON &root;
   /// The reference frame of the entire schema
@@ -121,9 +126,11 @@ struct Context {
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
   const SchemaUnevaluatedEntries unevaluated;
-  /// The set of global labels identifier during precompilation
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+  /// The set of global labels identified during precompilation
   std::unordered_set<std::size_t> precompiled_labels;
-  /// The set of global labels identifier during precompilation
+  /// The set of tweaks for the compiler
+  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const Tweaks tweaks;
 };
 
@@ -152,8 +159,8 @@ auto SOURCEMETA_BLAZE_COMPILER_EXPORT default_schema_compiler(
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::core::default_schema_compiler)};
 ///
 /// // Evaluate or encode

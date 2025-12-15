@@ -203,8 +203,8 @@ private:
 /// })JSON");
 ///
 /// // Apply the transformation bundle to the schema
-/// bundle.apply(schema, sourcemeta::core::schema_official_walker,
-///              sourcemeta::core::schema_official_resolver);
+/// bundle.apply(schema, sourcemeta::core::schema_walker,
+///              sourcemeta::core::schema_resolver);
 ///
 /// // `foo` keywords are gone
 /// assert(!schema.defines("foo"));

@@ -19,7 +19,7 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
   if (format == StandardOutput::Flag) {
     auto result{sourcemeta::core::JSON::make_object()};
     const auto valid{evaluator.validate(schema, instance)};
-    result.assign("valid", sourcemeta::core::JSON{valid});
+    result.assign_assume_new("valid", sourcemeta::core::JSON{valid});
     return result;
   } else {
     assert(format == StandardOutput::Basic);
@@ -28,15 +28,17 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
 
     if (valid) {
       auto result{sourcemeta::core::JSON::make_object()};
-      result.assign("valid", sourcemeta::core::JSON{valid});
+      result.assign_assume_new("valid", sourcemeta::core::JSON{valid});
       auto annotations{sourcemeta::core::JSON::make_array()};
       for (const auto &annotation : output.annotations()) {
         auto unit{sourcemeta::core::JSON::make_object()};
-        unit.assign("keywordLocation",
-                    sourcemeta::core::to_json(annotation.first.evaluate_path));
-        unit.assign("absoluteKeywordLocation",
-                    sourcemeta::core::JSON{annotation.first.schema_location});
-        unit.assign(
+        unit.assign_assume_new(
+            "keywordLocation",
+            sourcemeta::core::to_json(annotation.first.evaluate_path));
+        unit.assign_assume_new(
+            "absoluteKeywordLocation",
+            sourcemeta::core::JSON{annotation.first.schema_location});
+        unit.assign_assume_new(
             "instanceLocation",
             sourcemeta::core::to_json(annotation.first.instance_location));
 
@@ -44,48 +46,50 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
           const auto position{tracker->get(sourcemeta::core::to_pointer(
               annotation.first.instance_location))};
           if (position.has_value()) {
-            unit.assign("instancePosition",
-                        sourcemeta::core::to_json(position.value()));
+            unit.assign_assume_new("instancePosition",
+                                   sourcemeta::core::to_json(position.value()));
           }
         }
 
-        unit.assign("annotation", sourcemeta::core::to_json(annotation.second));
+        unit.assign_assume_new("annotation",
+                               sourcemeta::core::to_json(annotation.second));
         annotations.push_back(std::move(unit));
       }
 
       if (!annotations.empty()) {
-        result.assign("annotations", std::move(annotations));
+        result.assign_assume_new("annotations", std::move(annotations));
       }
 
       return result;
     } else {
       auto result{sourcemeta::core::JSON::make_object()};
-      result.assign("valid", sourcemeta::core::JSON{valid});
+      result.assign_assume_new("valid", sourcemeta::core::JSON{valid});
       auto errors{sourcemeta::core::JSON::make_array()};
       for (const auto &entry : output) {
         auto unit{sourcemeta::core::JSON::make_object()};
-        unit.assign("keywordLocation",
-                    sourcemeta::core::to_json(entry.evaluate_path));
-        unit.assign("absoluteKeywordLocation",
-                    sourcemeta::core::JSON{entry.schema_location});
-        unit.assign("instanceLocation",
-                    sourcemeta::core::to_json(entry.instance_location));
+        unit.assign_assume_new("keywordLocation",
+                               sourcemeta::core::to_json(entry.evaluate_path));
+        unit.assign_assume_new("absoluteKeywordLocation",
+                               sourcemeta::core::JSON{entry.schema_location});
+        unit.assign_assume_new(
+            "instanceLocation",
+            sourcemeta::core::to_json(entry.instance_location));
 
         if (tracker != nullptr) {
           const auto position{tracker->get(
               sourcemeta::core::to_pointer(entry.instance_location))};
           if (position.has_value()) {
-            unit.assign("instancePosition",
-                        sourcemeta::core::to_json(position.value()));
+            unit.assign_assume_new("instancePosition",
+                                   sourcemeta::core::to_json(position.value()));
           }
         }
 
-        unit.assign("error", sourcemeta::core::JSON{entry.message});
+        unit.assign_assume_new("error", sourcemeta::core::JSON{entry.message});
         errors.push_back(std::move(unit));
       }
 
       assert(!errors.empty());
-      result.assign("errors", std::move(errors));
+      result.assign_assume_new("errors", std::move(errors));
       return result;
     }
   }

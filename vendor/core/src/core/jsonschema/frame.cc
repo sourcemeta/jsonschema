@@ -377,67 +377,79 @@ auto SchemaFrame::to_json(
     const std::optional<PointerPositionTracker> &tracker) const -> JSON {
   auto root{JSON::make_object()};
 
-  root.assign("locations", JSON::make_object());
-  root.at("locations").assign("static", JSON::make_object());
-  root.at("locations").assign("dynamic", JSON::make_object());
+  root.assign_assume_new("locations", JSON::make_object());
+  root.at("locations").assign_assume_new("static", JSON::make_object());
+  root.at("locations").assign_assume_new("dynamic", JSON::make_object());
   for (const auto &location : this->locations_) {
     auto entry{JSON::make_object()};
-    entry.assign("parent", sourcemeta::core::to_json(location.second.parent));
-    entry.assign("type", sourcemeta::core::to_json(location.second.type));
-    entry.assign("root", sourcemeta::core::to_json(location.second.root));
-    entry.assign("base", sourcemeta::core::to_json(location.second.base));
-    entry.assign("pointer", sourcemeta::core::to_json(location.second.pointer));
+    entry.assign_assume_new("parent",
+                            sourcemeta::core::to_json(location.second.parent));
+    entry.assign_assume_new("type",
+                            sourcemeta::core::to_json(location.second.type));
+    entry.assign_assume_new("root",
+                            sourcemeta::core::to_json(location.second.root));
+    entry.assign_assume_new("base",
+                            sourcemeta::core::to_json(location.second.base));
+    entry.assign_assume_new("pointer",
+                            sourcemeta::core::to_json(location.second.pointer));
     if (tracker.has_value()) {
-      entry.assign("position", sourcemeta::core::to_json(tracker.value().get(
-                                   location.second.pointer)));
+      entry.assign_assume_new(
+          "position", sourcemeta::core::to_json(
+                          tracker.value().get(location.second.pointer)));
     } else {
-      entry.assign("position", sourcemeta::core::to_json(nullptr));
+      entry.assign_assume_new("position", sourcemeta::core::to_json(nullptr));
     }
 
-    entry.assign("relativePointer",
-                 sourcemeta::core::to_json(location.second.relative_pointer));
-    entry.assign("dialect", sourcemeta::core::to_json(location.second.dialect));
-    entry.assign("baseDialect",
-                 sourcemeta::core::to_json(location.second.base_dialect));
+    entry.assign_assume_new(
+        "relativePointer",
+        sourcemeta::core::to_json(location.second.relative_pointer));
+    entry.assign_assume_new("dialect",
+                            sourcemeta::core::to_json(location.second.dialect));
+    entry.assign_assume_new(
+        "baseDialect", sourcemeta::core::to_json(location.second.base_dialect));
 
     switch (location.first.first) {
       case SchemaReferenceType::Static:
         root.at("locations")
             .at("static")
-            .assign(location.first.second, std::move(entry));
+            .assign_assume_new(location.first.second, std::move(entry));
         break;
       case SchemaReferenceType::Dynamic:
         root.at("locations")
             .at("dynamic")
-            .assign(location.first.second, std::move(entry));
+            .assign_assume_new(location.first.second, std::move(entry));
         break;
       default:
         assert(false);
     }
   }
 
-  root.assign("references", JSON::make_array());
+  root.assign_assume_new("references", JSON::make_array());
   for (const auto &reference : this->references_) {
     auto entry{JSON::make_object()};
-    entry.assign("type", sourcemeta::core::to_json(reference.first.first));
-    entry.assign("origin", sourcemeta::core::to_json(reference.first.second));
+    entry.assign_assume_new("type",
+                            sourcemeta::core::to_json(reference.first.first));
+    entry.assign_assume_new("origin",
+                            sourcemeta::core::to_json(reference.first.second));
 
     if (tracker.has_value()) {
-      entry.assign("position", sourcemeta::core::to_json(tracker.value().get(
-                                   reference.first.second)));
+      entry.assign_assume_new("position",
+                              sourcemeta::core::to_json(
+                                  tracker.value().get(reference.first.second)));
     } else {
-      entry.assign("position", sourcemeta::core::to_json(nullptr));
+      entry.assign_assume_new("position", sourcemeta::core::to_json(nullptr));
     }
 
-    entry.assign("destination",
-                 sourcemeta::core::to_json(reference.second.destination));
-    entry.assign("base", sourcemeta::core::to_json(reference.second.base));
-    entry.assign("fragment",
-                 sourcemeta::core::to_json(reference.second.fragment));
+    entry.assign_assume_new(
+        "destination", sourcemeta::core::to_json(reference.second.destination));
+    entry.assign_assume_new("base",
+                            sourcemeta::core::to_json(reference.second.base));
+    entry.assign_assume_new(
+        "fragment", sourcemeta::core::to_json(reference.second.fragment));
     root.at("references").push_back(std::move(entry));
   }
 
-  root.assign("instances", JSON::make_object());
+  root.assign_assume_new("instances", JSON::make_object());
   for (const auto &instance : this->instances_) {
     if (instance.second.empty()) {
       continue;
@@ -451,7 +463,8 @@ auto SchemaFrame::to_json(
       entry.push_back(sourcemeta::core::to_json(result.str()));
     }
 
-    root.at("instances").assign(to_string(instance.first), std::move(entry));
+    root.at("instances")
+        .assign_assume_new(to_string(instance.first), std::move(entry));
   }
 
   return root;
@@ -722,16 +735,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         } else {
           bool is_first = true;
           for (const auto &base_string : bases.first) {
-            // TODO: All this dance is necessary because we don't have a
-            // URI::fragment setter
-            std::ostringstream anchor_uri_string;
-            anchor_uri_string << sourcemeta::core::URI{base_string}
-                                     .recompose_without_fragment()
-                                     .value_or("");
-            anchor_uri_string << '#';
-            anchor_uri_string << name;
-            const auto anchor_uri{
-                sourcemeta::core::URI::canonicalize(anchor_uri_string.str())};
+            sourcemeta::core::URI anchor_uri_builder{base_string};
+            anchor_uri_builder.fragment(name);
+            anchor_uri_builder.canonicalize();
+            const auto anchor_uri{anchor_uri_builder.recompose()};
 
             if (!is_first && this->locations_.contains(
                                  {SchemaReferenceType::Static, anchor_uri})) {
@@ -781,6 +788,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
 
     // It is important for the loop that follows to assume a specific ordering
     // where smaller pointers (by number of tokens) are scanned first.
+    // TODO: Perform the pointer walking using weak pointers only
     const auto pointer_walker{sourcemeta::core::PointerWalker{schema}};
     std::vector<sourcemeta::core::Pointer> pointers{pointer_walker.cbegin(),
                                                     pointer_walker.cend()};

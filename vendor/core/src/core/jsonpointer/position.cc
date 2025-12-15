@@ -47,9 +47,10 @@ auto PointerPositionTracker::size() const -> std::size_t {
 auto PointerPositionTracker::to_json() const -> JSON {
   auto result{JSON::make_object()};
   for (const auto &entry : this->data) {
-    result.assign(to_string(entry.first),
-                  sourcemeta::core::to_json(entry.second));
+    result.assign_assume_new(to_string(entry.first),
+                             sourcemeta::core::to_json(entry.second));
   }
+
   return result;
 }
 

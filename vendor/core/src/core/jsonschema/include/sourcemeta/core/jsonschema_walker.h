@@ -48,8 +48,8 @@ namespace sourcemeta::core {
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaIterator{
-///          document, sourcemeta::core::schema_official_walker,
-///          sourcemeta::core::schema_official_resolver}) {
+///          document, sourcemeta::core::schema_walker,
+///          sourcemeta::core::schema_resolver}) {
 ///   sourcemeta::core::prettify(
 ///     sourcemeta::core::get(document, entry.pointer), std::cout);
 ///   std::cout << "\n";
@@ -115,8 +115,8 @@ private:
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaIteratorFlat{
-///          document, sourcemeta::core::schema_official_walker,
-///          sourcemeta::core::schema_official_resolver}) {
+///          document, sourcemeta::core::schema_walker,
+///          sourcemeta::core::schema_resolver}) {
 ///   sourcemeta::core::prettify(
 ///     sourcemeta::core::get(document, entry.pointer), std::cout);
 ///   std::cout << "\n";
@@ -173,8 +173,8 @@ private:
 ///
 /// for (const auto &entry :
 ///          sourcemeta::core::SchemaKeywordIterator{
-///          document, sourcemeta::core::schema_official_walker,
-///          sourcemeta::core::schema_official_resolver}) {
+///          document, sourcemeta::core::schema_walker,
+///          sourcemeta::core::schema_resolver}) {
 ///   sourcemeta::core::stringify(entry.pointer, std::cout);
 ///   std::cout << "\n";
 /// }

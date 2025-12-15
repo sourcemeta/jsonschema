@@ -40,8 +40,8 @@ namespace sourcemeta::jsonbinpack {
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::compile(
-///     schema, sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver);
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
@@ -73,8 +73,8 @@ auto compile(sourcemeta::core::JSON &schema,
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::canonicalize(
-///     schema, sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver);
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;

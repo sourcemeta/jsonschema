@@ -59,11 +59,16 @@ struct SOURCEMETA_CORE_JSONSCHEMA_EXPORT Vocabularies {
     JSON_Schema_2020_12_Meta_Data = 25,
     JSON_Schema_2020_12_Format_Annotation = 26,
     JSON_Schema_2020_12_Format_Assertion = 27,
-    JSON_Schema_2020_12_Content = 28
+    JSON_Schema_2020_12_Content = 28,
+    // OpenAPI
+    // https://spec.openapis.org/oas/v3.1.0.html#fixed-fields-19
+    OpenAPI_3_1_Base = 29,
+    // https://spec.openapis.org/oas/v3.2.0.html#base-vocabulary
+    OpenAPI_3_2_Base = 30
   };
 
   // NOTE: Must be kept in sync with the Known enum above
-  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 29;
+  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 31;
 
   /// A vocabulary URI type that can be either a known vocabulary enum or a
   /// custom string URI
@@ -114,10 +119,16 @@ public:
   /// Check if there are no vocabularies
   [[nodiscard]] auto empty() const noexcept -> bool;
 
+  /// Check if there are any unknown vocabularies
+  [[nodiscard]] auto has_unknown() const noexcept -> bool;
+
   /// Throw if the current vocabularies have required ones outside the given
   /// supported set
   auto throw_if_any_unsupported(const std::unordered_set<URI> &supported,
                                 const char *message) const -> void;
+
+  /// Throw if any unknown vocabulary is required
+  auto throw_if_any_unknown_required(const char *message) const -> void;
 
 private:
   // Invariant: required_known and optional_known must be mutually exclusive
@@ -128,8 +139,8 @@ private:
 #endif
   std::bitset<KNOWN_VOCABULARY_COUNT> required_known{};
   std::bitset<KNOWN_VOCABULARY_COUNT> optional_known{};
-  // Lazily initialized only when custom (non-official) vocabularies are used
-  std::optional<std::unordered_map<JSON::String, bool>> custom{std::nullopt};
+  // Lazily initialized only when unknown (non-official) vocabularies are used
+  std::optional<std::unordered_map<JSON::String, bool>> unknown{std::nullopt};
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -139,6 +150,19 @@ private:
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT auto
 operator<<(std::ostream &stream, Vocabularies::Known vocabulary)
     -> std::ostream &;
+
+/// Convert a vocabulary URI to its string representation
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT auto
+operator<<(std::ostream &stream, const Vocabularies::URI &vocabulary)
+    -> std::ostream &;
+
+/// Stringify a known vocabulary to a string
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT auto to_string(Vocabularies::Known vocabulary)
+    -> std::string_view;
+
+/// Stringify a vocabulary URI to a string
+SOURCEMETA_CORE_JSONSCHEMA_EXPORT auto
+to_string(const Vocabularies::URI &vocabulary) -> std::string_view;
 
 } // namespace sourcemeta::core
 

@@ -45,8 +45,8 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::core::schema_official_walker,
-///     sourcemeta::core::schema_official_resolver,
+///     schema, sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
 ///     sourcemeta::core::default_schema_compiler)};
 ///
 /// const sourcemeta::core::JSON instance{5};
@@ -91,15 +91,18 @@ public:
 
   using container_type = typename std::vector<Entry>;
   using const_iterator = typename container_type::const_iterator;
-  auto begin() const -> const_iterator;
-  auto end() const -> const_iterator;
-  auto cbegin() const -> const_iterator;
-  auto cend() const -> const_iterator;
+  [[nodiscard]] auto begin() const -> const_iterator;
+  [[nodiscard]] auto end() const -> const_iterator;
+  [[nodiscard]] auto cbegin() const -> const_iterator;
+  [[nodiscard]] auto cend() const -> const_iterator;
 
   /// Access annotations that were collected during evaluation, indexed by
   /// instance location and evaluation path
-  auto annotations() const -> const auto & { return this->annotations_; }
+  [[nodiscard]] auto annotations() const -> const auto & {
+    return this->annotations_;
+  }
 
+  // NOLINTNEXTLINE(bugprone-exception-escape)
   struct Location {
     auto operator<(const Location &other) const noexcept -> bool {
       // Perform a lexicographical comparison
@@ -109,9 +112,11 @@ public:
                       other.schema_location.get());
     }
 
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
     const sourcemeta::core::WeakPointer instance_location;
     const sourcemeta::core::WeakPointer evaluate_path;
     const std::reference_wrapper<const std::string> schema_location;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
 
 private:

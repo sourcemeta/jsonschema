@@ -43,8 +43,8 @@ namespace sourcemeta::core {
 /// })JSON");
 ///
 /// sourcemeta::core::for_editor(schema,
-///   sourcemeta::core::schema_official_walker,
-///   sourcemeta::core::schema_official_resolver);
+///   sourcemeta::core::schema_walker,
+///   sourcemeta::core::schema_resolver);
 /// ```
 SOURCEMETA_CORE_EDITORSCHEMA_EXPORT
 auto for_editor(

@@ -49,7 +49,7 @@ public:
   }
 
 private:
-  const sourcemeta::core::JSON::String message_;
+  sourcemeta::core::JSON::String message_;
 };
 
 #if defined(_MSC_VER)

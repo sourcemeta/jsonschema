@@ -82,7 +82,6 @@ test_completion "jsonschema validate --" "--trace" "Validate includes --trace"
 test_completion "jsonschema validate --" "--fast" "Validate includes --fast"
 
 test_completion "jsonschema lint --" "--fix" "Lint includes --fix"
-test_completion "jsonschema lint --" "--strict" "Lint includes --strict"
 test_completion "jsonschema lint --" "--list" "Lint includes --list"
 
 test_completion "jsonschema bundle --" "--without-id" "Bundle includes --without-id"

@@ -1,6 +1,6 @@
 #include <sourcemeta/core/jsonschema.h>
 
-auto sourcemeta::core::schema_official_resolver(std::string_view identifier)
+auto sourcemeta::core::schema_resolver(std::string_view identifier)
     -> std::optional<sourcemeta::core::JSON> {
   // JSON Schema 2020-12
   if (identifier == "https://json-schema.org/draft/2020-12/schema" ||
@@ -217,6 +217,23 @@ auto sourcemeta::core::schema_official_resolver(std::string_view identifier)
              identifier == "http://json-schema.org/draft-00/json-ref") {
     return sourcemeta::core::parse_json(
         R"EOF(@METASCHEMA_JSON_REF_DRAFT0@)EOF");
+
+    // OpenAPI v3.2
+  } else if (identifier ==
+             "https://spec.openapis.org/oas/3.2/dialect/2025-09-17") {
+    return sourcemeta::core::parse_json(
+        R"EOF(@OPENAPI_OAS_3_2_DIALECT_2025_09_17@)EOF");
+  } else if (identifier ==
+             "https://spec.openapis.org/oas/3.2/meta/2025-09-17") {
+    return sourcemeta::core::parse_json(
+        R"EOF(@OPENAPI_OAS_3_2_META_2025_09_17@)EOF");
+
+    // OpenAPI v3.1
+  } else if (identifier == "https://spec.openapis.org/oas/3.1/dialect/base") {
+    return sourcemeta::core::parse_json(
+        R"EOF(@OPENAPI_OAS_3_1_DIALECT_BASE@)EOF");
+  } else if (identifier == "https://spec.openapis.org/oas/3.1/meta/base") {
+    return sourcemeta::core::parse_json(R"EOF(@OPENAPI_OAS_3_1_META_BASE@)EOF");
 
     // Otherwise
   } else {

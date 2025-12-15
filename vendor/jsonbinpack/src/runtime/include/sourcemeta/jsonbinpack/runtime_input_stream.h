@@ -22,7 +22,7 @@ public:
   InputStream(const InputStream &) = delete;
   auto operator=(const InputStream &) -> InputStream & = delete;
 
-  auto position() const noexcept -> std::uint64_t;
+  [[nodiscard]] auto position() const noexcept -> std::uint64_t;
   auto seek(const std::uint64_t offset) -> void;
   // Seek backwards given a relative offset
   auto rewind(const std::uint64_t relative_offset, const std::uint64_t position)
@@ -33,7 +33,7 @@ public:
   auto get_word() -> std::uint16_t;
   auto get_varint() -> std::uint64_t;
   auto get_varint_zigzag() -> std::int64_t;
-  auto has_more_data() const noexcept -> bool;
+  [[nodiscard]] auto has_more_data() const noexcept -> bool;
   auto get_string_utf8(const std::uint64_t length)
       -> sourcemeta::core::JSON::String;
 

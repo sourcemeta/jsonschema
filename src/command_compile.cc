@@ -39,7 +39,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
     schema_template = sourcemeta::blaze::compile(
-        schema, sourcemeta::core::schema_official_walker, custom_resolver,
+        schema, sourcemeta::core::schema_walker, custom_resolver,
         sourcemeta::blaze::default_schema_compiler,
         fast_mode ? sourcemeta::blaze::Mode::FastValidation
                   : sourcemeta::blaze::Mode::Exhaustive,

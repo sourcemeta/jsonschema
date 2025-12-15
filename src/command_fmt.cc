@@ -46,7 +46,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         sourcemeta::core::prettify(entry.second, expected, indentation);
       } else {
         auto copy = entry.second;
-        sourcemeta::core::format(copy, sourcemeta::core::schema_official_walker,
+        sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
                                  custom_resolver, dialect);
         sourcemeta::core::prettify(copy, expected, indentation);
       }

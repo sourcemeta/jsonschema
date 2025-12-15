@@ -20,7 +20,11 @@ public:
       }
 
       const auto &metadata = walker(entry.first, vocabularies);
-      if (metadata.type == SchemaKeywordType::Unknown) {
+      if (metadata.type == SchemaKeywordType::Unknown &&
+          // If there is any i.e. optional vocabulary we don't recognise, then
+          // this seemingly unknown keyword might belong to one of those, and
+          // thus it might not be safe to flag it
+          !vocabularies.has_unknown()) {
         locations.push_back(Pointer{entry.first});
       }
     }

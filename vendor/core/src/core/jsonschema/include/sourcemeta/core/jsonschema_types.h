@@ -23,7 +23,7 @@ namespace sourcemeta::core {
 ///
 /// For convenience, we provide the following default resolvers:
 ///
-/// - sourcemeta::core::schema_official_resolver
+/// - sourcemeta::core::schema_resolver
 ///
 /// You can implement resolvers to read from a local storage, to send HTTP
 /// requests, or anything your application might require. Unless your resolver
@@ -190,7 +190,7 @@ struct SchemaWalkerResult {
 ///
 /// For convenience, we provide the following default walkers:
 ///
-/// - sourcemeta::core::schema_official_walker
+/// - sourcemeta::core::schema_walker
 /// - sourcemeta::core::schema_walker_none
 using SchemaWalker = std::function<const SchemaWalkerResult &(
     std::string_view, const Vocabularies &)>;
@@ -202,14 +202,17 @@ struct SchemaIteratorEntry {
   std::optional<Pointer> parent;
   // TODO: Turn this into a weak pointer
   Pointer pointer;
+  // TODO: Use "known" enum classes + strings for dialects
   std::optional<JSON::String> dialect;
   Vocabularies vocabularies;
+  // TODO: Use "known" enum classes for base dialects
   std::optional<JSON::String> base_dialect;
   std::reference_wrapper<const JSON> subschema;
 
   // TODO: These two pointer templates contain some overlap.
   // Instead, have a `base_instance_location` and a `relative_instance_location`
   // that when concatenated, represent the full `instance_location`
+  // TODO: Make these WeakPointerTemplate
   PointerTemplate instance_location;
   PointerTemplate relative_instance_location;
 

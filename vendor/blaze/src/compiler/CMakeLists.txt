@@ -8,7 +8,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
     default_compiler_2019_09.h
     default_compiler_draft7.h
     default_compiler_draft6.h
-    default_compiler_draft4.h)
+    default_compiler_draft4.h
+    default_compiler_openapi.h)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME compiler)

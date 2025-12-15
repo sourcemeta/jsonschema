@@ -17,7 +17,8 @@ auto BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &options) -> Encoding {
   assert(choices.is_array());
   const auto &array{choices.as_array()};
   std::vector<sourcemeta::core::JSON> elements{array.cbegin(), array.cend()};
-  return sourcemeta::jsonbinpack::BYTE_CHOICE_INDEX({std::move(elements)});
+  return sourcemeta::jsonbinpack::BYTE_CHOICE_INDEX{.choices =
+                                                        std::move(elements)};
 }
 
 auto LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &options) -> Encoding {
@@ -26,7 +27,8 @@ auto LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &options) -> Encoding {
   assert(choices.is_array());
   const auto &array{choices.as_array()};
   std::vector<sourcemeta::core::JSON> elements{array.cbegin(), array.cend()};
-  return sourcemeta::jsonbinpack::LARGE_CHOICE_INDEX({std::move(elements)});
+  return sourcemeta::jsonbinpack::LARGE_CHOICE_INDEX{.choices =
+                                                         std::move(elements)};
 }
 
 auto TOP_LEVEL_BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &options)
@@ -36,13 +38,13 @@ auto TOP_LEVEL_BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &options)
   assert(choices.is_array());
   const auto &array{choices.as_array()};
   std::vector<sourcemeta::core::JSON> elements{array.cbegin(), array.cend()};
-  return sourcemeta::jsonbinpack::TOP_LEVEL_BYTE_CHOICE_INDEX(
-      {std::move(elements)});
+  return sourcemeta::jsonbinpack::TOP_LEVEL_BYTE_CHOICE_INDEX{
+      .choices = std::move(elements)};
 }
 
 auto CONST_NONE(const sourcemeta::core::JSON &options) -> Encoding {
   assert(options.defines("value"));
-  return sourcemeta::jsonbinpack::CONST_NONE({options.at("value")});
+  return sourcemeta::jsonbinpack::CONST_NONE{.value = options.at("value")};
 }
 
 auto ANY_PACKED_TYPE_TAG_BYTE_PREFIX(const sourcemeta::core::JSON &)

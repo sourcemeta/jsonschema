@@ -50,8 +50,8 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  sourcemeta::jsonbinpack::compile(
-      schema, sourcemeta::core::schema_official_walker, custom_resolver);
+  sourcemeta::jsonbinpack::compile(schema, sourcemeta::core::schema_walker,
+                                   custom_resolver);
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 
   std::ifstream input_stream{

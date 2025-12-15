@@ -178,8 +178,9 @@
 #define EVALUATE_RECURSE(child, target)                                        \
   evaluate_instruction(child, schema, callback, target, property_target,       \
                        depth + 1, evaluator)
+// NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define EVALUATE_RECURSE_ON_PROPERTY_NAME(child, target, name)                 \
-  evaluate_instruction(child, schema, callback, target, &name, depth + 1,      \
+  evaluate_instruction(child, schema, callback, target, &(name), depth + 1,    \
                        evaluator)
 
 #define SOURCEMETA_EVALUATOR_COMPLETE

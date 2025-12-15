@@ -4,7 +4,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/core/uri.h>
 
-#include <algorithm> // std::find
+#include <algorithm> // std::ranges::find, std::ranges::any_of
 #include <cassert>   // assert
 #include <iterator>  // std::distance
 #include <regex>     // std::regex, std::regex_match, std::smatch
@@ -14,25 +14,31 @@
 namespace sourcemeta::blaze {
 
 inline auto relative_dynamic_context() -> DynamicContext {
-  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
-          false};
+  return {.keyword = "",
+          .base_schema_location = sourcemeta::core::empty_pointer,
+          .base_instance_location = sourcemeta::core::empty_pointer,
+          .property_as_target = false};
 }
 
 inline auto relative_dynamic_context(const DynamicContext &dynamic_context)
     -> DynamicContext {
-  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
-          dynamic_context.property_as_target};
+  return {.keyword = "",
+          .base_schema_location = sourcemeta::core::empty_pointer,
+          .base_instance_location = sourcemeta::core::empty_pointer,
+          .property_as_target = dynamic_context.property_as_target};
 }
 
 inline auto property_relative_dynamic_context() -> DynamicContext {
-  return {"", sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
-          true};
+  return {.keyword = "",
+          .base_schema_location = sourcemeta::core::empty_pointer,
+          .base_instance_location = sourcemeta::core::empty_pointer,
+          .property_as_target = true};
 }
 
 inline auto schema_resource_id(const std::vector<std::string> &resources,
                                const std::string &resource) -> std::size_t {
-  const auto iterator{std::find(resources.cbegin(), resources.cend(),
-                                sourcemeta::core::URI::canonicalize(resource))};
+  const auto iterator{std::ranges::find(
+      resources, sourcemeta::core::URI::canonicalize(resource))};
   if (iterator == resources.cend()) {
     assert(resource.empty());
     return 0;
@@ -49,17 +55,19 @@ inline auto make_with_resource(const InstructionIndex type,
                                const DynamicContext &dynamic_context,
                                const Value &value, const std::string &resource)
     -> Instruction {
-  return {
-      type,
-      dynamic_context.keyword.empty()
-          ? dynamic_context.base_schema_location
-          : dynamic_context.base_schema_location.concat(
-                {dynamic_context.keyword}),
-      dynamic_context.base_instance_location,
-      to_uri(schema_context.relative_pointer, schema_context.base).recompose(),
-      schema_resource_id(context.resources, resource),
-      value,
-      {}};
+  return {.type = type,
+          .relative_schema_location =
+              dynamic_context.keyword.empty()
+                  ? dynamic_context.base_schema_location
+                  : dynamic_context.base_schema_location.concat(
+                        {dynamic_context.keyword}),
+          .relative_instance_location = dynamic_context.base_instance_location,
+          .keyword_location =
+              to_uri(schema_context.relative_pointer, schema_context.base)
+                  .recompose(),
+          .schema_resource = schema_resource_id(context.resources, resource),
+          .value = value,
+          .children = {}};
 }
 
 // Instantiate a value-oriented step
@@ -76,40 +84,44 @@ inline auto make(const InstructionIndex type, const Context &context,
                  const SchemaContext &schema_context,
                  const DynamicContext &dynamic_context, Value &&value,
                  Instructions &&children) -> Instruction {
-  return {
-      type,
-      dynamic_context.keyword.empty()
-          ? dynamic_context.base_schema_location
-          : dynamic_context.base_schema_location.concat(
-                {dynamic_context.keyword}),
-      dynamic_context.base_instance_location,
-      to_uri(schema_context.relative_pointer, schema_context.base).recompose(),
-      schema_resource_id(context.resources, schema_context.base.recompose()),
-      std::move(value),
-      std::move(children)};
+  return {.type = type,
+          .relative_schema_location =
+              dynamic_context.keyword.empty()
+                  ? dynamic_context.base_schema_location
+                  : dynamic_context.base_schema_location.concat(
+                        {dynamic_context.keyword}),
+          .relative_instance_location = dynamic_context.base_instance_location,
+          .keyword_location =
+              to_uri(schema_context.relative_pointer, schema_context.base)
+                  .recompose(),
+          .schema_resource = schema_resource_id(
+              context.resources, schema_context.base.recompose()),
+          .value = std::move(value),
+          .children = std::move(children)};
 }
 
 inline auto unroll(const Instruction &step,
                    const sourcemeta::core::Pointer &base_instance_location =
                        sourcemeta::core::empty_pointer) -> Instruction {
-  return {step.type,
-          step.relative_schema_location,
-          base_instance_location.concat(step.relative_instance_location),
-          step.keyword_location,
-          step.schema_resource,
-          step.value,
-          {}};
+  return {.type = step.type,
+          .relative_schema_location = step.relative_schema_location,
+          .relative_instance_location =
+              base_instance_location.concat(step.relative_instance_location),
+          .keyword_location = step.keyword_location,
+          .schema_resource = step.schema_resource,
+          .value = step.value,
+          .children = {}};
 }
 
 inline auto rephrase(const InstructionIndex type, const Instruction &step)
     -> Instruction {
-  return {type,
-          step.relative_schema_location,
-          step.relative_instance_location,
-          step.keyword_location,
-          step.schema_resource,
-          step.value,
-          {}};
+  return {.type = type,
+          .relative_schema_location = step.relative_schema_location,
+          .relative_instance_location = step.relative_instance_location,
+          .keyword_location = step.keyword_location,
+          .schema_resource = step.schema_resource,
+          .value = step.value,
+          .children = {}};
 }
 
 inline auto
@@ -220,10 +232,11 @@ inline auto find_adjacent(const Context &context,
     const auto &subschema_vocabularies{sourcemeta::core::vocabularies(
         subschema, context.resolver, frame_entry.dialect)};
 
-    if (std::any_of(vocabularies.cbegin(), vocabularies.cend(),
-                    [&subschema_vocabularies](const auto &vocabulary) {
-                      return subschema_vocabularies.contains(vocabulary);
-                    }) &&
+    if (std::ranges::any_of(vocabularies,
+                            [&subschema_vocabularies](const auto &vocabulary) {
+                              return subschema_vocabularies.contains(
+                                  vocabulary);
+                            }) &&
         subschema.type() == type) {
       result.emplace_back(subschema);
     }

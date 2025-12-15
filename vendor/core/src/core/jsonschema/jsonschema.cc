@@ -489,9 +489,9 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON::String &identifier)
   auto result{JSON::make_object()};
   // JSON Schema 2020-12 is the first dialect that truly supports cross-dialect
   // references In practice, others do, but we can play it safe here
-  result.assign("$schema",
-                JSON{"https://json-schema.org/draft/2020-12/schema"});
-  result.assign("$ref", JSON{identifier});
+  result.assign_assume_new(
+      "$schema", JSON{"https://json-schema.org/draft/2020-12/schema"});
+  result.assign_assume_new("$ref", JSON{identifier});
   return result;
 }
 
@@ -514,11 +514,11 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   }
 
   auto result{JSON::make_object()};
-  result.assign("$schema",
-                // JSON Schema 2020-12 is the first dialect that truly supports
-                // cross-dialect references In practice, others do, but we can
-                // play it safe here
-                JSON{"https://json-schema.org/draft/2020-12/schema"});
+  // JSON Schema 2020-12 is the first dialect that truly supports
+  // cross-dialect references In practice, others do, but we can
+  // play it safe here
+  result.assign_assume_new(
+      "$schema", JSON{"https://json-schema.org/draft/2020-12/schema"});
   // We need to make sure the schema we are wrapping always has an identifier,
   // at least an artificial one, otherwise a standalone instance of `$schema`
   // outside of the root of a schema resource is not valid according to
@@ -542,16 +542,16 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
         "undefined behavior");
   }
 
-  result.assign("$defs", JSON::make_object());
-  result.at("$defs").assign("schema", std::move(copy));
+  result.assign_assume_new("$defs", JSON::make_object());
+  result.at("$defs").assign_assume_new("schema", std::move(copy));
 
   // Add a reference to the schema
   URI uri{id};
   if (!uri.fragment().has_value() || uri.fragment().value().empty()) {
     uri.fragment(to_string(pointer));
-    result.assign("$ref", JSON{uri.recompose()});
+    result.assign_assume_new("$ref", JSON{uri.recompose()});
   } else {
-    result.assign(
+    result.assign_assume_new(
         "$ref",
         JSON{to_uri(Pointer{"$defs", "schema"}.concat(pointer)).recompose()});
   }

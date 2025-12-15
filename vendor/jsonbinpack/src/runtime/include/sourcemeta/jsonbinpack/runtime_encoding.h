@@ -92,11 +92,11 @@ using Encoding = std::variant<
 // clang-format on
 struct BOUNDED_MULTIPLE_8BITS_ENUM_FIXED {
   /// The inclusive minimum value
-  const std::int64_t minimum;
+  std::int64_t minimum;
   /// The inclusive maximum value
-  const std::int64_t maximum;
+  std::int64_t maximum;
   /// The multiplier value
-  const std::uint64_t multiplier;
+  std::uint64_t multiplier;
 };
 
 // clang-format off
@@ -133,9 +133,9 @@ struct BOUNDED_MULTIPLE_8BITS_ENUM_FIXED {
 // clang-format on
 struct FLOOR_MULTIPLE_ENUM_VARINT {
   /// The inclusive minimum value
-  const std::int64_t minimum;
+  std::int64_t minimum;
   /// The multiplier value
-  const std::uint64_t multiplier;
+  std::uint64_t multiplier;
 };
 
 // clang-format off
@@ -171,9 +171,9 @@ struct FLOOR_MULTIPLE_ENUM_VARINT {
 // clang-format on
 struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT {
   /// The inclusive maximum value
-  const std::int64_t maximum;
+  std::int64_t maximum;
   /// The multiplier value
-  const std::uint64_t multiplier;
+  std::uint64_t multiplier;
 };
 
 // clang-format off
@@ -206,7 +206,7 @@ struct ROOF_MULTIPLE_MIRROR_ENUM_VARINT {
 // clang-format on
 struct ARBITRARY_MULTIPLE_ZIGZAG_VARINT {
   /// The multiplier value
-  const std::uint64_t multiplier;
+  std::uint64_t multiplier;
 };
 
 /// @}
@@ -302,7 +302,7 @@ struct DOUBLE_VARINT_TUPLE {};
 // clang-format on
 struct BYTE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::core::JSON> choices;
+  std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -336,7 +336,7 @@ struct BYTE_CHOICE_INDEX {
 // clang-format on
 struct LARGE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::core::JSON> choices;
+  std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -375,7 +375,7 @@ struct LARGE_CHOICE_INDEX {
 // clang-format on
 struct TOP_LEVEL_BYTE_CHOICE_INDEX {
   /// The set of choice values
-  const std::vector<sourcemeta::core::JSON> choices;
+  std::vector<sourcemeta::core::JSON> choices;
 };
 
 // clang-format off
@@ -397,7 +397,7 @@ struct TOP_LEVEL_BYTE_CHOICE_INDEX {
 // clang-format on
 struct CONST_NONE {
   /// The constant value
-  const sourcemeta::core::JSON value;
+  sourcemeta::core::JSON value;
 };
 
 // TODO: Write brief description
@@ -490,7 +490,7 @@ static_assert(SUBTYPE_LONG_STRING_BASE_EXPONENT_10 == 10);
 // clang-format on
 struct UTF8_STRING_NO_LENGTH {
   /// The string UTF-8 byte-length
-  const std::uint64_t size;
+  std::uint64_t size;
 };
 
 // clang-format off
@@ -544,7 +544,7 @@ struct UTF8_STRING_NO_LENGTH {
 // clang-format on
 struct FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED {
   /// The inclusive minimum string UTF-8 byte-length
-  const std::uint64_t minimum;
+  std::uint64_t minimum;
 };
 
 // clang-format off
@@ -598,7 +598,7 @@ struct FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED {
 // clang-format on
 struct ROOF_VARINT_PREFIX_UTF8_STRING_SHARED {
   /// The inclusive maximum string UTF-8 byte-length
-  const std::uint64_t maximum;
+  std::uint64_t maximum;
 };
 
 // clang-format off
@@ -658,9 +658,9 @@ struct ROOF_VARINT_PREFIX_UTF8_STRING_SHARED {
 // clang-format on
 struct BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED {
   /// The inclusive minimum string UTF-8 byte-length
-  const std::uint64_t minimum;
+  std::uint64_t minimum;
   /// The inclusive maximum string UTF-8 byte-length
-  const std::uint64_t maximum;
+  std::uint64_t maximum;
 };
 
 // clang-format off
@@ -789,11 +789,11 @@ struct PREFIX_VARINT_LENGTH_STRING_SHARED {};
 // clang-format on
 struct FIXED_TYPED_ARRAY {
   /// The array length
-  const std::uint64_t size;
+  std::uint64_t size;
   /// Element encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const std::vector<Encoding> prefix_encodings;
+  std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -838,13 +838,13 @@ struct FIXED_TYPED_ARRAY {
 // clang-format on
 struct BOUNDED_8BITS_TYPED_ARRAY {
   /// The minimum length of the array
-  const std::uint64_t minimum;
+  std::uint64_t minimum;
   /// The maximum length of the array
-  const std::uint64_t maximum;
+  std::uint64_t maximum;
   /// Element encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const std::vector<Encoding> prefix_encodings;
+  std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -886,11 +886,11 @@ struct BOUNDED_8BITS_TYPED_ARRAY {
 // clang-format on
 struct FLOOR_TYPED_ARRAY {
   /// The minimum length of the array
-  const std::uint64_t minimum;
+  std::uint64_t minimum;
   /// Element encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const std::vector<Encoding> prefix_encodings;
+  std::vector<Encoding> prefix_encodings;
 };
 
 // clang-format off
@@ -931,11 +931,11 @@ struct FLOOR_TYPED_ARRAY {
 // clang-format on
 struct ROOF_TYPED_ARRAY {
   /// The maximum length of the array
-  const std::uint64_t maximum;
+  std::uint64_t maximum;
   /// Element encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
   /// Positional encodings
-  const std::vector<Encoding> prefix_encodings;
+  std::vector<Encoding> prefix_encodings;
 };
 
 /// @}
@@ -988,11 +988,11 @@ struct ROOF_TYPED_ARRAY {
 // clang-format on
 struct FIXED_TYPED_ARBITRARY_OBJECT {
   /// The object size
-  const std::uint64_t size;
+  std::uint64_t size;
   /// Key encoding
-  const std::shared_ptr<Encoding> key_encoding;
+  std::shared_ptr<Encoding> key_encoding;
   /// Value encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
 };
 
 // clang-format off
@@ -1034,9 +1034,9 @@ struct FIXED_TYPED_ARBITRARY_OBJECT {
 // clang-format on
 struct VARINT_TYPED_ARBITRARY_OBJECT {
   /// Key encoding
-  const std::shared_ptr<Encoding> key_encoding;
+  std::shared_ptr<Encoding> key_encoding;
   /// Value encoding
-  const std::shared_ptr<Encoding> encoding;
+  std::shared_ptr<Encoding> encoding;
 };
 
 /// @}

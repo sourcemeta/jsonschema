@@ -29,8 +29,10 @@ auto compiler_draft7_applicator_if(const Context &context,
     assert(context.frame.locations().contains(
         {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
-        "then", dynamic_context.base_schema_location,
-        sourcemeta::core::empty_pointer, dynamic_context.property_as_target};
+        .keyword = "then",
+        .base_schema_location = dynamic_context.base_schema_location,
+        .base_instance_location = sourcemeta::core::empty_pointer,
+        .property_as_target = dynamic_context.property_as_target};
     for (auto &&step : compile(context, schema_context, new_dynamic_context,
                                sourcemeta::core::empty_pointer,
                                sourcemeta::core::empty_pointer, destination)) {
@@ -54,8 +56,10 @@ auto compiler_draft7_applicator_if(const Context &context,
     assert(context.frame.locations().contains(
         {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
-        "else", dynamic_context.base_schema_location,
-        sourcemeta::core::empty_pointer, dynamic_context.property_as_target};
+        .keyword = "else",
+        .base_schema_location = dynamic_context.base_schema_location,
+        .base_instance_location = sourcemeta::core::empty_pointer,
+        .property_as_target = dynamic_context.property_as_target};
     for (auto &&step : compile(context, schema_context, new_dynamic_context,
                                sourcemeta::core::empty_pointer,
                                sourcemeta::core::empty_pointer, destination)) {
