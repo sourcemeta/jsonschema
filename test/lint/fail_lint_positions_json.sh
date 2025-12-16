@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "additionalProperties": {
     "unknown-1": 1,
     "unknown-2": 2,
@@ -32,7 +34,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
       "schemaLocation": "/additionalProperties/unknown-1",
-      "position": [ 4, 5, 4, 18 ]
+      "position": [ 6, 5, 6, 18 ]
     },
     {
       "path": "$(realpath "$TMP")/schema.json",
@@ -40,7 +42,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
       "schemaLocation": "/additionalProperties/unknown-2",
-      "position": [ 5, 5, 5, 18 ]
+      "position": [ 7, 5, 7, 18 ]
     },
     {
       "path": "$(realpath "$TMP")/schema.json",
@@ -48,7 +50,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
       "schemaLocation": "/additionalProperties/unknown-3",
-      "position": [ 6, 5, 6, 18 ]
+      "position": [ 8, 5, 8, 18 ]
     }
   ]
 }

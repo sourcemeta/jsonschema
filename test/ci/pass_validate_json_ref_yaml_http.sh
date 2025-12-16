@@ -24,6 +24,8 @@ EOF
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "http://localhost:5889/schema.yaml"
 }
 EOF

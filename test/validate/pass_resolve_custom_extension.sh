@@ -11,6 +11,8 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "id": "https://example.com",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": { "$ref": "foo" },
     "bar": { "$ref": "bar" }

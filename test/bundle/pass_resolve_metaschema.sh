@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://example.com/meta",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "nested"
 }
@@ -20,6 +22,8 @@ mkdir "$TMP/schemas"
 cat << 'EOF' > "$TMP/schemas/meta.json"
 {
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com/meta",
   "$vocabulary": {
     "https://json-schema.org/draft/2019-09/vocab/core": true,
@@ -35,6 +39,8 @@ EOF
 cat << 'EOF' > "$TMP/schemas/remote.json"
 {
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com/nested",
   "type": "string"
 }
@@ -46,11 +52,15 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://example.com/meta",
   "$id": "https://example.com",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "nested",
   "$defs": {
     "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2019-09/schema",
       "$id": "https://example.com/nested",
+      "title": "Test",
+      "description": "Test schema",
       "type": "string"
     },
     "https://example.com/meta": {
@@ -63,7 +73,9 @@ cat << 'EOF' > "$TMP/expected.json"
         "https://json-schema.org/draft/2019-09/vocab/meta-data": true,
         "https://json-schema.org/draft/2019-09/vocab/format": false,
         "https://json-schema.org/draft/2019-09/vocab/content": true
-      }
+      },
+      "title": "Test",
+      "description": "Test schema"
     }
   }
 }

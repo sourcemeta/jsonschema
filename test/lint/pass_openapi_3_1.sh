@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://spec.openapis.org/oas/3.1/dialect/base",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string",
   "externalDocs": {
     "url": "https://example.com"

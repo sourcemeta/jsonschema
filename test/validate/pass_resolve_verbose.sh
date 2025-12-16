@@ -11,6 +11,8 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "id": "https://example.com",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": { "$ref": "foo" },
     "bar": { "$ref": "bar" }
@@ -31,6 +33,8 @@ cat << 'EOF' > "$TMP/schemas/baz.json"
 {
   "id": "https://example.com/baz",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "array"
 }
 EOF
@@ -44,6 +48,8 @@ cat << 'EOF' > "$TMP/schemas/nested/bar.json"
 {
   "id": "https://example.com/bar",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string"
 }
 EOF

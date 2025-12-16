@@ -10,6 +10,7 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
+  "description": "Test schema",
   "type": "string",
   "const": "foo",
   "title": "I should not be moved up"
@@ -21,6 +22,7 @@ EOF
 cat << 'EOF' > "$TMP/expected.json"
 {
     "$schema": "http://json-schema.org/draft-06/schema#",
+    "description": "Test schema",
     "const": "foo",
     "title": "I should not be moved up"
 }

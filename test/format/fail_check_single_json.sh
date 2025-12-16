@@ -11,8 +11,10 @@ mkdir -p "$TMP/this/is/a/very/very/very/long/path"
 
 cat << 'EOF' > "$TMP/this/is/a/very/very/very/long/path/schema.json"
 {
-  "type": 1,
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 

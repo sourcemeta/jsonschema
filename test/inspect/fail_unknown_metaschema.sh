@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://example.com/unknown",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "nested"
 }

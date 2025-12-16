@@ -16,6 +16,8 @@ EOF
 cat << 'EOF' > "$TMP/schemas/meta.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$vocabulary": { "https://json-schema.org/draft/2020-12/vocab/core": true },
   "$dynamicAnchor": "meta",
   "$ref": "https://json-schema.org/draft/2020-12/meta/core"

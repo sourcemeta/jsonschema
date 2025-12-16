@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string",
   "enum": [ "foo" ]
 }
@@ -29,7 +31,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
       "schemaLocation": "/enum",
-      "position": [ 4, 3, 4, 19 ]
+      "position": [ 6, 3, 6, 19 ]
     },
     {
       "path": "$(realpath "$TMP")/schema.json",
@@ -37,7 +39,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
       "schemaLocation": "/type",
-      "position": [ 3, 3, 3, 18 ]
+      "position": [ 5, 3, 5, 18 ]
     }
   ]
 }

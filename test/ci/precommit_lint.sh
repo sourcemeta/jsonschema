@@ -20,6 +20,8 @@ EOF
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string",
   "enum": [ "foo" ]
 }

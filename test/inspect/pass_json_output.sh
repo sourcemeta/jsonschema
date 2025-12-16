@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "#/$defs/string",
   "$defs": {
@@ -31,7 +33,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "",
-        "position": [ 1, 1, 8, 1 ],
+        "position": [ 1, 1, 10, 1 ],
         "relativePointer": "",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -42,7 +44,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "/$defs",
-        "position": [ 5, 3, 7, 3 ],
+        "position": [ 7, 3, 9, 3 ],
         "relativePointer": "/$defs",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -53,7 +55,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "/$defs/string",
-        "position": [ 6, 5, 6, 34 ],
+        "position": [ 8, 5, 8, 34 ],
         "relativePointer": "/$defs/string",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -64,7 +66,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "/$defs/string/type",
-        "position": [ 6, 17, 6, 32 ],
+        "position": [ 8, 17, 8, 32 ],
         "relativePointer": "/$defs/string/type",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -75,7 +77,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "/$id",
-        "position": [ 3, 3, 3, 30 ],
+        "position": [ 5, 3, 5, 30 ],
         "relativePointer": "/$id",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -86,7 +88,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "root": "https://example.com",
         "base": "https://example.com",
         "pointer": "/$ref",
-        "position": [ 4, 3, 4, 26 ],
+        "position": [ 6, 3, 6, 26 ],
         "relativePointer": "/$ref",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
@@ -101,6 +103,28 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "relativePointer": "/$schema",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
         "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+      },
+      "https://example.com#/description": {
+        "parent": "",
+        "type": "pointer",
+        "root": "https://example.com",
+        "base": "https://example.com",
+        "pointer": "/description",
+        "position": [ 4, 3, 4, 30 ],
+        "relativePointer": "/description",
+        "dialect": "https://json-schema.org/draft/2020-12/schema",
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+      },
+      "https://example.com#/title": {
+        "parent": "",
+        "type": "pointer",
+        "root": "https://example.com",
+        "base": "https://example.com",
+        "pointer": "/title",
+        "position": [ 3, 3, 3, 17 ],
+        "relativePointer": "/title",
+        "dialect": "https://json-schema.org/draft/2020-12/schema",
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
       }
     },
     "dynamic": {}
@@ -109,7 +133,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
     {
       "type": "static",
       "origin": "/$ref",
-      "position": [ 4, 3, 4, 26 ],
+      "position": [ 6, 3, 6, 26 ],
       "destination": "https://example.com#/$defs/string",
       "base": "https://example.com",
       "fragment": "/$defs/string"
