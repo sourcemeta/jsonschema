@@ -10,6 +10,7 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema_1.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
   "additionalProperties": false,
   "title": "Hello World",
   "properties": {"foo": {}, "bar": {}}
@@ -17,7 +18,7 @@ cat << 'EOF' > "$TMP/schema_1.json"
 EOF
 
 cat << 'EOF' > "$TMP/schema_2.json"
-{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String"}
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String", "description": "Test schema"}
 EOF
 
 cd "$TMP"
@@ -32,6 +33,7 @@ cat << 'EOF' > "$TMP/expected_1.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hello World",
+  "description": "Test schema",
   "properties": {
     "foo": {},
     "bar": {}
@@ -44,6 +46,7 @@ cat << 'EOF' > "$TMP/expected_2.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "My String",
+  "description": "Test schema",
   "type": "string"
 }
 EOF

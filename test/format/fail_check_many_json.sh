@@ -11,21 +11,27 @@ mkdir "$TMP/schemas"
 
 cat << 'EOF' > "$TMP/schemas/1.json"
 {
-  "type": 1,
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 
 cat << 'EOF' > "$TMP/schemas/2.json"
 {
-  "type": 1,
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 
 cat << 'EOF' > "$TMP/schemas/3.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 

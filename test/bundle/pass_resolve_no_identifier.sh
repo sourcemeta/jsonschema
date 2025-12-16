@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "./nested.json"
 }
 EOF
@@ -27,6 +29,8 @@ cat << EOF > "$TMP/expected.json"
 {
   "\$schema": "https://json-schema.org/draft/2020-12/schema",
   "\$id": "file://$(realpath "$TMP")/schema.json",
+  "title": "Test",
+  "description": "Test schema",
   "\$ref": "./nested.json",
   "\$defs": {
     "file://$(realpath "$TMP")/nested.json": {

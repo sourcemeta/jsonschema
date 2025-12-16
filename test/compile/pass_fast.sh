@@ -11,6 +11,8 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "$id": "https://example.com",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "additionalProperties": {
     "type": "string"
   }

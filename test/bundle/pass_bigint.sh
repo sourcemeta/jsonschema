@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "nested"
 }
@@ -19,6 +21,8 @@ cat << 'EOF' > "$TMP/nested.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/nested",
+  "title": "Test",
+  "description": "Test schema",
   "type": "integer",
   "exclusiveMaximum": 9223372036854776000
 }
@@ -30,11 +34,15 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "nested",
   "$defs": {
     "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://example.com/nested",
+      "title": "Test",
+      "description": "Test schema",
       "type": "integer",
       "exclusiveMaximum": 9.223372036854776000e+18
     }

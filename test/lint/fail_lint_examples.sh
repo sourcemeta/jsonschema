@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": {
       "type": "string",
@@ -24,7 +26,7 @@ cd "$TMP"
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:6:21:
+schema.json:8:21:
   Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
     at location "/properties/foo/examples/0"
     Invalid example instance at index 0

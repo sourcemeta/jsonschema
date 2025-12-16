@@ -64,6 +64,13 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     linter/then_empty.h
     linter/else_empty.h
     linter/then_without_if.h
+    linter/top_level_title.h
+    linter/top_level_description.h
+    linter/title_description_equal.h
+    linter/title_trailing_period.h
+    linter/description_trailing_period.h
+    linter/title_trim.h
+    linter/description_trim.h
     linter/property_names_type_default.h
     linter/property_names_default.h
     linter/draft_ref_siblings.h

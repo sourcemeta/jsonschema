@@ -14,6 +14,7 @@ mkdir -p "$TMP/bar"
 cat << 'EOF' > "$TMP/foo/example.schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
   "additionalProperties": false,
   "title": "Schema JSON",
   "properties": {"foo": {}, "bar": {}}
@@ -24,6 +25,7 @@ EOF
 cat << 'EOF' > "$TMP/foo/example.my.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
   "additionalProperties": false,
   "title": "My JSON",
   "properties": {"foo": {}, "bar": {}}
@@ -64,6 +66,7 @@ cat << 'EOF' > "$TMP/expected_schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Schema JSON",
+  "description": "Test schema",
   "properties": {
     "foo": {},
     "bar": {}
@@ -78,6 +81,7 @@ cat << 'EOF' > "$TMP/expected_my.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "My JSON",
+  "description": "Test schema",
   "properties": {
     "foo": {},
     "bar": {}

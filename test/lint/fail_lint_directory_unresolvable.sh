@@ -9,19 +9,25 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/foo.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 
 cat << 'EOF' > "$TMP/bar.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#"
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
 }
 EOF
 
 cat << 'EOF' > "$TMP/baz.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "allOf": [ { "$ref": "https://example.com/unknown" } ],
   "default": 1
 }

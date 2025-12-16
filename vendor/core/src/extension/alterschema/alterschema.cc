@@ -54,6 +54,8 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/dependencies_property_tautology.h"
 #include "linter/dependent_required_default.h"
 #include "linter/dependent_required_tautology.h"
+#include "linter/description_trailing_period.h"
+#include "linter/description_trim.h"
 #include "linter/draft_official_dialect_without_empty_fragment.h"
 #include "linter/draft_ref_siblings.h"
 #include "linter/duplicate_allof_branches.h"
@@ -90,6 +92,11 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/single_type_array.h"
 #include "linter/then_empty.h"
 #include "linter/then_without_if.h"
+#include "linter/title_description_equal.h"
+#include "linter/title_trailing_period.h"
+#include "linter/title_trim.h"
+#include "linter/top_level_description.h"
+#include "linter/top_level_title.h"
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
 #include "linter/unknown_keywords_prefix.h"
@@ -142,6 +149,11 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<UnknownKeywordsPrefix>();
   bundle.add<UnknownLocalRef>();
   bundle.add<RequiredPropertiesInProperties>();
+  bundle.add<TitleDescriptionEqual>();
+  bundle.add<TitleTrailingPeriod>();
+  bundle.add<DescriptionTrailingPeriod>();
+  bundle.add<TitleTrim>();
+  bundle.add<DescriptionTrim>();
 
   if (mode == AlterSchemaMode::StaticAnalysis) {
     bundle.add<BooleanTrue>();
@@ -182,6 +194,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<UnsatisfiableMaxContains>();
     bundle.add<UnsatisfiableMinProperties>();
     bundle.add<EnumToConst>();
+    bundle.add<TopLevelTitle>();
+    bundle.add<TopLevelDescription>();
   }
 }
 

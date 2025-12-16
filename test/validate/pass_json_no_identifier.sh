@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": {
       "type": "string"
@@ -29,11 +31,25 @@ cat << EOF > "$TMP/expected.json"
   "valid": true,
   "annotations": [
     {
+      "keywordLocation": "/description",
+      "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/description",
+      "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 16 ],
+      "annotation": [ "Test schema" ]
+    },
+    {
       "keywordLocation": "/properties",
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/properties",
       "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "foo" ]
+    },
+    {
+      "keywordLocation": "/title",
+      "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/title",
+      "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 16 ],
+      "annotation": [ "Test" ]
     }
   ]
 }

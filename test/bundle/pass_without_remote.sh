@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "#/$defs/string",
   "$defs": {
@@ -24,6 +26,8 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "#/$defs/string",
   "$defs": {
     "string": {

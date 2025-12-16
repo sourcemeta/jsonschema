@@ -13,6 +13,8 @@ mkdir -p "$TMP/bar"
 cat << 'EOF' > "$TMP/foo/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": {
       "type": "string",
@@ -44,6 +46,8 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": {
       "type": "string",

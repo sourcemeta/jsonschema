@@ -11,6 +11,8 @@ cat << 'EOF' > "$TMP/schema.json"
 {
   "$id": "https://example.com",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "properties": {
     "foo": {
       "type": "string"
@@ -28,6 +30,18 @@ EOF
   --trace --template "$TMP/template.json" > "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
+@- (annotation) "/description" (AnnotationEmit)
+   value "Test schema"
+   at instance location "" (line 1, column 1)
+   at keyword location "https://example.com#/description"
+   at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+
+@- (annotation) "/title" (AnnotationEmit)
+   value "Test"
+   at instance location "" (line 1, column 1)
+   at keyword location "https://example.com#/title"
+   at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+
 -> (push) "/properties" (LogicalWhenType)
    at instance location "" (line 1, column 1)
    at keyword location "https://example.com#/properties"

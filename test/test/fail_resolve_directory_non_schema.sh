@@ -13,6 +13,8 @@ cat << 'EOF' > "$TMP/schemas/schema.json"
 {
   "id": "https://example.com",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "definitions": {
     "foo": { "type": "string" },
     "bar": { "type": "integer" }

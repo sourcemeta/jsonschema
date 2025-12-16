@@ -13,6 +13,7 @@ mkdir -p "$TMP/bar"
 cat << 'EOF' > "$TMP/foo/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
   "additionalProperties": false,
   "title": "Hello World",
   "properties": {"foo": {}, "bar": {}}
@@ -42,6 +43,7 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Hello World",
+  "description": "Test schema",
   "properties": {
     "foo": {},
     "bar": {}

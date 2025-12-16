@@ -13,6 +13,8 @@ mkdir -p "$TMP/bar"
 cat << 'EOF' > "$TMP/foo/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string"
 }
 EOF

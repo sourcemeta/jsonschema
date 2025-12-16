@@ -40,6 +40,12 @@ dependent_required_default
 dependent_required_tautology
   Defining requirements for a property using `dependentRequired` that is already marked as required is an unnecessarily complex use of `dependentRequired`
 
+description_trailing_period
+  Descriptions should not end with a period to give user interfaces flexibility in presenting the text
+
+description_trim
+  Descriptions should not contain leading or trailing whitespace
+
 draft_official_dialect_without_empty_fragment
   The official dialect URI of Draft 7 and older versions must contain the empty fragment
 
@@ -148,6 +154,21 @@ then_empty
 then_without_if
   The `then` keyword is meaningless without the presence of the `if` keyword
 
+title_description_equal
+  The title and description metadata keywords should not be set to the same value
+
+title_trailing_period
+  Titles should not end with a period to give user interfaces flexibility in presenting the text
+
+title_trim
+  Titles should not contain leading or trailing whitespace
+
+top_level_description
+  Set a non-empty description at the top level of the schema to explain what the definition is about in detail
+
+top_level_title
+  Set a concise non-empty title at the top level of the schema to explain what the definition is about
+
 unevaluated_items_default
   Setting the `unevaluatedItems` keyword to the true schema does not add any further constraint
 
@@ -172,7 +193,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 54
+Number of rules: 61
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

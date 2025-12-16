@@ -12,6 +12,8 @@ mkdir "$TMP/schemas"
 cat << 'EOF' > "$TMP/schema.json.schema"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "id": "https://example.com"
 }
 EOF

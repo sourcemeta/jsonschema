@@ -9,12 +9,16 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.yaml"
 $schema: https://json-schema.org/draft/2020-12/schema
+title: Test
+description: Test schema
 $id: https://example.com
 $ref: nested
 EOF
 
 cat << 'EOF' > "$TMP/remote.yaml"
 $schema: https://json-schema.org/draft/2020-12/schema
+title: Test
+description: Test schema
 $id: https://example.com/nested
 type: string
 EOF
@@ -25,11 +29,15 @@ cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "nested",
   "$defs": {
     "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "$id": "https://example.com/nested",
+      "title": "Test",
+      "description": "Test schema",
       "type": "string"
     }
   }

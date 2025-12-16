@@ -10,6 +10,8 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com",
   "$ref": "nested"
 }
@@ -19,6 +21,8 @@ mkdir "$TMP/schemas"
 cat << 'EOF' > "$TMP/schemas/remote.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$id": "https://example.com/nested",
   "type": "string"
 }
@@ -29,10 +33,14 @@ EOF
 cat << 'EOF' > "$TMP/expected.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
   "$ref": "#/$defs/https:~1~1example.com~1nested",
   "$defs": {
     "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "Test",
+      "description": "Test schema",
       "type": "string"
     }
   }

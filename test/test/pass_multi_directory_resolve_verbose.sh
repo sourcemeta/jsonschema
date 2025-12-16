@@ -13,6 +13,8 @@ cat << 'EOF' > "$TMP/schemas/1.json"
 {
   "id": "https://example.com/1",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "string"
 }
 EOF
@@ -21,6 +23,8 @@ cat << 'EOF' > "$TMP/schemas/2.json"
 {
   "id": "https://example.com/2",
   "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
   "type": "array"
 }
 EOF
