@@ -10,6 +10,7 @@
 
 #include <cassert>     // assert
 #include <concepts>    // std::derived_from, std::same_as
+#include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
 #include <iterator>    // std::make_move_iterator, std::begin, std::end
 #include <map>         // std::map
@@ -257,7 +258,7 @@ public:
              const SchemaResolver &resolver, const Callback &callback,
              const std::optional<JSON::String> &default_dialect = std::nullopt,
              const std::optional<JSON::String> &default_id = std::nullopt) const
-      -> bool;
+      -> std::pair<bool, std::uint8_t>;
 
   /// Report back the rules from the bundle that need to be applied to a schema
   [[nodiscard]] auto
@@ -265,8 +266,6 @@ public:
         const SchemaResolver &resolver, const Callback &callback,
         const std::optional<JSON::String> &default_dialect = std::nullopt,
         const std::optional<JSON::String> &default_id = std::nullopt) const
-      // Note that we only calculate a health score on "check", as "apply" would
-      // by definition change the score
       -> std::pair<bool, std::uint8_t>;
 
   [[nodiscard]] auto begin() const -> auto { return this->rules.cbegin(); }

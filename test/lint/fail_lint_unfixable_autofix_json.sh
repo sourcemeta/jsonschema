@@ -22,7 +22,7 @@ test "$CODE" = "2" || exit 1
 cat << EOF > "$TMP/expected.json"
 {
   "valid": false,
-  "health": null,
+  "health": 0,
   "errors": [
     {
       "path": "$(realpath "$TMP")/schema.json",

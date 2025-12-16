@@ -211,7 +211,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
                   sourcemeta::core::URI::from_path(entry.first).recompose());
-              if (!apply_result) {
+              scores.emplace_back(apply_result.second);
+              if (!apply_result.first) {
                 return 2;
               }
 
