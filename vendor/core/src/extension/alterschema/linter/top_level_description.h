@@ -28,6 +28,6 @@ public:
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(!schema.defines("description") ||
                      schema.at("description").empty());
-    return APPLIES_TO_KEYWORDS("description");
+    return true;
   }
 };

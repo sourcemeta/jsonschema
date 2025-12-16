@@ -27,6 +27,6 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(!schema.defines("title") || schema.at("title").empty());
-    return APPLIES_TO_KEYWORDS("title");
+    return true;
   }
 };
