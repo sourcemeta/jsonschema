@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ {} ],
   "properties": {
     "foo": {
       "type": "string",
@@ -26,7 +27,7 @@ cd "$TMP"
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-schema.json:8:7:
+schema.json:9:7:
   Only set a \`default\` value that validates against the schema (blaze/valid_default)
     at location "/properties/foo/default"
     The value was expected to be of type string but it was of type integer

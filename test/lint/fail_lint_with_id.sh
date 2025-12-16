@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ {} ],
   "$id": "https://example.com",
   "additionalProperties": true
 }
@@ -22,7 +23,7 @@ cd "$TMP"
 test "$CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-schema.json:6:3:
+schema.json:7:3:
   Setting the `additionalProperties` keyword to the true schema does not add any further constraint (additional_properties_default)
     at location "/additionalProperties"
 EOF

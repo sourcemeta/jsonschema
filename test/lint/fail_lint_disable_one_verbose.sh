@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ "foo" ],
   "type": "string",
   "contentMediaType": "application/json",
   "enum": [ "foo" ]
@@ -25,13 +26,13 @@ test "$CODE" = "2" || exit 1
 cat << EOF > "$TMP/expected.txt"
 Disabling rule: enum_to_const
 Linting: $(realpath "$TMP")/schema.json
-schema.json:6:3:
+schema.json:7:3:
   The \`contentMediaType\` keyword is meaningless without the presence of the \`contentEncoding\` keyword (content_media_type_without_encoding)
     at location "/contentMediaType"
-schema.json:7:3:
+schema.json:8:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/enum"
-schema.json:5:3:
+schema.json:6:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/type"
 EOF

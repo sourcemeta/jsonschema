@@ -14,6 +14,7 @@ cat << 'EOF' > "$TMP/schemas/foo.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ "foo" ],
   "type": "string",
   "enum": [ "foo", "bar", "baz" ]
 }
@@ -23,7 +24,8 @@ cat << 'EOF' > "$TMP/schemas/bar.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
-  "description": "Test schema"
+  "description": "Test schema",
+  "examples": [ true ]
 }
 EOF
 
@@ -41,7 +43,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
       "schemaLocation": "/enum",
-      "position": [ 6, 3, 6, 33 ]
+      "position": [ 7, 3, 7, 33 ]
     },
     {
       "path": "$(realpath "$TMP")/schemas/foo.json",
@@ -49,7 +51,7 @@ cat << EOF > "$TMP/expected.json"
       "message": "Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
       "schemaLocation": "/type",
-      "position": [ 5, 3, 5, 18 ]
+      "position": [ 6, 3, 6, 18 ]
     }
   ]
 }

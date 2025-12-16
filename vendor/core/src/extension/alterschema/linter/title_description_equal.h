@@ -29,7 +29,7 @@ public:
     ONLY_CONTINUE_IF(schema.at("title").is_string() &&
                      schema.at("description").is_string());
     ONLY_CONTINUE_IF(schema.at("title") == schema.at("description"));
-    return APPLIES_TO_KEYWORDS("description");
+    return APPLIES_TO_KEYWORDS("title", "description");
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {

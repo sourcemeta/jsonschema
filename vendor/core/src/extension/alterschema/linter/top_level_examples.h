@@ -1,10 +1,10 @@
-class TopLevelTitle final : public SchemaTransformRule {
+class TopLevelExamples final : public SchemaTransformRule {
 public:
-  TopLevelTitle()
+  TopLevelExamples()
       : SchemaTransformRule{
-            "top_level_title",
-            "Set a concise non-empty title at the top level of the "
-            "schema to explain what the definition is about"} {};
+            "top_level_examples",
+            "Set a non-empty examples array at the top level of the schema to "
+            "illustrate the expected data"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -20,17 +20,13 @@ public:
         {Vocabularies::Known::JSON_Schema_2020_12_Meta_Data,
          Vocabularies::Known::JSON_Schema_2019_09_Meta_Data,
          Vocabularies::Known::JSON_Schema_Draft_7,
-         Vocabularies::Known::JSON_Schema_Draft_6,
-         Vocabularies::Known::JSON_Schema_Draft_4,
-         Vocabularies::Known::JSON_Schema_Draft_3,
-         Vocabularies::Known::JSON_Schema_Draft_2,
-         Vocabularies::Known::JSON_Schema_Draft_1}));
+         Vocabularies::Known::JSON_Schema_Draft_6}));
     ONLY_CONTINUE_IF(schema.is_object());
-    if (schema.defines("title") && schema.at("title").is_string() &&
-        schema.at("title").empty()) {
-      return APPLIES_TO_KEYWORDS("title");
+    if (schema.defines("examples") && schema.at("examples").is_array() &&
+        schema.at("examples").empty()) {
+      return APPLIES_TO_KEYWORDS("examples");
     } else {
-      return !schema.defines("title");
+      return !schema.defines("examples");
     }
   }
 };

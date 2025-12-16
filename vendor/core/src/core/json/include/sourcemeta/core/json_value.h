@@ -1664,6 +1664,20 @@ public:
   /// ```
   auto trim() -> const JSON::String &;
 
+  /// Check if the string has no leading or trailing whitespace. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON trimmed{"Hello World"};
+  /// assert(trimmed.is_trimmed());
+  ///
+  /// const sourcemeta::core::JSON untrimmed{" Hello World "};
+  /// assert(!untrimmed.is_trimmed());
+  /// ```
+  [[nodiscard]] auto is_trimmed() const noexcept -> bool;
+
   /// Reorder the properties of an object by sorting keys according to a
   /// comparator function. The object is modified in-place. For example:
   ///

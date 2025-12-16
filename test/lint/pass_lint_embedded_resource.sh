@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ 1 ],
   "$id": "https://example.com/main",
   "$ref": "embedded",
   "$defs": {
