@@ -11,8 +11,6 @@ mkdir -p "$TMP/schemas/folder"
 
 cat << 'EOF' > "$TMP/schemas/folder/test.json"
 { "$schema": "../meta.json" }
-"title": "Test",
-"description": "Test schema",
 EOF
 
 cat << 'EOF' > "$TMP/schemas/meta.json"
