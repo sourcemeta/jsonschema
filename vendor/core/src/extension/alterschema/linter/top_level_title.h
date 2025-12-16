@@ -26,7 +26,9 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_2,
          Vocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
-    ONLY_CONTINUE_IF(!schema.defines("title") || schema.at("title").empty());
+    ONLY_CONTINUE_IF(
+        !schema.defines("title") ||
+        (schema.at("title").is_string() && schema.at("title").empty()));
     return true;
   }
 };

@@ -27,7 +27,8 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(!schema.defines("description") ||
-                     schema.at("description").empty());
+                     (schema.at("description").is_string() &&
+                      schema.at("description").empty()));
     return true;
   }
 };
