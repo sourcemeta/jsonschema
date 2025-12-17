@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ {} ],
   "properties": {
     "foo": {
       "type": "string",
@@ -33,6 +34,7 @@ cat << 'EOF' > "$TMP/expected.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ {} ],
   "properties": {
     "foo": {
       "type": "string",

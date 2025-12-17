@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ "foo" ],
   "type": "string",
   "enum": [ "foo" ]
 }
@@ -34,6 +35,7 @@ cat << 'EOF' > "$TMP/expected_fixed.json"
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ "foo" ],
   "const": "foo"
 }
 EOF

@@ -18,6 +18,8 @@
 
 namespace sourcemeta::core {
 
+static constexpr auto TRIM_WHITESPACE = " \t\n\r\v\f";
+
 JSON::JSON(const std::int64_t value) : current_type{Type::Integer} {
   this->data_integer = value;
 }
@@ -1022,10 +1024,19 @@ auto JSON::merge(const JSON::Object &other) -> void {
 
 auto JSON::trim() -> const JSON::String & {
   assert(this->is_string());
-  constexpr auto WHITESPACE = " \t\n\r\v\f";
-  this->data_string.erase(this->data_string.find_last_not_of(WHITESPACE) + 1);
-  this->data_string.erase(0, this->data_string.find_first_not_of(WHITESPACE));
+  this->data_string.erase(this->data_string.find_last_not_of(TRIM_WHITESPACE) +
+                          1);
+  this->data_string.erase(0,
+                          this->data_string.find_first_not_of(TRIM_WHITESPACE));
   return this->to_string();
+}
+
+[[nodiscard]] auto JSON::is_trimmed() const noexcept -> bool {
+  assert(this->is_string());
+  const auto &value{this->data_string};
+  return value.empty() ||
+         (value.find_first_of(TRIM_WHITESPACE) != 0 &&
+          value.find_last_of(TRIM_WHITESPACE) != value.size() - 1);
 }
 
 auto JSON::reorder(const KeyComparison &compare) -> void {

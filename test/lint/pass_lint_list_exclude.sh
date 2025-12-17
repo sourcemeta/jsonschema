@@ -13,6 +13,9 @@ cat << 'EOF' > "$TMP/expected.txt"
 additional_properties_default
   Setting the `additionalProperties` keyword to the true schema does not add any further constraint
 
+comment_trim
+  Comments should not contain leading or trailing whitespace
+
 const_with_type
   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type
 
@@ -60,6 +63,9 @@ duplicate_anyof_branches
 
 duplicate_enum_values
   Setting duplicate values in `enum` is considered an anti-pattern
+
+duplicate_examples
+  Setting duplicate values in `examples` is redundant
 
 duplicate_required_values
   Setting duplicate values in `required` is considered an anti-pattern
@@ -166,6 +172,9 @@ title_trim
 top_level_description
   Set a non-empty description at the top level of the schema to explain what the definition is about in detail
 
+top_level_examples
+  Set a non-empty examples array at the top level of the schema to illustrate the expected data
+
 top_level_title
   Set a concise non-empty title at the top level of the schema to explain what the definition is about
 
@@ -193,7 +202,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 61
+Number of rules: 64
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

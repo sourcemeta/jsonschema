@@ -26,12 +26,7 @@ public:
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(schema.defines("title"));
     ONLY_CONTINUE_IF(schema.at("title").is_string());
-    const auto &title{schema.at("title").to_string()};
-    // TODO: Implement JSON::is_trimmed
-    constexpr auto WHITESPACE = " \t\n\r\v\f";
-    ONLY_CONTINUE_IF(!title.empty() &&
-                     (std::strchr(WHITESPACE, title.front()) != nullptr ||
-                      std::strchr(WHITESPACE, title.back()) != nullptr));
+    ONLY_CONTINUE_IF(!schema.at("title").is_trimmed());
     return APPLIES_TO_KEYWORDS("title");
   }
 

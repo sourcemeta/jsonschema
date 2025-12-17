@@ -71,6 +71,9 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     linter/description_trailing_period.h
     linter/title_trim.h
     linter/description_trim.h
+    linter/comment_trim.h
+    linter/top_level_examples.h
+    linter/duplicate_examples.h
     linter/property_names_type_default.h
     linter/property_names_default.h
     linter/draft_ref_siblings.h

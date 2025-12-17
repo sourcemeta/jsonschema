@@ -12,6 +12,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "$schema": "https://spec.openapis.org/oas/3.1/dialect/base",
   "title": "Test",
   "description": "Test schema",
+  "examples": [ "foo" ],
   "type": "string",
   "externalDocs": {
     "url": "https://example.com"
