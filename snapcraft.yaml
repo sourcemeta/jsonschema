@@ -2,9 +2,16 @@
 name: jsonschema
 base: core22
 adopt-info: jsonschema
+title: JSON Schema CLI
 summary: The command-line tool for working with JSON Schema
 description: |
   Covers formatting, linting, testing, bundling, and more for both local development and CI/CD pipelines.
+license: AGPL-3.0-or-later
+contact: hello@sourcemeta.com
+donation: https://github.com/sponsors/sourcemeta
+issues: https://github.com/sourcemeta/jsonschema/issues
+source-code: https://github.com/sourcemeta/jsonschema
+website: https://github.com/sourcemeta/jsonschema
 grade: stable
 confinement: strict
 apps:
