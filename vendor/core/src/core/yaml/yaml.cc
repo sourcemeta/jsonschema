@@ -515,9 +515,18 @@ auto read_yaml(const std::filesystem::path &path,
 
 auto read_yaml_or_json(const std::filesystem::path &path,
                        const JSON::ParseCallback &callback) -> JSON {
-  return path.extension() == ".yaml" || path.extension() == ".yml"
-             ? read_yaml(path, callback)
-             : read_json(path, callback);
+  const auto extension{path.extension()};
+  if (extension == ".yaml" || extension == ".yml") {
+    return read_yaml(path, callback);
+  } else if (extension == ".json") {
+    return read_json(path, callback);
+  }
+
+  try {
+    return read_json(path, callback);
+  } catch (const JSONParseError &) {
+    return read_yaml(path, callback);
+  }
 }
 
 } // namespace sourcemeta::core

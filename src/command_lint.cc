@@ -195,8 +195,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
       LOG_VERBOSE(options) << "Linting: " << entry.first.string() << "\n";
-      if (entry.first.extension() == ".yaml" ||
-          entry.first.extension() == ".yml") {
+      if (entry.yaml) {
         throw YAMLInputError{
             "The --fix option is not supported for YAML input files",
             entry.first};
