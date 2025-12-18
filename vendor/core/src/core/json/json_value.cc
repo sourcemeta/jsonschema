@@ -733,6 +733,8 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
                                return accumulator + 1 + pair.first.size() +
                                       pair.second.fast_hash();
                              });
+    case Type::Decimal:
+      return 8;
     default:
       assert(false);
       return 0;

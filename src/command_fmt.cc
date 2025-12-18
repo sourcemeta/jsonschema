@@ -21,8 +21,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
-    if (entry.first.extension() == ".yaml" ||
-        entry.first.extension() == ".yml") {
+    if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",
                            entry.first};
     }

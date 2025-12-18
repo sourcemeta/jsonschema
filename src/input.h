@@ -14,6 +14,7 @@
 
 #include <algorithm>  // std::any_of, std::none_of, std::sort
 #include <cstddef>    // std::size_t
+#include <cstdint>    // std::uintptr_t
 #include <filesystem> // std::filesystem
 #include <functional> // std::ref
 #include <set>        // std::set
@@ -30,6 +31,7 @@ struct InputJSON {
   sourcemeta::core::PointerPositionTracker positions;
   std::size_t index{0};
   bool multidocument{false};
+  bool yaml{false};
   auto operator<(const InputJSON &other) const noexcept -> bool {
     return this->first < other.first;
   }
@@ -38,12 +40,26 @@ struct InputJSON {
 inline auto parse_extensions(
     const sourcemeta::core::Options &options,
     const std::optional<sourcemeta::core::SchemaConfig> &configuration)
-    -> std::set<std::string> {
+    -> const std::set<std::string> & {
+  using CacheKey =
+      std::pair<std::uintptr_t, std::optional<std::filesystem::path>>;
+  static std::map<CacheKey, std::set<std::string>> cache;
+
+  CacheKey cache_key{reinterpret_cast<std::uintptr_t>(&options),
+                     configuration.has_value()
+                         ? std::optional{configuration.value().absolute_path}
+                         : std::nullopt};
+
+  const auto iterator{cache.find(cache_key)};
+  if (iterator != cache.end()) {
+    return iterator->second;
+  }
+
   std::set<std::string> result;
 
   if (options.contains("extension")) {
     for (const auto &extension : options.at("extension")) {
-      if (extension.starts_with('.')) {
+      if (extension.empty() || extension.starts_with('.')) {
         result.emplace(extension);
       } else {
         std::ostringstream normalised_extension;
@@ -55,7 +71,7 @@ inline auto parse_extensions(
 
   if (configuration.has_value()) {
     for (const auto &extension : configuration.value().extension) {
-      if (extension.starts_with('.')) {
+      if (extension.empty() || extension.starts_with('.')) {
         result.emplace(extension);
       } else {
         std::ostringstream normalised_extension;
@@ -66,7 +82,11 @@ inline auto parse_extensions(
   }
 
   for (const auto &extension : result) {
-    LOG_VERBOSE(options) << "Using extension: " << extension << "\n";
+    if (extension.empty()) {
+      LOG_WARNING() << "Matching files with no extension\n";
+    } else {
+      LOG_VERBOSE(options) << "Using extension: " << extension << "\n";
+    }
   }
 
   if (result.empty()) {
@@ -75,7 +95,7 @@ inline auto parse_extensions(
     result.insert({".yml"});
   }
 
-  return result;
+  return cache.emplace(std::move(cache_key), std::move(result)).first->second;
 }
 
 inline auto parse_ignore(const sourcemeta::core::Options &options)
@@ -95,6 +115,34 @@ inline auto parse_ignore(const sourcemeta::core::Options &options)
 
 namespace {
 
+struct ParsedJSON {
+  sourcemeta::core::JSON document;
+  sourcemeta::core::PointerPositionTracker positions;
+  bool yaml{false};
+};
+
+inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
+  const auto extension{path.extension()};
+  sourcemeta::core::PointerPositionTracker positions;
+
+  if (extension == ".yaml" || extension == ".yml") {
+    return {sourcemeta::core::read_yaml(path, std::ref(positions)),
+            std::move(positions), true};
+  } else if (extension == ".json") {
+    return {sourcemeta::core::read_json(path, std::ref(positions)),
+            std::move(positions), false};
+  }
+
+  try {
+    return {sourcemeta::core::read_json(path, std::ref(positions)),
+            std::move(positions), false};
+  } catch (const sourcemeta::core::JSONParseError &) {
+    sourcemeta::core::PointerPositionTracker yaml_positions;
+    return {sourcemeta::core::read_yaml(path, std::ref(yaml_positions)),
+            std::move(yaml_positions), true};
+  }
+}
+
 inline auto
 handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::filesystem::path> &blacklist,
@@ -108,7 +156,9 @@ handle_json_entry(const std::filesystem::path &entry_path,
       if (!std::filesystem::is_directory(entry) &&
           std::any_of(extensions.cbegin(), extensions.cend(),
                       [&canonical](const auto &extension) {
-                        return canonical.string().ends_with(extension);
+                        return extension.empty()
+                                   ? !canonical.has_extension()
+                                   : canonical.string().ends_with(extension);
                       }) &&
           std::none_of(blacklist.cbegin(), blacklist.cend(),
                        [&canonical](const auto &prefix) {
@@ -119,12 +169,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
           continue;
         }
 
-        sourcemeta::core::PointerPositionTracker positions;
         // TODO: Print a verbose message for what is getting parsed
-        auto contents{sourcemeta::core::read_yaml_or_json(canonical,
-                                                          std::ref(positions))};
-        result.push_back(
-            {std::move(canonical), std::move(contents), std::move(positions)});
+        auto parsed{read_file(canonical)};
+        result.push_back({std::move(canonical), std::move(parsed.document),
+                          std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
   } else {
@@ -190,24 +238,22 @@ handle_json_entry(const std::filesystem::path &entry_path,
           std::size_t index{0};
           for (auto &entry : documents) {
             result.push_back({canonical, std::move(entry.first),
-                              std::move(entry.second), index, true});
+                              std::move(entry.second), index, true, true});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back({std::move(canonical),
-                            std::move(documents.front().first),
-                            std::move(documents.front().second)});
+          result.push_back(
+              {std::move(canonical), std::move(documents.front().first),
+               std::move(documents.front().second), 0, false, true});
         }
       } else {
         if (std::filesystem::is_empty(canonical)) {
           return;
         }
-        sourcemeta::core::PointerPositionTracker positions;
         // TODO: Print a verbose message for what is getting parsed
-        auto contents{
-            sourcemeta::core::read_json(canonical, std::ref(positions))};
-        result.push_back(
-            {std::move(canonical), std::move(contents), std::move(positions)});
+        auto parsed{read_file(canonical)};
+        result.push_back({std::move(canonical), std::move(parsed.document),
+                          std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
   }
