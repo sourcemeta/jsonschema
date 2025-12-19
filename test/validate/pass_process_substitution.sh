@@ -18,7 +18,7 @@ cat << 'EOF' > "$TMP/schema.json"
       "type": "string"
     }
   },
-  "required": ["name"]
+  "required": [ "name" ]
 }
 EOF
 

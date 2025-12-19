@@ -354,6 +354,19 @@ add_jsonschema_test_unix(compile/pass_without_extension_yaml)
 add_jsonschema_test_unix(compile/pass_custom_extension_json)
 add_jsonschema_test_unix(compile/pass_custom_extension_yaml)
 
+# Canonicalize
+add_jsonschema_test_unix(canonicalize/pass_input_unmodified)
+add_jsonschema_test_unix(canonicalize/pass_resolve)
+add_jsonschema_test_unix(canonicalize/pass_default_dialect)
+add_jsonschema_test_unix(canonicalize/pass_yaml)
+add_jsonschema_test_unix(canonicalize/pass_without_extension_json)
+add_jsonschema_test_unix(canonicalize/pass_without_extension_yaml)
+add_jsonschema_test_unix(canonicalize/pass_custom_extension_json)
+add_jsonschema_test_unix(canonicalize/pass_custom_extension_yaml)
+add_jsonschema_test_unix(canonicalize/fail_no_schema)
+add_jsonschema_test_unix(canonicalize/fail_non_schema)
+add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
+
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
 add_jsonschema_test_unix(lint/pass_lint_no_fix)

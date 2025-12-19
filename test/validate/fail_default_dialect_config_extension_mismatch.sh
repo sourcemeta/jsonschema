@@ -17,7 +17,7 @@ EOF
 
 cat << 'EOF' > "$TMP/jsonschema.json"
 {
-  "extension": [".schema.json"],
+  "extension": [ ".schema.json" ],
   "defaultDialect": "https://json-schema.org/draft/2020-12/schema"
 }
 EOF
