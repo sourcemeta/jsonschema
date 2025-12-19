@@ -13,7 +13,7 @@ cat << 'EOF' > "$TMP/schema.custom"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test",
   "description": "A test schema",
-  "examples": ["foo"],
+  "examples": [ "foo" ],
   "type": "string"
 }
 EOF
@@ -26,7 +26,7 @@ cat << 'EOF' > "$TMP/expected.json"
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test",
   "description": "A test schema",
-  "examples": ["foo"],
+  "examples": [ "foo" ],
   "type": "string"
 }
 EOF

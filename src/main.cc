@@ -95,6 +95,13 @@ Commands:
        Statically inspect a schema to display schema locations and
        references in a human-readable manner.
 
+   canonicalize <schema.json|.yaml> [--http/-h]
+
+       Transform a JSON Schema into a canonical normalized form.
+       Canonicalization is a process that simplifies a schema into a
+       more verbose but semantically equivalent representation, making
+       it easier for static analysis.
+
    encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
@@ -163,6 +170,10 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("minify", {"m"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compile(app);
+    return EXIT_SUCCESS;
+  } else if (command == "canonicalize") {
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::canonicalize(app);
     return EXIT_SUCCESS;
   } else if (command == "test") {
     app.option("extension", {"e"});
