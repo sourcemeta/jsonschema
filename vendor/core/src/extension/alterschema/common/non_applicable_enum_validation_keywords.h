@@ -27,7 +27,7 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_1,
                           Vocabularies::Known::JSON_Schema_Draft_1_Hyper}) &&
                      schema.is_object() && schema.defines("enum") &&
-                     schema.at("enum").is_array());
+                     schema.at("enum").is_array() && !schema.defines("type"));
 
     sourcemeta::core::JSON::TypeSet enum_types;
     for (const auto &value : schema.at("enum").as_array()) {

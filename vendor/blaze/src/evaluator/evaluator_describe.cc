@@ -191,9 +191,12 @@ auto describe(const bool valid, const Instruction &step,
               const sourcemeta::core::WeakPointer &instance_location,
               const sourcemeta::core::JSON &instance,
               const sourcemeta::core::JSON &annotation) -> std::string {
-  assert(evaluate_path.empty() || evaluate_path.back().is_property());
-  const std::string keyword{
-      evaluate_path.empty() ? "" : evaluate_path.back().to_property()};
+  const std::string keyword{evaluate_path.empty() ||
+                                    // The last token can be an index for
+                                    // boolean schemas inside array applicators
+                                    !evaluate_path.back().is_property()
+                                ? ""
+                                : evaluate_path.back().to_property()};
   const sourcemeta::core::JSON &target{get(instance, instance_location)};
 
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionFail) {

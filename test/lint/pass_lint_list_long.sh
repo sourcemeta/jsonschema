@@ -61,6 +61,9 @@ draft_official_dialect_without_empty_fragment
 draft_ref_siblings
   In Draft 7 and older dialects, keywords sibling to `$ref` are never evaluated
 
+drop_allof_empty_schemas
+  Empty schemas in `allOf` are redundant and can be removed
+
 duplicate_allof_branches
   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
 
@@ -142,6 +145,9 @@ non_applicable_type_specific_keywords
 not_false
   Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
 
+orphan_definitions
+  Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
+
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
 
@@ -202,13 +208,16 @@ unnecessary_allof_ref_wrapper_draft
 unnecessary_allof_ref_wrapper_modern
   Wrapping `$ref` in `allOf` was only necessary in JSON Schema Draft 7 and older
 
+unnecessary_allof_wrapper
+  Keywords inside `allOf` that do not conflict with the parent schema can be elevated
+
 unsatisfiable_max_contains
   Setting the `maxContains` keyword to a number greater than or equal to the array upper bound does not add any further constraint
 
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 66
+Number of rules: 69
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

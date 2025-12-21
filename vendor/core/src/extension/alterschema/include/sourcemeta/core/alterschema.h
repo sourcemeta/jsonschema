@@ -25,12 +25,12 @@ namespace sourcemeta::core {
 enum class AlterSchemaMode : std::uint8_t {
   /// Rules that simplify the given schema for both human readability and
   /// performance
-  Readability,
+  Linter,
 
   /// Rules that surface implicit constraints and simplifies keywords that
   /// are syntax sugar to other keywords, potentially decreasing human
   /// readability in favor of explicitness
-  StaticAnalysis,
+  Canonicalizer,
 };
 
 /// @ingroup alterschema
@@ -44,7 +44,7 @@ enum class AlterSchemaMode : std::uint8_t {
 /// sourcemeta::core::SchemaTransformer bundle;
 ///
 /// sourcemeta::core::add(bundle,
-///   sourcemeta::core::AlterSchemaMode::Readability);
+///   sourcemeta::core::AlterSchemaMode::Linter);
 ///
 /// auto schema = sourcemeta::core::parse_json(R"JSON({
 ///   "$schema": "https://json-schema.org/draft/2020-12/schema",

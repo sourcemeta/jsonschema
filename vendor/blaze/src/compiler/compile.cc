@@ -27,8 +27,14 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     if (schema_context.schema.to_boolean()) {
       return {};
     } else {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
-                   schema_context, dynamic_context, ValueNone{})};
+      return {make(
+          sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+          schema_context,
+          {.keyword = "",
+           .base_schema_location = dynamic_context.base_schema_location,
+           .base_instance_location = dynamic_context.base_instance_location,
+           .property_as_target = dynamic_context.property_as_target},
+          ValueNone{})};
     }
   }
 

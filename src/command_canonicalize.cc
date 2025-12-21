@@ -43,7 +43,7 @@ auto sourcemeta::jsonschema::canonicalize(
 
     sourcemeta::core::SchemaTransformer canonicalizer;
     sourcemeta::core::add(canonicalizer,
-                          sourcemeta::core::AlterSchemaMode::StaticAnalysis);
+                          sourcemeta::core::AlterSchemaMode::Canonicalizer);
     canonicalizer.apply(schema, sourcemeta::core::schema_walker,
                         custom_resolver, transformer_callback_noop, dialect);
 

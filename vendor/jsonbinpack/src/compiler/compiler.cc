@@ -24,7 +24,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                   const std::optional<std::string> &default_dialect) -> void {
   sourcemeta::core::SchemaTransformer canonicalizer;
   sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaMode::StaticAnalysis);
+                        sourcemeta::core::AlterSchemaMode::Canonicalizer);
   canonicalizer.apply(schema, walker, make_resolver(resolver),
                       transformer_callback_noop, default_dialect);
 }

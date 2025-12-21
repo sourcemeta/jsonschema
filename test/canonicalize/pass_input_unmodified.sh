@@ -56,12 +56,7 @@ cat << 'EOF' > "$TMP/expected.json"
       "minLength": 0
     },
     {
-      "type": "number",
-      "multipleOf": 1
-    },
-    {
-      "type": "integer",
-      "multipleOf": 1
+      "type": "number"
     }
   ]
 }
