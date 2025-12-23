@@ -21,6 +21,7 @@ Global Options:
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
                                   if the `$schema` keyword is not set
    --json, -j                     Prefer JSON output if supported
+   --http, -h                     Allow network access to resolve remote schemas
 
 Commands:
 
@@ -32,9 +33,8 @@ Commands:
 
        Print this command reference help.
 
-   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...> [--http/-h]
-            [--benchmark/-b] [--loop <iterations>]
-            [--extension/-e <extension>]
+   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
+            [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>]
 
@@ -51,19 +51,18 @@ Commands:
        for error reporting purposes. Make sure they match or you will get
        non-sense results.
 
-   metaschema [schemas-or-directories...] [--http/-h]
-              [--extension/-e <extension>]
+   metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
 
-   compile <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
+   compile <schema.json|.yaml> [--extension/-e <extension>]
            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
 
        Compile the given schema into an internal optimised representation.
 
-   test [schemas-or-directories...] [--http/-h] [--extension/-e <extension>]
+   test [schemas-or-directories...] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
 
        Run a set of unit tests against a schema.
@@ -84,7 +83,7 @@ Commands:
        Use --list/-l to print a summary of all enabled rules.
        Use --indentation/-n to keep indentation when auto-fixing
 
-   bundle <schema.json|.yaml> [--http/-h] [--extension/-e <extension>]
+   bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
 
        Perform JSON Schema Bundling on a schema to inline remote references,
@@ -95,7 +94,7 @@ Commands:
        Statically inspect a schema to display schema locations and
        references in a human-readable manner.
 
-   canonicalize <schema.json|.yaml> [--http/-h]
+   canonicalize <schema.json|.yaml>
 
        Transform a JSON Schema into a canonical normalized form.
        Canonicalization is a process that simplifies a schema into a
