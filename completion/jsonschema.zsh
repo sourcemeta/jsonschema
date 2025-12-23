@@ -15,6 +15,7 @@ _jsonschema() {
     'lint:Lint schemas and optionally fix issues'
     'bundle:Inline remote references in a schema'
     'inspect:Display schema locations and references'
+    'canonicalize:Transform a schema into a canonical form'
     'encode:Encode JSON using JSON BinPack'
     'decode:Decode JSON using JSON BinPack'
     'version:Print version information'
@@ -110,6 +111,11 @@ _jsonschema() {
             '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         inspect)
+          _arguments \
+            ${global_options[@]} \
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
+        canonicalize)
           _arguments \
             ${global_options[@]} \
             '1:schema file:_files -g "*.json *.yaml *.yml"'

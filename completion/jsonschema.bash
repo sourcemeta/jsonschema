@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect encode decode version help"
+  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h"
 
@@ -59,7 +59,7 @@ _jsonschema() {
 
   case "${command}" in
     validate)
-      local options="--http -h --benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m"
+      local options="--benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
@@ -68,7 +68,7 @@ _jsonschema() {
       fi
       ;;
     metaschema)
-      local options="--http -h --extension -e --ignore -i --trace -t"
+      local options="--extension -e --ignore -i --trace -t"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
@@ -77,7 +77,7 @@ _jsonschema() {
       fi
       ;;
     compile)
-      local options="--http -h --extension -e --ignore -i --fast -f --minify -m"
+      local options="--extension -e --ignore -i --fast -f --minify -m"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
@@ -86,7 +86,7 @@ _jsonschema() {
       fi
       ;;
     test)
-      local options="--http -h --extension -e --ignore -i"
+      local options="--extension -e --ignore -i"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
@@ -113,7 +113,7 @@ _jsonschema() {
       fi
       ;;
     bundle)
-      local options="--http -h --extension -e --ignore -i --without-id -w"
+      local options="--extension -e --ignore -i --without-id -w"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
@@ -122,6 +122,14 @@ _jsonschema() {
       fi
       ;;
     inspect)
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      ;;
+    canonicalize)
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
