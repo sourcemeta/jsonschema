@@ -559,24 +559,39 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   return result;
 }
 
-auto sourcemeta::core::parse_schema_type(
-    const sourcemeta::core::JSON::String &type,
-    const std::function<void(const sourcemeta::core::JSON::Type)> &callback)
+static auto parse_schema_type_string(const sourcemeta::core::JSON::String &type,
+                                     sourcemeta::core::JSON::TypeSet &result)
     -> void {
   if (type == "null") {
-    callback(sourcemeta::core::JSON::Type::Null);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Null));
   } else if (type == "boolean") {
-    callback(sourcemeta::core::JSON::Type::Boolean);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Boolean));
   } else if (type == "object") {
-    callback(sourcemeta::core::JSON::Type::Object);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Object));
   } else if (type == "array") {
-    callback(sourcemeta::core::JSON::Type::Array);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Array));
   } else if (type == "number") {
-    callback(sourcemeta::core::JSON::Type::Integer);
-    callback(sourcemeta::core::JSON::Type::Real);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Integer));
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Real));
   } else if (type == "integer") {
-    callback(sourcemeta::core::JSON::Type::Integer);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Integer));
   } else if (type == "string") {
-    callback(sourcemeta::core::JSON::Type::String);
+    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::String));
   }
+}
+
+auto sourcemeta::core::parse_schema_type(const sourcemeta::core::JSON &type)
+    -> sourcemeta::core::JSON::TypeSet {
+  sourcemeta::core::JSON::TypeSet result;
+  if (type.is_string()) {
+    parse_schema_type_string(type.to_string(), result);
+  } else if (type.is_array()) {
+    for (const auto &item : type.as_array()) {
+      if (item.is_string()) {
+        parse_schema_type_string(item.to_string(), result);
+      }
+    }
+  }
+
+  return result;
 }

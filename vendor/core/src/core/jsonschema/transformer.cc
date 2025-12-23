@@ -1,9 +1,11 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
+#include <algorithm>     // std::erase_if
 #include <cassert>       // assert
 #include <set>           // std::set
 #include <sstream>       // std::ostringstream
+#include <tuple>         // std::tuple
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::pair
 
@@ -105,7 +107,7 @@ auto SchemaTransformer::check(
     const std::optional<JSON::String> &default_dialect,
     const std::optional<JSON::String> &default_id) const
     -> std::pair<bool, std::uint8_t> {
-  SchemaFrame frame{SchemaFrame::Mode::Locations};
+  SchemaFrame frame{SchemaFrame::Mode::Instances};
 
   // If we use the default id when there is already one, framing will duplicate
   // the locations leading to duplicate check reports
@@ -137,12 +139,12 @@ auto SchemaTransformer::check(
     const auto &current{get(schema, entry.second.pointer)};
     const auto current_vocabularies{frame.vocabularies(entry.second, resolver)};
     bool subresult{true};
-    for (const auto &[name, rule] : this->rules) {
+    for (const auto &rule : this->rules) {
       const auto outcome{rule->check(current, schema, current_vocabularies,
                                      walker, resolver, frame, entry.second)};
       if (outcome.applies) {
         subresult = false;
-        callback(entry.second.pointer, name, rule->message(), outcome);
+        callback(entry.second.pointer, rule->name(), rule->message(), outcome);
       }
     }
 
@@ -164,13 +166,14 @@ auto SchemaTransformer::apply(
     -> std::pair<bool, std::uint8_t> {
   // There is no point in applying an empty bundle
   assert(!this->rules.empty());
-  std::set<std::pair<const JSON *, const JSON::String *>> processed_rules;
+  std::set<std::tuple<const JSON *, const JSON::String *, std::uint64_t>>
+      processed_rules;
 
   bool result{true};
   std::size_t subschema_count{0};
   std::size_t subschema_failures{0};
   while (true) {
-    SchemaFrame frame{SchemaFrame::Mode::References};
+    SchemaFrame frame{SchemaFrame::Mode::Instances};
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
     std::unordered_set<Pointer> visited;
 
@@ -196,7 +199,7 @@ auto SchemaTransformer::apply(
           frame.vocabularies(entry.second, resolver)};
 
       bool subschema_failed{false};
-      for (const auto &[name, rule] : this->rules) {
+      for (const auto &rule : this->rules) {
         const auto subresult{rule->apply(current, schema, current_vocabularies,
                                          walker, resolver, frame,
                                          entry.second)};
@@ -206,7 +209,7 @@ auto SchemaTransformer::apply(
         } else {
           result = false;
           subschema_failed = true;
-          callback(entry.second.pointer, name, rule->message(),
+          callback(entry.second.pointer, rule->name(), rule->message(),
                    subresult.second);
         }
 
@@ -214,9 +217,14 @@ auto SchemaTransformer::apply(
           continue;
         }
 
-        std::pair<const JSON *, const JSON::String *> mark{&current, &name};
+        std::tuple<const JSON *, const JSON::String *, std::uint64_t> mark{
+            &current, &rule->name(),
+            // Allow applying the same rule to the same location if the schema
+            // has changed, which means we are still "making progress". The
+            // hashing is not perfect, but its enough
+            current.fast_hash()};
         if (processed_rules.contains(mark)) {
-          throw SchemaTransformRuleProcessedTwiceError(name,
+          throw SchemaTransformRuleProcessedTwiceError(rule->name(),
                                                        entry.second.pointer);
         }
 
@@ -235,6 +243,11 @@ auto SchemaTransformer::apply(
           const auto &target{destination.value().get()};
           // The destination still exists, so we don't have to do anything
           if (try_get(schema, target.pointer)) {
+            continue;
+          }
+
+          // If the source no longer exists, we don't need to fix the reference
+          if (!try_get(schema, reference.first.second.initial())) {
             continue;
           }
 
@@ -270,7 +283,9 @@ auto SchemaTransformer::apply(
 }
 
 auto SchemaTransformer::remove(const std::string &name) -> bool {
-  return this->rules.erase(name) > 0;
+  return std::erase_if(this->rules, [&name](const auto &rule) {
+           return rule->name() == name;
+         }) > 0;
 }
 
 } // namespace sourcemeta::core

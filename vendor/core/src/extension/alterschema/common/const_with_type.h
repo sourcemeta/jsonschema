@@ -23,23 +23,9 @@ public:
                      schema.is_object() && schema.defines("type") &&
                      schema.defines("const"));
 
-    std::set<JSON::Type> current_types;
-    if (schema.at("type").is_string()) {
-      parse_schema_type(
-          schema.at("type").to_string(),
-          [&current_types](const auto type) { current_types.emplace(type); });
-    } else if (schema.at("type").is_array()) {
-      for (const auto &entry : schema.at("type").as_array()) {
-        if (entry.is_string()) {
-          parse_schema_type(entry.to_string(),
-                            [&current_types](const auto type) {
-                              current_types.emplace(type);
-                            });
-        }
-      }
-    }
-
-    ONLY_CONTINUE_IF(current_types.contains(schema.at("const").type()));
+    const auto current_types{parse_schema_type(schema.at("type"))};
+    ONLY_CONTINUE_IF(current_types.test(
+        static_cast<std::size_t>(schema.at("const").type())));
     return APPLIES_TO_KEYWORDS("const", "type");
   }
 

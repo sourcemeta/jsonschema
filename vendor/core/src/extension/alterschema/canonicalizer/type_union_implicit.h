@@ -76,16 +76,14 @@ public:
   auto transform(JSON &schema, const Result &) const -> void override {
     auto types{sourcemeta::core::JSON::make_array()};
 
-    // All possible JSON Schema types
-    // See
-    // https://json-schema.org/draft/2020-12/json-schema-validation.html#rfc.section.6.1.1
     types.push_back(sourcemeta::core::JSON{"null"});
     types.push_back(sourcemeta::core::JSON{"boolean"});
     types.push_back(sourcemeta::core::JSON{"object"});
     types.push_back(sourcemeta::core::JSON{"array"});
     types.push_back(sourcemeta::core::JSON{"string"});
+
+    // Note we don't add `integer`, as its covered by `number`
     types.push_back(sourcemeta::core::JSON{"number"});
-    types.push_back(sourcemeta::core::JSON{"integer"});
 
     schema.assign("type", std::move(types));
   }

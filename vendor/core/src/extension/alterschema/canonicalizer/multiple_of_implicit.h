@@ -21,8 +21,8 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
                      schema.is_object() && schema.defines("type") &&
                      schema.at("type").is_string() &&
-                     (schema.at("type").to_string() == "integer" ||
-                      schema.at("type").to_string() == "number") &&
+                     // Applying this to numbers would be a semantic problem
+                     schema.at("type").to_string() == "integer" &&
                      !schema.defines("multipleOf"));
     return true;
   }

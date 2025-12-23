@@ -22,10 +22,10 @@ test "$CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 schema.json:1:1:
-  Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
+  Set a concise non-empty title at the top level of the schema to explain what the definition is about (top_level_title)
     at location ""
 schema.json:1:1:
-  Set a concise non-empty title at the top level of the schema to explain what the definition is about (top_level_title)
+  Set a non-empty description at the top level of the schema to explain what the definition is about in detail (top_level_description)
     at location ""
 EOF
 

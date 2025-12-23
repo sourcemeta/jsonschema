@@ -16,37 +16,22 @@ public:
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
 
-    sourcemeta::core::JSON::TypeSet current_types;
-    if (vocabularies.contains_any(
-            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-             Vocabularies::Known::JSON_Schema_2019_09_Validation,
-             Vocabularies::Known::JSON_Schema_Draft_7,
-             Vocabularies::Known::JSON_Schema_Draft_6,
-             Vocabularies::Known::JSON_Schema_Draft_4,
-             Vocabularies::Known::JSON_Schema_Draft_3,
-             Vocabularies::Known::JSON_Schema_Draft_2,
-             Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
-             Vocabularies::Known::JSON_Schema_Draft_1,
-             Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
-             Vocabularies::Known::JSON_Schema_Draft_0,
-             Vocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
-        schema.defines("type")) {
-      if (schema.at("type").is_string()) {
-        parse_schema_type(schema.at("type").to_string(),
-                          [&current_types](const auto type) {
-                            current_types.set(static_cast<std::size_t>(type));
-                          });
-      } else if (schema.at("type").is_array()) {
-        for (const auto &entry : schema.at("type").as_array()) {
-          if (entry.is_string()) {
-            parse_schema_type(
-                entry.to_string(), [&current_types](const auto type) {
-                  current_types.set(static_cast<std::size_t>(type));
-                });
-          }
-        }
-      }
-    }
+    auto current_types{vocabularies.contains_any(
+                           {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+                            Vocabularies::Known::JSON_Schema_2019_09_Validation,
+                            Vocabularies::Known::JSON_Schema_Draft_7,
+                            Vocabularies::Known::JSON_Schema_Draft_6,
+                            Vocabularies::Known::JSON_Schema_Draft_4,
+                            Vocabularies::Known::JSON_Schema_Draft_3,
+                            Vocabularies::Known::JSON_Schema_Draft_2,
+                            Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
+                            Vocabularies::Known::JSON_Schema_Draft_1,
+                            Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
+                            Vocabularies::Known::JSON_Schema_Draft_0,
+                            Vocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
+                               schema.defines("type")
+                           ? parse_schema_type(schema.at("type"))
+                           : sourcemeta::core::JSON::TypeSet{}};
 
     if (vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,

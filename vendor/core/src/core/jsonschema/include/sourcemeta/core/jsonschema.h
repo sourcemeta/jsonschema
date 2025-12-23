@@ -435,27 +435,23 @@ auto wrap(const JSON &schema, const Pointer &pointer,
 
 /// @ingroup jsonschema
 ///
-/// Parse a JSON Schema `type` string into one or more native JSON type
-/// definition. For example:
+/// Parse the value of a JSON Schema `type` keyword (which can be a string or
+/// an array of strings) into a set of native JSON types. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
 /// #include <sourcemeta/core/jsonschema.h>
 /// #include <cassert>
-/// #include <set>
 ///
-/// std::set<sourcemeta::core::JSON::Type> types;
-/// sourcemeta::core::parse_schema_type("number",
-///   [&types](const auto type) { types.emplace(type); });
-///
-/// assert(types.size() == 2);
-/// assert(types.contains(sourcemeta::core::JSON::Type::Integer));
-/// assert(types.contains(sourcemeta::core::JSON::Type::Real));
+/// const auto type{sourcemeta::core::parse_json(R"JSON([ "string", "null"
+/// ])JSON")}; const auto types{sourcemeta::core::parse_schema_type(type)};
+/// assert(types.test(
+///     static_cast<std::size_t>(sourcemeta::core::JSON::Type::String)));
+/// assert(types.test(
+///     static_cast<std::size_t>(sourcemeta::core::JSON::Type::Null)));
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto parse_schema_type(const JSON::String &type,
-                       const std::function<void(const JSON::Type)> &callback)
-    -> void;
+auto parse_schema_type(const JSON &type) -> JSON::TypeSet;
 
 } // namespace sourcemeta::core
 

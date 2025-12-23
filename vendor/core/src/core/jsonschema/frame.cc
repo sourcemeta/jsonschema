@@ -5,9 +5,9 @@
 #include <functional>    // std::less
 #include <map>           // std::map
 #include <optional>      // std::optional
-#include <set>           // std::set
 #include <sstream>       // std::ostringstream
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <utility>       // std::pair, std::move
 #include <vector>        // std::vector
 
@@ -268,7 +268,9 @@ auto traverse_origin_instance_locations(
     const sourcemeta::core::SchemaFrame::Instances &instances,
     const sourcemeta::core::Pointer &current,
     const std::optional<sourcemeta::core::PointerTemplate> &accumulator,
-    sourcemeta::core::SchemaFrame::Instances::mapped_type &destination)
+    sourcemeta::core::SchemaFrame::Instances::mapped_type &destination,
+    std::unordered_set<
+        const sourcemeta::core::SchemaFrame::References::value_type *> &visited)
     -> void {
   if (accumulator.has_value() &&
       std::ranges::find(destination, accumulator.value()) ==
@@ -277,18 +279,25 @@ auto traverse_origin_instance_locations(
   }
 
   for (const auto &reference : frame.references_to(current)) {
-    const auto subschema_pointer{reference.get().first.second.initial()};
-    // Avoid recursing to itself, in the case of circular subschemas
-    if (subschema_pointer == current) {
+    if (visited.contains(&reference.get())) {
       continue;
     }
 
+    visited.insert(&reference.get());
+
+    const auto subschema_pointer{reference.get().first.second.initial()};
     const auto match{instances.find(subschema_pointer)};
     if (match != instances.cend()) {
       for (const auto &instance_location : match->second) {
         traverse_origin_instance_locations(frame, instances, subschema_pointer,
-                                           instance_location, destination);
+                                           instance_location, destination,
+                                           visited);
       }
+    } else {
+      // Even if the parent doesn't have instance locations yet,
+      // recurse to find the origin of the reference chain
+      traverse_origin_instance_locations(frame, instances, subschema_pointer,
+                                         std::nullopt, destination, visited);
     }
   }
 }
@@ -302,16 +311,32 @@ struct CacheSubschema {
   std::optional<sourcemeta::core::Pointer> parent{};
 };
 
+auto is_definition_entry(const sourcemeta::core::Pointer &pointer) -> bool {
+  if (pointer.size() < 2) {
+    return false;
+  }
+
+  const auto &container{pointer.at(pointer.size() - 2)};
+  return container.is_property() && (container.to_property() == "$defs" ||
+                                     container.to_property() == "definitions");
+}
+
 auto repopulate_instance_locations(
     const sourcemeta::core::SchemaFrame &frame,
     const sourcemeta::core::SchemaFrame::Instances &instances,
     const std::unordered_map<sourcemeta::core::Pointer, CacheSubschema> &cache,
-    const sourcemeta::core::Pointer &, const CacheSubschema &cache_entry,
+    const sourcemeta::core::Pointer &pointer, const CacheSubschema &cache_entry,
     sourcemeta::core::SchemaFrame::Instances::mapped_type &destination,
     const std::optional<sourcemeta::core::PointerTemplate> &accumulator)
     -> void {
-  // Check parent first as even orphan schemas can inherit instance locations
-  // from their parents if the parent is in the evaluation flow
+  // Definition entries should not inherit instance locations from their parent
+  // container. They only get instance locations if something references them.
+  // However, children of definitions should still inherit from their definition
+  // parent
+  if (cache_entry.orphan && is_definition_entry(pointer)) {
+    return;
+  }
+
   if (cache_entry.parent.has_value() &&
       // Don't consider bases from the root subschema, as if that
       // subschema has any instance location other than "", then it
@@ -343,9 +368,6 @@ auto repopulate_instance_locations(
           frame, instances, cache, cache_entry.parent.value(),
           cache.at(cache_entry.parent.value()), destination, new_accumulator);
     }
-  } else if (cache_entry.orphan && cache_entry.instance_location.empty()) {
-    // Only return early for orphan schemas if they don't have a parent
-    return;
   }
 }
 
@@ -1035,18 +1057,21 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   }
 
   if (this->mode_ == sourcemeta::core::SchemaFrame::Mode::Instances) {
-    // Calculate alternative unresolved instance locations
+    // First pass: trace through references to find instance locations.
+    // This handles definitions that are referenced
     for (auto &entry : this->locations_) {
       if (entry.second.type == SchemaFrame::LocationType::Pointer) {
         continue;
       }
 
+      std::unordered_set<const SchemaFrame::References::value_type *> visited;
       traverse_origin_instance_locations(
           *this, this->instances_, entry.second.pointer, std::nullopt,
-          this->instances_[entry.second.pointer]);
+          this->instances_[entry.second.pointer], visited);
     }
 
-    // This is guaranteed to be top-down
+    // Second pass: inherit instance locations from parents (top-down).
+    // This handles applicator children inheriting from their parent schema
     for (auto &entry : this->locations_) {
       if (entry.second.type == SchemaFrame::LocationType::Pointer) {
         continue;
@@ -1057,6 +1082,20 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                     subschema->first, subschema->second,
                                     this->instances_[entry.second.pointer],
                                     std::nullopt);
+    }
+
+    // Third pass: trace references again. Now that inheritance has run,
+    // schemas from definitions can trace to applicator children that now have
+    // instance locations from inheritance
+    for (auto &entry : this->locations_) {
+      if (entry.second.type == SchemaFrame::LocationType::Pointer) {
+        continue;
+      }
+
+      std::unordered_set<const SchemaFrame::References::value_type *> visited;
+      traverse_origin_instance_locations(
+          *this, this->instances_, entry.second.pointer, std::nullopt,
+          this->instances_[entry.second.pointer], visited);
     }
   }
 }
