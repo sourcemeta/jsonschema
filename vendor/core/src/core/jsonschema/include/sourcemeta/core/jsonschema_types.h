@@ -161,6 +161,9 @@ struct SchemaWalkerResult {
   /// The keywords a given keyword depends on (if any) during the evaluation
   /// process
   std::unordered_set<std::string_view> dependencies;
+  /// The keywords a given keyword depends on for evaluation ordering purposes
+  /// only (not semantic dependencies)
+  std::unordered_set<std::string_view> order_dependencies;
   /// The JSON instance types that this keyword applies to (empty means all)
   JSON::TypeSet instances;
 
@@ -175,9 +178,12 @@ struct SchemaWalkerResult {
   SchemaWalkerResult(SchemaKeywordType type_,
                      std::optional<Vocabularies::URI> vocabulary_,
                      std::unordered_set<std::string_view> dependencies_,
+                     std::unordered_set<std::string_view> order_dependencies_,
                      JSON::TypeSet instances_)
       : type{type_}, vocabulary{std::move(vocabulary_)},
-        dependencies{std::move(dependencies_)}, instances{instances_} {}
+        dependencies{std::move(dependencies_)},
+        order_dependencies{std::move(order_dependencies_)},
+        instances{instances_} {}
 };
 
 /// @ingroup jsonschema

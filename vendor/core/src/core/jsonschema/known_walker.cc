@@ -11,10 +11,10 @@ using KeywordHandler =
     const SchemaWalkerResult &(*)(const Vocabularies &vocabularies);
 
 static const SchemaWalkerResult UNKNOWN_RESULT{
-    SchemaKeywordType::Unknown, std::nullopt, {}, {}};
+    SchemaKeywordType::Unknown, std::nullopt, {}, {}, {}};
 
 static const SchemaWalkerResult UNKNOWN_WITH_REF_RESULT{
-    SchemaKeywordType::Unknown, std::nullopt, {"$ref"}, {}};
+    SchemaKeywordType::Unknown, std::nullopt, {"$ref"}, {}, {}};
 
 auto has_draft3_to_7(const Vocabularies &vocabularies) -> bool {
   return vocabularies.contains(Known::JSON_Schema_Draft_7) ||
@@ -30,14 +30,21 @@ auto has_draft3_to_7(const Vocabularies &vocabularies) -> bool {
 #define RETURN_WITH_DEPENDENCIES(_vocabulary, _types, _strategy, ...)          \
   {                                                                            \
     static const SchemaWalkerResult result{                                    \
-        SchemaKeywordType::_strategy, _vocabulary, {__VA_ARGS__}, _types};     \
+        SchemaKeywordType::_strategy, _vocabulary, {__VA_ARGS__}, {}, _types}; \
+    return result;                                                             \
+  }
+
+#define RETURN_WITH_ORDER_DEPENDENCIES(_vocabulary, _types, _strategy, ...)    \
+  {                                                                            \
+    static const SchemaWalkerResult result{                                    \
+        SchemaKeywordType::_strategy, _vocabulary, {}, {__VA_ARGS__}, _types}; \
     return result;                                                             \
   }
 
 #define RETURN(_vocabulary, _types, _strategy)                                 \
   {                                                                            \
     static const SchemaWalkerResult result{                                    \
-        SchemaKeywordType::_strategy, _vocabulary, {}, _types};                \
+        SchemaKeywordType::_strategy, _vocabulary, {}, {}, _types};            \
     return result;                                                             \
   }
 
@@ -45,6 +52,13 @@ auto has_draft3_to_7(const Vocabularies &vocabularies) -> bool {
                                            ...)                                \
   if (vocabularies.contains(_vocabulary)) {                                    \
     RETURN_WITH_DEPENDENCIES(_vocabulary, _types, _strategy, __VA_ARGS__)      \
+  }
+
+#define CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(_vocabulary, _types,          \
+                                                 _strategy, ...)               \
+  if (vocabularies.contains(_vocabulary)) {                                    \
+    RETURN_WITH_ORDER_DEPENDENCIES(_vocabulary, _types, _strategy,             \
+                                   __VA_ARGS__)                                \
   }
 
 #define CHECK_VOCABULARY(_vocabulary, _types, _strategy)                       \
@@ -340,7 +354,7 @@ auto handle_properties(const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Validation)) {
-      RETURN_WITH_DEPENDENCIES(
+      RETURN_WITH_ORDER_DEPENDENCIES(
           Known::JSON_Schema_2020_12_Applicator, make_set({JSON::Type::Object}),
           ApplicatorMembersTraversePropertyStatic, "required")
     }
@@ -350,7 +364,7 @@ auto handle_properties(const Vocabularies &vocabularies)
   }
   if (vocabularies.contains(Known::JSON_Schema_2019_09_Applicator)) {
     if (vocabularies.contains(Known::JSON_Schema_2019_09_Validation)) {
-      RETURN_WITH_DEPENDENCIES(
+      RETURN_WITH_ORDER_DEPENDENCIES(
           Known::JSON_Schema_2019_09_Applicator, make_set({JSON::Type::Object}),
           ApplicatorMembersTraversePropertyStatic, "required")
     }
@@ -358,24 +372,60 @@ auto handle_properties(const Vocabularies &vocabularies)
            make_set({JSON::Type::Object}),
            ApplicatorMembersTraversePropertyStatic)
   }
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_7, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_7_Hyper, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_6, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_6_Hyper, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_4, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
-      Known::JSON_Schema_Draft_4_Hyper, make_set({JSON::Type::Object}),
-      ApplicatorMembersTraversePropertyStatic, "$ref", "required")
+  if (vocabularies.contains(Known::JSON_Schema_Draft_7)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_7,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
+  if (vocabularies.contains(Known::JSON_Schema_Draft_7_Hyper)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_7_Hyper,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
+  if (vocabularies.contains(Known::JSON_Schema_Draft_6)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_6,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
+  if (vocabularies.contains(Known::JSON_Schema_Draft_6_Hyper)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_6_Hyper,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
+  if (vocabularies.contains(Known::JSON_Schema_Draft_4)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_4,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
+  if (vocabularies.contains(Known::JSON_Schema_Draft_4_Hyper)) {
+    static const SchemaWalkerResult result{
+        SchemaKeywordType::ApplicatorMembersTraversePropertyStatic,
+        Known::JSON_Schema_Draft_4_Hyper,
+        {"$ref"},
+        {"required"},
+        make_set({JSON::Type::Object})};
+    return result;
+  }
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
       Known::JSON_Schema_Draft_3, make_set({JSON::Type::Object}),
       ApplicatorMembersTraversePropertyStatic, "$ref")
@@ -718,30 +768,30 @@ auto handle_type(const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   if (vocabularies.contains(Known::JSON_Schema_2020_12_Validation)) {
     if (vocabularies.contains(Known::JSON_Schema_2020_12_Applicator)) {
-      RETURN_WITH_DEPENDENCIES(Known::JSON_Schema_2020_12_Validation, {},
-                               Assertion, "properties")
+      RETURN_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_2020_12_Validation, {},
+                                     Assertion, "properties")
     }
     RETURN(Known::JSON_Schema_2020_12_Validation, {}, Assertion)
   }
   if (vocabularies.contains(Known::JSON_Schema_2019_09_Validation)) {
     if (vocabularies.contains(Known::JSON_Schema_2019_09_Applicator)) {
-      RETURN_WITH_DEPENDENCIES(Known::JSON_Schema_2019_09_Validation, {},
-                               Assertion, "properties")
+      RETURN_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_2019_09_Validation, {},
+                                     Assertion, "properties")
     }
     RETURN(Known::JSON_Schema_2019_09_Validation, {}, Assertion)
   }
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_7, {}, Assertion,
-                                     ("properties"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_7_Hyper, {},
-                                     Assertion, "properties")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_6, {}, Assertion,
-                                     ("properties"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_6_Hyper, {},
-                                     Assertion, "properties")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4, {}, Assertion,
-                                     ("properties"))
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
-                                     Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_7, {},
+                                           Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_7_Hyper, {},
+                                           Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_6, {},
+                                           Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_6_Hyper, {},
+                                           Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_4, {},
+                                           Assertion, "properties")
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
+                                           Assertion, "properties")
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3, {},
                                      ApplicatorElementsInPlaceSome, "$ref")
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3_Hyper, {},
@@ -834,10 +884,10 @@ auto handle_multipleOf(const Vocabularies &vocabularies)
 
 auto handle_maximum(const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Validation,
       make_set({JSON::Type::Integer, JSON::Type::Real}), Assertion, "type")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2019_09_Validation,
       make_set({JSON::Type::Integer, JSON::Type::Real}), Assertion, "type")
   CHECK_VOCABULARY_WITH_DEPENDENCIES(
@@ -881,10 +931,10 @@ auto handle_maximum(const Vocabularies &vocabularies)
 
 auto handle_minimum(const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2020_12_Validation,
       make_set({JSON::Type::Integer, JSON::Type::Real}), Assertion, "type")
-  CHECK_VOCABULARY_WITH_DEPENDENCIES(
+  CHECK_VOCABULARY_WITH_ORDER_DEPENDENCIES(
       Known::JSON_Schema_2019_09_Validation,
       make_set({JSON::Type::Integer, JSON::Type::Real}), Assertion, "type")
   CHECK_VOCABULARY_WITH_DEPENDENCIES(

@@ -157,6 +157,9 @@ property_names_type_default
 required_properties_in_properties
   Every property listed in the `required` keyword must be explicitly defined using the `properties` keyword
 
+simple_properties_identifiers
+  Set `properties` to identifier names that can be easily mapped to programming languages (matching [A-Za-z_][A-Za-z0-9_]*)
+
 single_type_array
   Setting `type` to an array of a single type is the same as directly declaring such type
 
@@ -211,7 +214,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 67
+Number of rules: 68
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -1,4 +1,5 @@
 #include <sourcemeta/core/alterschema.h>
+#include <sourcemeta/core/regex.h>
 
 // For built-in rules
 #include <algorithm>     // std::sort, std::unique
@@ -106,6 +107,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "linter/properties_default.h"
 #include "linter/property_names_default.h"
 #include "linter/property_names_type_default.h"
+#include "linter/simple_properties_identifiers.h"
 #include "linter/title_description_equal.h"
 #include "linter/title_trailing_period.h"
 #include "linter/title_trim.h"
@@ -215,6 +217,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<DescriptionTrim>();
     bundle.add<CommentTrim>();
     bundle.add<DuplicateExamples>();
+    bundle.add<SimplePropertiesIdentifiers>();
   }
 
   bundle.add<UnnecessaryAllOfRefWrapperModern>();
