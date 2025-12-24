@@ -67,8 +67,7 @@ public:
           continue;
         }
 
-        if (metadata.type != SchemaKeywordType::Assertion &&
-            dependency_blocked.contains(keyword)) {
+        if (dependency_blocked.contains(keyword)) {
           continue;
         }
 
@@ -77,11 +76,7 @@ public:
           continue;
         }
 
-        // TODO: Fix the fact that the walker declares dependencies for
-        // evaluation order convenience, not semantic dependencies (i.e. many
-        // assertion keywords depend on `type`)
-        if (metadata.type != SchemaKeywordType::Assertion &&
-            std::ranges::any_of(
+        if (std::ranges::any_of(
                 metadata.dependencies, [&](const auto &dependency) {
                   return !entry.defines(std::string{dependency}) &&
                          (schema.defines(std::string{dependency}) ||

@@ -6,6 +6,8 @@
 
 #include "encoding.h"
 
+#include <cassert> // assert
+
 static auto
 transformer_callback_noop(const sourcemeta::core::Pointer &,
                           const std::string_view, const std::string_view,
@@ -25,8 +27,10 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   sourcemeta::core::SchemaTransformer canonicalizer;
   sourcemeta::core::add(canonicalizer,
                         sourcemeta::core::AlterSchemaMode::Canonicalizer);
-  canonicalizer.apply(schema, walker, make_resolver(resolver),
-                      transformer_callback_noop, default_dialect);
+  [[maybe_unused]] const auto result =
+      canonicalizer.apply(schema, walker, make_resolver(resolver),
+                          transformer_callback_noop, default_dialect);
+  assert(result.first);
 }
 
 auto make_encoding(sourcemeta::core::JSON &document,
@@ -83,8 +87,10 @@ auto compile(sourcemeta::core::JSON &schema,
   // Numbers
   mapper.add<NumberArbitrary>();
 
-  mapper.apply(schema, walker, make_resolver(resolver),
-               transformer_callback_noop, default_dialect);
+  [[maybe_unused]] const auto mapper_result =
+      mapper.apply(schema, walker, make_resolver(resolver),
+                   transformer_callback_noop, default_dialect);
+  assert(mapper_result.first);
 
   // The "any" encoding is always the last resort
   const auto dialect{sourcemeta::core::dialect(schema)};

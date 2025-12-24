@@ -44,8 +44,10 @@ auto sourcemeta::jsonschema::canonicalize(
     sourcemeta::core::SchemaTransformer canonicalizer;
     sourcemeta::core::add(canonicalizer,
                           sourcemeta::core::AlterSchemaMode::Canonicalizer);
-    canonicalizer.apply(schema, sourcemeta::core::schema_walker,
-                        custom_resolver, transformer_callback_noop, dialect);
+    [[maybe_unused]] const auto result = canonicalizer.apply(
+        schema, sourcemeta::core::schema_walker, custom_resolver,
+        transformer_callback_noop, dialect);
+    assert(result.first);
 
     sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);

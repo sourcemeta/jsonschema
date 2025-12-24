@@ -474,14 +474,23 @@ auto sourcemeta::core::schema_keyword_priority(
     const sourcemeta::core::Vocabularies &vocabularies,
     const sourcemeta::core::SchemaWalker &walker) -> std::uint64_t {
   const auto &result{walker(keyword, vocabularies)};
-  return std::accumulate(
+  const auto priority_from_dependencies{std::accumulate(
       result.dependencies.cbegin(), result.dependencies.cend(),
       static_cast<std::uint64_t>(0),
       [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
         return std::max(
             accumulator,
             schema_keyword_priority(dependency, vocabularies, walker) + 1);
-      });
+      })};
+  const auto priority_from_order_dependencies{std::accumulate(
+      result.order_dependencies.cbegin(), result.order_dependencies.cend(),
+      static_cast<std::uint64_t>(0),
+      [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
+        return std::max(
+            accumulator,
+            schema_keyword_priority(dependency, vocabularies, walker) + 1);
+      })};
+  return std::max(priority_from_dependencies, priority_from_order_dependencies);
 }
 
 auto sourcemeta::core::wrap(const sourcemeta::core::JSON::String &identifier)

@@ -11,9 +11,10 @@ public:
             const sourcemeta::core::Vocabularies &vocabularies,
             const sourcemeta::core::SchemaFrame &,
             const sourcemeta::core::SchemaFrame::Location &,
-            const sourcemeta::core::SchemaWalker &,
+            const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
+    using namespace sourcemeta::core;
     ONLY_CONTINUE_IF(schema.is_object());
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
@@ -26,50 +27,35 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_1,
          Vocabularies::Known::JSON_Schema_Draft_0}));
     ONLY_CONTINUE_IF(!schema.defines("type"));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core) ||
-        !schema.defines_any({"$ref", "$dynamicRef"}));
-    ONLY_CONTINUE_IF(!vocabularies.contains(
-                         Vocabularies::Known::JSON_Schema_2020_12_Applicator) ||
-                     !schema.defines_any({"anyOf", "oneOf", "allOf", "if",
-                                          "then", "else", "not"}));
-    ONLY_CONTINUE_IF(!vocabularies.contains(
-                         Vocabularies::Known::JSON_Schema_2020_12_Validation) ||
-                     !schema.defines_any({"enum", "const"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) ||
-        !schema.defines_any({"$ref", "$recursiveRef"}));
-    ONLY_CONTINUE_IF(!vocabularies.contains(
-                         Vocabularies::Known::JSON_Schema_2019_09_Applicator) ||
-                     !schema.defines_any({"anyOf", "oneOf", "allOf", "if",
-                                          "then", "else", "not"}));
-    ONLY_CONTINUE_IF(!vocabularies.contains(
-                         Vocabularies::Known::JSON_Schema_2019_09_Validation) ||
-                     !schema.defines_any({"enum", "const"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_7) ||
-        !schema.defines_any({"$ref", "enum", "const", "anyOf", "oneOf", "allOf",
-                             "if", "then", "else", "not"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_6) ||
-        !schema.defines_any(
-            {"$ref", "enum", "const", "anyOf", "oneOf", "allOf", "not"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_4) ||
-        !schema.defines_any(
-            {"$ref", "enum", "anyOf", "oneOf", "allOf", "not"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_3) ||
-        !schema.defines_any({"$ref", "enum", "disallow", "extends"}))
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_2) ||
-        !schema.defines_any({"enum", "disallow", "extends"}));
-    ONLY_CONTINUE_IF(
-        !vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_1) ||
-        !schema.defines_any({"enum", "disallow", "extends"}));
-    ONLY_CONTINUE_IF(!vocabularies.contains(
-                         Vocabularies::Known::JSON_Schema_Draft_0_Hyper) ||
-                     !schema.defines_any({"enum", "disallow", "extends"}));
+    ONLY_CONTINUE_IF(!schema.defines("enum"));
+    ONLY_CONTINUE_IF(!vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
+                          Vocabularies::Known::JSON_Schema_Draft_7,
+                          Vocabularies::Known::JSON_Schema_Draft_6}) ||
+                     !schema.defines("const"));
+
+    for (const auto &entry : schema.as_object()) {
+      const auto &keyword_type{walker(entry.first, vocabularies).type};
+
+      // References point to other schemas that may have type constraints
+      ONLY_CONTINUE_IF(keyword_type != SchemaKeywordType::Reference);
+
+      // Logical in-place applicators apply without affecting the instance
+      // location, meaning they impose constraints on the same instance. Adding
+      // an implicit type union alongside these would create redundant branches
+      // that need complex simplification
+      ONLY_CONTINUE_IF(
+          keyword_type != SchemaKeywordType::ApplicatorValueOrElementsInPlace &&
+          keyword_type != SchemaKeywordType::ApplicatorMembersInPlaceSome &&
+          keyword_type != SchemaKeywordType::ApplicatorElementsInPlace &&
+          keyword_type != SchemaKeywordType::ApplicatorElementsInPlaceSome &&
+          keyword_type !=
+              SchemaKeywordType::ApplicatorElementsInPlaceSomeNegate &&
+          keyword_type != SchemaKeywordType::ApplicatorValueInPlaceMaybe &&
+          keyword_type != SchemaKeywordType::ApplicatorValueInPlaceNegate);
+    }
+
     return true;
   }
 
