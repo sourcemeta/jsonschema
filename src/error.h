@@ -1,7 +1,7 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
-#include "test.h"
+#include <sourcemeta/blaze/test.h>
 
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -335,7 +335,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_FAILURE;
-  } catch (const FileError<TestParseError> &error) {
+  } catch (const FileError<sourcemeta::blaze::TestParseError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     if (!is_json) {

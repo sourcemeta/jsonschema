@@ -1,4 +1,5 @@
 #include <sourcemeta/blaze/output.h>
+#include <sourcemeta/blaze/test.h>
 
 #include <cstdlib>  // EXIT_FAILURE
 #include <iostream> // std::cerr, std::cout
@@ -10,7 +11,6 @@
 #include "input.h"
 #include "logger.h"
 #include "resolver.h"
-#include "test.h"
 #include "utils.h"
 
 auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
@@ -27,15 +27,15 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     const auto &schema_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
 
-    std::optional<sourcemeta::jsonschema::TestSuite> test_suite;
+    std::optional<sourcemeta::blaze::TestSuite> test_suite;
     try {
-      test_suite.emplace(sourcemeta::jsonschema::TestSuite::parse(
+      test_suite.emplace(sourcemeta::blaze::TestSuite::parse(
           entry.second, entry.positions, entry.first.parent_path(),
           schema_resolver, sourcemeta::core::schema_walker,
           sourcemeta::blaze::default_schema_compiler, dialect));
-    } catch (const sourcemeta::jsonschema::TestParseError &error) {
+    } catch (const sourcemeta::blaze::TestParseError &error) {
       std::cout << entry.first.string() << ":\n";
-      throw FileError<sourcemeta::jsonschema::TestParseError>{
+      throw FileError<sourcemeta::blaze::TestParseError>{
           entry.first, error.what(), error.location(), error.line(),
           error.column()};
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
@@ -61,7 +61,7 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
 
     const auto suite_result{test_suite->run(
         [&](std::size_t index, std::size_t total,
-            const sourcemeta::jsonschema::TestCase &test_case, bool actual) {
+            const sourcemeta::blaze::TestCase &test_case, bool actual) {
           if (index == 1 && verbose) {
             std::cout << "\n";
           }
