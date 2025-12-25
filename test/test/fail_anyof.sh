@@ -53,6 +53,9 @@ error: Schema validation failure
   The value was expected to be of type integer but it was of type object
     at instance location ""
     at evaluate path "/allOf/1/type"
+  The object value was expected to validate against the 2 given subschemas
+    at instance location ""
+    at evaluate path "/allOf"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

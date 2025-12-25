@@ -48,7 +48,6 @@ cat << EOF > "$TMP/expected.txt"
 Detecting schema resources from file: $(realpath "$TMP")/schema.json
 Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
 Importing schema into the resolution context: https://example.com
-Looking for target: https://example.com
 $(realpath "$TMP")/test.json:
   1/3 PASS First test
   2/3 FAIL Unexpected

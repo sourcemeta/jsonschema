@@ -44,7 +44,6 @@ Using extension: .yml
 Detecting schema resources from file: $(realpath "$TMP")/schema.json
 Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
 Importing schema into the resolution context: https://example.com
-Looking for target: https://example.com
 $(realpath "$TMP")/foo/test.json: NO TESTS
 EOF
 

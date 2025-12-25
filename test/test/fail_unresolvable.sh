@@ -28,7 +28,6 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Looking for target: https://example.com/unknown
 $(realpath "$TMP")/test.json:
 error: Could not resolve the reference to an external schema
   at identifier https://example.com/unknown

@@ -76,11 +76,9 @@ Importing schema into the resolution context: https://example.com/1
 Detecting schema resources from file: $(realpath "$TMP")/schemas/2.json
 Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/2.json
 Importing schema into the resolution context: https://example.com/2
-Looking for target: https://example.com/1
 $(realpath "$TMP")/tests/1.json:
   1/2 PASS First test
   2/2 PASS Second test
-Looking for target: https://example.com/2
 $(realpath "$TMP")/tests/2.json:
   1/2 PASS First test
   2/2 PASS Second test

@@ -27,8 +27,10 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: Test case documents must be objects
-  at test case #2
+  at line 8
+  at column 5
   at file path $(realpath "$TMP")/test.json
+  at location "/tests/1"
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
