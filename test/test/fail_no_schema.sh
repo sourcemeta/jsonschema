@@ -29,7 +29,10 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: The test document must contain a \`target\` property
+  at line 1
+  at column 1
   at file path $(realpath "$TMP")/test.json
+  at location ""
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
@@ -45,7 +48,10 @@ cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 {
   "error": "The test document must contain a \`target\` property",
-  "filePath": "$(realpath "$TMP")/test.json"
+  "line": 1,
+  "column": 1,
+  "filePath": "$(realpath "$TMP")/test.json",
+  "location": ""
 }
 EOF
 

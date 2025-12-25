@@ -44,7 +44,6 @@ cat << EOF > "$TMP/expected.txt"
 Detecting schema resources from file: $(realpath "$TMP")/schema.json
 Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
 Importing schema into the resolution context: https://example.com
-Looking for target: https://example.com#foo
 $(realpath "$TMP")/test.json:
 error: Could not resolve schema under test
   at identifier https://example.com#foo

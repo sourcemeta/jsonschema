@@ -30,8 +30,10 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: The test case document \`valid\` property must be a boolean
-  at test case #1
+  at line 6
+  at column 7
   at file path $(realpath "$TMP")/test.json
+  at location "/tests/0/valid"
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF

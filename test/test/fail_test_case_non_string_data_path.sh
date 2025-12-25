@@ -26,8 +26,10 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
 error: Test case documents must set the \`dataPath\` property to a string
-  at test case #1
+  at line 6
+  at column 7
   at file path $(realpath "$TMP")/test.json
+  at location "/tests/0/dataPath"
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
 EOF
