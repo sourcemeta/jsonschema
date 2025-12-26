@@ -145,9 +145,6 @@ non_applicable_type_specific_keywords
 not_false
   Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
 
-orphan_definitions
-  Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
-
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
 
@@ -220,7 +217,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 70
+Number of rules: 69
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
