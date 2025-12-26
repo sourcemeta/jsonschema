@@ -60,8 +60,10 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     std::cout << entry.first.string() << ":";
 
     const auto suite_result{test_suite->run(
-        [&](std::size_t index, std::size_t total,
-            const sourcemeta::blaze::TestCase &test_case, bool actual) {
+        [&](const sourcemeta::core::JSON::String &, std::size_t index,
+            std::size_t total, const sourcemeta::blaze::TestCase &test_case,
+            bool actual, sourcemeta::blaze::TestTimestamp,
+            sourcemeta::blaze::TestTimestamp) {
           if (index == 1 && verbose) {
             std::cout << "\n";
           }
