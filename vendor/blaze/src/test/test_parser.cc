@@ -24,10 +24,13 @@ inline auto TEST_ERROR_IF(
 
 namespace sourcemeta::blaze {
 
-auto TestCase::parse(const sourcemeta::core::JSON &test_case_json,
-                     const sourcemeta::core::PointerPositionTracker &tracker,
-                     const std::filesystem::path &base_path,
-                     const sourcemeta::core::Pointer &location) -> TestCase {
+auto TestCase::parse(
+    const sourcemeta::core::JSON &test_case_json,
+    const sourcemeta::core::PointerPositionTracker &tracker,
+    const std::filesystem::path &base_path,
+    const sourcemeta::core::Pointer &location,
+    const sourcemeta::core::PointerPositionTracker::Position &position)
+    -> TestCase {
   TEST_ERROR_IF(!test_case_json.is_object(), tracker, location,
                 "Test case documents must be objects");
   TEST_ERROR_IF(!test_case_json.defines("data") &&
@@ -66,7 +69,8 @@ auto TestCase::parse(const sourcemeta::core::JSON &test_case_json,
     return TestCase{.description = std::move(description),
                     .valid = test_case_json.at("valid").to_boolean(),
                     .data = test_case_json.at("data"),
-                    .tracker = std::move(data_tracker)};
+                    .tracker = std::move(data_tracker),
+                    .position = position};
   } else {
     const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
         base_path / test_case_json.at("dataPath").to_string())};
@@ -75,7 +79,8 @@ auto TestCase::parse(const sourcemeta::core::JSON &test_case_json,
     return TestCase{.description = std::move(description),
                     .valid = test_case_json.at("valid").to_boolean(),
                     .data = std::move(data),
-                    .tracker = std::move(data_tracker)};
+                    .tracker = std::move(data_tracker),
+                    .position = position};
   }
 }
 
@@ -115,9 +120,11 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
 
   std::size_t index{0};
   for (const auto &test_case_json : document.at("tests").as_array()) {
-    test_suite.tests.push_back(
-        TestCase::parse(test_case_json, tracker, base_path,
-                        sourcemeta::core::Pointer{"tests", index}));
+    const sourcemeta::core::Pointer location{"tests", index};
+    const auto position{tracker.get(location)};
+    assert(position.has_value());
+    test_suite.tests.push_back(TestCase::parse(
+        test_case_json, tracker, base_path, location, position.value()));
     index += 1;
   }
 
