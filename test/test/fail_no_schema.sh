@@ -45,7 +45,6 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-$(realpath "$TMP")/test.json:
 {
   "error": "The test document must contain a \`target\` property",
   "line": 1,

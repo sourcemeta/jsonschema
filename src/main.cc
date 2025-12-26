@@ -66,6 +66,7 @@ Commands:
         [--ignore/-i <schemas-or-directories>]
 
        Run a set of unit tests against a schema.
+       Pass --json/-j to output results in CTRF format (https://ctrf.io).
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
