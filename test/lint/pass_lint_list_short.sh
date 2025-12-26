@@ -145,6 +145,9 @@ non_applicable_type_specific_keywords
 not_false
   Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
 
+orphan_definitions
+  Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
+
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
 
@@ -211,13 +214,16 @@ unnecessary_allof_ref_wrapper_modern
 unnecessary_allof_wrapper
   Keywords inside `allOf` that do not conflict with the parent schema can be elevated
 
+unsatisfiable_in_place_applicator_type
+  An in-place applicator branch that defines a `type` with no overlap with the parent `type` can never be satisfied
+
 unsatisfiable_max_contains
   Setting the `maxContains` keyword to a number greater than or equal to the array upper bound does not add any further constraint
 
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 69
+Number of rules: 71
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

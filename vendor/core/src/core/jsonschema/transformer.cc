@@ -107,7 +107,7 @@ auto SchemaTransformer::check(
     const std::optional<JSON::String> &default_dialect,
     const std::optional<JSON::String> &default_id) const
     -> std::pair<bool, std::uint8_t> {
-  SchemaFrame frame{SchemaFrame::Mode::Instances};
+  SchemaFrame frame{SchemaFrame::Mode::References};
 
   // If we use the default id when there is already one, framing will duplicate
   // the locations leading to duplicate check reports
@@ -173,7 +173,7 @@ auto SchemaTransformer::apply(
   std::size_t subschema_count{0};
   std::size_t subschema_failures{0};
   while (true) {
-    SchemaFrame frame{SchemaFrame::Mode::Instances};
+    SchemaFrame frame{SchemaFrame::Mode::References};
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
     std::unordered_set<Pointer> visited;
 
