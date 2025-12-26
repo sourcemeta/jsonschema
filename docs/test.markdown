@@ -21,6 +21,10 @@ suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
 **If you want to validate that a schema adheres to its metaschema, use the
 [`metaschema`](./metaschema.markdown) command instead.**
 
+Pass `--json` to output results in [CTRF (Common Test Report
+Format)](https://ctrf.io), a standardized JSON format for test results that
+integrates with CI/CD tools and test result dashboards.
+
 Writing tests
 -------------
 
