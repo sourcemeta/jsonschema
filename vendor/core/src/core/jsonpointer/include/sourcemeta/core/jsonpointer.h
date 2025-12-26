@@ -21,6 +21,7 @@
 #include <memory>      // std::allocator
 #include <ostream>     // std::basic_ostream
 #include <string>      // std::basic_string
+#include <string_view> // std::string_view
 #include <type_traits> // std::is_same_v
 
 /// @defgroup jsonpointer JSON Pointer
@@ -544,6 +545,42 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_string(const PointerTemplate &pointer)
     -> std::basic_string<JSON::Char, JSON::CharTraits,
                          std::allocator<JSON::Char>>;
+
+/// @ingroup jsonpointer
+///
+/// Mangle a JSON Pointer template and prefix into a collision-free identifier.
+///
+/// The encoding rules for ASCII characters (0x00-0x7F) are:
+///
+/// - Lowercase at segment start (except x, u, z): capitalize (no marker)
+/// - Lowercase x, u, z at segment start: hex escape (reserved characters)
+/// - Uppercase at segment start (except X, U, Z): U + letter
+/// - Uppercase X, U, Z at segment start: hex escape (reserved characters)
+/// - Non-segment-start lowercase: as-is
+/// - Non-segment-start uppercase (except X, U): as-is
+/// - Non-segment-start X: X58, Non-segment-start U: X55
+/// - ASCII digits (0-9): as-is
+/// - Other ASCII (space, punctuation, control): hex escape, starts new segment
+/// - Z/z reserved for special token prefixes
+///
+/// For non-ASCII bytes (0x80-0xFF, e.g. UTF-8 sequences):
+///
+/// - Always hex escaped
+/// - Do NOT start a new segment (preserves UTF-8 multi-byte sequences)
+///
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::PointerTemplate pointer{"foo", "bar"};
+/// const auto result{sourcemeta::core::mangle(pointer, "schema")};
+/// assert(result == "Schema_Foo_Bar");
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto mangle(const PointerTemplate &pointer, std::string_view prefix)
+    -> std::string;
 
 /// @ingroup jsonpointer
 ///

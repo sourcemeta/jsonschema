@@ -87,6 +87,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/unnecessary_allof_ref_wrapper_draft.h"
 #include "common/unnecessary_allof_ref_wrapper_modern.h"
 #include "common/unnecessary_allof_wrapper.h"
+#include "common/unsatisfiable_in_place_applicator_type.h"
 
 // Linter
 #include "linter/additional_properties_default.h"
@@ -140,6 +141,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<NonApplicableTypeSpecificKeywords>();
   bundle.add<DuplicateAllOfBranches>();
   bundle.add<DuplicateAnyOfBranches>();
+  bundle.add<UnsatisfiableInPlaceApplicatorType>();
   bundle.add<ElseWithoutIf>();
   bundle.add<IfWithoutThenElse>();
   bundle.add<IgnoredMetaschema>();
