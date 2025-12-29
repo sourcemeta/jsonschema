@@ -127,10 +127,6 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   bundle.add<sourcemeta::blaze::ValidDefault>(
       sourcemeta::blaze::default_schema_compiler);
 
-  // TODO: This rule has known problems we are working hard to fix right now
-  // See https://github.com/sourcemeta/core/pull/2145
-  bundle.remove("orphan_definitions");
-
   if (options.contains("only")) {
     if (options.contains("exclude")) {
       throw OptionConflictError{
