@@ -1,11 +1,16 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
 
-#include <iostream> // std::cerr, std::cout
+#include <algorithm> // std::transform
+#include <cctype>    // std::toupper
+#include <iomanip>   // std::hex, std::setw, std::setfill
+#include <iostream>  // std::cerr, std::cout
+#include <sstream>   // std::ostringstream
 
 #include "command.h"
 #include "configuration.h"
@@ -62,11 +67,67 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   }
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};
-  if (options.contains("minify")) {
+
+  if (options.contains("include") && !options.at("include").empty()) {
+    std::string name{options.at("include").front()};
+
+    static const auto IDENTIFIER_PATTERN{
+        sourcemeta::core::to_regex("^[A-Za-z_][A-Za-z0-9_]*$")};
+    if (!IDENTIFIER_PATTERN.has_value() ||
+        !sourcemeta::core::matches(IDENTIFIER_PATTERN.value(), name)) {
+      throw InvalidIncludeIdentifier{name};
+    }
+
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](unsigned char character) -> unsigned char {
+                     return static_cast<unsigned char>(std::toupper(character));
+                   });
+
+    std::ostringstream json_stream;
+    sourcemeta::core::stringify(template_json, json_stream);
+    const auto json_data{std::move(json_stream).str()};
+
+    constexpr auto BYTES_PER_LINE{16};
+
+    std::cout << "#ifndef SOURCEMETA_JSONSCHEMA_INCLUDE_" << name << "_H_\n";
+    std::cout << "#define SOURCEMETA_JSONSCHEMA_INCLUDE_" << name << "_H_\n";
+    std::cout << "\n";
+    std::cout << "#ifdef __cplusplus\n";
+    std::cout << "#include <string_view>\n";
+    std::cout << "#endif\n";
+    std::cout << "\n";
+    std::cout << "static const char " << name << "_DATA[] =";
+
+    for (std::size_t index = 0; index < json_data.size(); ++index) {
+      if (index % BYTES_PER_LINE == 0) {
+        std::cout << "\n  \"";
+      }
+
+      std::cout << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+                << (static_cast<unsigned int>(
+                       static_cast<unsigned char>(json_data[index])));
+
+      if ((index + 1) % BYTES_PER_LINE == 0 || index + 1 == json_data.size()) {
+        std::cout << "\"";
+      }
+    }
+
+    std::cout << ";\n";
+    std::cout << std::dec;
+    std::cout << "static const unsigned int " << name
+              << "_LENGTH = " << json_data.size() << ";\n";
+    std::cout << "\n";
+    std::cout << "#ifdef __cplusplus\n";
+    std::cout << "static constexpr std::string_view " << name << "{" << name
+              << "_DATA, " << name << "_LENGTH};\n";
+    std::cout << "#endif\n";
+    std::cout << "\n";
+    std::cout << "#endif\n";
+  } else if (options.contains("minify")) {
     sourcemeta::core::stringify(template_json, std::cout);
+    std::cout << "\n";
   } else {
     sourcemeta::core::prettify(template_json, std::cout);
+    std::cout << "\n";
   }
-
-  std::cout << "\n";
 }

@@ -81,6 +81,21 @@ private:
   std::string rule_;
 };
 
+class InvalidIncludeIdentifier : public std::runtime_error {
+public:
+  InvalidIncludeIdentifier(std::string identifier)
+      : std::runtime_error{"The include identifier is not a valid C/C++ "
+                           "identifier"},
+        identifier_{std::move(identifier)} {}
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+private:
+  std::string identifier_;
+};
+
 class LintAutoFixError : public std::runtime_error {
 public:
   LintAutoFixError(std::string message, std::filesystem::path path,
@@ -313,6 +328,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_FAILURE;
   } catch (const InvalidLintRuleError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const InvalidIncludeIdentifier &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
