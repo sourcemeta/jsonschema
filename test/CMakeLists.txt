@@ -359,6 +359,9 @@ add_jsonschema_test_unix(compile/pass_without_extension_json)
 add_jsonschema_test_unix(compile/pass_without_extension_yaml)
 add_jsonschema_test_unix(compile/pass_custom_extension_json)
 add_jsonschema_test_unix(compile/pass_custom_extension_yaml)
+add_jsonschema_test_unix(compile/pass_include)
+add_jsonschema_test_unix(compile/pass_include_lowercase)
+add_jsonschema_test_unix(compile/pass_include_short)
 
 # Canonicalize
 add_jsonschema_test_unix(canonicalize/pass_input_unmodified)
