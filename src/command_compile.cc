@@ -1,6 +1,7 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/yaml.h>
 
 #include <sourcemeta/blaze/compiler.h>
@@ -69,6 +70,14 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
   if (options.contains("include") && !options.at("include").empty()) {
     std::string name{options.at("include").front()};
+
+    static const auto IDENTIFIER_PATTERN{
+        sourcemeta::core::to_regex("^[A-Za-z_][A-Za-z0-9_]*$")};
+    if (!IDENTIFIER_PATTERN.has_value() ||
+        !sourcemeta::core::matches(IDENTIFIER_PATTERN.value(), name)) {
+      throw InvalidIncludeIdentifier{name};
+    }
+
     std::transform(name.begin(), name.end(), name.begin(),
                    [](unsigned char character) -> unsigned char {
                      return static_cast<unsigned char>(std::toupper(character));
