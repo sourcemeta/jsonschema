@@ -12,7 +12,6 @@
 #include <sourcemeta/core/jsonpointer_error.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/jsonpointer_position.h>
-#include <sourcemeta/core/jsonpointer_template.h>
 #include <sourcemeta/core/jsonpointer_walker.h>
 // NOLINTEND(misc-include-cleaner)
 
@@ -49,10 +48,6 @@ const Pointer empty_pointer;
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON WeakPointer.
 const WeakPointer empty_weak_pointer;
-
-/// @ingroup jsonpointer
-/// A JSON Pointer with unresolved wildcards
-using PointerTemplate = GenericPointerTemplate<Pointer>;
 
 /// @ingroup jsonpointer
 /// Get a value from a JSON document using a JSON Pointer (`const` overload).
@@ -468,27 +463,6 @@ auto stringify(const WeakPointer &pointer,
 
 /// @ingroup jsonpointer
 ///
-/// Stringify the input JSON Pointer template into a given C++ standard output
-/// stream. For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/jsonpointer.h>
-/// #include <iostream>
-/// #include <sstream>
-///
-/// const sourcemeta::core::Pointer base{"foo", "bar"};
-/// const sourcemeta::core::PointerTemplate pointer{base};
-/// std::ostringstream stream;
-/// sourcemeta::core::stringify(pointer, stream);
-/// std::cout << stream.str() << std::endl;
-/// ```
-SOURCEMETA_CORE_JSONPOINTER_EXPORT
-auto stringify(const PointerTemplate &pointer,
-               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
-    -> void;
-
-/// @ingroup jsonpointer
-///
 /// Stringify the input JSON Pointer into a C++ standard string. For example:
 ///
 /// ```cpp
@@ -527,27 +501,6 @@ auto to_string(const WeakPointer &pointer)
 
 /// @ingroup jsonpointer
 ///
-/// Stringify the input JSON Pointer template into a C++ standard string. For
-/// example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/jsonpointer.h>
-/// #include <string>
-/// #include <iostream>
-///
-/// sourcemeta::core::PointerTemplate pointer;
-/// pointer.emplace_back(sourcemeta::core::Pointer::Token{"foo"});
-/// pointer.emplace_back(sourcemeta::core::PointerTemplate::Wildcard::Property);
-/// const std::string result{sourcemeta::core::to_string(pointer)};
-/// std::cout << result << '\n';
-/// ```
-SOURCEMETA_CORE_JSONPOINTER_EXPORT
-auto to_string(const PointerTemplate &pointer)
-    -> std::basic_string<JSON::Char, JSON::CharTraits,
-                         std::allocator<JSON::Char>>;
-
-/// @ingroup jsonpointer
-///
 /// Mangle a JSON Pointer template and prefix into a collision-free identifier.
 ///
 /// The encoding rules for ASCII characters (0x00-0x7F) are:
@@ -574,13 +527,12 @@ auto to_string(const PointerTemplate &pointer)
 /// #include <sourcemeta/core/jsonpointer.h>
 /// #include <cassert>
 ///
-/// const sourcemeta::core::PointerTemplate pointer{"foo", "bar"};
+/// const sourcemeta::core::Pointer pointer{"foo", "bar"};
 /// const auto result{sourcemeta::core::mangle(pointer, "schema")};
 /// assert(result == "Schema_Foo_Bar");
 /// ```
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
-auto mangle(const PointerTemplate &pointer, std::string_view prefix)
-    -> std::string;
+auto mangle(const Pointer &pointer, std::string_view prefix) -> std::string;
 
 /// @ingroup jsonpointer
 ///
@@ -715,41 +667,6 @@ struct hash<sourcemeta::core::GenericPointer<
            (last.is_property()
                 ? static_cast<std::size_t>(last.property_hash().a)
                 : last.to_index());
-  }
-};
-
-template <typename PointerT>
-struct hash<sourcemeta::core::GenericPointerTemplate<PointerT>> {
-  auto operator()(const sourcemeta::core::GenericPointerTemplate<PointerT>
-                      &pointer) const noexcept -> std::size_t {
-    const auto size{pointer.size()};
-    if (size == 0) {
-      return size;
-    }
-
-    auto hash_element =
-        [](const typename sourcemeta::core::GenericPointerTemplate<
-            PointerT>::value_type &element) -> std::size_t {
-      using Template = sourcemeta::core::GenericPointerTemplate<PointerT>;
-      const auto *token{std::get_if<typename Template::Token>(&element)};
-      if (token) {
-        return token->is_property()
-                   ? static_cast<std::size_t>(token->property_hash().a)
-                   : token->to_index();
-      } else {
-        return element.index();
-      }
-    };
-
-    const auto &first{*pointer.cbegin()};
-    const auto &middle{
-        *(pointer.cbegin() +
-          static_cast<typename sourcemeta::core::GenericPointerTemplate<
-              PointerT>::difference_type>(size / 2))};
-    const auto &last{*(pointer.cend() - 1)};
-
-    return size + hash_element(first) + hash_element(middle) +
-           hash_element(last);
   }
 };
 } // namespace std

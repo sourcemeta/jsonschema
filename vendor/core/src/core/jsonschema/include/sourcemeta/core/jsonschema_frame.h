@@ -104,7 +104,7 @@ class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrame {
 public:
   /// The mode of framing. More extensive analysis can be compute and memory
   /// intensive
-  enum class Mode : std::uint8_t { Locations, References, Instances };
+  enum class Mode : std::uint8_t { Locations, References };
 
   SchemaFrame(const Mode mode) : mode_{mode} {}
 
@@ -176,10 +176,6 @@ public:
       // point to different places.
       std::map<std::pair<SchemaReferenceType, JSON::String>, Location>;
 
-  // TODO: Turn the mapped value into a proper set
-  /// A set of unresolved instance locations
-  using Instances = std::map<Pointer, std::vector<PointerTemplate>>;
-
   /// A set of paths to frame within a schema wrapper
   using Paths = std::set<Pointer>;
 
@@ -237,10 +233,6 @@ public:
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 
-  /// Get the unresolved instance locations associated with a location entry
-  [[nodiscard]] auto instance_locations(const Location &location) const -> const
-      typename Instances::mapped_type &;
-
   /// Find all references to a given location pointer
   [[nodiscard]] auto references_to(const Pointer &pointer) const -> std::vector<
       std::reference_wrapper<const typename References::value_type>>;
@@ -255,7 +247,6 @@ private:
 #endif
   Locations locations_;
   References references_;
-  Instances instances_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

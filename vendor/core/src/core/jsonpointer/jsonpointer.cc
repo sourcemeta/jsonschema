@@ -347,12 +347,6 @@ auto stringify(const WeakPointer &pointer,
   stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream);
 }
 
-auto stringify(const PointerTemplate &pointer,
-               std::basic_ostream<JSON::Char, JSON::CharTraits> &stream)
-    -> void {
-  stringify<JSON::Char, JSON::CharTraits, std::allocator>(pointer, stream);
-}
-
 auto to_string(const Pointer &pointer)
     -> std::basic_string<JSON::Char, JSON::CharTraits,
                          std::allocator<JSON::Char>> {
@@ -364,16 +358,6 @@ auto to_string(const Pointer &pointer)
 }
 
 auto to_string(const WeakPointer &pointer)
-    -> std::basic_string<JSON::Char, JSON::CharTraits,
-                         std::allocator<JSON::Char>> {
-  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
-                           std::allocator<JSON::Char>>
-      result;
-  stringify(pointer, result);
-  return result.str();
-}
-
-auto to_string(const PointerTemplate &pointer)
     -> std::basic_string<JSON::Char, JSON::CharTraits,
                          std::allocator<JSON::Char>> {
   std::basic_ostringstream<JSON::Char, JSON::CharTraits,

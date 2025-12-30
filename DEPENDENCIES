@@ -1,5 +1,5 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core 9985d96665aae0a8dfabf63f59b0732b92c64771
+core https://github.com/sourcemeta/core 94ff49bd58ca63c5e5a7fb2435b3bc72872517c4
 jsonbinpack https://github.com/sourcemeta/jsonbinpack 8fae212dc7ec02af4bb0cd4e7fccd42a2471f1c1
 blaze https://github.com/sourcemeta/blaze 8dba65f8aebfe1ac976168b76e01c20dd406c517
 hydra https://github.com/sourcemeta/hydra af9f2c54709d620872ead0c3f8f683c15a0fa702

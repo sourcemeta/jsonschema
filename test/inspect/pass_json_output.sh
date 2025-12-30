@@ -146,11 +146,7 @@ cat << 'EOF' > "$TMP/expected_json.txt"
       "base": "https://json-schema.org/draft/2020-12/schema",
       "fragment": null
     }
-  ],
-  "instances": {
-    "": [ "" ],
-    "/$defs/string": [ "" ]
-  }
+  ]
 }
 EOF
 
