@@ -94,19 +94,6 @@ auto print_frame(std::ostream &stream,
       stream << "    Parent            : <NONE>\n";
     }
 
-    const auto &instance_locations{frame.instance_locations(location.second)};
-    if (!instance_locations.empty()) {
-      for (const auto &instance_location : instance_locations) {
-        if (instance_location.empty()) {
-          stream << "    Instance Location :\n";
-        } else {
-          stream << "    Instance Location : ";
-          sourcemeta::core::stringify(instance_location, stream);
-          stream << "\n";
-        }
-      }
-    }
-
     if (std::next(iterator) != frame.locations().cend()) {
       stream << "\n";
     }
@@ -162,7 +149,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   const auto dialect{default_dialect(options, configuration)};
 
   sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::Instances};
+      sourcemeta::core::SchemaFrame::Mode::References};
 
   try {
     const auto &custom_resolver{

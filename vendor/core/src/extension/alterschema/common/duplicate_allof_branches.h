@@ -31,11 +31,44 @@ public:
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    auto collection = schema.at("allOf");
-    std::sort(collection.as_array().begin(), collection.as_array().end());
-    auto last =
-        std::unique(collection.as_array().begin(), collection.as_array().end());
-    collection.erase(last, collection.as_array().end());
-    schema.at("allOf").into(std::move(collection));
+    this->index_mapping_.clear();
+    const auto &original{schema.at("allOf")};
+
+    std::unordered_map<std::reference_wrapper<const JSON>, std::size_t,
+                       HashJSON<std::reference_wrapper<const JSON>>,
+                       EqualJSON<std::reference_wrapper<const JSON>>>
+        seen;
+    auto result{JSON::make_array()};
+
+    for (std::size_t index = 0; index < original.size(); ++index) {
+      const auto &value{original.at(index)};
+      const auto match{seen.find(std::cref(value))};
+
+      if (match == seen.end()) {
+        this->index_mapping_[index] = seen.size();
+        seen.emplace(std::cref(value), seen.size());
+        result.push_back(value);
+      } else {
+        this->index_mapping_[index] = match->second;
+      }
+    }
+
+    schema.assign("allOf", std::move(result));
   }
+
+  [[nodiscard]] auto rereference(const std::string &, const Pointer &,
+                                 const Pointer &target,
+                                 const Pointer &current) const
+      -> Pointer override {
+    const auto allof_prefix{current.concat({"allOf"})};
+    const auto relative{target.resolve_from(allof_prefix)};
+    const auto old_index{relative.at(0).to_index()};
+    const auto new_index{this->index_mapping_.at(old_index)};
+    const Pointer old_prefix{allof_prefix.concat({old_index})};
+    const Pointer new_prefix{allof_prefix.concat({new_index})};
+    return target.rebase(old_prefix, new_prefix);
+  }
+
+private:
+  mutable std::unordered_map<std::size_t, std::size_t> index_mapping_;
 };

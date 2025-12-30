@@ -26,7 +26,6 @@ cat << 'EOF' > "$TMP/expected.txt"
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : <NONE>
-    Instance Location :
 
 (POINTER) URI: https://example.com#/$id
     Type              : Static

@@ -1,6 +1,6 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME jsonpointer
   PRIVATE_HEADERS pointer.h position.h error.h token.h
-    walker.h template.h
+    walker.h
   SOURCES jsonpointer.cc stringify.h parser.h grammar.h position.cc mangle.cc)
 
 if(SOURCEMETA_CORE_INSTALL)

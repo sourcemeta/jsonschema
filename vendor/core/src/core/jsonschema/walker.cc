@@ -23,8 +23,6 @@ auto ref_overrides_adjacent_keywords(const std::string &base_dialect) -> bool {
 
 auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
           const sourcemeta::core::Pointer &pointer,
-          const sourcemeta::core::PointerTemplate &instance_location,
-          const sourcemeta::core::PointerTemplate &relative_instance_location,
           std::vector<sourcemeta::core::SchemaIteratorEntry> &subschemas,
           const sourcemeta::core::JSON &subschema,
           const sourcemeta::core::SchemaWalker &walker,
@@ -77,16 +75,14 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
       resolver, current_base_dialect, current_dialect)};
 
   if (type == SchemaWalkerType_t::Deep || level > 0) {
-    sourcemeta::core::SchemaIteratorEntry entry{
-        .parent = parent,
-        .pointer = pointer,
-        .dialect = current_dialect,
-        .vocabularies = vocabularies,
-        .base_dialect = current_base_dialect,
-        .subschema = subschema,
-        .instance_location = instance_location,
-        .relative_instance_location = relative_instance_location,
-        .orphan = orphan};
+    sourcemeta::core::SchemaIteratorEntry entry{.parent = parent,
+                                                .pointer = pointer,
+                                                .dialect = current_dialect,
+                                                .vocabularies = vocabularies,
+                                                .base_dialect =
+                                                    current_base_dialect,
+                                                .subschema = subschema,
+                                                .orphan = orphan};
     subschemas.push_back(std::move(entry));
   }
 
@@ -116,100 +112,60 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
           ApplicatorValueTraverseSomeProperty: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Condition{pair.first});
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Wildcard::Property);
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Condition{pair.first},
-              sourcemeta::core::PointerTemplate::Wildcard::Property},
-             subschemas, pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::
           ApplicatorValueTraverseAnyPropertyKey: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Wildcard::Key);
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Wildcard::Key}, subschemas,
-             pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::
           ApplicatorValueTraverseAnyItem: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Wildcard::Item);
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Wildcard::Item}, subschemas,
-             pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::
           ApplicatorValueTraverseSomeItem: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Condition{pair.first});
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Wildcard::Item);
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Condition{pair.first},
-              sourcemeta::core::PointerTemplate::Wildcard::Item},
-             subschemas, pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::ApplicatorValueTraverseParent: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.pop_back();
-        walk(pointer, new_pointer, new_instance_location, {}, subschemas,
-             pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceOther: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        walk(pointer, new_pointer, instance_location, {}, subschemas,
-             pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceNegate: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Negation{});
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Negation{}}, subschemas,
-             pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::ApplicatorValueInPlaceMaybe: {
         sourcemeta::core::Pointer new_pointer{pointer};
         new_pointer.emplace_back(pair.first);
-        auto new_instance_location{instance_location};
-        new_instance_location.emplace_back(
-            sourcemeta::core::PointerTemplate::Condition{pair.first});
-        walk(pointer, new_pointer, new_instance_location,
-             {sourcemeta::core::PointerTemplate::Condition{pair.first}},
-             subschemas, pair.second, walker, resolver, current_dialect,
-             current_base_dialect, type, level + 1, orphan);
+        walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+             current_dialect, current_base_dialect, type, level + 1, orphan);
       } break;
 
       case sourcemeta::core::SchemaKeywordType::ApplicatorElementsTraverseItem:
@@ -218,10 +174,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(new_pointer.back());
-            walk(pointer, new_pointer, new_instance_location,
-                 {new_pointer.back()}, subschemas, pair.second.at(index),
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
                  walker, resolver, current_dialect, current_base_dialect, type,
                  level + 1, orphan);
           }
@@ -235,9 +188,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, instance_location, {}, subschemas,
-                 pair.second.at(index), walker, resolver, current_dialect,
-                 current_base_dialect, type, level + 1, orphan);
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
+                 walker, resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         }
 
@@ -249,19 +202,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{pair.first});
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{
-                    std::to_string(index)});
-            walk(pointer, new_pointer, new_instance_location,
-                 {sourcemeta::core::PointerTemplate::Condition{pair.first},
-                  sourcemeta::core::PointerTemplate::Condition{
-                      std::to_string(index)}},
-                 subschemas, pair.second.at(index), walker, resolver,
-                 current_dialect, current_base_dialect, type, level + 1,
-                 orphan);
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
+                 walker, resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         }
 
@@ -274,22 +217,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{pair.first});
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{
-                    std::to_string(index)});
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Negation{});
-            walk(pointer, new_pointer, new_instance_location,
-                 {sourcemeta::core::PointerTemplate::Condition{pair.first},
-                  sourcemeta::core::PointerTemplate::Condition{
-                      std::to_string(index)},
-                  sourcemeta::core::PointerTemplate::Negation{}},
-                 subschemas, pair.second.at(index), walker, resolver,
-                 current_dialect, current_base_dialect, type, level + 1,
-                 orphan);
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
+                 walker, resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         }
 
@@ -302,10 +232,7 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(subpair.first);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(new_pointer.back());
-            walk(pointer, new_pointer, new_instance_location,
-                 {new_pointer.back()}, subschemas, subpair.second, walker,
+            walk(pointer, new_pointer, subschemas, subpair.second, walker,
                  resolver, current_dialect, current_base_dialect, type,
                  level + 1, orphan);
           }
@@ -320,11 +247,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(subpair.first);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(subpair.first);
-            walk(pointer, new_pointer, new_instance_location, {subpair.first},
-                 subschemas, subpair.second, walker, resolver, current_dialect,
-                 current_base_dialect, type, level + 1, orphan);
+            walk(pointer, new_pointer, subschemas, subpair.second, walker,
+                 resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         }
 
@@ -336,16 +261,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(subpair.first);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{pair.first});
-            new_instance_location.emplace_back(
-                sourcemeta::core::PointerTemplate::Condition{subpair.first});
-            walk(pointer, new_pointer, new_instance_location,
-                 {sourcemeta::core::PointerTemplate::Condition{pair.first},
-                  sourcemeta::core::PointerTemplate::Condition{subpair.first}},
-                 subschemas, subpair.second, walker, resolver, current_dialect,
-                 current_base_dialect, type, level + 1, orphan);
+            walk(pointer, new_pointer, subschemas, subpair.second, walker,
+                 resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         }
 
@@ -357,9 +275,9 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(subpair.first);
-            walk(pointer, new_pointer, instance_location, {}, subschemas,
-                 subpair.second, walker, resolver, current_dialect,
-                 current_base_dialect, type, level + 1, true);
+            walk(pointer, new_pointer, subschemas, subpair.second, walker,
+                 resolver, current_dialect, current_base_dialect, type,
+                 level + 1, true);
           }
         }
 
@@ -372,23 +290,15 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            auto new_instance_location{instance_location};
-            new_instance_location.emplace_back(new_pointer.back());
-            walk(pointer, new_pointer, new_instance_location,
-                 {new_pointer.back()}, subschemas, pair.second.at(index),
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
                  walker, resolver, current_dialect, current_base_dialect, type,
                  level + 1, orphan);
           }
         } else {
           sourcemeta::core::Pointer new_pointer{pointer};
           new_pointer.emplace_back(pair.first);
-          auto new_instance_location{instance_location};
-          new_instance_location.emplace_back(
-              sourcemeta::core::PointerTemplate::Wildcard::Item);
-          walk(pointer, new_pointer, new_instance_location,
-               {sourcemeta::core::PointerTemplate::Wildcard::Item}, subschemas,
-               pair.second, walker, resolver, current_dialect,
-               current_base_dialect, type, level + 1, orphan);
+          walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+               current_dialect, current_base_dialect, type, level + 1, orphan);
         }
 
         break;
@@ -400,16 +310,15 @@ auto walk(const std::optional<sourcemeta::core::Pointer> &parent,
             sourcemeta::core::Pointer new_pointer{pointer};
             new_pointer.emplace_back(pair.first);
             new_pointer.emplace_back(index);
-            walk(pointer, new_pointer, instance_location, {}, subschemas,
-                 pair.second.at(index), walker, resolver, current_dialect,
-                 current_base_dialect, type, level + 1, orphan);
+            walk(pointer, new_pointer, subschemas, pair.second.at(index),
+                 walker, resolver, current_dialect, current_base_dialect, type,
+                 level + 1, orphan);
           }
         } else {
           sourcemeta::core::Pointer new_pointer{pointer};
           new_pointer.emplace_back(pair.first);
-          walk(pointer, new_pointer, instance_location, {}, subschemas,
-               pair.second, walker, resolver, current_dialect,
-               current_base_dialect, type, level + 1, orphan);
+          walk(pointer, new_pointer, subschemas, pair.second, walker, resolver,
+               current_dialect, current_base_dialect, type, level + 1, orphan);
         }
 
         break;
@@ -437,31 +346,25 @@ sourcemeta::core::SchemaIterator::SchemaIterator(
       sourcemeta::core::dialect(schema, default_dialect)};
 
   sourcemeta::core::Pointer pointer;
-  sourcemeta::core::PointerTemplate instance_location;
   // If the given schema declares no dialect and the user didn't
   // not pass a default, then there is nothing we can do. We know
   // the current schema is a subschema, but cannot walk any further.
   if (!dialect.has_value()) {
-    sourcemeta::core::SchemaIteratorEntry entry{
-        .parent = std::nullopt,
-        .pointer = pointer,
-        .dialect = std::nullopt,
-        .vocabularies = {},
-        .base_dialect = std::nullopt,
-        .subschema = schema,
-        // TODO: Only compute these if needed, i.e. when framing with instance
-        // locations
-        .instance_location = instance_location,
-        .relative_instance_location = instance_location,
-        .orphan = false};
+    sourcemeta::core::SchemaIteratorEntry entry{.parent = std::nullopt,
+                                                .pointer = pointer,
+                                                .dialect = std::nullopt,
+                                                .vocabularies = {},
+                                                .base_dialect = std::nullopt,
+                                                .subschema = schema,
+                                                .orphan = false};
     this->subschemas.push_back(std::move(entry));
   } else {
     const auto base_dialect{
         sourcemeta::core::base_dialect(schema, resolver, dialect)};
     assert(base_dialect.has_value());
-    walk(std::nullopt, pointer, instance_location, instance_location,
-         this->subschemas, schema, walker, resolver, dialect.value(),
-         base_dialect.value(), SchemaWalkerType_t::Deep, 0, false);
+    walk(std::nullopt, pointer, this->subschemas, schema, walker, resolver,
+         dialect.value(), base_dialect.value(), SchemaWalkerType_t::Deep, 0,
+         false);
   }
 }
 
@@ -474,13 +377,12 @@ sourcemeta::core::SchemaIteratorFlat::SchemaIteratorFlat(
       sourcemeta::core::dialect(schema, default_dialect)};
   if (dialect.has_value()) {
     sourcemeta::core::Pointer pointer;
-    sourcemeta::core::PointerTemplate instance_location;
     const auto base_dialect{
         sourcemeta::core::base_dialect(schema, resolver, dialect)};
     assert(base_dialect.has_value());
-    walk(std::nullopt, pointer, instance_location, instance_location,
-         this->subschemas, schema, walker, resolver, dialect.value(),
-         base_dialect.value(), SchemaWalkerType_t::Flat, 0, false);
+    walk(std::nullopt, pointer, this->subschemas, schema, walker, resolver,
+         dialect.value(), base_dialect.value(), SchemaWalkerType_t::Flat, 0,
+         false);
   }
 }
 
@@ -513,10 +415,6 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
         .vocabularies = vocabularies,
         .base_dialect = base_dialect,
         .subschema = entry.second,
-        // TODO: Only compute these if needed, i.e. when framing with instance
-        // locations
-        .instance_location = {},
-        .relative_instance_location = {},
         .orphan = false};
     this->entries.push_back(std::move(subschema_entry));
   }

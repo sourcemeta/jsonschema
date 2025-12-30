@@ -7,7 +7,7 @@ public:
 
   [[nodiscard]] auto
   condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &, const SchemaFrame::Location &,
+            const SchemaFrame &frame, const SchemaFrame::Location &location,
             const SchemaWalker &walker, const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
@@ -48,6 +48,13 @@ public:
       if (!entry.is_object() || entry.empty() ||
           // We separately handle this case, as it has many other subtleties
           entry.defines("$ref")) {
+        continue;
+      }
+
+      // Skip entries that have direct references pointing to them
+      const auto entry_pointer{
+          location.relative_pointer.concat({"allOf", index - 1})};
+      if (!frame.references_to(entry_pointer).empty()) {
         continue;
       }
 
@@ -109,6 +116,19 @@ public:
           keyword, schema.at("allOf").at(allof_index).at(keyword), "allOf");
       schema.at("allOf").at(allof_index).erase(keyword);
     }
+  }
+
+  [[nodiscard]] auto rereference(const std::string &, const Pointer &,
+                                 const Pointer &target,
+                                 const Pointer &current) const
+      -> Pointer override {
+    // The rule moves keywords from /allOf/<index>/<keyword> to /<keyword>
+    const auto allof_prefix{current.concat({"allOf"})};
+    const auto relative{target.resolve_from(allof_prefix)};
+    const auto &keyword{relative.at(1).to_property()};
+    const Pointer old_prefix{allof_prefix.concat({relative.at(0), keyword})};
+    const Pointer new_prefix{current.concat({keyword})};
+    return target.rebase(old_prefix, new_prefix);
   }
 
 private:

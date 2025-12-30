@@ -4,7 +4,6 @@
 #include <iomanip>     // std::setfill, std::setw
 #include <sstream>     // std::ostringstream
 #include <string_view> // std::string_view
-#include <variant>     // std::visit
 
 namespace {
 
@@ -24,12 +23,7 @@ constexpr auto RESERVED_Z_LOWER = 'z';
 
 // Special token markers
 constexpr std::string_view TOKEN_EMPTY = "ZEmpty";
-constexpr std::string_view TOKEN_WILDCARD_PROPERTY = "ZAnyProperty";
-constexpr std::string_view TOKEN_WILDCARD_ITEM = "ZAnyItem";
-constexpr std::string_view TOKEN_WILDCARD_KEY = "ZAnyKey";
-constexpr std::string_view TOKEN_CONDITION = "ZMaybe";
-constexpr std::string_view TOKEN_NEGATION = "ZNot";
-constexpr std::string_view TOKEN_REGEX = "ZRegex";
+constexpr std::string_view TOKEN_INDEX = "ZIndex";
 
 constexpr auto ASCII_MAX = static_cast<unsigned char>(0x80);
 
@@ -152,69 +146,22 @@ inline auto encode_string_or_empty(std::ostringstream &output,
   }
 }
 
-class TokenVisitor {
-public:
-  explicit TokenVisitor(std::ostringstream &output) noexcept
-      : output_{output} {}
-
-  auto operator()(const sourcemeta::core::Pointer::Token &token) const noexcept
-      -> void {
-    this->output_ << SEPARATOR;
-    encode_string_or_empty(this->output_, token.to_property());
-  }
-
-  auto operator()(const sourcemeta::core::PointerTemplate::Wildcard &wildcard)
-      const noexcept -> void {
-    this->output_ << SEPARATOR;
-    switch (wildcard) {
-      case sourcemeta::core::PointerTemplate::Wildcard::Property:
-        this->output_ << TOKEN_WILDCARD_PROPERTY;
-        break;
-      case sourcemeta::core::PointerTemplate::Wildcard::Item:
-        this->output_ << TOKEN_WILDCARD_ITEM;
-        break;
-      case sourcemeta::core::PointerTemplate::Wildcard::Key:
-        this->output_ << TOKEN_WILDCARD_KEY;
-        break;
-    }
-  }
-
-  auto operator()(const sourcemeta::core::PointerTemplate::Condition &condition)
-      const noexcept -> void {
-    this->output_ << SEPARATOR << TOKEN_CONDITION;
-    if (condition.suffix.has_value()) {
-      encode_string_or_empty(this->output_, condition.suffix.value());
-    }
-  }
-
-  auto
-  operator()(const sourcemeta::core::PointerTemplate::Negation &) const noexcept
-      -> void {
-    this->output_ << SEPARATOR << TOKEN_NEGATION;
-  }
-
-  auto operator()(const sourcemeta::core::PointerTemplate::Regex &regex)
-      const noexcept -> void {
-    this->output_ << SEPARATOR << TOKEN_REGEX;
-    encode_string_or_empty(this->output_, regex);
-  }
-
-private:
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  std::ostringstream &output_;
-};
-
 } // namespace
 
 namespace sourcemeta::core {
 
-auto mangle(const PointerTemplate &pointer, const std::string_view prefix)
+auto mangle(const Pointer &pointer, const std::string_view prefix)
     -> std::string {
   assert(!prefix.empty());
   std::ostringstream output;
   encode_prefix(output, prefix);
   for (const auto &token : pointer) {
-    std::visit(TokenVisitor{output}, token);
+    output << SEPARATOR;
+    if (token.is_property()) {
+      encode_string_or_empty(output, token.to_property());
+    } else {
+      output << TOKEN_INDEX << token.to_index();
+    }
   }
   return output.str();
 }

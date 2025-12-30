@@ -1,17 +1,23 @@
 #ifndef SOURCEMETA_CORE_JSON_HASH_H_
 #define SOURCEMETA_CORE_JSON_HASH_H_
 
-#include <cassert> // assert
-#include <cstdint> // std::uint64_t
-#include <cstring> // std::memcpy
+#include <cassert>    // assert
+#include <cstdint>    // std::uint64_t
+#include <cstring>    // std::memcpy
+#include <functional> // std::reference_wrapper
 
 namespace sourcemeta::core {
 
 /// @ingroup json
 template <typename T> struct HashJSON {
   using hash_type = std::uint64_t;
+
   inline auto operator()(const T &value) const noexcept -> hash_type {
-    return value.fast_hash();
+    if constexpr (requires { value.get().fast_hash(); }) {
+      return value.get().fast_hash();
+    } else {
+      return value.fast_hash();
+    }
   }
 
   [[nodiscard]]
@@ -142,6 +148,21 @@ template <typename T> struct PropertyHashJSON {
     // If there is anything written past the first byte,
     // then it is a perfect hash
     return (hash.a & 255) == 0;
+  }
+};
+
+/// @ingroup json
+/// Until C++26, `std::reference_wrapper` does not overload `operator==`,
+/// so we need custom comparisons for use in i.e. `unordered_set`
+/// See
+/// https://en.cppreference.com/w/cpp/utility/functional/reference_wrapper/operator_cmp.html
+template <typename T> struct EqualJSON {
+  inline auto operator()(const T &left, const T &right) const -> bool {
+    if constexpr (requires { left.get() == right.get(); }) {
+      return left.get() == right.get();
+    } else {
+      return left == right;
+    }
   }
 };
 
