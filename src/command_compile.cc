@@ -87,32 +87,41 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
     sourcemeta::core::stringify(template_json, json_stream);
     const auto json_data{std::move(json_stream).str()};
 
-    constexpr auto BYTES_PER_LINE{16};
+    constexpr auto BYTES_PER_LINE{12};
 
     std::cout << "#ifndef SOURCEMETA_JSONSCHEMA_INCLUDE_" << name << "_H_\n";
     std::cout << "#define SOURCEMETA_JSONSCHEMA_INCLUDE_" << name << "_H_\n";
     std::cout << "\n";
     std::cout << "#ifdef __cplusplus\n";
+    std::cout << "#include <cstddef>\n";
     std::cout << "#include <string_view>\n";
     std::cout << "#endif\n";
     std::cout << "\n";
-    std::cout << "static const char " << name << "_DATA[] =";
+    std::cout << "static const char " << name << "_DATA[] = {";
 
     for (std::size_t index = 0; index < json_data.size(); ++index) {
       if (index % BYTES_PER_LINE == 0) {
-        std::cout << "\n  \"";
+        std::cout << "\n  ";
       }
 
-      std::cout << "\\x" << std::hex << std::setw(2) << std::setfill('0')
+      std::cout << "0x" << std::hex << std::setw(2) << std::setfill('0')
                 << (static_cast<unsigned int>(
                        static_cast<unsigned char>(json_data[index])));
 
-      if ((index + 1) % BYTES_PER_LINE == 0 || index + 1 == json_data.size()) {
-        std::cout << "\"";
+      std::cout << ",";
+      if ((index + 1) % BYTES_PER_LINE != 0) {
+        std::cout << " ";
       }
     }
 
-    std::cout << ";\n";
+    if (json_data.size() % BYTES_PER_LINE != 0) {
+      std::cout << "0x00";
+    } else {
+      std::cout << "\n  0x00";
+    }
+
+    std::cout << "\n};\n";
+    std::cout << "\n";
     std::cout << std::dec;
     std::cout << "static const unsigned int " << name
               << "_LENGTH = " << json_data.size() << ";\n";
