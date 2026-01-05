@@ -296,53 +296,26 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   if (output_json) {
-    std::vector<std::size_t> indices(errors_array.size());
-    for (std::size_t i = 0; i < errors_array.size(); ++i) {
-      indices[i] = i;
-    }
-
-    std::sort(indices.begin(), indices.end(),
-              [&errors_array](const std::size_t left_idx,
-                              const std::size_t right_idx) -> bool {
-                const auto &left = errors_array.at(left_idx);
-                const auto &right = errors_array.at(right_idx);
-
-                const auto &left_path = left.at("path");
-                const auto &right_path = right.at("path");
-                if (left_path.to_string() != right_path.to_string()) {
-                  return left_path.to_string() < right_path.to_string();
+    std::sort(errors_array.as_array().begin(), errors_array.as_array().end(),
+              [](const sourcemeta::core::JSON &left,
+                 const sourcemeta::core::JSON &right) {
+                const auto left_path_str = left.at("path").to_string();
+                const auto right_path_str = right.at("path").to_string();
+                if (left_path_str != right_path_str) {
+                  return left_path_str < right_path_str;
                 }
 
                 const auto &left_pos = left.at("position");
                 const auto &right_pos = right.at("position");
 
-                const bool left_is_null = left_pos.is_null();
-                const bool right_is_null = right_pos.is_null();
-                if (left_is_null && right_is_null) {
+                if (left_pos.is_null())
                   return false;
-                }
-                if (left_is_null) {
-                  return false;
-                }
-                if (right_is_null) {
+                if (right_pos.is_null())
                   return true;
-                }
 
-                const auto left_line = left_pos.at(0).to_integer();
-                const auto right_line = right_pos.at(0).to_integer();
-                if (left_line != right_line) {
-                  return left_line < right_line;
-                }
-
-                const auto left_col = left_pos.at(1).to_integer();
-                const auto right_col = right_pos.at(1).to_integer();
-                return left_col < right_col;
+                return left_pos.front().to_integer() <
+                       right_pos.front().to_integer();
               });
-
-    auto sorted_errors = sourcemeta::core::JSON::make_array();
-    for (const auto idx : indices) {
-      sorted_errors.push_back(errors_array.at(idx));
-    }
 
     auto output_json_object = sourcemeta::core::JSON::make_object();
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
@@ -356,7 +329,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           "health", sourcemeta::core::JSON{static_cast<std::size_t>(health)});
     }
 
-    output_json_object.assign("errors", sourcemeta::core::JSON{sorted_errors});
+    output_json_object.assign("errors", sourcemeta::core::JSON{errors_array});
     sourcemeta::core::prettify(output_json_object, std::cout, indentation);
     std::cout << "\n";
   }
