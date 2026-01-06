@@ -296,6 +296,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   if (output_json) {
+    std::sort(errors_array.as_array().begin(), errors_array.as_array().end(),
+              [](const sourcemeta::core::JSON &left,
+                 const sourcemeta::core::JSON &right) {
+                return left.at("position").front() <
+                       right.at("position").front();
+              });
+
     auto output_json_object = sourcemeta::core::JSON::make_object();
     output_json_object.assign("valid", sourcemeta::core::JSON{result});
 
