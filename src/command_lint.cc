@@ -299,22 +299,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     std::sort(errors_array.as_array().begin(), errors_array.as_array().end(),
               [](const sourcemeta::core::JSON &left,
                  const sourcemeta::core::JSON &right) {
-                const auto left_path_str = left.at("path").to_string();
-                const auto right_path_str = right.at("path").to_string();
-                if (left_path_str != right_path_str) {
-                  return left_path_str < right_path_str;
-                }
-
-                const auto &left_pos = left.at("position");
-                const auto &right_pos = right.at("position");
-
-                if (left_pos.is_null())
-                  return false;
-                if (right_pos.is_null())
-                  return true;
-
-                return left_pos.front().to_integer() <
-                       right_pos.front().to_integer();
+                return left.at("position").front() <
+                       right.at("position").front();
               });
 
     auto output_json_object = sourcemeta::core::JSON::make_object();
