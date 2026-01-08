@@ -9,8 +9,8 @@ public:
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &walker,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
@@ -73,6 +73,12 @@ public:
       // If none of the types that the keyword applies to is a valid
       // type for the current schema, then by definition we can remove it
       if ((metadata.instances & current_types).none()) {
+        // Skip keywords that have references pointing to them
+        if (frame.has_references_through(
+                location.pointer.concat({entry.first}))) {
+          continue;
+        }
+
         positions.push_back(Pointer{entry.first});
       }
     }

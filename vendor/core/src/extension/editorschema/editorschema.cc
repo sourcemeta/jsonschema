@@ -10,8 +10,7 @@ namespace {
 // See https://arxiv.org/abs/2503.11288 for an academic study of this topic
 auto top_dynamic_anchor_location(
     const sourcemeta::core::SchemaFrame &frame,
-    const sourcemeta::core::Pointer &current,
-    const sourcemeta::core::JSON::String &fragment,
+    const sourcemeta::core::Pointer &current, const std::string_view fragment,
     const sourcemeta::core::JSON::String &default_uri)
     -> std::optional<sourcemeta::core::Pointer> {
   // Get the location object of where we are at the moment
@@ -23,15 +22,17 @@ auto top_dynamic_anchor_location(
 
   // Try to locate an anchor with the given name on the current base
   assert(!fragment.starts_with('#'));
-  const auto anchor_uri{location.base + "#" + fragment};
+  sourcemeta::core::JSON::String anchor_uri{location.base};
+  anchor_uri += '#';
+  anchor_uri += fragment;
   const auto anchor{frame.traverse(anchor_uri)};
 
   if (location.parent.has_value()) {
     // If there is a parent resource, keep looking there, but update the default
     // if the current resource has the dynamic anchor we want
-    return top_dynamic_anchor_location(frame, location.parent.value(), fragment,
-                                       anchor.has_value() ? anchor_uri
-                                                          : default_uri);
+    return top_dynamic_anchor_location(
+        frame, to_pointer(location.parent.value()), fragment,
+        anchor.has_value() ? anchor_uri : default_uri);
 
     // If we are at the top of the schema and it declares the dynamic anchor, we
     // should use that
@@ -51,94 +52,134 @@ auto top_dynamic_anchor_location(
 
 namespace sourcemeta::core {
 
+// Collected information about a reference to modify
+struct ReferenceChange {
+  Pointer pointer;
+  JSON::String new_value;
+  JSON::String keyword;
+  bool rename_to_ref;
+};
+
+// Collected information about a subschema to modify
+struct SubschemaChange {
+  Pointer pointer;
+  SchemaBaseDialect base_dialect;
+  bool add_schema_declaration;
+  bool erase_2020_12_keywords;
+  bool erase_2019_09_keywords;
+};
+
 auto for_editor(JSON &schema, const SchemaWalker &walker,
                 const SchemaResolver &resolver,
-                const std::optional<std::string> &default_dialect) -> void {
+                std::string_view default_dialect) -> void {
   // (1) Bring in all of the references
   bundle(schema, walker, resolver, default_dialect);
 
-  // (2) Re-frame before changing anything
-  SchemaFrame frame{SchemaFrame::Mode::References};
-  frame.analyse(schema, walker, resolver, default_dialect);
+  // (2) Frame the schema and collect all changes we need to make
+  std::vector<ReferenceChange> reference_changes;
+  std::vector<SubschemaChange> subschema_changes;
 
-  // (3) Pre-process all subschemas
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type != SchemaFrame::LocationType::Resource &&
-        entry.second.type != SchemaFrame::LocationType::Subschema) {
-      continue;
-    }
+  {
+    SchemaFrame frame{SchemaFrame::Mode::References};
+    frame.analyse(schema, walker, resolver, default_dialect);
 
-    auto &subschema{get(schema, entry.second.pointer)};
-    if (subschema.is_boolean()) {
-      continue;
-    }
+    // Collect reference changes
+    for (const auto &[key, reference] : frame.references()) {
+      assert(!key.second.empty());
+      assert(key.second.back().is_property());
+      const auto &keyword{key.second.back().to_property()};
 
-    // Make sure that the top-level schema ALWAYS has a `$schema` declaration
-    if (entry.second.pointer.empty() && !subschema.defines("$schema")) {
-      subschema.assign_assume_new("$schema", JSON{entry.second.base_dialect});
-    }
+      if (key.first == SchemaReferenceType::Dynamic) {
+        if (reference.fragment.has_value()) {
+          auto destination{top_dynamic_anchor_location(
+              frame, key.second, reference.fragment.value(),
+              reference.destination)};
+          if (!destination.has_value()) {
+            continue;
+          }
 
-    // Get rid of the keywords we don't want anymore
-    anonymize(subschema, entry.second.base_dialect);
-    const auto vocabularies{frame.vocabularies(entry.second, resolver)};
-    if (vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core)) {
-      subschema.erase_keys({"$vocabulary", "$anchor", "$dynamicAnchor"});
-    } else if (vocabularies.contains(
-                   Vocabularies::Known::JSON_Schema_2019_09_Core)) {
-      subschema.erase_keys({"$vocabulary", "$anchor", "$recursiveAnchor"});
-    }
-  }
-
-  // (4) Fix-up static and dynamic references
-  for (const auto &[key, reference] : frame.references()) {
-    assert(!key.second.empty());
-    assert(key.second.back().is_property());
-    const auto &keyword{key.second.back().to_property()};
-
-    if (key.first == SchemaReferenceType::Dynamic) {
-      if (reference.fragment.has_value()) {
-        auto destination{top_dynamic_anchor_location(frame, key.second,
-                                                     reference.fragment.value(),
-                                                     reference.destination)};
-        if (!destination.has_value()) {
+          reference_changes.push_back(
+              {key.second, to_uri(std::move(destination).value()).recompose(),
+               keyword, true});
+        } else {
+          reference_changes.push_back({key.second, "", keyword, true});
+        }
+      } else {
+        if (keyword == "$schema") {
+          const auto uri{frame.uri(key.second)};
+          assert(uri.has_value());
+          const auto origin{frame.traverse(uri.value().get())};
+          assert(origin.has_value());
+          reference_changes.push_back(
+              {key.second,
+               JSON::String{to_string(origin.value().get().base_dialect)},
+               keyword, false});
           continue;
         }
 
-        set(schema, key.second,
-            JSON{to_uri(std::move(destination).value()).recompose()});
+        const auto result{frame.traverse(reference.destination)};
+        if (result.has_value()) {
+          const bool should_rename =
+              keyword == "$dynamicRef" || keyword == "$recursiveRef";
+          reference_changes.push_back(
+              {key.second, to_uri(result.value().get().pointer).recompose(),
+               keyword, should_rename});
+        } else {
+          reference_changes.push_back(
+              {key.second, reference.destination, keyword, false});
+        }
       }
+    }
 
-      get(schema, key.second.initial()).rename(keyword, "$ref");
-    } else {
-      // The `$schema` keyword is not allowed to take relative URIs (for
-      // example, pointers going from the root). Because we remove identifiers,
-      // the only sane thing we can do here is default it to the base dialect,
-      // which editors will likely understand
-      if (keyword == "$schema") {
-        const auto uri{frame.uri(key.second)};
-        assert(uri.has_value());
-        const auto origin{frame.traverse(uri.value().get())};
-        assert(origin.has_value());
-        set(schema, key.second, JSON{origin.value().get().base_dialect});
+    // Collect subschema changes
+    for (const auto &entry : frame.locations()) {
+      if (entry.second.type != SchemaFrame::LocationType::Resource &&
+          entry.second.type != SchemaFrame::LocationType::Subschema) {
         continue;
       }
 
-      // As we get rid of identifiers, we rephrase every reference to be the URI
-      // representation of the JSON Pointer to the destination from the root
-      const auto result{frame.traverse(reference.destination)};
-      if (result.has_value()) {
-        set(schema, key.second,
-            JSON{to_uri(result.value().get().pointer).recompose()});
-
-        // If we have a dynamic reference to a static location,
-        // we can just rename the keyword
-        if (keyword == "$dynamicRef" || keyword == "$recursiveRef") {
-          get(schema, key.second.initial()).rename(keyword, "$ref");
-        }
-
-      } else {
-        set(schema, key.second, JSON{reference.destination});
+      const auto &subschema{get(schema, entry.second.pointer)};
+      if (subschema.is_boolean()) {
+        continue;
       }
+
+      const bool add_schema =
+          entry.second.pointer.empty() && !subschema.defines("$schema");
+      const auto vocabularies{frame.vocabularies(entry.second, resolver)};
+
+      subschema_changes.push_back(
+          {entry.second.pointer, entry.second.base_dialect, add_schema,
+           vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core),
+           vocabularies.contains(
+               Vocabularies::Known::JSON_Schema_2019_09_Core)});
+    }
+  }
+
+  // (3) Apply reference changes
+  for (const auto &change : reference_changes) {
+    if (!change.new_value.empty()) {
+      set(schema, change.pointer, JSON{change.new_value});
+    }
+    if (change.rename_to_ref) {
+      get(schema, change.pointer.initial()).rename(change.keyword, "$ref");
+    }
+  }
+
+  // (4) Apply subschema changes
+  for (const auto &change : subschema_changes) {
+    auto &subschema{get(schema, change.pointer)};
+
+    if (change.add_schema_declaration) {
+      subschema.assign_assume_new(
+          "$schema", JSON{JSON::String{to_string(change.base_dialect)}});
+    }
+
+    anonymize(subschema, change.base_dialect);
+
+    if (change.erase_2020_12_keywords) {
+      subschema.erase_keys({"$vocabulary", "$anchor", "$dynamicAnchor"});
+    } else if (change.erase_2019_09_keywords) {
+      subschema.erase_keys({"$vocabulary", "$anchor", "$recursiveAnchor"});
     }
   }
 }

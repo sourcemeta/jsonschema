@@ -201,8 +201,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
         const std::filesystem::path &base_path,
         const sourcemeta::core::SchemaResolver &schema_resolver,
         const sourcemeta::core::SchemaWalker &walker, const Compiler &compiler,
-        const std::optional<std::string> &default_dialect = std::nullopt,
-        const std::optional<std::string> &default_id = std::nullopt,
+        std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> TestSuite;
 };
 

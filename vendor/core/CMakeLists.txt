@@ -13,6 +13,7 @@ option(SOURCEMETA_CORE_UUID "Build the Sourcemeta Core UUID library" ON)
 option(SOURCEMETA_CORE_MD5 "Build the Sourcemeta Core MD5 library" ON)
 option(SOURCEMETA_CORE_REGEX "Build the Sourcemeta Core Regex library" ON)
 option(SOURCEMETA_CORE_URI "Build the Sourcemeta Core URI library" ON)
+option(SOURCEMETA_CORE_URITEMPLATE "Build the Sourcemeta Core URI Template library" ON)
 option(SOURCEMETA_CORE_JSON "Build the Sourcemeta Core JSON library" ON)
 option(SOURCEMETA_CORE_JSONSCHEMA "Build the Sourcemeta Core JSON Schema library" ON)
 option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer library" ON)
@@ -98,6 +99,10 @@ endif()
 
 if(SOURCEMETA_CORE_URI)
   add_subdirectory(src/core/uri)
+endif()
+
+if(SOURCEMETA_CORE_URITEMPLATE)
+  add_subdirectory(src/core/uritemplate)
 endif()
 
 if(SOURCEMETA_CORE_JSON)
@@ -210,6 +215,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_URI)
     add_subdirectory(test/uri)
+  endif()
+
+  if(SOURCEMETA_CORE_URITEMPLATE)
+    add_subdirectory(test/uritemplate)
   endif()
 
   if(SOURCEMETA_CORE_JSON)

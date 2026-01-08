@@ -31,7 +31,7 @@ namespace sourcemeta::core {
 /// sourcemeta::hydra::md5("foo bar", result);
 /// std::cout << result.str() << "\n";
 /// ```
-auto SOURCEMETA_CORE_MD5_EXPORT md5(std::string_view input,
+auto SOURCEMETA_CORE_MD5_EXPORT md5(const std::string_view input,
                                     std::ostream &output) -> void;
 
 } // namespace sourcemeta::core

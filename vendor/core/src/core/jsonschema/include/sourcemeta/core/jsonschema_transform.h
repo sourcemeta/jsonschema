@@ -60,7 +60,8 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaTransformRule {
 public:
   /// Create a transformation rule. Each rule must have a unique name.
-  SchemaTransformRule(std::string &&name, std::string &&message);
+  SchemaTransformRule(const std::string_view name,
+                      const std::string_view message);
 
   // Necessary to wrap rules on smart pointers
   virtual ~SchemaTransformRule() = default;
@@ -75,10 +76,10 @@ public:
   auto operator==(const SchemaTransformRule &other) const -> bool;
 
   /// Fetch the name of a rule
-  [[nodiscard]] auto name() const -> const std::string &;
+  [[nodiscard]] auto name() const noexcept -> std::string_view;
 
   /// Fetch the message of a rule
-  [[nodiscard]] auto message() const -> const std::string &;
+  [[nodiscard]] auto message() const noexcept -> std::string_view;
 
   /// The result of evaluating a rule
   struct Result {
@@ -108,13 +109,6 @@ public:
     std::optional<JSON::String> description;
   };
 
-  /// Apply the rule to a schema
-  auto apply(JSON &schema, const JSON &root, const Vocabularies &vocabularies,
-             const SchemaWalker &walker, const SchemaResolver &resolver,
-             const SchemaFrame &frame,
-             const SchemaFrame::Location &location) const
-      -> std::pair<bool, Result>;
-
   /// Check if the rule applies to a schema
   [[nodiscard]] auto
   check(const JSON &schema, const JSON &root, const Vocabularies &vocabularies,
@@ -125,10 +119,9 @@ public:
   /// A method to optionally fix any reference location that was affected by the
   /// transformation.
   [[nodiscard]] virtual auto
-  rereference(const std::string &reference, const Pointer &origin,
+  rereference(const std::string_view reference, const Pointer &origin,
               const Pointer &target, const Pointer &current) const -> Pointer;
 
-private:
   /// The rule condition
   [[nodiscard]] virtual auto
   condition(const JSON &schema, const JSON &root,
@@ -140,6 +133,7 @@ private:
   /// then the rule condition is considered to not be fixable.
   virtual auto transform(JSON &schema, const Result &result) const -> void;
 
+private:
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
@@ -237,7 +231,7 @@ public:
   }
 
   /// Remove a rule from the bundle
-  auto remove(const std::string &name) -> bool;
+  auto remove(const std::string_view name) -> bool;
 
   /// The callback that is called whenever the condition of a rule holds true.
   /// The arguments are as follows:
@@ -251,19 +245,19 @@ public:
                                       const SchemaTransformRule::Result &)>;
 
   /// Apply the bundle of rules to a schema
-  [[nodiscard]] auto
-  apply(JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const Callback &callback,
-        const std::optional<JSON::String> &default_dialect = std::nullopt,
-        const std::optional<JSON::String> &default_id = std::nullopt) const
+  [[nodiscard]] auto apply(JSON &schema, const SchemaWalker &walker,
+                           const SchemaResolver &resolver,
+                           const Callback &callback,
+                           std::string_view default_dialect = "",
+                           std::string_view default_id = "") const
       -> std::pair<bool, std::uint8_t>;
 
   /// Report back the rules from the bundle that need to be applied to a schema
-  [[nodiscard]] auto
-  check(const JSON &schema, const SchemaWalker &walker,
-        const SchemaResolver &resolver, const Callback &callback,
-        const std::optional<JSON::String> &default_dialect = std::nullopt,
-        const std::optional<JSON::String> &default_id = std::nullopt) const
+  [[nodiscard]] auto check(const JSON &schema, const SchemaWalker &walker,
+                           const SchemaResolver &resolver,
+                           const Callback &callback,
+                           std::string_view default_dialect = "",
+                           std::string_view default_id = "") const
       -> std::pair<bool, std::uint8_t>;
 
   [[nodiscard]] auto begin() const -> auto { return this->rules.cbegin(); }

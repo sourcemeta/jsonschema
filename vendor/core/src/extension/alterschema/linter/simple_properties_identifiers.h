@@ -46,8 +46,10 @@ public:
       }
     } else {
       // Skip pre-vocabulary meta-schemas
+      JSON::String base_with_hash{location.base};
+      base_with_hash += '#';
       ONLY_CONTINUE_IF(location.base != location.dialect &&
-                       (location.base + "#") != location.dialect);
+                       base_with_hash != location.dialect);
     }
 
     std::vector<Pointer> offenders;

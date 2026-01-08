@@ -58,11 +58,11 @@ private:
 class SOURCEMETA_CORE_YAML_EXPORT YAMLUnknownAnchorError
     : public YAMLParseError {
 public:
-  YAMLUnknownAnchorError(std::string anchor_name)
+  YAMLUnknownAnchorError(const std::string_view anchor_name)
       : YAMLParseError{"YAML alias references undefined anchor"},
-        anchor_name_{std::move(anchor_name)} {}
+        anchor_name_{anchor_name} {}
 
-  [[nodiscard]] auto anchor() const noexcept -> const std::string & {
+  [[nodiscard]] auto anchor() const noexcept -> std::string_view {
     return this->anchor_name_;
   }
 

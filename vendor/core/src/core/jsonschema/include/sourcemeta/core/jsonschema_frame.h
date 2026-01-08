@@ -52,53 +52,6 @@ namespace sourcemeta::core {
 /// frame.analyse(document,
 ///   sourcemeta::core::schema_walker,
 ///   sourcemeta::core::schema_resolver);
-///
-/// // IDs
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/foo"}));
-///
-/// // Anchors
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#test"}));
-///
-/// // Root Pointers
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/$id"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/$schema"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/items"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/items/$id"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/items/type"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties/foo"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties/foo/$anchor"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties/foo/type"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties/bar"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/schema#/properties/bar/$ref"}));
-///
-/// // Subpointers
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/foo#/$id"}));
-/// assert(frame.locations().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   "https://www.example.com/foo#/type"}));
-///
-/// // References
-/// assert(frame.references().contains({sourcemeta::core::SchemaReferenceType::Static,
-///   { "properties", "bar", "$ref" }}));
-/// assert(frame.references().at({sourcemeta::core::SchemaReferenceType::Static,
-///   { "properties", "bar", "$ref" }}).destination ==
-///     "https://www.example.com/schema#/properties/foo");
 /// ```
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrame {
 public:
@@ -113,12 +66,13 @@ public:
 
   /// A single entry in a JSON Schema reference map
   struct ReferencesEntry {
-    JSON::String original;
+    std::string_view original;
+    // TODO: This one is tricky to turn into a view, as there is no
+    // location entry to point to if it is an external unresolved reference
     JSON::String destination;
-    // TODO: This string can be a `string_view` over the `destination`
-    std::optional<JSON::String> base;
-    // TODO: This string can be a `string_view` over the `destination`
-    std::optional<JSON::String> fragment;
+    // Empty means no base
+    std::string_view base;
+    std::optional<std::string_view> fragment;
   };
 
   /// A JSON Schema reference map is a mapping of a JSON Pointer
@@ -152,17 +106,14 @@ public:
 
   /// A location entry
   struct Location {
-    // TODO: Turn this into a weak pointer
-    std::optional<Pointer> parent;
+    std::optional<WeakPointer> parent;
     LocationType type;
-    std::optional<JSON::String> root;
-    JSON::String base;
+    std::string_view base;
     // TODO: Turn this into a weak pointer
     Pointer pointer;
-    // TODO: Turn this into a weak pointer
-    Pointer relative_pointer;
-    JSON::String dialect;
-    JSON::String base_dialect;
+    std::size_t relative_pointer;
+    std::string_view dialect;
+    SchemaBaseDialect base_dialect;
   };
 
   /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,
@@ -176,8 +127,8 @@ public:
       // point to different places.
       std::map<std::pair<SchemaReferenceType, JSON::String>, Location>;
 
-  /// A set of paths to frame within a schema wrapper
-  using Paths = std::set<Pointer>;
+  /// A list of paths to frame within a schema wrapper
+  using Paths = std::vector<WeakPointer>;
 
   /// Export the frame entries as JSON
   [[nodiscard]] auto to_json(
@@ -186,12 +137,11 @@ public:
 
   /// Analyse a schema or set of schemas from a given root. Passing
   /// multiple paths that have any overlap is undefined behaviour
-  auto
-  analyse(const JSON &root, const SchemaWalker &walker,
-          const SchemaResolver &resolver,
-          const std::optional<JSON::String> &default_dialect = std::nullopt,
-          const std::optional<JSON::String> &default_id = std::nullopt,
-          const Paths &paths = {empty_pointer}) -> void;
+  auto analyse(const JSON &root, const SchemaWalker &walker,
+               const SchemaResolver &resolver,
+               std::string_view default_dialect = "",
+               std::string_view default_id = "",
+               const Paths &paths = {empty_weak_pointer}) -> void;
 
   /// Access the analysed schema locations
   [[nodiscard]] auto locations() const noexcept -> const Locations &;
@@ -199,8 +149,16 @@ public:
   /// Access the analysed schema references
   [[nodiscard]] auto references() const noexcept -> const References &;
 
+  /// Get a specific reference entry by type and pointer
+  [[nodiscard]] auto reference(const SchemaReferenceType type,
+                               const Pointer &pointer) const
+      -> std::optional<std::reference_wrapper<const ReferencesEntry>>;
+
   /// Check whether the analysed schema has no external references
   [[nodiscard]] auto standalone() const -> bool;
+
+  /// Get the root schema identifier (empty if none)
+  [[nodiscard]] auto root() const noexcept -> const JSON::String &;
 
   /// Get the vocabularies associated with a location entry
   [[nodiscard]] auto vocabularies(const Location &location,
@@ -219,7 +177,11 @@ public:
       -> const Location &;
 
   /// Get the location associated with a given URI
-  [[nodiscard]] auto traverse(const JSON::String &uri) const
+  [[nodiscard]] auto traverse(const std::string_view uri) const
+      -> std::optional<std::reference_wrapper<const Location>>;
+
+  /// Get the location associated with a given pointer
+  [[nodiscard]] auto traverse(const Pointer &pointer) const
       -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Turn an absolute pointer into a location URI
@@ -233,9 +195,32 @@ public:
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 
-  /// Find all references to a given location pointer
-  [[nodiscard]] auto references_to(const Pointer &pointer) const -> std::vector<
-      std::reference_wrapper<const typename References::value_type>>;
+  /// Iterate over all resource URIs in the frame
+  auto for_each_resource_uri(
+      const std::function<void(std::string_view)> &callback) const -> void;
+
+  /// Iterate over all unresolved references (where destination cannot be
+  /// traversed)
+  auto for_each_unresolved_reference(
+      const std::function<void(const Pointer &, const ReferencesEntry &)>
+          &callback) const -> void;
+
+  /// Check if there are any references to a given location pointer
+  [[nodiscard]] auto has_references_to(const Pointer &pointer) const -> bool;
+
+  /// Check if there are any references that go through a given location pointer
+  [[nodiscard]] auto has_references_through(const Pointer &pointer) const
+      -> bool;
+
+  /// Get the relative instance location pointer for a given location entry
+  [[nodiscard]] auto relative_instance_location(const Location &location) const
+      -> Pointer;
+
+  /// Check if the frame has no analysed data
+  [[nodiscard]] auto empty() const noexcept -> bool;
+
+  /// Reset the frame, clearing all analysed data
+  auto reset() -> void;
 
 private:
   Mode mode_;
@@ -245,6 +230,7 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251 4275)
 #endif
+  JSON::String root_;
   Locations locations_;
   References references_;
 #if defined(_MSC_VER)

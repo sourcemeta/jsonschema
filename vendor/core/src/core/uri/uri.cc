@@ -6,15 +6,13 @@
 
 namespace sourcemeta::core {
 
-URI::URI(const std::string &input) { this->parse(input); }
-
 URI::URI(std::istream &input) {
   std::ostringstream output;
   output << input.rdbuf();
   this->parse(output.str());
 }
 
-auto URI::from_fragment(std::string_view fragment) -> URI {
+auto URI::from_fragment(const std::string_view fragment) -> URI {
   URI result;
   result.fragment(fragment);
   return result;

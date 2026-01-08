@@ -36,7 +36,7 @@ inline auto property_relative_dynamic_context() -> DynamicContext {
 }
 
 inline auto schema_resource_id(const std::vector<std::string> &resources,
-                               const std::string &resource) -> std::size_t {
+                               const std::string_view resource) -> std::size_t {
   const auto iterator{std::ranges::find(
       resources, sourcemeta::core::URI::canonicalize(resource))};
   if (iterator == resources.cend()) {
@@ -205,9 +205,10 @@ inline auto find_adjacent(const Context &context,
         context.frame.references().at({reference_type, destination.pointer})};
     const auto keyword_uri{
         sourcemeta::core::to_uri(
-            sourcemeta::core::to_pointer(reference.fragment.value_or(""))
+            sourcemeta::core::to_pointer(
+                std::string{reference.fragment.value_or("")})
                 .concat({keyword}))
-            .resolve_from(reference.base.value_or(""))};
+            .resolve_from(sourcemeta::core::URI{reference.base})};
 
     // TODO: When this logic is used by
     // `unevaluatedProperties`/`unevaluatedItems`, how can we let the

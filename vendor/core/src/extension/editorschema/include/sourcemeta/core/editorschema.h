@@ -17,8 +17,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <optional> // std::optional, std::nullopt
-#include <string>   // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -47,9 +46,9 @@ namespace sourcemeta::core {
 ///   sourcemeta::core::schema_resolver);
 /// ```
 SOURCEMETA_CORE_EDITORSCHEMA_EXPORT
-auto for_editor(
-    JSON &schema, const SchemaWalker &walker, const SchemaResolver &resolver,
-    const std::optional<std::string> &default_dialect = std::nullopt) -> void;
+auto for_editor(JSON &schema, const SchemaWalker &walker,
+                const SchemaResolver &resolver,
+                std::string_view default_dialect = "") -> void;
 
 } // namespace sourcemeta::core
 

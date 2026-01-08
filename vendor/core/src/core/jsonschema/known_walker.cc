@@ -2194,7 +2194,8 @@ auto handle_example(const Vocabularies &vocabularies)
 
 } // anonymous namespace
 
-auto schema_walker(std::string_view keyword, const Vocabularies &vocabularies)
+auto schema_walker(const std::string_view keyword,
+                   const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
   // TODO: Make use of JSON key's perfect hashes, as we mostly run the walker by
   // checking JSON property names

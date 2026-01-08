@@ -177,7 +177,8 @@ inline auto uri_unescape_selective_inplace(std::string &str) -> void {
 
 // Full unescaping for URI normalization (copy version for compatibility)
 // Decodes all percent-encoded sequences
-inline auto uri_unescape_selective(std::string_view input) -> std::string {
+inline auto uri_unescape_selective(const std::string_view input)
+    -> std::string {
   std::string result{input};
   uri_unescape_selective_inplace(result);
   return result;

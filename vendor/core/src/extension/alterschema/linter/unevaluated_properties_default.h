@@ -10,8 +10,8 @@ public:
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
@@ -24,6 +24,8 @@ public:
           schema.at("unevaluatedProperties").to_boolean()) ||
          (schema.at("unevaluatedProperties").is_object() &&
           schema.at("unevaluatedProperties").empty())));
+    ONLY_CONTINUE_IF(!frame.has_references_through(
+        location.pointer.concat({"unevaluatedProperties"})));
     return APPLIES_TO_KEYWORDS("unevaluatedProperties");
   }
 

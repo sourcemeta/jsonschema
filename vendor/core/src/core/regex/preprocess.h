@@ -538,7 +538,7 @@ inline auto expand_char_class(const std::string &content)
   return result.none() ? "(?!)" : bitset_to_class(result);
 }
 
-inline auto translate_property(std::string_view name, bool negated)
+inline auto translate_property(const std::string_view name, const bool negated)
     -> std::optional<std::string> {
   for (const auto &[prop_name, pcre_name] : unicode_property_map) {
     if (name == prop_name) {

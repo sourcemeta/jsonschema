@@ -91,7 +91,7 @@ inline auto md5_process_block(const unsigned char *block,
 
 namespace sourcemeta::core {
 
-auto md5(std::string_view input, std::ostream &output) -> void {
+auto md5(const std::string_view input, std::ostream &output) -> void {
   // Initial state as per RFC 1321
   std::array<std::uint32_t, 4> state{};
   state[0] = 0x67452301U;

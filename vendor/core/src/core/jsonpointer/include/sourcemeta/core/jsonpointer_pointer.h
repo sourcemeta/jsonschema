@@ -433,6 +433,33 @@ public:
     return result;
   }
 
+  /// Get a copy of the JSON Pointer starting from a given token index. This
+  /// method is undefined if the index is greater than the pointer size. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Pointer pointer{"foo", "bar", "baz"};
+  /// const sourcemeta::core::Pointer result{pointer.slice(1)};
+  /// assert(result.size() == 2);
+  /// assert(result.at(0).is_property());
+  /// assert(result.at(0).to_property() == "bar");
+  /// assert(result.at(1).is_property());
+  /// assert(result.at(1).to_property() == "baz");
+  /// ```
+  [[nodiscard]] auto slice(const std::size_t index) const
+      -> GenericPointer<PropertyT, Hash> {
+    assert(index <= this->size());
+    auto new_begin{this->data.cbegin()};
+    std::advance(new_begin, index);
+    GenericPointer<PropertyT, Hash> result;
+    result.reserve(this->size() - index);
+    std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
+    return result;
+  }
+
   /// Concatenate a JSON Pointer with another JSON Pointer, getting a new
   /// pointer as a result. For example:
   ///

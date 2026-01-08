@@ -13,20 +13,19 @@
 #include <sourcemeta/core/jsonschema_types.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <functional> // std::function
-#include <optional>   // std::optional, std::nullopt
+#include <functional>  // std::function
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
 /// @ingroup jsonschema
 /// A callback to get dependency information
-/// - Origin URI
+/// - Origin URI (empty if none)
 /// - Pointer (reference keyword from the origin)
 /// - Target URI
 /// - Target schema
-using DependencyCallback =
-    std::function<void(const std::optional<JSON::String> &, const Pointer &,
-                       const JSON::String &, const JSON &)>;
+using DependencyCallback = std::function<void(std::string_view, const Pointer &,
+                                              std::string_view, const JSON &)>;
 
 /// @ingroup jsonschema
 ///
@@ -67,12 +66,13 @@ using DependencyCallback =
 ///   });
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto dependencies(
-    const JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver, const DependencyCallback &callback,
-    const std::optional<std::string> &default_dialect = std::nullopt,
-    const std::optional<std::string> &default_id = std::nullopt,
-    const SchemaFrame::Paths &paths = {empty_pointer}) -> void;
+auto dependencies(const JSON &schema, const SchemaWalker &walker,
+                  const SchemaResolver &resolver,
+                  const DependencyCallback &callback,
+                  std::string_view default_dialect = "",
+                  std::string_view default_id = "",
+                  const SchemaFrame::Paths &paths = {empty_weak_pointer})
+    -> void;
 
 /// @ingroup jsonschema
 ///
@@ -126,10 +126,10 @@ auto dependencies(
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect = std::nullopt,
-            const std::optional<std::string> &default_id = std::nullopt,
+            std::string_view default_dialect = "",
+            std::string_view default_id = "",
             const std::optional<Pointer> &default_container = std::nullopt,
-            const SchemaFrame::Paths &paths = {empty_pointer}) -> void;
+            const SchemaFrame::Paths &paths = {empty_weak_pointer}) -> void;
 
 /// @ingroup jsonschema
 ///
@@ -185,10 +185,10 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
 auto bundle(const JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver,
-            const std::optional<std::string> &default_dialect = std::nullopt,
-            const std::optional<std::string> &default_id = std::nullopt,
+            std::string_view default_dialect = "",
+            std::string_view default_id = "",
             const std::optional<Pointer> &default_container = std::nullopt,
-            const SchemaFrame::Paths &paths = {empty_pointer}) -> JSON;
+            const SchemaFrame::Paths &paths = {empty_weak_pointer}) -> JSON;
 
 } // namespace sourcemeta::core
 

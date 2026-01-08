@@ -38,8 +38,9 @@ namespace sourcemeta::core {
 using Pointer = GenericPointer<JSON::String, PropertyHashJSON<JSON::String>>;
 
 /// @ingroup jsonpointer
-using WeakPointer = GenericPointer<std::reference_wrapper<const std::string>,
-                                   PropertyHashJSON<JSON::String>>;
+using WeakPointer = GenericPointer<
+    // We use this instead of a string view as the latter occupies more memory
+    std::reference_wrapper<const std::string>, PropertyHashJSON<JSON::String>>;
 
 /// @ingroup jsonpointer
 /// A global constant instance of the empty JSON Pointer.
@@ -573,34 +574,48 @@ auto to_uri(const Pointer &pointer) -> URI;
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 
-// TODO: Only support this with weak pointers
+/// @ingroup jsonpointer
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto to_uri(const WeakPointer &pointer) -> URI;
+
+/// @ingroup jsonpointer
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto to_uri(const WeakPointer &pointer, const URI &base) -> URI;
+
+/// @ingroup jsonpointer
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto to_uri(const WeakPointer &pointer, const std::string_view base) -> URI;
+
 /// @ingroup jsonpointer
 ///
-/// Walk over every element of a JSON document, top-down, using JSON Pointers.
-/// For example:
+/// Walk over every element of a JSON document, top-down, using weak pointers.
+/// Note that the resulting weak pointers hold references to strings in the JSON
+/// document, so the document must outlive the walker and any pointers obtained
+/// from it. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
 /// #include <sourcemeta/core/jsonpointer.h>
 /// #include <cassert>
+/// #include <string>
 /// #include <vector>
 ///
 /// const sourcemeta::core::JSON document =
 ///   sourcemeta::core::parse_json("[ 1, 2, 3 ]");
-/// std::vector<sourcemeta::core::Pointer> subpointers;
+/// std::vector<std::string> subpointers;
 ///
 /// for (const auto &subpointer :
 ///   sourcemeta::core::PointerWalker{document}) {
-///   subpointers.push_back(subpointer);
+///   subpointers.push_back(sourcemeta::core::to_string(subpointer));
 /// }
 ///
 /// assert(subpointers.size() == 4);
-/// assert(subpointers.at(0) == sourcemeta::core::Pointer{});
-/// assert(subpointers.at(1) == sourcemeta::core::Pointer{0});
-/// assert(subpointers.at(2) == sourcemeta::core::Pointer{1});
-/// assert(subpointers.at(3) == sourcemeta::core::Pointer{2});
+/// assert(subpointers.at(0) == "");
+/// assert(subpointers.at(1) == "/0");
+/// assert(subpointers.at(2) == "/1");
+/// assert(subpointers.at(3) == "/2");
 /// ```
-using PointerWalker = GenericPointerWalker<Pointer>;
+using PointerWalker = GenericPointerWalker<WeakPointer>;
 
 /// @ingroup jsonpointer
 /// Serialise a Pointer as JSON

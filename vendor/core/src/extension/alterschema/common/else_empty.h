@@ -7,7 +7,7 @@ public:
 
   [[nodiscard]] auto
   condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
-            const SchemaFrame &, const SchemaFrame::Location &,
+            const SchemaFrame &frame, const SchemaFrame::Location &location,
             const SchemaWalker &, const SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
@@ -20,6 +20,8 @@ public:
         (schema.at("else").is_object() ||
          (!schema.defines("if") ||
           !(schema.at("if").is_boolean() && schema.at("if").to_boolean()))));
+    ONLY_CONTINUE_IF(
+        !frame.has_references_through(location.pointer.concat({"else"})));
     return APPLIES_TO_KEYWORDS("else");
   }
 

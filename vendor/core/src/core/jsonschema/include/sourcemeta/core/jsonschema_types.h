@@ -35,6 +35,26 @@ using SchemaResolver = std::function<std::optional<JSON>(std::string_view)>;
 /// The reference type
 enum class SchemaReferenceType : std::uint8_t { Static, Dynamic };
 
+/// @ingroup jsonschema
+/// All the known JSON Schema base dialects
+enum class SchemaBaseDialect : std::uint8_t {
+  JSON_Schema_2020_12,
+  JSON_Schema_2020_12_Hyper,
+  JSON_Schema_2019_09,
+  JSON_Schema_2019_09_Hyper,
+  JSON_Schema_Draft_7,
+  JSON_Schema_Draft_7_Hyper,
+  JSON_Schema_Draft_6,
+  JSON_Schema_Draft_6_Hyper,
+  JSON_Schema_Draft_4,
+  JSON_Schema_Draft_4_Hyper,
+  JSON_Schema_Draft_3,
+  JSON_Schema_Draft_3_Hyper,
+  JSON_Schema_Draft_2_Hyper,
+  JSON_Schema_Draft_1_Hyper,
+  JSON_Schema_Draft_0_Hyper
+};
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 // For some strange reason, GCC on Debian 11 believes that a member of
@@ -191,28 +211,19 @@ struct SchemaWalkerResult {
 /// For walking purposes, some functions need to understand which JSON Schema
 /// keywords declare other JSON Schema definitions. To accomplish this in a
 /// generic and flexible way that does not assume the use any vocabulary other
-/// than `core`, these functions take a walker function as argument, of the type
-/// sourcemeta::core::SchemaWalker.
-///
-/// For convenience, we provide the following default walkers:
-///
-/// - sourcemeta::core::schema_walker
-/// - sourcemeta::core::schema_walker_none
+/// than `core`, these functions take a walker function as argument.
 using SchemaWalker = std::function<const SchemaWalkerResult &(
     std::string_view, const Vocabularies &)>;
 
 /// @ingroup jsonschema
 /// An entry of a schema iterator.
 struct SchemaIteratorEntry {
-  // TODO: Turn this into a weak pointer
-  std::optional<Pointer> parent;
-  // TODO: Turn this into a weak pointer
-  Pointer pointer;
+  std::optional<WeakPointer> parent;
+  WeakPointer pointer;
   // TODO: Use "known" enum classes + strings for dialects
-  std::optional<JSON::String> dialect;
+  std::string_view dialect;
   Vocabularies vocabularies;
-  // TODO: Use "known" enum classes for base dialects
-  std::optional<JSON::String> base_dialect;
+  std::optional<SchemaBaseDialect> base_dialect;
   std::reference_wrapper<const JSON> subschema;
   bool orphan;
 };

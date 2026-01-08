@@ -27,26 +27,23 @@ public:
 
     // Find the keyword location entry
     const auto absolute_ref_pointer{location.pointer.concat({"$ref"})};
-    const auto reference_entry{frame.references().find(
-        {SchemaReferenceType::Static, absolute_ref_pointer})};
-    ONLY_CONTINUE_IF(reference_entry != frame.references().end());
+    const auto reference_entry{
+        frame.reference(SchemaReferenceType::Static, absolute_ref_pointer)};
+    ONLY_CONTINUE_IF(reference_entry.has_value());
 
     // If the keyword has no fragment, continue
-    const auto &reference_fragment{reference_entry->second.fragment};
+    const auto &reference_fragment{reference_entry->get().fragment};
     ONLY_CONTINUE_IF(reference_fragment.has_value());
 
     // Only continue if the reference target does not exist
-    const auto target_location{frame.locations().find(
-        {SchemaReferenceType::Static, reference_entry->second.destination})};
-    ONLY_CONTINUE_IF(target_location == frame.locations().end());
+    ONLY_CONTINUE_IF(
+        !frame.traverse(reference_entry->get().destination).has_value());
 
     // If there is a base beyond the fragment, the base must exist.
     // Otherwise it is likely an external reference?
-    const auto &reference_base{reference_entry->second.base};
-    if (reference_base.has_value()) {
-      const auto base_location{frame.locations().find(
-          {SchemaReferenceType::Static, reference_base.value()})};
-      ONLY_CONTINUE_IF(base_location != frame.locations().end());
+    const auto &reference_base{reference_entry->get().base};
+    if (!reference_base.empty()) {
+      ONLY_CONTINUE_IF(frame.traverse(reference_base).has_value());
     }
 
     return APPLIES_TO_KEYWORDS("$ref");

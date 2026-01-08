@@ -8,14 +8,15 @@
 #include <cstdint>  // std::uint64_t
 #include <optional> // std::optional
 #include <string>   // std::string, std::stoul
+#include <string_view> // std::string_view
 
 namespace {
 
 using namespace sourcemeta::core;
 
-auto validate_percent_encoded_utf8(const std::string &input,
-                                   std::string::size_type position)
-    -> std::string::size_type {
+auto validate_percent_encoded_utf8(const std::string_view input,
+                                   std::string_view::size_type position)
+    -> std::string_view::size_type {
   if (input[position] != URI_PERCENT) {
     return 3;
   }
@@ -85,7 +86,8 @@ auto validate_percent_encoded_utf8(const std::string &input,
   return 3 * (1 + continuation_count);
 }
 
-auto parse_scheme(const std::string &input, std::string::size_type &position)
+auto parse_scheme(const std::string_view input,
+                  std::string_view::size_type &position)
     -> std::optional<std::string> {
   if (position >= input.size() ||
       !std::isalpha(static_cast<unsigned char>(input[position]))) {
@@ -100,7 +102,7 @@ auto parse_scheme(const std::string &input, std::string::size_type &position)
   }
 
   if (position < input.size() && input[position] == URI_COLON) {
-    auto scheme = input.substr(start, position - start);
+    std::string scheme{input.substr(start, position - start)};
     position += 1;
     return scheme;
   }
@@ -109,7 +111,8 @@ auto parse_scheme(const std::string &input, std::string::size_type &position)
   return std::nullopt;
 }
 
-auto parse_port(const std::string &input, std::string::size_type &position)
+auto parse_port(const std::string_view input,
+                std::string_view::size_type &position)
     -> std::optional<unsigned long> {
   if (position >= input.size() ||
       !std::isdigit(static_cast<unsigned char>(input[position]))) {
@@ -122,12 +125,12 @@ auto parse_port(const std::string &input, std::string::size_type &position)
     position += 1;
   }
 
-  const auto port_string = input.substr(start, position - start);
+  const std::string port_string{input.substr(start, position - start)};
   return std::stoul(port_string);
 }
 
-auto parse_ipv6(const std::string &input, std::string::size_type &position)
-    -> std::string {
+auto parse_ipv6(const std::string_view input,
+                std::string_view::size_type &position) -> std::string {
   assert(input[position] == URI_OPEN_BRACKET);
 
   const auto start = position;
@@ -142,13 +145,13 @@ auto parse_ipv6(const std::string &input, std::string::size_type &position)
         static_cast<std::uint64_t>(start + 1)};
   }
 
-  auto ipv6 = input.substr(start + 1, position - start - 1);
+  std::string ipv6{input.substr(start + 1, position - start - 1)};
   position += 1;
   return ipv6;
 }
 
-auto parse_host(const std::string &input, std::string::size_type &position)
-    -> std::string {
+auto parse_host(const std::string_view input,
+                std::string_view::size_type &position) -> std::string {
   if (position >= input.size()) {
     return std::string{};
   }
@@ -180,16 +183,17 @@ auto parse_host(const std::string &input, std::string::size_type &position)
     return std::string{};
   }
 
-  return input.substr(start, position - start);
+  return std::string{input.substr(start, position - start)};
 }
 
-auto parse_userinfo(const std::string &input, std::string::size_type &position)
+auto parse_userinfo(const std::string_view input,
+                    std::string_view::size_type &position)
     -> std::optional<std::string> {
   const auto start = position;
   while (position < input.size()) {
     const auto current = input[position];
     if (current == URI_AT) {
-      auto userinfo = input.substr(start, position - start);
+      std::string userinfo{input.substr(start, position - start)};
       position += 1;
       return userinfo;
     }
@@ -209,7 +213,8 @@ auto parse_userinfo(const std::string &input, std::string::size_type &position)
   return std::nullopt;
 }
 
-auto parse_path(const std::string &input, std::string::size_type &position)
+auto parse_path(const std::string_view input,
+                std::string_view::size_type &position)
     -> std::optional<std::string> {
   if (position >= input.size()) {
     return std::nullopt;
@@ -238,10 +243,11 @@ auto parse_path(const std::string &input, std::string::size_type &position)
     }
   }
 
-  return input.substr(start, position - start);
+  return std::string{input.substr(start, position - start)};
 }
 
-auto parse_query(const std::string &input, std::string::size_type &position)
+auto parse_query(const std::string_view input,
+                 std::string_view::size_type &position)
     -> std::optional<std::string> {
   if (position >= input.size() || input[position] != URI_QUESTION) {
     return std::nullopt;
@@ -268,10 +274,11 @@ auto parse_query(const std::string &input, std::string::size_type &position)
     }
   }
 
-  return input.substr(start, position - start);
+  return std::string{input.substr(start, position - start)};
 }
 
-auto parse_fragment(const std::string &input, std::string::size_type &position)
+auto parse_fragment(const std::string_view input,
+                    std::string_view::size_type &position)
     -> std::optional<std::string> {
   if (position >= input.size() || input[position] != URI_HASH) {
     return std::nullopt;
@@ -295,14 +302,15 @@ auto parse_fragment(const std::string &input, std::string::size_type &position)
     }
   }
 
-  return input.substr(start, position - start);
+  return std::string{input.substr(start, position - start)};
 }
 
 } // namespace
 
 namespace sourcemeta::core {
 
-auto parse_authority(const std::string &input, std::string::size_type &position,
+auto parse_authority(const std::string_view input,
+                     std::string_view::size_type &position,
                      std::optional<std::string> &userinfo,
                      std::optional<std::string> &host,
                      std::optional<std::uint32_t> &port) -> void {
@@ -332,7 +340,7 @@ auto parse_authority(const std::string &input, std::string::size_type &position,
   }
 }
 
-auto URI::parse(const std::string &input) -> void {
+auto URI::parse(const std::string_view input) -> void {
   assert(!this->scheme_.has_value());
   assert(!this->userinfo_.has_value());
   assert(!this->host_.has_value());
@@ -345,7 +353,7 @@ auto URI::parse(const std::string &input) -> void {
     return;
   }
 
-  auto position = std::string::size_type{0};
+  std::string_view::size_type position{0};
 
   this->scheme_ = parse_scheme(input, position);
 

@@ -52,9 +52,8 @@ public:
       }
 
       // Skip entries that have direct references pointing to them
-      const auto entry_pointer{
-          location.relative_pointer.concat({"allOf", index - 1})};
-      if (!frame.references_to(entry_pointer).empty()) {
+      const auto entry_pointer{location.pointer.concat({"allOf", index - 1})};
+      if (frame.has_references_to(entry_pointer)) {
         continue;
       }
 
@@ -118,7 +117,7 @@ public:
     }
   }
 
-  [[nodiscard]] auto rereference(const std::string &, const Pointer &,
+  [[nodiscard]] auto rereference(const std::string_view, const Pointer &,
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {

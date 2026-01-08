@@ -3,11 +3,12 @@
 
 #include <sourcemeta/core/jsonschema.h>
 
-#include <algorithm> // std::move, std::sort, std::unique
-#include <cassert>   // assert
-#include <iterator>  // std::back_inserter
-#include <tuple>     // std::tuple, std::get
-#include <utility>   // std::move, std::pair
+#include <algorithm>   // std::move, std::sort, std::unique
+#include <cassert>     // assert
+#include <iterator>    // std::back_inserter
+#include <string_view> // std::string_view
+#include <tuple>       // std::tuple, std::get
+#include <utility>     // std::move, std::pair
 
 #include "compile_helpers.h"
 
@@ -16,7 +17,7 @@ namespace {
 auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::SchemaContext &schema_context,
                        const sourcemeta::blaze::DynamicContext &dynamic_context,
-                       const std::optional<std::string> &default_dialect)
+                       const std::string_view default_dialect)
     -> sourcemeta::blaze::Instructions {
   using namespace sourcemeta::blaze;
   assert(is_schema(schema_context.schema));
@@ -83,7 +84,7 @@ auto precompile(
       sourcemeta::blaze::schema_resource_id(
           context.resources,
           anchor_uri.recompose_without_fragment().value_or("")),
-      std::string{anchor_uri.fragment().value_or("")})};
+      anchor_uri.fragment().value_or(""))};
   schema_context.labels.insert(label);
 
   // Configure a schema context that corresponds to the
@@ -91,11 +92,14 @@ auto precompile(
   auto subschema{sourcemeta::core::get(context.root, entry.second.pointer)};
   auto nested_vocabularies{sourcemeta::core::vocabularies(
       subschema, context.resolver, entry.second.dialect)};
+  const auto nested_relative_pointer{
+      entry.second.pointer.slice(entry.second.relative_pointer)};
+  const sourcemeta::core::URI nested_base{entry.second.base};
   const sourcemeta::blaze::SchemaContext nested_schema_context{
-      .relative_pointer = entry.second.relative_pointer,
+      .relative_pointer = nested_relative_pointer,
       .schema = std::move(subschema),
       .vocabularies = std::move(nested_vocabularies),
-      .base = entry.second.base,
+      .base = nested_base,
       .labels = {},
       .is_property_name = schema_context.is_property_name};
 
@@ -118,8 +122,8 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler,
              const sourcemeta::core::SchemaFrame &frame, const Mode mode,
-             const std::optional<std::string> &default_dialect,
-             const std::optional<std::string> &default_id,
+             const std::string_view default_dialect,
+             const std::string_view default_id,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
   const auto effective_tweaks{tweaks.value_or(Tweaks{})};
@@ -133,9 +137,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   const auto identifier{
       base_dialect.has_value()
           ? sourcemeta::core::identify(schema, base_dialect.value(), default_id)
-          : std::optional<std::string>{std::nullopt}};
-  const std::string base{
-      sourcemeta::core::URI::canonicalize(identifier.value_or(""))};
+          : std::string_view{}};
+  const std::string base{sourcemeta::core::URI::canonicalize(identifier)};
   assert(frame.locations().contains(
       {sourcemeta::core::SchemaReferenceType::Static, base}));
   const auto root_frame_entry{frame.locations().at(
@@ -202,7 +205,7 @@ auto compile(const sourcemeta::core::JSON &schema,
         }
 
         const auto label{Evaluator{}.hash(
-            schema_resource_id(resources, reference.second.base.value_or("")),
+            schema_resource_id(resources, reference.second.base),
             reference.second.fragment.value_or(""))};
         auto [iterator, inserted] = static_reference_destinations.try_emplace(
             reference.second.destination, std::make_pair(label, 0));
@@ -324,13 +327,17 @@ auto compile(const sourcemeta::core::JSON &schema,
 
     auto nested_vocabularies{sourcemeta::core::vocabularies(
         subschema, context.resolver, entry->second.dialect)};
+    const auto nested_relative_pointer{
+        entry->second.pointer.slice(entry->second.relative_pointer)};
+    // TODO: I think this is hiding a framing bug that we should later
+    // investigate
+    const sourcemeta::core::URI nested_base{
+        entry->second.base.starts_with('#') ? "" : entry->second.base};
     const sourcemeta::blaze::SchemaContext nested_schema_context{
-        .relative_pointer = entry->second.relative_pointer,
+        .relative_pointer = nested_relative_pointer,
         .schema = std::move(subschema),
         .vocabularies = std::move(nested_vocabularies),
-        // TODO: I think this is hiding a framing bug that we should later
-        // investigate
-        .base = entry->second.base.starts_with('#') ? "" : entry->second.base,
+        .base = nested_base,
         .labels = {},
         .is_property_name = schema_context.is_property_name};
     static_reference_template.push_back(
@@ -384,8 +391,8 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaWalker &walker,
              const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler, const Mode mode,
-             const std::optional<std::string> &default_dialect,
-             const std::optional<std::string> &default_id,
+             const std::string_view default_dialect,
+             const std::string_view default_id,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
 
@@ -407,7 +414,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
              const DynamicContext &dynamic_context,
              const sourcemeta::core::Pointer &schema_suffix,
              const sourcemeta::core::Pointer &instance_suffix,
-             const std::optional<std::string> &uri) -> Instructions {
+             const std::optional<std::string_view> uri) -> Instructions {
   // Determine URI of the destination after recursion
   const std::string destination{
       uri.has_value()
@@ -442,15 +449,18 @@ auto compile(const Context &context, const SchemaContext &schema_context,
                 .concat({dynamic_context.keyword})
                 .concat(schema_suffix)};
 
+  const auto new_relative_pointer{entry.pointer.slice(entry.relative_pointer)};
+  const sourcemeta::core::URI new_base{
+      sourcemeta::core::URI{entry.base}.recompose_without_fragment().value_or(
+          "")};
+
   return compile_subschema(
       context,
-      {.relative_pointer = entry.relative_pointer,
+      {.relative_pointer = new_relative_pointer,
        .schema = new_schema,
        .vocabularies =
            vocabularies(new_schema, context.resolver, entry.dialect),
-       .base = sourcemeta::core::URI{entry.base}
-                   .recompose_without_fragment()
-                   .value_or(""),
+       .base = new_base,
        // TODO: This represents a copy
        .labels = schema_context.labels,
        .is_property_name = schema_context.is_property_name},

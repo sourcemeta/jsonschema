@@ -49,17 +49,15 @@ auto ValidExamples::condition(
     }
   }
 
-  const auto &root_base_dialect{frame.traverse(location.root.value_or(""))
-                                    .value_or(location)
-                                    .get()
-                                    .base_dialect};
-  std::optional<std::string> default_id{location.base};
-  if (sourcemeta::core::identify(root, root_base_dialect).has_value() ||
-      default_id.value().empty()) {
+  const auto &root_base_dialect{
+      frame.traverse(frame.root()).value_or(location).get().base_dialect};
+  std::string_view default_id{location.base};
+  if (!sourcemeta::core::identify(root, root_base_dialect).empty() ||
+      default_id.empty()) {
     // We want to only set a default identifier if the root schema does not
     // have an explicit identifier. Otherwise, we can get into corner case
     // when wrapping the schema
-    default_id = std::nullopt;
+    default_id = "";
   }
 
   const auto subschema{sourcemeta::core::wrap(root, location.pointer, resolver,

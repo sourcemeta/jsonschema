@@ -19,6 +19,7 @@
 #include <functional>    // std::function
 #include <optional>      // std::optional, std::nullopt
 #include <string>        // std::string
+#include <string_view>   // std::string_view
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
@@ -170,8 +171,7 @@ compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::SchemaWalker &walker,
         const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt,
-        const std::optional<std::string> &default_id = std::nullopt,
+        std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
@@ -189,8 +189,7 @@ compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
         const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt,
-        const std::optional<std::string> &default_id = std::nullopt,
+        std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
@@ -207,7 +206,7 @@ compile(const Context &context, const SchemaContext &schema_context,
         const sourcemeta::core::Pointer &schema_suffix,
         const sourcemeta::core::Pointer &instance_suffix =
             sourcemeta::core::empty_pointer,
-        const std::optional<std::string> &uri = std::nullopt) -> Instructions;
+        std::optional<std::string_view> uri = std::nullopt) -> Instructions;
 
 /// @ingroup compiler
 /// Serialise a template as JSON

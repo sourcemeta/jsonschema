@@ -199,9 +199,10 @@ auto compiler_draft4_core_ref(const Context &context,
         entry.pointer, "The schema location is inside of an unknown keyword");
   }
   const auto &reference{context.frame.references().at({type, entry.pointer})};
-  const auto label{Evaluator{}.hash(
-      schema_resource_id(context.resources, reference.base.value_or("")),
-      reference.fragment.value_or(""))};
+
+  const auto label{
+      Evaluator{}.hash(schema_resource_id(context.resources, reference.base),
+                       reference.fragment.value_or(""))};
 
   ///////////////////////////////////////////////////////////////////
   // (2) If we know about such label, then just jump into it

@@ -71,7 +71,7 @@
   X(OpenAPI_3_2_Base, "https://spec.openapis.org/oas/3.2/vocab/base")
 
 namespace {
-auto uri_to_known_vocabulary(std::string_view uri)
+auto uri_to_known_vocabulary(const std::string_view uri)
     -> std::optional<sourcemeta::core::Vocabularies::Known> {
   using sourcemeta::core::Vocabularies;
 
