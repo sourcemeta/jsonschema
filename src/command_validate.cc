@@ -8,10 +8,11 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output.h>
 
-#include <chrono>   // std::chrono
-#include <cmath>    // std::sqrt
-#include <iostream> // std::cerr
-#include <string>   // std::string
+#include <chrono>      // std::chrono
+#include <cmath>       // std::sqrt
+#include <iostream>    // std::cerr
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 #include "command.h"
 #include "configuration.h"
@@ -36,8 +37,8 @@ auto get_precompiled_schema_template_path(
 auto get_schema_template(const sourcemeta::core::JSON &bundled,
                          const sourcemeta::core::SchemaResolver &resolver,
                          const sourcemeta::core::SchemaFrame &frame,
-                         const std::optional<std::string> &default_dialect,
-                         const std::optional<std::string> &default_id,
+                         const std::string_view default_dialect,
+                         const std::string_view default_id,
                          const bool fast_mode,
                          const sourcemeta::core::Options &options)
     -> sourcemeta::blaze::Template {

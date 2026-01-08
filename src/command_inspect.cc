@@ -50,7 +50,7 @@ auto print_frame(std::ostream &stream,
     }
 
     stream << "    Root              : "
-           << location.second.root.value_or("<ANONYMOUS>") << "\n";
+           << (frame.root().empty() ? "<ANONYMOUS>" : frame.root()) << "\n";
 
     if (location.second.pointer.empty()) {
       stream << "    Pointer           :\n";
@@ -70,17 +70,19 @@ auto print_frame(std::ostream &stream,
 
     stream << "    Base              : " << location.second.base << "\n";
 
-    if (location.second.relative_pointer.empty()) {
+    const auto relative_pointer{
+        location.second.pointer.slice(location.second.relative_pointer)};
+    if (relative_pointer.empty()) {
       stream << "    Relative Pointer  :\n";
     } else {
       stream << "    Relative Pointer  : ";
-      sourcemeta::core::stringify(location.second.relative_pointer, stream);
+      sourcemeta::core::stringify(relative_pointer, stream);
       stream << "\n";
     }
 
     stream << "    Dialect           : " << location.second.dialect << "\n";
-    stream << "    Base Dialect      : " << location.second.base_dialect
-           << "\n";
+    stream << "    Base Dialect      : "
+           << sourcemeta::core::to_string(location.second.base_dialect) << "\n";
 
     if (location.second.parent.has_value()) {
       if (location.second.parent.value().empty()) {
@@ -125,7 +127,8 @@ auto print_frame(std::ostream &stream,
     stream << "    Destination       : " << reference.second.destination
            << "\n";
     stream << "    - (w/o fragment)  : "
-           << reference.second.base.value_or("<NONE>") << "\n";
+           << (reference.second.base.empty() ? "<NONE>" : reference.second.base)
+           << "\n";
     stream << "    - (fragment)      : "
            << reference.second.fragment.value_or("<NONE>") << "\n";
   }
@@ -157,17 +160,17 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     const auto identifier{
         sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
-    frame.analyse(
-        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
+    frame.analyse(schema, sourcemeta::core::schema_walker, custom_resolver,
+                  dialect,
 
-        // Only use the file-based URI if the schema has no identifier,
-        // as otherwise we make the output unnecessarily hard when it
-        // comes to debugging schemas
-        identifier.has_value()
-            ? std::optional<sourcemeta::core::JSON::String>(std::nullopt)
-            : sourcemeta::core::URI::from_path(
-                  sourcemeta::core::weakly_canonical(schema_path))
-                  .recompose());
+                  // Only use the file-based URI if the schema has no
+                  // identifier, as otherwise we make the output unnecessarily
+                  // hard when it comes to debugging schemas
+                  !identifier.empty()
+                      ? ""
+                      : sourcemeta::core::URI::from_path(
+                            sourcemeta::core::weakly_canonical(schema_path))
+                            .recompose());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(

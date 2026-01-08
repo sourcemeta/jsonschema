@@ -47,7 +47,7 @@ auto sourcemeta::jsonschema::metaschema(
     try {
       const auto dialect{
           sourcemeta::core::dialect(entry.second, default_dialect_option)};
-      if (!dialect) {
+      if (dialect.empty()) {
         throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
             entry.first);
       }
@@ -62,27 +62,27 @@ auto sourcemeta::jsonschema::metaschema(
       frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
                     default_dialect_option);
 
-      if (!cache.contains(dialect.value())) {
+      if (!cache.contains(std::string{dialect})) {
         const auto metaschema_template{sourcemeta::blaze::compile(
             bundled, sourcemeta::core::schema_walker, custom_resolver,
             sourcemeta::blaze::default_schema_compiler, frame,
             sourcemeta::blaze::Mode::Exhaustive, default_dialect_option)};
-        cache.insert({dialect.value(), metaschema_template});
+        cache.insert({std::string{dialect}, metaschema_template});
       }
 
       if (trace) {
         sourcemeta::blaze::TraceOutput output{
             sourcemeta::core::schema_walker, custom_resolver,
             sourcemeta::core::empty_weak_pointer, frame};
-        result = evaluator.validate(cache.at(dialect.value()), entry.second,
-                                    std::ref(output));
+        result = evaluator.validate(cache.at(std::string{dialect}),
+                                    entry.second, std::ref(output));
         print(output, entry.positions, std::cout);
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
         std::cerr << entry.first.string() << "\n";
         const auto output{sourcemeta::blaze::standard(
-            evaluator, cache.at(dialect.value()), entry.second,
+            evaluator, cache.at(std::string{dialect}), entry.second,
             sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
         assert(output.is_object());
         assert(output.defines("valid"));
@@ -95,12 +95,12 @@ auto sourcemeta::jsonschema::metaschema(
         std::cout << "\n";
       } else {
         sourcemeta::blaze::SimpleOutput output{entry.second};
-        if (evaluator.validate(cache.at(dialect.value()), entry.second,
+        if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
                                std::ref(output))) {
           LOG_VERBOSE(options)
               << "ok: "
               << sourcemeta::core::weakly_canonical(entry.first).string()
-              << "\n  matches " << dialect.value() << "\n";
+              << "\n  matches " << dialect << "\n";
         } else {
           std::cerr << "fail: "
                     << sourcemeta::core::weakly_canonical(entry.first).string()

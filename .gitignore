@@ -13,3 +13,4 @@ Brewfile.lock.json
 .DS_Store
 *.snap
 /node_modules
+/.cache

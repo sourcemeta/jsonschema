@@ -80,7 +80,7 @@ public:
   CustomResolver(
       const sourcemeta::core::Options &options,
       const std::optional<sourcemeta::core::SchemaConfig> &configuration,
-      const bool remote, const std::optional<std::string> &default_dialect)
+      const bool remote, const std::string_view default_dialect)
       : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
       for (const auto &entry : for_each_json(options.at("resolve"), options)) {
@@ -121,8 +121,8 @@ public:
   }
 
   auto add(const sourcemeta::core::JSON &schema,
-           const std::optional<std::string> &default_dialect = std::nullopt,
-           const std::optional<std::string> &default_id = std::nullopt,
+           const std::string_view default_dialect = "",
+           const std::string_view default_id = "",
            const std::function<void(const sourcemeta::core::JSON::String &)>
                &callback = nullptr) -> bool {
     assert(sourcemeta::core::is_schema(schema));
@@ -223,12 +223,12 @@ private:
 
 inline auto
 resolver(const sourcemeta::core::Options &options, const bool remote,
-         const std::optional<std::string> &default_dialect,
+         const std::string_view default_dialect,
          const std::optional<sourcemeta::core::SchemaConfig> &configuration)
     -> const CustomResolver & {
-  using CacheKey = std::pair<bool, std::optional<std::string>>;
+  using CacheKey = std::pair<bool, std::string>;
   static std::map<CacheKey, CustomResolver> resolver_cache;
-  const CacheKey cache_key{remote, default_dialect};
+  const CacheKey cache_key{remote, std::string{default_dialect}};
 
   // Check if resolver is already cached
   auto iterator{resolver_cache.find(cache_key)};
