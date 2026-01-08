@@ -19,6 +19,7 @@
 #include <functional>    // std::function
 #include <optional>      // std::optional, std::nullopt
 #include <string>        // std::string
+#include <string_view>   // std::string_view
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
@@ -34,7 +35,7 @@ namespace sourcemeta::blaze {
 struct SchemaContext {
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The schema location relative to the base URI
-  const sourcemeta::core::Pointer &relative_pointer;
+  const sourcemeta::core::WeakPointer &relative_pointer;
   /// The current subschema
   const sourcemeta::core::JSON &schema;
   /// The schema vocabularies in use
@@ -56,9 +57,9 @@ struct DynamicContext {
   /// The schema keyword
   const std::string keyword;
   /// The schema base keyword path
-  const sourcemeta::core::Pointer &base_schema_location;
+  const sourcemeta::core::WeakPointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
-  const sourcemeta::core::Pointer &base_instance_location;
+  const sourcemeta::core::WeakPointer &base_instance_location;
   /// Whether the instance location property acts as the target
   const bool property_as_target;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -170,8 +171,7 @@ compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::SchemaWalker &walker,
         const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt,
-        const std::optional<std::string> &default_id = std::nullopt,
+        std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
@@ -189,8 +189,7 @@ compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
         const Mode mode = Mode::FastValidation,
-        const std::optional<std::string> &default_dialect = std::nullopt,
-        const std::optional<std::string> &default_id = std::nullopt,
+        std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
@@ -204,10 +203,10 @@ compile(const sourcemeta::core::JSON &schema,
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 compile(const Context &context, const SchemaContext &schema_context,
         const DynamicContext &dynamic_context,
-        const sourcemeta::core::Pointer &schema_suffix,
-        const sourcemeta::core::Pointer &instance_suffix =
-            sourcemeta::core::empty_pointer,
-        const std::optional<std::string> &uri = std::nullopt) -> Instructions;
+        const sourcemeta::core::WeakPointer &schema_suffix,
+        const sourcemeta::core::WeakPointer &instance_suffix =
+            sourcemeta::core::empty_weak_pointer,
+        std::optional<std::string_view> uri = std::nullopt) -> Instructions;
 
 /// @ingroup compiler
 /// Serialise a template as JSON

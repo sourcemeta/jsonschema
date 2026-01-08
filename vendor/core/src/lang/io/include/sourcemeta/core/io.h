@@ -5,6 +5,11 @@
 #include <sourcemeta/core/io_export.h>
 #endif
 
+// NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/io_error.h>
+#include <sourcemeta/core/io_fileview.h>
+// NOLINTEND(misc-include-cleaner)
+
 #include <cassert>    // assert
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::basic_ifstream

@@ -75,7 +75,7 @@ auto utf8_to_punycode(std::istream &input, std::ostream &output) -> void;
 /// "Mnchen-3ya");
 /// ```
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto utf8_to_punycode(std::string_view input) -> std::string;
+auto utf8_to_punycode(const std::string_view input) -> std::string;
 
 /// @ingroup punycode
 /// Decode Punycode to Unicode code points (UTF-32). For example:
@@ -97,7 +97,7 @@ auto utf8_to_punycode(std::string_view input) -> std::string;
 /// (`std::ctype<char32_t>`) for `std::basic_istream<char32_t>` and
 /// `std::basic_ostream<char32_t>` to function properly.
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto punycode_to_utf32(std::string_view input) -> std::u32string;
+auto punycode_to_utf32(const std::string_view input) -> std::u32string;
 
 /// @ingroup punycode
 /// Decode Punycode to UTF-8 using streams. For example:
@@ -126,7 +126,7 @@ auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void;
 /// "M\xC3\xBCnchen");
 /// ```
 SOURCEMETA_CORE_PUNYCODE_EXPORT
-auto punycode_to_utf8(std::string_view input) -> std::string;
+auto punycode_to_utf8(const std::string_view input) -> std::string;
 
 } // namespace sourcemeta::core
 

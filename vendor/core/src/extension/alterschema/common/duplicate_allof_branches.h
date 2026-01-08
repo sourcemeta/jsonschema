@@ -56,7 +56,7 @@ public:
     schema.assign("allOf", std::move(result));
   }
 
-  [[nodiscard]] auto rereference(const std::string &, const Pointer &,
+  [[nodiscard]] auto rereference(const std::string_view, const Pointer &,
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {

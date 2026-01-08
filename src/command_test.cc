@@ -3,13 +3,13 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <chrono>   // std::chrono
-#include <cstdlib>  // EXIT_FAILURE
-#include <iostream> // std::cerr, std::cout
-#include <sstream>  // std::ostringstream
-#include <string>   // std::string
-#include <thread>   // std::this_thread
-#include <vector>   // std::vector
+#include <chrono>      // std::chrono
+#include <cstdlib>     // EXIT_FAILURE
+#include <iostream>    // std::cerr, std::cout
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <thread>      // std::this_thread
 
 #include "command.h"
 #include "configuration.h"
@@ -24,8 +24,8 @@ namespace {
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::core::SchemaResolver &schema_resolver,
-                      const std::optional<std::string> &dialect,
-                      const bool json_output) -> sourcemeta::blaze::TestSuite {
+                      const std::string_view dialect, const bool json_output)
+    -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
         entry.second, entry.positions, entry.first.parent_path(),

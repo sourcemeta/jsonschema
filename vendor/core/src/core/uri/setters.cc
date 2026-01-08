@@ -25,7 +25,7 @@ auto apply_leading_slash_transform(std::optional<std::string> parsed_path,
   return parsed_path;
 }
 
-auto normalize_fragment(std::string_view input) -> std::string {
+auto normalize_fragment(const std::string_view input) -> std::string {
   if (input.empty()) {
     return "";
   }
@@ -149,7 +149,7 @@ auto URI::extension(std::string &&extension) -> URI & {
   return *this;
 }
 
-auto URI::fragment(std::string_view fragment) -> URI & {
+auto URI::fragment(const std::string_view fragment) -> URI & {
   this->fragment_ = normalize_fragment(std::string{fragment});
   return *this;
 }

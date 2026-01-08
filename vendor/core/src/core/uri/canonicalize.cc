@@ -9,7 +9,7 @@
 
 namespace {
 
-auto to_lowercase(std::string_view input) -> std::string {
+auto to_lowercase(const std::string_view input) -> std::string {
   std::string result;
   result.reserve(input.size());
   for (const auto character : input) {
@@ -62,7 +62,7 @@ auto URI::canonicalize() -> URI & {
   return *this;
 }
 
-auto URI::canonicalize(const std::string &input) -> std::string {
+auto URI::canonicalize(const std::string_view input) -> std::string {
   return URI{input}.canonicalize().recompose();
 }
 

@@ -17,7 +17,7 @@ auto find_canonical_name(const T &aliases, const typename T::key_type &alias)
     -> const typename T::mapped_type & {
   const auto iterator{aliases.find(alias)};
   if (iterator == aliases.cend()) {
-    throw sourcemeta::core::OptionsUnknownOptionError(std::string{alias});
+    throw sourcemeta::core::OptionsUnknownOptionError(alias);
   } else {
     return iterator->second;
   }
@@ -57,14 +57,14 @@ auto Options::flag(std::string &&name,
   this->flags.emplace(view);
 }
 
-auto Options::at(std::string_view name) const
+auto Options::at(const std::string_view name) const
     -> const std::vector<std::string_view> & {
   assert(!name.empty());
   const auto iterator{this->options_.find(name)};
   return iterator == this->options_.cend() ? Options::EMPTY : iterator->second;
 }
 
-auto Options::contains(std::string_view name) const -> bool {
+auto Options::contains(const std::string_view name) const -> bool {
   return this->options_.contains(name);
 }
 
@@ -104,7 +104,7 @@ auto Options::parse(const int argc,
         if (eq == std::string_view::npos) {
           this->options_[canonical].push_back(token.substr(2));
         } else {
-          throw OptionsUnexpectedValueFlagError(std::string{name});
+          throw OptionsUnexpectedValueFlagError(name);
         }
       } else if (eq != std::string_view::npos) {
         this->options_[canonical].push_back(token.substr(eq + 1));
@@ -112,7 +112,7 @@ auto Options::parse(const int argc,
         this->options_[canonical].emplace_back(next);
         index += 1;
       } else {
-        throw OptionsMissingOptionValueError(std::string{name});
+        throw OptionsMissingOptionValueError(name);
       }
 
       // Parse short options
@@ -132,7 +132,7 @@ auto Options::parse(const int argc,
           index += 1;
           break;
         } else {
-          throw OptionsMissingOptionValueError(std::string{name});
+          throw OptionsMissingOptionValueError(name);
         }
       }
 

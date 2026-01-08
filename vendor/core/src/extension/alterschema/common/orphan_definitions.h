@@ -28,7 +28,6 @@ public:
                                schema.defines("definitions")};
     ONLY_CONTINUE_IF(has_defs || has_definitions);
 
-    const auto prefix_size{location.pointer.size()};
     bool has_external_to_defs{false};
     bool has_external_to_definitions{false};
     std::unordered_set<std::string_view> outside_referenced_defs;
@@ -37,16 +36,16 @@ public:
     for (const auto &[key, reference] : frame.references()) {
       const auto destination_location{frame.traverse(reference.destination)};
       if (destination_location.has_value()) {
+        const auto &destination_pointer{destination_location->get().pointer};
         if (has_defs) {
-          process_reference(key.second, destination_location->get().pointer,
-                            location.pointer, prefix_size, "$defs",
-                            has_external_to_defs, outside_referenced_defs);
+          process_reference(key.second, destination_pointer, location.pointer,
+                            "$defs", has_external_to_defs,
+                            outside_referenced_defs);
         }
 
         if (has_definitions) {
-          process_reference(key.second, destination_location->get().pointer,
-                            location.pointer, prefix_size, "definitions",
-                            has_external_to_definitions,
+          process_reference(key.second, destination_pointer, location.pointer,
+                            "definitions", has_external_to_definitions,
                             outside_referenced_definitions);
         }
       }
@@ -77,18 +76,16 @@ public:
   }
 
 private:
-  static auto
-  process_reference(const Pointer &source_pointer,
-                    const Pointer &destination_pointer, const Pointer &prefix,
-                    const std::size_t prefix_size, std::string_view container,
-                    bool &has_external,
-                    std::unordered_set<std::string_view> &referenced) -> void {
+  static auto process_reference(
+      const WeakPointer &source_pointer, const WeakPointer &destination_pointer,
+      const WeakPointer &prefix, std::string_view container, bool &has_external,
+      std::unordered_set<std::string_view> &referenced) -> void {
     if (!destination_pointer.starts_with(prefix, container) ||
-        destination_pointer.size() <= prefix_size + 1) {
+        destination_pointer.size() <= prefix.size() + 1) {
       return;
     }
 
-    const auto &entry_token{destination_pointer.at(prefix_size + 1)};
+    const auto &entry_token{destination_pointer.at(prefix.size() + 1)};
     if (entry_token.is_property()) {
       const auto &entry_name{entry_token.to_property()};
       if (!source_pointer.starts_with(prefix, container)) {

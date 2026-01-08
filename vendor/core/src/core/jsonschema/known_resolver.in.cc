@@ -1,6 +1,6 @@
 #include <sourcemeta/core/jsonschema.h>
 
-auto sourcemeta::core::schema_resolver(std::string_view identifier)
+auto sourcemeta::core::schema_resolver(const std::string_view identifier)
     -> std::optional<sourcemeta::core::JSON> {
   // JSON Schema 2020-12
   if (identifier == "https://json-schema.org/draft/2020-12/schema" ||

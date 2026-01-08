@@ -162,6 +162,14 @@ auto get(JSON &document, const Pointer &pointer) -> JSON & {
   return traverse_all<std::allocator, JSON>(document, pointer);
 }
 
+auto get(JSON &document, const WeakPointer &pointer) -> JSON & {
+  if (pointer.empty()) {
+    return document;
+  }
+
+  return traverse_all<std::allocator, JSON>(document, pointer);
+}
+
 auto try_get(const JSON &document, const Pointer &pointer) -> const JSON * {
   return pointer.empty() ? &document : try_traverse(document, pointer);
 }
@@ -377,6 +385,26 @@ auto to_uri(const Pointer &pointer) -> URI {
 
 auto to_uri(const Pointer &pointer, const URI &base) -> URI {
   return to_uri(pointer).resolve_from(base).canonicalize();
+}
+
+auto to_uri(const WeakPointer &pointer) -> URI {
+  std::basic_ostringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      result;
+  stringify(pointer, result);
+  return URI::from_fragment(result.str());
+}
+
+auto to_uri(const WeakPointer &pointer, const URI &base) -> URI {
+  return to_uri(pointer).resolve_from(base).canonicalize();
+}
+
+auto to_uri(const WeakPointer &pointer, const std::string_view base) -> URI {
+  if (base.empty()) {
+    return to_uri(pointer);
+  }
+
+  return to_uri(pointer).resolve_from(URI{base}).canonicalize();
 }
 
 } // namespace sourcemeta::core

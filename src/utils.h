@@ -8,28 +8,29 @@
 
 #include <sourcemeta/blaze/output.h>
 
-#include <cassert>  // assert
-#include <iterator> // std::next
-#include <optional> // std::optional
-#include <ostream>  // std::ostream
-#include <sstream>  // std::ostringstream
-#include <string>   // std::string, std::stoull
-#include <tuple>    // std::get
-#include <variant>  // std::visit
+#include <cassert>     // assert
+#include <iterator>    // std::next
+#include <optional>    // std::optional
+#include <ostream>     // std::ostream
+#include <string>      // std::string, std::stoull
+#include <string_view> // std::string_view
+#include <tuple>       // std::get
+#include <variant>     // std::visit
 
 namespace sourcemeta::jsonschema {
 
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
     const std::optional<sourcemeta::core::SchemaConfig> &configuration)
-    -> std::optional<std::string> {
+    -> std::string_view {
   if (options.contains("default-dialect")) {
-    return std::string{options.at("default-dialect").front()};
-  } else if (configuration.has_value()) {
-    return configuration.value().default_dialect;
+    return options.at("default-dialect").front();
+  } else if (configuration.has_value() &&
+             configuration.value().default_dialect.has_value()) {
+    return configuration.value().default_dialect.value();
   }
 
-  return std::nullopt;
+  return "";
 }
 
 inline auto parse_indentation(const sourcemeta::core::Options &options)

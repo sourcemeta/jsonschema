@@ -8,9 +8,9 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -43,12 +43,8 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaResolutionError
     : public std::exception {
 public:
-  SchemaResolutionError(std::string identifier, const char *message)
-      : identifier_{std::move(identifier)}, message_{message} {}
-  SchemaResolutionError(std::string identifier, std::string message) = delete;
-  SchemaResolutionError(std::string identifier, std::string &&message) = delete;
-  SchemaResolutionError(std::string identifier,
-                        std::string_view message) = delete;
+  SchemaResolutionError(const std::string_view identifier, const char *message)
+      : identifier_{identifier}, message_{message} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_;
@@ -70,8 +66,8 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaRelativeMetaschemaResolutionError
     : public SchemaResolutionError {
 public:
-  SchemaRelativeMetaschemaResolutionError(std::string identifier)
-      : SchemaResolutionError{std::move(identifier),
+  SchemaRelativeMetaschemaResolutionError(const std::string_view identifier)
+      : SchemaResolutionError{identifier,
                               "Relative meta-schema URIs are not valid "
                               "according to the JSON Schema specification"} {}
 };
@@ -81,11 +77,8 @@ public:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaVocabularyError
     : public std::exception {
 public:
-  SchemaVocabularyError(std::string uri, const char *message)
-      : uri_{std::move(uri)}, message_{message} {}
-  SchemaVocabularyError(std::string uri, std::string message) = delete;
-  SchemaVocabularyError(std::string uri, std::string &&message) = delete;
-  SchemaVocabularyError(std::string uri, std::string_view message) = delete;
+  SchemaVocabularyError(const std::string_view uri, const char *message)
+      : uri_{uri}, message_{message} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_;
@@ -105,16 +98,10 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaReferenceError
     : public std::exception {
 public:
-  SchemaReferenceError(std::string identifier, Pointer schema_location,
-                       const char *message)
-      : identifier_{std::move(identifier)},
-        schema_location_{std::move(schema_location)}, message_{message} {}
-  SchemaReferenceError(std::string identifier, Pointer schema_location,
-                       std::string message) = delete;
-  SchemaReferenceError(std::string identifier, Pointer schema_location,
-                       std::string &&message) = delete;
-  SchemaReferenceError(std::string identifier, Pointer schema_location,
-                       std::string_view message) = delete;
+  SchemaReferenceError(const std::string_view identifier,
+                       Pointer schema_location, const char *message)
+      : identifier_{identifier}, schema_location_{std::move(schema_location)},
+        message_{message} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_;
@@ -189,18 +176,19 @@ public:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaTransformRuleProcessedTwiceError
     : public std::exception {
 public:
-  SchemaTransformRuleProcessedTwiceError(std::string name, Pointer location)
-      : name_{std::move(name)}, location_{std::move(location)} {}
+  SchemaTransformRuleProcessedTwiceError(const std::string_view name,
+                                         Pointer location)
+      : name_{name}, location_{std::move(location)} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Transformation rules must only be processed once";
   }
 
-  [[nodiscard]] auto name() const noexcept -> const auto & {
+  [[nodiscard]] auto name() const noexcept -> std::string_view {
     return this->name_;
   }
 
-  [[nodiscard]] auto location() const noexcept -> const auto & {
+  [[nodiscard]] auto location() const noexcept -> const Pointer & {
     return this->location_;
   }
 
@@ -215,8 +203,8 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaReferenceObjectResourceError
     : public std::exception {
 public:
-  SchemaReferenceObjectResourceError(std::string identifier)
-      : identifier_{std::move(identifier)} {}
+  SchemaReferenceObjectResourceError(const std::string_view identifier)
+      : identifier_{identifier} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "A schema with a top-level `$ref` in JSON Schema Draft 7 and older "
@@ -225,7 +213,7 @@ public:
            "bundling, are not possible without undefined behavior";
   }
 
-  [[nodiscard]] auto identifier() const noexcept -> const auto & {
+  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
     return this->identifier_;
   }
 
@@ -238,8 +226,8 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaBaseDialectError
     : public std::exception {
 public:
-  SchemaBaseDialectError(std::string base_dialect)
-      : base_dialect_{std::move(base_dialect)} {}
+  SchemaBaseDialectError(const std::string_view base_dialect)
+      : base_dialect_{base_dialect} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Unrecognized base dialect";
@@ -258,11 +246,8 @@ private:
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrameError
     : public std::exception {
 public:
-  SchemaFrameError(std::string identifier, const char *message)
-      : identifier_{std::move(identifier)}, message_{message} {}
-  SchemaFrameError(std::string identifier, std::string message) = delete;
-  SchemaFrameError(std::string identifier, std::string &&message) = delete;
-  SchemaFrameError(std::string identifier, std::string_view message) = delete;
+  SchemaFrameError(const std::string_view identifier, const char *message)
+      : identifier_{identifier}, message_{message} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_;

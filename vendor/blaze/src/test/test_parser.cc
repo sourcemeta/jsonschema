@@ -4,9 +4,10 @@
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <cassert> // assert
-#include <tuple>   // std::get
-#include <utility> // std::move
+#include <cassert>     // assert
+#include <string_view> // std::string_view
+#include <tuple>       // std::get
+#include <utility>     // std::move
 
 namespace {
 inline auto TEST_ERROR_IF(
@@ -90,8 +91,8 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
                       const sourcemeta::core::SchemaResolver &schema_resolver,
                       const sourcemeta::core::SchemaWalker &walker,
                       const Compiler &compiler,
-                      const std::optional<std::string> &default_dialect,
-                      const std::optional<std::string> &default_id,
+                      const std::string_view default_dialect,
+                      const std::string_view default_id,
                       const std::optional<Tweaks> &tweaks) -> TestSuite {
   assert(std::filesystem::is_directory(base_path));
   TEST_ERROR_IF(!document.is_object(), tracker, sourcemeta::core::empty_pointer,

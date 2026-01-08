@@ -298,10 +298,11 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
-                  { current.option() } -> std::convertible_to<std::string>;
+                  { current.option() } -> std::convertible_to<std::string_view>;
                 }) {
     if (is_json) {
-      error_json.assign("option", sourcemeta::core::JSON{exception.option()});
+      error_json.assign(
+          "option", sourcemeta::core::JSON{std::string{exception.option()}});
     } else {
       std::cerr << "  at option " << exception.option() << "\n";
     }

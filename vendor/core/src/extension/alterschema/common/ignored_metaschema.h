@@ -18,8 +18,8 @@ public:
     ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
                      schema.at("$schema").is_string());
     const auto dialect{sourcemeta::core::dialect(schema)};
-    ONLY_CONTINUE_IF(dialect.has_value());
-    ONLY_CONTINUE_IF(dialect.value() != location.dialect);
+    ONLY_CONTINUE_IF(!dialect.empty());
+    ONLY_CONTINUE_IF(dialect != location.dialect);
     return APPLIES_TO_KEYWORDS("$schema");
   }
 

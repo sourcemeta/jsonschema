@@ -259,7 +259,7 @@ auto utf32_to_punycode(std::u32string_view input) -> std::string {
   return result;
 }
 
-auto punycode_to_utf32(std::string_view input) -> std::u32string {
+auto punycode_to_utf32(const std::string_view input) -> std::u32string {
   std::u32string result;
   punycode_decode(input, result);
   return result;
@@ -288,7 +288,7 @@ auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void {
   utf32_to_utf8(decoded, output);
 }
 
-auto utf8_to_punycode(std::string_view input) -> std::string {
+auto utf8_to_punycode(const std::string_view input) -> std::string {
   std::istringstream input_stream{std::string{input}};
   const auto codepoints = utf8_to_utf32(input_stream);
   if (!codepoints.has_value()) {
@@ -300,7 +300,7 @@ auto utf8_to_punycode(std::string_view input) -> std::string {
   return result;
 }
 
-auto punycode_to_utf8(std::string_view input) -> std::string {
+auto punycode_to_utf8(const std::string_view input) -> std::string {
   std::u32string decoded;
   punycode_decode(input, decoded);
   std::ostringstream output_stream;

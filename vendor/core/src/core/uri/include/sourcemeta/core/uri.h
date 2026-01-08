@@ -9,6 +9,7 @@
 #include <sourcemeta/core/uri_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <concepts>    // std::convertible_to
 #include <cstdint>     // std::uint32_t
 #include <filesystem>  // std::filesystem
 #include <istream>     // std::istream
@@ -17,6 +18,7 @@
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <type_traits> // std::is_same_v
 #include <vector>      // std::vector
 
 /// @defgroup uri URI
@@ -48,14 +50,19 @@ public:
   /// Move assignment operator
   auto operator=(URI &&) noexcept -> URI & = default;
 
-  /// This constructor creates a URI from a string type. For example:
+  /// This constructor creates a URI from a string. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
   ///
   /// const sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
   /// ```
-  URI(const std::string &input);
+  template <typename T>
+    requires std::convertible_to<T, std::string_view> &&
+             (!std::is_same_v<std::decay_t<T>, URI>)
+  URI(T &&input) {
+    this->parse(std::string_view{std::forward<T>(input)});
+  }
 
   /// This constructor creates a URI from a C++ input stream. For example:
   ///
@@ -291,7 +298,7 @@ public:
   /// assert(uri.fragment().has_value());
   /// assert(uri.fragment().value() == "foo");
   /// ```
-  auto fragment(std::string_view fragment) -> URI &;
+  auto fragment(const std::string_view fragment) -> URI &;
 
   /// Get the non-dissected query part of the URI, if any. For example:
   ///
@@ -434,7 +441,7 @@ public:
   ///   sourcemeta::core::URI::from_fragment("foo")};
   /// assert(uri.recompose() == "#foo");
   /// ```
-  static auto from_fragment(std::string_view fragment) -> URI;
+  static auto from_fragment(const std::string_view fragment) -> URI;
 
   /// Create a URI from a file system path. For example:
   ///
@@ -460,10 +467,10 @@ public:
   ///   sourcemeta::core::URI::canonicalize("hTtP://exAmpLe.com:80/TEST")};
   /// assert(result == "http://example.com/TEST");
   /// ```
-  static auto canonicalize(const std::string &input) -> std::string;
+  static auto canonicalize(std::string_view input) -> std::string;
 
 private:
-  auto parse(const std::string &input) -> void;
+  auto parse(std::string_view input) -> void;
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.

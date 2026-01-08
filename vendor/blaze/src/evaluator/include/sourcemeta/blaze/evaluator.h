@@ -14,6 +14,7 @@
 #include <chrono>        // std::chrono
 #include <cstdint>       // std::uint8_t
 #include <functional>    // std::function, std::reference_wrapper
+#include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <vector>        // std::vector
 
@@ -157,9 +158,8 @@ public:
   static const sourcemeta::core::JSON null;
   static const sourcemeta::core::JSON empty_string;
 
-  [[nodiscard]] auto
-  hash(const std::size_t resource,
-       const sourcemeta::core::JSON::String &fragment) const noexcept
+  [[nodiscard]] auto hash(const std::size_t resource,
+                          std::string_view fragment) const noexcept
       -> std::size_t;
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void;
@@ -175,7 +175,7 @@ public:
   sourcemeta::core::WeakPointer evaluate_path;
   sourcemeta::core::WeakPointer instance_location;
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::hash<sourcemeta::core::JSON::String> hasher_{};
+  const std::hash<std::string_view> hasher_{};
   std::vector<std::size_t> resources;
 
   // To speed up the labels map

@@ -85,11 +85,11 @@ public:
       -> void;
 
   /// Access the values (if any) set for an option or flag, by its main name
-  [[nodiscard]] auto at(std::string_view name) const
+  [[nodiscard]] auto at(const std::string_view name) const
       -> const std::vector<std::string_view> &;
 
   /// Check if an option or flag was set, by its main name
-  [[nodiscard]] auto contains(std::string_view name) const -> bool;
+  [[nodiscard]] auto contains(const std::string_view name) const -> bool;
 
   /// Access the positional arguments, if any
   [[nodiscard]] auto positional() const

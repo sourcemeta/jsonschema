@@ -108,8 +108,8 @@ const sourcemeta::core::JSON Evaluator::null{nullptr};
 const sourcemeta::core::JSON Evaluator::empty_string{""};
 
 auto Evaluator::hash(const std::size_t resource,
-                     const sourcemeta::core::JSON::String &fragment)
-    const noexcept -> std::size_t {
+                     const std::string_view fragment) const noexcept
+    -> std::size_t {
   return resource + this->hasher_(fragment);
 }
 

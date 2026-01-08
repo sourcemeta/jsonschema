@@ -14,16 +14,19 @@ auto compiler_draft7_applicator_if(const Context &context,
                                    const DynamicContext &dynamic_context,
                                    const Instructions &) -> Instructions {
   // `if`
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   // `then`
+  static const std::string then_keyword{"then"};
   std::size_t then_cursor{0};
   if (schema_context.schema.defines("then")) {
     then_cursor = children.size();
     const auto destination{
-        to_uri(schema_context.relative_pointer.initial().concat({"then"}),
+        to_uri(schema_context.relative_pointer.initial().concat(
+                   make_weak_pointer(then_keyword)),
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
@@ -31,11 +34,12 @@ auto compiler_draft7_applicator_if(const Context &context,
     DynamicContext new_dynamic_context{
         .keyword = "then",
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_pointer,
+        .base_instance_location = sourcemeta::core::empty_weak_pointer,
         .property_as_target = dynamic_context.property_as_target};
-    for (auto &&step : compile(context, schema_context, new_dynamic_context,
-                               sourcemeta::core::empty_pointer,
-                               sourcemeta::core::empty_pointer, destination)) {
+    for (auto &&step :
+         compile(context, schema_context, new_dynamic_context,
+                 sourcemeta::core::empty_weak_pointer,
+                 sourcemeta::core::empty_weak_pointer, destination)) {
       children.push_back(std::move(step));
     }
 
@@ -46,11 +50,13 @@ auto compiler_draft7_applicator_if(const Context &context,
   }
 
   // `else`
+  static const std::string else_keyword{"else"};
   std::size_t else_cursor{0};
   if (schema_context.schema.defines("else")) {
     else_cursor = children.size();
     const auto destination{
-        to_uri(schema_context.relative_pointer.initial().concat({"else"}),
+        to_uri(schema_context.relative_pointer.initial().concat(
+                   make_weak_pointer(else_keyword)),
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
@@ -58,11 +64,12 @@ auto compiler_draft7_applicator_if(const Context &context,
     DynamicContext new_dynamic_context{
         .keyword = "else",
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_pointer,
+        .base_instance_location = sourcemeta::core::empty_weak_pointer,
         .property_as_target = dynamic_context.property_as_target};
-    for (auto &&step : compile(context, schema_context, new_dynamic_context,
-                               sourcemeta::core::empty_pointer,
-                               sourcemeta::core::empty_pointer, destination)) {
+    for (auto &&step :
+         compile(context, schema_context, new_dynamic_context,
+                 sourcemeta::core::empty_weak_pointer,
+                 sourcemeta::core::empty_weak_pointer, destination)) {
       children.push_back(std::move(step));
     }
   }

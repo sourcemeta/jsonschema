@@ -13,7 +13,6 @@
 #include <optional>      // std::optional
 #include <ostream>       // std::ostream
 #include <stdexcept>     // std::out_of_range
-#include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
