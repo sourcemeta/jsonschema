@@ -1,4 +1,7 @@
 class ElseWithoutIf final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"else"};
+
 public:
   ElseWithoutIf()
       : SchemaTransformRule{"else_without_if",
@@ -18,14 +21,14 @@ public:
                          {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7}) &&
-                     schema.is_object() && schema.defines("else") &&
+                     schema.is_object() && schema.defines(KEYWORD) &&
                      !schema.defines("if"));
-    ONLY_CONTINUE_IF(
-        !frame.has_references_through(location.pointer.concat({"else"})));
-    return APPLIES_TO_KEYWORDS("else");
+    ONLY_CONTINUE_IF(!frame.has_references_through(
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("else");
+    schema.erase(KEYWORD);
   }
 };

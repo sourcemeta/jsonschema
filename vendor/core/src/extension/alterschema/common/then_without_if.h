@@ -1,4 +1,7 @@
 class ThenWithoutIf final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"then"};
+
 public:
   ThenWithoutIf()
       : SchemaTransformRule{"then_without_if",
@@ -18,14 +21,14 @@ public:
                          {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7}) &&
-                     schema.is_object() && schema.defines("then") &&
+                     schema.is_object() && schema.defines(KEYWORD) &&
                      !schema.defines("if"));
-    ONLY_CONTINUE_IF(
-        !frame.has_references_through(location.pointer.concat({"then"})));
-    return APPLIES_TO_KEYWORDS("then");
+    ONLY_CONTINUE_IF(!frame.has_references_through(
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("then");
+    schema.erase(KEYWORD);
   }
 };

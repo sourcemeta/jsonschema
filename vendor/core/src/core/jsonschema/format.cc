@@ -4,6 +4,7 @@
 #include <limits>        // std::numeric_limits
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
+#include <vector>        // std::vector
 
 namespace {
 
@@ -139,19 +140,28 @@ auto format(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver, std::string_view default_dialect)
     -> void {
   assert(is_schema(schema));
-  SchemaFrame frame{SchemaFrame::Mode::Locations};
-  frame.analyse(schema, walker, resolver, default_dialect);
+  std::vector<JSON *> objects_to_reorder;
 
-  for (const auto &entry : frame.locations()) {
-    if (entry.second.type != SchemaFrame::LocationType::Resource &&
-        entry.second.type != SchemaFrame::LocationType::Subschema) {
-      continue;
-    }
+  {
+    SchemaFrame frame{SchemaFrame::Mode::Locations};
+    frame.analyse(schema, walker, resolver, default_dialect);
 
-    auto &value{get(schema, entry.second.pointer)};
-    if (value.is_object()) {
-      value.reorder(keyword_compare);
+    for (const auto &entry : frame.locations()) {
+      if (entry.second.type != SchemaFrame::LocationType::Resource &&
+          entry.second.type != SchemaFrame::LocationType::Subschema) {
+        continue;
+      }
+
+      auto &subschema{get(schema, entry.second.pointer)};
+      if (subschema.is_object()) {
+        objects_to_reorder.push_back(&subschema);
+      }
     }
+  }
+
+  // Now apply the reordering after the frame is destroyed
+  for (auto *object : objects_to_reorder) {
+    object->reorder(keyword_compare);
   }
 }
 

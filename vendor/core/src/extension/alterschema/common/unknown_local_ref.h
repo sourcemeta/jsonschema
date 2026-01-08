@@ -1,4 +1,7 @@
 class UnknownLocalRef final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"$ref"};
+
 public:
   UnknownLocalRef()
       : SchemaTransformRule{
@@ -22,13 +25,14 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_6,
          Vocabularies::Known::JSON_Schema_Draft_4,
          Vocabularies::Known::JSON_Schema_Draft_3}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref") &&
-                     schema.at("$ref").is_string());
+    ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
+                     schema.at(KEYWORD).is_string());
 
     // Find the keyword location entry
-    const auto absolute_ref_pointer{location.pointer.concat({"$ref"})};
+    auto keyword_pointer{location.pointer};
+    keyword_pointer.push_back(std::cref(KEYWORD));
     const auto reference_entry{
-        frame.reference(SchemaReferenceType::Static, absolute_ref_pointer)};
+        frame.reference(SchemaReferenceType::Static, keyword_pointer)};
     ONLY_CONTINUE_IF(reference_entry.has_value());
 
     // If the keyword has no fragment, continue
@@ -46,10 +50,10 @@ public:
       ONLY_CONTINUE_IF(frame.traverse(reference_base).has_value());
     }
 
-    return APPLIES_TO_KEYWORDS("$ref");
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("$ref");
+    schema.erase(KEYWORD);
   }
 };

@@ -10,8 +10,9 @@
 
 namespace {
 
-auto is_official_metaschema_reference(const sourcemeta::core::Pointer &pointer,
-                                      const std::string &destination) -> bool {
+auto is_official_metaschema_reference(
+    const sourcemeta::core::WeakPointer &pointer,
+    const std::string &destination) -> bool {
   assert(!pointer.empty());
   assert(pointer.back().is_property());
   return pointer.back().to_property() == "$schema" &&
@@ -47,7 +48,8 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
 
     if (reference.base.empty()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, pointer, "Could not resolve schema reference");
+          reference.destination, sourcemeta::core::to_pointer(pointer),
+          "Could not resolve schema reference");
     }
 
     // To not infinitely loop on circular references
@@ -59,7 +61,8 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
     // find the base, then we are facing an unresolved fragment
     if (frame.traverse(reference.base).has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, pointer, "Could not resolve schema reference");
+          reference.destination, sourcemeta::core::to_pointer(pointer),
+          "Could not resolve schema reference");
     }
 
     assert(!reference.base.empty());
@@ -72,14 +75,16 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
 
     if (!sourcemeta::core::is_schema(remote.value())) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, pointer, "The JSON document is not a valid JSON Schema");
+          identifier, sourcemeta::core::to_pointer(pointer),
+          "The JSON document is not a valid JSON Schema");
     }
 
     const auto remote_base_dialect{sourcemeta::core::base_dialect(
         remote.value(), resolver, default_dialect)};
     if (!remote_base_dialect.has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, pointer, "The JSON document is not a valid JSON Schema");
+          identifier, sourcemeta::core::to_pointer(pointer),
+          "The JSON document is not a valid JSON Schema");
     }
 
     callback(origin, pointer, identifier, remote.value());
@@ -161,12 +166,14 @@ auto bundle_schema(sourcemeta::core::JSON &root,
     // find base, then we are facing an unresolved fragment
     if (!reference.base.empty() && frame.traverse(reference.base).has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, pointer, "Could not resolve schema reference");
+          reference.destination, sourcemeta::core::to_pointer(pointer),
+          "Could not resolve schema reference");
     }
 
     if (reference.base.empty()) {
       throw sourcemeta::core::SchemaReferenceError(
-          reference.destination, pointer, "Could not resolve schema reference");
+          reference.destination, sourcemeta::core::to_pointer(pointer),
+          "Could not resolve schema reference");
     }
 
     assert(!reference.base.empty());
@@ -182,7 +189,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
     if (!remote.has_value()) {
       if (frame.traverse(identifier).has_value()) {
         throw sourcemeta::core::SchemaReferenceError(
-            reference.destination, pointer,
+            reference.destination, sourcemeta::core::to_pointer(pointer),
             "Could not resolve schema reference");
       }
 
@@ -192,14 +199,16 @@ auto bundle_schema(sourcemeta::core::JSON &root,
 
     if (!sourcemeta::core::is_schema(remote.value())) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, pointer, "The JSON document is not a valid JSON Schema");
+          identifier, sourcemeta::core::to_pointer(pointer),
+          "The JSON document is not a valid JSON Schema");
     }
 
     const auto remote_base_dialect{sourcemeta::core::base_dialect(
         remote.value(), resolver, default_dialect)};
     if (!remote_base_dialect.has_value()) {
       throw sourcemeta::core::SchemaReferenceError(
-          identifier, pointer, "The JSON document is not a valid JSON Schema");
+          identifier, sourcemeta::core::to_pointer(pointer),
+          "The JSON document is not a valid JSON Schema");
     }
 
     // If the reference has a fragment, verify it exists in the remote
@@ -213,7 +222,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
                            identifier);
       if (!remote_frame.traverse(reference.destination).has_value()) {
         throw sourcemeta::core::SchemaReferenceError(
-            reference.destination, pointer,
+            reference.destination, sourcemeta::core::to_pointer(pointer),
             "Could not resolve schema reference");
       }
     }

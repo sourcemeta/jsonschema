@@ -1,4 +1,7 @@
 class NotFalse final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"not"};
+
 public:
   NotFalse()
       : SchemaTransformRule{"not_false",
@@ -17,15 +20,15 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("not") &&
-                     schema.at("not").is_boolean() &&
-                     !schema.at("not").to_boolean());
-    ONLY_CONTINUE_IF(
-        !frame.has_references_through(location.pointer.concat({"not"})));
-    return APPLIES_TO_KEYWORDS("not");
+                     schema.is_object() && schema.defines(KEYWORD) &&
+                     schema.at(KEYWORD).is_boolean() &&
+                     !schema.at(KEYWORD).to_boolean());
+    ONLY_CONTINUE_IF(!frame.has_references_through(
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("not");
+    schema.erase(KEYWORD);
   }
 };

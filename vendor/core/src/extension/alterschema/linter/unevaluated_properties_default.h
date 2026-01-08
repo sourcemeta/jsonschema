@@ -1,4 +1,7 @@
 class UnevaluatedPropertiesDefault final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"unevaluatedProperties"};
+
 public:
   UnevaluatedPropertiesDefault()
       : SchemaTransformRule{
@@ -19,17 +22,15 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
              Vocabularies::Known::JSON_Schema_2019_09_Applicator}) &&
-        schema.is_object() && schema.defines("unevaluatedProperties") &&
-        ((schema.at("unevaluatedProperties").is_boolean() &&
-          schema.at("unevaluatedProperties").to_boolean()) ||
-         (schema.at("unevaluatedProperties").is_object() &&
-          schema.at("unevaluatedProperties").empty())));
+        schema.is_object() && schema.defines(KEYWORD) &&
+        ((schema.at(KEYWORD).is_boolean() && schema.at(KEYWORD).to_boolean()) ||
+         (schema.at(KEYWORD).is_object() && schema.at(KEYWORD).empty())));
     ONLY_CONTINUE_IF(!frame.has_references_through(
-        location.pointer.concat({"unevaluatedProperties"})));
-    return APPLIES_TO_KEYWORDS("unevaluatedProperties");
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("unevaluatedProperties");
+    schema.erase(KEYWORD);
   }
 };

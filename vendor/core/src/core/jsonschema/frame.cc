@@ -13,6 +13,12 @@
 
 enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 
+// Static keyword strings for reference pointers
+static const std::string KEYWORD_SCHEMA{"$schema"};
+static const std::string KEYWORD_REF{"$ref"};
+static const std::string KEYWORD_RECURSIVE_REF{"$recursiveRef"};
+static const std::string KEYWORD_DYNAMIC_REF{"$dynamicRef"};
+
 namespace {
 
 auto find_anchors(const sourcemeta::core::JSON &schema,
@@ -287,7 +293,7 @@ auto store(sourcemeta::core::SchemaFrame::Locations &frame,
                     {.parent = parent,
                      .type = entry_type,
                      .base = base,
-                     .pointer = to_pointer(pointer_from_root),
+                     .pointer = pointer_from_root,
                      .relative_pointer = relative_pointer_offset,
                      .dialect = dialect,
                      .base_dialect = base_dialect}});
@@ -357,9 +363,9 @@ auto SchemaFrame::to_json(
     entry.assign_assume_new("pointer",
                             sourcemeta::core::to_json(location.second.pointer));
     if (tracker.has_value()) {
-      entry.assign_assume_new(
-          "position", sourcemeta::core::to_json(
-                          tracker.value().get(location.second.pointer)));
+      entry.assign_assume_new("position",
+                              sourcemeta::core::to_json(tracker.value().get(
+                                  to_pointer(location.second.pointer))));
     } else {
       entry.assign_assume_new("position", sourcemeta::core::to_json(nullptr));
     }
@@ -400,8 +406,8 @@ auto SchemaFrame::to_json(
 
     if (tracker.has_value()) {
       entry.assign_assume_new("position",
-                              sourcemeta::core::to_json(
-                                  tracker.value().get(reference.first.second)));
+                              sourcemeta::core::to_json(tracker.value().get(
+                                  to_pointer(reference.first.second))));
     } else {
       entry.assign_assume_new("position", sourcemeta::core::to_json(nullptr));
     }
@@ -527,7 +533,6 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
     for (const auto &entry_index : current_subschema_entries) {
       const auto &entry{subschema_entries[entry_index]};
       const auto &common_pointer_weak{entry.common.pointer};
-      const auto common_pointer{to_pointer(common_pointer_weak)};
       const auto &common_parent{entry.common.parent};
       if (entry.id.has_value()) {
         assert(entry.common.base_dialect.has_value());
@@ -573,7 +578,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             const auto maybe_match{
                 this->locations_.find({SchemaReferenceType::Static, new_id})};
             if (maybe_match != this->locations_.cend() &&
-                maybe_match->second.pointer != common_pointer) {
+                maybe_match->second.pointer != common_pointer_weak) {
               throw_already_exists(new_id);
             }
 
@@ -618,8 +623,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
 
           metaschema.canonicalize();
           assert(entry.common.subschema.get().defines("$schema"));
+          auto schema_pointer{common_pointer_weak};
+          schema_pointer.push_back(std::cref(KEYWORD_SCHEMA));
           const auto [it, inserted] = this->references_.insert_or_assign(
-              {SchemaReferenceType::Static, common_pointer.concat({"$schema"})},
+              {SchemaReferenceType::Static, std::move(schema_pointer)},
               SchemaFrame::ReferencesEntry{.original = maybe_metaschema,
                                            .destination =
                                                metaschema.recompose(),
@@ -809,7 +816,6 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   // Resolve references after all framing was performed
   for (const auto &entry : subschema_entries) {
     const auto &common_pointer_weak{entry.common.pointer};
-    const auto common_pointer{to_pointer(common_pointer_weak)};
     if (entry.common.subschema.get().is_object()) {
       const auto nearest_bases{find_nearest_bases(
           base_uris, common_pointer_weak,
@@ -825,8 +831,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           }
 
           ref.canonicalize();
+          auto ref_pointer{common_pointer_weak};
+          ref_pointer.push_back(std::cref(KEYWORD_REF));
           const auto [it, inserted] = this->references_.insert_or_assign(
-              {SchemaReferenceType::Static, common_pointer.concat({"$ref"})},
+              {SchemaReferenceType::Static, std::move(ref_pointer)},
               SchemaFrame::ReferencesEntry{.original = original,
                                            .destination = ref.recompose(),
                                            .base = std::string_view{},
@@ -848,7 +856,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         // https://json-schema.org/draft/2019-09/draft-handrews-json-schema-02#rfc.section.8.2.4.2.1
         if (ref != "#") {
           throw sourcemeta::core::SchemaReferenceError(
-              entry.id.value_or(""), common_pointer.concat({"$recursiveRef"}),
+              entry.id.value_or(""),
+              to_pointer(common_pointer_weak).concat({"$recursiveRef"}),
               "Invalid recursive reference");
         }
 
@@ -860,8 +869,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                       ? SchemaReferenceType::Static
                                       : SchemaReferenceType::Dynamic};
         const sourcemeta::core::URI anchor_uri{anchor_uri_string};
+        auto recursive_ref_pointer{common_pointer_weak};
+        recursive_ref_pointer.push_back(std::cref(KEYWORD_RECURSIVE_REF));
         const auto [it, inserted] = this->references_.insert_or_assign(
-            {reference_type, common_pointer.concat({"$recursiveRef"})},
+            {reference_type, std::move(recursive_ref_pointer)},
             SchemaFrame::ReferencesEntry{.original = ref,
                                          .destination = anchor_uri.recompose(),
                                          .base = std::string_view{},
@@ -896,10 +907,12 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               !has_fragment ||
               (has_fragment && maybe_static_frame != this->locations_.end() &&
                maybe_dynamic_frame == this->locations_.end())};
+          auto dynamic_ref_pointer{common_pointer_weak};
+          dynamic_ref_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
           const auto [it, inserted] = this->references_.insert_or_assign(
               {behaves_as_static ? SchemaReferenceType::Static
                                  : SchemaReferenceType::Dynamic,
-               common_pointer.concat({"$dynamicRef"})},
+               std::move(dynamic_ref_pointer)},
               SchemaFrame::ReferencesEntry{.original = original,
                                            .destination = std::move(ref_string),
                                            .base = std::string_view{},
@@ -979,7 +992,7 @@ auto SchemaFrame::references() const noexcept -> const References & {
 }
 
 auto SchemaFrame::reference(const SchemaReferenceType type,
-                            const Pointer &pointer) const
+                            const WeakPointer &pointer) const
     -> std::optional<std::reference_wrapper<const ReferencesEntry>> {
   const auto result{this->references_.find({type, pointer})};
   if (result != this->references_.cend()) {
@@ -1015,7 +1028,7 @@ auto SchemaFrame::vocabularies(const Location &location,
 }
 
 auto SchemaFrame::uri(const Location &location,
-                      const Pointer &relative_schema_location) const
+                      const WeakPointer &relative_schema_location) const
     -> JSON::String {
   return to_uri(this->relative_instance_location(location).concat(
                     relative_schema_location),
@@ -1024,7 +1037,7 @@ auto SchemaFrame::uri(const Location &location,
 }
 
 auto SchemaFrame::traverse(const Location &location,
-                           const Pointer &relative_schema_location) const
+                           const WeakPointer &relative_schema_location) const
     -> const Location & {
   const auto new_uri{this->uri(location, relative_schema_location)};
   const auto static_match{
@@ -1057,7 +1070,7 @@ auto SchemaFrame::traverse(const std::string_view uri) const
   return std::nullopt;
 }
 
-auto SchemaFrame::traverse(const Pointer &pointer) const
+auto SchemaFrame::traverse(const WeakPointer &pointer) const
     -> std::optional<std::reference_wrapper<const Location>> {
   // TODO: This is slow. Consider adding a pointer-indexed secondary
   // lookup structure to SchemaFrame
@@ -1070,7 +1083,7 @@ auto SchemaFrame::traverse(const Pointer &pointer) const
   return std::nullopt;
 }
 
-auto SchemaFrame::uri(const Pointer &pointer) const
+auto SchemaFrame::uri(const WeakPointer &pointer) const
     -> std::optional<std::reference_wrapper<const JSON::String>> {
   for (const auto &entry : this->locations_) {
     if (entry.second.pointer == pointer) {
@@ -1082,11 +1095,11 @@ auto SchemaFrame::uri(const Pointer &pointer) const
 }
 
 auto SchemaFrame::dereference(const Location &location,
-                              const Pointer &relative_schema_location) const
+                              const WeakPointer &relative_schema_location) const
     -> std::pair<SchemaReferenceType,
                  std::optional<std::reference_wrapper<const Location>>> {
   const auto effective_location{
-      location.pointer.concat({relative_schema_location})};
+      location.pointer.concat(relative_schema_location)};
   const auto maybe_reference_entry{this->references_.find(
       {SchemaReferenceType::Static, effective_location})};
   if (maybe_reference_entry == this->references_.cend()) {
@@ -1118,7 +1131,7 @@ auto SchemaFrame::for_each_resource_uri(
 }
 
 auto SchemaFrame::for_each_unresolved_reference(
-    const std::function<void(const Pointer &, const ReferencesEntry &)>
+    const std::function<void(const WeakPointer &, const ReferencesEntry &)>
         &callback) const -> void {
   for (const auto &[key, reference] : this->references_) {
     if (!this->traverse(reference.destination).has_value()) {
@@ -1127,7 +1140,7 @@ auto SchemaFrame::for_each_unresolved_reference(
   }
 }
 
-auto SchemaFrame::has_references_to(const Pointer &pointer) const -> bool {
+auto SchemaFrame::has_references_to(const WeakPointer &pointer) const -> bool {
   for (const auto &reference : this->references_) {
     assert(!reference.first.second.empty());
     assert(reference.first.second.back().is_property());
@@ -1157,7 +1170,8 @@ auto SchemaFrame::has_references_to(const Pointer &pointer) const -> bool {
   return false;
 }
 
-auto SchemaFrame::has_references_through(const Pointer &pointer) const -> bool {
+auto SchemaFrame::has_references_through(const WeakPointer &pointer) const
+    -> bool {
   for (const auto &reference : this->references_) {
     assert(!reference.first.second.empty());
     assert(reference.first.second.back().is_property());
@@ -1187,8 +1201,40 @@ auto SchemaFrame::has_references_through(const Pointer &pointer) const -> bool {
   return false;
 }
 
+auto SchemaFrame::has_references_through(const WeakPointer &pointer,
+                                         const WeakPointer::Token &tail) const
+    -> bool {
+  for (const auto &reference : this->references_) {
+    assert(!reference.first.second.empty());
+    assert(reference.first.second.back().is_property());
+
+    if (reference.first.first == SchemaReferenceType::Static) {
+      const auto match{this->locations_.find(
+          {reference.first.first, reference.second.destination})};
+      if (match != this->locations_.cend() &&
+          match->second.pointer.starts_with(pointer, tail)) {
+        return true;
+      }
+    } else {
+      for (const auto &location : this->locations_) {
+        if (location.second.type == LocationType::Anchor &&
+            location.first.first == SchemaReferenceType::Dynamic &&
+            location.second.pointer.starts_with(pointer, tail)) {
+          if (!reference.second.fragment.has_value() ||
+              URI{location.first.second}.fragment().value_or("") ==
+                  reference.second.fragment.value()) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 auto SchemaFrame::relative_instance_location(const Location &location) const
-    -> Pointer {
+    -> WeakPointer {
   return location.pointer.slice(location.relative_pointer);
 }
 

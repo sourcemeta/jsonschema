@@ -77,7 +77,7 @@ private:
                                const SchemaResolver &resolver,
                                const JSON::String &property) const -> bool {
     if (location.parent.has_value()) {
-      const auto parent_pointer{to_pointer(location.parent.value())};
+      const auto &parent_pointer{location.parent.value()};
       const auto relative_pointer{
           location.pointer.resolve_from(parent_pointer)};
       assert(!relative_pointer.empty() && relative_pointer.at(0).is_property());
@@ -92,8 +92,8 @@ private:
           type == SchemaKeywordType::ApplicatorValueInPlaceMaybe ||
           type == SchemaKeywordType::ApplicatorValueInPlaceNegate ||
           type == SchemaKeywordType::ApplicatorValueInPlaceOther) {
-        return this->defined_in_properties_sibling(
-            get(root, location.parent.value()), property);
+        return this->defined_in_properties_sibling(get(root, parent_pointer),
+                                                   property);
       }
     }
 

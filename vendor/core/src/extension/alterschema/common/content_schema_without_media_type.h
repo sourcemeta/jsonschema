@@ -1,4 +1,7 @@
 class ContentSchemaWithoutMediaType final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"contentSchema"};
+
 public:
   ContentSchemaWithoutMediaType()
       : SchemaTransformRule{
@@ -18,14 +21,14 @@ public:
     ONLY_CONTINUE_IF(vocabularies.contains_any(
                          {Vocabularies::Known::JSON_Schema_2020_12_Content,
                           Vocabularies::Known::JSON_Schema_2019_09_Content}) &&
-                     schema.is_object() && schema.defines("contentSchema") &&
+                     schema.is_object() && schema.defines(KEYWORD) &&
                      !schema.defines("contentMediaType"));
     ONLY_CONTINUE_IF(!frame.has_references_through(
-        location.pointer.concat({"contentSchema"})));
-    return APPLIES_TO_KEYWORDS("contentSchema");
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("contentSchema");
+    schema.erase(KEYWORD);
   }
 };

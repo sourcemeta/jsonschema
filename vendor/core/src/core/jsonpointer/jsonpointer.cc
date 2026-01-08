@@ -162,6 +162,14 @@ auto get(JSON &document, const Pointer &pointer) -> JSON & {
   return traverse_all<std::allocator, JSON>(document, pointer);
 }
 
+auto get(JSON &document, const WeakPointer &pointer) -> JSON & {
+  if (pointer.empty()) {
+    return document;
+  }
+
+  return traverse_all<std::allocator, JSON>(document, pointer);
+}
+
 auto try_get(const JSON &document, const Pointer &pointer) -> const JSON * {
   return pointer.empty() ? &document : try_traverse(document, pointer);
 }

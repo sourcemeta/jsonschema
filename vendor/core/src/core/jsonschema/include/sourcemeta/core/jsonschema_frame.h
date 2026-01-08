@@ -83,7 +83,7 @@ public:
   /// have a static and a dynamic reference to the same location
   /// on the same schema object.
   using References =
-      std::map<std::pair<SchemaReferenceType, Pointer>, ReferencesEntry>;
+      std::map<std::pair<SchemaReferenceType, WeakPointer>, ReferencesEntry>;
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -109,8 +109,7 @@ public:
     std::optional<WeakPointer> parent;
     LocationType type;
     std::string_view base;
-    // TODO: Turn this into a weak pointer
-    Pointer pointer;
+    WeakPointer pointer;
     std::size_t relative_pointer;
     std::string_view dialect;
     SchemaBaseDialect base_dialect;
@@ -151,7 +150,7 @@ public:
 
   /// Get a specific reference entry by type and pointer
   [[nodiscard]] auto reference(const SchemaReferenceType type,
-                               const Pointer &pointer) const
+                               const WeakPointer &pointer) const
       -> std::optional<std::reference_wrapper<const ReferencesEntry>>;
 
   /// Check whether the analysed schema has no external references
@@ -168,12 +167,12 @@ public:
   /// Get the URI associated with a location entry
   [[nodiscard]] auto
   uri(const Location &location,
-      const Pointer &relative_schema_location = empty_pointer) const
+      const WeakPointer &relative_schema_location = empty_weak_pointer) const
       -> JSON::String;
 
   /// Get the location associated by traversing a pointer from another location
   [[nodiscard]] auto traverse(const Location &location,
-                              const Pointer &relative_schema_location) const
+                              const WeakPointer &relative_schema_location) const
       -> const Location &;
 
   /// Get the location associated with a given URI
@@ -181,17 +180,17 @@ public:
       -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Get the location associated with a given pointer
-  [[nodiscard]] auto traverse(const Pointer &pointer) const
+  [[nodiscard]] auto traverse(const WeakPointer &pointer) const
       -> std::optional<std::reference_wrapper<const Location>>;
 
   /// Turn an absolute pointer into a location URI
-  [[nodiscard]] auto uri(const Pointer &pointer) const
+  [[nodiscard]] auto uri(const WeakPointer &pointer) const
       -> std::optional<std::reference_wrapper<const JSON::String>>;
 
   /// Try to dereference a reference location into its destination location
-  [[nodiscard]] auto
-  dereference(const Location &location,
-              const Pointer &relative_schema_location = empty_pointer) const
+  [[nodiscard]] auto dereference(
+      const Location &location,
+      const WeakPointer &relative_schema_location = empty_weak_pointer) const
       -> std::pair<SchemaReferenceType,
                    std::optional<std::reference_wrapper<const Location>>>;
 
@@ -202,19 +201,25 @@ public:
   /// Iterate over all unresolved references (where destination cannot be
   /// traversed)
   auto for_each_unresolved_reference(
-      const std::function<void(const Pointer &, const ReferencesEntry &)>
+      const std::function<void(const WeakPointer &, const ReferencesEntry &)>
           &callback) const -> void;
 
   /// Check if there are any references to a given location pointer
-  [[nodiscard]] auto has_references_to(const Pointer &pointer) const -> bool;
+  [[nodiscard]] auto has_references_to(const WeakPointer &pointer) const
+      -> bool;
 
   /// Check if there are any references that go through a given location pointer
-  [[nodiscard]] auto has_references_through(const Pointer &pointer) const
+  [[nodiscard]] auto has_references_through(const WeakPointer &pointer) const
       -> bool;
+  /// Check if there are any references that go through a given location pointer
+  /// with a tail token
+  [[nodiscard]] auto
+  has_references_through(const WeakPointer &pointer,
+                         const WeakPointer::Token &tail) const -> bool;
 
   /// Get the relative instance location pointer for a given location entry
   [[nodiscard]] auto relative_instance_location(const Location &location) const
-      -> Pointer;
+      -> WeakPointer;
 
   /// Check if the frame has no analysed data
   [[nodiscard]] auto empty() const noexcept -> bool;

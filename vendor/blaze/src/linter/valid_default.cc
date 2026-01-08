@@ -56,8 +56,9 @@ auto ValidDefault::condition(
     default_id = "";
   }
 
-  const auto subschema{sourcemeta::core::wrap(root, location.pointer, resolver,
-                                              location.dialect)};
+  const auto subschema{sourcemeta::core::wrap(
+      root, sourcemeta::core::to_pointer(location.pointer), resolver,
+      location.dialect)};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::FastValidation,
                                      location.dialect, default_id)};

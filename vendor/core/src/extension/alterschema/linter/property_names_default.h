@@ -1,4 +1,7 @@
 class PropertyNamesDefault final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"propertyNames"};
+
 public:
   PropertyNamesDefault()
       : SchemaTransformRule{
@@ -20,15 +23,15 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("propertyNames") &&
-                     schema.at("propertyNames").is_object() &&
-                     schema.at("propertyNames").empty());
+                     schema.is_object() && schema.defines(KEYWORD) &&
+                     schema.at(KEYWORD).is_object() &&
+                     schema.at(KEYWORD).empty());
     ONLY_CONTINUE_IF(!frame.has_references_through(
-        location.pointer.concat({"propertyNames"})));
-    return APPLIES_TO_KEYWORDS("propertyNames");
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("propertyNames");
+    schema.erase(KEYWORD);
   }
 };

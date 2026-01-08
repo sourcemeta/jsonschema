@@ -115,6 +115,28 @@ auto get(const JSON &document, const WeakPointer &pointer) -> const JSON &;
 auto get(JSON &&document, const WeakPointer &pointer) -> const JSON & = delete;
 
 /// @ingroup jsonpointer
+/// Get a value from a JSON document using a JSON WeakPointer (non-`const`
+/// overload). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+/// #include <sstream>
+///
+/// std::istringstream stream{"[ { \"foo\": 1 }, { \"bar\": 2 } ]"};
+/// auto document{sourcemeta::core::parse_json(stream)};
+/// const sourcemeta::core::Pointer pointer{1, "bar"};
+/// sourcemeta::core::JSON &value{
+///   sourcemeta::core::get(document,
+///   sourcemeta::core::to_weak_pointer(pointer))};
+/// value = sourcemeta::core::JSON{3};
+/// assert(document.at(1).at("bar").to_integer() == 3);
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto get(JSON &document, const WeakPointer &pointer) -> JSON &;
+
+/// @ingroup jsonpointer
 /// Get a value from a JSON document using a Pointer, returning an optional that
 /// is not set if the path does not exist in the document. For example:
 ///

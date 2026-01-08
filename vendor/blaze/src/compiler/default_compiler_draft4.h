@@ -17,13 +17,13 @@
 
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::core::URI &base,
-                        const sourcemeta::core::Pointer &schema_location)
+                        const sourcemeta::core::WeakPointer &schema_location)
     -> sourcemeta::core::Regex {
   const auto result{sourcemeta::core::to_regex(pattern)};
   if (!result.has_value()) {
     std::ostringstream message;
     message << "Invalid regular expression: " << pattern;
-    throw sourcemeta::blaze::CompilerError(base, schema_location,
+    throw sourcemeta::blaze::CompilerError(base, to_pointer(schema_location),
                                            message.str());
   }
 
@@ -51,7 +51,7 @@ defines_direct_enumeration(const sourcemeta::blaze::Instructions &steps)
   return std::distance(steps.cbegin(), iterator);
 }
 
-static auto is_inside_disjunctor(const sourcemeta::core::Pointer &pointer)
+static auto is_inside_disjunctor(const sourcemeta::core::WeakPointer &pointer)
     -> bool {
   return pointer.size() > 2 && pointer.at(pointer.size() - 2).is_index() &&
          pointer.at(pointer.size() - 3).is_property() &&
@@ -95,9 +95,11 @@ compile_properties(const sourcemeta::blaze::Context &context,
   std::vector<std::pair<std::string, sourcemeta::blaze::Instructions>>
       properties;
   for (const auto &entry : schema_context.schema.at("properties").as_object()) {
-    properties.emplace_back(entry.first,
-                            compile(context, schema_context, dynamic_context,
-                                    {entry.first}, {entry.first}));
+    properties.emplace_back(
+        entry.first,
+        compile(context, schema_context, dynamic_context,
+                sourcemeta::blaze::make_weak_pointer(entry.first),
+                sourcemeta::blaze::make_weak_pointer(entry.first)));
   }
 
   // In many cases, `properties` have some subschemas that are small
@@ -196,7 +198,8 @@ auto compiler_draft4_core_ref(const Context &context,
 
     throw sourcemeta::core::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
-        entry.pointer, "The schema location is inside of an unknown keyword");
+        to_pointer(entry.pointer),
+        "The schema location is inside of an unknown keyword");
   }
   const auto &reference{context.frame.references().at({type, entry.pointer})};
 
@@ -229,8 +232,8 @@ auto compiler_draft4_core_ref(const Context &context,
   if (is_circular(context.frame, entry.pointer, reference, visited)) {
     auto children{compile(
         context, new_schema_context, relative_dynamic_context(dynamic_context),
-        sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer,
-        reference.destination)};
+        sourcemeta::core::empty_weak_pointer,
+        sourcemeta::core::empty_weak_pointer, reference.destination)};
     return {make(sourcemeta::blaze::InstructionIndex::ControlLabel, context,
                  new_schema_context, dynamic_context,
                  ValueUnsignedInteger{label}, std::move(children))};
@@ -246,16 +249,16 @@ auto compiler_draft4_core_ref(const Context &context,
       // one of the necessary schema resources to the evaluator
       !context.uses_dynamic_scopes) {
     return compile(context, schema_context, dynamic_context,
-                   sourcemeta::core::empty_pointer,
-                   sourcemeta::core::empty_pointer, reference.destination);
+                   sourcemeta::core::empty_weak_pointer,
+                   sourcemeta::core::empty_weak_pointer, reference.destination);
   } else {
-    return {
-        make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-             schema_context, dynamic_context, ValueNone{},
-             compile(context, schema_context,
-                     relative_dynamic_context(dynamic_context),
-                     sourcemeta::core::empty_pointer,
-                     sourcemeta::core::empty_pointer, reference.destination))};
+    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+                 schema_context, dynamic_context, ValueNone{},
+                 compile(context, schema_context,
+                         relative_dynamic_context(dynamic_context),
+                         sourcemeta::core::empty_weak_pointer,
+                         sourcemeta::core::empty_weak_pointer,
+                         reference.destination))};
   }
 }
 
@@ -551,10 +554,11 @@ auto compiler_draft4_validation_required(const Context &context,
     } else if (is_closed_properties_required(schema_context.schema,
                                              properties_set)) {
       if (context.mode == Mode::FastValidation && assume_object) {
+        static const std::string properties_keyword{"properties"};
         const SchemaContext new_schema_context{
             .relative_pointer =
                 schema_context.relative_pointer.initial().concat(
-                    {"properties"}),
+                    sourcemeta::blaze::make_weak_pointer(properties_keyword)),
             .schema = schema_context.schema,
             .vocabularies = schema_context.vocabularies,
             .base = schema_context.base,
@@ -562,8 +566,8 @@ auto compiler_draft4_validation_required(const Context &context,
             .is_property_name = schema_context.is_property_name};
         const DynamicContext new_dynamic_context{
             .keyword = "properties",
-            .base_schema_location = sourcemeta::core::empty_pointer,
-            .base_instance_location = sourcemeta::core::empty_pointer,
+            .base_schema_location = sourcemeta::core::empty_weak_pointer,
+            .base_instance_location = sourcemeta::core::empty_weak_pointer,
             .property_as_target = false};
         auto properties{compile_properties(context, new_schema_context,
                                            new_dynamic_context, current)};
@@ -1209,8 +1213,8 @@ auto compiler_draft4_applicator_patternproperties_with_options(
   // For each regular expression and corresponding subschema in the object
   for (const auto &pattern : patterns) {
     auto substeps{compile(context, schema_context,
-                          relative_dynamic_context(dynamic_context), {pattern},
-                          {})};
+                          relative_dynamic_context(dynamic_context),
+                          sourcemeta::blaze::make_weak_pointer(pattern))};
 
     if (annotate) {
       substeps.push_back(
@@ -1281,9 +1285,10 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
     return {};
   }
 
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   if (annotate) {
     children.push_back(
@@ -1312,10 +1317,13 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
       if (maybe_prefix.has_value()) {
         filter_prefixes.push_back(maybe_prefix.value());
       } else {
+        static const std::string pattern_properties_keyword{
+            "patternProperties"};
         filter_regexes.push_back(
             {parse_regex(entry.first, schema_context.base,
                          schema_context.relative_pointer.initial().concat(
-                             {"patternProperties"})),
+                             sourcemeta::blaze::make_weak_pointer(
+                                 pattern_properties_keyword))),
              entry.first});
       }
     }
@@ -1531,9 +1539,10 @@ auto compiler_draft4_applicator_not(const Context &context,
     subschemas += 1;
   }
 
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
@@ -1664,7 +1673,8 @@ auto compiler_draft4_applicator_items_with_options(
     if (annotate || track_evaluation) {
       Instructions subchildren{compile(
           context, schema_context, relative_dynamic_context(dynamic_context),
-          sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+          sourcemeta::core::empty_weak_pointer,
+          sourcemeta::core::empty_weak_pointer)};
 
       Instructions children;
 
@@ -1702,9 +1712,10 @@ auto compiler_draft4_applicator_items_with_options(
       return children;
     }
 
-    Instructions children{compile(
-        context, schema_context, relative_dynamic_context(dynamic_context),
-        sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+    Instructions children{compile(context, schema_context,
+                                  relative_dynamic_context(dynamic_context),
+                                  sourcemeta::core::empty_weak_pointer,
+                                  sourcemeta::core::empty_weak_pointer)};
     if (track_evaluation) {
       children.push_back(
           make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
@@ -1787,9 +1798,10 @@ auto compiler_draft4_applicator_additionalitems_from_cursor(
     return {};
   }
 
-  Instructions subchildren{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions subchildren{compile(context, schema_context,
+                                   relative_dynamic_context(dynamic_context),
+                                   sourcemeta::core::empty_weak_pointer,
+                                   sourcemeta::core::empty_weak_pointer)};
 
   Instructions children;
 
@@ -1891,8 +1903,8 @@ auto compiler_draft4_applicator_dependencies(
             sourcemeta::blaze::InstructionIndex::LogicalWhenDefines, context,
             schema_context, dynamic_context, make_property(entry.first),
             compile(context, schema_context,
-                    relative_dynamic_context(dynamic_context), {entry.first},
-                    sourcemeta::core::empty_pointer)));
+                    relative_dynamic_context(dynamic_context),
+                    sourcemeta::blaze::make_weak_pointer(entry.first))));
       }
     } else if (entry.second.is_array()) {
       std::vector<sourcemeta::core::JSON::String> properties;

@@ -49,8 +49,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
     assert(!schema_context.base.fragment().has_value());
     for (auto &&step : context.compiler(
              context,
-             {.relative_pointer =
-                  schema_context.relative_pointer.concat({keyword}),
+             {.relative_pointer = schema_context.relative_pointer.concat(
+                  make_weak_pointer(keyword)),
               .schema = schema_context.schema,
               .vocabularies = entry.vocabularies,
               .base = schema_context.base,
@@ -109,8 +109,8 @@ auto precompile(
                sourcemeta::blaze::compile(
                    context, nested_schema_context,
                    sourcemeta::blaze::relative_dynamic_context(),
-                   sourcemeta::core::empty_pointer,
-                   sourcemeta::core::empty_pointer, entry.first.second))};
+                   sourcemeta::core::empty_weak_pointer,
+                   sourcemeta::core::empty_weak_pointer, entry.first.second))};
 }
 
 } // namespace
@@ -253,7 +253,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   ///////////////////////////////////////////////////////////////////
 
   SchemaContext schema_context{
-      .relative_pointer = sourcemeta::core::empty_pointer,
+      .relative_pointer = sourcemeta::core::empty_weak_pointer,
       .schema = schema,
       .vocabularies = vocabularies(schema, resolver, root_frame_entry.dialect),
       .base = sourcemeta::core::URI::canonicalize(root_frame_entry.base),
@@ -347,8 +347,8 @@ auto compile(const sourcemeta::core::JSON &schema,
              sourcemeta::blaze::compile(
                  context, nested_schema_context,
                  sourcemeta::blaze::relative_dynamic_context(),
-                 sourcemeta::core::empty_pointer,
-                 sourcemeta::core::empty_pointer, entry->first.second)));
+                 sourcemeta::core::empty_weak_pointer,
+                 sourcemeta::core::empty_weak_pointer, entry->first.second)));
   }
 
   for (auto &&substep : static_reference_template) {
@@ -412,8 +412,8 @@ auto compile(const sourcemeta::core::JSON &schema,
 
 auto compile(const Context &context, const SchemaContext &schema_context,
              const DynamicContext &dynamic_context,
-             const sourcemeta::core::Pointer &schema_suffix,
-             const sourcemeta::core::Pointer &instance_suffix,
+             const sourcemeta::core::WeakPointer &schema_suffix,
+             const sourcemeta::core::WeakPointer &instance_suffix,
              const std::optional<std::string_view> uri) -> Instructions {
   // Determine URI of the destination after recursion
   const std::string destination{
@@ -428,7 +428,7 @@ auto compile(const Context &context, const SchemaContext &schema_context,
   if (!context.frame.locations().contains(
           {sourcemeta::core::SchemaReferenceType::Static, destination})) {
     throw sourcemeta::core::SchemaReferenceError(
-        destination, schema_context.relative_pointer,
+        destination, to_pointer(schema_context.relative_pointer),
         "The target of the reference does not exist in the schema");
   }
 
@@ -438,15 +438,15 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   if (!is_schema(new_schema)) {
     throw sourcemeta::core::SchemaReferenceError(
-        destination, schema_context.relative_pointer,
+        destination, to_pointer(schema_context.relative_pointer),
         "The target of the reference is not a valid schema");
   }
 
-  const sourcemeta::core::Pointer destination_pointer{
+  const sourcemeta::core::WeakPointer destination_pointer{
       dynamic_context.keyword.empty()
           ? dynamic_context.base_schema_location.concat(schema_suffix)
           : dynamic_context.base_schema_location
-                .concat({dynamic_context.keyword})
+                .concat(make_weak_pointer(dynamic_context.keyword))
                 .concat(schema_suffix)};
 
   const auto new_relative_pointer{entry.pointer.slice(entry.relative_pointer)};

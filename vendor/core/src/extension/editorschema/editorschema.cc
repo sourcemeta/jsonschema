@@ -10,9 +10,11 @@ namespace {
 // See https://arxiv.org/abs/2503.11288 for an academic study of this topic
 auto top_dynamic_anchor_location(
     const sourcemeta::core::SchemaFrame &frame,
-    const sourcemeta::core::Pointer &current, const std::string_view fragment,
+    const sourcemeta::core::WeakPointer &current,
+    const std::string_view fragment,
     const sourcemeta::core::JSON::String &default_uri)
-    -> std::optional<sourcemeta::core::Pointer> {
+    -> std::optional<
+        std::reference_wrapper<const sourcemeta::core::WeakPointer>> {
   // Get the location object of where we are at the moment
   const auto uri{frame.uri(current)};
   assert(uri.has_value());
@@ -30,21 +32,21 @@ auto top_dynamic_anchor_location(
   if (location.parent.has_value()) {
     // If there is a parent resource, keep looking there, but update the default
     // if the current resource has the dynamic anchor we want
-    return top_dynamic_anchor_location(
-        frame, to_pointer(location.parent.value()), fragment,
-        anchor.has_value() ? anchor_uri : default_uri);
+    return top_dynamic_anchor_location(frame, location.parent.value(), fragment,
+                                       anchor.has_value() ? anchor_uri
+                                                          : default_uri);
 
     // If we are at the top of the schema and it declares the dynamic anchor, we
     // should use that
   } else if (anchor.has_value()) {
-    return anchor.value().get().pointer;
+    return std::cref(anchor.value().get().pointer);
 
     // Otherwise, if we are at the top and the dynamic anchor is not there, use
     // the default we have so far
   } else {
     const auto default_location{frame.traverse(default_uri)};
     assert(default_location.has_value());
-    return default_location.value().get().pointer;
+    return std::cref(default_location.value().get().pointer);
   }
 }
 
@@ -91,7 +93,7 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
 
       if (key.first == SchemaReferenceType::Dynamic) {
         if (reference.fragment.has_value()) {
-          auto destination{top_dynamic_anchor_location(
+          const auto destination{top_dynamic_anchor_location(
               frame, key.second, reference.fragment.value(),
               reference.destination)};
           if (!destination.has_value()) {
@@ -99,10 +101,11 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
           }
 
           reference_changes.push_back(
-              {key.second, to_uri(std::move(destination).value()).recompose(),
-               keyword, true});
+              {to_pointer(key.second),
+               to_uri(destination.value().get()).recompose(), keyword, true});
         } else {
-          reference_changes.push_back({key.second, "", keyword, true});
+          reference_changes.push_back(
+              {to_pointer(key.second), "", keyword, true});
         }
       } else {
         if (keyword == "$schema") {
@@ -111,7 +114,7 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
           const auto origin{frame.traverse(uri.value().get())};
           assert(origin.has_value());
           reference_changes.push_back(
-              {key.second,
+              {to_pointer(key.second),
                JSON::String{to_string(origin.value().get().base_dialect)},
                keyword, false});
           continue;
@@ -122,11 +125,12 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
           const bool should_rename =
               keyword == "$dynamicRef" || keyword == "$recursiveRef";
           reference_changes.push_back(
-              {key.second, to_uri(result.value().get().pointer).recompose(),
-               keyword, should_rename});
+              {to_pointer(key.second),
+               to_uri(result.value().get().pointer).recompose(), keyword,
+               should_rename});
         } else {
           reference_changes.push_back(
-              {key.second, reference.destination, keyword, false});
+              {to_pointer(key.second), reference.destination, keyword, false});
         }
       }
     }
@@ -148,7 +152,8 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
       const auto vocabularies{frame.vocabularies(entry.second, resolver)};
 
       subschema_changes.push_back(
-          {entry.second.pointer, entry.second.base_dialect, add_schema,
+          {to_pointer(entry.second.pointer), entry.second.base_dialect,
+           add_schema,
            vocabularies.contains(Vocabularies::Known::JSON_Schema_2020_12_Core),
            vocabularies.contains(
                Vocabularies::Known::JSON_Schema_2019_09_Core)});

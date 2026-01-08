@@ -24,8 +24,8 @@ namespace sourcemeta::core {
 /// - Pointer (reference keyword from the origin)
 /// - Target URI
 /// - Target schema
-using DependencyCallback = std::function<void(std::string_view, const Pointer &,
-                                              std::string_view, const JSON &)>;
+using DependencyCallback = std::function<void(
+    std::string_view, const WeakPointer &, std::string_view, const JSON &)>;
 
 /// @ingroup jsonschema
 ///

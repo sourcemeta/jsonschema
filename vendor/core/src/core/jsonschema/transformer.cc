@@ -107,13 +107,16 @@ auto SchemaTransformer::check(const JSON &schema, const SchemaWalker &walker,
 
     // Framing may report resource twice or more given default identifiers and
     // nested resources, risking reporting the same errors twice
-    if (!visited.insert(entry.second.pointer).second) {
+    const auto [visited_iterator, inserted] =
+        visited.insert(to_pointer(entry.second.pointer));
+    if (!inserted) {
       continue;
     }
+    const auto &entry_pointer{*visited_iterator};
 
     subschema_count += 1;
 
-    const auto &current{get(schema, entry.second.pointer)};
+    const auto &current{get(schema, entry_pointer)};
     const auto current_vocabularies{frame.vocabularies(entry.second, resolver)};
     bool subresult{true};
     for (const auto &rule : this->rules) {
@@ -121,7 +124,7 @@ auto SchemaTransformer::check(const JSON &schema, const SchemaWalker &walker,
                                      walker, resolver, frame, entry.second)};
       if (outcome.applies) {
         subresult = false;
-        callback(entry.second.pointer, rule->name(), rule->message(), outcome);
+        callback(entry_pointer, rule->name(), rule->message(), outcome);
       }
     }
 
@@ -180,13 +183,16 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
       // Framing may report resource twice or more given default identifiers and
       // nested resources, risking reporting the same errors twice
-      if (!visited.insert(entry.second.pointer).second) {
+      const auto [visited_iterator, inserted] =
+          visited.insert(to_pointer(entry.second.pointer));
+      if (!inserted) {
         continue;
       }
+      const auto &entry_pointer{*visited_iterator};
 
       subschema_count += 1;
 
-      auto &current{get(schema, entry.second.pointer)};
+      auto &current{get(schema, entry_pointer)};
       const auto current_vocabularies{
           frame.vocabularies(entry.second, resolver)};
 
@@ -198,10 +204,6 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
         if (!outcome.applies) {
           continue;
         }
-
-        // Store data we need before invalidating the frame
-        const auto transformed_pointer{entry.second.pointer};
-        const auto transformed_relative_pointer{entry.second.relative_pointer};
 
         // Collect reference information BEFORE invalidating the frame.
         // We need to save this data because after the transform, the old
@@ -218,8 +220,9 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
           const auto &target{destination.value().get()};
           potentially_broken_references.push_back(
-              {reference.first.second, JSON::String{reference.second.original},
-               reference.second.destination, target.pointer,
+              {to_pointer(reference.first.second),
+               JSON::String{reference.second.original},
+               reference.second.destination, to_pointer(target.pointer),
                target.relative_pointer});
         }
 
@@ -228,7 +231,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
         } catch (const SchemaAbortError &) {
           result = false;
           subschema_failed = true;
-          callback(transformed_pointer, rule->name(), rule->message(), outcome);
+          callback(entry_pointer, rule->name(), rule->message(), outcome);
           continue;
         }
 
@@ -236,7 +239,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
         frame.analyse(schema, walker, resolver, default_dialect, default_id);
 
-        const auto new_location{frame.traverse(transformed_pointer)};
+        const auto new_location{frame.traverse(to_weak_pointer(entry_pointer))};
         // The location should still exist after transform
         assert(new_location.has_value());
 
@@ -271,7 +274,8 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
               saved_reference.destination, saved_reference.origin,
               saved_reference.target_pointer.slice(
                   saved_reference.target_relative_pointer),
-              transformed_pointer.slice(transformed_relative_pointer))};
+              entry_pointer.slice(
+                  new_location.value().get().relative_pointer))};
 
           // Note we use the base from the original reference before any
           // canonicalisation takes place so that we don't overly change
@@ -290,7 +294,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
             current.fast_hash()};
         if (processed_rules.contains(mark)) {
           throw SchemaTransformRuleProcessedTwiceError(rule->name(),
-                                                       transformed_pointer);
+                                                       entry_pointer);
         }
 
         processed_rules.emplace(std::move(mark));

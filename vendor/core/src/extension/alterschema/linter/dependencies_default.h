@@ -1,4 +1,7 @@
 class DependenciesDefault final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"dependencies"};
+
 public:
   DependenciesDefault()
       : SchemaTransformRule{
@@ -20,15 +23,14 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_6,
                                    Vocabularies::Known::JSON_Schema_Draft_4,
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("dependencies") &&
-        schema.at("dependencies").is_object() &&
-        schema.at("dependencies").empty());
+        schema.is_object() && schema.defines(KEYWORD) &&
+        schema.at(KEYWORD).is_object() && schema.at(KEYWORD).empty());
     ONLY_CONTINUE_IF(!frame.has_references_through(
-        location.pointer.concat({"dependencies"})));
-    return APPLIES_TO_KEYWORDS("dependencies");
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
+    return APPLIES_TO_KEYWORDS(KEYWORD);
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("dependencies");
+    schema.erase(KEYWORD);
   }
 };

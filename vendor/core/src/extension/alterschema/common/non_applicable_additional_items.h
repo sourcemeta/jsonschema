@@ -1,4 +1,7 @@
 class NonApplicableAdditionalItems final : public SchemaTransformRule {
+private:
+  static inline const std::string KEYWORD{"additionalItems"};
+
 public:
   NonApplicableAdditionalItems()
       : SchemaTransformRule{
@@ -21,21 +24,20 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4,
                           Vocabularies::Known::JSON_Schema_Draft_3}) &&
-                     schema.is_object() && schema.defines("additionalItems"));
-
+                     schema.is_object() && schema.defines(KEYWORD));
     ONLY_CONTINUE_IF(!frame.has_references_through(
-        location.pointer.concat({"additionalItems"})));
+        location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
 
     if (schema.defines("items") && is_schema(schema.at("items"))) {
-      return APPLIES_TO_KEYWORDS("additionalItems", "items");
+      return APPLIES_TO_KEYWORDS(KEYWORD, "items");
     } else if (!schema.defines("items")) {
-      return APPLIES_TO_KEYWORDS("additionalItems");
+      return APPLIES_TO_KEYWORDS(KEYWORD);
     } else {
       return false;
     }
   }
 
   auto transform(JSON &schema, const Result &) const -> void override {
-    schema.erase("additionalItems");
+    schema.erase(KEYWORD);
   }
 };

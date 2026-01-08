@@ -46,8 +46,8 @@ auto compiler_2019_09_applicator_dependentschemas(
                schema_context, relative_dynamic_context(dynamic_context),
                make_property(dependent),
                compile(context, schema_context,
-                       relative_dynamic_context(dynamic_context), {dependent},
-                       sourcemeta::core::empty_pointer)));
+                       relative_dynamic_context(dynamic_context),
+                       sourcemeta::blaze::make_weak_pointer(dependent))));
     }
   }
 
@@ -155,9 +155,10 @@ auto compiler_2019_09_applicator_contains_with_options(
     return {};
   }
 
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   if (annotate) {
     children.push_back(
@@ -280,9 +281,10 @@ auto compiler_2019_09_applicator_unevaluateditems(
     // NOLINTEND(bugprone-branch-clone)
   }
 
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
     children.push_back(
@@ -319,9 +321,10 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
     return {};
   }
 
-  Instructions children{compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_pointer, sourcemeta::core::empty_pointer)};
+  Instructions children{compile(context, schema_context,
+                                relative_dynamic_context(dynamic_context),
+                                sourcemeta::core::empty_weak_pointer,
+                                sourcemeta::core::empty_weak_pointer)};
 
   if (context.mode == Mode::Exhaustive) {
     children.push_back(
@@ -357,10 +360,13 @@ auto compiler_2019_09_applicator_unevaluatedproperties(
           if (maybe_prefix.has_value()) {
             filter_prefixes.push_back(maybe_prefix.value());
           } else {
+            static const std::string pattern_properties_keyword{
+                "patternProperties"};
             filter_regexes.push_back(
                 {parse_regex(property.first, schema_context.base,
                              schema_context.relative_pointer.initial().concat(
-                                 {"patternProperties"})),
+                                 sourcemeta::blaze::make_weak_pointer(
+                                     pattern_properties_keyword))),
                  property.first});
           }
         }

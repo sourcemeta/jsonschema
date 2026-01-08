@@ -1,7 +1,10 @@
 #include <sourcemeta/blaze/compiler.h>
 
+#include "compile_helpers.h"
+
 namespace {
 using namespace sourcemeta::core;
+using namespace sourcemeta::blaze;
 using Known = Vocabularies::Known;
 
 auto find_adjacent_dependencies(
@@ -29,7 +32,7 @@ auto find_adjacent_dependencies(
         continue;
       }
 
-      auto pointer{entry.pointer.concat({property.first})};
+      auto pointer{entry.pointer.concat(make_weak_pointer(property.first))};
       if (is_static) {
         result.static_dependencies.emplace(std::move(pointer));
       } else {
@@ -42,7 +45,8 @@ auto find_adjacent_dependencies(
     switch (walker(property.first, subschema_vocabularies).type) {
       // References
       case SchemaKeywordType::Reference: {
-        const auto reference{frame.dereference(entry, {property.first})};
+        const auto reference{
+            frame.dereference(entry, make_weak_pointer(property.first))};
         if (reference.first == SchemaReferenceType::Static &&
             reference.second.has_value()) {
           find_adjacent_dependencies(
@@ -60,8 +64,8 @@ auto find_adjacent_dependencies(
         for (std::size_t index = 0; index < property.second.size(); index++) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first, index}), is_static,
-              result);
+              frame.traverse(entry, make_weak_pointer(property.first, index)),
+              is_static, result);
         }
 
         break;
@@ -72,7 +76,8 @@ auto find_adjacent_dependencies(
           for (std::size_t index = 0; index < property.second.size(); index++) {
             find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, index}), false, result);
+                frame.traverse(entry, make_weak_pointer(property.first, index)),
+                false, result);
           }
         }
 
@@ -85,7 +90,8 @@ auto find_adjacent_dependencies(
         if (is_schema(property.second)) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first}), false, result);
+              frame.traverse(entry, make_weak_pointer(property.first)), false,
+              result);
         }
 
         break;
@@ -94,12 +100,14 @@ auto find_adjacent_dependencies(
           for (std::size_t index = 0; index < property.second.size(); index++) {
             find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, index}), false, result);
+                frame.traverse(entry, make_weak_pointer(property.first, index)),
+                false, result);
           }
         } else if (is_schema(property.second)) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
-              frame.traverse(entry, {property.first}), false, result);
+              frame.traverse(entry, make_weak_pointer(property.first)), false,
+              result);
         }
 
         break;
@@ -108,8 +116,9 @@ auto find_adjacent_dependencies(
           for (const auto &pair : property.second.as_object()) {
             find_adjacent_dependencies(
                 current, schema, frame, walker, resolver, keywords, root,
-                frame.traverse(entry, {property.first, pair.first}), false,
-                result);
+                frame.traverse(entry,
+                               make_weak_pointer(property.first, pair.first)),
+                false, result);
           }
         }
 
@@ -152,7 +161,8 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     const auto subschema_vocabularies{
         frame.vocabularies(entry.second, resolver)};
     for (const auto &pair : subschema.as_object()) {
-      const auto keyword_uri{frame.uri(entry.second, {pair.first})};
+      const auto keyword_uri{
+          frame.uri(entry.second, make_weak_pointer(pair.first))};
       SchemaUnevaluatedEntry unevaluated;
 
       if ((subschema_vocabularies.contains(

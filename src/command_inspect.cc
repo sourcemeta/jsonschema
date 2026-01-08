@@ -60,7 +60,8 @@ auto print_frame(std::ostream &stream,
       stream << "\n";
     }
 
-    const auto position{positions.get(location.second.pointer)};
+    const auto position{
+        positions.get(sourcemeta::core::to_pointer(location.second.pointer))};
     if (position.has_value()) {
       stream << "    File Position     : " << std::get<0>(position.value())
              << ":" << std::get<1>(position.value()) << "\n";
@@ -116,7 +117,8 @@ auto print_frame(std::ostream &stream,
       stream << "    Type              : Dynamic\n";
     }
 
-    const auto position{positions.get(reference.first.second)};
+    const auto position{
+        positions.get(sourcemeta::core::to_pointer(reference.first.second))};
     if (position.has_value()) {
       stream << "    File Position     : " << std::get<0>(position.value())
              << ":" << std::get<1>(position.value()) << "\n";
