@@ -68,8 +68,7 @@ The canonicalization process will result in something like this:
       "minLength": 0
     },
     {
-      "type": "number",
-      "multipleOf": 1
+      "type": "number"
     },
     {
       "type": "integer",
