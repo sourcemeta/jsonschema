@@ -140,7 +140,7 @@ auto format(JSON &schema, const SchemaWalker &walker,
             const SchemaResolver &resolver, std::string_view default_dialect)
     -> void {
   assert(is_schema(schema));
-  std::vector<JSON *> objects_to_reorder;
+  std::vector<Pointer> subschemas;
 
   {
     SchemaFrame frame{SchemaFrame::Mode::Locations};
@@ -152,16 +152,15 @@ auto format(JSON &schema, const SchemaWalker &walker,
         continue;
       }
 
-      auto &subschema{get(schema, entry.second.pointer)};
-      if (subschema.is_object()) {
-        objects_to_reorder.push_back(&subschema);
-      }
+      subschemas.push_back(to_pointer(entry.second.pointer));
     }
   }
 
-  // Now apply the reordering after the frame is destroyed
-  for (auto *object : objects_to_reorder) {
-    object->reorder(keyword_compare);
+  for (const auto &pointer : subschemas) {
+    auto &subschema{get(schema, pointer)};
+    if (subschema.is_object()) {
+      subschema.reorder(keyword_compare);
+    }
   }
 }
 
