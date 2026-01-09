@@ -26,8 +26,7 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
                            std::string_view default_dialect,
                            std::string_view default_id,
                            const sourcemeta::core::SchemaFrame::Paths &paths,
-                           std::unordered_set<std::string_view> &visited)
-    -> void {
+                           std::unordered_set<std::string> &visited) -> void {
   sourcemeta::core::SchemaFrame frame{
       sourcemeta::core::SchemaFrame::Mode::References};
   frame.analyse(schema, walker, resolver, default_dialect, default_id, paths);
@@ -53,7 +52,7 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
     }
 
     // To not infinitely loop on circular references
-    if (visited.contains(reference.base)) {
+    if (visited.contains(std::string{reference.base})) {
       return;
     }
 
@@ -90,7 +89,7 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
     callback(origin, pointer, identifier, remote.value());
     found.emplace_back(std::move(remote).value(),
                        sourcemeta::core::JSON::String{identifier});
-    visited.emplace(identifier);
+    visited.emplace(std::string{identifier});
   });
 
   for (const auto &entry : found) {
@@ -251,7 +250,7 @@ auto dependencies(const JSON &schema, const SchemaWalker &walker,
                   const DependencyCallback &callback,
                   std::string_view default_dialect, std::string_view default_id,
                   const SchemaFrame::Paths &paths) -> void {
-  std::unordered_set<std::string_view> visited;
+  std::unordered_set<std::string> visited;
   dependencies_internal(schema, walker, resolver, callback, default_dialect,
                         default_id, paths, visited);
 }
