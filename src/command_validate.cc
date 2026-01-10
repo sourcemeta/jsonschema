@@ -141,27 +141,65 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "jsonschema validate path/to/schema.json path/to/instance.json"};
   }
 
-  const auto &schema_path{options.positional().at(0)};
+  const auto &schema_input{options.positional().at(0)};
+  const bool schema_is_url{sourcemeta::jsonschema::is_http_url(schema_input)};
 
-  if (std::filesystem::is_directory(schema_path)) {
-    throw std::filesystem::filesystem_error{
-        "The input was supposed to be a file but it is a directory",
-        schema_path, std::make_error_code(std::errc::is_a_directory)};
+  std::optional<std::filesystem::path> schema_path{std::nullopt};
+  const std::optional<sourcemeta::core::SchemaConfig> *configuration{nullptr};
+  const sourcemeta::jsonschema::CustomResolver *custom_resolver{nullptr};
+  std::string_view dialect;
+  sourcemeta::core::JSON schema{sourcemeta::core::JSON::make_object()};
+  std::string schema_display;
+  std::string default_id;
+
+  if (schema_is_url) {
+    if (!options.contains("http")) {
+      throw std::runtime_error{
+          "Remote schema inputs require network access. Pass `--http/-h`"};
+    }
+
+    const auto current_path{std::filesystem::current_path()};
+    const auto configuration_path{find_configuration(current_path)};
+    configuration = &read_configuration(options, configuration_path);
+    dialect = default_dialect(options, *configuration);
+    custom_resolver =
+        &resolver(options, /* remote */ true, dialect, *configuration);
+
+    schema = sourcemeta::jsonschema::fetch_http_schema(options, schema_input);
+    schema_display = std::string{schema_input};
+    default_id = schema_display;
+  } else {
+    schema_path = std::filesystem::path{schema_input};
+
+    if (std::filesystem::is_directory(schema_path.value())) {
+      throw std::filesystem::filesystem_error{
+          "The input was supposed to be a file but it is a directory",
+          schema_path.value(), std::make_error_code(std::errc::is_a_directory)};
+    }
+
+    const auto configuration_path{find_configuration(schema_path.value())};
+    configuration =
+        &read_configuration(options, configuration_path, schema_path.value());
+    dialect = default_dialect(options, *configuration);
+    schema = sourcemeta::core::read_yaml_or_json(schema_path.value());
+    schema_display =
+        sourcemeta::core::weakly_canonical(schema_path.value()).string();
+    default_id = sourcemeta::core::URI::from_path(
+                     sourcemeta::core::weakly_canonical(schema_path.value()))
+                     .recompose();
+    custom_resolver =
+        &resolver(options, options.contains("http"), dialect, *configuration);
   }
-
-  const auto configuration_path{find_configuration(schema_path)};
-  const auto &configuration{
-      read_configuration(options, configuration_path, schema_path)};
-  const auto dialect{default_dialect(options, configuration)};
-
-  const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    throw NotSchemaError{schema_path};
+    if (schema_path.has_value()) {
+      throw NotSchemaError{schema_path.value()};
+    }
+
+    throw RemoteSchemaNotSchemaError{std::string{schema_input}};
   }
 
-  const auto &custom_resolver{
-      resolver(options, options.contains("http"), dialect, configuration)};
+  assert(custom_resolver != nullptr);
 
   const auto fast_mode{options.contains("fast")};
   const auto benchmark{options.contains("benchmark")};
@@ -173,35 +211,58 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
-  const auto default_id{sourcemeta::core::URI::from_path(
-                            sourcemeta::core::weakly_canonical(schema_path))
-                            .recompose()};
-
   const sourcemeta::core::JSON bundled{[&]() {
     try {
-      return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
-                                      custom_resolver, dialect, default_id);
+      return sourcemeta::core::bundle(
+          static_cast<const sourcemeta::core::JSON &>(schema),
+          sourcemeta::core::schema_walker, *custom_resolver, dialect,
+          default_id);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_path, std::string{error.identifier()}, error.location(),
-          error.what());
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaReferenceError>(
+            schema_path.value(), std::string{error.identifier()},
+            error.location(), error.what());
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          schema_path, error);
+      if (schema_path.has_value()) {
+        throw FileError<
+            sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                               error);
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          schema_path);
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+            schema_path.value());
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaError>(schema_path.value(),
+                                                       error.what());
+      }
+
+      throw;
     } catch (
         const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceObjectResourceError>(
-          schema_path, error.identifier());
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaReferenceObjectResourceError>(
+            schema_path.value(), error.identifier());
+      }
+
+      throw;
     }
   }()};
 
@@ -209,43 +270,82 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       sourcemeta::core::SchemaFrame::Mode::References};
 
   try {
-    frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
+    frame.analyse(bundled, sourcemeta::core::schema_walker, *custom_resolver,
                   dialect, default_id);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-        schema_path, error);
+    if (schema_path.has_value()) {
+      throw FileError<
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+          schema_path.value(), error);
+    }
+
+    throw;
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                             error);
+    if (schema_path.has_value()) {
+      throw FileError<sourcemeta::core::SchemaResolutionError>(
+          schema_path.value(), error);
+    }
+
+    throw;
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_path);
+    if (schema_path.has_value()) {
+      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+          schema_path.value());
+    }
+
+    throw;
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+    if (schema_path.has_value()) {
+      throw FileError<sourcemeta::core::SchemaError>(schema_path.value(),
+                                                     error.what());
+    }
+
+    throw;
   }
 
   const auto schema_template{[&]() {
     try {
-      return get_schema_template(bundled, custom_resolver, frame, dialect,
+      return get_schema_template(bundled, *custom_resolver, frame, dialect,
                                  default_id, fast_mode, options);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_path, std::string{error.identifier()}, error.location(),
-          error.what());
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaReferenceError>(
+            schema_path.value(), std::string{error.identifier()},
+            error.location(), error.what());
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          schema_path, error);
+      if (schema_path.has_value()) {
+        throw FileError<
+            sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                               error);
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          schema_path);
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+            schema_path.value());
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaError>(schema_path.value(),
+                                                       error.what());
+      }
+
+      throw;
     }
   }()};
 
@@ -292,12 +392,13 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         instance_path.extension() == ".yaml" ||
         instance_path.extension() == ".yml") {
       for (const auto &entry : for_each_json({instance_path_view}, options)) {
+        const auto &entry_path{entry.local_path_or_throw("validate")};
         std::ostringstream error;
         sourcemeta::blaze::SimpleOutput output{entry.second};
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(
-              evaluator, schema_template, entry.second, entry.first,
+              evaluator, schema_template, entry.second, entry_path,
               entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
                                   : static_cast<std::int64_t>(-1),
               benchmark_loop);
@@ -316,7 +417,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           continue;
         } else if (json_output) {
           if (!entry.multidocument) {
-            std::cerr << entry.first.string() << "\n";
+            std::cerr << entry.first << "\n";
           }
           const auto suboutput{sourcemeta::blaze::standard(
               evaluator, schema_template, entry.second,
@@ -337,18 +438,15 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         } else if (subresult) {
           LOG_VERBOSE(options)
               << "ok: "
-              << sourcemeta::core::weakly_canonical(entry.first).string();
+              << sourcemeta::core::weakly_canonical(entry_path).string();
           if (entry.multidocument) {
             LOG_VERBOSE(options) << " (entry #" << entry.index + 1 << ")";
           }
-          LOG_VERBOSE(options)
-              << "\n  matches "
-              << sourcemeta::core::weakly_canonical(schema_path).string()
-              << "\n";
+          LOG_VERBOSE(options) << "\n  matches " << schema_display << "\n";
           print_annotations(output, options, entry.positions, std::cerr);
         } else {
           std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(entry.first).string();
+                    << sourcemeta::core::weakly_canonical(entry_path).string();
           if (entry.multidocument) {
             std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
             sourcemeta::core::prettify(entry.second, std::cerr);
@@ -371,7 +469,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
-          sourcemeta::core::schema_walker, custom_resolver,
+          sourcemeta::core::schema_walker, *custom_resolver,
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
@@ -413,8 +511,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         LOG_VERBOSE(options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
-            << "\n  matches "
-            << sourcemeta::core::weakly_canonical(schema_path).string() << "\n";
+            << "\n  matches " << schema_display << "\n";
         print_annotations(output, options, tracker, std::cerr);
       } else {
         std::cerr << "fail: "

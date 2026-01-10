@@ -23,6 +23,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include "error.h"
+#include "http.h"
 #include "input.h"
 #include "logger.h"
 
@@ -54,10 +55,7 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
   }
 
   // If the URI is not an HTTP URL, then abort
-  const sourcemeta::core::URI uri{std::string{identifier}};
-  const auto maybe_scheme{uri.scheme()};
-  if (uri.is_urn() || !maybe_scheme.has_value() ||
-      (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
+  if (!is_http_url(identifier)) {
     return std::nullopt;
   }
 
@@ -86,9 +84,7 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
     throw std::runtime_error(error.str());
   }
 
-  const auto content_type_iterator{response.header.find("content-type")};
-  if (content_type_iterator != response.header.end() &&
-      content_type_iterator->second.starts_with("text/yaml")) {
+  if (is_likely_yaml(identifier, response.header)) {
     return sourcemeta::core::parse_yaml(response.text);
   } else {
     return sourcemeta::core::parse_json(response.text);
@@ -104,20 +100,27 @@ public:
       : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
       for (const auto &entry : for_each_json(options.at("resolve"), options)) {
-        LOG_VERBOSE(options)
-            << "Detecting schema resources from file: " << entry.first.string()
-            << "\n";
+        if (entry.path.has_value()) {
+          LOG_VERBOSE(options) << "Detecting schema resources from file: "
+                               << entry.path.value().string() << "\n";
+        } else {
+          LOG_VERBOSE(options)
+              << "Detecting schema resources from url: " << entry.first << "\n";
+        }
 
         if (!sourcemeta::core::is_schema(entry.second)) {
-          throw FileError<sourcemeta::core::SchemaError>(
-              entry.first,
-              "The file you provided does not represent a valid JSON Schema");
+          if (entry.path.has_value()) {
+            throw FileError<sourcemeta::core::SchemaError>(
+                entry.path.value(),
+                "The file you provided does not represent a valid JSON Schema");
+          }
+
+          throw RemoteSchemaNotSchemaError{std::string{entry.first}};
         }
 
         try {
           const auto result = this->add(
-              entry.second, default_dialect,
-              sourcemeta::core::URI::from_path(entry.first).recompose(),
+              entry.second, default_dialect, entry.base_uri(),
               [&options](const auto &identifier) {
                 LOG_VERBOSE(options)
                     << "Importing schema into the resolution context: "
@@ -126,15 +129,24 @@ public:
           if (!result) {
             LOG_WARNING()
                 << "No schema resources were imported from this file\n"
-                << "  at " << entry.first.string() << "\n"
+                << "  at " << entry.first << "\n"
                 << "Are you sure this schema sets any identifiers?\n";
           }
         } catch (const sourcemeta::core::SchemaFrameError &error) {
-          throw FileError<sourcemeta::core::SchemaFrameError>(
-              entry.first, std::string{error.identifier()}, error.what());
+          if (entry.path.has_value()) {
+            throw FileError<sourcemeta::core::SchemaFrameError>(
+                entry.path.value(), std::string{error.identifier()},
+                error.what());
+          }
+
+          throw;
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-              entry.first);
+          if (entry.path.has_value()) {
+            throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+                entry.path.value());
+          }
+
+          throw;
         }
       }
     }

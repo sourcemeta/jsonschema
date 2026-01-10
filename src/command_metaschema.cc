@@ -7,10 +7,15 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output.h>
 
-#include <cassert>  // assert
+#include <cassert> // assert
+#include <filesystem>
 #include <iostream> // std::cerr
 #include <map>      // std::map
-#include <string>   // std::string
+#include <optional>
+#include <sstream>
+#include <string> // std::string
+#include <string_view>
+#include <vector>
 
 #include "command.h"
 #include "configuration.h"
@@ -29,31 +34,43 @@ auto sourcemeta::jsonschema::metaschema(
   sourcemeta::blaze::Evaluator evaluator;
 
   std::map<std::string, sourcemeta::blaze::Template> cache;
+  const auto current_path{std::filesystem::current_path()};
+  const auto remote_configuration_path{find_configuration(current_path)};
+  const auto &remote_configuration{
+      read_configuration(options, remote_configuration_path)};
 
-  for (const auto &entry : for_each_json(options)) {
-    if (!sourcemeta::core::is_schema(entry.second)) {
-      throw NotSchemaError{entry.first};
+  const auto process_schema =
+      [&](const sourcemeta::core::JSON &schema,
+          const sourcemeta::core::PointerPositionTracker &positions,
+          const std::optional<std::filesystem::path> &schema_path,
+          const std::string_view schema_display,
+          const sourcemeta::jsonschema::CustomResolver &custom_resolver,
+          const std::string_view default_dialect_option) -> void {
+    if (!sourcemeta::core::is_schema(schema)) {
+      if (schema_path.has_value()) {
+        throw NotSchemaError{schema_path.value()};
+      }
+
+      throw RemoteSchemaNotSchemaError{std::string{schema_display}};
     }
-
-    const auto configuration_path{find_configuration(entry.first)};
-    const auto &configuration{
-        read_configuration(options, configuration_path, entry.first)};
-    const auto default_dialect_option{default_dialect(options, configuration)};
-
-    const auto &custom_resolver{resolver(options, options.contains("http"),
-                                         default_dialect_option,
-                                         configuration)};
 
     try {
       const auto dialect{
-          sourcemeta::core::dialect(entry.second, default_dialect_option)};
+          sourcemeta::core::dialect(schema, default_dialect_option)};
       if (dialect.empty()) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.first);
+        if (schema_path.has_value()) {
+          throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+              schema_path.value());
+        }
+
+        std::ostringstream error;
+        error << "Could not resolve the metaschema of the schema\n  at uri "
+              << schema_display;
+        throw std::runtime_error(error.str());
       }
 
       const auto metaschema{sourcemeta::core::metaschema(
-          entry.second, custom_resolver, default_dialect_option)};
+          schema, custom_resolver, default_dialect_option)};
       const sourcemeta::core::JSON bundled{
           sourcemeta::core::bundle(metaschema, sourcemeta::core::schema_walker,
                                    custom_resolver, default_dialect_option)};
@@ -74,16 +91,16 @@ auto sourcemeta::jsonschema::metaschema(
         sourcemeta::blaze::TraceOutput output{
             sourcemeta::core::schema_walker, custom_resolver,
             sourcemeta::core::empty_weak_pointer, frame};
-        result = evaluator.validate(cache.at(std::string{dialect}),
-                                    entry.second, std::ref(output));
-        print(output, entry.positions, std::cout);
+        result = evaluator.validate(cache.at(std::string{dialect}), schema,
+                                    std::ref(output));
+        print(output, positions, std::cout);
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
-        std::cerr << entry.first.string() << "\n";
+        std::cerr << schema_display << "\n";
         const auto output{sourcemeta::blaze::standard(
-            evaluator, cache.at(std::string{dialect}), entry.second,
-            sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
+            evaluator, cache.at(std::string{dialect}), schema,
+            sourcemeta::blaze::StandardOutput::Basic, positions)};
         assert(output.is_object());
         assert(output.defines("valid"));
         assert(output.at("valid").is_boolean());
@@ -94,29 +111,56 @@ auto sourcemeta::jsonschema::metaschema(
         sourcemeta::core::prettify(output, std::cout);
         std::cout << "\n";
       } else {
-        sourcemeta::blaze::SimpleOutput output{entry.second};
-        if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
+        sourcemeta::blaze::SimpleOutput output{schema};
+        if (evaluator.validate(cache.at(std::string{dialect}), schema,
                                std::ref(output))) {
           LOG_VERBOSE(options)
-              << "ok: "
-              << sourcemeta::core::weakly_canonical(entry.first).string()
-              << "\n  matches " << dialect << "\n";
+              << "ok: " << schema_display << "\n  matches " << dialect << "\n";
         } else {
-          std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(entry.first).string()
-                    << "\n";
-          print(output, entry.positions, std::cerr);
+          std::cerr << "fail: " << schema_display << "\n";
+          print(output, positions, std::cerr);
           result = false;
         }
       }
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+      if (schema_path.has_value()) {
+        throw FileError<
+            sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      if (schema_path.has_value()) {
+        throw FileError<sourcemeta::core::SchemaResolutionError>(
+            schema_path.value(), error);
+      }
+
+      throw;
+    }
+  };
+
+  for (const auto &entry : for_each_json(options)) {
+    if (entry.path.has_value()) {
+      const auto configuration_path{find_configuration(entry.path.value())};
+      const auto &configuration{
+          read_configuration(options, configuration_path, entry.path.value())};
+      const auto default_dialect_option{
+          default_dialect(options, configuration)};
+      const auto &custom_resolver{resolver(options, options.contains("http"),
+                                           default_dialect_option,
+                                           configuration)};
+      process_schema(entry.second, entry.positions, entry.path, entry.first,
+                     custom_resolver, default_dialect_option);
+    } else {
+      const auto remote_default_dialect_option{
+          default_dialect(options, remote_configuration)};
+      const auto &remote_resolver{resolver(options, options.contains("http"),
+                                           remote_default_dialect_option,
+                                           remote_configuration)};
+      process_schema(entry.second, entry.positions, std::nullopt, entry.first,
+                     remote_resolver, remote_default_dialect_option);
     }
   }
 

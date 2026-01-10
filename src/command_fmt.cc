@@ -21,21 +21,22 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
+    const auto &path{entry.local_path_or_throw("fmt")};
     if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",
-                           entry.first};
+                           path};
     }
 
     if (options.contains("check")) {
-      LOG_VERBOSE(options) << "Checking: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Checking: " << path.string() << "\n";
     } else {
-      LOG_VERBOSE(options) << "Formatting: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Formatting: " << path.string() << "\n";
     }
 
     try {
-      const auto configuration_path{find_configuration(entry.first)};
+      const auto configuration_path{find_configuration(path)};
       const auto &configuration{
-          read_configuration(options, configuration_path, entry.first)};
+          read_configuration(options, configuration_path, path)};
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
@@ -51,39 +52,37 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       }
       expected << "\n";
 
-      std::ifstream current_stream{entry.first};
+      std::ifstream current_stream{path};
       std::ostringstream current;
       current << current_stream.rdbuf();
 
       if (options.contains("check")) {
         if (current.str() == expected.str()) {
-          LOG_VERBOSE(options) << "ok: " << entry.first.string() << "\n";
+          LOG_VERBOSE(options) << "ok: " << path.string() << "\n";
         } else if (output_json) {
-          failed_files.push_back(entry.first.string());
+          failed_files.push_back(path.string());
           result = false;
         } else {
-          std::cerr << "fail: " << entry.first.string() << "\n";
+          std::cerr << "fail: " << path.string() << "\n";
           result = false;
         }
       } else {
         if (current.str() != expected.str()) {
-          std::ofstream output{entry.first};
+          std::ofstream output{path};
           output << expected.str();
         }
       }
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(path,
+                                                                     error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      throw FileError<sourcemeta::core::SchemaResolutionError>(path, error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          entry.first);
+      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(path);
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(entry.first, error.what());
+      throw FileError<sourcemeta::core::SchemaError>(path, error.what());
     }
   }
 
