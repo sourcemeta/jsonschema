@@ -131,6 +131,7 @@ if(NOT MbedTLS_FOUND)
       -Wextra
       -Wpedantic
       -Werror
+      -Wno-error=array-bounds
       -Wdouble-promotion
       -Wfloat-equal
       -Wformat=2
