@@ -12,7 +12,7 @@ option(JSONSCHEMA_CONTINUOUS "Perform a continuous JSON Schema CLI release" ON)
 option(JSONSCHEMA_PORTABLE "Build a portable JSON Schema CLI binary to increase platform support" OFF)
 
 find_package(Core REQUIRED)
-if(NOT JSONSCHEMA_PORTABLE)
+if(NOT JSONSCHEMA_PORTABLE AND NOT MSVC)
   message(STATUS "Building an optimised but less portable binary (JSONSCHEMA_PORTABLE)")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mtune=native")
