@@ -26,6 +26,12 @@ jobs:
             cc: gcc
             cxx: g++
             shell: sh
+          - os: ubuntu-latest
+            type: container
+            container: alpine:3.21
+            cc: gcc
+            cxx: g++
+            shell: sh
           - os: macos-15-intel
             type: native
             cc: clang
@@ -48,6 +54,7 @@ jobs:
         shell: ${{ matrix.platform.shell }}
 
     runs-on: ${{ matrix.platform.os }}
+    container: ${{ matrix.platform.container }}
     env:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
@@ -59,6 +66,10 @@ jobs:
           distribution: Ubuntu-22.04
           additional-packages: cmake build-essential shellcheck pipx zsh jq
           wsl-version: 2
+
+      - name: Install dependencies (Alpine)
+        if: matrix.platform.type == 'container'
+        run: apk add --no-cache cmake make g++ zsh bash jq shellcheck pipx git
 
       - name: Install pre-commit
         run: pipx install pre-commit
@@ -78,7 +89,7 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'native'
         run: choco install shellcheck
       - name: Install dependencies (Linux)
-        if: runner.os == 'linux'
+        if: runner.os == 'linux' && matrix.platform.type == 'native'
         run: sudo apt-get update --yes && sudo apt-get install --yes zsh
 
       - run: cmake --version
@@ -93,6 +104,8 @@ jobs:
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
       - run: cmake --build ./build --config Release --target clang_format_test
+        # TODO: As the downloaded `clang-format` binary won't run on Alpine
+        if: matrix.platform.type != 'container'
       - run: cmake --build ./build --config Release --target shellcheck
       - run: cmake --build ./build --config Release --parallel 4
       - run: >
