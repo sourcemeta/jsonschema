@@ -7,9 +7,9 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-mkdir -p "$TMP/this/is/a/very/very/very/long/path"
+mkdir -p "$TMP/this/is/a/very/very/very/very/very/very/long/path"
 
-cat << 'EOF' > "$TMP/this/is/a/very/very/very/long/path/schema.json"
+cat << 'EOF' > "$TMP/this/is/a/very/very/very/very/very/very/long/path/schema.json"
 {
   "type": "string",
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -18,7 +18,7 @@ cat << 'EOF' > "$TMP/this/is/a/very/very/very/long/path/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/this/is/a/very/very/very/long/path/schema.json" \
+"$1" fmt "$TMP/this/is/a/very/very/very/very/very/very/long/path/schema.json" \
   --check --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "2" || exit 1
 
@@ -26,7 +26,7 @@ cat << EOF > "$TMP/expected.json"
 {
   "valid": false,
   "errors": [
-    "$(realpath "$TMP")/this/is/a/very/very/very/long/path/schema.json"
+    "$(realpath "$TMP")/this/is/a/very/very/very/very/very/very/long/path/schema.json"
   ]
 }
 EOF

@@ -3,6 +3,9 @@
 set -o errexit
 set -o nounset
 
+# Ensure pipx-installed binaries are in PATH
+export PATH="$HOME/.local/bin:$PATH"
+
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
