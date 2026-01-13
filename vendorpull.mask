@@ -32,3 +32,4 @@ eslint.config.mjs
 package.json
 package-lock.json
 npm
+Dockerfile.test.alpine
