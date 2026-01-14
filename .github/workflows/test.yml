@@ -149,4 +149,4 @@ jobs:
       - run: mkdir "$PWD/build"
       - run: TMPDIR="$PWD/build" ./test/lint/fail_lint.sh jsonschema
       - run: TMPDIR="$PWD/build" ./test/bundle/pass_resolve_single.sh jsonschema
-      - run: TMPDIR="$PWD/build" ./test/ci/pass_validate_http_verbose.sh jsonschema
+      - run: TMPDIR="$PWD/build" ./test/ci/pass_validate_http.sh jsonschema
