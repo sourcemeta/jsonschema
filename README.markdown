@@ -133,7 +133,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
   uses: actions/checkout@v4
 
 - name: Install the JSON Schema CLI
-  uses: sourcemeta/jsonschema@v14.0.3
+  uses: sourcemeta/jsonschema@v14.0.4
 
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
@@ -172,9 +172,8 @@ curl -fsSL https://raw.githubusercontent.com/sourcemeta/jsonschema/main/install 
 ```
 
 Keep in mind that it is hard to provide binaries that work across GNU/Linux
-distributions, given they often have major differences such as C runtimes (GLIC
-vs MUSL). We conservatively target Ubuntu 22.04, but you might need to build
-from source if your distribution of choice is different.
+distributions. We conservatively target Ubuntu and Alpine, but you might need
+to build from source if your distribution of choice is different.
 
 To verify the GPG signature of the checksums file:
 
