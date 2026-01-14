@@ -238,3 +238,9 @@ cmake --install ./build --prefix <prefix> \
 
 Where `<prefix>` can be any destination prefix of your choosing, such as `/opt`
 or `/usr/local`.
+
+For performance reasons, the build will take as much advantage of your specific
+machine capabilities. If you desire to build a portable binary, or if the
+aggressive processor-specific optimisations cause any issues (we heard of some
+`Illegal instruction` cases), then configure the project with
+`-DJSONSCHEMA_PORTABLE:BOOL=ON`.
