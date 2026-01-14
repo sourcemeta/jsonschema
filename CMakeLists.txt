@@ -55,6 +55,7 @@ if(PROJECT_IS_TOP_LEVEL)
   find_program(GIT_BIN NAMES git)
   if(GIT_BIN AND JSONSCHEMA_CONTINUOUS)
     execute_process(COMMAND "${GIT_BIN}" rev-parse --git-dir
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       ERROR_QUIET
       OUTPUT_STRIP_TRAILING_WHITESPACE
       OUTPUT_VARIABLE GIT_DIR)
@@ -67,6 +68,12 @@ if(PROJECT_IS_TOP_LEVEL)
       OUTPUT_STRIP_TRAILING_WHITESPACE
       COMMAND_ERROR_IS_FATAL ANY)
   else()
+    if(NOT GIT_BIN)
+      message(STATUS "Could not determine current Git SHA: Git not available")
+    elseif(NOT EXISTS "${GIT_DIR}")
+      message(STATUS "Could not determine current Git SHA: Git directory does not exist (${GIT_DIR})")
+    endif()
+
     set(PROJECT_GIT_SHA "unknown")
   endif()
 
@@ -80,6 +87,17 @@ if(PROJECT_IS_TOP_LEVEL)
     set(LOWER_SYSTEM_PROCESSOR "arm64")
   endif()
   set(PLATFORM_SUFFIX "${LOWER_SYSTEM_NAME}-${LOWER_SYSTEM_PROCESSOR}")
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_CROSSCOMPILING)
+    find_program(LDD_BIN NAMES ldd)
+    if(LDD_BIN)
+      execute_process(COMMAND "${LDD_BIN}" --version
+        OUTPUT_VARIABLE LDD_OUTPUT
+        ERROR_VARIABLE LDD_OUTPUT)
+      if(LDD_OUTPUT MATCHES "musl")
+        set(PLATFORM_SUFFIX "${PLATFORM_SUFFIX}-musl")
+      endif()
+    endif()
+  endif()
   if(JSONSCHEMA_CONTINUOUS)
     set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-${PROJECT_GIT_SHA}-${PLATFORM_SUFFIX}")
   else()
