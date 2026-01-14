@@ -23,7 +23,15 @@ then
 
   PACKAGE_BASE_URL="https://github.com/$OWNER/$REPOSITORY/releases/download/v$VERSION"
   PACKAGE_PLATFORM_NAME="$(echo "$UNAME" | tr '[:upper:]' '[:lower:]')"
-  PACKAGE_URL="$PACKAGE_BASE_URL/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH.zip"
+
+  if [ "$UNAME" = "Linux" ] && [ -f /etc/os-release ] && grep -qi alpine /etc/os-release
+  then
+    PACKAGE_NAME="jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH-musl"
+  else
+    PACKAGE_NAME="jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH"
+  fi
+
+  PACKAGE_URL="$PACKAGE_BASE_URL/$PACKAGE_NAME.zip"
   echo "---- Fetching version v$VERSION from $PACKAGE_URL" 1>&2
   TMP="$(mktemp -d)"
   clean() { rm -rf "$TMP"; }
@@ -31,7 +39,7 @@ then
   curl --retry 5 --location --output "$TMP/artifact.zip" "$PACKAGE_URL"
   unzip "$TMP/artifact.zip" -d "$TMP/out"
   install -d -m 0755 "$OUTPUT/bin"
-  install -v -m 0755 "$TMP/out/jsonschema-$VERSION-$PACKAGE_PLATFORM_NAME-$ARCH/bin/jsonschema" "$OUTPUT/bin"
+  install -v -m 0755 "$TMP/out/$PACKAGE_NAME/bin/jsonschema" "$OUTPUT/bin"
 else
   echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
   echo "Open an issue here: https://github.com/sourcemeta/jsonschema/issues" 1>&2
