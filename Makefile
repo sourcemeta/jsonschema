@@ -4,6 +4,7 @@ CTEST = ctest
 CPACK = cpack
 NPM = npm
 NODE = node
+DOCKER = docker
 
 # Options
 PRESET = Debug
@@ -51,6 +52,9 @@ npm-pack: node_modules .always
 
 npm-publish: npm-pack
 	$(NPM) publish
+
+alpine: .always
+	$(DOCKER) build --progress plain --file Dockerfile.test.alpine .
 
 # For NMake, which doesn't support .PHONY
 .always:

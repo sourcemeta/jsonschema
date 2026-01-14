@@ -1,0 +1,22 @@
+FROM alpine:3.21
+RUN apk add --no-cache cmake make g++ zsh bash jq
+WORKDIR /src
+COPY CMakeLists.txt .
+COPY cmake cmake
+COPY src src
+COPY test test
+COPY vendor vendor
+COPY completion completion
+COPY VERSION VERSION
+COPY package.json package.json
+COPY package-lock.json package-lock.json
+COPY action.yml action.yml
+COPY README.markdown README.markdown
+RUN cmake -S . -B ./build \
+  -DCMAKE_BUILD_TYPE:STRING=Release \
+  -DJSONSCHEMA_TESTS:BOOL=ON
+RUN cmake --build ./build --config Release --parallel 4
+RUN cmake --install ./build --prefix ./build/dist --config Release --verbose \
+  --component sourcemeta_jsonschema
+RUN cd ./build && ctest --build-config Release --output-on-failure --parallel
+RUN cpack --config build/CPackConfig.cmake -B build/out -C Release
