@@ -27,6 +27,8 @@
 #include "logger.h"
 
 #include <cassert>     // assert
+#include <chrono>      // std::chrono::seconds
+#include <cstdint>     // std::uint8_t
 #include <filesystem>  // std::filesystem
 #include <functional>  // std::function, std::ref
 #include <iostream>    // std::cerr
@@ -36,9 +38,12 @@
 #include <stdexcept>   // std::runtime_error
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <thread>      // std::this_thread::sleep_for
 #include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple
 
 namespace sourcemeta::jsonschema {
+
+static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
 static inline auto fallback_resolver(const sourcemeta::core::Options &options,
                                      std::string_view identifier)
@@ -56,9 +61,24 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
     return std::nullopt;
   }
 
-  LOG_VERBOSE(options) << "Resolving over HTTP: " << identifier << "\n";
-  const cpr::Response response{
-      cpr::Get(cpr::Url{identifier}, cpr::Redirect{true})};
+  cpr::Response response;
+  for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
+    LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
+                         << static_cast<int>(attempt) << "/"
+                         << static_cast<int>(HTTP_MAXIMUM_RETRIES)
+                         << "): " << identifier << "\n";
+    response = cpr::Get(cpr::Url{identifier}, cpr::Redirect{true});
+
+    if (response.status_code == 200) {
+      break;
+    }
+
+    if (attempt < HTTP_MAXIMUM_RETRIES) {
+      LOG_VERBOSE(options) << "Request failed with HTTP "
+                           << response.status_code << ", retrying...\n";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
 
   if (response.status_code != 200) {
     std::ostringstream error;
