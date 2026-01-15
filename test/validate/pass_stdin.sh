@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Rules:
-# 1. Instance from stdin is allowed: validate schema.json -
-# 2. Schema from stdin is FORBIDDEN: validate - instance.json
-# 3. YAML from stdin is allowed (internal fallback).
-
 set -o errexit
 set -o nounset
 
@@ -25,7 +20,7 @@ EOF
 echo '{"foo": "bar"}' | "$1" validate "$TMP/schema.json" -
 echo 'foo: bar' | "$1" validate "$TMP/schema.json" -
 set +o errexit
-OUTPUT=$(cat "$TMP/schema.json" | "$1" validate - "$TMP/schema.json" 2>&1)
+OUTPUT=$("$1" validate - "$TMP/schema.json" < "$TMP/schema.json" 2>&1)
 EXIT_CODE=$?
 set -o errexit
 
@@ -40,4 +35,4 @@ if ! echo "$OUTPUT" | grep -q "Reading schema from stdin is not supported"; then
     exit 1
 fi
 
-echo "PASS:stdin tests passed."
+echo "PASS: stdin tests passed."
