@@ -141,6 +141,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const auto &schema_path{options.positional().at(0)};
 
+  if (schema_path == "-") {
+    throw std::runtime_error{"Reading schema from stdin is not supported"};
+  }
+
   if (std::filesystem::is_directory(schema_path)) {
     throw std::filesystem::filesystem_error{
         "The input was supposed to be a file but it is a directory",
@@ -320,7 +324,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw std::runtime_error{"The `--benchmark/-b` option is only allowed "
                                "given a single instance"};
     }
-    if (std::filesystem::is_directory(instance_path) ||
+    if (instance_path == "-" || std::filesystem::is_directory(instance_path) ||
         instance_path.extension() == ".jsonl" ||
         instance_path.extension() == ".yaml" ||
         instance_path.extension() == ".yml") {

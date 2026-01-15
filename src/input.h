@@ -143,12 +143,40 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
+inline auto read_from_stdin() -> ParsedJSON {
+  std::string buffer;
+  {
+    std::ostringstream ss;
+    ss << std::cin.rdbuf();
+    buffer = ss.str();
+  }
+
+  sourcemeta::core::PointerPositionTracker positions;
+  try {
+    return {sourcemeta::core::parse_json(buffer, std::ref(positions)),
+            std::move(positions), false};
+  } catch (const sourcemeta::core::JSONParseError &) {
+    sourcemeta::core::PointerPositionTracker yaml_positions;
+    std::istringstream yaml_stream(buffer);
+    return {sourcemeta::core::parse_yaml(yaml_stream, std::ref(yaml_positions)),
+            std::move(yaml_positions), true};
+  }
+}
+
 inline auto
 handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::filesystem::path> &blacklist,
                   const std::set<std::string> &extensions,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options) -> void {
+  if (entry_path == "-") {
+    auto parsed{read_from_stdin()};
+    std::filesystem::path virtual_path{std::filesystem::current_path()};
+    result.push_back({std::move(virtual_path), std::move(parsed.document),
+                      std::move(parsed.positions), 0, false, parsed.yaml});
+    return;
+  }
+
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
@@ -261,7 +289,6 @@ handle_json_entry(const std::filesystem::path &entry_path,
     }
   }
 }
-
 } // namespace
 
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
