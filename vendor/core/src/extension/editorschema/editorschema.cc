@@ -1,6 +1,7 @@
 #include <sourcemeta/core/editorschema.h>
 
 #include <cassert> // assert
+#include <map>     // std::map
 
 namespace {
 
@@ -74,16 +75,25 @@ struct SubschemaChange {
 auto for_editor(JSON &schema, const SchemaWalker &walker,
                 const SchemaResolver &resolver,
                 std::string_view default_dialect) -> void {
-  // (1) Bring in all of the references
-  bundle(schema, walker, resolver, default_dialect);
-
-  // (2) Frame the schema and collect all changes we need to make
+  // (1) Frame the schema and collect all changes we need to make
   std::vector<ReferenceChange> reference_changes;
   std::vector<SubschemaChange> subschema_changes;
 
   {
     SchemaFrame frame{SchemaFrame::Mode::References};
     frame.analyse(schema, walker, resolver, default_dialect);
+
+    // Otherwise the input is not bundled
+    assert(frame.standalone());
+
+    // Note that `std::unordered_map` is slower here due to high collision rates
+    // from the simple pointer hashes
+    std::map<WeakPointer, std::reference_wrapper<const JSON::String>>
+        pointer_to_uri;
+    for (const auto &entry : frame.locations()) {
+      pointer_to_uri.emplace(entry.second.pointer,
+                             std::cref(entry.first.second));
+    }
 
     // Collect reference changes
     for (const auto &[key, reference] : frame.references()) {
@@ -109,9 +119,10 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
         }
       } else {
         if (keyword == "$schema") {
-          const auto uri{frame.uri(key.second)};
-          assert(uri.has_value());
-          const auto origin{frame.traverse(uri.value().get())};
+          // Use pre-built index instead of O(n) frame.uri() scan
+          const auto uri_it{pointer_to_uri.find(key.second)};
+          assert(uri_it != pointer_to_uri.end());
+          const auto origin{frame.traverse(uri_it->second.get())};
           assert(origin.has_value());
           reference_changes.push_back(
               {to_pointer(key.second),
@@ -160,7 +171,7 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
     }
   }
 
-  // (3) Apply reference changes
+  // (2) Apply reference changes
   for (const auto &change : reference_changes) {
     if (!change.new_value.empty()) {
       set(schema, change.pointer, JSON{change.new_value});
@@ -170,7 +181,7 @@ auto for_editor(JSON &schema, const SchemaWalker &walker,
     }
   }
 
-  // (4) Apply subschema changes
+  // (3) Apply subschema changes
   for (const auto &change : subschema_changes) {
     auto &subschema{get(schema, change.pointer)};
 
