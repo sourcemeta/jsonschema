@@ -31,6 +31,8 @@ namespace sourcemeta::core {
 /// might be edge cases that we cannot cover. The real solution is for popular
 /// editors to fix their JSON Schema language support.
 ///
+/// Note that the input schema is expected to be already bundled.
+///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
 /// #include <sourcemeta/core/jsonschema.h>
@@ -41,6 +43,9 @@ namespace sourcemeta::core {
 ///   "$ref": "another"
 /// })JSON");
 ///
+/// sourcemeta::core::bundle(schema,
+///   sourcemeta::core::schema_walker,
+///   sourcemeta::core::schema_resolver);
 /// sourcemeta::core::for_editor(schema,
 ///   sourcemeta::core::schema_walker,
 ///   sourcemeta::core::schema_resolver);
