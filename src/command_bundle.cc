@@ -31,6 +31,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   try {
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
+
     sourcemeta::core::bundle(
         schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
         sourcemeta::core::URI::from_path(
@@ -50,6 +51,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
           << "you will be unable to reference the resulting schema from "
              "other schemas\n"
           << "using the --resolve/-r option.\n";
+
       sourcemeta::core::for_editor(schema, sourcemeta::core::schema_walker,
                                    custom_resolver, dialect);
     }

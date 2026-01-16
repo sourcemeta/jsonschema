@@ -20,6 +20,7 @@
 #include <optional>      // std::optional, std::nullopt
 #include <string>        // std::string
 #include <string_view>   // std::string_view
+#include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
@@ -133,6 +134,8 @@ struct Context {
   /// The set of tweaks for the compiler
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const Tweaks tweaks;
+  /// Cache for $ref targets
+  mutable std::unordered_map<std::string, Instructions> ref_cache;
 };
 
 /// @ingroup compiler
