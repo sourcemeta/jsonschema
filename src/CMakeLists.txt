@@ -11,7 +11,8 @@ add_executable(jsonschema_cli
   command_encode.cc
   command_decode.cc
   command_compile.cc
-  command_canonicalize.cc)
+  command_canonicalize.cc
+  command_codegen.cc)
 
 sourcemeta_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
@@ -34,6 +35,8 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::evaluator)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::linter)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::test)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::codegen::ir)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::codegen::generator)
 target_link_libraries(jsonschema_cli PRIVATE CPR::cpr)
 
 configure_file(configure.h.in configure.h @ONLY)

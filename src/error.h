@@ -2,6 +2,7 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
 #include <sourcemeta/blaze/test.h>
+#include <sourcemeta/codegen/ir.h>
 
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -9,14 +10,16 @@
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/schemaconfig.h>
 
-#include <cstdlib>      // EXIT_FAILURE
-#include <filesystem>   // std::filesystem
-#include <functional>   // std::function
-#include <iostream>     // std::cout, std::cerr
-#include <stdexcept>    // std::runtime_error
-#include <string>       // std::string
-#include <system_error> // std::errc
-#include <type_traits>  // std::is_base_of_v
+#include <cstdlib>          // EXIT_FAILURE
+#include <filesystem>       // std::filesystem
+#include <functional>       // std::function
+#include <initializer_list> // std::initializer_list
+#include <iostream>         // std::cout, std::cerr
+#include <stdexcept>        // std::runtime_error
+#include <string>           // std::string
+#include <system_error>     // std::errc
+#include <type_traits>      // std::is_base_of_v
+#include <vector>           // std::vector
 
 namespace sourcemeta::jsonschema {
 
@@ -31,6 +34,27 @@ public:
 
 private:
   std::string example_;
+};
+
+class InvalidOptionEnumerationValueError : public std::runtime_error {
+public:
+  InvalidOptionEnumerationValueError(std::string message, std::string option,
+                                     std::initializer_list<std::string> values)
+      : std::runtime_error{message}, option_{std::move(option)},
+        values_{values} {}
+
+  [[nodiscard]] auto option() const noexcept -> const std::string & {
+    return this->option_;
+  }
+
+  [[nodiscard]] auto values() const noexcept
+      -> const std::vector<std::string> & {
+    return this->values_;
+  }
+
+private:
+  std::string option_;
+  std::vector<std::string> values_;
 };
 
 class NotSchemaError : public std::runtime_error {
@@ -269,6 +293,19 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.keyword()
+                  } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign(
+          "keyword", sourcemeta::core::JSON{std::string{exception.keyword()}});
+    } else {
+      std::cerr << "  at keyword " << exception.keyword() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.uri(); }) {
     if (is_json) {
       error_json.assign("uri", sourcemeta::core::JSON{exception.uri()});
@@ -305,6 +342,25 @@ inline auto print_exception(const bool is_json, const Exception &exception)
           "option", sourcemeta::core::JSON{std::string{exception.option()}});
     } else {
       std::cerr << "  at option " << exception.option() << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.values()
+                  } -> std::convertible_to<const std::vector<std::string> &>;
+                }) {
+    if (is_json) {
+      auto values_array{sourcemeta::core::JSON::make_array()};
+      for (const auto &value : exception.values()) {
+        values_array.push_back(sourcemeta::core::JSON{value});
+      }
+      error_json.assign("values", std::move(values_array));
+    } else {
+      std::cerr << "  with values\n";
+      for (const auto &value : exception.values()) {
+        std::cerr << "  - " << value << "\n";
+      }
     }
   }
 
@@ -422,6 +478,20 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
+  } catch (const FileError<sourcemeta::core::SchemaVocabularyError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (
+      const FileError<sourcemeta::codegen::UnsupportedKeywordError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const FileError<sourcemeta::codegen::UnsupportedKeywordValueError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const sourcemeta::core::JSONFileParseError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -435,6 +505,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const InvalidOptionEnumerationValueError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nRun the `help` command for usage information\n";
+    }
+
     return EXIT_FAILURE;
   } catch (const PositionalArgumentError &error) {
     const auto is_json{options.contains("json")};

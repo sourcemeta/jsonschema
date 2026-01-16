@@ -1,0 +1,5 @@
+if(NOT Codegen_FOUND)
+  set(CODEGEN_INSTALL OFF CACHE BOOL "disable installation")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/codegen")
+  set(Codegen_FOUND ON)
+endif()
