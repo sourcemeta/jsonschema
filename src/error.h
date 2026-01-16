@@ -142,6 +142,75 @@ private:
   int exit_code_;
 };
 
+class RemoteSchemaFetchError : public std::runtime_error {
+public:
+  RemoteSchemaFetchError(std::string uri, const long status_code)
+      : std::runtime_error{"Could not fetch the schema over HTTP (HTTP " +
+                           std::to_string(status_code) + ")"},
+        uri_{std::move(uri)} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
+};
+
+class RemoteSchemaJSONParseError : public std::runtime_error {
+public:
+  RemoteSchemaJSONParseError(std::string uri, const std::uint64_t line,
+                             const std::uint64_t column,
+                             const std::string_view message)
+      : std::runtime_error{std::string{message}}, uri_{std::move(uri)},
+        line_{line}, column_{column} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+  [[nodiscard]] auto line() const noexcept -> std::uint64_t {
+    return this->line_;
+  }
+
+  [[nodiscard]] auto column() const noexcept -> std::uint64_t {
+    return this->column_;
+  }
+
+private:
+  std::string uri_;
+  std::uint64_t line_;
+  std::uint64_t column_;
+};
+
+class RemoteSchemaYAMLParseError : public std::runtime_error {
+public:
+  RemoteSchemaYAMLParseError(std::string uri, const std::string_view message)
+      : std::runtime_error{std::string{message}}, uri_{std::move(uri)} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
+};
+
+class RemoteSchemaNotSchemaError : public std::runtime_error {
+public:
+  RemoteSchemaNotSchemaError(std::string uri)
+      : std::runtime_error{"The fetched document does not represent a valid "
+                           "JSON Schema"},
+        uri_{std::move(uri)} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
+};
+
 template <typename T> class FileError : public T {
 public:
   template <typename... Args>
@@ -328,6 +397,22 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
+  } catch (const RemoteSchemaFetchError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const RemoteSchemaJSONParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const RemoteSchemaYAMLParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const RemoteSchemaNotSchemaError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const InvalidLintRuleError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -419,6 +504,54 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_FAILURE;
   } catch (const FileError<sourcemeta::core::SchemaError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (
+      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      if (error.identifier().starts_with("file://")) {
+        std::cerr << "\nThis is likely because the file does not exist\n";
+      } else {
+        std::cerr << "\nThis is likely because you forgot to import such "
+                     "schema using `--resolve/-r`\n";
+      }
+    }
+
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nAre you sure the input is a valid JSON Schema and its "
+                   "base dialect is known?\n";
+      std::cerr
+          << "If the input does not declare the `$schema` keyword, you might "
+             "want to\n";
+      std::cerr << "explicitly declare a default dialect using "
+                   "`--default-dialect/-d`\n";
+    }
+
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const sourcemeta::core::SchemaError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
