@@ -15,6 +15,42 @@
 
 #include "compile_helpers.h"
 
+// Prepend bases to top-level instruction locations only (not children)
+// Children are relative to their parent instruction's context
+static auto prepend_base_to_instructions(
+    const sourcemeta::blaze::Instructions &instructions,
+    const sourcemeta::core::Pointer &schema_base,
+    const sourcemeta::core::Pointer &instance_base)
+    -> sourcemeta::blaze::Instructions {
+  if (schema_base.empty() && instance_base.empty()) {
+    // No change needed, we can just copy
+    return instructions;
+  }
+
+  sourcemeta::blaze::Instructions result;
+  result.reserve(instructions.size());
+
+  for (const auto &instruction : instructions) {
+    // Prepend bases to the instruction's locations
+    auto new_schema_location =
+        schema_base.concat(instruction.relative_schema_location);
+    auto new_instance_location =
+        instance_base.concat(instruction.relative_instance_location);
+
+    // Children keep their original locations as they are relative to parent
+    result.push_back(sourcemeta::blaze::Instruction{
+        .type = instruction.type,
+        .relative_schema_location = std::move(new_schema_location),
+        .relative_instance_location = std::move(new_instance_location),
+        .keyword_location = instruction.keyword_location,
+        .schema_resource = instruction.schema_resource,
+        .value = instruction.value,
+        .children = instruction.children});
+  }
+
+  return result;
+}
+
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::core::URI &base,
                         const sourcemeta::core::WeakPointer &schema_location)
@@ -243,23 +279,72 @@ auto compiler_draft4_core_ref(const Context &context,
   // (5) If the resulting instructions were definitely NOT recursive, inline
   ///////////////////////////////////////////////////////////////////
 
-  if (context.mode == Mode::FastValidation &&
-      // Expanding references inline when dynamic scoping is required
-      // may not work, as we might omit the instruction that introduces
-      // one of the necessary schema resources to the evaluator
-      !context.uses_dynamic_scopes) {
-    return compile(context, schema_context, dynamic_context,
-                   sourcemeta::core::empty_weak_pointer,
-                   sourcemeta::core::empty_weak_pointer, reference.destination);
-  } else {
+  // Skip cache if schema uses dynamic scopes ($recursiveRef/$dynamicRef)
+  // which resolve differently based on dynamic call stack
+  if (context.uses_dynamic_scopes) {
+    auto children = compile(
+        context, schema_context, relative_dynamic_context(dynamic_context),
+        sourcemeta::core::empty_weak_pointer,
+        sourcemeta::core::empty_weak_pointer, reference.destination);
     return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
                  schema_context, dynamic_context, ValueNone{},
-                 compile(context, schema_context,
-                         relative_dynamic_context(dynamic_context),
-                         sourcemeta::core::empty_weak_pointer,
-                         sourcemeta::core::empty_weak_pointer,
-                         reference.destination))};
+                 std::move(children))};
   }
+
+  // Build cache key: destination|labels|is_property_name|property_as_target
+  std::ostringstream cache_key_stream;
+  cache_key_stream << reference.destination << "|";
+  std::vector<std::size_t> sorted_labels(schema_context.labels.begin(),
+                                         schema_context.labels.end());
+  std::ranges::sort(sorted_labels);
+  for (const auto &lbl : sorted_labels) {
+    cache_key_stream << lbl << ",";
+  }
+  cache_key_stream << "|" << schema_context.is_property_name << "|"
+                   << dynamic_context.property_as_target;
+  const auto cache_key{cache_key_stream.str()};
+
+  // Check cache
+  auto cache_iterator = context.ref_cache.find(cache_key);
+
+  if (context.mode == Mode::FastValidation) {
+    const auto call_site_schema_base{
+        to_pointer(dynamic_context.base_schema_location)
+            .concat({dynamic_context.keyword})};
+    const auto call_site_instance_base{
+        to_pointer(dynamic_context.base_instance_location)};
+
+    if (cache_iterator != context.ref_cache.end()) {
+      return prepend_base_to_instructions(cache_iterator->second,
+                                          call_site_schema_base,
+                                          call_site_instance_base);
+    }
+
+    // Cache miss
+    auto children = compile(
+        context, schema_context, relative_dynamic_context(dynamic_context),
+        sourcemeta::core::empty_weak_pointer,
+        sourcemeta::core::empty_weak_pointer, reference.destination);
+    context.ref_cache.emplace(cache_key, children);
+    return prepend_base_to_instructions(children, call_site_schema_base,
+                                        call_site_instance_base);
+  }
+
+  if (cache_iterator != context.ref_cache.end()) {
+    Instructions children{cache_iterator->second};
+    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+                 schema_context, dynamic_context, ValueNone{},
+                 std::move(children))};
+  }
+
+  auto children = compile(
+      context, schema_context, relative_dynamic_context(dynamic_context),
+      sourcemeta::core::empty_weak_pointer,
+      sourcemeta::core::empty_weak_pointer, reference.destination);
+  context.ref_cache.emplace(cache_key, children);
+  return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+               schema_context, dynamic_context, ValueNone{},
+               std::move(children))};
 }
 
 auto compiler_draft4_validation_type(const Context &context,
