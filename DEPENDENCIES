@@ -3,4 +3,5 @@ core https://github.com/sourcemeta/core 1af926d7b2ce9836256656f0bf4da87477375834
 jsonbinpack https://github.com/sourcemeta/jsonbinpack 0c2340990bf31c630155991a93306990d9d94fd4
 blaze https://github.com/sourcemeta/blaze 234d368be6d8ab1c5345c44d6f9173bfafc93584
 hydra https://github.com/sourcemeta/hydra c5f9542519bce7b6ac90ec8638329ef53aa46450
+codegen https://github.com/sourcemeta/codegen 10466c0216d36cdc65cf8e951f1dcf85cc580502
 ctrf https://github.com/ctrf-io/ctrf 93ea827d951390190171d37443bff169cf47c808

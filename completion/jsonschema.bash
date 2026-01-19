@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode version help"
+  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h"
 
@@ -41,8 +41,15 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}") )
       return 0
       ;;
-    --indentation|-n)
+    --indentation)
       COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
+      return 0
+      ;;
+    -n)
+      if [ "${command}" = "fmt" ] || [ "${command}" = "lint" ]
+      then
+        COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
+      fi
       return 0
       ;;
     --loop|-l)
@@ -53,6 +60,10 @@ _jsonschema() {
       ;;
     --template|-m)
       COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
+      return 0
+      ;;
+    --target|-t)
+      COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
       return 0
       ;;
   esac
@@ -151,6 +162,15 @@ _jsonschema() {
         COMPREPLY=( $(compgen -W "${global_options}" -- "${current}") )
       else
         COMPREPLY=( $(compgen -f -X '!*.binpack' -- "${current}") )
+      fi
+      ;;
+    codegen)
+      local options="--name -n --target -t"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     version|help)

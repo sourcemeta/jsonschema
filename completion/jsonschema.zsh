@@ -18,6 +18,7 @@ _jsonschema() {
     'canonicalize:Transform a schema into a canonical form'
     'encode:Encode JSON using JSON BinPack'
     'decode:Decode JSON using JSON BinPack'
+    'codegen:Generate code from a JSON Schema'
     'version:Print version information'
     'help:Print help information'
   )
@@ -131,6 +132,13 @@ _jsonschema() {
             ${global_options[@]} \
             '1:input file:_files -g "*.binpack"' \
             '2:output file:_files -g "*.json *.jsonl"'
+          ;;
+        codegen)
+          _arguments \
+            ${global_options[@]} \
+            '(--name -n)'{--name,-n}'[Specify type name prefix]:name:' \
+            '(--target -t)'{--target,-t}'[Specify target language]:target:(typescript)' \
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         version|help)
           ;;

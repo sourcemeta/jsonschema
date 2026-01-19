@@ -104,6 +104,11 @@ Commands:
        more verbose but semantically equivalent representation, making
        it easier for static analysis.
 
+   codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
+
+       Generate code from a JSON Schema. Currently only supports
+       --target/-t set to typescript and JSON Schema 2020-12.
+
    encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
@@ -191,6 +196,12 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "decode") {
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::decode(app);
+    return EXIT_SUCCESS;
+  } else if (command == "codegen") {
+    app.option("name", {"n"});
+    app.option("target", {"t"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::codegen(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"

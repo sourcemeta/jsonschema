@@ -1,0 +1,25 @@
+@PACKAGE_INIT@
+
+# Support both casing styles
+list(APPEND CODEGEN_COMPONENTS ${Codegen_FIND_COMPONENTS})
+list(APPEND CODEGEN_COMPONENTS ${codegen_FIND_COMPONENTS})
+if(NOT CODEGEN_COMPONENTS)
+  list(APPEND CODEGEN_COMPONENTS ir)
+  list(APPEND CODEGEN_COMPONENTS generator)
+endif()
+
+include(CMakeFindDependencyMacro)
+find_dependency(Core COMPONENTS regex json jsonschema alterschema)
+
+foreach(component ${CODEGEN_COMPONENTS})
+  if(component STREQUAL "ir")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_codegen_ir.cmake")
+  elseif(component STREQUAL "generator")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_codegen_ir.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/sourcemeta_codegen_generator.cmake")
+  else()
+    message(FATAL_ERROR "Unknown Codegen component: ${component}")
+  endif()
+endforeach()
+
+check_required_components("@PROJECT_NAME@")
