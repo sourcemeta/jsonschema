@@ -22,7 +22,10 @@ echo '{"foo": "bar"}' | "$1" validate "$TMP/schema.json" -
 echo 'foo: bar' | "$1" validate "$TMP/schema.json" -
 
 set +o errexit
-OUTPUT=$("$1" validate - "$TMP/schema.json" < "$TMP/schema.json" 2>&1)
+cat "$TMP/schema.json" > "$TMP/schema_stdin.json"
+
+OUTPUT=$("$1" validate - "$TMP/schema.json" < "$TMP/schema_stdin.json" 2>&1)
+
 EXIT_CODE=$?
 set -o errexit
 
