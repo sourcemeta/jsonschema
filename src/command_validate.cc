@@ -141,10 +141,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const auto &schema_path{options.positional().at(0)};
 
-  if (schema_path == "-") {
-    throw std::runtime_error{"Reading schema from stdin is not supported"};
-  }
-
   if (std::filesystem::is_directory(schema_path)) {
     throw std::filesystem::filesystem_error{
         "The input was supposed to be a file but it is a directory",

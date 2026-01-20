@@ -239,7 +239,9 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json, true,
                                     printed_progress),
-                  dialect, sourcemeta::jsonschema::default_id(entry.first),
+                  dialect,
+                  sourcemeta::core::URI::from_path(entry.resolution_base)
+                      .recompose(),
                   EXCLUDE_KEYWORD);
               if (printed_progress) {
                 std::cerr << "\n";
@@ -368,7 +370,9 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   custom_resolver,
                   get_lint_callback(errors_array, entry, output_json, false,
                                     printed_progress),
-                  dialect, sourcemeta::jsonschema::default_id(entry.first),
+                  dialect,
+                  sourcemeta::core::URI::from_path(entry.resolution_base)
+                      .recompose(),
                   EXCLUDE_KEYWORD);
               scores.emplace_back(subresult.second);
               if (subresult.first) {

@@ -27,6 +27,7 @@ namespace sourcemeta::jsonschema {
 
 struct InputJSON {
   std::filesystem::path first;
+  std::filesystem::path resolution_base;
   sourcemeta::core::JSON second;
   sourcemeta::core::PointerPositionTracker positions;
   std::size_t index{0};
@@ -171,9 +172,11 @@ handle_json_entry(const std::filesystem::path &entry_path,
                   const sourcemeta::core::Options &options) -> void {
   if (entry_path == "-") {
     auto parsed{read_from_stdin()};
-    std::filesystem::path virtual_path{std::filesystem::current_path()};
-    result.push_back({std::move(virtual_path), std::move(parsed.document),
-                      std::move(parsed.positions), 0, false, parsed.yaml});
+    std::filesystem::path display_path{"<stdin>"};
+    std::filesystem::path resolution_path{std::filesystem::current_path()};
+    result.push_back({std::move(display_path), std::move(resolution_path),
+                      std::move(parsed.document), std::move(parsed.positions),
+                      0, false, parsed.yaml});
     return;
   }
 
@@ -199,8 +202,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
-                          std::move(parsed.positions), 0, false, parsed.yaml});
+        auto canonical_copy{canonical};
+        result.push_back({std::move(canonical), std::move(canonical_copy),
+                          std::move(parsed.document), std::move(parsed.positions),
+                          0, false, parsed.yaml});
       }
     }
   } else {
@@ -219,7 +224,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
             result.push_back(
-                {canonical, document, std::move(positions), index, true});
+                {canonical, canonical, document, std::move(positions), index, true});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -268,13 +273,15 @@ handle_json_entry(const std::filesystem::path &entry_path,
                                << canonical.string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical, std::move(entry.first),
+            result.push_back({canonical, canonical, std::move(entry.first),
                               std::move(entry.second), index, true, true});
             index += 1;
           }
         } else if (documents.size() == 1) {
+          auto canonical_copy{canonical};
           result.push_back(
-              {std::move(canonical), std::move(documents.front().first),
+              {std::move(canonical), std::move(canonical_copy),
+               std::move(documents.front().first),
                std::move(documents.front().second), 0, false, true});
         }
       } else {
@@ -283,8 +290,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
-                          std::move(parsed.positions), 0, false, parsed.yaml});
+        auto canonical_copy{canonical};
+        result.push_back({std::move(canonical), std::move(canonical_copy),
+                          std::move(parsed.document), std::move(parsed.positions),
+                          0, false, parsed.yaml});
       }
     }
   }
@@ -294,6 +303,17 @@ handle_json_entry(const std::filesystem::path &entry_path,
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
+  std::size_t stdin_count{0};
+  for (const auto &arg : arguments) {
+    if (arg == "-") {
+      stdin_count++;
+    }
+  }
+  if (stdin_count > 1) {
+    throw std::runtime_error{
+        "Standard input (-) can only be specified once"};
+  }
+
   const auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
