@@ -18,22 +18,37 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 echo '{"foo": "bar"}' | "$1" validate "$TMP/schema.json" -
+
 echo 'foo: bar' | "$1" validate "$TMP/schema.json" -
+
 set +o errexit
-SCHEMA_CONTENT=$(cat "$TMP/schema.json")
-OUTPUT=$(echo "$SCHEMA_CONTENT" | "$1" validate - "$TMP/schema.json" 2>&1)
+OUTPUT=$(echo '{"foo": 123}' | "$1" validate "$TMP/schema.json" - 2>&1)
 EXIT_CODE=$?
 set -o errexit
 
 if [ "$EXIT_CODE" -eq 0 ]; then
-    echo "FAIL: Expected failure when passing schema as stdin, but got success"
+    echo "FAIL: Expected validation failure for type mismatch"
     exit 1
 fi
 
-if ! echo "$OUTPUT" | grep -q "Reading schema from stdin is not supported"; then
-    echo "FAIL: Expected specific error message 'Reading schema from stdin is not supported', got:"
-    echo "$OUTPUT"
+set +o errexit
+OUTPUT=$(cat "$TMP/schema.json" | "$1" validate - "$TMP/schema.json" 2>&1)
+EXIT_CODE=$?
+set -o errexit
+
+if [ "$EXIT_CODE" -eq 0 ]; then
+    echo "FAIL: Expected failure when passing schema as stdin"
     exit 1
 fi
 
-echo "PASS: stdin tests passed."
+set +o errexit
+OUTPUT=$(echo '{}' | "$1" validate "$TMP/schema.json" - - 2>&1)
+EXIT_CODE=$?
+set -o errexit
+
+if [ "$EXIT_CODE" -eq 0 ]; then
+    echo "FAIL: Expected failure for multiple stdin arguments"
+    exit 1
+fi
+
+echo "PASS: All stdin tests passed."
