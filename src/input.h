@@ -204,8 +204,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
         auto parsed{read_file(canonical)};
         auto canonical_copy{canonical};
         result.push_back({std::move(canonical), std::move(canonical_copy),
-                          std::move(parsed.document), std::move(parsed.positions),
-                          0, false, parsed.yaml});
+                          std::move(parsed.document),
+                          std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
   } else {
@@ -223,8 +223,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back(
-                {canonical, canonical, document, std::move(positions), index, true});
+            result.push_back({canonical, canonical, document,
+                              std::move(positions), index, true});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -276,10 +276,10 @@ handle_json_entry(const std::filesystem::path &entry_path,
           }
         } else if (documents.size() == 1) {
           auto canonical_copy{canonical};
-          result.push_back(
-              {std::move(canonical), std::move(canonical_copy),
-               std::move(documents.front().first),
-               std::move(documents.front().second), 0, false, true});
+          result.push_back({std::move(canonical), std::move(canonical_copy),
+                            std::move(documents.front().first),
+                            std::move(documents.front().second), 0, false,
+                            true});
         }
       } else {
         if (std::filesystem::is_empty(canonical)) {
@@ -289,8 +289,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
         auto parsed{read_file(canonical)};
         auto canonical_copy{canonical};
         result.push_back({std::move(canonical), std::move(canonical_copy),
-                          std::move(parsed.document), std::move(parsed.positions),
-                          0, false, parsed.yaml});
+                          std::move(parsed.document),
+                          std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
   }
@@ -307,8 +307,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     }
   }
   if (stdin_count > 1) {
-    throw std::runtime_error{
-        "Standard input (-) can only be specified once"};
+    throw std::runtime_error{"Standard input (-) can only be specified once"};
   }
 
   const auto blacklist{parse_ignore(options)};
