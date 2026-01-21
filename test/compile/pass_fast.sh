@@ -28,14 +28,17 @@ cat << 'EOF' > "$TMP/expected.json"
   [ "", "https://example.com" ],
   [
     [
-      71,
-      "/additionalProperties",
-      "",
-      "#/additionalProperties",
-      2,
-      [ 8, 4 ]
+      [
+        71,
+        "/additionalProperties/type",
+        "",
+        "#/additionalProperties/type",
+        2,
+        [ 8, 4 ]
+      ]
     ]
-  ]
+  ],
+  []
 ]
 EOF
 

@@ -11,12 +11,12 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <chrono>        // std::chrono
-#include <cstdint>       // std::uint8_t
-#include <functional>    // std::function, std::reference_wrapper
-#include <string_view>   // std::string_view
-#include <unordered_map> // std::unordered_map
-#include <vector>        // std::vector
+#include <chrono>      // std::chrono
+#include <cstdint>     // std::uint8_t
+#include <functional>  // std::function
+#include <string_view> // std::string_view
+#include <utility>     // std::pair
+#include <vector>      // std::vector
 
 /// @defgroup evaluator Evaluator
 /// @brief A high-performance JSON Schema evaluator
@@ -32,9 +32,10 @@ namespace sourcemeta::blaze {
 /// @ingroup evaluator
 /// Represents a compiled schema ready for execution
 struct Template {
-  Instructions instructions;
   bool dynamic;
   bool track;
+  std::vector<Instructions> targets;
+  std::vector<std::pair<std::size_t, std::size_t>> labels;
 };
 
 /// @ingroup evaluator
@@ -158,8 +159,8 @@ public:
   static const sourcemeta::core::JSON null;
   static const sourcemeta::core::JSON empty_string;
 
-  [[nodiscard]] auto hash(const std::size_t resource,
-                          std::string_view fragment) const noexcept
+  [[nodiscard]] static auto hash(const std::size_t resource,
+                                 std::string_view fragment) noexcept
       -> std::size_t;
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void;
@@ -174,21 +175,7 @@ public:
 #endif
   sourcemeta::core::WeakPointer evaluate_path;
   sourcemeta::core::WeakPointer instance_location;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const std::hash<std::string_view> hasher_{};
   std::vector<std::size_t> resources;
-
-  // To speed up the labels map
-  struct IdentityHash {
-    auto operator()(std::size_t value) const noexcept -> std::size_t {
-      return value;
-    }
-  };
-
-  std::unordered_map<std::size_t,
-                     const std::reference_wrapper<const Instructions>,
-                     IdentityHash>
-      labels;
 
   struct Evaluation {
     const sourcemeta::core::JSON *instance;

@@ -51,7 +51,7 @@ $(realpath "$TMP")/schemas/schema_2.json
       "absoluteKeywordLocation": "http://json-schema.org/draft-04/schema#/properties/type/anyOf/0/\$ref",
       "instanceLocation": "/type",
       "instancePosition": [ 5, 3, 5, 11 ],
-      "error": "The integer value was expected to validate against the statically referenced schema"
+      "error": "The integer value was expected to validate against the referenced schema"
     },
     {
       "keywordLocation": "/properties/type/anyOf/1/type",

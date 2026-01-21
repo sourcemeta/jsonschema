@@ -77,12 +77,27 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
   result.push_back(sourcemeta::core::JSON{schema_template.dynamic});
   result.push_back(sourcemeta::core::JSON{schema_template.track});
   std::vector<sourcemeta::core::JSON::String> resources;
-  auto instructions{sourcemeta::core::to_json(
-      schema_template.instructions, [&resources](const auto &instruction) {
-        return ::to_json(instruction, resources);
-      })};
+
+  auto targets{sourcemeta::core::JSON::make_array()};
+  for (const auto &target : schema_template.targets) {
+    targets.push_back(sourcemeta::core::to_json(
+        target, [&resources](const auto &instruction) {
+          return ::to_json(instruction, resources);
+        }));
+  }
+
   result.push_back(sourcemeta::core::to_json(resources));
-  result.push_back(std::move(instructions));
+  result.push_back(std::move(targets));
+
+  auto labels{sourcemeta::core::JSON::make_array()};
+  for (const auto &[key, value] : schema_template.labels) {
+    auto pair{sourcemeta::core::JSON::make_array()};
+    pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(key)});
+    pair.push_back(sourcemeta::core::JSON{static_cast<std::int64_t>(value)});
+    labels.push_back(std::move(pair));
+  }
+  result.push_back(std::move(labels));
+
   return result;
 }
 

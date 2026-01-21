@@ -13,6 +13,12 @@
 
 namespace sourcemeta::blaze {
 
+// Static keyword strings for use in DynamicContext references
+static const sourcemeta::core::JSON::String KEYWORD_EMPTY{};
+static const sourcemeta::core::JSON::String KEYWORD_PROPERTIES{"properties"};
+static const sourcemeta::core::JSON::String KEYWORD_THEN{"then"};
+static const sourcemeta::core::JSON::String KEYWORD_ELSE{"else"};
+
 // Helper to create a single-element WeakPointer from a property name reference
 inline auto make_weak_pointer(const std::string &property)
     -> sourcemeta::core::WeakPointer {
@@ -42,7 +48,7 @@ inline auto make_weak_pointer(const std::string &property1,
 }
 
 inline auto relative_dynamic_context() -> DynamicContext {
-  return {.keyword = "",
+  return {.keyword = KEYWORD_EMPTY,
           .base_schema_location = sourcemeta::core::empty_weak_pointer,
           .base_instance_location = sourcemeta::core::empty_weak_pointer,
           .property_as_target = false};
@@ -50,14 +56,14 @@ inline auto relative_dynamic_context() -> DynamicContext {
 
 inline auto relative_dynamic_context(const DynamicContext &dynamic_context)
     -> DynamicContext {
-  return {.keyword = "",
+  return {.keyword = KEYWORD_EMPTY,
           .base_schema_location = sourcemeta::core::empty_weak_pointer,
           .base_instance_location = sourcemeta::core::empty_weak_pointer,
           .property_as_target = dynamic_context.property_as_target};
 }
 
 inline auto property_relative_dynamic_context() -> DynamicContext {
-  return {.keyword = "",
+  return {.keyword = KEYWORD_EMPTY,
           .base_schema_location = sourcemeta::core::empty_weak_pointer,
           .base_instance_location = sourcemeta::core::empty_weak_pointer,
           .property_as_target = true};
@@ -297,22 +303,28 @@ inline auto make_property(const ValueString &property) -> ValueProperty {
 }
 
 inline auto requires_evaluation(const Context &context,
-                                const SchemaContext &schema_context) -> bool {
-  const auto &entry{static_frame_entry(context, schema_context)};
+                                const sourcemeta::core::WeakPointer &pointer)
+    -> bool {
   for (const auto &unevaluated : context.unevaluated) {
     if (unevaluated.second.unresolved ||
-        unevaluated.second.dynamic_dependencies.contains(entry.pointer)) {
+        unevaluated.second.dynamic_dependencies.contains(pointer)) {
       return true;
     }
 
     for (const auto &dependency : unevaluated.second.dynamic_dependencies) {
-      if (dependency.starts_with(entry.pointer)) {
+      if (dependency.starts_with(pointer)) {
         return true;
       }
     }
   }
 
   return false;
+}
+
+inline auto requires_evaluation(const Context &context,
+                                const SchemaContext &schema_context) -> bool {
+  const auto &entry{static_frame_entry(context, schema_context)};
+  return requires_evaluation(context, entry.pointer);
 }
 
 // TODO: Elevate to Core and test

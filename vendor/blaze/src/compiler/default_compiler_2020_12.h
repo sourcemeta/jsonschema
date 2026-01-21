@@ -108,6 +108,8 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
     return {make_with_resource(
         sourcemeta::blaze::InstructionIndex::ControlDynamicAnchorJump, context,
         schema_context, dynamic_context,
+        // TODO: The amount of possible anchors is known at compile time.
+        // We could convert it into integers like we do for resources
         std::string{reference.fragment().value()}, base_resource.value())};
   }
 }

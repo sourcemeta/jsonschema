@@ -97,6 +97,12 @@ auto print_frame(std::ostream &stream,
       stream << "    Parent            : <NONE>\n";
     }
 
+    if (location.second.property_name) {
+      stream << "    Property Name     : yes\n";
+    } else {
+      stream << "    Property Name     : no\n";
+    }
+
     if (std::next(iterator) != frame.locations().cend()) {
       stream << "\n";
     }

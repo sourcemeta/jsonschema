@@ -113,6 +113,7 @@ public:
     std::size_t relative_pointer;
     std::string_view dialect;
     SchemaBaseDialect base_dialect;
+    bool property_name;
   };
 
   /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,

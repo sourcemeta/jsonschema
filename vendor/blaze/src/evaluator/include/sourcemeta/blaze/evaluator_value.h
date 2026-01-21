@@ -74,10 +74,8 @@ using ValueType = sourcemeta::core::JSON::Type;
 struct ValueRegex {
   using second_type = ValueString;
   using first_type = sourcemeta::core::Regex;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const first_type first;
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const second_type second;
+  first_type first;
+  second_type second;
 
   [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
     return sourcemeta::core::to_json(this->second);

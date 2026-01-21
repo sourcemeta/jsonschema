@@ -296,7 +296,7 @@ auto store(sourcemeta::core::SchemaFrame::Locations &frame,
            const std::string_view dialect,
            const sourcemeta::core::SchemaBaseDialect base_dialect,
            const std::optional<sourcemeta::core::WeakPointer> &parent,
-           const bool ignore_if_present = false,
+           const bool property_name, const bool ignore_if_present = false,
            const bool already_canonical = false) -> void {
   auto canonical{already_canonical ? std::move(uri)
                                    : sourcemeta::core::URI::canonicalize(uri)};
@@ -308,7 +308,8 @@ auto store(sourcemeta::core::SchemaFrame::Locations &frame,
                      .pointer = pointer_from_root,
                      .relative_pointer = relative_pointer_offset,
                      .dialect = dialect,
-                     .base_dialect = base_dialect}});
+                     .base_dialect = base_dialect,
+                     .property_name = property_name}});
   if (!ignore_if_present && !inserted) {
     throw_already_exists(iterator->first.second);
   }
@@ -329,6 +330,7 @@ struct InternalEntry {
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct CacheSubschema {
   bool orphan{};
+  bool property_name{};
   std::optional<sourcemeta::core::WeakPointer> parent{};
 };
 
@@ -391,6 +393,8 @@ auto SchemaFrame::to_json(
     entry.assign_assume_new(
         "baseDialect",
         JSON{JSON::String{to_string(location.second.base_dialect)}});
+    entry.assign_assume_new("propertyName",
+                            JSON{location.second.property_name});
 
     switch (location.first.first) {
       case SchemaReferenceType::Static:
@@ -451,7 +455,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   assert(std::unordered_set<WeakPointer>(paths.cbegin(), paths.cend()).size() ==
          paths.size());
   std::vector<InternalEntry> subschema_entries;
-  std::unordered_map<WeakPointer, CacheSubschema> subschemas;
+  std::map<WeakPointer, CacheSubschema> subschemas;
   std::map<WeakPointer, std::vector<JSON::String>> base_uris;
   std::map<WeakPointer, std::vector<std::string_view>> base_dialects;
 
@@ -498,7 +502,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       store(this->locations_, SchemaReferenceType::Static,
             SchemaFrame::LocationType::Resource, default_id_canonical,
             this->root_, path, path.size(), root_dialect,
-            root_base_dialect.value(), std::nullopt);
+            root_base_dialect.value(), std::nullopt, false);
 
       base_uris.insert({path, {root_id.value(), default_id_canonical}});
     }
@@ -535,8 +539,10 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               : std::nullopt};
 
       // Store information
-      subschemas.emplace(entry.pointer, CacheSubschema{.orphan = entry.orphan,
-                                                       .parent = entry.parent});
+      subschemas.emplace(entry.pointer,
+                         CacheSubschema{.orphan = entry.orphan,
+                                        .property_name = entry.property_name,
+                                        .parent = entry.parent});
       subschema_entries.emplace_back(
           InternalEntry{.common = std::move(entry), .id = std::move(id)});
       current_subschema_entries.emplace_back(subschema_entries.size() - 1);
@@ -602,7 +608,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                     SchemaFrame::LocationType::Resource, new_id, new_id,
                     common_pointer_weak, common_pointer_weak.size(),
                     entry.common.dialect, entry.common.base_dialect.value(),
-                    common_parent);
+                    common_parent, entry.common.property_name);
             }
 
             auto base_uri_match{base_uris.find(common_pointer_weak)};
@@ -665,7 +671,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                   SchemaFrame::LocationType::Anchor, relative_anchor_uri, "",
                   common_pointer_weak, bases.second.size(),
                   entry.common.dialect, entry.common.base_dialect.value(),
-                  common_parent);
+                  common_parent, entry.common.property_name);
           }
 
           if (type == AnchorType::Dynamic || type == AnchorType::All) {
@@ -673,7 +679,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                   SchemaFrame::LocationType::Anchor, relative_anchor_uri, "",
                   common_pointer_weak, bases.second.size(),
                   entry.common.dialect, entry.common.base_dialect.value(),
-                  common_parent);
+                  common_parent, entry.common.property_name);
 
             // Register a dynamic anchor as a static anchor if possible too
             if (entry.common.vocabularies.contains(
@@ -682,7 +688,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                     SchemaFrame::LocationType::Anchor, relative_anchor_uri, "",
                     common_pointer_weak, bases.second.size(),
                     entry.common.dialect, entry.common.base_dialect.value(),
-                    common_parent, true);
+                    common_parent, entry.common.property_name, true);
             }
           }
         } else {
@@ -712,7 +718,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                     SchemaFrame::LocationType::Anchor, anchor_uri, base_view,
                     common_pointer_weak, bases.second.size(),
                     entry.common.dialect, entry.common.base_dialect.value(),
-                    common_parent);
+                    common_parent, entry.common.property_name);
             }
 
             if (type == AnchorType::Dynamic || type == AnchorType::All) {
@@ -721,7 +727,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                     SchemaFrame::LocationType::Anchor, anchor_uri, base_view,
                     common_pointer_weak, bases.second.size(),
                     entry.common.dialect, entry.common.base_dialect.value(),
-                    common_parent);
+                    common_parent, entry.common.property_name);
 
               // Register a dynamic anchor as a static anchor if possible too
               if (entry.common.vocabularies.contains(
@@ -731,7 +737,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                       SchemaFrame::LocationType::Anchor, anchor_uri, base_view,
                       common_pointer_weak, bases.second.size(),
                       entry.common.dialect, entry.common.base_dialect.value(),
-                      common_parent, true);
+                      common_parent, entry.common.property_name, true);
               }
             }
 
@@ -833,16 +839,22 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                   SchemaFrame::LocationType::Subschema, std::move(result),
                   base_view, pointer_weak, nearest_base_depth,
                   dialect_for_pointer, current_base_dialect,
-                  subschema_it->second.parent, false, true);
+                  subschema_it->second.parent,
+                  subschema_it->second.property_name, false, true);
           } else {
+            const auto &parent_pointer{combined.dialect_match.has_value()
+                                           ? combined.dialect_match->second
+                                           : empty_weak_pointer};
+            const auto parent_subschema_it{subschemas.find(parent_pointer)};
+            const bool parent_property_name{
+                parent_subschema_it != subschemas.cend() &&
+                parent_subschema_it->second.property_name};
+
             store(this->locations_, SchemaReferenceType::Static,
                   SchemaFrame::LocationType::Pointer, std::move(result),
                   base_view, pointer_weak, nearest_base_depth,
-                  dialect_for_pointer, current_base_dialect,
-                  combined.dialect_match.has_value()
-                      ? combined.dialect_match->second
-                      : empty_weak_pointer,
-                  false, true);
+                  dialect_for_pointer, current_base_dialect, parent_pointer,
+                  parent_property_name, false, true);
           }
         }
       }
