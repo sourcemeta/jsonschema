@@ -109,11 +109,9 @@ enum class InstructionIndex : std::uint8_t {
   ControlGroupWhenDefines,
   ControlGroupWhenDefinesDirect,
   ControlGroupWhenType,
-  ControlLabel,
-  ControlMark,
   ControlEvaluate,
-  ControlJump,
-  ControlDynamicAnchorJump
+  ControlDynamicAnchorJump,
+  ControlJump
 };
 
 /// @ingroup evaluator
@@ -208,11 +206,9 @@ constexpr std::string_view InstructionNames[] = {
     "ControlGroupWhenDefines",
     "ControlGroupWhenDefinesDirect",
     "ControlGroupWhenType",
-    "ControlLabel",
-    "ControlMark",
     "ControlEvaluate",
-    "ControlJump",
-    "ControlDynamicAnchorJump"};
+    "ControlDynamicAnchorJump",
+    "ControlJump"};
 
 /// @ingroup evaluator
 /// Check if a given instruction type corresponds to an annotation
@@ -243,15 +239,13 @@ using Instructions = std::vector<Instruction>;
 /// Represents a single instruction to be evaluated
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct Instruction {
-  // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-  const InstructionIndex type;
-  const sourcemeta::core::Pointer relative_schema_location;
-  const sourcemeta::core::Pointer relative_instance_location;
-  const std::string keyword_location;
-  const std::size_t schema_resource;
-  const Value value;
-  const Instructions children;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+  InstructionIndex type;
+  sourcemeta::core::Pointer relative_schema_location;
+  sourcemeta::core::Pointer relative_instance_location;
+  std::string keyword_location;
+  std::size_t schema_resource;
+  Value value;
+  Instructions children;
 };
 
 /// @ingroup evaluator

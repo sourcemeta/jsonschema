@@ -226,6 +226,7 @@ struct SchemaIteratorEntry {
   std::optional<SchemaBaseDialect> base_dialect;
   std::reference_wrapper<const JSON> subschema;
   bool orphan;
+  bool property_name;
 };
 
 } // namespace sourcemeta::core

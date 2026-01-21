@@ -193,8 +193,9 @@ inline auto evaluate(const sourcemeta::core::JSON &instance,
                      sourcemeta::blaze::Evaluator &evaluator,
                      const sourcemeta::blaze::Template &schema,
                      const sourcemeta::blaze::Callback &callback) -> bool {
+  assert(!schema.targets.empty());
   bool overall{true};
-  for (const auto &instruction : schema.instructions) {
+  for (const auto &instruction : schema.targets[0]) {
     if (!evaluate_instruction(instruction, schema, callback, instance, nullptr,
                               0, evaluator)) {
       overall = false;

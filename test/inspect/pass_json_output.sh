@@ -36,7 +36,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 1, 1, 10, 1 ],
         "relativePointer": "",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$defs": {
         "parent": "",
@@ -47,7 +48,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 7, 3, 9, 3 ],
         "relativePointer": "/$defs",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$defs/string": {
         "parent": "",
@@ -58,7 +60,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 8, 5, 8, 34 ],
         "relativePointer": "/$defs/string",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$defs/string/type": {
         "parent": "/$defs/string",
@@ -69,7 +72,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 8, 17, 8, 32 ],
         "relativePointer": "/$defs/string/type",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$id": {
         "parent": "",
@@ -80,7 +84,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 5, 3, 5, 30 ],
         "relativePointer": "/$id",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$ref": {
         "parent": "",
@@ -91,7 +96,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 6, 3, 6, 26 ],
         "relativePointer": "/$ref",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/$schema": {
         "parent": "",
@@ -102,7 +108,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 2, 3, 2, 59 ],
         "relativePointer": "/$schema",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/description": {
         "parent": "",
@@ -113,7 +120,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 4, 3, 4, 30 ],
         "relativePointer": "/description",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       },
       "https://example.com#/title": {
         "parent": "",
@@ -124,7 +132,8 @@ cat << 'EOF' > "$TMP/expected_json.txt"
         "position": [ 3, 3, 3, 17 ],
         "relativePointer": "/title",
         "dialect": "https://json-schema.org/draft/2020-12/schema",
-        "baseDialect": "https://json-schema.org/draft/2020-12/schema"
+        "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+        "propertyName": false
       }
     },
     "dynamic": {}

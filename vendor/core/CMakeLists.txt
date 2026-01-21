@@ -19,6 +19,7 @@ option(SOURCEMETA_CORE_JSONSCHEMA "Build the Sourcemeta Core JSON Schema library
 option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer library" ON)
 option(SOURCEMETA_CORE_JSONL "Build the Sourcemeta Core JSONL library" ON)
 option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
+option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
 option(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA "Build the Sourcemeta Core AlterSchema library" ON)
 option(SOURCEMETA_CORE_EXTENSION_EDITORSCHEMA "Build the Sourcemeta Core EditorSchema library" ON)
 option(SOURCEMETA_CORE_EXTENSION_SCHEMACONFIG "Build the Sourcemeta Core SchemaConfig library" ON)
@@ -124,6 +125,10 @@ endif()
 if(SOURCEMETA_CORE_YAML)
   find_package(yaml REQUIRED)
   add_subdirectory(src/core/yaml)
+endif()
+
+if(SOURCEMETA_CORE_HTML)
+  add_subdirectory(src/core/html)
 endif()
 
 if(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA)
@@ -239,6 +244,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_YAML)
     add_subdirectory(test/yaml)
+  endif()
+
+  if(SOURCEMETA_CORE_HTML)
+    add_subdirectory(test/html)
   endif()
 
   if(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA)

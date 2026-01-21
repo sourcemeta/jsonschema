@@ -20,19 +20,17 @@ auto compiler_draft7_applicator_if(const Context &context,
                                 sourcemeta::core::empty_weak_pointer)};
 
   // `then`
-  static const std::string then_keyword{"then"};
-  std::size_t then_cursor{0};
+  std::size_t then_cursor{children.size()};
   if (schema_context.schema.defines("then")) {
-    then_cursor = children.size();
     const auto destination{
         to_uri(schema_context.relative_pointer.initial().concat(
-                   make_weak_pointer(then_keyword)),
+                   make_weak_pointer(KEYWORD_THEN)),
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
         {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
-        .keyword = "then",
+        .keyword = KEYWORD_THEN,
         .base_schema_location = dynamic_context.base_schema_location,
         .base_instance_location = sourcemeta::core::empty_weak_pointer,
         .property_as_target = dynamic_context.property_as_target};
@@ -50,19 +48,18 @@ auto compiler_draft7_applicator_if(const Context &context,
   }
 
   // `else`
-  static const std::string else_keyword{"else"};
   std::size_t else_cursor{0};
   if (schema_context.schema.defines("else")) {
     else_cursor = children.size();
     const auto destination{
         to_uri(schema_context.relative_pointer.initial().concat(
-                   make_weak_pointer(else_keyword)),
+                   make_weak_pointer(KEYWORD_ELSE)),
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
         {sourcemeta::core::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
-        .keyword = "else",
+        .keyword = KEYWORD_ELSE,
         .base_schema_location = dynamic_context.base_schema_location,
         .base_instance_location = sourcemeta::core::empty_weak_pointer,
         .property_as_target = dynamic_context.property_as_target};

@@ -46,56 +46,59 @@ cat << 'EOF' > "$TMP/expected.json"
   [ "", "https://example.com", "https://example.com/other" ],
   [
     [
-      51,
-      "/$ref",
-      "",
-      "#/$ref",
-      2,
-      [ 0 ],
       [
-        [
-          44,
-          "/description",
-          "",
-          "#/description",
-          3,
-          [ 1, "Test schema" ]
-        ],
-        [
-          44,
-          "/title",
-          "",
-          "#/title",
-          3,
-          [ 1, "Test" ]
-        ],
-        [
-          11,
-          "/type",
-          "",
-          "#/type",
-          3,
-          [ 8, 4 ]
-        ]
+        91,
+        "/$ref",
+        "",
+        "#/$ref",
+        2,
+        [ 10, 1 ]
+      ],
+      [
+        44,
+        "/description",
+        "",
+        "#/description",
+        2,
+        [ 1, "Test schema" ]
+      ],
+      [
+        44,
+        "/title",
+        "",
+        "#/title",
+        2,
+        [ 1, "Test" ]
       ]
     ],
     [
-      44,
-      "/description",
-      "",
-      "#/description",
-      2,
-      [ 1, "Test schema" ]
-    ],
-    [
-      44,
-      "/title",
-      "",
-      "#/title",
-      2,
-      [ 1, "Test" ]
+      [
+        44,
+        "/description",
+        "",
+        "#/description",
+        3,
+        [ 1, "Test schema" ]
+      ],
+      [
+        44,
+        "/title",
+        "",
+        "#/title",
+        3,
+        [ 1, "Test" ]
+      ],
+      [
+        11,
+        "/type",
+        "",
+        "#/type",
+        3,
+        [ 8, 4 ]
+      ]
     ]
-  ]
+  ],
+  []
 ]
 EOF
 

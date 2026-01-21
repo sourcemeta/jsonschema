@@ -7,49 +7,12 @@
 #include <sourcemeta/core/regex.h>
 
 #include <algorithm> // std::sort, std::any_of, std::all_of, std::find_if, std::none_of
-#include <cassert>       // assert
-#include <set>           // std::set
-#include <sstream>       // std::ostringstream
-#include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
+#include <cassert> // assert
+#include <set>     // std::set
+#include <sstream> // std::ostringstream
+#include <utility> // std::move
 
 #include "compile_helpers.h"
-
-// Prepend bases to top-level instruction locations only (not children)
-// Children are relative to their parent instruction's context
-static auto prepend_base_to_instructions(
-    const sourcemeta::blaze::Instructions &instructions,
-    const sourcemeta::core::Pointer &schema_base,
-    const sourcemeta::core::Pointer &instance_base)
-    -> sourcemeta::blaze::Instructions {
-  if (schema_base.empty() && instance_base.empty()) {
-    // No change needed, we can just copy
-    return instructions;
-  }
-
-  sourcemeta::blaze::Instructions result;
-  result.reserve(instructions.size());
-
-  for (const auto &instruction : instructions) {
-    // Prepend bases to the instruction's locations
-    auto new_schema_location =
-        schema_base.concat(instruction.relative_schema_location);
-    auto new_instance_location =
-        instance_base.concat(instruction.relative_instance_location);
-
-    // Children keep their original locations as they are relative to parent
-    result.push_back(sourcemeta::blaze::Instruction{
-        .type = instruction.type,
-        .relative_schema_location = std::move(new_schema_location),
-        .relative_instance_location = std::move(new_instance_location),
-        .keyword_location = instruction.keyword_location,
-        .schema_resource = instruction.schema_resource,
-        .value = instruction.value,
-        .children = instruction.children});
-  }
-
-  return result;
-}
 
 static auto parse_regex(const std::string &pattern,
                         const sourcemeta::core::URI &base,
@@ -221,130 +184,23 @@ auto compiler_draft4_core_ref(const Context &context,
                               const SchemaContext &schema_context,
                               const DynamicContext &dynamic_context,
                               const Instructions &) -> Instructions {
-  ///////////////////////////////////////////////////////////////////
-  // (1) Determine the label we should try to jump to
-  ///////////////////////////////////////////////////////////////////
-
   const auto &entry{static_frame_entry(context, schema_context)};
   const auto type{sourcemeta::core::SchemaReferenceType::Static};
-  if (!context.frame.references().contains({type, entry.pointer})) {
-    if (!schema_context.schema.at(dynamic_context.keyword).is_string()) {
-      return {};
-    }
-
+  const auto reference{context.frame.reference(type, entry.pointer)};
+  if (!reference.has_value()) {
     throw sourcemeta::core::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
-        to_pointer(entry.pointer),
-        "The schema location is inside of an unknown keyword");
-  }
-  const auto &reference{context.frame.references().at({type, entry.pointer})};
-
-  const auto label{
-      Evaluator{}.hash(schema_resource_id(context.resources, reference.base),
-                       reference.fragment.value_or(""))};
-
-  ///////////////////////////////////////////////////////////////////
-  // (2) If we know about such label, then just jump into it
-  ///////////////////////////////////////////////////////////////////
-
-  if (schema_context.labels.contains(label) ||
-      context.precompiled_labels.contains(label)) {
-    return {make(sourcemeta::blaze::InstructionIndex::ControlJump, context,
-                 schema_context, dynamic_context, ValueUnsignedInteger{label})};
+        to_pointer(schema_context.relative_pointer),
+        "Could not resolve schema reference");
   }
 
-  ///////////////////////////////////////////////////////////////////
-  // (3) Compile the target assuming it might be recursive
-  ///////////////////////////////////////////////////////////////////
-
-  auto new_schema_context{schema_context};
-  new_schema_context.labels.insert(label);
-
-  ///////////////////////////////////////////////////////////////////
-  // (4) If the resulting instructions may be recursive, label
-  ///////////////////////////////////////////////////////////////////
-
-  std::unordered_set<std::string> visited;
-  if (is_circular(context.frame, entry.pointer, reference, visited)) {
-    auto children{compile(
-        context, new_schema_context, relative_dynamic_context(dynamic_context),
-        sourcemeta::core::empty_weak_pointer,
-        sourcemeta::core::empty_weak_pointer, reference.destination)};
-    return {make(sourcemeta::blaze::InstructionIndex::ControlLabel, context,
-                 new_schema_context, dynamic_context,
-                 ValueUnsignedInteger{label}, std::move(children))};
-  }
-
-  ///////////////////////////////////////////////////////////////////
-  // (5) If the resulting instructions were definitely NOT recursive, inline
-  ///////////////////////////////////////////////////////////////////
-
-  // Skip cache if schema uses dynamic scopes ($recursiveRef/$dynamicRef)
-  // which resolve differently based on dynamic call stack
-  if (context.uses_dynamic_scopes) {
-    auto children = compile(
-        context, schema_context, relative_dynamic_context(dynamic_context),
-        sourcemeta::core::empty_weak_pointer,
-        sourcemeta::core::empty_weak_pointer, reference.destination);
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
-  }
-
-  // Build cache key: destination|labels|is_property_name|property_as_target
-  std::ostringstream cache_key_stream;
-  cache_key_stream << reference.destination << "|";
-  std::vector<std::size_t> sorted_labels(schema_context.labels.begin(),
-                                         schema_context.labels.end());
-  std::ranges::sort(sorted_labels);
-  for (const auto &lbl : sorted_labels) {
-    cache_key_stream << lbl << ",";
-  }
-  cache_key_stream << "|" << schema_context.is_property_name << "|"
-                   << dynamic_context.property_as_target;
-  const auto cache_key{cache_key_stream.str()};
-
-  // Check cache
-  auto cache_iterator = context.ref_cache.find(cache_key);
-
-  if (context.mode == Mode::FastValidation) {
-    const auto call_site_schema_base{
-        to_pointer(dynamic_context.base_schema_location)
-            .concat({dynamic_context.keyword})};
-    const auto call_site_instance_base{
-        to_pointer(dynamic_context.base_instance_location)};
-
-    if (cache_iterator != context.ref_cache.end()) {
-      return prepend_base_to_instructions(cache_iterator->second,
-                                          call_site_schema_base,
-                                          call_site_instance_base);
-    }
-
-    // Cache miss
-    auto children = compile(
-        context, schema_context, relative_dynamic_context(dynamic_context),
-        sourcemeta::core::empty_weak_pointer,
-        sourcemeta::core::empty_weak_pointer, reference.destination);
-    context.ref_cache.emplace(cache_key, children);
-    return prepend_base_to_instructions(children, call_site_schema_base,
-                                        call_site_instance_base);
-  }
-
-  if (cache_iterator != context.ref_cache.end()) {
-    Instructions children{cache_iterator->second};
-    return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-                 schema_context, dynamic_context, ValueNone{},
-                 std::move(children))};
-  }
-
-  auto children = compile(
-      context, schema_context, relative_dynamic_context(dynamic_context),
-      sourcemeta::core::empty_weak_pointer,
-      sourcemeta::core::empty_weak_pointer, reference.destination);
-  context.ref_cache.emplace(cache_key, children);
-  return {make(sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
-               schema_context, dynamic_context, ValueNone{},
-               std::move(children))};
+  const auto key{std::make_tuple(type,
+                                 std::string_view{reference->get().destination},
+                                 schema_context.is_property_name)};
+  assert(context.targets.contains(key));
+  return {make(sourcemeta::blaze::InstructionIndex::ControlJump, context,
+               schema_context, dynamic_context,
+               ValueUnsignedInteger{context.targets.at(key).first})};
 }
 
 auto compiler_draft4_validation_type(const Context &context,
@@ -647,10 +503,9 @@ auto compiler_draft4_validation_required(const Context &context,
             .schema = schema_context.schema,
             .vocabularies = schema_context.vocabularies,
             .base = schema_context.base,
-            .labels = schema_context.labels,
             .is_property_name = schema_context.is_property_name};
         const DynamicContext new_dynamic_context{
-            .keyword = "properties",
+            .keyword = KEYWORD_PROPERTIES,
             .base_schema_location = sourcemeta::core::empty_weak_pointer,
             .base_instance_location = sourcemeta::core::empty_weak_pointer,
             .property_as_target = false};
@@ -1142,46 +997,27 @@ auto compiler_draft4_applicator_properties_with_options(
                sourcemeta::core::JSON{name}));
     }
 
-    // Optimize `properties` where its subschemas just include a type check,
-    // as that's a very common pattern
+    // Optimize `properties` where its subschemas just include a type check
 
-    if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+    if (context.mode == Mode::FastValidation && track_evaluation &&
+        substeps.size() == 1 &&
         substeps.front().type == InstructionIndex::AssertionTypeStrict) {
-      const auto &type_step{substeps.front()};
-      if (track_evaluation) {
-        children.push_back(rephrase(sourcemeta::blaze::InstructionIndex::
-                                        AssertionPropertyTypeStrictEvaluate,
-                                    type_step));
-      } else {
-        children.push_back(rephrase(
-            sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeStrict,
-            type_step));
-      }
-    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+      children.push_back(rephrase(sourcemeta::blaze::InstructionIndex::
+                                      AssertionPropertyTypeStrictEvaluate,
+                                  substeps.front()));
+    } else if (context.mode == Mode::FastValidation && track_evaluation &&
+               substeps.size() == 1 &&
                substeps.front().type == InstructionIndex::AssertionType) {
-      const auto &type_step{substeps.front()};
-      if (track_evaluation) {
-        children.push_back(rephrase(
-            sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeEvaluate,
-            type_step));
-      } else {
-        children.push_back(
-            rephrase(sourcemeta::blaze::InstructionIndex::AssertionPropertyType,
-                     type_step));
-      }
-    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+      children.push_back(rephrase(
+          sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeEvaluate,
+          substeps.front()));
+    } else if (context.mode == Mode::FastValidation && track_evaluation &&
+               substeps.size() == 1 &&
                substeps.front().type ==
                    InstructionIndex::AssertionTypeStrictAny) {
-      const auto &type_step{substeps.front()};
-      if (track_evaluation) {
-        children.push_back(rephrase(sourcemeta::blaze::InstructionIndex::
-                                        AssertionPropertyTypeStrictAnyEvaluate,
-                                    type_step));
-      } else {
-        children.push_back(rephrase(
-            sourcemeta::blaze::InstructionIndex::AssertionPropertyTypeStrictAny,
-            type_step));
-      }
+      children.push_back(rephrase(sourcemeta::blaze::InstructionIndex::
+                                      AssertionPropertyTypeStrictAnyEvaluate,
+                                  substeps.front()));
 
       // NOLINTBEGIN(bugprone-branch-clone)
     } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
@@ -1470,46 +1306,6 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
                                      std::move(filter_prefixes),
                                      std::move(filter_regexes)},
                  std::move(children))};
-
-    // Optimize `additionalProperties` set to just `type`, which is a
-    // pretty common pattern
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             children.front().type == InstructionIndex::AssertionTypeStrict) {
-    const auto &type_step{children.front()};
-    if (track_evaluation) {
-      return {make(
-          sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeStrictEvaluate,
-          context, schema_context, dynamic_context, type_step.value)};
-    } else {
-      return {
-          make(sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeStrict,
-               context, schema_context, dynamic_context, type_step.value)};
-    }
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             children.front().type == InstructionIndex::AssertionType) {
-    const auto &type_step{children.front()};
-    if (track_evaluation) {
-      return {
-          make(sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeEvaluate,
-               context, schema_context, dynamic_context, type_step.value)};
-    } else {
-      return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesType,
-                   context, schema_context, dynamic_context, type_step.value)};
-    }
-  } else if (context.mode == Mode::FastValidation && children.size() == 1 &&
-             children.front().type ==
-                 InstructionIndex::AssertionTypeStrictAny) {
-    const auto &type_step{children.front()};
-    if (track_evaluation) {
-      return {make(sourcemeta::blaze::InstructionIndex::
-                       LoopPropertiesTypeStrictAnyEvaluate,
-                   context, schema_context, dynamic_context, type_step.value)};
-    } else {
-      return {
-          make(sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeStrictAny,
-               context, schema_context, dynamic_context, type_step.value)};
-    }
-
   } else if (track_evaluation) {
     if (children.empty()) {
       return {make(sourcemeta::blaze::InstructionIndex::Evaluate, context,

@@ -95,7 +95,8 @@ namespace sourcemeta::blaze::fast {
 inline auto evaluate(const sourcemeta::core::JSON &instance,
                      sourcemeta::blaze::Evaluator &evaluator,
                      const sourcemeta::blaze::Template &schema) -> bool {
-  for (const auto &instruction : schema.instructions) {
+  assert(!schema.targets.empty());
+  for (const auto &instruction : schema.targets[0]) {
     if (!evaluate_instruction(instruction, schema, nullptr, instance, nullptr,
                               0, evaluator)) {
       return false;

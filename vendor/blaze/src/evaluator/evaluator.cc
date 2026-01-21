@@ -76,7 +76,6 @@ auto Evaluator::validate(const Template &schema,
   assert(this->evaluate_path.empty());
   assert(this->instance_location.empty());
   assert(this->resources.empty());
-  this->labels.clear();
 
   if (schema.track && schema.dynamic) {
     this->evaluated_.clear();
@@ -98,7 +97,6 @@ auto Evaluator::validate(const Template &schema,
   assert(this->evaluate_path.empty());
   assert(this->instance_location.empty());
   assert(this->resources.empty());
-  this->labels.clear();
   this->evaluated_.clear();
 
   return complete::evaluate(instance, *this, schema, callback);
@@ -108,9 +106,18 @@ const sourcemeta::core::JSON Evaluator::null{nullptr};
 const sourcemeta::core::JSON Evaluator::empty_string{""};
 
 auto Evaluator::hash(const std::size_t resource,
-                     const std::string_view fragment) const noexcept
-    -> std::size_t {
-  return resource + this->hasher_(fragment);
+                     const std::string_view fragment) noexcept -> std::size_t {
+  // FNV-1a hash for 64-bit
+  std::size_t hash{14695981039346656037ULL};
+
+  // TODO: We could hash the fragment in advance ONCE and then hash
+  // it with each schema resource on the loop iterations?
+  for (const auto byte : fragment) {
+    hash ^= static_cast<std::size_t>(static_cast<unsigned char>(byte));
+    hash *= 1099511628211ULL;
+  }
+
+  return resource + hash;
 }
 
 auto Evaluator::evaluate(const sourcemeta::core::JSON *target) -> void {

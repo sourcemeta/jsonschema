@@ -15,13 +15,15 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
+#include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint8_t
 #include <functional>    // std::function
+#include <map>           // std::map
 #include <optional>      // std::optional, std::nullopt
 #include <string>        // std::string
 #include <string_view>   // std::string_view
+#include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
-#include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
 /// @defgroup compiler Compiler
@@ -44,8 +46,6 @@ struct SchemaContext {
   /// The schema base URI
   const sourcemeta::core::URI &base;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-  /// The set of labels registered so far
-  std::unordered_set<std::size_t> labels;
   /// Whether the current schema targets a property name
   bool is_property_name;
 };
@@ -56,7 +56,7 @@ struct SchemaContext {
 struct DynamicContext {
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
   /// The schema keyword
-  const std::string keyword;
+  const sourcemeta::core::JSON::String &keyword;
   /// The schema base keyword path
   const sourcemeta::core::WeakPointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
@@ -90,18 +90,12 @@ enum class Mode : std::uint8_t {
 /// @ingroup compiler
 /// Advanced knobs that you can tweak for higher control and optimisations
 struct Tweaks {
-  /// Consider static references that are not circular when precompiling static
-  /// references
-  bool precompile_static_references_non_circular{false};
-  /// The maximum amount of static references to precompile
-  std::size_t precompile_static_references_maximum_schemas{10};
-  /// The minimum amount of references to a destination before considering it
-  /// for precompilation
-  std::size_t precompile_static_references_minimum_reference_count{10};
   /// Always unroll `properties` in a logical AND operation
   bool properties_always_unroll{false};
   /// Attempt to re-order `properties` subschemas to evaluate cheaper ones first
   bool properties_reorder{true};
+  /// Inline jump targets with fewer instructions than this threshold
+  std::size_t target_inline_threshold{50};
 };
 
 /// @ingroup compiler
@@ -128,14 +122,14 @@ struct Context {
   const bool uses_dynamic_scopes;
   /// The list of unevaluated entries and their dependencies
   const SchemaUnevaluatedEntries unevaluated;
-  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-  /// The set of global labels identified during precompilation
-  std::unordered_set<std::size_t> precompiled_labels;
   /// The set of tweaks for the compiler
-  // NOLINTNEXTLINE(cppcoreguidelines-avoid-const-or-ref-data-members)
   const Tweaks tweaks;
-  /// Cache for $ref targets
-  mutable std::unordered_map<std::string, Instructions> ref_cache;
+  /// All possible reference targets (key includes is_property_name context)
+  const std::map<
+      std::tuple<sourcemeta::core::SchemaReferenceType, std::string_view, bool>,
+      std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
+      targets;
+  // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 
 /// @ingroup compiler

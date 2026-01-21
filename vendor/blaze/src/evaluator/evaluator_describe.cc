@@ -162,8 +162,7 @@ auto describe_types_check(const bool valid,
 auto describe_reference(const sourcemeta::core::JSON &target) -> std::string {
   std::ostringstream message;
   message << "The " << to_string(target.type())
-          << " value was expected to validate against the statically "
-             "referenced schema";
+          << " value was expected to validate against the referenced schema";
   return message.str();
 }
 
@@ -321,20 +320,8 @@ auto describe(const bool valid, const Instruction &step,
     return message.str();
   }
 
-  if (step.type == sourcemeta::blaze::InstructionIndex::ControlLabel) {
-    return describe_reference(target);
-  }
-
-  if (step.type == sourcemeta::blaze::InstructionIndex::ControlMark) {
-    return "The schema location was marked for future use";
-  }
-
   if (step.type == sourcemeta::blaze::InstructionIndex::Evaluate) {
     return "The instance location was marked as evaluated";
-  }
-
-  if (step.type == sourcemeta::blaze::InstructionIndex::ControlJump) {
-    return describe_reference(target);
   }
 
   if (step.type ==
@@ -1262,14 +1249,22 @@ auto describe(const bool valid, const Instruction &step,
     return message.str();
   }
 
-  if (step.type == sourcemeta::blaze::InstructionIndex::AssertionType) {
-    std::ostringstream message;
-    describe_type_check(valid, target.type(),
-                        instruction_value<ValueType>(step), message);
-    return message.str();
-  }
+  if (step.type == sourcemeta::blaze::InstructionIndex::AssertionType ||
+      step.type == sourcemeta::blaze::InstructionIndex::AssertionTypeStrict) {
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      std::ostringstream message;
+      message << "The property name "
+              << escape_string(instance_location.back().to_property())
+              << " was expected to be of type "
+              << to_string(instruction_value<ValueType>(step));
+      return message.str();
+    }
 
-  if (step.type == sourcemeta::blaze::InstructionIndex::AssertionTypeStrict) {
     std::ostringstream message;
     describe_type_check(valid, target.type(),
                         instruction_value<ValueType>(step), message);
@@ -2347,6 +2342,22 @@ auto describe(const bool valid, const Instruction &step,
     }
 
     return unknown();
+  }
+
+  if (step.type == sourcemeta::blaze::InstructionIndex::ControlJump) {
+    if (std::ranges::any_of(evaluate_path,
+                            [](const auto &token) {
+                              return token.is_property() &&
+                                     token.to_property() == "propertyNames";
+                            }) &&
+        !instance_location.empty() && instance_location.back().is_property()) {
+      std::ostringstream message;
+      message << "The string value was expected to validate against the "
+                 "referenced schema";
+      return message.str();
+    }
+
+    return describe_reference(target);
   }
 
   return unknown();

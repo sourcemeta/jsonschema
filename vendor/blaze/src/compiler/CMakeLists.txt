@@ -3,7 +3,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME compiler
   PRIVATE_HEADERS error.h unevaluated.h
   SOURCES
     compile.cc compile_json.cc
-    compile_helpers.h default_compiler.cc unevaluated.cc
+    compile_helpers.h postprocess.h
+    default_compiler.cc unevaluated.cc
     default_compiler_2020_12.h
     default_compiler_2019_09.h
     default_compiler_draft7.h

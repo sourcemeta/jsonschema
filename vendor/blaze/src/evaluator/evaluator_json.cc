@@ -128,7 +128,7 @@ auto instructions_from_json(const sourcemeta::core::JSON &instructions,
 namespace sourcemeta::blaze {
 
 auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
-  if (!json.is_array() || json.array_size() != 4) {
+  if (!json.is_array() || json.array_size() != 5) {
     return std::nullopt;
   }
 
@@ -140,15 +140,42 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     return std::nullopt;
   }
 
-  const auto &instructions{json.at(3)};
-  auto instructions_result{instructions_from_json(instructions, resources)};
-  if (!instructions_result.has_value()) {
+  const auto &targets{json.at(3)};
+  if (!targets.is_array()) {
     return std::nullopt;
   }
 
-  return Template{.instructions = std::move(instructions_result).value(),
-                  .dynamic = dynamic.to_boolean(),
-                  .track = track.to_boolean()};
+  std::vector<Instructions> targets_result;
+  targets_result.reserve(targets.size());
+  for (const auto &target : targets.as_array()) {
+    auto target_result{instructions_from_json(target, resources)};
+    if (!target_result.has_value()) {
+      return std::nullopt;
+    }
+    targets_result.push_back(std::move(target_result).value());
+  }
+
+  const auto &labels{json.at(4)};
+  if (!labels.is_array()) {
+    return std::nullopt;
+  }
+
+  std::vector<std::pair<std::size_t, std::size_t>> labels_result;
+  labels_result.reserve(labels.size());
+  for (const auto &label : labels.as_array()) {
+    if (!label.is_array() || label.array_size() != 2 ||
+        !label.at(0).is_integer() || !label.at(1).is_integer()) {
+      return std::nullopt;
+    }
+    labels_result.emplace_back(
+        static_cast<std::size_t>(label.at(0).to_integer()),
+        static_cast<std::size_t>(label.at(1).to_integer()));
+  }
+
+  return Template{.dynamic = dynamic.to_boolean(),
+                  .track = track.to_boolean(),
+                  .targets = std::move(targets_result),
+                  .labels = std::move(labels_result)};
 }
 
 } // namespace sourcemeta::blaze
