@@ -242,6 +242,33 @@ private:
 };
 
 /// @ingroup jsonschema
+/// An error that represents a schema keyword error
+class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaKeywordError
+    : public std::exception {
+public:
+  SchemaKeywordError(const std::string_view keyword,
+                     const std::string_view value, const char *message)
+      : keyword_{keyword}, value_{value}, message_{message} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
+
+  [[nodiscard]] auto value() const noexcept -> std::string_view {
+    return this->value_;
+  }
+
+  [[nodiscard]] auto keyword() const noexcept -> std::string_view {
+    return this->keyword_;
+  }
+
+private:
+  std::string keyword_;
+  std::string value_;
+  const char *message_;
+};
+
+/// @ingroup jsonschema
 /// An error that represents a schema frame error
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaFrameError
     : public std::exception {

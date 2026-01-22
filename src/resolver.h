@@ -215,7 +215,13 @@ public:
     }
 
     // Fallback resolution logic
-    const sourcemeta::core::URI uri{std::string{identifier}};
+    sourcemeta::core::URI uri;
+    try {
+      uri = sourcemeta::core::URI{std::string{identifier}};
+    } catch (const sourcemeta::core::URIParseError &) {
+      return std::nullopt;
+    }
+
     if (uri.is_file()) {
       const auto path{uri.to_path()};
       LOG_VERBOSE(this->options_)

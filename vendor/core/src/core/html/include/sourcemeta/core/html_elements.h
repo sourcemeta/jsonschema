@@ -12,20 +12,22 @@ namespace sourcemeta::core::html {
     return HTML(#name, std::move(attributes), true);                           \
   }
 
-#define HTML_CONTAINER_ELEMENT(name)                                           \
+#define HTML_CONTAINER_ELEMENT_NAMED(name, tag)                                \
   inline auto name(HTMLAttributes attributes) -> HTML {                        \
-    return HTML(#name, std::move(attributes));                                 \
+    return HTML(#tag, std::move(attributes));                                  \
   }                                                                            \
   template <typename... Children>                                              \
   inline auto name(HTMLAttributes attributes, Children &&...children)          \
       -> HTML {                                                                \
-    return HTML(#name, std::move(attributes),                                  \
+    return HTML(#tag, std::move(attributes),                                   \
                 std::forward<Children>(children)...);                          \
   }                                                                            \
   template <typename... Children>                                              \
   inline auto name(Children &&...children) -> HTML {                           \
-    return HTML(#name, std::forward<Children>(children)...);                   \
+    return HTML(#tag, std::forward<Children>(children)...);                    \
   }
+
+#define HTML_CONTAINER_ELEMENT(name) HTML_CONTAINER_ELEMENT_NAMED(name, name)
 
 #define HTML_COMPACT_ELEMENT(name)                                             \
   inline auto name(HTMLAttributes attributes) -> HTML {                        \
@@ -433,11 +435,12 @@ HTML_CONTAINER_ELEMENT(summary)
 HTML_CONTAINER_ELEMENT(slot)
 
 /// @ingroup html
-HTML_CONTAINER_ELEMENT(template_)
+HTML_CONTAINER_ELEMENT_NAMED(template_, template)
 
 #ifndef DOXYGEN
 #undef HTML_VOID_ELEMENT
 #undef HTML_CONTAINER_ELEMENT
+#undef HTML_CONTAINER_ELEMENT_NAMED
 #undef HTML_COMPACT_ELEMENT
 #undef HTML_VOID_ATTR_ELEMENT
 #endif

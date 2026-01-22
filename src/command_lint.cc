@@ -224,6 +224,12 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   "Could not autofix the schema without breaking its internal "
                   "references",
                   entry.first, error.location()};
+            } catch (const sourcemeta::core::SchemaKeywordError &error) {
+              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
+                                                                    error);
+            } catch (const sourcemeta::core::SchemaFrameError &error) {
+              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
+                                                                  error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
                   entry.first);
@@ -273,6 +279,12 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 // Return 2 for logical lint failures
                 return 2;
               }
+            } catch (const sourcemeta::core::SchemaKeywordError &error) {
+              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
+                                                                    error);
+            } catch (const sourcemeta::core::SchemaFrameError &error) {
+              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
+                                                                  error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
                   entry.first);

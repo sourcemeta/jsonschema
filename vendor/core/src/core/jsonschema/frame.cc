@@ -1,5 +1,7 @@
 #include <sourcemeta/core/jsonschema.h>
 
+#include "helpers.h"
+
 #include <algorithm>     // std::sort, std::all_of, std::any_of
 #include <cassert>       // assert
 #include <functional>    // std::less
@@ -62,10 +64,16 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
           sourcemeta::core::Vocabularies::Known::JSON_Schema_2019_09_Core)) {
     if (schema.defines("$recursiveAnchor")) {
       const auto &anchor{schema.at("$recursiveAnchor")};
-      assert(anchor.is_boolean());
-      if (anchor.to_boolean()) {
-        // We store a 2019-09 recursive anchor as an empty anchor
-        result.emplace_back(std::string_view{}, AnchorType::Dynamic);
+      if (anchor.is_boolean()) {
+        if (anchor.to_boolean()) {
+          // We store a 2019-09 recursive anchor as an empty anchor
+          result.emplace_back(std::string_view{}, AnchorType::Dynamic);
+        }
+      } else {
+        std::ostringstream value;
+        sourcemeta::core::stringify(anchor, value);
+        throw sourcemeta::core::SchemaKeywordError(
+            "$recursiveAnchor", value.str(), "Invalid recursive anchor value");
       }
     }
 
@@ -214,29 +222,6 @@ auto find_dialect_and_all_bases(const DialectMapType &base_dialects,
   }
 
   return result;
-}
-
-// TODO: Why do we have this function both here and on `walker.cc`?
-auto ref_overrides_adjacent_keywords(
-    const sourcemeta::core::SchemaBaseDialect base_dialect) -> bool {
-  using sourcemeta::core::SchemaBaseDialect;
-  // In older drafts, the presence of `$ref` would override any sibling
-  // keywords
-  // See
-  // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
-  switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-      return true;
-    default:
-      return false;
-  }
 }
 
 auto supports_id_anchors(const sourcemeta::core::SchemaBaseDialect base_dialect)
@@ -481,7 +466,14 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       const auto maybe_id{sourcemeta::core::identify(
           schema, root_base_dialect.value(), default_id)};
       if (!maybe_id.empty()) {
-        root_id = URI::canonicalize(maybe_id);
+        try {
+          root_id = URI::canonicalize(maybe_id);
+        } catch (const URIParseError &) {
+          throw SchemaKeywordError(
+              sourcemeta::core::id_keyword(root_base_dialect.value()),
+              std::string{maybe_id}, "The identifier is not a valid URI");
+        }
+
         this->root_ = root_id.value();
       }
     }
@@ -555,7 +547,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       if (entry.id.has_value()) {
         assert(entry.common.base_dialect.has_value());
         const bool ref_overrides =
-            ref_overrides_adjacent_keywords(entry.common.base_dialect.value());
+            sourcemeta::core::ref_overrides_adjacent_keywords(
+                entry.common.base_dialect.value());
         const bool is_pre_2019_09_location_independent_identifier =
             supports_id_anchors(entry.common.base_dialect.value()) &&
             entry.id.value().starts_with('#');
@@ -576,8 +569,18 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
               continue;
             }
 
-            const sourcemeta::core::URI base{base_string};
-            sourcemeta::core::URI maybe_relative{entry.id.value()};
+            sourcemeta::core::URI base;
+            sourcemeta::core::URI maybe_relative;
+            try {
+              base = sourcemeta::core::URI{base_string};
+              maybe_relative = sourcemeta::core::URI{entry.id.value()};
+            } catch (const sourcemeta::core::URIParseError &) {
+              throw sourcemeta::core::SchemaKeywordError(
+                  sourcemeta::core::id_keyword(
+                      entry.common.base_dialect.value()),
+                  entry.id.value(), "The identifier is not a valid URI");
+            }
+
             const auto maybe_fragment{maybe_relative.fragment()};
 
             // See
@@ -585,7 +588,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
             // See
             // https://json-schema.org/draft/2020-12/draft-bhutton-json-schema-01#section-8.2.1-5
             if (maybe_fragment.has_value() && !maybe_fragment.value().empty()) {
-              throw SchemaError(
+              throw SchemaFrameError(
+                  entry.id.value(),
                   "Identifiers must not contain non-empty fragments");
             }
 
@@ -630,7 +634,14 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         const auto maybe_metaschema{
             sourcemeta::core::dialect(entry.common.subschema.get())};
         if (!maybe_metaschema.empty()) {
-          sourcemeta::core::URI metaschema{maybe_metaschema};
+          sourcemeta::core::URI metaschema;
+          try {
+            metaschema = sourcemeta::core::URI{maybe_metaschema};
+          } catch (const URIParseError &) {
+            throw SchemaKeywordError("$schema", std::string{maybe_metaschema},
+                                     "The dialect is not a valid URI");
+          }
+
           const auto nearest_bases{find_nearest_bases<JSON::String>(
               base_uris, common_pointer_weak,
               entry.id ? std::optional<std::string_view>{*entry.id}
@@ -874,31 +885,52 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           entry.id ? std::optional<std::string_view>{*entry.id}
                    : std::nullopt)};
       if (entry.common.subschema.get().defines("$ref")) {
-        if (entry.common.subschema.get().at("$ref").is_string()) {
-          const auto &original{
-              entry.common.subschema.get().at("$ref").to_string()};
-          sourcemeta::core::URI ref{original};
-          if (!nearest_bases.first.empty()) {
-            ref.resolve_from(nearest_bases.first.front());
-          }
-
-          ref.canonicalize();
-          auto ref_pointer{common_pointer_weak};
-          ref_pointer.push_back(std::cref(KEYWORD_REF));
-          const auto [it, inserted] = this->references_.insert_or_assign(
-              {SchemaReferenceType::Static, std::move(ref_pointer)},
-              SchemaFrame::ReferencesEntry{.original = original,
-                                           .destination = ref.recompose(),
-                                           .base = std::string_view{},
-                                           .fragment = std::nullopt});
-          set_base_and_fragment(it->second);
+        if (!entry.common.subschema.get().at("$ref").is_string()) {
+          std::ostringstream value;
+          sourcemeta::core::stringify(entry.common.subschema.get().at("$ref"),
+                                      value);
+          throw sourcemeta::core::SchemaKeywordError("$ref", value.str(),
+                                                     "Invalid reference value");
         }
+
+        const auto &original{
+            entry.common.subschema.get().at("$ref").to_string()};
+        sourcemeta::core::URI ref;
+        try {
+          ref = sourcemeta::core::URI{original};
+        } catch (const URIParseError &) {
+          throw sourcemeta::core::SchemaKeywordError(
+              "$ref", original, "The reference is not a valid URI");
+        }
+
+        if (!nearest_bases.first.empty()) {
+          ref.resolve_from(nearest_bases.first.front());
+        }
+
+        ref.canonicalize();
+        auto ref_pointer{common_pointer_weak};
+        ref_pointer.push_back(std::cref(KEYWORD_REF));
+        const auto [it, inserted] = this->references_.insert_or_assign(
+            {SchemaReferenceType::Static, std::move(ref_pointer)},
+            SchemaFrame::ReferencesEntry{.original = original,
+                                         .destination = ref.recompose(),
+                                         .base = std::string_view{},
+                                         .fragment = std::nullopt});
+        set_base_and_fragment(it->second);
       }
 
       if (entry.common.vocabularies.contains(
               Vocabularies::Known::JSON_Schema_2019_09_Core) &&
           entry.common.subschema.get().defines("$recursiveRef")) {
-        assert(entry.common.subschema.get().at("$recursiveRef").is_string());
+        if (!entry.common.subschema.get().at("$recursiveRef").is_string()) {
+          std::ostringstream value;
+          sourcemeta::core::stringify(
+              entry.common.subschema.get().at("$recursiveRef"), value);
+          throw sourcemeta::core::SchemaKeywordError(
+              "$recursiveRef", value.str(),
+              "Invalid recursive reference value");
+        }
+
         const auto &ref{
             entry.common.subschema.get().at("$recursiveRef").to_string()};
 
@@ -935,42 +967,56 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
       if (entry.common.vocabularies.contains(
               Vocabularies::Known::JSON_Schema_2020_12_Core) &&
           entry.common.subschema.get().defines("$dynamicRef")) {
-        if (entry.common.subschema.get().at("$dynamicRef").is_string()) {
-          const auto &original{
-              entry.common.subschema.get().at("$dynamicRef").to_string()};
-          sourcemeta::core::URI ref{original};
-          if (!nearest_bases.first.empty()) {
-            ref.resolve_from(nearest_bases.first.front());
-          }
-
-          ref.canonicalize();
-          auto ref_string{ref.recompose()};
-
-          // Note that here we cannot enforce the bookending requirement,
-          // as the dynamic reference may point to a schema resource that
-          // is not part of or bundled within the schema we are analyzing here.
-
-          const auto has_fragment{ref.fragment().has_value()};
-          const auto maybe_static_frame{
-              this->locations_.find({SchemaReferenceType::Static, ref_string})};
-          const auto maybe_dynamic_frame{this->locations_.find(
-              {SchemaReferenceType::Dynamic, ref_string})};
-          const auto behaves_as_static{
-              !has_fragment ||
-              (has_fragment && maybe_static_frame != this->locations_.end() &&
-               maybe_dynamic_frame == this->locations_.end())};
-          auto dynamic_ref_pointer{common_pointer_weak};
-          dynamic_ref_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
-          const auto [it, inserted] = this->references_.insert_or_assign(
-              {behaves_as_static ? SchemaReferenceType::Static
-                                 : SchemaReferenceType::Dynamic,
-               std::move(dynamic_ref_pointer)},
-              SchemaFrame::ReferencesEntry{.original = original,
-                                           .destination = std::move(ref_string),
-                                           .base = std::string_view{},
-                                           .fragment = std::nullopt});
-          set_base_and_fragment(it->second);
+        if (!entry.common.subschema.get().at("$dynamicRef").is_string()) {
+          std::ostringstream value;
+          sourcemeta::core::stringify(
+              entry.common.subschema.get().at("$dynamicRef"), value);
+          throw sourcemeta::core::SchemaKeywordError(
+              "$dynamicRef", value.str(), "Invalid dynamic reference value");
         }
+
+        const auto &original{
+            entry.common.subschema.get().at("$dynamicRef").to_string()};
+        sourcemeta::core::URI ref;
+        try {
+          ref = sourcemeta::core::URI{original};
+        } catch (const URIParseError &) {
+          throw sourcemeta::core::SchemaKeywordError(
+              "$dynamicRef", original,
+              "The dynamic reference is not a valid URI");
+        }
+
+        if (!nearest_bases.first.empty()) {
+          ref.resolve_from(nearest_bases.first.front());
+        }
+
+        ref.canonicalize();
+        auto ref_string{ref.recompose()};
+
+        // Note that here we cannot enforce the bookending requirement,
+        // as the dynamic reference may point to a schema resource that
+        // is not part of or bundled within the schema we are analyzing here.
+
+        const auto has_fragment{ref.fragment().has_value()};
+        const auto maybe_static_frame{
+            this->locations_.find({SchemaReferenceType::Static, ref_string})};
+        const auto maybe_dynamic_frame{
+            this->locations_.find({SchemaReferenceType::Dynamic, ref_string})};
+        const auto behaves_as_static{
+            !has_fragment ||
+            (has_fragment && maybe_static_frame != this->locations_.end() &&
+             maybe_dynamic_frame == this->locations_.end())};
+        auto dynamic_ref_pointer{common_pointer_weak};
+        dynamic_ref_pointer.push_back(std::cref(KEYWORD_DYNAMIC_REF));
+        const auto [it, inserted] = this->references_.insert_or_assign(
+            {behaves_as_static ? SchemaReferenceType::Static
+                               : SchemaReferenceType::Dynamic,
+             std::move(dynamic_ref_pointer)},
+            SchemaFrame::ReferencesEntry{.original = original,
+                                         .destination = std::move(ref_string),
+                                         .base = std::string_view{},
+                                         .fragment = std::nullopt});
+        set_base_and_fragment(it->second);
       }
     }
   }
