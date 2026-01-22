@@ -68,6 +68,8 @@ add_jsonschema_test_unix(format/pass_extension_empty_json)
 add_jsonschema_test_unix(format/fail_extension_empty_yaml)
 add_jsonschema_test_unix(format/pass_custom_extension_json)
 add_jsonschema_test_unix(format/fail_custom_extension_yaml)
+add_jsonschema_test_unix(format/fail_invalid_id_type)
+add_jsonschema_test_unix(format/fail_invalid_schema_uri)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_enoent)
@@ -190,6 +192,8 @@ add_jsonschema_test_unix(validate/pass_extension_empty_json)
 add_jsonschema_test_unix(validate/pass_extension_empty_yaml)
 add_jsonschema_test_unix(validate/pass_custom_extension_json)
 add_jsonschema_test_unix(validate/pass_custom_extension_yaml)
+add_jsonschema_test_unix(validate/fail_invalid_id_type)
+add_jsonschema_test_unix(validate/fail_invalid_schema_uri)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -319,6 +323,8 @@ add_jsonschema_test_unix(bundle/pass_without_extension_json)
 add_jsonschema_test_unix(bundle/pass_without_extension_yaml)
 add_jsonschema_test_unix(bundle/pass_custom_extension_json)
 add_jsonschema_test_unix(bundle/pass_custom_extension_yaml)
+add_jsonschema_test_unix(bundle/fail_invalid_id_type)
+add_jsonschema_test_unix(bundle/fail_invalid_schema_uri)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
@@ -338,6 +344,8 @@ add_jsonschema_test_unix(inspect/pass_without_extension_json)
 add_jsonschema_test_unix(inspect/pass_without_extension_yaml)
 add_jsonschema_test_unix(inspect/pass_custom_extension_json)
 add_jsonschema_test_unix(inspect/pass_custom_extension_yaml)
+add_jsonschema_test_unix(inspect/fail_invalid_id_type)
+add_jsonschema_test_unix(inspect/fail_invalid_schema_uri)
 
 # Compile
 add_jsonschema_test_unix(compile/pass)
@@ -363,6 +371,8 @@ add_jsonschema_test_unix(compile/pass_include)
 add_jsonschema_test_unix(compile/pass_include_lowercase)
 add_jsonschema_test_unix(compile/pass_include_short)
 add_jsonschema_test_unix(compile/fail_include_invalid_identifier)
+add_jsonschema_test_unix(compile/fail_invalid_id_type)
+add_jsonschema_test_unix(compile/fail_invalid_schema_uri)
 
 # Canonicalize
 add_jsonschema_test_unix(canonicalize/pass_input_unmodified)
@@ -376,6 +386,8 @@ add_jsonschema_test_unix(canonicalize/pass_custom_extension_yaml)
 add_jsonschema_test_unix(canonicalize/fail_no_schema)
 add_jsonschema_test_unix(canonicalize/fail_non_schema)
 add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
+add_jsonschema_test_unix(canonicalize/fail_invalid_id_type)
+add_jsonschema_test_unix(canonicalize/fail_invalid_schema_uri)
 
 # Codegen
 add_jsonschema_test_unix(codegen/pass_typescript)
@@ -405,6 +417,8 @@ add_jsonschema_test_unix(codegen/fail_unsupported_vocabulary)
 add_jsonschema_test_unix(codegen/fail_unsupported_keyword)
 add_jsonschema_test_unix(codegen/fail_unsupported_keyword_value)
 add_jsonschema_test_unix(codegen/fail_unsupported_schema)
+add_jsonschema_test_unix(codegen/fail_invalid_id_type)
+add_jsonschema_test_unix(codegen/fail_invalid_schema_uri)
 
 # Lint
 add_jsonschema_test_unix(lint/pass_lint_fix)
