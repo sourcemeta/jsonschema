@@ -287,7 +287,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw std::runtime_error{"The `--benchmark/-b` option is only allowed "
                                "given a single instance"};
     }
-    if (std::filesystem::is_directory(instance_path) ||
+    if (instance_path == "-" || std::filesystem::is_directory(instance_path) ||
         instance_path.extension() == ".jsonl" ||
         instance_path.extension() == ".yaml" ||
         instance_path.extension() == ".yml") {
