@@ -23,7 +23,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-"$1" inspect "$TMP/schema.json" --verbose > "$TMP/result.txt" 2> "$TMP/output.txt"
+"$1" inspect "$TMP/schema.json" --debug > "$TMP/result.txt" 2> "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
 (RESOURCE) URI: https://example.com
@@ -108,7 +108,8 @@ EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"
 
-cat << 'EOF' > "$TMP/expected_log.txt"
+cat << EOF > "$TMP/expected_log.txt"
+debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_log.txt"

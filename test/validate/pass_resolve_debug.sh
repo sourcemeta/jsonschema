@@ -59,9 +59,18 @@ cat << 'EOF' > "$TMP/instance.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/foo.json" --resolve "$TMP/schemas" --verbose 2> "$TMP/stderr.txt"
+  --resolve "$TMP/foo.json" --resolve "$TMP/schemas" --debug 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
+debug: Detecting schema resources from file: $(realpath "$TMP")/foo.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/foo.json
+debug: Importing schema into the resolution context: https://example.com/foo
+debug: Detecting schema resources from file: $(realpath "$TMP")/schemas/baz.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/baz.json
+debug: Importing schema into the resolution context: https://example.com/baz
+debug: Detecting schema resources from file: $(realpath "$TMP")/schemas/nested/bar.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/nested/bar.json
+debug: Importing schema into the resolution context: https://example.com/bar
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 EOF

@@ -16,6 +16,7 @@ constexpr std::string_view USAGE_DETAILS{R"EOF(
 Global Options:
 
    --verbose, -v                  Enable verbose output
+   --debug, -g                    Enable even higher verbose output
    --resolve, -r                  Import the given JSON Schema (or directory of schemas)
                                   into the resolution context
    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
@@ -223,6 +224,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   sourcemeta::core::Options app;
   app.flag("http", {"h"});
   app.flag("verbose", {"v"});
+  app.flag("debug", {"g"});
   app.flag("json", {"j"});
   app.option("resolve", {"r"});
   app.option("default-dialect", {"d"});

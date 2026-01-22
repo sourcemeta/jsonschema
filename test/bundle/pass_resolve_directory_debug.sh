@@ -28,23 +28,22 @@ cat << 'EOF' > "$TMP/schemas/remote.json"
 }
 EOF
 
-"$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --without-id --verbose 1> "$TMP/result.json" 2>&1
+"$1" bundle "$TMP/schema.json" --resolve "$TMP/schemas" --debug 1> "$TMP/result.json" 2>&1
 
 cat << EOF > "$TMP/expected.json"
-warning: You are opting in to remove schema identifiers in the bundled schema.
-The only legit use case of this advanced feature we know of is to workaround
-non-compliant JSON Schema implementations such as Visual Studio Code.
-Otherwise, this is not needed and may harm other use cases. For example,
-you will be unable to reference the resulting schema from other schemas
-using the --resolve/-r option.
+debug: Detecting schema resources from file: $(realpath "$TMP")/schemas/remote.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/remote.json
+debug: Importing schema into the resolution context: https://example.com/nested
 {
   "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "https://example.com",
   "title": "Test",
   "description": "Test schema",
-  "\$ref": "#/\$defs/https:~1~1example.com~1nested",
+  "\$ref": "nested",
   "\$defs": {
     "https://example.com/nested": {
       "\$schema": "https://json-schema.org/draft/2020-12/schema",
+      "\$id": "https://example.com/nested",
       "title": "Test",
       "description": "Test schema",
       "type": "string"

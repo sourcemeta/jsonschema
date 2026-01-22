@@ -63,9 +63,6 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 warning: Matching files with no extension
-Detecting schema resources from file: $(realpath "$TMP")/schemas/schema
-Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/schema
-Importing schema into the resolution context: https://example.com
 $(realpath "$TMP")/tests/test1:
   1/1 PASS First test
 $(realpath "$TMP")/tests/test2:

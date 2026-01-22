@@ -5,7 +5,7 @@ Compiling
 > JSON Schema Draft 3 and older are not supported at this point in time.
 
 ```sh
-jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v]
+jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] [--debug/-g]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
   [--minify/-m] [--json/-j] [--include/-n <name>]

@@ -68,7 +68,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
 
 auto report_as_text(const sourcemeta::core::Options &options) -> void {
   bool result{true};
-  const auto verbose{options.contains("verbose")};
+  const auto verbose{options.contains("verbose") || options.contains("debug")};
 
   for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
     const auto configuration_path{

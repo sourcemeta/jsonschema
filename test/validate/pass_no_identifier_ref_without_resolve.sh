@@ -34,7 +34,6 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Attempting to read file reference from disk: $(realpath "$TMP")/schemas/other.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 annotation: "Test schema"

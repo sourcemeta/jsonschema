@@ -37,7 +37,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 "$1" compile "$TMP/schema.json" \
-  --resolve "$TMP/remote.json" --verbose > "$TMP/template.json" 2> "$TMP/output.txt"
+  --resolve "$TMP/remote.json" --debug > "$TMP/template.json" 2> "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 [
@@ -104,7 +104,13 @@ EOF
 
 diff "$TMP/template.json" "$TMP/expected.json"
 
-cat << 'EOF' > "$TMP/expected.txt"
+cat << EOF > "$TMP/expected.txt"
+debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
+debug: Detecting schema resources from file: $(realpath "$TMP")/remote.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/remote.json
+debug: Importing schema into the resolution context: https://example.com/nested
+debug: Resolving https://example.com/other as https://example.com/middle given the configuration file
+debug: Resolving https://example.com/middle as https://example.com/nested given the configuration file
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

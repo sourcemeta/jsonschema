@@ -6,7 +6,8 @@ Validating
 
 ```sh
 jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
-  [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--http/-h] [--verbose/-v] [--debug/-g]
+  [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j]

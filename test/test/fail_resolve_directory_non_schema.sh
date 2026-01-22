@@ -40,10 +40,6 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Detecting schema resources from file: $(realpath "$TMP")/schemas/schema.json
-Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/schema.json
-Importing schema into the resolution context: https://example.com
-Detecting schema resources from file: $(realpath "$TMP")/schemas/test.json
 error: Could not determine the base dialect of the schema
   at file path $(realpath "$TMP")/schemas/test.json
 

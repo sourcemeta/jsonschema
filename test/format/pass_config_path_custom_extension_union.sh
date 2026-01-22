@@ -53,7 +53,6 @@ cd "$TMP/bar"
 "$1" fmt --verbose --extension .my.json >"$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
 Using extension: .my.json
 Using extension: .schema.json
 Formatting: $(realpath "$TMP")/foo/example.my.json

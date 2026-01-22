@@ -3,7 +3,8 @@ Bundling
 
 ```sh
 jsonschema bundle <schema.json|.yaml>
-  [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--http/-h] [--verbose/-v] [--debug/-g]
+  [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
 ```

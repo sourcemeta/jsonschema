@@ -48,16 +48,7 @@ cd "$TMP"
 
 "$1" test test.json --resolve schema.json --verbose > "$TMP/output.txt" 2>&1
 
-# TODO: Why do we get duplicated "Resolving" logs?
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
-Detecting schema resources from file: $(realpath "$TMP")/schema.json
-Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
-Importing schema into the resolution context: https://example.com
-Resolving https://example.com/other as https://example.com/middle given the configuration file
-Resolving https://example.com/middle as https://example.com given the configuration file
-Resolving https://example.com/other as https://example.com/middle given the configuration file
-Resolving https://example.com/middle as https://example.com given the configuration file
 $(realpath "$TMP")/test.json:
   1/2 PASS First test
   2/2 PASS Invalid type
