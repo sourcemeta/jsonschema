@@ -51,6 +51,10 @@ auto sourcemeta::jsonschema::canonicalize(
 
     sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw FileError<sourcemeta::core::SchemaReferenceError>(
         schema_path, std::string{error.identifier()}, error.location(),

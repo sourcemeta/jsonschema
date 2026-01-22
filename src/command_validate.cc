@@ -181,6 +181,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     try {
       return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
                                       custom_resolver, dialect, default_id);
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw FileError<sourcemeta::core::SchemaReferenceError>(
           schema_path, std::string{error.identifier()}, error.location(),
@@ -211,6 +215,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   try {
     frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
                   dialect, default_id);
+  } catch (const sourcemeta::core::SchemaKeywordError &error) {
+    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+  } catch (const sourcemeta::core::SchemaFrameError &error) {
+    throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
@@ -229,6 +237,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     try {
       return get_schema_template(bundled, custom_resolver, frame, dialect,
                                  default_id, fast_mode, options);
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw FileError<sourcemeta::core::SchemaReferenceError>(
           schema_path, std::string{error.identifier()}, error.location(),

@@ -71,6 +71,10 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           output << expected.str();
         }
       }
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first, error);
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw FileError<sourcemeta::core::SchemaFrameError>(entry.first, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
