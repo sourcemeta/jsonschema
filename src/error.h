@@ -230,6 +230,27 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) { current.value(); }) {
+    if (is_json) {
+      error_json.assign("value", sourcemeta::core::JSON{exception.value()});
+    } else {
+      std::cerr << "  at value " << exception.value() << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.keyword()
+                  } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign(
+          "keyword", sourcemeta::core::JSON{std::string{exception.keyword()}});
+    } else {
+      std::cerr << "  at keyword " << exception.keyword() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.line(); }) {
     if (is_json) {
       error_json.assign("line", sourcemeta::core::JSON{static_cast<std::size_t>(
@@ -290,19 +311,6 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     } else {
       std::cerr << "  at location \""
                 << sourcemeta::core::to_string(exception.location()) << "\"\n";
-    }
-  }
-
-  if constexpr (requires(const Exception &current) {
-                  {
-                    current.keyword()
-                  } -> std::convertible_to<std::string_view>;
-                }) {
-    if (is_json) {
-      error_json.assign(
-          "keyword", sourcemeta::core::JSON{std::string{exception.keyword()}});
-    } else {
-      std::cerr << "  at keyword " << exception.keyword() << "\n";
     }
   }
 
@@ -462,6 +470,15 @@ inline auto try_catch(const sourcemeta::core::Options &options,
              "want to\n";
       std::cerr << "explicitly declare a default dialect using "
                    "`--default-dialect/-d`\n";
+    }
+
+    return EXIT_FAILURE;
+  } catch (const FileError<sourcemeta::core::SchemaKeywordError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nAre you sure the input is a valid JSON Schema and it is "
+                   "valid according to its meta-schema?\n";
     }
 
     return EXIT_FAILURE;

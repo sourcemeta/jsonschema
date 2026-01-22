@@ -22,8 +22,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Unsupported keyword in subschema
-  at file path $(realpath "$TMP")/schema.json
   at keyword if
+  at file path $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -36,8 +36,8 @@ test "$CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "Unsupported keyword in subschema",
-  "filePath": "$(realpath "$TMP")/schema.json",
-  "keyword": "if"
+  "keyword": "if",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 

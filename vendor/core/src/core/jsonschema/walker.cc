@@ -1,32 +1,12 @@
 #include <sourcemeta/core/jsonschema.h>
 
+#include "helpers.h"
+
 #include <algorithm> // std::max, std::sort
 #include <cassert>   // assert
 
 namespace {
 enum class SchemaWalkerType_t : std::uint8_t { Deep, Flat };
-
-auto ref_overrides_adjacent_keywords(
-    const sourcemeta::core::SchemaBaseDialect base_dialect) -> bool {
-  using sourcemeta::core::SchemaBaseDialect;
-  // In older drafts, the presence of `$ref` would override any sibling
-  // keywords
-  // See
-  // https://json-schema.org/draft-07/draft-handrews-json-schema-01#rfc.section.8.3
-  switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-      return true;
-    default:
-      return false;
-  }
-}
 
 auto walk(const std::optional<sourcemeta::core::WeakPointer> &parent,
           const sourcemeta::core::WeakPointer &pointer,
@@ -105,7 +85,7 @@ auto walk(const std::optional<sourcemeta::core::WeakPointer> &parent,
 
   const auto has_overriding_ref{
       subschema.defines("$ref") &&
-      ref_overrides_adjacent_keywords(current_base_dialect)};
+      sourcemeta::core::ref_overrides_adjacent_keywords(current_base_dialect)};
   for (auto &pair : subschema.as_object()) {
     const auto &keyword_info{walker(pair.first, vocabularies)};
 

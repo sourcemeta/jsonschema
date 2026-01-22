@@ -1,9 +1,12 @@
 #include <sourcemeta/core/jsonschema.h>
 
+#include "helpers.h"
+
 #include <cassert>       // assert
 #include <cstdint>       // std::uint64_t
 #include <limits>        // std::numeric_limits
 #include <numeric>       // std::accumulate
+#include <sstream>       // std::ostringstream
 #include <type_traits>   // std::remove_reference_t
 #include <unordered_map> // std::unordered_map
 #include <utility>       // std::move
@@ -98,37 +101,6 @@ auto sourcemeta::core::to_base_dialect(const std::string_view base_dialect)
   return std::nullopt;
 }
 
-namespace {
-
-static auto id_keyword(const sourcemeta::core::SchemaBaseDialect base_dialect)
-    -> std::string_view {
-  using sourcemeta::core::SchemaBaseDialect;
-  switch (base_dialect) {
-    case SchemaBaseDialect::JSON_Schema_2020_12:
-    case SchemaBaseDialect::JSON_Schema_2020_12_Hyper:
-    case SchemaBaseDialect::JSON_Schema_2019_09:
-    case SchemaBaseDialect::JSON_Schema_2019_09_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_7:
-    case SchemaBaseDialect::JSON_Schema_Draft_7_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_6:
-    case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
-      return "$id";
-    case SchemaBaseDialect::JSON_Schema_Draft_4:
-    case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_3:
-    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
-    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
-      return "id";
-  }
-
-  assert(false);
-  return {};
-}
-
-} // namespace
-
 auto sourcemeta::core::identify(const sourcemeta::core::JSON &schema,
                                 const SchemaResolver &resolver,
                                 std::string_view default_dialect,
@@ -157,7 +129,7 @@ auto sourcemeta::core::identify(const JSON &schema,
     return default_id;
   }
 
-  const std::string keyword{id_keyword(base_dialect)};
+  const std::string keyword{sourcemeta::core::id_keyword(base_dialect)};
 
   if (!schema.defines(keyword)) {
     return default_id;
@@ -165,8 +137,10 @@ auto sourcemeta::core::identify(const JSON &schema,
 
   const auto &identifier{schema.at(keyword)};
   if (!identifier.is_string() || identifier.empty()) {
-    throw sourcemeta::core::SchemaError(
-        "The schema identifier property is invalid");
+    std::ostringstream value;
+    sourcemeta::core::stringify(identifier, value);
+    throw sourcemeta::core::SchemaKeywordError(
+        keyword, value.str(), "The schema identifier is invalid");
   }
 
   // In older drafts, the presence of `$ref` would override any sibling
@@ -192,7 +166,7 @@ auto sourcemeta::core::identify(const JSON &schema,
 auto sourcemeta::core::anonymize(JSON &schema,
                                  const SchemaBaseDialect base_dialect) -> void {
   if (schema.is_object()) {
-    schema.erase(std::string{id_keyword(base_dialect)});
+    schema.erase(std::string{sourcemeta::core::id_keyword(base_dialect)});
   }
 }
 
@@ -213,7 +187,8 @@ auto sourcemeta::core::reidentify(JSON &schema, std::string_view new_identifier,
     -> void {
   assert(is_schema(schema));
   assert(schema.is_object());
-  schema.assign(std::string{id_keyword(base_dialect)}, JSON{new_identifier});
+  schema.assign(std::string{sourcemeta::core::id_keyword(base_dialect)},
+                JSON{new_identifier});
 
   // If we reidentify, and the identifier is still not retrievable, then
   // we are facing the Draft 7 `$ref` sibling edge case, and we cannot
@@ -231,7 +206,15 @@ auto sourcemeta::core::dialect(const sourcemeta::core::JSON &schema,
     return default_dialect;
   }
 
-  return schema.at("$schema").to_string();
+  const auto &dialect_value{schema.at("$schema")};
+  if (!dialect_value.is_string()) {
+    std::ostringstream value;
+    sourcemeta::core::stringify(dialect_value, value);
+    throw sourcemeta::core::SchemaKeywordError("$schema", value.str(),
+                                               "The dialect value is invalid");
+  }
+
+  return dialect_value.to_string();
 }
 
 auto sourcemeta::core::metaschema(
@@ -285,9 +268,17 @@ auto sourcemeta::core::base_dialect(
   const std::optional<sourcemeta::core::JSON> metaschema{
       resolver(effective_dialect)};
   if (!metaschema.has_value()) {
+    URI effective_dialect_uri;
+    try {
+      effective_dialect_uri = URI{effective_dialect};
+    } catch (const URIParseError &) {
+      throw sourcemeta::core::SchemaKeywordError(
+          "$schema", std::string{effective_dialect},
+          "The dialect is not a valid URI");
+    }
+
     // Relative meta-schema references are invalid according to the
     // JSON Schema specifications. They must be absolute ones
-    const URI effective_dialect_uri{effective_dialect};
     if (effective_dialect_uri.is_relative()) {
       throw sourcemeta::core::SchemaRelativeMetaschemaResolutionError(
           std::string{effective_dialect});
