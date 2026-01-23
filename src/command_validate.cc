@@ -237,6 +237,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     try {
       return get_schema_template(bundled, custom_resolver, frame, dialect,
                                  default_id, fast_mode, options);
+    } catch (
+        const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+      throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+          schema_path, error);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {

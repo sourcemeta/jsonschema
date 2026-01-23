@@ -460,6 +460,37 @@ public:
     return result;
   }
 
+  /// Get a copy of the JSON Pointer starting from a given token index up to
+  /// (but not including) a given end index. This method is undefined if the
+  /// start index is greater than the end index or if the end index is greater
+  /// than the pointer size. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Pointer pointer{"foo", "bar", "baz", "qux"};
+  /// const sourcemeta::core::Pointer result{pointer.slice(1, 3)};
+  /// assert(result.size() == 2);
+  /// assert(result.at(0).is_property());
+  /// assert(result.at(0).to_property() == "bar");
+  /// assert(result.at(1).is_property());
+  /// assert(result.at(1).to_property() == "baz");
+  /// ```
+  [[nodiscard]] auto slice(const std::size_t start, const std::size_t end) const
+      -> GenericPointer<PropertyT, Hash> {
+    assert(start <= end);
+    assert(end <= this->size());
+    auto new_begin{this->data.cbegin()};
+    std::advance(new_begin, start);
+    auto new_end{this->data.cbegin()};
+    std::advance(new_end, end);
+    GenericPointer<PropertyT, Hash> result;
+    result.reserve(end - start);
+    std::copy(new_begin, new_end, std::back_inserter(result.data));
+    return result;
+  }
+
   /// Concatenate a JSON Pointer with another JSON Pointer, getting a new
   /// pointer as a result. For example:
   ///

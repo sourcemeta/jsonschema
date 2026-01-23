@@ -3,6 +3,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
+#include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/linter.h>
 
 #include <cstdlib>  // EXIT_FAILURE
@@ -224,6 +225,12 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   "Could not autofix the schema without breaking its internal "
                   "references",
                   entry.first, error.location()};
+            } catch (
+                const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
+                    &error) {
+              throw FileError<
+                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+                  entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
               throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
                                                                     error);
@@ -279,6 +286,12 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 // Return 2 for logical lint failures
                 return 2;
               }
+            } catch (
+                const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
+                    &error) {
+              throw FileError<
+                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+                  entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
               throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
                                                                     error);

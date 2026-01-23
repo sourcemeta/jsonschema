@@ -109,6 +109,10 @@ auto sourcemeta::jsonschema::metaschema(
           result = false;
         }
       }
+    } catch (
+        const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+      throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+          entry.first, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
