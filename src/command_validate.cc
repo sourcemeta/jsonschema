@@ -173,14 +173,13 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
-  const auto default_id{sourcemeta::core::URI::from_path(
-                            sourcemeta::core::weakly_canonical(schema_path))
-                            .recompose()};
+  const auto schema_default_id{sourcemeta::jsonschema::default_id(schema_path)};
 
   const sourcemeta::core::JSON bundled{[&]() {
     try {
       return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
-                                      custom_resolver, dialect, default_id);
+                                      custom_resolver, dialect,
+                                      schema_default_id);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
@@ -214,7 +213,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   try {
     frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
-                  dialect, default_id);
+                  dialect, schema_default_id);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
@@ -236,7 +235,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto schema_template{[&]() {
     try {
       return get_schema_template(bundled, custom_resolver, frame, dialect,
-                                 default_id, fast_mode, options);
+                                 schema_default_id, fast_mode, options);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

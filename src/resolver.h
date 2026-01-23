@@ -25,6 +25,7 @@
 #include "error.h"
 #include "input.h"
 #include "logger.h"
+#include "utils.h"
 
 #include <cassert>     // assert
 #include <chrono>      // std::chrono::seconds
@@ -116,7 +117,7 @@ public:
         try {
           const auto result = this->add(
               entry.second, default_dialect,
-              sourcemeta::core::URI::from_path(entry.first).recompose(),
+              sourcemeta::jsonschema::default_id(entry.first),
               [&options](const auto &identifier) {
                 LOG_DEBUG(options)
                     << "Importing schema into the resolution context: "

@@ -31,11 +31,9 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
       resolver(options, options.contains("http"), dialect, configuration)};
 
   try {
-    sourcemeta::core::bundle(
-        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
-        sourcemeta::core::URI::from_path(
-            sourcemeta::core::weakly_canonical(schema_path))
-            .recompose());
+    sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
+                             custom_resolver, dialect,
+                             sourcemeta::jsonschema::default_id(schema_path));
 
     if (options.contains("without-id")) {
       sourcemeta::jsonschema::LOG_WARNING()

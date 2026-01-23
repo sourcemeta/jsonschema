@@ -209,7 +209,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               const auto apply_result = bundle.apply(
                   copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
-                  sourcemeta::core::URI::from_path(entry.first).recompose(),
+                  sourcemeta::jsonschema::default_id(entry.first),
                   EXCLUDE_KEYWORD);
               scores.emplace_back(apply_result.second);
               if (!apply_result.first) {
@@ -281,7 +281,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   entry.second, sourcemeta::core::schema_walker,
                   custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
-                  sourcemeta::core::URI::from_path(entry.first).recompose(),
+                  sourcemeta::jsonschema::default_id(entry.first),
                   EXCLUDE_KEYWORD);
               scores.emplace_back(subresult.second);
               if (subresult.first) {
