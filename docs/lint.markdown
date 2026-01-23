@@ -42,6 +42,48 @@ automatically fix many of them.
 Use `--list/-l` to print all the available rules and brief descriptions about
 them.
 
+Disabling Rules
+---------------
+
+While you can disable rules globally using the `--exclude/-x` option, you may
+want to disable specific rules for individual subschemas. To do this, add the
+`x-lint-exclude` keyword to the subschema, set to either a rule name or an
+array of rule names to exclude.
+
+For example, if you intentionally want to use `type` alongside `enum` in a
+specific property, you can disable the `enum_with_type` rule for just that
+subschema:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [ "active", "inactive" ],
+      "x-lint-exclude": "enum_with_type"
+    }
+  }
+}
+```
+
+To disable multiple rules, use an array:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [ "active" ],
+      "x-lint-exclude": [ "enum_with_type", "enum_to_const" ]
+    }
+  }
+}
+```
+
 Examples
 --------
 

@@ -113,8 +113,8 @@ public:
   [[nodiscard]] auto
   check(const JSON &schema, const JSON &root, const Vocabularies &vocabularies,
         const SchemaWalker &walker, const SchemaResolver &resolver,
-        const SchemaFrame &frame, const SchemaFrame::Location &location) const
-      -> Result;
+        const SchemaFrame &frame, const SchemaFrame::Location &location,
+        const JSON::String &exclude_keyword) const -> Result;
 
   /// A method to optionally fix any reference location that was affected by the
   /// transformation.
@@ -245,19 +245,19 @@ public:
                                       const SchemaTransformRule::Result &)>;
 
   /// Apply the bundle of rules to a schema
-  [[nodiscard]] auto apply(JSON &schema, const SchemaWalker &walker,
-                           const SchemaResolver &resolver,
-                           const Callback &callback,
-                           std::string_view default_dialect = "",
-                           std::string_view default_id = "") const
+  [[nodiscard]] auto
+  apply(JSON &schema, const SchemaWalker &walker,
+        const SchemaResolver &resolver, const Callback &callback,
+        std::string_view default_dialect = "", std::string_view default_id = "",
+        const JSON::String &exclude_keyword = "") const
       -> std::pair<bool, std::uint8_t>;
 
   /// Report back the rules from the bundle that need to be applied to a schema
-  [[nodiscard]] auto check(const JSON &schema, const SchemaWalker &walker,
-                           const SchemaResolver &resolver,
-                           const Callback &callback,
-                           std::string_view default_dialect = "",
-                           std::string_view default_id = "") const
+  [[nodiscard]] auto
+  check(const JSON &schema, const SchemaWalker &walker,
+        const SchemaResolver &resolver, const Callback &callback,
+        std::string_view default_dialect = "", std::string_view default_id = "",
+        const JSON::String &exclude_keyword = "") const
       -> std::pair<bool, std::uint8_t>;
 
   [[nodiscard]] auto begin() const -> auto { return this->rules.cbegin(); }

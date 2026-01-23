@@ -43,6 +43,8 @@ public:
   template <typename T> using Allocator = std::allocator<T>;
   /// The string type used by the JSON document.
   using String = std::basic_string<Char, CharTraits, Allocator<Char>>;
+  /// The string view type used by the JSON document.
+  using StringView = std::basic_string_view<Char, CharTraits>;
   /// The array type used by the JSON document.
   using Array = JSONArray<JSON>;
   /// The object type used by the JSON document.
@@ -1174,7 +1176,7 @@ public:
   [[nodiscard]] auto defines_any(std::initializer_list<String> keys) const
       -> bool;
 
-  /// This method checks if an JSON array contains a given JSON instance. For
+  /// This method checks if a JSON array contains a given JSON instance. For
   /// example:
   ///
   /// ```cpp
@@ -1188,7 +1190,21 @@ public:
   /// ```
   [[nodiscard]] auto contains(const JSON &element) const -> bool;
 
-  /// This method checks if an JSON string contains a given string. For
+  /// This method checks if a JSON array contains a given string. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json(R"JSON([ "foo", "bar", "baz" ])JSON");
+  /// assert(document.contains("bar"));
+  /// assert(!document.contains("qux"));
+  /// ```
+  [[nodiscard]] auto contains(const StringView element) const -> bool;
+
+  /// This method checks if a JSON string includes a given substring. For
   /// example:
   ///
   /// ```cpp
@@ -1196,12 +1212,12 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document{"foo bar baz"};
-  /// assert(document.contains("bar"));
-  /// assert(!document.contains("baz"));
+  /// assert(document.includes("bar"));
+  /// assert(!document.includes("qux"));
   /// ```
-  [[nodiscard]] auto contains(const String &input) const -> bool;
+  [[nodiscard]] auto includes(const String &input) const -> bool;
 
-  /// This method checks if an JSON string contains a given character. For
+  /// This method checks if a JSON string includes a given character. For
   /// example:
   ///
   /// ```cpp
@@ -1209,10 +1225,10 @@ public:
   /// #include <cassert>
   ///
   /// const sourcemeta::core::JSON document{"foo"};
-  /// assert(document.contains('f'));
-  /// assert(!document.contains('b'));
+  /// assert(document.includes('f'));
+  /// assert(!document.includes('b'));
   /// ```
-  [[nodiscard]] auto contains(const String::value_type input) const -> bool;
+  [[nodiscard]] auto includes(const String::value_type input) const -> bool;
 
   /// This method checks if an JSON array does not contain duplicated items. For
   /// example:

@@ -68,22 +68,35 @@ auto SchemaTransformRule::rereference(const std::string_view reference,
                                    "The reference broke after transformation");
 }
 
-auto SchemaTransformRule::check(const JSON &schema, const JSON &root,
-                                const Vocabularies &vocabularies,
-                                const SchemaWalker &walker,
-                                const SchemaResolver &resolver,
-                                const SchemaFrame &frame,
-                                const SchemaFrame::Location &location) const
-    -> SchemaTransformRule::Result {
-  return this->condition(schema, root, vocabularies, frame, location, walker,
-                         resolver);
+auto SchemaTransformRule::check(
+    const JSON &schema, const JSON &root, const Vocabularies &vocabularies,
+    const SchemaWalker &walker, const SchemaResolver &resolver,
+    const SchemaFrame &frame, const SchemaFrame::Location &location,
+    const JSON::String &exclude_keyword) const -> SchemaTransformRule::Result {
+  auto result{this->condition(schema, root, vocabularies, frame, location,
+                              walker, resolver)};
+
+  // Support rule exclusion
+  if (result.applies && !exclude_keyword.empty() && schema.is_object()) {
+    const auto *exclude_value{schema.try_at(exclude_keyword)};
+    if (exclude_value != nullptr &&
+        ((exclude_value->is_string() &&
+          exclude_value->to_string() == this->name()) ||
+         (exclude_value->is_array() &&
+          exclude_value->contains(this->name())))) {
+      return false;
+    }
+  }
+
+  return result;
 }
 
 auto SchemaTransformer::check(const JSON &schema, const SchemaWalker &walker,
                               const SchemaResolver &resolver,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
-                              std::string_view default_id) const
+                              std::string_view default_id,
+                              const JSON::String &exclude_keyword) const
     -> std::pair<bool, std::uint8_t> {
   SchemaFrame frame{SchemaFrame::Mode::References};
 
@@ -121,7 +134,8 @@ auto SchemaTransformer::check(const JSON &schema, const SchemaWalker &walker,
     bool subresult{true};
     for (const auto &rule : this->rules) {
       const auto outcome{rule->check(current, schema, current_vocabularies,
-                                     walker, resolver, frame, entry.second)};
+                                     walker, resolver, frame, entry.second,
+                                     exclude_keyword)};
       if (outcome.applies) {
         subresult = false;
         callback(entry_pointer, rule->name(), rule->message(), outcome);
@@ -142,7 +156,8 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
                               const SchemaResolver &resolver,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
-                              std::string_view default_id) const
+                              std::string_view default_id,
+                              const JSON::String &exclude_keyword) const
     -> std::pair<bool, std::uint8_t> {
   assert(!this->rules.empty());
   std::unordered_set<std::tuple<const JSON *, std::string_view, std::uint64_t>,
@@ -198,8 +213,9 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
       bool subschema_failed{false};
       for (const auto &rule : this->rules) {
-        auto outcome{rule->condition(current, schema, current_vocabularies,
-                                     frame, entry.second, walker, resolver)};
+        auto outcome{rule->check(current, schema, current_vocabularies, walker,
+                                 resolver, frame, entry.second,
+                                 exclude_keyword)};
 
         if (!outcome.applies) {
           continue;
@@ -249,8 +265,8 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
         // The condition must always be false after applying the
         // transformation in order to avoid infinite loops
-        if (rule->condition(current, schema, new_vocabularies, frame,
-                            new_location.value().get(), walker, resolver)
+        if (rule->check(current, schema, new_vocabularies, walker, resolver,
+                        frame, new_location.value().get(), exclude_keyword)
                 .applies) {
           std::ostringstream error;
           error << "Rule condition holds after application: " << rule->name();
