@@ -20,6 +20,8 @@
 #include "resolver.h"
 #include "utils.h"
 
+static const sourcemeta::core::JSON::String EXCLUDE_KEYWORD{"x-lint-exclude"};
+
 template <typename Options, typename Iterator>
 static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
                                const Options &options, Iterator first,
@@ -207,7 +209,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               const auto apply_result = bundle.apply(
                   copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
-                  sourcemeta::core::URI::from_path(entry.first).recompose());
+                  sourcemeta::core::URI::from_path(entry.first).recompose(),
+                  EXCLUDE_KEYWORD);
               scores.emplace_back(apply_result.second);
               if (!apply_result.first) {
                 return 2;
@@ -278,7 +281,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   entry.second, sourcemeta::core::schema_walker,
                   custom_resolver,
                   get_lint_callback(errors_array, entry, output_json), dialect,
-                  sourcemeta::core::URI::from_path(entry.first).recompose());
+                  sourcemeta::core::URI::from_path(entry.first).recompose(),
+                  EXCLUDE_KEYWORD);
               scores.emplace_back(subresult.second);
               if (subresult.first) {
                 return EXIT_SUCCESS;

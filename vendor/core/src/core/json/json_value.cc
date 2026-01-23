@@ -847,12 +847,24 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
                    element) != this->as_array().cend();
 }
 
-[[nodiscard]] auto JSON::contains(const JSON::String &input) const -> bool {
+[[nodiscard]] auto JSON::contains(const JSON::StringView element) const
+    -> bool {
+  assert(this->is_array());
+  for (const auto &item : this->as_array()) {
+    if (item.is_string() && item.to_string() == element) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+[[nodiscard]] auto JSON::includes(const JSON::String &input) const -> bool {
   assert(this->is_string());
   return this->to_string().find(input) != JSON::String::npos;
 }
 
-[[nodiscard]] auto JSON::contains(const JSON::String::value_type input) const
+[[nodiscard]] auto JSON::includes(const JSON::String::value_type input) const
     -> bool {
   assert(this->is_string());
   return this->to_string().find(input) != JSON::String::npos;
