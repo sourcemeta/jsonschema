@@ -1,14 +1,17 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/schemaconfig.h>
+#include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/output.h>
 
 #include <cassert>     // assert
+#include <filesystem>  // std::filesystem::path
 #include <iterator>    // std::next
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
@@ -18,6 +21,13 @@
 #include <variant>     // std::visit
 
 namespace sourcemeta::jsonschema {
+
+inline auto default_id(const std::filesystem::path &schema_path)
+    -> std::string {
+  return sourcemeta::core::URI::from_path(
+             sourcemeta::core::weakly_canonical(schema_path))
+      .recompose();
+}
 
 inline auto default_dialect(
     const sourcemeta::core::Options &options,

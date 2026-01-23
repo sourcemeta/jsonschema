@@ -168,17 +168,14 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
     const auto identifier{
         sourcemeta::core::identify(schema, custom_resolver, dialect)};
 
-    frame.analyse(schema, sourcemeta::core::schema_walker, custom_resolver,
-                  dialect,
+    frame.analyse(
+        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
 
-                  // Only use the file-based URI if the schema has no
-                  // identifier, as otherwise we make the output unnecessarily
-                  // hard when it comes to debugging schemas
-                  !identifier.empty()
-                      ? ""
-                      : sourcemeta::core::URI::from_path(
-                            sourcemeta::core::weakly_canonical(schema_path))
-                            .recompose());
+        // Only use the file-based URI if the schema has no
+        // identifier, as otherwise we make the output unnecessarily
+        // hard when it comes to debugging schemas
+        !identifier.empty() ? ""
+                            : sourcemeta::jsonschema::default_id(schema_path));
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {

@@ -48,10 +48,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         sourcemeta::blaze::default_schema_compiler,
         fast_mode ? sourcemeta::blaze::Mode::FastValidation
                   : sourcemeta::blaze::Mode::Exhaustive,
-        dialect,
-        sourcemeta::core::URI::from_path(
-            sourcemeta::core::weakly_canonical(schema_path))
-            .recompose());
+        dialect, sourcemeta::jsonschema::default_id(schema_path));
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

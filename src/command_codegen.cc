@@ -52,9 +52,7 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
     result = sourcemeta::codegen::compile(
         schema, sourcemeta::core::schema_walker, custom_resolver,
         sourcemeta::codegen::default_compiler, dialect,
-        sourcemeta::core::URI::from_path(
-            sourcemeta::core::weakly_canonical(schema_path))
-            .recompose());
+        sourcemeta::jsonschema::default_id(schema_path));
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
