@@ -50,23 +50,7 @@ inline auto make_weak_pointer(const std::string &property1,
 inline auto relative_dynamic_context() -> DynamicContext {
   return {.keyword = KEYWORD_EMPTY,
           .base_schema_location = sourcemeta::core::empty_weak_pointer,
-          .base_instance_location = sourcemeta::core::empty_weak_pointer,
-          .property_as_target = false};
-}
-
-inline auto relative_dynamic_context(const DynamicContext &dynamic_context)
-    -> DynamicContext {
-  return {.keyword = KEYWORD_EMPTY,
-          .base_schema_location = sourcemeta::core::empty_weak_pointer,
-          .base_instance_location = sourcemeta::core::empty_weak_pointer,
-          .property_as_target = dynamic_context.property_as_target};
-}
-
-inline auto property_relative_dynamic_context() -> DynamicContext {
-  return {.keyword = KEYWORD_EMPTY,
-          .base_schema_location = sourcemeta::core::empty_weak_pointer,
-          .base_instance_location = sourcemeta::core::empty_weak_pointer,
-          .property_as_target = true};
+          .base_instance_location = sourcemeta::core::empty_weak_pointer};
 }
 
 inline auto schema_resource_id(const std::vector<std::string> &resources,

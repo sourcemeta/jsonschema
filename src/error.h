@@ -430,6 +430,25 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_FAILURE;
+  } catch (
+      const FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>
+          &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+
+      if (!error.location().empty() && error.location().back().is_property() &&
+          error.location().back().to_property() == "$defs") {
+        std::cerr << "Maybe you meant to use `definitions` instead of `$defs` "
+                     "in this dialect?\n";
+      } else {
+        std::cerr << "Are you sure the reported location is a valid JSON "
+                     "Schema keyword in this dialect?\n";
+      }
+    }
+
+    return EXIT_FAILURE;
   } catch (const FileError<sourcemeta::core::SchemaReferenceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

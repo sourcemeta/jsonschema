@@ -15,7 +15,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                                    const Instructions &) -> Instructions {
   // `if`
   Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
+                                relative_dynamic_context(),
                                 sourcemeta::core::empty_weak_pointer,
                                 sourcemeta::core::empty_weak_pointer)};
 
@@ -32,8 +32,7 @@ auto compiler_draft7_applicator_if(const Context &context,
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_THEN,
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_weak_pointer,
-        .property_as_target = dynamic_context.property_as_target};
+        .base_instance_location = sourcemeta::core::empty_weak_pointer};
     for (auto &&step :
          compile(context, schema_context, new_dynamic_context,
                  sourcemeta::core::empty_weak_pointer,
@@ -61,8 +60,7 @@ auto compiler_draft7_applicator_if(const Context &context,
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_ELSE,
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_weak_pointer,
-        .property_as_target = dynamic_context.property_as_target};
+        .base_instance_location = sourcemeta::core::empty_weak_pointer};
     for (auto &&step :
          compile(context, schema_context, new_dynamic_context,
                  sourcemeta::core::empty_weak_pointer,

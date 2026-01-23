@@ -507,8 +507,7 @@ auto compiler_draft4_validation_required(const Context &context,
         const DynamicContext new_dynamic_context{
             .keyword = KEYWORD_PROPERTIES,
             .base_schema_location = sourcemeta::core::empty_weak_pointer,
-            .base_instance_location = sourcemeta::core::empty_weak_pointer,
-            .property_as_target = false};
+            .base_instance_location = sourcemeta::core::empty_weak_pointer};
         auto properties{compile_properties(context, new_schema_context,
                                            new_dynamic_context, current)};
         if (std::ranges::all_of(properties, [](const auto &property) {
@@ -614,8 +613,7 @@ auto compiler_draft4_applicator_allof(const Context &context,
          index < schema_context.schema.at(dynamic_context.keyword).size();
          index++) {
       for (auto &&step : compile(
-               context, schema_context,
-               relative_dynamic_context(dynamic_context),
+               context, schema_context, relative_dynamic_context(),
                {static_cast<sourcemeta::core::Pointer::Token::Index>(index)})) {
         children.push_back(std::move(step));
       }
@@ -643,9 +641,9 @@ auto compiler_draft4_applicator_anyof(const Context &context,
        index++) {
     disjunctors.push_back(make(
         sourcemeta::blaze::InstructionIndex::ControlGroup, context,
-        schema_context, relative_dynamic_context(dynamic_context), ValueNone{},
+        schema_context, relative_dynamic_context(), ValueNone{},
         compile(
-            context, schema_context, relative_dynamic_context(dynamic_context),
+            context, schema_context, relative_dynamic_context(),
             {static_cast<sourcemeta::core::Pointer::Token::Index>(index)})));
   }
 
@@ -718,9 +716,9 @@ auto compiler_draft4_applicator_oneof(const Context &context,
        index++) {
     disjunctors.push_back(make(
         sourcemeta::blaze::InstructionIndex::ControlGroup, context,
-        schema_context, relative_dynamic_context(dynamic_context), ValueNone{},
+        schema_context, relative_dynamic_context(), ValueNone{},
         compile(
-            context, schema_context, relative_dynamic_context(dynamic_context),
+            context, schema_context, relative_dynamic_context(),
             {static_cast<sourcemeta::core::Pointer::Token::Index>(index)})));
   }
 
@@ -852,29 +850,27 @@ auto compiler_draft4_applicator_properties_with_options(
     std::size_t cursor = 0;
 
     for (auto &&[name, substeps] : compile_properties(
-             context, schema_context, relative_dynamic_context(dynamic_context),
-             current)) {
+             context, schema_context, relative_dynamic_context(), current)) {
       indexes.emplace(name, cursor);
 
       if (track_evaluation) {
-        substeps.push_back(
-            make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-                 schema_context, relative_dynamic_context(dynamic_context),
-                 ValuePointer{name}));
+        substeps.push_back(make(
+            sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
+            schema_context, relative_dynamic_context(), ValuePointer{name}));
       }
 
       if (annotate) {
         substeps.push_back(
             make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
-                 schema_context, relative_dynamic_context(dynamic_context),
+                 schema_context, relative_dynamic_context(),
                  sourcemeta::core::JSON{name}));
       }
 
       // Note that the evaluator completely ignores this wrapper anyway
       children.push_back(make(sourcemeta::blaze::InstructionIndex::ControlGroup,
                               context, schema_context,
-                              relative_dynamic_context(dynamic_context),
-                              ValueNone{}, std::move(substeps)));
+                              relative_dynamic_context(), ValueNone{},
+                              std::move(substeps)));
       cursor += 1;
     }
 
@@ -896,10 +892,9 @@ auto compiler_draft4_applicator_properties_with_options(
 
   Instructions children;
 
-  const auto effective_dynamic_context{
-      context.mode == Mode::FastValidation
-          ? dynamic_context
-          : relative_dynamic_context(dynamic_context)};
+  const auto effective_dynamic_context{context.mode == Mode::FastValidation
+                                           ? dynamic_context
+                                           : relative_dynamic_context()};
 
   const auto assume_object{schema_context.schema.defines("type") &&
                            schema_context.schema.at("type").is_string() &&
@@ -1042,16 +1037,15 @@ auto compiler_draft4_applicator_properties_with_options(
         auto new_base_instance_location{
             effective_dynamic_context.base_instance_location};
         new_base_instance_location.push_back({name});
-        substeps.push_back(make(
-            sourcemeta::blaze::InstructionIndex::Evaluate, context,
-            schema_context,
-            DynamicContext{.keyword = effective_dynamic_context.keyword,
-                           .base_schema_location =
-                               effective_dynamic_context.base_schema_location,
-                           .base_instance_location = new_base_instance_location,
-                           .property_as_target =
-                               effective_dynamic_context.property_as_target},
-            ValueNone{}));
+        substeps.push_back(
+            make(sourcemeta::blaze::InstructionIndex::Evaluate, context,
+                 schema_context,
+                 DynamicContext{
+                     .keyword = effective_dynamic_context.keyword,
+                     .base_schema_location =
+                         effective_dynamic_context.base_schema_location,
+                     .base_instance_location = new_base_instance_location},
+                 ValueNone{}));
       }
 
       if (!substeps.empty()) {
@@ -1133,22 +1127,19 @@ auto compiler_draft4_applicator_patternproperties_with_options(
 
   // For each regular expression and corresponding subschema in the object
   for (const auto &pattern : patterns) {
-    auto substeps{compile(context, schema_context,
-                          relative_dynamic_context(dynamic_context),
+    auto substeps{compile(context, schema_context, relative_dynamic_context(),
                           sourcemeta::blaze::make_weak_pointer(pattern))};
 
     if (annotate) {
-      substeps.push_back(
-          make(sourcemeta::blaze::InstructionIndex::AnnotationBasenameToParent,
-               context, schema_context,
-               relative_dynamic_context(dynamic_context), ValueNone{}));
+      substeps.push_back(make(
+          sourcemeta::blaze::InstructionIndex::AnnotationBasenameToParent,
+          context, schema_context, relative_dynamic_context(), ValueNone{}));
     }
 
     if (track_evaluation) {
       substeps.push_back(
           make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-               schema_context, relative_dynamic_context(dynamic_context),
-               ValuePointer{}));
+               schema_context, relative_dynamic_context(), ValuePointer{}));
     }
 
     if (context.mode == Mode::FastValidation && !track_evaluation &&
@@ -1207,15 +1198,14 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
   }
 
   Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
+                                relative_dynamic_context(),
                                 sourcemeta::core::empty_weak_pointer,
                                 sourcemeta::core::empty_weak_pointer)};
 
   if (annotate) {
     children.push_back(
         make(sourcemeta::blaze::InstructionIndex::AnnotationBasenameToParent,
-             context, schema_context, relative_dynamic_context(dynamic_context),
-             ValueNone{}));
+             context, schema_context, relative_dynamic_context(), ValueNone{}));
   }
 
   ValueStringSet filter_strings;
@@ -1296,8 +1286,7 @@ auto compiler_draft4_applicator_additionalproperties_with_options(
     if (track_evaluation) {
       children.push_back(
           make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-               schema_context, relative_dynamic_context(dynamic_context),
-               ValuePointer{}));
+               schema_context, relative_dynamic_context(), ValuePointer{}));
     }
 
     return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesExcept,
@@ -1421,7 +1410,7 @@ auto compiler_draft4_applicator_not(const Context &context,
   }
 
   Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
+                                relative_dynamic_context(),
                                 sourcemeta::core::empty_weak_pointer,
                                 sourcemeta::core::empty_weak_pointer)};
 
@@ -1479,7 +1468,7 @@ auto compiler_draft4_applicator_items_array(
       schema_context.schema.at(dynamic_context.keyword).as_array()};
   for (auto iterator{array.cbegin()}; iterator != array.cend(); ++iterator) {
     subschemas.push_back(compile(context, schema_context,
-                                 relative_dynamic_context(dynamic_context),
+                                 relative_dynamic_context(),
                                  {subschemas.size()}, {subschemas.size()}));
   }
 
@@ -1495,13 +1484,12 @@ auto compiler_draft4_applicator_items_array(
     if (annotate) {
       subchildren.push_back(
           make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
-               schema_context, relative_dynamic_context(dynamic_context),
+               schema_context, relative_dynamic_context(),
                sourcemeta::core::JSON{cursor}));
     }
 
     children.push_back(make(sourcemeta::blaze::InstructionIndex::ControlGroup,
-                            context, schema_context,
-                            relative_dynamic_context(dynamic_context),
+                            context, schema_context, relative_dynamic_context(),
                             ValueNone{}, std::move(subchildren)));
   }
 
@@ -1514,18 +1502,15 @@ auto compiler_draft4_applicator_items_array(
 
   if (annotate) {
     tail.push_back(make(sourcemeta::blaze::InstructionIndex::AnnotationEmit,
-                        context, schema_context,
-                        relative_dynamic_context(dynamic_context),
+                        context, schema_context, relative_dynamic_context(),
                         sourcemeta::core::JSON{children.size() - 1}));
     tail.push_back(make(sourcemeta::blaze::InstructionIndex::AnnotationEmit,
-                        context, schema_context,
-                        relative_dynamic_context(dynamic_context),
+                        context, schema_context, relative_dynamic_context(),
                         sourcemeta::core::JSON{true}));
   }
 
   children.push_back(make(sourcemeta::blaze::InstructionIndex::ControlGroup,
-                          context, schema_context,
-                          relative_dynamic_context(dynamic_context),
+                          context, schema_context, relative_dynamic_context(),
                           ValueNone{}, std::move(tail)));
 
   if (track_evaluation) {
@@ -1552,10 +1537,10 @@ auto compiler_draft4_applicator_items_with_options(
 
   if (is_schema(schema_context.schema.at(dynamic_context.keyword))) {
     if (annotate || track_evaluation) {
-      Instructions subchildren{compile(
-          context, schema_context, relative_dynamic_context(dynamic_context),
-          sourcemeta::core::empty_weak_pointer,
-          sourcemeta::core::empty_weak_pointer)};
+      Instructions subchildren{compile(context, schema_context,
+                                       relative_dynamic_context(),
+                                       sourcemeta::core::empty_weak_pointer,
+                                       sourcemeta::core::empty_weak_pointer)};
 
       Instructions children;
 
@@ -1573,16 +1558,14 @@ auto compiler_draft4_applicator_items_with_options(
 
       if (annotate) {
         tail.push_back(make(sourcemeta::blaze::InstructionIndex::AnnotationEmit,
-                            context, schema_context,
-                            relative_dynamic_context(dynamic_context),
+                            context, schema_context, relative_dynamic_context(),
                             sourcemeta::core::JSON{true}));
       }
 
       if (track_evaluation) {
         tail.push_back(
             make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-                 schema_context, relative_dynamic_context(dynamic_context),
-                 ValuePointer{}));
+                 schema_context, relative_dynamic_context(), ValuePointer{}));
       }
 
       children.push_back(
@@ -1594,14 +1577,13 @@ auto compiler_draft4_applicator_items_with_options(
     }
 
     Instructions children{compile(context, schema_context,
-                                  relative_dynamic_context(dynamic_context),
+                                  relative_dynamic_context(),
                                   sourcemeta::core::empty_weak_pointer,
                                   sourcemeta::core::empty_weak_pointer)};
     if (track_evaluation) {
       children.push_back(
           make(sourcemeta::blaze::InstructionIndex::ControlEvaluate, context,
-               schema_context, relative_dynamic_context(dynamic_context),
-               ValuePointer{}));
+               schema_context, relative_dynamic_context(), ValuePointer{}));
     }
 
     if (children.empty()) {
@@ -1680,7 +1662,7 @@ auto compiler_draft4_applicator_additionalitems_from_cursor(
   }
 
   Instructions subchildren{compile(context, schema_context,
-                                   relative_dynamic_context(dynamic_context),
+                                   relative_dynamic_context(),
                                    sourcemeta::core::empty_weak_pointer,
                                    sourcemeta::core::empty_weak_pointer)};
 
@@ -1702,15 +1684,13 @@ auto compiler_draft4_applicator_additionalitems_from_cursor(
 
   if (annotate) {
     tail.push_back(make(sourcemeta::blaze::InstructionIndex::AnnotationEmit,
-                        context, schema_context,
-                        relative_dynamic_context(dynamic_context),
+                        context, schema_context, relative_dynamic_context(),
                         sourcemeta::core::JSON{true}));
   }
 
   if (track_evaluation) {
     tail.push_back(make(sourcemeta::blaze::InstructionIndex::ControlEvaluate,
-                        context, schema_context,
-                        relative_dynamic_context(dynamic_context),
+                        context, schema_context, relative_dynamic_context(),
                         ValuePointer{}));
   }
 
@@ -1783,8 +1763,7 @@ auto compiler_draft4_applicator_dependencies(
         children.push_back(make(
             sourcemeta::blaze::InstructionIndex::LogicalWhenDefines, context,
             schema_context, dynamic_context, make_property(entry.first),
-            compile(context, schema_context,
-                    relative_dynamic_context(dynamic_context),
+            compile(context, schema_context, relative_dynamic_context(),
                     sourcemeta::blaze::make_weak_pointer(entry.first))));
       }
     } else if (entry.second.is_array()) {

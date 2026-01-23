@@ -61,8 +61,6 @@ struct DynamicContext {
   const sourcemeta::core::WeakPointer &base_schema_location;
   /// The base instance location that the keyword must be evaluated to
   const sourcemeta::core::WeakPointer &base_instance_location;
-  /// Whether the instance location property acts as the target
-  const bool property_as_target;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 

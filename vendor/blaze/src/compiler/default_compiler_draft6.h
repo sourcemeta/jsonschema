@@ -193,7 +193,7 @@ auto compiler_draft6_validation_type(const Context &context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
-      if (dynamic_context.property_as_target) {
+      if (schema_context.is_property_name) {
         return {};
       }
 
@@ -274,7 +274,7 @@ auto compiler_draft6_validation_type(const Context &context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
-      if (dynamic_context.property_as_target) {
+      if (schema_context.is_property_name) {
         return {};
       }
 
@@ -313,7 +313,7 @@ auto compiler_draft6_validation_type(const Context &context,
         types.set(
             static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
       } else if (type_string == "string") {
-        if (dynamic_context.property_as_target) {
+        if (schema_context.is_property_name) {
           continue;
         }
 
@@ -393,7 +393,7 @@ auto compiler_draft6_applicator_contains(const Context &context,
   }
 
   Instructions children{compile(context, schema_context,
-                                relative_dynamic_context(dynamic_context),
+                                relative_dynamic_context(),
                                 sourcemeta::core::empty_weak_pointer,
                                 sourcemeta::core::empty_weak_pointer)};
 
@@ -423,7 +423,7 @@ auto compiler_draft6_validation_propertynames(
   auto nested_schema_context = schema_context;
   nested_schema_context.is_property_name = true;
   Instructions children{compile(context, nested_schema_context,
-                                property_relative_dynamic_context(),
+                                relative_dynamic_context(),
                                 sourcemeta::core::empty_weak_pointer,
                                 sourcemeta::core::empty_weak_pointer)};
 

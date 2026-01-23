@@ -196,6 +196,8 @@ add_jsonschema_test_unix(validate/pass_custom_extension_json)
 add_jsonschema_test_unix(validate/pass_custom_extension_yaml)
 add_jsonschema_test_unix(validate/fail_invalid_id_type)
 add_jsonschema_test_unix(validate/fail_invalid_schema_uri)
+add_jsonschema_test_unix(validate/fail_draft7_defs_ref_target)
+add_jsonschema_test_unix(validate/fail_draft4_x_keyword_ref_target)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -229,6 +231,8 @@ add_jsonschema_test_unix(metaschema/pass_extension_empty_json)
 add_jsonschema_test_unix(metaschema/pass_extension_empty_yaml)
 add_jsonschema_test_unix(metaschema/pass_custom_extension_json)
 add_jsonschema_test_unix(metaschema/pass_custom_extension_yaml)
+add_jsonschema_test_unix(metaschema/fail_draft7_defs_ref_target)
+add_jsonschema_test_unix(metaschema/fail_draft4_x_keyword_ref_target)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -297,6 +301,8 @@ add_jsonschema_test_unix(test/pass_single_no_description_json)
 add_jsonschema_test_unix(test/fail_true_single_resolve_json)
 add_jsonschema_test_unix(test/fail_false_single_resolve_json)
 add_jsonschema_test_unix(test/fail_unresolvable_json)
+add_jsonschema_test_unix(test/fail_draft7_defs_ref_target)
+add_jsonschema_test_unix(test/fail_draft4_x_keyword_ref_target)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)
@@ -380,6 +386,8 @@ add_jsonschema_test_unix(compile/pass_include_short)
 add_jsonschema_test_unix(compile/fail_include_invalid_identifier)
 add_jsonschema_test_unix(compile/fail_invalid_id_type)
 add_jsonschema_test_unix(compile/fail_invalid_schema_uri)
+add_jsonschema_test_unix(compile/fail_draft7_defs_ref_target)
+add_jsonschema_test_unix(compile/fail_draft4_x_keyword_ref_target)
 
 # Canonicalize
 add_jsonschema_test_unix(canonicalize/pass_input_unmodified)
@@ -513,6 +521,10 @@ add_jsonschema_test_unix(lint/fail_lint_empty_anchor)
 add_jsonschema_test_unix(lint/fail_lint_invalid_recursiveanchor_type)
 add_jsonschema_test_unix(lint/fail_lint_invalid_schema_type)
 add_jsonschema_test_unix(lint/fail_lint_nested_invalid_schema_type)
+add_jsonschema_test_unix(lint/fail_draft7_defs_ref_target)
+add_jsonschema_test_unix(lint/fail_draft7_defs_ref_target_fix)
+add_jsonschema_test_unix(lint/fail_draft4_x_keyword_ref_target)
+add_jsonschema_test_unix(lint/fail_draft4_x_keyword_ref_target_fix)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)

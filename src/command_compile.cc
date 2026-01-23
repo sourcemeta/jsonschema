@@ -52,6 +52,10 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         sourcemeta::core::URI::from_path(
             sourcemeta::core::weakly_canonical(schema_path))
             .recompose());
+  } catch (
+      const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+    throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+        schema_path, error);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
