@@ -27,9 +27,15 @@ cat << 'EOF' > "$TMP/schemas/2.json"
 }
 EOF
 
-"$1" lint --resolve "$TMP/schemas" "$TMP/schemas" --verbose > "$TMP/output.txt" 2>&1
+"$1" lint --resolve "$TMP/schemas" "$TMP/schemas" --debug > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+debug: Detecting schema resources from file: $(realpath "$TMP")/schemas/1.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/1.json
+debug: Importing schema into the resolution context: https://example.com/1
+debug: Detecting schema resources from file: $(realpath "$TMP")/schemas/2.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schemas/2.json
+debug: Importing schema into the resolution context: https://example.com/2
 Linting: $(realpath "$TMP")/schemas/1.json
 Linting: $(realpath "$TMP")/schemas/2.json
 EOF

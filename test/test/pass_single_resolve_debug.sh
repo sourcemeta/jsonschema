@@ -17,14 +17,6 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-cat << 'EOF' > "$TMP/data-valid.json"
-"Hello World"
-EOF
-
-cat << 'EOF' > "$TMP/data-invalid.json"
-{ "type": "Hello World" }
-EOF
-
 cat << 'EOF' > "$TMP/test.json"
 {
   "target": "https://example.com",
@@ -32,23 +24,26 @@ cat << 'EOF' > "$TMP/test.json"
     {
       "description": "First test",
       "valid": true,
-      "dataPath": "./data-valid.json"
+      "data": "foo"
     },
     {
-      "description": "Second test",
+      "description": "Invalid type",
       "valid": false,
-      "dataPath": "./data-invalid.json"
+      "data": 1
     }
   ]
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --debug 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+debug: Detecting schema resources from file: $(realpath "$TMP")/schema.json
+debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
+debug: Importing schema into the resolution context: https://example.com
 $(realpath "$TMP")/test.json:
   1/2 PASS First test
-  2/2 PASS Second test
+  2/2 PASS Invalid type
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

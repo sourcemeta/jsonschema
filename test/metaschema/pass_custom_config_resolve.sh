@@ -45,9 +45,6 @@ EOF
 "$1" metaschema "$TMP/schema.json" --verbose 2> "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
-Resolving https://example.com/meta as file://$(realpath "$TMP")/meta.json given the configuration file
-Attempting to read file reference from disk: $(realpath "$TMP")/meta.json
 ok: $(realpath "$TMP")/schema.json
   matches https://example.com/meta
 EOF

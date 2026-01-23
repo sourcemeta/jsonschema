@@ -12,15 +12,11 @@ mkdir -p "$TMP/bar"
 
 cat << 'EOF' > "$TMP/foo/schema.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Test",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Test schema",
-  "properties": {
-    "foo": {
-      "type": "string",
-      "default": "foo"
-    }
-  }
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
 }
 EOF
 
@@ -31,28 +27,28 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 cd "$TMP/bar"
-"$1" lint --verbose > "$TMP/output.txt" 2>&1
+"$1" fmt --debug >"$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
 Using extension: .json
 Using extension: .yaml
 Using extension: .yml
-Linting: $(realpath "$TMP")/foo/schema.json
+Formatting: $(realpath "$TMP")/foo/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Test",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
   "description": "Test schema",
   "properties": {
-    "foo": {
-      "type": "string",
-      "default": "foo"
-    }
-  }
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
 }
 EOF
 

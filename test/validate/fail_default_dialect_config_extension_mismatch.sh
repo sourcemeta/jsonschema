@@ -27,8 +27,6 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
-Ignoring configuration file given extensions mismatch: $(realpath "$TMP")/jsonschema.json
 error: Could not determine the base dialect of the schema
   at file path $(realpath "$TMP")/document.json
 

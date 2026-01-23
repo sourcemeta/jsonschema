@@ -3,7 +3,8 @@ Linting
 
 ```sh
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
-  [--json/-j] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--json/-j] [--verbose/-v] [--debug/-g]
+  [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
   [--default-dialect/-d <uri>] [--indentation/-n <spaces>]

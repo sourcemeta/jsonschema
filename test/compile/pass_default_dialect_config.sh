@@ -65,8 +65,7 @@ EOF
 
 diff "$TMP/template.json" "$TMP/expected.json"
 
-cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
+cat << 'EOF' > "$TMP/expected.txt"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

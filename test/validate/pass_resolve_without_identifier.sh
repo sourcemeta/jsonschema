@@ -31,8 +31,6 @@ EOF
   --resolve "$TMP/no-id.json" --verbose 2>"$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
-Detecting schema resources from file: $(realpath "$TMP")/no-id.json
-Importing schema into the resolution context: file://$(realpath "$TMP")/no-id.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 EOF

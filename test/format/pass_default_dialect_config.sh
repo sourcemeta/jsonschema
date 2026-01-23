@@ -38,7 +38,6 @@ diff "$TMP/schema.json" "$TMP/expected.json"
 
 cat << EOF > "$TMP/expected_output.txt"
 Formatting: $(realpath "$TMP")/schema.json
-Using configuration file: $(realpath "$TMP")/jsonschema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_output.txt"

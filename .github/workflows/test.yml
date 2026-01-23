@@ -88,9 +88,6 @@ jobs:
         env:
           HOMEBREW_NO_ANALYTICS: 1
           HOMEBREW_NO_AUTO_UPDATE: 1
-      - name: Install dependencies (Windows)
-        if: runner.os == 'windows' && matrix.platform.type == 'native'
-        run: choco install shellcheck
       - name: Install dependencies (Linux)
         if: runner.os == 'linux' && matrix.platform.type == 'native'
         run: sudo apt-get update --yes && sudo apt-get install --yes zsh
@@ -109,6 +106,8 @@ jobs:
         # TODO: As the downloaded `clang-format` binary won't run on Alpine
         if: matrix.platform.type != 'container'
       - run: cmake --build ./build --config Release --target shellcheck
+        # Windows complains about the path lengths with `shellcheck`
+        if: runner.os != 'windows'
       - run: cmake --build ./build --config Release --parallel 4
       - run: >
           cmake --install ./build --prefix ./build/dist --config Release --verbose

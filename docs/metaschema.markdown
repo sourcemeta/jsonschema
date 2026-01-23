@@ -6,7 +6,7 @@ Metaschema
 
 ```sh
 jsonschema metaschema [schemas-or-directories...]
-  [--http/-h] [--verbose/-v] [--extension/-e <extension>]
+  [--http/-h] [--verbose/-v] [--debug/-g] [--extension/-e <extension>]
   [--resolve/-r <schemas-or-directories> ...]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
   [--default-dialect/-d <uri>] [--json/-j]

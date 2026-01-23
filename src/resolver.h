@@ -104,9 +104,8 @@ public:
       : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
       for (const auto &entry : for_each_json(options.at("resolve"), options)) {
-        LOG_VERBOSE(options)
-            << "Detecting schema resources from file: " << entry.first.string()
-            << "\n";
+        LOG_DEBUG(options) << "Detecting schema resources from file: "
+                           << entry.first.string() << "\n";
 
         if (!sourcemeta::core::is_schema(entry.second)) {
           throw FileError<sourcemeta::core::SchemaError>(
@@ -119,7 +118,7 @@ public:
               entry.second, default_dialect,
               sourcemeta::core::URI::from_path(entry.first).recompose(),
               [&options](const auto &identifier) {
-                LOG_VERBOSE(options)
+                LOG_DEBUG(options)
                     << "Importing schema into the resolution context: "
                     << identifier << "\n";
               });
@@ -197,12 +196,12 @@ public:
           const auto file_uri{sourcemeta::core::URI::from_path(
               this->configuration_.value().absolute_path / new_uri.to_path())};
           const auto result{file_uri.recompose()};
-          LOG_VERBOSE(this->options_)
+          LOG_DEBUG(this->options_)
               << "Resolving " << identifier << " as " << result
               << " given the configuration file\n";
           return this->operator()(result);
         } else {
-          LOG_VERBOSE(this->options_)
+          LOG_DEBUG(this->options_)
               << "Resolving " << identifier << " as " << match->second
               << " given the configuration file\n";
           return this->operator()(match->second);
@@ -224,7 +223,7 @@ public:
 
     if (uri.is_file()) {
       const auto path{uri.to_path()};
-      LOG_VERBOSE(this->options_)
+      LOG_DEBUG(this->options_)
           << "Attempting to read file reference from disk: " << path.string()
           << "\n";
       if (std::filesystem::exists(path)) {

@@ -37,11 +37,11 @@ inline auto read_configuration(
   // Compute and cache the configuration
   std::optional<sourcemeta::core::SchemaConfig> result{std::nullopt};
   if (configuration_path.has_value()) {
-    LOG_VERBOSE(options) << "Using configuration file: "
-                         << sourcemeta::core::weakly_canonical(
-                                configuration_path.value())
-                                .string()
-                         << "\n";
+    LOG_DEBUG(options) << "Using configuration file: "
+                       << sourcemeta::core::weakly_canonical(
+                              configuration_path.value())
+                              .string()
+                       << "\n";
     try {
       result =
           sourcemeta::core::SchemaConfig::read_json(configuration_path.value());
@@ -53,7 +53,7 @@ inline auto read_configuration(
     assert(result.has_value());
     if (schema_path.has_value() &&
         !result.value().applies_to(schema_path.value())) {
-      LOG_VERBOSE(options)
+      LOG_DEBUG(options)
           << "Ignoring configuration file given extensions mismatch: "
           << sourcemeta::core::weakly_canonical(configuration_path.value())
                  .string()

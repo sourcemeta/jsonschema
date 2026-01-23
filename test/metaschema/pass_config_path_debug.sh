@@ -26,9 +26,10 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 cd "$TMP/bar"
-"$1" metaschema --verbose > "$TMP/output.txt" 2>&1
+"$1" metaschema --debug > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
 Using extension: .json
 Using extension: .yaml
 Using extension: .yml

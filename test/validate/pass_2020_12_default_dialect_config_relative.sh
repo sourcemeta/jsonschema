@@ -32,7 +32,6 @@ cd "$TMP"
 "$1" validate --verbose schema.json instance.json 2> "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 annotation: "foo"

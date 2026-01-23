@@ -11,7 +11,18 @@ namespace sourcemeta::jsonschema {
 
 inline auto LOG_VERBOSE(const sourcemeta::core::Options &options)
     -> std::ostream & {
-  if (options.contains("verbose")) {
+  if (options.contains("verbose") || options.contains("debug")) {
+    return std::cerr;
+  }
+
+  static std::ofstream null_stream;
+  return null_stream;
+}
+
+inline auto LOG_DEBUG(const sourcemeta::core::Options &options)
+    -> std::ostream & {
+  if (options.contains("debug")) {
+    std::cerr << "debug: ";
     return std::cerr;
   }
 

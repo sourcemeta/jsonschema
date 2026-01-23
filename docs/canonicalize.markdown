@@ -3,7 +3,8 @@ Canonicalize
 
 ```sh
 jsonschema canonicalize <schema.json|.yaml>
-  [--http/-h] [--verbose/-v] [--resolve/-r <schemas-or-directories> ...]
+  [--http/-h] [--verbose/-v] [--debug/-g]
+  [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>]
 ```
 

@@ -19,9 +19,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-cd "$TMP"
-
-"$1" codegen schema.json --target typescript --verbose \
+"$1" codegen "$TMP/schema.json" --target typescript --debug \
   > "$TMP/result.txt" 2> "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -30,7 +28,8 @@ EOF
 
 diff "$TMP/result.txt" "$TMP/expected.txt"
 
-cat << 'EOF' > "$TMP/expected_log.txt"
+cat << EOF > "$TMP/expected_log.txt"
+debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_log.txt"

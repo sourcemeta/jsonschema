@@ -32,7 +32,6 @@ EOF
 "$1" validate --verbose "$TMP/level1/level2/level3/schema.json" "$TMP/instance.json" 2> "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
-Using configuration file: $(realpath "$TMP")/jsonschema.json
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/level1/level2/level3/schema.json
 annotation: "foo"

@@ -25,7 +25,6 @@ EOF
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Attempting to read file reference from disk: $(realpath "$TMP")/schemas/other.json
 error: Could not resolve the reference to an external schema
   at identifier file://$(realpath "$TMP")/schemas/other.json
   at file path $(realpath "$TMP")/schema.json
