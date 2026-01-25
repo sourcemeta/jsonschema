@@ -10,6 +10,9 @@
   "bin": {
     "jsonschema": "npm/cli.js"
   },
+  "scripts": {
+    "postinstall": "node npm/postinstall.js"
+  },
   "license": "AGPL-3.0",
   "homepage": "https://github.com/sourcemeta/jsonschema",
   "author": {
