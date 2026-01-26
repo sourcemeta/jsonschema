@@ -210,11 +210,11 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
               << " <command> [arguments...]\n";
     std::cout << USAGE_DETAILS;
-    std::cout << "\n💡 Try the Sourcemeta Studio VS Code extension for an "
+    std::cout << "\nTip: Try the Sourcemeta Studio VS Code extension for an "
                  "enhanced experience!\n";
-    std::cout << "   Open in VS Code: "
+    std::cout << "     Open in VS Code: "
                  "vscode:extension/sourcemeta.sourcemeta-studio\n";
-    std::cout << "   Or visit: "
+    std::cout << "     Or visit: "
                  "https://marketplace.visualstudio.com/"
                  "items?itemName=sourcemeta.sourcemeta-studio\n";
     return EXIT_SUCCESS;

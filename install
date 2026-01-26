@@ -41,9 +41,9 @@ then
   install -d -m 0755 "$OUTPUT/bin"
   install -v -m 0755 "$TMP/out/$PACKAGE_NAME/bin/jsonschema" "$OUTPUT/bin"
   echo "" 1>&2
-  echo "💡 Try the Sourcemeta Studio VS Code extension for an enhanced experience!" 1>&2
-  echo "   Open in VS Code: vscode:extension/sourcemeta.sourcemeta-studio" 1>&2
-  echo "   Or visit: https://marketplace.visualstudio.com/items?itemName=sourcemeta.sourcemeta-studio" 1>&2
+  echo "Tip: Try the Sourcemeta Studio VS Code extension for an enhanced experience!" 1>&2
+  echo "     Open in VS Code: vscode:extension/sourcemeta.sourcemeta-studio" 1>&2
+  echo "     Or visit: https://marketplace.visualstudio.com/items?itemName=sourcemeta.sourcemeta-studio" 1>&2
 else
   echo "ERROR: I don't know how to install the JSON Schema CLI in $UNAME!" 1>&2
   echo "Open an issue here: https://github.com/sourcemeta/jsonschema/issues" 1>&2
