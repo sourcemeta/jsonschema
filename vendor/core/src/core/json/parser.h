@@ -730,25 +730,23 @@ auto parse_number(
 // We use "goto" to avoid recursion
 // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 
-#define CALLBACK_PRE(value_type, value)                                        \
+#define CALLBACK_PRE(value_type, context, index, property)                     \
   if (callback) {                                                              \
-    assert((value).is_null() || (value).is_string() || (value).is_integer());  \
     callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
-             value);                                                           \
+             context, index, property);                                        \
   }
 
-#define CALLBACK_PRE_WITH_POSITION(value_type, line, column, value)            \
+#define CALLBACK_PRE_WITH_POSITION(value_type, line, column, context, index,   \
+                                   property)                                   \
   if (callback) {                                                              \
-    assert((value).is_null() || (value).is_string() || (value).is_integer());  \
     callback(JSON::ParsePhase::Pre, JSON::Type::value_type, line, column,      \
-             value);                                                           \
+             context, index, property);                                        \
   }
 
-#define CALLBACK_POST(value_type, value)                                       \
+#define CALLBACK_POST(value_type)                                              \
   if (callback) {                                                              \
-    assert((value).type() == JSON::Type::value_type);                          \
     callback(JSON::ParsePhase::Post, JSON::Type::value_type, line, column,     \
-             value);                                                           \
+             JSON::ParseContext::Root, 0, JSON::StringView{});                 \
   }
 
 namespace sourcemeta::core {
@@ -781,30 +779,27 @@ do_parse:
   switch (character) {
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
-        // TODO: Don't create expensive JSON values on the spot
-        CALLBACK_PRE(Boolean, JSON{nullptr});
+        CALLBACK_PRE(Boolean, JSON::ParseContext::Root, 0, JSON::StringView{});
         const auto value{internal::parse_boolean_true(line, column, stream)};
-        CALLBACK_POST(Boolean, value);
+        CALLBACK_POST(Boolean);
         return value;
       } else {
         return internal::parse_boolean_true(line, column, stream);
       }
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
-        // TODO: Don't create expensive JSON values on the spot
-        CALLBACK_PRE(Boolean, JSON{nullptr});
+        CALLBACK_PRE(Boolean, JSON::ParseContext::Root, 0, JSON::StringView{});
         const auto value{internal::parse_boolean_false(line, column, stream)};
-        CALLBACK_POST(Boolean, value);
+        CALLBACK_POST(Boolean);
         return value;
       } else {
         return internal::parse_boolean_false(line, column, stream);
       }
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
       if (callback) {
-        // TODO: Don't create expensive JSON values on the spot
-        CALLBACK_PRE(Null, JSON{nullptr});
+        CALLBACK_PRE(Null, JSON::ParseContext::Root, 0, JSON::StringView{});
         const auto value{internal::parse_null(line, column, stream)};
-        CALLBACK_POST(Null, value);
+        CALLBACK_POST(Null);
         return value;
       } else {
         return internal::parse_null(line, column, stream);
@@ -815,21 +810,18 @@ do_parse:
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
       if (callback) {
-        // TODO: Don't create expensive JSON values on the spot
-        CALLBACK_PRE(String, JSON{nullptr});
+        CALLBACK_PRE(String, JSON::ParseContext::Root, 0, JSON::StringView{});
         const Result value{internal::parse_string(line, column, stream)};
-        CALLBACK_POST(String, value);
+        CALLBACK_POST(String);
         return value;
       } else {
         return Result{internal::parse_string(line, column, stream)};
       }
     case internal::token_array_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Array, JSON{nullptr});
+      CALLBACK_PRE(Array, JSON::ParseContext::Root, 0, JSON::StringView{});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Object, JSON{nullptr});
+      CALLBACK_PRE(Object, JSON::ParseContext::Root, 0, JSON::StringView{});
       goto do_parse_object;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -849,20 +841,20 @@ do_parse:
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
-                                     JSON{nullptr});
-          CALLBACK_POST(Integer, value);
+                                     JSON::ParseContext::Root, 0,
+                                     JSON::StringView{});
+          CALLBACK_POST(Integer);
         } else if (value.is_decimal()) {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Decimal, current_line, current_column,
-                                     JSON{nullptr});
-          CALLBACK_POST(Decimal, value);
+                                     JSON::ParseContext::Root, 0,
+                                     JSON::StringView{});
+          CALLBACK_POST(Decimal);
         } else {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
-                                     JSON{nullptr});
-          CALLBACK_POST(Real, value);
+                                     JSON::ParseContext::Root, 0,
+                                     JSON::StringView{});
+          CALLBACK_POST(Real);
         }
 
         return value;
@@ -924,7 +916,7 @@ do_parse_array_item:
     // Positional
     case internal::token_array_end<typename JSON::Char>:
       if (frames.top().get().empty()) {
-        CALLBACK_POST(Array, frames.top().get());
+        CALLBACK_POST(Array);
         goto do_parse_container_end;
       } else {
         throw JSONParseError(line, column);
@@ -932,43 +924,43 @@ do_parse_array_item:
 
     // Values
     case internal::token_array_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Array, JSON{frames.top().get().size()});
+      CALLBACK_PRE(Array, JSON::ParseContext::Index, frames.top().get().size(),
+                   JSON::StringView{});
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Object, JSON{frames.top().get().size()});
+      CALLBACK_PRE(Object, JSON::ParseContext::Index, frames.top().get().size(),
+                   JSON::StringView{});
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
+      CALLBACK_PRE(Boolean, JSON::ParseContext::Index,
+                   frames.top().get().size(), JSON::StringView{});
       frames.top().get().push_back(
           internal::parse_boolean_true(line, column, stream));
-      CALLBACK_POST(Boolean, frames.top().get().back());
+      CALLBACK_POST(Boolean);
       goto do_parse_array_item_separator;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Boolean, JSON{frames.top().get().size()});
+      CALLBACK_PRE(Boolean, JSON::ParseContext::Index,
+                   frames.top().get().size(), JSON::StringView{});
       frames.top().get().push_back(
           internal::parse_boolean_false(line, column, stream));
-      CALLBACK_POST(Boolean, frames.top().get().back());
+      CALLBACK_POST(Boolean);
       goto do_parse_array_item_separator;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(Null, JSON{frames.top().get().size()});
+      CALLBACK_PRE(Null, JSON::ParseContext::Index, frames.top().get().size(),
+                   JSON::StringView{});
       frames.top().get().push_back(internal::parse_null(line, column, stream));
-      CALLBACK_POST(Null, frames.top().get().back());
+      CALLBACK_POST(Null);
       goto do_parse_array_item_separator;
 
     // A string is a sequence of Unicode code points wrapped with quotation
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE(String, JSON{frames.top().get().size()});
+      CALLBACK_PRE(String, JSON::ParseContext::Index, frames.top().get().size(),
+                   JSON::StringView{});
       frames.top().get().push_back(
           Result{internal::parse_string(line, column, stream)});
-      CALLBACK_POST(String, frames.top().get().back());
+      CALLBACK_POST(String);
       goto do_parse_array_item_separator;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -985,30 +977,31 @@ do_parse_array_item:
       if (callback) {
         const auto current_line{line};
         const auto current_column{column};
+        const auto current_index{frames.top().get().size()};
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Integer, current_line, current_column,
-                                     JSON{frames.top().get().size()});
+                                     JSON::ParseContext::Index, current_index,
+                                     JSON::StringView{});
         } else if (value.is_decimal()) {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Decimal, current_line, current_column,
-                                     JSON{frames.top().get().size()});
+                                     JSON::ParseContext::Index, current_index,
+                                     JSON::StringView{});
         } else {
-          // TODO: Don't create expensive JSON values on the spot
           CALLBACK_PRE_WITH_POSITION(Real, current_line, current_column,
-                                     JSON{frames.top().get().size()});
+                                     JSON::ParseContext::Index, current_index,
+                                     JSON::StringView{});
         }
 
         frames.top().get().push_back(value);
 
         if (value.is_integer()) {
-          CALLBACK_POST(Integer, frames.top().get().back());
+          CALLBACK_POST(Integer);
         } else if (value.is_decimal()) {
-          CALLBACK_POST(Decimal, frames.top().get().back());
+          CALLBACK_POST(Decimal);
         } else {
-          CALLBACK_POST(Real, frames.top().get().back());
+          CALLBACK_POST(Real);
         }
       } else {
         frames.top().get().push_back(
@@ -1041,7 +1034,7 @@ do_parse_array_item_separator:
     case internal::token_array_delimiter<typename JSON::Char>:
       goto do_parse_array_item;
     case internal::token_array_end<typename JSON::Char>:
-      CALLBACK_POST(Array, frames.top().get());
+      CALLBACK_POST(Array);
       goto do_parse_container_end;
 
     // Insignificant whitespace is allowed before or after any token.
@@ -1099,7 +1092,7 @@ do_parse_object_property_key:
   switch (character) {
     case internal::token_object_end<typename JSON::Char>:
       if (frames.top().get().empty()) {
-        CALLBACK_POST(Object, frames.top().get());
+        CALLBACK_POST(Object);
         goto do_parse_container_end;
       } else {
         goto error;
@@ -1159,44 +1152,44 @@ do_parse_object_property_value:
   switch (character) {
     // Values
     case internal::token_array_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(Array, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Array, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       goto do_parse_array;
     case internal::token_object_begin<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(Object, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Object, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       goto do_parse_object;
     case internal::constant_true<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       frames.top().get().assign(
           key, internal::parse_boolean_true(line, column, stream));
-      CALLBACK_POST(Boolean, frames.top().get().at(key));
+      CALLBACK_POST(Boolean);
       goto do_parse_object_property_end;
     case internal::constant_false<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Boolean, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       frames.top().get().assign(
           key, internal::parse_boolean_false(line, column, stream));
-      CALLBACK_POST(Boolean, frames.top().get().at(key));
+      CALLBACK_POST(Boolean);
       goto do_parse_object_property_end;
     case internal::constant_null<typename JSON::Char, typename JSON::CharTraits>.front():
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(Null, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(Null, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       frames.top().get().assign(key,
                                 internal::parse_null(line, column, stream));
-      CALLBACK_POST(Null, frames.top().get().at(key));
+      CALLBACK_POST(Null);
       goto do_parse_object_property_end;
 
     // A string is a sequence of Unicode code points wrapped with quotation
     // marks (U+0022). See
     // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
     case internal::token_string_quote<typename JSON::Char>:
-      // TODO: Don't create expensive JSON values on the spot
-      CALLBACK_PRE_WITH_POSITION(String, key_line, key_column, JSON{key});
+      CALLBACK_PRE_WITH_POSITION(String, key_line, key_column,
+                                 JSON::ParseContext::Property, 0, key);
       frames.top().get().assign(
           key, Result{internal::parse_string(line, column, stream)});
-      CALLBACK_POST(String, frames.top().get().at(key));
+      CALLBACK_POST(String);
       goto do_parse_object_property_end;
 
     case internal::token_number_minus<typename JSON::Char>:
@@ -1214,24 +1207,24 @@ do_parse_object_property_value:
         const auto value{
             internal::parse_number(line, column, stream, character)};
         if (value.is_integer()) {
-          // TODO: Don't create expensive JSON values on the spot
-          CALLBACK_PRE_WITH_POSITION(Integer, key_line, key_column, JSON{key});
+          CALLBACK_PRE_WITH_POSITION(Integer, key_line, key_column,
+                                     JSON::ParseContext::Property, 0, key);
         } else if (value.is_decimal()) {
-          // TODO: Don't create expensive JSON values on the spot
-          CALLBACK_PRE_WITH_POSITION(Decimal, key_line, key_column, JSON{key});
+          CALLBACK_PRE_WITH_POSITION(Decimal, key_line, key_column,
+                                     JSON::ParseContext::Property, 0, key);
         } else {
-          // TODO: Don't create expensive JSON values on the spot
-          CALLBACK_PRE_WITH_POSITION(Real, key_line, key_column, JSON{key});
+          CALLBACK_PRE_WITH_POSITION(Real, key_line, key_column,
+                                     JSON::ParseContext::Property, 0, key);
         }
 
         frames.top().get().assign(key, value);
 
         if (value.is_integer()) {
-          CALLBACK_POST(Integer, frames.top().get().at(key));
+          CALLBACK_POST(Integer);
         } else if (value.is_decimal()) {
-          CALLBACK_POST(Decimal, frames.top().get().at(key));
+          CALLBACK_POST(Decimal);
         } else {
-          CALLBACK_POST(Real, frames.top().get().at(key));
+          CALLBACK_POST(Real);
         }
       } else {
         frames.top().get().assign(
@@ -1263,7 +1256,7 @@ do_parse_object_property_end:
     case internal::token_object_delimiter<typename JSON::Char>:
       goto do_parse_object_property_key;
     case internal::token_object_end<typename JSON::Char>:
-      CALLBACK_POST(Object, frames.top().get());
+      CALLBACK_POST(Object);
       goto do_parse_container_end;
 
     // Insignificant whitespace is allowed before or after any token.

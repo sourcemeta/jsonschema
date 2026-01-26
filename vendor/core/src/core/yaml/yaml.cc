@@ -59,7 +59,8 @@ struct AnchoredValue {
   sourcemeta::core::JSON value;
   std::vector<std::tuple<sourcemeta::core::JSON::ParsePhase,
                          sourcemeta::core::JSON::Type, std::uint64_t,
-                         std::uint64_t, sourcemeta::core::JSON>>
+                         std::uint64_t, sourcemeta::core::JSON::ParseContext,
+                         std::size_t, std::string>>
       callbacks;
 };
 
@@ -67,14 +68,18 @@ using AnchorMap = std::unordered_map<std::string, AnchoredValue>;
 
 auto consume_value_event(yaml_parser_t *parser, yaml_event_t *event,
                          const sourcemeta::core::JSON::ParseCallback &callback,
-                         const sourcemeta::core::JSON &context,
+                         const sourcemeta::core::JSON::ParseContext context,
+                         const std::size_t index,
+                         const sourcemeta::core::JSON::StringView property,
                          AnchorMap &anchors,
                          const yaml_mark_t *override_start_mark = nullptr)
     -> sourcemeta::core::JSON;
 
 auto consume_scalar_event(yaml_event_t *event,
                           const sourcemeta::core::JSON::ParseCallback &callback,
-                          const sourcemeta::core::JSON &context,
+                          const sourcemeta::core::JSON::ParseContext context,
+                          const std::size_t index,
+                          const sourcemeta::core::JSON::StringView property,
                           AnchorMap &anchors,
                           const yaml_mark_t *override_start_mark = nullptr)
     -> sourcemeta::core::JSON {
@@ -117,18 +122,22 @@ auto consume_scalar_event(yaml_event_t *event,
 
   std::vector<std::tuple<sourcemeta::core::JSON::ParsePhase,
                          sourcemeta::core::JSON::Type, std::uint64_t,
-                         std::uint64_t, sourcemeta::core::JSON>>
+                         std::uint64_t, sourcemeta::core::JSON::ParseContext,
+                         std::size_t, std::string>>
       recorded_callbacks;
 
   if (callback) {
     callback(sourcemeta::core::JSON::ParsePhase::Pre, type, start_line,
-             start_column, context);
+             start_column, context, index, property);
     recorded_callbacks.emplace_back(sourcemeta::core::JSON::ParsePhase::Pre,
-                                    type, start_line, start_column, context);
+                                    type, start_line, start_column, context,
+                                    index, std::string{property});
     callback(sourcemeta::core::JSON::ParsePhase::Post, type, end_line,
-             end_column, result);
-    recorded_callbacks.emplace_back(sourcemeta::core::JSON::ParsePhase::Post,
-                                    type, end_line, end_column, result);
+             end_column, sourcemeta::core::JSON::ParseContext::Root, 0,
+             sourcemeta::core::JSON::StringView{});
+    recorded_callbacks.emplace_back(
+        sourcemeta::core::JSON::ParsePhase::Post, type, end_line, end_column,
+        sourcemeta::core::JSON::ParseContext::Root, 0, "");
   }
 
   if (event->data.scalar.anchor) {
@@ -145,8 +154,10 @@ auto consume_scalar_event(yaml_event_t *event,
 auto consume_sequence_events(
     yaml_parser_t *parser, yaml_event_t *start_event,
     const sourcemeta::core::JSON::ParseCallback &callback,
-    const sourcemeta::core::JSON &context, AnchorMap &anchors,
-    const yaml_mark_t *override_start_mark = nullptr)
+    const sourcemeta::core::JSON::ParseContext context,
+    const std::size_t context_index,
+    const sourcemeta::core::JSON::StringView context_property,
+    AnchorMap &anchors, const yaml_mark_t *override_start_mark = nullptr)
     -> sourcemeta::core::JSON {
   const yaml_mark_t &start_mark{override_start_mark ? *override_start_mark
                                                     : start_event->start_mark};
@@ -156,18 +167,23 @@ auto consume_sequence_events(
   const bool has_anchor{start_event->data.sequence_start.anchor != nullptr};
   std::vector<std::tuple<sourcemeta::core::JSON::ParsePhase,
                          sourcemeta::core::JSON::Type, std::uint64_t,
-                         std::uint64_t, sourcemeta::core::JSON>>
+                         std::uint64_t, sourcemeta::core::JSON::ParseContext,
+                         std::size_t, std::string>>
       recorded_callbacks;
 
   sourcemeta::core::JSON::ParseCallback effective_callback;
   if (has_anchor && callback) {
-    effective_callback =
-        [&](const sourcemeta::core::JSON::ParsePhase phase,
-            const sourcemeta::core::JSON::Type type, const std::uint64_t line,
-            const std::uint64_t column, const sourcemeta::core::JSON &value) {
-          recorded_callbacks.emplace_back(phase, type, line, column, value);
-          callback(phase, type, line, column, value);
-        };
+    effective_callback = [&](const sourcemeta::core::JSON::ParsePhase phase,
+                             const sourcemeta::core::JSON::Type type,
+                             const std::uint64_t line,
+                             const std::uint64_t column,
+                             const sourcemeta::core::JSON::ParseContext ctx,
+                             const std::size_t idx,
+                             const sourcemeta::core::JSON::StringView prop) {
+      recorded_callbacks.emplace_back(phase, type, line, column, ctx, idx,
+                                      std::string{prop});
+      callback(phase, type, line, column, ctx, idx, prop);
+    };
   } else {
     effective_callback = callback;
   }
@@ -175,11 +191,11 @@ auto consume_sequence_events(
   if (effective_callback) {
     effective_callback(sourcemeta::core::JSON::ParsePhase::Pre,
                        sourcemeta::core::JSON::Type::Array, start_line,
-                       start_column, context);
+                       start_column, context, context_index, context_property);
   }
 
   auto result{sourcemeta::core::JSON::make_array()};
-  std::uint64_t index{0};
+  std::size_t index{0};
 
   while (true) {
     yaml_event_t event;
@@ -195,7 +211,9 @@ auto consume_sequence_events(
       if (effective_callback) {
         effective_callback(sourcemeta::core::JSON::ParsePhase::Post,
                            sourcemeta::core::JSON::Type::Array, end_line,
-                           end_column, result);
+                           end_column,
+                           sourcemeta::core::JSON::ParseContext::Root, 0,
+                           sourcemeta::core::JSON::StringView{});
       }
 
       if (has_anchor) {
@@ -210,9 +228,10 @@ auto consume_sequence_events(
       return result;
     }
 
-    auto value{consume_value_event(
-        parser, &event, effective_callback,
-        sourcemeta::core::JSON{static_cast<std::int64_t>(index)}, anchors)};
+    auto value{consume_value_event(parser, &event, effective_callback,
+                                   sourcemeta::core::JSON::ParseContext::Index,
+                                   index, sourcemeta::core::JSON::StringView{},
+                                   anchors)};
     result.push_back(std::move(value));
     index++;
   }
@@ -221,8 +240,10 @@ auto consume_sequence_events(
 auto consume_mapping_events(
     yaml_parser_t *parser, yaml_event_t *start_event,
     const sourcemeta::core::JSON::ParseCallback &callback,
-    const sourcemeta::core::JSON &context, AnchorMap &anchors,
-    const yaml_mark_t *override_start_mark = nullptr)
+    const sourcemeta::core::JSON::ParseContext context,
+    const std::size_t context_index,
+    const sourcemeta::core::JSON::StringView context_property,
+    AnchorMap &anchors, const yaml_mark_t *override_start_mark = nullptr)
     -> sourcemeta::core::JSON {
   const yaml_mark_t &start_mark{override_start_mark ? *override_start_mark
                                                     : start_event->start_mark};
@@ -232,18 +253,23 @@ auto consume_mapping_events(
   const bool has_anchor{start_event->data.mapping_start.anchor != nullptr};
   std::vector<std::tuple<sourcemeta::core::JSON::ParsePhase,
                          sourcemeta::core::JSON::Type, std::uint64_t,
-                         std::uint64_t, sourcemeta::core::JSON>>
+                         std::uint64_t, sourcemeta::core::JSON::ParseContext,
+                         std::size_t, std::string>>
       recorded_callbacks;
 
   sourcemeta::core::JSON::ParseCallback effective_callback;
   if (has_anchor && callback) {
-    effective_callback =
-        [&](const sourcemeta::core::JSON::ParsePhase phase,
-            const sourcemeta::core::JSON::Type type, const std::uint64_t line,
-            const std::uint64_t column, const sourcemeta::core::JSON &value) {
-          recorded_callbacks.emplace_back(phase, type, line, column, value);
-          callback(phase, type, line, column, value);
-        };
+    effective_callback = [&](const sourcemeta::core::JSON::ParsePhase phase,
+                             const sourcemeta::core::JSON::Type type,
+                             const std::uint64_t line,
+                             const std::uint64_t column,
+                             const sourcemeta::core::JSON::ParseContext ctx,
+                             const std::size_t idx,
+                             const sourcemeta::core::JSON::StringView prop) {
+      recorded_callbacks.emplace_back(phase, type, line, column, ctx, idx,
+                                      std::string{prop});
+      callback(phase, type, line, column, ctx, idx, prop);
+    };
   } else {
     effective_callback = callback;
   }
@@ -251,7 +277,7 @@ auto consume_mapping_events(
   if (effective_callback) {
     effective_callback(sourcemeta::core::JSON::ParsePhase::Pre,
                        sourcemeta::core::JSON::Type::Object, start_line,
-                       start_column, context);
+                       start_column, context, context_index, context_property);
   }
 
   auto result{sourcemeta::core::JSON::make_object()};
@@ -270,7 +296,9 @@ auto consume_mapping_events(
       if (effective_callback) {
         effective_callback(sourcemeta::core::JSON::ParsePhase::Post,
                            sourcemeta::core::JSON::Type::Object, end_line,
-                           end_column, result);
+                           end_column,
+                           sourcemeta::core::JSON::ParseContext::Root, 0,
+                           sourcemeta::core::JSON::StringView{});
       }
 
       if (has_anchor) {
@@ -301,16 +329,19 @@ auto consume_mapping_events(
       throw sourcemeta::core::YAMLParseError("Failed to parse YAML event");
     }
 
-    auto value{consume_value_event(parser, &value_event, effective_callback,
-                                   sourcemeta::core::JSON{key}, anchors,
-                                   &key_start_mark)};
+    auto value{
+        consume_value_event(parser, &value_event, effective_callback,
+                            sourcemeta::core::JSON::ParseContext::Property, 0,
+                            key, anchors, &key_start_mark)};
     result.assign(key, std::move(value));
   }
 }
 
 auto consume_value_event(yaml_parser_t *parser, yaml_event_t *event,
                          const sourcemeta::core::JSON::ParseCallback &callback,
-                         const sourcemeta::core::JSON &context,
+                         const sourcemeta::core::JSON::ParseContext context,
+                         const std::size_t index,
+                         const sourcemeta::core::JSON::StringView property,
                          AnchorMap &anchors,
                          const yaml_mark_t *override_start_mark)
     -> sourcemeta::core::JSON {
@@ -318,26 +349,36 @@ auto consume_value_event(yaml_parser_t *parser, yaml_event_t *event,
 
   switch (event->type) {
     case YAML_SCALAR_EVENT:
-      result = consume_scalar_event(event, callback, context, anchors,
-                                    override_start_mark);
+      result = consume_scalar_event(event, callback, context, index, property,
+                                    anchors, override_start_mark);
       yaml_event_delete(event);
       break;
 
     case YAML_SEQUENCE_START_EVENT:
-      result = consume_sequence_events(parser, event, callback, context,
-                                       anchors, override_start_mark);
+      result = consume_sequence_events(parser, event, callback, context, index,
+                                       property, anchors, override_start_mark);
       yaml_event_delete(event);
       break;
 
     case YAML_MAPPING_START_EVENT:
-      result = consume_mapping_events(parser, event, callback, context, anchors,
-                                      override_start_mark);
+      result = consume_mapping_events(parser, event, callback, context, index,
+                                      property, anchors, override_start_mark);
       yaml_event_delete(event);
       break;
 
     case YAML_ALIAS_EVENT: {
       const std::string anchor_name{
           reinterpret_cast<char *>(event->data.alias.anchor)};
+      const std::uint64_t alias_start_line{(override_start_mark
+                                                ? override_start_mark->line
+                                                : event->start_mark.line) +
+                                           1};
+      const std::uint64_t alias_start_column{(override_start_mark
+                                                  ? override_start_mark->column
+                                                  : event->start_mark.column) +
+                                             1};
+      const std::uint64_t alias_end_line{event->end_mark.line + 1};
+      const std::uint64_t alias_end_column{event->end_mark.column};
       yaml_event_delete(event);
 
       const auto anchor_it{anchors.find(anchor_name)};
@@ -349,20 +390,29 @@ auto consume_value_event(yaml_parser_t *parser, yaml_event_t *event,
 
       if (callback) {
         const auto &callbacks{anchor_it->second.callbacks};
-        if (result.is_object() || result.is_array()) {
-          for (std::size_t index = 1; index < callbacks.size() - 1; index++) {
-            callback(
-                std::get<0>(callbacks[index]), std::get<1>(callbacks[index]),
-                std::get<2>(callbacks[index]), std::get<3>(callbacks[index]),
-                std::get<4>(callbacks[index]));
+        if (!callbacks.empty()) {
+          const auto value_type{std::get<1>(callbacks.front())};
+          callback(sourcemeta::core::JSON::ParsePhase::Pre, value_type,
+                   alias_start_line, alias_start_column, context, index,
+                   property);
+
+          if (result.is_object() || result.is_array()) {
+            for (std::size_t callback_index = 1;
+                 callback_index < callbacks.size() - 1; callback_index++) {
+              callback(std::get<0>(callbacks[callback_index]),
+                       std::get<1>(callbacks[callback_index]),
+                       std::get<2>(callbacks[callback_index]),
+                       std::get<3>(callbacks[callback_index]),
+                       std::get<4>(callbacks[callback_index]),
+                       std::get<5>(callbacks[callback_index]),
+                       std::get<6>(callbacks[callback_index]));
+            }
           }
-        } else {
-          if (!callbacks.empty()) {
-            const auto &post_trace = callbacks.back();
-            callback(std::get<0>(post_trace), std::get<1>(post_trace),
-                     std::get<2>(post_trace), std::get<3>(post_trace),
-                     std::get<4>(post_trace));
-          }
+
+          callback(sourcemeta::core::JSON::ParsePhase::Post, value_type,
+                   alias_end_line, alias_end_column,
+                   sourcemeta::core::JSON::ParseContext::Root, 0,
+                   sourcemeta::core::JSON::StringView{});
         }
       }
 
@@ -406,8 +456,9 @@ auto parse_yaml_from_events(
     throw sourcemeta::core::YAMLParseError("Failed to parse YAML value");
   }
 
-  auto result{consume_value_event(parser, &event, callback,
-                                  sourcemeta::core::JSON{nullptr}, anchors)};
+  auto result{consume_value_event(
+      parser, &event, callback, sourcemeta::core::JSON::ParseContext::Root, 0,
+      sourcemeta::core::JSON::StringView{}, anchors)};
 
   if (!yaml_parser_parse(parser, &event)) {
     throw sourcemeta::core::YAMLParseError("Failed to parse YAML document end");

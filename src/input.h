@@ -216,15 +216,18 @@ handle_json_entry(const std::filesystem::path &entry_path,
           sourcemeta::core::PointerPositionTracker positions;
           const std::uint64_t current_offset{line_offset};
           max_line = 0;
-          auto callback = [&positions, current_offset, &max_line](
-                              const sourcemeta::core::JSON::ParsePhase phase,
-                              const sourcemeta::core::JSON::Type type,
-                              const std::uint64_t line,
-                              const std::uint64_t column,
-                              const sourcemeta::core::JSON &value) {
-            max_line = std::max(max_line, line);
-            positions(phase, type, line + current_offset, column, value);
-          };
+          auto callback =
+              [&positions, current_offset,
+               &max_line](const sourcemeta::core::JSON::ParsePhase phase,
+                          const sourcemeta::core::JSON::Type type,
+                          const std::uint64_t line, const std::uint64_t column,
+                          const sourcemeta::core::JSON::ParseContext context,
+                          const std::size_t index,
+                          const sourcemeta::core::JSON::StringView property) {
+                max_line = std::max(max_line, line);
+                positions(phase, type, line + current_offset, column, context,
+                          index, property);
+              };
           documents.emplace_back(sourcemeta::core::parse_yaml(stream, callback),
                                  std::move(positions));
           // The YAML parser reports the line of the next document separator,

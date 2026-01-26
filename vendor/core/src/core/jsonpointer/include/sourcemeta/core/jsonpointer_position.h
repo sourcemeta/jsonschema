@@ -50,7 +50,8 @@ public:
       std::tuple<std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
   auto operator()(const JSON::ParsePhase phase, const JSON::Type,
                   const std::uint64_t line, const std::uint64_t column,
-                  const JSON &value) -> void;
+                  const JSON::ParseContext context, const std::size_t index,
+                  const JSON::StringView property) -> void;
   [[nodiscard]] auto get(const Pointer &pointer) const
       -> std::optional<Position>;
   [[nodiscard]] auto size() const -> std::size_t;
