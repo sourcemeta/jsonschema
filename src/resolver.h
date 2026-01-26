@@ -189,8 +189,20 @@ public:
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
     if (this->configuration_.has_value()) {
-      const auto match{
-          this->configuration_.value().resolve.find(string_identifier)};
+
+      // TODO: Abstract this fallback logic as a SchemaConfig method
+      auto match{this->configuration_.value().resolve.find(string_identifier)};
+      if (match == this->configuration_.value().resolve.cend() &&
+          !string_identifier.ends_with(".json")) {
+        match = this->configuration_.value().resolve.find(string_identifier +
+                                                          ".json");
+      }
+      if (match == this->configuration_.value().resolve.cend() &&
+          string_identifier.ends_with(".json")) {
+        match = this->configuration_.value().resolve.find(
+            string_identifier.substr(0, string_identifier.size() - 5));
+      }
+
       if (match != this->configuration_.value().resolve.cend()) {
         const sourcemeta::core::URI new_uri{match->second};
         if (new_uri.is_relative()) {
