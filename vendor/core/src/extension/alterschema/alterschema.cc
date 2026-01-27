@@ -90,7 +90,6 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/unsatisfiable_in_place_applicator_type.h"
 
 // Linter
-#include "linter/additional_properties_default.h"
 #include "linter/comment_trim.h"
 #include "linter/content_schema_default.h"
 #include "linter/definitions_to_defs.h"
@@ -193,7 +192,6 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
 
   if (mode == AlterSchemaMode::Linter) {
     bundle.add<EqualNumericBoundsToConst>();
-    bundle.add<AdditionalPropertiesDefault>();
     bundle.add<ContentSchemaDefault>();
     bundle.add<DependenciesDefault>();
     bundle.add<DependentRequiredDefault>();

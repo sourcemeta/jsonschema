@@ -10,9 +10,6 @@ trap clean EXIT
 "$1" lint --list > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
-additional_properties_default
-  Setting the `additionalProperties` keyword to the true schema does not add any further constraint
-
 blaze/valid_default
   Only set a `default` value that validates against the schema
 
@@ -223,7 +220,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 71
+Number of rules: 70
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

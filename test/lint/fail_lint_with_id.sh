@@ -14,7 +14,7 @@ cat << 'EOF' > "$TMP/schema.json"
   "description": "Test schema",
   "examples": [ {} ],
   "$id": "https://example.com",
-  "additionalProperties": true
+  "properties": {}
 }
 EOF
 
@@ -24,8 +24,8 @@ test "$CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 schema.json:7:3:
-  Setting the `additionalProperties` keyword to the true schema does not add any further constraint (additional_properties_default)
-    at location "/additionalProperties"
+  Setting the `properties` keyword to the empty object does not add any further constraint (properties_default)
+    at location "/properties"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
