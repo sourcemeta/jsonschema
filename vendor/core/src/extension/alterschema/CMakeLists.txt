@@ -62,7 +62,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/unsatisfiable_in_place_applicator_type.h
 
     # Linter
-    linter/additional_properties_default.h
     linter/comment_trim.h
     linter/content_schema_default.h
     linter/definitions_to_defs.h

@@ -10,9 +10,6 @@ trap clean EXIT
 "$1" lint --list --exclude blaze/valid_default --exclude blaze/valid_examples > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
-additional_properties_default
-  Setting the `additionalProperties` keyword to the true schema does not add any further constraint
-
 comment_trim
   Comments should not contain leading or trailing whitespace
 
@@ -217,7 +214,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 69
+Number of rules: 68
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
