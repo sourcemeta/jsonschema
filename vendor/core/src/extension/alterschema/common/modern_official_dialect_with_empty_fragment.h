@@ -2,6 +2,7 @@ class ModernOfficialDialectWithEmptyFragment final
     : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ModernOfficialDialectWithEmptyFragment()
       : SchemaTransformRule{
             "modern_official_dialect_with_empty_fragment",

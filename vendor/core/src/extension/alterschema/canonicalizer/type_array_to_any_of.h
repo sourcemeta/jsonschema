@@ -1,6 +1,7 @@
 class TypeArrayToAnyOf final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   TypeArrayToAnyOf()
       : SchemaTransformRule{
             "type_array_to_any_of",

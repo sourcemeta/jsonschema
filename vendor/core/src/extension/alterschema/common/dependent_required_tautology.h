@@ -1,6 +1,7 @@
 class DependentRequiredTautology final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   DependentRequiredTautology()
       : SchemaTransformRule{
             "dependent_required_tautology",

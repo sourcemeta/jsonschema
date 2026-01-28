@@ -1,6 +1,7 @@
 class MaximumRealForInteger final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   MaximumRealForInteger()
       : SchemaTransformRule{
             "maximum_real_for_integer",

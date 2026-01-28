@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ElseWithoutIf()
       : SchemaTransformRule{"else_without_if",
                             "The `else` keyword is meaningless "

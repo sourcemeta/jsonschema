@@ -2,6 +2,7 @@ class IntegerUpperBoundMultiplier final
     : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   IntegerUpperBoundMultiplier()
       : sourcemeta::core::SchemaTransformRule{"integer_upper_bound_multiplier",
                                               ""} {};

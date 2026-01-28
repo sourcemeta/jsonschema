@@ -138,7 +138,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
     std::unordered_set<std::string_view> blacklist;
     for (const auto &entry : bundle) {
-      blacklist.emplace(entry.first->name());
+      blacklist.emplace(std::get<0>(entry)->name());
     }
 
     for (const auto &only : options.at("only")) {
@@ -160,7 +160,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   if (options.contains("list")) {
     std::vector<std::pair<std::string_view, std::string_view>> rules;
     for (const auto &entry : bundle) {
-      rules.emplace_back(entry.first->name(), entry.first->message());
+      rules.emplace_back(std::get<0>(entry)->name(),
+                         std::get<0>(entry)->message());
     }
 
     std::sort(

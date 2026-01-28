@@ -1,6 +1,7 @@
 class UnsatisfiableInPlaceApplicatorType final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   UnsatisfiableInPlaceApplicatorType()
       : SchemaTransformRule{
             "unsatisfiable_in_place_applicator_type",

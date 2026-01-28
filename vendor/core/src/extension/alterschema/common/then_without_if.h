@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ThenWithoutIf()
       : SchemaTransformRule{"then_without_if",
                             "The `then` keyword is meaningless "

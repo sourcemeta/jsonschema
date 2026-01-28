@@ -1,6 +1,7 @@
 class AllOfFalseSimplify final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   AllOfFalseSimplify()
       : SchemaTransformRule{"allof_false_simplify",
                             "When `allOf` contains a `false` branch, the "

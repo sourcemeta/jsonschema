@@ -1,6 +1,7 @@
 class DuplicateEnumValues final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   DuplicateEnumValues()
       : SchemaTransformRule{"duplicate_enum_values",
                             "Setting duplicate values in `enum` is "

@@ -1,6 +1,7 @@
 class ExclusiveMinimumIntegerToMinimum final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ExclusiveMinimumIntegerToMinimum()
       : SchemaTransformRule{
             "exclusive_minimum_integer_to_minimum",

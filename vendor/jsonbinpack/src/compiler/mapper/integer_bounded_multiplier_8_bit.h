@@ -2,6 +2,7 @@ class IntegerBoundedMultiplier8Bit final
     : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   IntegerBoundedMultiplier8Bit()
       : sourcemeta::core::SchemaTransformRule{
             "integer_bounded_multiplier_8_bit", ""} {};

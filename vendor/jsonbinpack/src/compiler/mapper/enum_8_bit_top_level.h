@@ -1,6 +1,7 @@
 class Enum8BitTopLevel final : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   Enum8BitTopLevel()
       : sourcemeta::core::SchemaTransformRule{"enum_8_bit_top_level", ""} {};
 

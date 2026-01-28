@@ -2,6 +2,7 @@ class IntegerUnboundMultiplier final
     : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   IntegerUnboundMultiplier()
       : sourcemeta::core::SchemaTransformRule{"integer_unbound_multiplier",
                                               ""} {};

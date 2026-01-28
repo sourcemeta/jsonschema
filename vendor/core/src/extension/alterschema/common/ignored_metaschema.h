@@ -1,6 +1,7 @@
 class IgnoredMetaschema final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   IgnoredMetaschema()
       : SchemaTransformRule{
             "ignored_metaschema",

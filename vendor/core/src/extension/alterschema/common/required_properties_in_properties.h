@@ -1,6 +1,7 @@
 class RequiredPropertiesInProperties final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   RequiredPropertiesInProperties()
       : SchemaTransformRule{
             "required_properties_in_properties",

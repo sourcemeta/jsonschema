@@ -39,8 +39,8 @@ auto calculate_health_percentage(const std::size_t subschemas,
 auto check_rules(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::core::SchemaFrame &frame,
-    const std::vector<
-        std::pair<std::unique_ptr<sourcemeta::core::SchemaTransformRule>, bool>>
+    const std::vector<std::tuple<
+        std::unique_ptr<sourcemeta::core::SchemaTransformRule>, bool, bool>>
         &rules,
     const sourcemeta::core::SchemaWalker &walker,
     const sourcemeta::core::SchemaResolver &resolver,
@@ -73,7 +73,7 @@ auto check_rules(
     const auto current_vocabularies{frame.vocabularies(entry.second, resolver)};
 
     bool subschema_failed{false};
-    for (const auto &[rule, mutates] : rules) {
+    for (const auto &[rule, mutates, _] : rules) {
       // TODO: In this case, can we avoid framing and the entire subschema loop
       // if there will be no rules to execute that match this criteria?
       if (non_mutating_only && mutates) {
@@ -234,7 +234,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
       const auto current_vocabularies{
           frame.vocabularies(entry.second, resolver)};
 
-      for (const auto &[rule, mutates] : this->rules) {
+      for (const auto &[rule, mutates, reframe_after_transform] : this->rules) {
         // Only process mutating rules in the main loop.
         // Non-mutating rules will be processed once at the end.
         if (!mutates) {
@@ -274,8 +274,10 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
         applied = true;
 
-        analyse_frame(frame, schema, walker, resolver, default_dialect,
-                      default_id);
+        if (reframe_after_transform) {
+          analyse_frame(frame, schema, walker, resolver, default_dialect,
+                        default_id);
+        }
 
         const auto new_location{frame.traverse(to_weak_pointer(entry_pointer))};
         // The location should still exist after transform
@@ -344,7 +346,9 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
           frame.reset();
         }
 
-        goto core_transformer_start_again;
+        if (references_fixed || reframe_after_transform) {
+          goto core_transformer_start_again;
+        }
       }
     }
 
@@ -364,7 +368,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
 
 auto SchemaTransformer::remove(const std::string_view name) -> bool {
   return std::erase_if(this->rules, [&name](const auto &entry) {
-           return entry.first->name() == name;
+           return std::get<0>(entry)->name() == name;
          }) > 0;
 }
 

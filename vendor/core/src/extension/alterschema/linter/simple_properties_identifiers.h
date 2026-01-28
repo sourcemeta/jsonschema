@@ -1,6 +1,7 @@
 class SimplePropertiesIdentifiers final : public SchemaTransformRule {
 public:
   using mutates = std::false_type;
+  using reframe_after_transform = std::false_type;
   SimplePropertiesIdentifiers()
       // Inspired by
       // https://json-structure.github.io/core/draft-vasters-json-structure-core.html#section-3.6
