@@ -1,5 +1,6 @@
 class EqualNumericBoundsToEnum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   EqualNumericBoundsToEnum()
       : SchemaTransformRule{
             "equal_numeric_bounds_to_enum",

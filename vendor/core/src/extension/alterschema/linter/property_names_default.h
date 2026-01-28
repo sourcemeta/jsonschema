@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"propertyNames"};
 
 public:
+  using mutates = std::true_type;
   PropertyNamesDefault()
       : SchemaTransformRule{
             "property_names_default",

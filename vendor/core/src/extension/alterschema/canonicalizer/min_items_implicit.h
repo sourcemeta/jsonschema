@@ -1,5 +1,6 @@
 class MinItemsImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinItemsImplicit()
       : SchemaTransformRule{"min_items_implicit",
                             "Every array has a minimum size of zero items"} {};

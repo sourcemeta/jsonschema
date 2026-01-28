@@ -1,5 +1,6 @@
 class TypeNullAsEnum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   TypeNullAsEnum()
       : SchemaTransformRule{
             "type_null_as_enum",

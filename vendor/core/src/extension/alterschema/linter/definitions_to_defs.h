@@ -1,5 +1,6 @@
 class DefinitionsToDefs final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DefinitionsToDefs()
       : SchemaTransformRule{"definitions_to_defs",
                             "`definitions` was superseded by `$defs` in "

@@ -1,5 +1,6 @@
 class MinPropertiesCoveredByRequired final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinPropertiesCoveredByRequired()
       : SchemaTransformRule{
             "min_properties_covered_by_required",

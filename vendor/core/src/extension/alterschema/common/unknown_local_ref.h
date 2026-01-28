@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"$ref"};
 
 public:
+  using mutates = std::true_type;
   UnknownLocalRef()
       : SchemaTransformRule{
             "unknown_local_ref",

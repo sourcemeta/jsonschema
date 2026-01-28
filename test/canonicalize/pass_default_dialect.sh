@@ -39,7 +39,8 @@ cat << 'EOF' > "$TMP/expected.json"
     },
     {
       "type": "array",
-      "minItems": 0
+      "minItems": 0,
+      "items": true
     },
     {
       "type": "string",

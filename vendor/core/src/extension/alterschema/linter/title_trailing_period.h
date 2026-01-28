@@ -1,5 +1,6 @@
 class TitleTrailingPeriod final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   TitleTrailingPeriod()
       : SchemaTransformRule{
             "title_trailing_period",

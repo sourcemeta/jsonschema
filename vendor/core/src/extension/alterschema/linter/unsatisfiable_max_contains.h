@@ -1,5 +1,6 @@
 class UnsatisfiableMaxContains final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   UnsatisfiableMaxContains()
       : SchemaTransformRule{
             "unsatisfiable_max_contains",

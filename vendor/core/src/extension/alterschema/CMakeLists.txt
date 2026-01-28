@@ -1,10 +1,10 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
   SOURCES alterschema.cc
     # Canonicalizer
-    canonicalizer/boolean_true.h
     canonicalizer/const_as_enum.h
     canonicalizer/exclusive_maximum_integer_to_maximum.h
     canonicalizer/exclusive_minimum_integer_to_minimum.h
+    canonicalizer/items_implicit.h
     canonicalizer/max_contains_covered_by_max_items.h
     canonicalizer/min_items_given_min_contains.h
     canonicalizer/min_items_implicit.h
@@ -20,6 +20,10 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     canonicalizer/type_union_implicit.h
 
     # Common
+    common/allof_false_simplify.h
+    common/anyof_false_simplify.h
+    common/anyof_remove_false_schemas.h
+    common/anyof_true_simplify.h
     common/const_with_type.h
     common/orphan_definitions.h
     common/content_media_type_without_encoding.h
@@ -33,6 +37,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/duplicate_anyof_branches.h
     common/duplicate_enum_values.h
     common/duplicate_required_values.h
+    common/empty_object_as_true.h
     common/else_empty.h
     common/else_without_if.h
     common/enum_with_type.h
@@ -50,12 +55,15 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/non_applicable_enum_validation_keywords.h
     common/non_applicable_type_specific_keywords.h
     common/not_false.h
+    common/oneof_false_simplify.h
+    common/oneof_to_anyof_disjoint_types.h
     common/required_properties_in_properties.h
     common/single_type_array.h
     common/then_empty.h
     common/then_without_if.h
     common/unknown_keywords_prefix.h
     common/unknown_local_ref.h
+    common/unsatisfiable_drop_validation.h
     common/unnecessary_allof_ref_wrapper_draft.h
     common/unnecessary_allof_ref_wrapper_modern.h
     common/unnecessary_allof_wrapper.h

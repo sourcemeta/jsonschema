@@ -6,7 +6,8 @@
 
 #include "encoding.h"
 
-#include <cassert> // assert
+#include <cassert>     // assert
+#include <type_traits> // std::true_type
 
 static auto
 transformer_callback_noop(const sourcemeta::core::Pointer &,

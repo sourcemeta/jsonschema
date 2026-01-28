@@ -1,5 +1,6 @@
 class SingleTypeArray final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   SingleTypeArray()
       : SchemaTransformRule{"single_type_array",
                             "Setting `type` to an array of a single type is "

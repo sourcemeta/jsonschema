@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"dependencies"};
 
 public:
+  using mutates = std::true_type;
   DependenciesDefault()
       : SchemaTransformRule{
             "dependencies_default",

@@ -1,5 +1,6 @@
 class MinPropertiesImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinPropertiesImplicit()
       : SchemaTransformRule{
             "min_properties_implicit",

@@ -1,5 +1,6 @@
 class ConstAsEnum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ConstAsEnum()
       : SchemaTransformRule{"const_as_enum",
                             "Setting `const` is syntax sugar for an "

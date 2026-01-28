@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"not"};
 
 public:
+  using mutates = std::true_type;
   NotFalse()
       : SchemaTransformRule{"not_false",
                             "Setting the `not` keyword to `false` imposes no "

@@ -1,5 +1,6 @@
 class PropertiesDefault final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   PropertiesDefault()
       : SchemaTransformRule{
             "properties_default",

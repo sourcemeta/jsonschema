@@ -1,5 +1,6 @@
 class TitleDescriptionEqual final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   TitleDescriptionEqual()
       : SchemaTransformRule{
             "title_description_equal",

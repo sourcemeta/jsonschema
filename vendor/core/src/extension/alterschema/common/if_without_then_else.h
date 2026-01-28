@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"if"};
 
 public:
+  using mutates = std::true_type;
   IfWithoutThenElse()
       : SchemaTransformRule{
             "if_without_then_else",

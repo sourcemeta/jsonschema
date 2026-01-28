@@ -1,5 +1,6 @@
 class DependentRequiredDefault final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DependentRequiredDefault()
       : SchemaTransformRule{
             "dependent_required_default",

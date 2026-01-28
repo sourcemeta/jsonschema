@@ -1,6 +1,7 @@
 // TODO: Unit test this mapping once we have container encodings
 class EnumArbitrary final : public sourcemeta::core::SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   EnumArbitrary()
       : sourcemeta::core::SchemaTransformRule{"enum_arbitrary", ""} {};
 
@@ -16,8 +17,9 @@ public:
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                      JSON_Schema_2020_12_Validation) &&
-           schema.defines("enum") && schema.at("enum").is_array() &&
-           !location.pointer.empty() && schema.at("enum").size() > 1 &&
+           schema.is_object() && schema.defines("enum") &&
+           schema.at("enum").is_array() && !location.pointer.empty() &&
+           schema.at("enum").size() > 1 &&
            !is_byte(schema.at("enum").size() - 1);
   }
 

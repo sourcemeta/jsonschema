@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"else"};
 
 public:
+  using mutates = std::true_type;
   ElseWithoutIf()
       : SchemaTransformRule{"else_without_if",
                             "The `else` keyword is meaningless "

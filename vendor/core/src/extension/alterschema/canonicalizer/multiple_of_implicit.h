@@ -1,5 +1,6 @@
 class MultipleOfImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MultipleOfImplicit()
       : SchemaTransformRule{"multiple_of_implicit",
                             "The unit of `multipleOf` is the integer 1"} {};

@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"unevaluatedProperties"};
 
 public:
+  using mutates = std::true_type;
   UnevaluatedPropertiesDefault()
       : SchemaTransformRule{
             "unevaluated_properties_default",

@@ -1,5 +1,6 @@
 class TypeBooleanAsEnum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   TypeBooleanAsEnum()
       : SchemaTransformRule{
             "type_boolean_as_enum",

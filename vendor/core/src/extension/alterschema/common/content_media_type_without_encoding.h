@@ -1,5 +1,6 @@
 class ContentMediaTypeWithoutEncoding final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ContentMediaTypeWithoutEncoding()
       : SchemaTransformRule{
             "content_media_type_without_encoding",

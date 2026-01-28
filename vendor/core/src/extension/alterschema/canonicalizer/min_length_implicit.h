@@ -1,5 +1,6 @@
 class MinLengthImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinLengthImplicit()
       : SchemaTransformRule{
             "min_length_implicit",

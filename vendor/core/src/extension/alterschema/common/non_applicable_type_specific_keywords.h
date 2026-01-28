@@ -1,5 +1,6 @@
 class NonApplicableTypeSpecificKeywords final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   NonApplicableTypeSpecificKeywords()
       : SchemaTransformRule{"non_applicable_type_specific_keywords",
                             "Avoid keywords that don't apply to the type or "

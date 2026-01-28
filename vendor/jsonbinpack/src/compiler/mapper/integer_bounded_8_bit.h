@@ -1,5 +1,6 @@
 class IntegerBounded8Bit final : public sourcemeta::core::SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   IntegerBounded8Bit()
       : sourcemeta::core::SchemaTransformRule{"integer_bounded_8_bit", ""} {};
 
@@ -15,7 +16,7 @@ public:
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                      JSON_Schema_2020_12_Validation) &&
-           schema.defines("type") &&
+           schema.is_object() && schema.defines("type") &&
            schema.at("type").to_string() == "integer" &&
            schema.defines("minimum") && schema.defines("maximum") &&
            is_byte(schema.at("maximum").to_integer() -

@@ -10,6 +10,18 @@ trap clean EXIT
 "$1" lint --list --exclude blaze/valid_default --exclude blaze/valid_examples > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
+allof_false_simplify
+  When `allOf` contains a `false` branch, the schema is unsatisfiable
+
+anyof_false_simplify
+  An `anyOf` of a single `false` branch is unsatisfiable
+
+anyof_remove_false_schemas
+  The boolean schema `false` is guaranteed to never match in `anyOf`, as it is sufficient for any other branch to match
+
+anyof_true_simplify
+  An `anyOf` with a `true` or `{}` branch always succeeds
+
 comment_trim
   Comments should not contain leading or trailing whitespace
 
@@ -76,6 +88,9 @@ else_empty
 else_without_if
   The `else` keyword is meaningless without the presence of the `if` keyword
 
+empty_object_as_true
+  The empty schema `{}` accepts all values and is equivalent to the boolean schema `true`
+
 enum_to_const
   An `enum` of a single value can be expressed as `const`
 
@@ -135,6 +150,12 @@ non_applicable_type_specific_keywords
 
 not_false
   Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
+
+oneof_false_simplify
+  A `oneOf` of a single `false` branch is unsatisfiable
+
+oneof_to_anyof_disjoint_types
+  A `oneOf` where all branches have disjoint types can be safely converted to `anyOf`
 
 orphan_definitions
   Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
@@ -205,6 +226,9 @@ unnecessary_allof_ref_wrapper_modern
 unnecessary_allof_wrapper
   Keywords inside `allOf` that do not conflict with the parent schema can be elevated
 
+unsatisfiable_drop_validation
+  Do not place assertions or applicators next to an unsatisfiable negation
+
 unsatisfiable_in_place_applicator_type
   An in-place applicator branch that defines a `type` with no overlap with the parent `type` can never be satisfied
 
@@ -214,7 +238,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 68
+Number of rules: 76
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
