@@ -1,6 +1,7 @@
 class DescriptionTrim final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   DescriptionTrim()
       : SchemaTransformRule{
             "description_trim",

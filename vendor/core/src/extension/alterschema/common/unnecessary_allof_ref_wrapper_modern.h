@@ -1,6 +1,7 @@
 class UnnecessaryAllOfRefWrapperModern final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   UnnecessaryAllOfRefWrapperModern()
       : SchemaTransformRule{"unnecessary_allof_ref_wrapper_modern",
                             "Wrapping `$ref` in `allOf` was only necessary in "

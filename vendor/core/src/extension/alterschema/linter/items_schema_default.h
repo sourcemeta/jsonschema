@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ItemsSchemaDefault()
       : SchemaTransformRule{"items_schema_default",
                             "Setting the `items` keyword to the true schema "

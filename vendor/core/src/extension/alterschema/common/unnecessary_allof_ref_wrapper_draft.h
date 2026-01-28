@@ -1,6 +1,7 @@
 class UnnecessaryAllOfRefWrapperDraft final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   UnnecessaryAllOfRefWrapperDraft()
       : SchemaTransformRule{"unnecessary_allof_ref_wrapper_draft",
                             "Wrapping `$ref` in `allOf` is only necessary if "

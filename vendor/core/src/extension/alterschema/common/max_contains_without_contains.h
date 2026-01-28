@@ -1,6 +1,7 @@
 class MaxContainsWithoutContains final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   MaxContainsWithoutContains()
       : SchemaTransformRule{"max_contains_without_contains",
                             "The `maxContains` keyword is meaningless "

@@ -1,6 +1,7 @@
 class NonApplicableEnumValidationKeywords final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   NonApplicableEnumValidationKeywords()
       : SchemaTransformRule{
             "non_applicable_enum_validation_keywords",

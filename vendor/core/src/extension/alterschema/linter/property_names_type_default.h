@@ -1,6 +1,7 @@
 class PropertyNamesTypeDefault final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   PropertyNamesTypeDefault()
       : SchemaTransformRule{
             "property_names_type_default",

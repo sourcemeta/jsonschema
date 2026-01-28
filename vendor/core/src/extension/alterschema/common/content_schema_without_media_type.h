@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ContentSchemaWithoutMediaType()
       : SchemaTransformRule{
             "content_schema_without_media_type",

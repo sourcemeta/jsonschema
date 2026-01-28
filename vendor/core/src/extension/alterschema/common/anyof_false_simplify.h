@@ -1,6 +1,7 @@
 class AnyOfFalseSimplify final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   AnyOfFalseSimplify()
       : SchemaTransformRule{"anyof_false_simplify",
                             "An `anyOf` of a single `false` branch is "

@@ -1,6 +1,7 @@
 class DependenciesPropertyTautology final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   DependenciesPropertyTautology()
       : SchemaTransformRule{
             "dependencies_property_tautology",

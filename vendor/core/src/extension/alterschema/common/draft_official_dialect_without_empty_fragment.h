@@ -2,6 +2,7 @@ class DraftOfficialDialectWithoutEmptyFragment final
     : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   DraftOfficialDialectWithoutEmptyFragment()
       : SchemaTransformRule{"draft_official_dialect_without_empty_fragment",
                             "The official dialect URI of Draft 7 and older "

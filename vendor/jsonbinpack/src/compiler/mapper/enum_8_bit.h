@@ -2,6 +2,7 @@
 class Enum8Bit final : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   Enum8Bit() : sourcemeta::core::SchemaTransformRule{"enum_8_bit", ""} {};
 
   [[nodiscard]] auto

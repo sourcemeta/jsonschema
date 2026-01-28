@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ElseEmpty()
       : SchemaTransformRule{"else_empty",
                             "Setting the `else` keyword to the empty schema "

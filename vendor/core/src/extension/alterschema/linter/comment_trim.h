@@ -1,6 +1,7 @@
 class CommentTrim final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::false_type;
   CommentTrim()
       : SchemaTransformRule{
             "comment_trim",

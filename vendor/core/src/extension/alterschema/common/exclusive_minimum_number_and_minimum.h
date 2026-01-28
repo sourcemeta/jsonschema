@@ -1,6 +1,7 @@
 class ExclusiveMinimumNumberAndMinimum final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ExclusiveMinimumNumberAndMinimum()
       : SchemaTransformRule{
             "exclusive_minimum_number_and_minimum",

@@ -29,6 +29,7 @@ class SOURCEMETA_BLAZE_LINTER_EXPORT ValidExamples final
     : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ValidExamples(Compiler compiler);
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &,
                                const sourcemeta::core::JSON &,
@@ -63,6 +64,7 @@ class SOURCEMETA_BLAZE_LINTER_EXPORT ValidDefault final
     : public sourcemeta::core::SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ValidDefault(Compiler compiler);
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &,
                                const sourcemeta::core::JSON &,

@@ -1,6 +1,7 @@
 class DuplicateAnyOfBranches final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   DuplicateAnyOfBranches()
       : SchemaTransformRule{
             "duplicate_anyof_branches",

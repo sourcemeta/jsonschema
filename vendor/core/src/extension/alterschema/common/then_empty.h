@@ -4,6 +4,7 @@ private:
 
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   ThenEmpty()
       : SchemaTransformRule{"then_empty",
                             "Setting the `then` keyword to the empty schema "

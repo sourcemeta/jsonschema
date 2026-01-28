@@ -1,6 +1,7 @@
 class TopLevelDescription final : public SchemaTransformRule {
 public:
   using mutates = std::false_type;
+  using reframe_after_transform = std::false_type;
   TopLevelDescription()
       : SchemaTransformRule{
             "top_level_description",

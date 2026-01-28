@@ -1,6 +1,7 @@
 class MinContainsWithoutContains final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
+  using reframe_after_transform = std::true_type;
   MinContainsWithoutContains()
       : SchemaTransformRule{"min_contains_without_contains",
                             "The `minContains` keyword is meaningless "
