@@ -1,5 +1,6 @@
 class DuplicateRequiredValues final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DuplicateRequiredValues()
       : SchemaTransformRule{
             "duplicate_required_values",

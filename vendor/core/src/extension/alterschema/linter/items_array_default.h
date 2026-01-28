@@ -1,5 +1,6 @@
 class ItemsArrayDefault final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ItemsArrayDefault()
       : SchemaTransformRule{"items_array_default",
                             "Setting the `items` keyword to the empty array "

@@ -1,5 +1,6 @@
 class EnumToConst final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   EnumToConst()
       : SchemaTransformRule{
             "enum_to_const",

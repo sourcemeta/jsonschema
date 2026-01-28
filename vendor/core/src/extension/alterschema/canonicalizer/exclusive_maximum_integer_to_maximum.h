@@ -1,5 +1,6 @@
 class ExclusiveMaximumIntegerToMaximum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ExclusiveMaximumIntegerToMaximum()
       : SchemaTransformRule{
             "exclusive_maximum_integer_to_maximum",

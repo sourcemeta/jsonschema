@@ -1,5 +1,6 @@
 class MaxContainsCoveredByMaxItems final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MaxContainsCoveredByMaxItems()
       : SchemaTransformRule{
             "max_contains_covered_by_max_items",

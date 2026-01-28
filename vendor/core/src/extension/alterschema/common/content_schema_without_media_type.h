@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"contentSchema"};
 
 public:
+  using mutates = std::true_type;
   ContentSchemaWithoutMediaType()
       : SchemaTransformRule{
             "content_schema_without_media_type",

@@ -1,5 +1,6 @@
 class TopLevelExamples final : public SchemaTransformRule {
 public:
+  using mutates = std::false_type;
   TopLevelExamples()
       : SchemaTransformRule{
             "top_level_examples",

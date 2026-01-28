@@ -1,5 +1,6 @@
 class TypeUnionImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   TypeUnionImplicit()
       : SchemaTransformRule{
             "type_union_implicit",

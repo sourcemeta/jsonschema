@@ -1,5 +1,6 @@
 class DuplicateExamples final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DuplicateExamples()
       : SchemaTransformRule{
             "duplicate_examples",

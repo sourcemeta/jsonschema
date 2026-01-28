@@ -1,5 +1,6 @@
 class NoMetadata final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   NoMetadata()
       : SchemaTransformRule{"no_metadata",
                             "Annotations, comments, and unknown keywords have "

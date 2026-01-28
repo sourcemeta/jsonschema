@@ -1,5 +1,6 @@
 class UnknownKeywordsPrefix final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   UnknownKeywordsPrefix()
       : SchemaTransformRule{
             "unknown_keywords_prefix",

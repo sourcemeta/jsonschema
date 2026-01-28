@@ -1,5 +1,6 @@
 class EnumWithType final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   EnumWithType()
       : SchemaTransformRule{
             "enum_with_type",

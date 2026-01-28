@@ -8,6 +8,8 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/core/jsonschema.h>
 
+#include <type_traits> // std::true_type
+
 /// @defgroup linter Linter
 /// @brief A set of JSON Schema linter extensions powered by Blaze
 ///
@@ -26,6 +28,7 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_LINTER_EXPORT ValidExamples final
     : public sourcemeta::core::SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ValidExamples(Compiler compiler);
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &,
                                const sourcemeta::core::JSON &,
@@ -59,6 +62,7 @@ private:
 class SOURCEMETA_BLAZE_LINTER_EXPORT ValidDefault final
     : public sourcemeta::core::SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ValidDefault(Compiler compiler);
   [[nodiscard]] auto condition(const sourcemeta::core::JSON &,
                                const sourcemeta::core::JSON &,

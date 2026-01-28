@@ -1,5 +1,6 @@
 class PatternPropertiesDefault final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   PatternPropertiesDefault()
       : SchemaTransformRule{
             "pattern_properties_default",

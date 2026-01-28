@@ -1,5 +1,6 @@
 class ConstWithType final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ConstWithType()
       : SchemaTransformRule{
             "const_with_type",

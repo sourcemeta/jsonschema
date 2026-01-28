@@ -1,5 +1,6 @@
 class DropAllOfEmptySchemas final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DropAllOfEmptySchemas()
       : SchemaTransformRule{"drop_allof_empty_schemas",
                             "Empty schemas in `allOf` are redundant and can be "

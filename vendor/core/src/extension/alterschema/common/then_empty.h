@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"then"};
 
 public:
+  using mutates = std::true_type;
   ThenEmpty()
       : SchemaTransformRule{"then_empty",
                             "Setting the `then` keyword to the empty schema "

@@ -1,5 +1,6 @@
 class TopLevelTitle final : public SchemaTransformRule {
 public:
+  using mutates = std::false_type;
   TopLevelTitle()
       : SchemaTransformRule{
             "top_level_title",

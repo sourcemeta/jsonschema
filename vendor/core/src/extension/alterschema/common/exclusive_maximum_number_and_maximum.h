@@ -1,5 +1,6 @@
 class ExclusiveMaximumNumberAndMaximum final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   ExclusiveMaximumNumberAndMaximum()
       : SchemaTransformRule{
             "exclusive_maximum_number_and_maximum",

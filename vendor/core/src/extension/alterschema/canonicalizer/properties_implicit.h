@@ -1,5 +1,6 @@
 class PropertiesImplicit final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   PropertiesImplicit()
       : SchemaTransformRule{"properties_implicit",
                             "Every object has an implicit `properties` "

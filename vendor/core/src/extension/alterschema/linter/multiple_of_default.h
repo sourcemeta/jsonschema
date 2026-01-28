@@ -1,5 +1,6 @@
 class MultipleOfDefault final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MultipleOfDefault()
       : SchemaTransformRule{
             "multiple_of_default",

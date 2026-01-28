@@ -1,5 +1,6 @@
 class DraftRefSiblings final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   DraftRefSiblings()
       : SchemaTransformRule{"draft_ref_siblings",
                             "In Draft 7 and older dialects, keywords sibling "

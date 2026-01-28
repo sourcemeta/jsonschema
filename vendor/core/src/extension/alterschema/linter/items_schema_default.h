@@ -3,6 +3,7 @@ private:
   static inline const std::string KEYWORD{"items"};
 
 public:
+  using mutates = std::true_type;
   ItemsSchemaDefault()
       : SchemaTransformRule{"items_schema_default",
                             "Setting the `items` keyword to the true schema "

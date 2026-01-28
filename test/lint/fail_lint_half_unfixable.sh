@@ -10,8 +10,14 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "type": "string",
-  "enum": [ "foo" ]
+  "properties": {
+    "a": {
+      "description": " untrimmed description a "
+    },
+    "b": {
+      "description": " untrimmed description b "
+    }
+  }
 }
 EOF
 
@@ -33,7 +39,14 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 cat << 'EOF' > "$TMP/expected_fixed.json"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "enum": [ "foo" ]
+  "properties": {
+    "a": {
+      "description": "untrimmed description a"
+    },
+    "b": {
+      "description": "untrimmed description b"
+    }
+  }
 }
 EOF
 

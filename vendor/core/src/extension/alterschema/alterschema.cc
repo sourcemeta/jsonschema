@@ -29,10 +29,10 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
   }
 
 // Canonicalizer
-#include "canonicalizer/boolean_true.h"
 #include "canonicalizer/const_as_enum.h"
 #include "canonicalizer/exclusive_maximum_integer_to_maximum.h"
 #include "canonicalizer/exclusive_minimum_integer_to_minimum.h"
+#include "canonicalizer/items_implicit.h"
 #include "canonicalizer/max_contains_covered_by_max_items.h"
 #include "canonicalizer/min_items_given_min_contains.h"
 #include "canonicalizer/min_items_implicit.h"
@@ -48,6 +48,10 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "canonicalizer/type_union_implicit.h"
 
 // Common
+#include "common/allof_false_simplify.h"
+#include "common/anyof_false_simplify.h"
+#include "common/anyof_remove_false_schemas.h"
+#include "common/anyof_true_simplify.h"
 #include "common/const_with_type.h"
 #include "common/content_media_type_without_encoding.h"
 #include "common/content_schema_without_media_type.h"
@@ -62,6 +66,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/duplicate_required_values.h"
 #include "common/else_empty.h"
 #include "common/else_without_if.h"
+#include "common/empty_object_as_true.h"
 #include "common/enum_with_type.h"
 #include "common/equal_numeric_bounds_to_enum.h"
 #include "common/exclusive_maximum_number_and_maximum.h"
@@ -77,6 +82,8 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/non_applicable_enum_validation_keywords.h"
 #include "common/non_applicable_type_specific_keywords.h"
 #include "common/not_false.h"
+#include "common/oneof_false_simplify.h"
+#include "common/oneof_to_anyof_disjoint_types.h"
 #include "common/orphan_definitions.h"
 #include "common/required_properties_in_properties.h"
 #include "common/single_type_array.h"
@@ -87,6 +94,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/unnecessary_allof_ref_wrapper_draft.h"
 #include "common/unnecessary_allof_ref_wrapper_modern.h"
 #include "common/unnecessary_allof_wrapper.h"
+#include "common/unsatisfiable_drop_validation.h"
 #include "common/unsatisfiable_in_place_applicator_type.h"
 
 // Linter
@@ -138,9 +146,16 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<ContentSchemaWithoutMediaType>();
   bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
   bundle.add<NonApplicableTypeSpecificKeywords>();
+  bundle.add<AnyOfRemoveFalseSchemas>();
+  bundle.add<AnyOfTrueSimplify>();
   bundle.add<DuplicateAllOfBranches>();
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<UnsatisfiableInPlaceApplicatorType>();
+  bundle.add<AllOfFalseSimplify>();
+  bundle.add<AnyOfFalseSimplify>();
+  bundle.add<OneOfFalseSimplify>();
+  bundle.add<OneOfToAnyOfDisjointTypes>();
+  bundle.add<UnsatisfiableDropValidation>();
   bundle.add<ElseWithoutIf>();
   bundle.add<IfWithoutThenElse>();
   bundle.add<IgnoredMetaschema>();
@@ -172,7 +187,6 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<OrphanDefinitions>();
 
   if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<BooleanTrue>();
     bundle.add<ConstAsEnum>();
     bundle.add<EqualNumericBoundsToConst>();
     bundle.add<ExclusiveMaximumIntegerToMaximum>();
@@ -188,6 +202,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<MinPropertiesImplicit>();
     bundle.add<MultipleOfImplicit>();
     bundle.add<PropertiesImplicit>();
+    bundle.add<ItemsImplicit>();
   }
 
   if (mode == AlterSchemaMode::Linter) {
@@ -224,6 +239,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<UnnecessaryAllOfRefWrapperDraft>();
   bundle.add<UnnecessaryAllOfWrapper>();
   bundle.add<DropAllOfEmptySchemas>();
+  bundle.add<EmptyObjectAsTrue>();
 }
 
 } // namespace sourcemeta::core

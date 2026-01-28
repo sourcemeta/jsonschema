@@ -1,5 +1,6 @@
 class MinItemsGivenMinContains final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinItemsGivenMinContains()
       : SchemaTransformRule{
             "min_items_given_min_contains",

@@ -1,5 +1,6 @@
 class OrphanDefinitions final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   OrphanDefinitions()
       : SchemaTransformRule{
             "orphan_definitions",

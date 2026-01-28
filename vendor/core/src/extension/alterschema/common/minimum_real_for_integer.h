@@ -1,5 +1,6 @@
 class MinimumRealForInteger final : public SchemaTransformRule {
 public:
+  using mutates = std::true_type;
   MinimumRealForInteger()
       : SchemaTransformRule{
             "minimum_real_for_integer",
