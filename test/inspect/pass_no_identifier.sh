@@ -35,6 +35,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : <NONE>
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/\$defs
     Type              : Static
@@ -47,6 +48,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (SUBSCHEMA) URI: file://$(realpath "$TMP")/schema.json#/\$defs/string
     Type              : Static
@@ -59,6 +61,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : yes
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/\$defs/string/type
     Type              : Static
@@ -71,6 +74,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : /\$defs/string
     Property Name     : no
+    Orphan            : yes
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/\$ref
     Type              : Static
@@ -83,6 +87,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/\$schema
     Type              : Static
@@ -95,6 +100,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/description
     Type              : Static
@@ -107,6 +113,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: file://$(realpath "$TMP")/schema.json#/title
     Type              : Static
@@ -119,6 +126,7 @@ cat << EOF > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (REFERENCE) ORIGIN: /\$ref
     Type              : Static

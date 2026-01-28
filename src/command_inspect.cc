@@ -103,6 +103,12 @@ auto print_frame(std::ostream &stream,
       stream << "    Property Name     : no\n";
     }
 
+    if (location.second.orphan) {
+      stream << "    Orphan            : yes\n";
+    } else {
+      stream << "    Orphan            : no\n";
+    }
+
     if (std::next(iterator) != frame.locations().cend()) {
       stream << "\n";
     }

@@ -39,6 +39,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : <NONE>
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: https://example.com#/$defs
     Type              : Static
@@ -51,6 +52,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (SUBSCHEMA) URI: https://example.com#/$defs/string
     Type              : Static
@@ -63,6 +65,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : yes
 
 (POINTER) URI: https://example.com#/$defs/string/type
     Type              : Static
@@ -75,6 +78,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            : /$defs/string
     Property Name     : no
+    Orphan            : yes
 
 (POINTER) URI: https://example.com#/$id
     Type              : Static
@@ -87,6 +91,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (POINTER) URI: https://example.com#/$ref
     Type              : Static
@@ -99,6 +104,7 @@ cat << 'EOF' > "$TMP/expected.txt"
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
     Parent            :
     Property Name     : no
+    Orphan            : no
 
 (REFERENCE) ORIGIN: /$ref
     Type              : Static
