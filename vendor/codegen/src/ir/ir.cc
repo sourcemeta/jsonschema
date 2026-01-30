@@ -46,7 +46,10 @@ auto compile(const sourcemeta::core::JSON &input,
   // (4) Convert every subschema into a code generation object
   // --------------------------------------------------------------------------
 
-  std::unordered_set<sourcemeta::core::WeakPointer> visited;
+  std::unordered_set<sourcemeta::core::WeakPointer,
+                     sourcemeta::core::WeakPointer::Hasher,
+                     sourcemeta::core::WeakPointer::Comparator>
+      visited;
   IRResult result;
   for (const auto &[key, location] : frame.locations()) {
     if (location.type !=

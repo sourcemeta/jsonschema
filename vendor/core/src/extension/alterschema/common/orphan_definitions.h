@@ -14,8 +14,8 @@ public:
             const sourcemeta::core::Vocabularies &vocabularies,
             const sourcemeta::core::SchemaFrame &frame,
             const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::core::SchemaWalker &walker,
+            const sourcemeta::core::SchemaResolver &resolver) const
       -> sourcemeta::core::SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
@@ -30,35 +30,11 @@ public:
                                schema.defines("definitions")};
     ONLY_CONTINUE_IF(has_defs || has_definitions);
 
-    bool has_external_to_defs{false};
-    bool has_external_to_definitions{false};
-    std::unordered_set<std::string_view> outside_referenced_defs;
-    std::unordered_set<std::string_view> outside_referenced_definitions;
-
-    for (const auto &[key, reference] : frame.references()) {
-      const auto destination_location{frame.traverse(reference.destination)};
-      if (destination_location.has_value()) {
-        const auto &destination_pointer{destination_location->get().pointer};
-        if (has_defs) {
-          process_reference(key.second, destination_pointer, location.pointer,
-                            "$defs", has_external_to_defs,
-                            outside_referenced_defs);
-        }
-
-        if (has_definitions) {
-          process_reference(key.second, destination_pointer, location.pointer,
-                            "definitions", has_external_to_definitions,
-                            outside_referenced_definitions);
-        }
-      }
-    }
-
     std::vector<Pointer> orphans;
-    collect_orphans(schema, "$defs", has_defs, has_external_to_defs,
-                    outside_referenced_defs, orphans);
-    collect_orphans(schema, "definitions", has_definitions,
-                    has_external_to_definitions, outside_referenced_definitions,
-                    orphans);
+    collect_orphans(frame, walker, resolver, location.pointer, schema, "$defs",
+                    has_defs, orphans);
+    collect_orphans(frame, walker, resolver, location.pointer, schema,
+                    "definitions", has_definitions, orphans);
 
     ONLY_CONTINUE_IF(!orphans.empty());
     return APPLIES_TO_POINTERS(std::move(orphans));
@@ -73,55 +49,72 @@ public:
       schema.at(container).erase(pointer.at(1).to_property());
     }
 
-    remove_empty_container(schema, "$defs");
-    remove_empty_container(schema, "definitions");
+    if (schema.defines("$defs") && schema.at("$defs").empty()) {
+      schema.erase("$defs");
+    }
+
+    if (schema.defines("definitions") && schema.at("definitions").empty()) {
+      schema.erase("definitions");
+    }
   }
 
 private:
-  static auto process_reference(
-      const WeakPointer &source_pointer, const WeakPointer &destination_pointer,
-      const WeakPointer &prefix, std::string_view container, bool &has_external,
-      std::unordered_set<std::string_view> &referenced) -> void {
-    if (!destination_pointer.starts_with(prefix, container) ||
-        destination_pointer.size() <= prefix.size() + 1) {
+  static auto has_reachable_reference_through(
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver,
+      const WeakPointer &pointer) -> bool {
+    for (const auto &reference : frame.references()) {
+      const auto destination{frame.traverse(reference.second.destination)};
+      if (!destination.has_value()) {
+        continue;
+      }
+
+      if (!destination->get().pointer.starts_with(pointer)) {
+        continue;
+      }
+
+      const auto &source_pointer{reference.first.second};
+      if (source_pointer.empty()) {
+        return true;
+      }
+
+      const auto source_location{frame.traverse(
+          source_pointer.initial(),
+          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
+      if (source_location.has_value() &&
+          frame.is_reachable(source_location->get(), walker, resolver)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static auto collect_orphans(const sourcemeta::core::SchemaFrame &frame,
+                              const sourcemeta::core::SchemaWalker &walker,
+                              const sourcemeta::core::SchemaResolver &resolver,
+                              const WeakPointer &prefix, const JSON &schema,
+                              const JSON::String &container,
+                              const bool has_container,
+                              std::vector<Pointer> &orphans) -> void {
+    if (!has_container || !schema.at(container).is_object()) {
       return;
     }
 
-    const auto &entry_token{destination_pointer.at(prefix.size() + 1)};
-    if (entry_token.is_property()) {
-      const auto &entry_name{entry_token.to_property()};
-      if (!source_pointer.starts_with(prefix, container)) {
-        has_external = true;
-        referenced.insert(entry_name);
-      } else if (!source_pointer.starts_with(prefix, container, entry_name)) {
-        referenced.insert(entry_name);
+    for (const auto &entry : schema.at(container).as_object()) {
+      const WeakPointer entry_pointer{std::cref(container),
+                                      std::cref(entry.first)};
+      const auto absolute_entry_pointer{prefix.concat(entry_pointer)};
+      const auto entry_location{frame.traverse(
+          absolute_entry_pointer,
+          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
+      if (entry_location.has_value() &&
+          !frame.is_reachable(entry_location->get(), walker, resolver) &&
+          !has_reachable_reference_through(frame, walker, resolver,
+                                           absolute_entry_pointer)) {
+        orphans.push_back(Pointer{container, entry.first});
       }
-    }
-  }
-
-  static auto
-  collect_orphans(const JSON &schema, const JSON::String &container,
-                  const bool has_container, const bool has_external_reference,
-                  const std::unordered_set<std::string_view> &referenced,
-                  std::vector<Pointer> &orphans) -> void {
-    if (has_container) {
-      const auto &maybe_object{schema.at(container)};
-      if (maybe_object.is_object()) {
-        // If no external references to container, all definitions are orphans
-        // Otherwise, only unreferenced definitions are orphans
-        for (const auto &entry : maybe_object.as_object()) {
-          if (!has_external_reference || !referenced.contains(entry.first)) {
-            orphans.push_back(Pointer{container, entry.first});
-          }
-        }
-      }
-    }
-  }
-
-  static auto remove_empty_container(JSON &schema, const JSON::String &name)
-      -> void {
-    if (schema.defines(name) && schema.at(name).empty()) {
-      schema.erase(name);
     }
   }
 };

@@ -172,6 +172,12 @@ auto TypeScript::operator()(const IRImpossible &entry) -> void {
                << " = never;\n";
 }
 
+auto TypeScript::operator()(const IRAny &entry) -> void {
+  this->output << "export type "
+               << mangle(this->prefix, entry.pointer, entry.symbol, this->cache)
+               << " = unknown;\n";
+}
+
 auto TypeScript::operator()(const IRArray &entry) -> void {
   this->output << "export type "
                << mangle(this->prefix, entry.pointer, entry.symbol, this->cache)
