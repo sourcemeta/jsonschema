@@ -24,6 +24,7 @@ public:
   auto operator()(const IREnumeration &entry) -> void;
   auto operator()(const IRObject &entry) -> void;
   auto operator()(const IRImpossible &entry) -> void;
+  auto operator()(const IRAny &entry) -> void;
   auto operator()(const IRArray &entry) -> void;
   auto operator()(const IRReference &entry) -> void;
   auto operator()(const IRTuple &entry) -> void;

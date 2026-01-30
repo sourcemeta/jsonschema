@@ -236,6 +236,22 @@ auto compile(const sourcemeta::core::JSON &schema,
       continue;
     }
 
+    auto reference_origin{frame.traverse(reference.first.second)};
+    assert(reference_origin.has_value());
+    while (reference_origin->get().type ==
+               sourcemeta::core::SchemaFrame::LocationType::Pointer &&
+           reference_origin->get().parent.has_value()) {
+      reference_origin = frame.traverse(reference_origin->get().parent.value());
+      assert(reference_origin.has_value());
+    }
+
+    // Skip unreachable targets
+    if (reference_origin->get().type !=
+            sourcemeta::core::SchemaFrame::LocationType::Pointer &&
+        !frame.is_reachable(reference_origin->get(), walker, resolver)) {
+      continue;
+    }
+
     assert(target_types.contains(reference.second.destination));
     const auto &[needs_name,
                  needs_instance]{target_types.at(reference.second.destination)};

@@ -47,7 +47,9 @@ auto check_rules(
     const sourcemeta::core::SchemaTransformer::Callback &callback,
     const sourcemeta::core::JSON::String &exclude_keyword,
     const bool non_mutating_only) -> std::pair<bool, std::uint8_t> {
-  std::unordered_set<sourcemeta::core::Pointer> visited;
+  std::unordered_set<sourcemeta::core::Pointer,
+                     sourcemeta::core::Pointer::Hasher>
+      visited;
   bool result{true};
   std::size_t subschema_count{0};
   std::size_t subschema_failures{0};
@@ -213,7 +215,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
                     default_id);
     }
 
-    std::unordered_set<Pointer> visited;
+    std::unordered_set<Pointer, Pointer::Hasher> visited;
     bool applied{false};
 
     for (const auto &entry : frame.locations()) {
