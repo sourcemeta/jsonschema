@@ -594,15 +594,22 @@ auto sourcemeta::core::wrap(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::core::SchemaFrame &frame,
     const sourcemeta::core::SchemaFrame::Location &location,
-    const sourcemeta::core::SchemaResolver &resolver)
-    -> sourcemeta::core::JSON {
+    const sourcemeta::core::SchemaResolver &resolver,
+    sourcemeta::core::WeakPointer &base) -> sourcemeta::core::JSON {
+  assert(frame.mode() == SchemaFrame::Mode::References);
   assert(location.type != SchemaFrame::LocationType::Pointer);
+
   const auto &pointer{location.pointer};
-  assert(try_get(schema, pointer));
   if (pointer.empty()) {
-    return schema;
+    auto copy = schema;
+    if (copy.is_object()) {
+      copy.assign("$schema", JSON{location.dialect});
+    }
+
+    return copy;
   }
 
+  assert(try_get(schema, pointer));
   const auto has_internal_references{
       std::any_of(frame.references().cbegin(), frame.references().cend(),
                   [&pointer](const auto &reference) {
@@ -611,12 +618,12 @@ auto sourcemeta::core::wrap(
 
   if (!has_internal_references) {
     auto subschema{get(schema, pointer)};
-    subschema.assign("$schema", JSON{JSON::String{location.dialect}});
+    subschema.assign("$schema", JSON{location.dialect});
     return subschema;
   }
 
   auto copy = schema;
-  copy.assign("$schema", JSON{JSON::String{location.dialect}});
+  copy.assign("$schema", JSON{location.dialect});
 
   auto result{JSON::make_object()};
   // JSON Schema 2020-12 is the first dialect that truly supports
@@ -666,6 +673,8 @@ auto sourcemeta::core::wrap(
                  .recompose()});
   }
 
+  static const JSON::String REF{"$ref"};
+  base.push_back(REF);
   return result;
 }
 
