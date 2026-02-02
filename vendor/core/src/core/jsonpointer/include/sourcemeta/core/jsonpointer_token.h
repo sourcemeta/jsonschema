@@ -243,7 +243,14 @@ public:
     if (this->as_property != other.as_property) {
       return false;
     } else if (this->as_property) {
-      return this->to_property() == other.to_property();
+      if constexpr (requires { hasher.is_perfect(this->hash); }) {
+        if (hasher.is_perfect(this->hash) && hasher.is_perfect(other.hash)) {
+          return this->hash == other.hash;
+        }
+      }
+
+      return this->hash == other.hash &&
+             this->to_property() == other.to_property();
     } else {
       return this->index == other.index;
     }
