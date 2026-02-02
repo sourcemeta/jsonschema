@@ -422,17 +422,27 @@ auto wrap(std::string_view identifier) -> JSON;
 ///   "items": { "type": "string" }
 /// })JSON");
 ///
+/// sourcemeta::core::SchemaFrame frame{
+///     sourcemeta::core::SchemaFrame::Mode::References};
+/// frame.analyse(document, sourcemeta::core::schema_walker,
+///               sourcemeta::core::schema_resolver);
+///
+/// const auto location{frame.traverse(
+///     sourcemeta::core::WeakPointer{"items"},
+///     sourcemeta::core::SchemaFrame::LocationType::Subschema)};
+///
+/// sourcemeta::core::WeakPointer base;
 /// const sourcemeta::core::JSON result =
-///   sourcemeta::core::wrap(document, { "items" },
-///     sourcemeta::core::schema_resolver);
+///   sourcemeta::core::wrap(document, frame, location.value().get(),
+///     sourcemeta::core::schema_resolver, base);
 ///
 /// sourcemeta::core::prettify(result, std::cerr);
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_JSONSCHEMA_EXPORT
-auto wrap(const JSON &schema, const Pointer &pointer,
-          const SchemaResolver &resolver, std::string_view default_dialect = "")
-    -> JSON;
+auto wrap(const JSON &schema, const SchemaFrame &frame,
+          const SchemaFrame::Location &location, const SchemaResolver &resolver,
+          WeakPointer &base) -> JSON;
 
 /// @ingroup jsonschema
 ///

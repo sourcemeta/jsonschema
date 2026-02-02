@@ -94,6 +94,9 @@ struct Tweaks {
   bool properties_reorder{true};
   /// Inline jump targets with fewer instructions than this threshold
   std::size_t target_inline_threshold{50};
+  /// Assume the schema is already bundled with no pending unresolved external
+  /// references
+  bool assume_bundled{false};
 };
 
 /// @ingroup compiler

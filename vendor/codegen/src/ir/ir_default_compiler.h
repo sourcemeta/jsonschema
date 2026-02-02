@@ -37,6 +37,16 @@ auto handle_impossible(const sourcemeta::core::JSON &,
        .symbol = symbol(frame, location)}};
 }
 
+auto handle_any(const sourcemeta::core::JSON &,
+                const sourcemeta::core::SchemaFrame &frame,
+                const sourcemeta::core::SchemaFrame::Location &location,
+                const sourcemeta::core::Vocabularies &,
+                const sourcemeta::core::SchemaResolver &,
+                const sourcemeta::core::JSON &) -> IRAny {
+  return IRAny{{.pointer = sourcemeta::core::to_pointer(location.pointer),
+                .symbol = symbol(frame, location)}};
+}
+
 auto handle_string(const sourcemeta::core::JSON &schema,
                    const sourcemeta::core::SchemaFrame &frame,
                    const sourcemeta::core::SchemaFrame::Location &location,
@@ -450,9 +460,13 @@ auto default_compiler(const sourcemeta::core::JSON &schema,
   // following shapes
 
   if (subschema.is_boolean()) {
-    assert(!subschema.to_boolean());
-    return handle_impossible(schema, frame, location, vocabularies, resolver,
-                             subschema);
+    if (subschema.to_boolean()) {
+      return handle_any(schema, frame, location, vocabularies, resolver,
+                        subschema);
+    } else {
+      return handle_impossible(schema, frame, location, vocabularies, resolver,
+                               subschema);
+    }
   } else if (subschema.defines("type")) {
     const auto &type_value{subschema.at("type")};
     if (!type_value.is_string()) {
