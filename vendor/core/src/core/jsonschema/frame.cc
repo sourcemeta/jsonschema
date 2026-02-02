@@ -1035,7 +1035,20 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
   }
 
   // A schema is standalone if all references can be resolved within itself
-  if (this->standalone()) {
+  this->standalone_ =
+      std::ranges::all_of(this->references_, [&](const auto &reference) {
+        assert(!reference.first.second.empty());
+        assert(reference.first.second.back().is_property());
+        // TODO: This check might need to be more elaborate given
+        // https://github.com/sourcemeta/core/issues/1390
+        return reference.first.second.back().to_property() == "$schema" ||
+               this->locations_.contains({SchemaReferenceType::Static,
+                                          reference.second.destination}) ||
+               this->locations_.contains({SchemaReferenceType::Dynamic,
+                                          reference.second.destination});
+      });
+
+  if (this->standalone_) {
     // Find all dynamic anchors
     // Values are pointers to full URIs in locations_
     std::unordered_map<JSON::String, std::vector<const JSON::String *>>
@@ -1113,18 +1126,8 @@ auto SchemaFrame::reference(const SchemaReferenceType type,
   return std::nullopt;
 }
 
-auto SchemaFrame::standalone() const -> bool {
-  return std::ranges::all_of(this->references_, [&](const auto &reference) {
-    assert(!reference.first.second.empty());
-    assert(reference.first.second.back().is_property());
-    // TODO: This check might need to be more elaborate given
-    // https://github.com/sourcemeta/core/issues/1390
-    return reference.first.second.back().to_property() == "$schema" ||
-           this->locations_.contains(
-               {SchemaReferenceType::Static, reference.second.destination}) ||
-           this->locations_.contains(
-               {SchemaReferenceType::Dynamic, reference.second.destination});
-  });
+auto SchemaFrame::standalone() const noexcept -> bool {
+  return this->standalone_;
 }
 
 auto SchemaFrame::root() const noexcept -> const JSON::String & {
@@ -1392,6 +1395,7 @@ auto SchemaFrame::reset() -> void {
   this->root_.clear();
   this->locations_.clear();
   this->references_.clear();
+  this->standalone_ = false;
 }
 
 auto SchemaFrame::populate_pointer_to_location() const -> void {

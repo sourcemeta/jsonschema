@@ -618,7 +618,10 @@ auto sourcemeta::core::wrap(
 
   if (!has_internal_references) {
     auto subschema{get(schema, pointer)};
-    subschema.assign("$schema", JSON{location.dialect});
+    if (subschema.is_object()) {
+      subschema.assign("$schema", JSON{location.dialect});
+    }
+
     return subschema;
   }
 

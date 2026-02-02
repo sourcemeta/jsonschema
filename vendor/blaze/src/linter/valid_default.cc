@@ -56,17 +56,18 @@ auto ValidDefault::condition(
     default_id = "";
   }
 
-  const auto subschema{sourcemeta::core::wrap(
-      root, sourcemeta::core::to_pointer(location.pointer), resolver,
-      location.dialect)};
+  sourcemeta::core::WeakPointer base;
+  const auto subschema{
+      sourcemeta::core::wrap(root, frame, location, resolver, base)};
+  // To avoid bundling twice in vain
+  Tweaks tweaks{.assume_bundled = frame.standalone()};
   const auto schema_template{compile(subschema, walker, resolver,
-                                     this->compiler_, Mode::FastValidation,
-                                     location.dialect, default_id)};
+                                     this->compiler_, Mode::Exhaustive,
+                                     location.dialect, default_id, tweaks)};
 
   const auto &instance{schema.at("default")};
   Evaluator evaluator;
-  const std::string ref{"$ref"};
-  SimpleOutput output{instance, {std::cref(ref)}};
+  SimpleOutput output{instance, base};
   const auto result{
       evaluator.validate(schema_template, instance, std::ref(output))};
   if (result) {

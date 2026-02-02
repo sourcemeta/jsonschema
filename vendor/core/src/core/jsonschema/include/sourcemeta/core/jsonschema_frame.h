@@ -163,7 +163,7 @@ public:
       -> std::optional<std::reference_wrapper<const ReferencesEntry>>;
 
   /// Check whether the analysed schema has no external references
-  [[nodiscard]] auto standalone() const -> bool;
+  [[nodiscard]] auto standalone() const noexcept -> bool;
 
   /// Get the root schema identifier (empty if none)
   [[nodiscard]] auto root() const noexcept -> const JSON::String &;
@@ -268,6 +268,7 @@ private:
   mutable std::unordered_map<std::reference_wrapper<const WeakPointer>, bool,
                              WeakPointer::Hasher, WeakPointer::Comparator>
       reachability_;
+  bool standalone_{false};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
