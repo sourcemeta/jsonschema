@@ -444,9 +444,14 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                                                paths.cend())
               .size() == paths.size()));
   std::vector<InternalEntry> subschema_entries;
-  std::map<WeakPointer, CacheSubschema> subschemas;
-  std::map<WeakPointer, std::vector<JSON::String>> base_uris;
-  std::map<WeakPointer, std::vector<std::string_view>> base_dialects;
+  std::unordered_map<WeakPointer, CacheSubschema, WeakPointer::Hasher>
+      subschemas;
+  std::unordered_map<WeakPointer, std::vector<JSON::String>,
+                     WeakPointer::Hasher>
+      base_uris;
+  std::unordered_map<WeakPointer, std::vector<std::string_view>,
+                     WeakPointer::Hasher>
+      base_dialects;
 
   for (const auto &path : paths) {
     // Passing paths that overlap is undefined behavior. No path should

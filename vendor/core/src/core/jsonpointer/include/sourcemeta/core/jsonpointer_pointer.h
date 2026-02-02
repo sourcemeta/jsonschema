@@ -744,21 +744,30 @@ public:
       const auto &last{pointer.at(size - 1)};
 
       return size +
-             (first.is_property()
-                  ? static_cast<std::size_t>(first.property_hash().a)
-                  : first.to_index()) +
-             (middle.is_property()
-                  ? static_cast<std::size_t>(middle.property_hash().a)
-                  : middle.to_index()) +
-             (last.is_property()
-                  ? static_cast<std::size_t>(last.property_hash().a)
-                  : last.to_index());
+             (first.is_property() ? property_hash(first.property_hash())
+                                  : first.to_index()) +
+             (middle.is_property() ? property_hash(middle.property_hash())
+                                   : middle.to_index()) +
+             (last.is_property() ? property_hash(last.property_hash())
+                                 : last.to_index());
     }
 
     auto operator()(
         const std::reference_wrapper<const GenericPointer<PropertyT, Hash>>
             &reference) const noexcept -> std::size_t {
       return (*this)(reference.get());
+    }
+
+  private:
+    static auto property_hash(const typename Hash::hash_type &hash) noexcept
+        -> std::size_t {
+#if defined(__SIZEOF_INT128__)
+      const auto *parts =
+          reinterpret_cast<const std::uint64_t *>(&hash.a); // NOLINT
+      return parts[0] ^ parts[1];
+#else
+      return hash.a ^ hash.b;
+#endif
     }
   };
 
