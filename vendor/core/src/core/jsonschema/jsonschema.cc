@@ -590,23 +590,33 @@ auto sourcemeta::core::wrap(const std::string_view identifier)
   return result;
 }
 
-auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
-                            const sourcemeta::core::Pointer &pointer,
-                            const sourcemeta::core::SchemaResolver &resolver,
-                            std::string_view default_dialect)
+auto sourcemeta::core::wrap(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaFrame &frame,
+    const sourcemeta::core::SchemaFrame::Location &location,
+    const sourcemeta::core::SchemaResolver &resolver)
     -> sourcemeta::core::JSON {
+  assert(location.type != SchemaFrame::LocationType::Pointer);
+  const auto &pointer{location.pointer};
   assert(try_get(schema, pointer));
   if (pointer.empty()) {
     return schema;
   }
 
-  auto copy = schema;
-  const auto effective_dialect{dialect(copy, default_dialect)};
-  if (!effective_dialect.empty()) {
-    copy.assign("$schema", JSON{effective_dialect});
-  } else {
-    throw SchemaUnknownBaseDialectError();
+  const auto has_internal_references{
+      std::any_of(frame.references().cbegin(), frame.references().cend(),
+                  [&pointer](const auto &reference) {
+                    return reference.first.second.starts_with(pointer);
+                  })};
+
+  if (!has_internal_references) {
+    auto subschema{get(schema, pointer)};
+    subschema.assign("$schema", JSON{JSON::String{location.dialect}});
+    return subschema;
   }
+
+  auto copy = schema;
+  copy.assign("$schema", JSON{JSON::String{location.dialect}});
 
   auto result{JSON::make_object()};
   // JSON Schema 2020-12 is the first dialect that truly supports
@@ -622,13 +632,13 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
   // other schemas whose top-level identifiers are relative URIs don't
   // get affected. Otherwise, we would cause unintended base resolution.
   constexpr std::string_view WRAPPER_IDENTIFIER{"__sourcemeta-core-wrap__"};
-  const auto maybe_id{identify(copy, resolver, default_dialect)};
+  const auto maybe_id{identify(copy, resolver, location.dialect)};
   const auto id{maybe_id.empty() ? WRAPPER_IDENTIFIER : maybe_id};
 
   URI uri{id};
 
   try {
-    reidentify(copy, id, resolver, default_dialect);
+    reidentify(copy, id, resolver, location.dialect);
 
     // Otherwise we will get an error with the `WRAPPER_IDENTIFIER`, which will
     // be confusing to end users
@@ -647,9 +657,13 @@ auto sourcemeta::core::wrap(const sourcemeta::core::JSON &schema,
     uri.fragment(to_string(pointer));
     result.assign_assume_new("$ref", JSON{uri.recompose()});
   } else {
+    static const JSON::String DEFS{"$defs"};
+    static const JSON::String SCHEMA{"schema"};
     result.assign_assume_new(
         "$ref",
-        JSON{to_uri(Pointer{"$defs", "schema"}.concat(pointer)).recompose()});
+        JSON{to_uri(WeakPointer{std::cref(DEFS), std::cref(SCHEMA)}.concat(
+                        pointer))
+                 .recompose()});
   }
 
   return result;
