@@ -281,6 +281,11 @@ auto compile(const sourcemeta::core::JSON &schema,
       continue;
     }
 
+    // Skip unreachable dynamic anchors
+    if (!frame.is_reachable(entry.second, walker, resolver)) {
+      continue;
+    }
+
     targets_map.emplace(std::make_tuple(entry.first.first,
                                         std::string_view{entry.first.second},
                                         false),
@@ -317,6 +322,12 @@ auto compile(const sourcemeta::core::JSON &schema,
       if (entry.second.type !=
               sourcemeta::core::SchemaFrame::LocationType::Anchor ||
           entry.first.first != sourcemeta::core::SchemaReferenceType::Dynamic) {
+        continue;
+      }
+
+      // Skip unreachable dynamic anchors
+      if (!context.frame.is_reachable(entry.second, context.walker,
+                                      context.resolver)) {
         continue;
       }
 
