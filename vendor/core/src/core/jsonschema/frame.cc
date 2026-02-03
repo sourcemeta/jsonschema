@@ -1483,6 +1483,22 @@ auto SchemaFrame::populate_reachability(const SchemaWalker &walker,
   // (2) Build a reverse mapping from reference destinations to their sources
   // ---------------------------------------------------------------------------
 
+  std::unordered_map<std::string_view, std::vector<const WeakPointer *>>
+      dynamic_anchors_by_fragment;
+  for (const auto &location : this->locations_) {
+    if (location.first.first == SchemaReferenceType::Dynamic &&
+        location.second.type == LocationType::Anchor) {
+      const auto &uri{location.first.second};
+      const auto hash_pos{uri.rfind('#')};
+      if (hash_pos != std::string::npos) {
+        std::string_view fragment{uri.data() + hash_pos + 1,
+                                  uri.size() - hash_pos - 1};
+        dynamic_anchors_by_fragment[fragment].push_back(
+            &location.second.pointer);
+      }
+    }
+  }
+
   std::vector<std::pair<const WeakPointer *, const WeakPointer *>>
       reference_destinations;
   reference_destinations.reserve(this->references_.size());
@@ -1493,21 +1509,25 @@ auto SchemaFrame::populate_reachability(const SchemaWalker &walker,
       continue;
     }
 
-    const WeakPointer *destination_pointer{nullptr};
+    if (reference.first.first == SchemaReferenceType::Dynamic &&
+        reference.second.fragment.has_value()) {
+      const auto &fragment{reference.second.fragment.value()};
+      const auto match{dynamic_anchors_by_fragment.find(fragment)};
+      if (match != dynamic_anchors_by_fragment.cend()) {
+        for (const auto *destination_pointer : match->second) {
+          reference_destinations.emplace_back(&source_pointer,
+                                              destination_pointer);
+        }
+      }
+
+      continue;
+    }
+
     const auto destination_location{this->locations_.find(
         {SchemaReferenceType::Static, reference.second.destination})};
     if (destination_location != this->locations_.cend()) {
-      destination_pointer = &destination_location->second.pointer;
-    } else {
-      const auto dynamic_destination{this->locations_.find(
-          {SchemaReferenceType::Dynamic, reference.second.destination})};
-      if (dynamic_destination != this->locations_.cend()) {
-        destination_pointer = &dynamic_destination->second.pointer;
-      }
-    }
-
-    if (destination_pointer != nullptr) {
-      reference_destinations.emplace_back(&source_pointer, destination_pointer);
+      reference_destinations.emplace_back(
+          &source_pointer, &destination_location->second.pointer);
     }
   }
 
