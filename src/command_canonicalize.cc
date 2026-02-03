@@ -14,7 +14,8 @@ namespace {
 auto transformer_callback_noop(
     const sourcemeta::core::Pointer &, const std::string_view,
     const std::string_view,
-    const sourcemeta::core::SchemaTransformRule::Result &) -> void {}
+    const sourcemeta::core::SchemaTransformRule::Result &, const bool) -> void {
+}
 } // namespace
 
 auto sourcemeta::jsonschema::canonicalize(

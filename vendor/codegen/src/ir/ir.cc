@@ -30,7 +30,8 @@ auto compile(const sourcemeta::core::JSON &input,
                         sourcemeta::core::AlterSchemaMode::Canonicalizer);
   [[maybe_unused]] const auto canonicalized{canonicalizer.apply(
       schema, walker, resolver,
-      [](const auto &, const auto, const auto, const auto &) { assert(false); },
+      [](const auto &, const auto, const auto, const auto &,
+         [[maybe_unused]] const auto applied) { assert(applied); },
       default_dialect, default_id)};
   assert(canonicalized.first);
 

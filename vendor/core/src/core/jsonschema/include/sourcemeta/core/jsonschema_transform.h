@@ -253,9 +253,10 @@ public:
   /// - The name of the rule
   /// - The message of the rule
   /// - The rule evaluation result
-  using Callback = std::function<void(const Pointer &, const std::string_view,
-                                      const std::string_view,
-                                      const SchemaTransformRule::Result &)>;
+  /// - Whether the rule is mutable (on check) or was mutated (on apply)
+  using Callback = std::function<void(
+      const Pointer &, const std::string_view, const std::string_view,
+      const SchemaTransformRule::Result &, const bool)>;
 
   /// Apply the bundle of rules to a schema
   [[nodiscard]] auto
