@@ -37,6 +37,7 @@ test "$CODE" = "1" || exit 1
 
 # After --fix elevates the allOf wrapper, the path changes
 cat << EOF > "$TMP/expected.txt"
+..
 error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
   at identifier file://$(realpath "$TMP")/schema.json#/additionalProperties/x-this-is-invalid/\$defs/test
   at file path $(realpath "$TMP")/schema.json

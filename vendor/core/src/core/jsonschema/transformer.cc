@@ -87,7 +87,8 @@ auto check_rules(
                                      exclude_keyword)};
       if (outcome.applies) {
         subschema_failed = true;
-        callback(entry_pointer, rule->name(), rule->message(), outcome);
+        callback(entry_pointer, rule->name(), rule->message(), outcome,
+                 mutates);
       }
     }
 
@@ -273,6 +274,7 @@ auto SchemaTransformer::apply(JSON &schema, const SchemaWalker &walker,
         }
 
         rule->transform(current, outcome);
+        callback(entry_pointer, rule->name(), rule->message(), outcome, true);
 
         applied = true;
 

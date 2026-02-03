@@ -38,6 +38,7 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
+.
 error: Could not autofix the schema without breaking its internal references
   at file path $(realpath "$TMP")/schema.json
   at location "/properties/bar/\$ref"
