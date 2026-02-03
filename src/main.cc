@@ -78,14 +78,17 @@ Commands:
        Format the input schemas in-place or check they are formatted.
        This command does not support YAML schemas yet.
 
-   lint [schemas-or-directories...] [--fix/-f] [--extension/-e <extension>]
+   lint [schemas-or-directories...] [--fix/-f] [--format/-m]
+        [--keep-ordering/-k] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
+       Use --format/-m with --fix to format the output even when there
+       are no linting issues.
+       Use --keep-ordering/-k with --format to preserve key order.
        Use --list/-l to print a summary of all enabled rules.
-       Use --indentation/-n to keep indentation when auto-fixing
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -146,6 +149,8 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "lint") {
     app.flag("fix", {"f"});
+    app.flag("format", {"m"});
+    app.flag("keep-ordering", {"k"});
     app.flag("list", {"l"});
     app.option("extension", {"e"});
     app.option("exclude", {"x"});

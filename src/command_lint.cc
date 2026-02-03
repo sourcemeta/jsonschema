@@ -7,7 +7,7 @@
 #include <sourcemeta/blaze/linter.h>
 
 #include <cstdlib>  // EXIT_FAILURE
-#include <fstream>  // std::ofstream
+#include <fstream>  // std::ofstream, std::ifstream
 #include <iostream> // std::cerr, std::cout
 #include <numeric>  // std::accumulate
 #include <sstream>  // std::ostringstream
@@ -181,6 +181,18 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     return;
   }
 
+  const bool format_output{options.contains("format")};
+  const bool keep_ordering{options.contains("keep-ordering")};
+
+  if (format_output && !options.contains("fix")) {
+    throw OptionConflictError{"The --format option requires --fix to be set"};
+  }
+
+  if (keep_ordering && !format_output) {
+    throw OptionConflictError{
+        "The --keep-ordering option requires --format to be set"};
+  }
+
   bool result{true};
   auto errors_array = sourcemeta::core::JSON::make_array();
   std::vector<std::uint8_t> scores;
@@ -255,7 +267,25 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           result = false;
         }
 
-        if (copy != entry.second) {
+        if (format_output) {
+          if (!keep_ordering) {
+            sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                     custom_resolver, dialect);
+          }
+
+          std::ostringstream expected;
+          sourcemeta::core::prettify(copy, expected, indentation);
+          expected << "\n";
+
+          std::ifstream current_stream{entry.first};
+          std::ostringstream current;
+          current << current_stream.rdbuf();
+
+          if (current.str() != expected.str()) {
+            std::ofstream output{entry.first};
+            output << expected.str();
+          }
+        } else if (copy != entry.second) {
           std::ofstream output{entry.first};
           sourcemeta::core::prettify(copy, output, indentation);
           output << "\n";

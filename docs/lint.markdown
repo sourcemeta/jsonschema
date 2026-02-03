@@ -3,7 +3,7 @@ Linting
 
 ```sh
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
-  [--json/-j] [--verbose/-v] [--debug/-g]
+  [--format/-m] [--keep-ordering/-k] [--json/-j] [--verbose/-v] [--debug/-g]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
@@ -29,6 +29,12 @@ automatically fix many of them.
 > specifications, you should make use of both linters together!
 
 **The `--fix/-f` option is not supported when passing YAML schemas.**
+
+**The `--format/-m` option requires `--fix/-f` to be set and is not supported
+for YAML schemas.** When `--format/-m` is set, the output file is always
+written with proper formatting (equivalent to running `fmt`), even if there
+are no lint issues to fix. Use `--keep-ordering/-k` with `--format/-m` to
+preserve key ordering during formatting.
 
 > [!NOTE]
 > There are linting rules that require compiling and validating instance
@@ -173,10 +179,16 @@ jsonschema lint path/to/my/schema.json --fix
 jsonschema lint path/to/my/schema.json --fix --indentation 4
 ```
 
-### Fix lint warnings on a single schema while preserving keyword ordering
+### Fix lint warnings and format the schema
 
 ```sh
-jsonschema lint path/to/my/schema.json --fix --keep-ordering
+jsonschema lint path/to/my/schema.json --fix --format
+```
+
+### Fix lint warnings, format, but preserve keyword ordering
+
+```sh
+jsonschema lint path/to/my/schema.json --fix --format --keep-ordering
 ```
 
 ### Print a summary of all enabled rules
