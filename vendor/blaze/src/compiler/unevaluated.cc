@@ -7,6 +7,9 @@ using namespace sourcemeta::core;
 using namespace sourcemeta::blaze;
 using Known = Vocabularies::Known;
 
+static const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
+static const std::string UNEVALUATED_ITEMS{"unevaluatedItems"};
+
 auto find_adjacent_dependencies(
     const JSON::String &current, const JSON &schema, const SchemaFrame &frame,
     const SchemaWalker &walker, const SchemaResolver &resolver,
@@ -158,52 +161,57 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
       continue;
     }
 
+    const bool has_unevaluated_properties{
+        subschema.defines("unevaluatedProperties")};
+    const bool has_unevaluated_items{subschema.defines("unevaluatedItems")};
+    if (!has_unevaluated_properties && !has_unevaluated_items) {
+      continue;
+    }
+
     const auto subschema_vocabularies{
         frame.vocabularies(entry.second, resolver)};
-    for (const auto &pair : subschema.as_object()) {
-      const auto keyword_uri{
-          frame.uri(entry.second, make_weak_pointer(pair.first))};
-      SchemaUnevaluatedEntry unevaluated;
 
+    if (has_unevaluated_properties) {
       if ((subschema_vocabularies.contains(
                Known::JSON_Schema_2020_12_Unevaluated) &&
            subschema_vocabularies.contains(
-               Known::JSON_Schema_2020_12_Applicator)) &&
-          // NOLINTNEXTLINE(bugprone-branch-clone)
-          pair.first == "unevaluatedProperties") {
+               Known::JSON_Schema_2020_12_Applicator)) ||
+          subschema_vocabularies.contains(
+              Known::JSON_Schema_2019_09_Applicator)) {
+        SchemaUnevaluatedEntry unevaluated;
         find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
+            "unevaluatedProperties", schema, frame, walker, resolver,
             {"properties", "patternProperties", "additionalProperties",
              "unevaluatedProperties"},
             entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
-      } else if ((subschema_vocabularies.contains(
-                      Known::JSON_Schema_2020_12_Unevaluated) &&
-                  subschema_vocabularies.contains(
-                      Known::JSON_Schema_2020_12_Applicator)) &&
-                 pair.first == "unevaluatedItems") {
+        result.emplace(
+            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_PROPERTIES)),
+            std::move(unevaluated));
+      }
+    }
+
+    if (has_unevaluated_items) {
+      SchemaUnevaluatedEntry unevaluated;
+      if (subschema_vocabularies.contains(
+              Known::JSON_Schema_2020_12_Unevaluated) &&
+          subschema_vocabularies.contains(
+              Known::JSON_Schema_2020_12_Applicator)) {
         find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
+            "unevaluatedItems", schema, frame, walker, resolver,
             {"prefixItems", "items", "contains", "unevaluatedItems"},
             entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
+        result.emplace(
+            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_ITEMS)),
+            std::move(unevaluated));
       } else if (subschema_vocabularies.contains(
-                     Known::JSON_Schema_2019_09_Applicator) &&
-                 pair.first == "unevaluatedProperties") {
+                     Known::JSON_Schema_2019_09_Applicator)) {
         find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
-            {"properties", "patternProperties", "additionalProperties",
-             "unevaluatedProperties"},
-            entry.second, entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
-      } else if (subschema_vocabularies.contains(
-                     Known::JSON_Schema_2019_09_Applicator) &&
-                 pair.first == "unevaluatedItems") {
-        find_adjacent_dependencies(
-            pair.first, schema, frame, walker, resolver,
+            "unevaluatedItems", schema, frame, walker, resolver,
             {"items", "additionalItems", "unevaluatedItems"}, entry.second,
             entry.second, true, unevaluated);
-        result.emplace(keyword_uri, std::move(unevaluated));
+        result.emplace(
+            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_ITEMS)),
+            std::move(unevaluated));
       }
     }
   }

@@ -30,11 +30,14 @@ public:
                                schema.defines("definitions")};
     ONLY_CONTINUE_IF(has_defs || has_definitions);
 
+    const auto base{frame.traverse(frame.root())};
+    ONLY_CONTINUE_IF(base.has_value());
+
     std::vector<Pointer> orphans;
-    collect_orphans(frame, walker, resolver, location.pointer, schema, "$defs",
-                    has_defs, orphans);
-    collect_orphans(frame, walker, resolver, location.pointer, schema,
-                    "definitions", has_definitions, orphans);
+    collect_orphans(frame, base->get(), walker, resolver, location.pointer,
+                    schema, "$defs", has_defs, orphans);
+    collect_orphans(frame, base->get(), walker, resolver, location.pointer,
+                    schema, "definitions", has_definitions, orphans);
 
     ONLY_CONTINUE_IF(!orphans.empty());
     return APPLIES_TO_POINTERS(std::move(orphans));
@@ -61,6 +64,7 @@ public:
 private:
   static auto has_reachable_reference_through(
       const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &base,
       const sourcemeta::core::SchemaWalker &walker,
       const sourcemeta::core::SchemaResolver &resolver,
       const WeakPointer &pointer) -> bool {
@@ -83,7 +87,7 @@ private:
           source_pointer.initial(),
           sourcemeta::core::SchemaFrame::LocationType::Subschema)};
       if (source_location.has_value() &&
-          frame.is_reachable(source_location->get(), walker, resolver)) {
+          frame.is_reachable(base, source_location->get(), walker, resolver)) {
         return true;
       }
     }
@@ -91,13 +95,14 @@ private:
     return false;
   }
 
-  static auto collect_orphans(const sourcemeta::core::SchemaFrame &frame,
-                              const sourcemeta::core::SchemaWalker &walker,
-                              const sourcemeta::core::SchemaResolver &resolver,
-                              const WeakPointer &prefix, const JSON &schema,
-                              const JSON::String &container,
-                              const bool has_container,
-                              std::vector<Pointer> &orphans) -> void {
+  static auto
+  collect_orphans(const sourcemeta::core::SchemaFrame &frame,
+                  const sourcemeta::core::SchemaFrame::Location &base,
+                  const sourcemeta::core::SchemaWalker &walker,
+                  const sourcemeta::core::SchemaResolver &resolver,
+                  const WeakPointer &prefix, const JSON &schema,
+                  const JSON::String &container, const bool has_container,
+                  std::vector<Pointer> &orphans) -> void {
     if (!has_container || !schema.at(container).is_object()) {
       return;
     }
@@ -110,8 +115,8 @@ private:
           absolute_entry_pointer,
           sourcemeta::core::SchemaFrame::LocationType::Subschema)};
       if (entry_location.has_value() &&
-          !frame.is_reachable(entry_location->get(), walker, resolver) &&
-          !has_reachable_reference_through(frame, walker, resolver,
+          !frame.is_reachable(base, entry_location->get(), walker, resolver) &&
+          !has_reachable_reference_through(frame, base, walker, resolver,
                                            absolute_entry_pointer)) {
         orphans.push_back(Pointer{container, entry.first});
       }

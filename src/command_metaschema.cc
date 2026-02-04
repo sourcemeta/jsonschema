@@ -65,8 +65,8 @@ auto sourcemeta::jsonschema::metaschema(
       if (!cache.contains(std::string{dialect})) {
         const auto metaschema_template{sourcemeta::blaze::compile(
             bundled, sourcemeta::core::schema_walker, custom_resolver,
-            sourcemeta::blaze::default_schema_compiler, frame,
-            sourcemeta::blaze::Mode::Exhaustive, default_dialect_option)};
+            sourcemeta::blaze::default_schema_compiler, frame, frame.root(),
+            sourcemeta::blaze::Mode::Exhaustive)};
         cache.insert({std::string{dialect}, metaschema_template});
       }
 

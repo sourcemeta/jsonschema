@@ -154,31 +154,27 @@ auto compile(const sourcemeta::core::JSON &schema,
              const sourcemeta::core::SchemaWalker &walker,
              const sourcemeta::core::SchemaResolver &resolver,
              const Compiler &compiler,
-             const sourcemeta::core::SchemaFrame &frame, const Mode mode,
-             const std::string_view default_dialect,
-             const std::string_view default_id,
+             const sourcemeta::core::SchemaFrame &frame,
+             const std::string_view entrypoint, const Mode mode,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
   const auto effective_tweaks{tweaks.value_or(Tweaks{})};
 
-  ///////////////////////////////////////////////////////////////////
-  // (1) Determine the root frame entry
-  ///////////////////////////////////////////////////////////////////
+  const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
+  if (!maybe_entrypoint_location.has_value()) {
+    throw CompilerInvalidEntryPoint{
+        entrypoint, "The given entrypoint URI does not exist in the schema"};
+  }
 
-  const auto base_dialect{
-      sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
-  const auto identifier{
-      base_dialect.has_value()
-          ? sourcemeta::core::identify(schema, base_dialect.value(), default_id)
-          : std::string_view{}};
-  const std::string base{sourcemeta::core::URI::canonicalize(identifier)};
-  assert(frame.locations().contains(
-      {sourcemeta::core::SchemaReferenceType::Static, base}));
-  const auto root_frame_entry{frame.locations().at(
-      {sourcemeta::core::SchemaReferenceType::Static, base})};
+  const auto &entrypoint_location{maybe_entrypoint_location->get()};
+  if (entrypoint_location.type ==
+      sourcemeta::core::SchemaFrame::LocationType::Pointer) {
+    throw CompilerInvalidEntryPoint{
+        entrypoint, "The given entrypoint URI is not a valid subschema"};
+  }
 
   ///////////////////////////////////////////////////////////////////
-  // (2) Determine all the schema resources in the schema
+  // (1) Determine all the schema resources in the schema
   ///////////////////////////////////////////////////////////////////
 
   std::vector<std::string> resources;
@@ -198,7 +194,7 @@ auto compile(const sourcemeta::core::JSON &schema,
          std::set<std::string>(resources.cbegin(), resources.cend()).size());
 
   ///////////////////////////////////////////////////////////////////
-  // (3) Check if the schema relies on dynamic scopes
+  // (2) Check if the schema relies on dynamic scopes
   ///////////////////////////////////////////////////////////////////
 
   bool uses_dynamic_scopes{false};
@@ -213,7 +209,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   ///////////////////////////////////////////////////////////////////
-  // (4) Plan which static references we will precompile
+  // (3) Plan which static references we will precompile
   ///////////////////////////////////////////////////////////////////
 
   std::unordered_map<std::string_view, std::pair<bool, bool>> target_types;
@@ -224,8 +220,8 @@ auto compile(const sourcemeta::core::JSON &schema,
       std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
       targets_map;
   targets_map.emplace(
-      std::make_tuple(sourcemeta::core::SchemaReferenceType::Static,
-                      std::string_view{frame.root()}, false),
+      std::make_tuple(sourcemeta::core::SchemaReferenceType::Static, entrypoint,
+                      false),
       std::make_pair(0, nullptr));
 
   for (const auto &reference : frame.references()) {
@@ -248,7 +244,8 @@ auto compile(const sourcemeta::core::JSON &schema,
     // Skip unreachable targets
     if (reference_origin->get().type !=
             sourcemeta::core::SchemaFrame::LocationType::Pointer &&
-        !frame.is_reachable(reference_origin->get(), walker, resolver)) {
+        !frame.is_reachable(entrypoint_location, reference_origin->get(),
+                            walker, resolver)) {
       continue;
     }
 
@@ -282,7 +279,8 @@ auto compile(const sourcemeta::core::JSON &schema,
     }
 
     // Skip unreachable dynamic anchors
-    if (!frame.is_reachable(entry.second, walker, resolver)) {
+    if (!frame.is_reachable(entrypoint_location, entry.second, walker,
+                            resolver)) {
       continue;
     }
 
@@ -293,7 +291,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   ///////////////////////////////////////////////////////////////////
-  // (5) Build the global compilation context
+  // (4) Build the global compilation context
   ///////////////////////////////////////////////////////////////////
 
   auto unevaluated{
@@ -312,7 +310,7 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .targets = std::move(targets_map)};
 
   ///////////////////////////////////////////////////////////////////
-  // (6) Build labels map for dynamic anchors
+  // (5) Build labels map for dynamic anchors
   ///////////////////////////////////////////////////////////////////
 
   std::vector<std::pair<std::size_t, std::size_t>> labels_map;
@@ -326,8 +324,8 @@ auto compile(const sourcemeta::core::JSON &schema,
       }
 
       // Skip unreachable dynamic anchors
-      if (!context.frame.is_reachable(entry.second, context.walker,
-                                      context.resolver)) {
+      if (!context.frame.is_reachable(entrypoint_location, entry.second,
+                                      context.walker, context.resolver)) {
         continue;
       }
 
@@ -352,7 +350,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   ///////////////////////////////////////////////////////////////////
-  // (7) Compile targets for static references
+  // (6) Compile targets for static references
   ///////////////////////////////////////////////////////////////////
 
   std::vector<Instructions> compiled_targets;
@@ -397,7 +395,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   ///////////////////////////////////////////////////////////////////
-  // (8) Postprocess compiled targets
+  // (7) Postprocess compiled targets
   ///////////////////////////////////////////////////////////////////
 
   if (mode == Mode::FastValidation) {
@@ -405,12 +403,12 @@ auto compile(const sourcemeta::core::JSON &schema,
   }
 
   ///////////////////////////////////////////////////////////////////
-  // (9) Return final template
+  // (8) Return final template
   ///////////////////////////////////////////////////////////////////
 
   const bool track{
       context.mode != Mode::FastValidation ||
-      requires_evaluation(context, root_frame_entry.pointer) ||
+      requires_evaluation(context, entrypoint_location.pointer) ||
       // TODO: This expression should go away if we start properly compiling
       // `unevaluatedItems` like we compile `unevaluatedProperties`
       std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
@@ -428,6 +426,7 @@ auto compile(const sourcemeta::core::JSON &schema,
              const Compiler &compiler, const Mode mode,
              const std::string_view default_dialect,
              const std::string_view default_id,
+             const std::string_view entrypoint,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
   const auto effective_tweaks{tweaks.value_or(Tweaks{})};
@@ -436,8 +435,9 @@ auto compile(const sourcemeta::core::JSON &schema,
     sourcemeta::core::SchemaFrame frame{
         sourcemeta::core::SchemaFrame::Mode::References};
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
-    return compile(schema, walker, resolver, compiler, frame, mode,
-                   default_dialect, default_id, tweaks);
+    return compile(schema, walker, resolver, compiler, frame,
+                   entrypoint.empty() ? frame.root() : entrypoint, mode,
+                   tweaks);
   } else {
     // Make sure the input schema is bundled, otherwise we won't be able to
     // resolve remote references here
@@ -447,8 +447,9 @@ auto compile(const sourcemeta::core::JSON &schema,
     sourcemeta::core::SchemaFrame frame{
         sourcemeta::core::SchemaFrame::Mode::References};
     frame.analyse(result, walker, resolver, default_dialect, default_id);
-    return compile(result, walker, resolver, compiler, frame, mode,
-                   default_dialect, default_id, tweaks);
+    return compile(result, walker, resolver, compiler, frame,
+                   entrypoint.empty() ? frame.root() : entrypoint, mode,
+                   tweaks);
   }
 }
 

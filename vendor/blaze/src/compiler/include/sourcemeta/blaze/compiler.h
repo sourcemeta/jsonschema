@@ -169,7 +169,9 @@ compile(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::SchemaWalker &walker,
         const sourcemeta::core::SchemaResolver &resolver,
         const Compiler &compiler, const Mode mode = Mode::FastValidation,
-        std::string_view default_dialect = "", std::string_view default_id = "",
+        const std::string_view default_dialect = "",
+        const std::string_view default_id = "",
+        const std::string_view entrypoint = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
@@ -181,14 +183,13 @@ compile(const sourcemeta::core::JSON &schema,
 /// behavior.
 ///
 /// Don't use this function unless you know what you are doing.
-auto SOURCEMETA_BLAZE_COMPILER_EXPORT
-compile(const sourcemeta::core::JSON &schema,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
-        const Compiler &compiler, const sourcemeta::core::SchemaFrame &frame,
-        const Mode mode = Mode::FastValidation,
-        std::string_view default_dialect = "", std::string_view default_id = "",
-        const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
+auto SOURCEMETA_BLAZE_COMPILER_EXPORT compile(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaWalker &walker,
+    const sourcemeta::core::SchemaResolver &resolver, const Compiler &compiler,
+    const sourcemeta::core::SchemaFrame &frame,
+    const std::string_view entrypoint, const Mode mode = Mode::FastValidation,
+    const std::optional<Tweaks> &tweaks = std::nullopt) -> Template;
 
 /// @ingroup compiler
 ///

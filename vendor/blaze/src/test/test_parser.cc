@@ -134,10 +134,10 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
   try {
     test_suite.schema_fast =
         compile(target_schema, walker, schema_resolver, compiler,
-                Mode::FastValidation, default_dialect, default_id, tweaks);
+                Mode::FastValidation, default_dialect, default_id, "", tweaks);
     test_suite.schema_exhaustive =
         compile(target_schema, walker, schema_resolver, compiler,
-                Mode::Exhaustive, default_dialect, default_id, tweaks);
+                Mode::Exhaustive, default_dialect, default_id, "", tweaks);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
         error.identifier() == test_suite.target) {

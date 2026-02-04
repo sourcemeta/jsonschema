@@ -37,8 +37,6 @@ auto get_precompiled_schema_template_path(
 auto get_schema_template(const sourcemeta::core::JSON &bundled,
                          const sourcemeta::core::SchemaResolver &resolver,
                          const sourcemeta::core::SchemaFrame &frame,
-                         const std::string_view default_dialect,
-                         const std::string_view default_id,
                          const bool fast_mode,
                          const sourcemeta::core::Options &options)
     -> sourcemeta::blaze::Template {
@@ -63,10 +61,9 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
 
   return sourcemeta::blaze::compile(
       bundled, sourcemeta::core::schema_walker, resolver,
-      sourcemeta::blaze::default_schema_compiler, frame,
+      sourcemeta::blaze::default_schema_compiler, frame, frame.root(),
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive,
-      default_dialect, default_id);
+                : sourcemeta::blaze::Mode::Exhaustive);
 }
 
 auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
@@ -234,8 +231,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const auto schema_template{[&]() {
     try {
-      return get_schema_template(bundled, custom_resolver, frame, dialect,
-                                 schema_default_id, fast_mode, options);
+      return get_schema_template(bundled, custom_resolver, frame, fast_mode,
+                                 options);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
