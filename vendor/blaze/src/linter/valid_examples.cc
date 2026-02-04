@@ -67,7 +67,7 @@ auto ValidExamples::condition(
   Tweaks tweaks{.assume_bundled = frame.standalone()};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::Exhaustive,
-                                     location.dialect, default_id, tweaks)};
+                                     location.dialect, default_id, "", tweaks)};
 
   Evaluator evaluator;
   std::size_t cursor{0};

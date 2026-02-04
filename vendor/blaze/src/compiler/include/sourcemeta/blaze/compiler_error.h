@@ -78,6 +78,28 @@ private:
   sourcemeta::core::Pointer schema_location_;
 };
 
+/// @ingroup jsonschema
+/// An error that represents an invalid compilation entrypoint
+class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInvalidEntryPoint
+    : public std::exception {
+public:
+  CompilerInvalidEntryPoint(const std::string_view entrypoint,
+                            const std::string_view message)
+      : identifier_{entrypoint}, message_{message} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+private:
+  std::string identifier_;
+  std::string message_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

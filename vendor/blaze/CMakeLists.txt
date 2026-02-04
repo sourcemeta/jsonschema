@@ -79,7 +79,6 @@ endif()
 
 if(PROJECT_IS_TOP_LEVEL)
   sourcemeta_target_clang_format(SOURCES
-    bindings/nodejs/src/*.cc bindings/nodejs/src/*.h
     contrib/*.cc
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
