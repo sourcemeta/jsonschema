@@ -10,7 +10,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...
   [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-  [--template/-m <template.json>] [--json/-j]
+  [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -182,4 +182,11 @@ jsonschema validate path/to/my/schema.json path/to/instances/ --extension .data.
 ```sh
 jsonschema validate path/to/my/schema.json path/to/instances/ \
   --ignore path/to/instances/drafts
+```
+
+### Validate a JSON instance against a specific subschema
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json \
+  --entrypoint '/$defs/MyType'
 ```

@@ -449,6 +449,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_FAILURE;
+  } catch (
+      const FileError<sourcemeta::blaze::CompilerInvalidEntryPoint> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr
+          << "\nUse the `inspect` command to find valid schema locations\n";
+    }
+
+    return EXIT_FAILURE;
   } catch (const FileError<sourcemeta::core::SchemaReferenceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
