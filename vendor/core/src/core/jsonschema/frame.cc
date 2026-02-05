@@ -1397,6 +1397,11 @@ auto SchemaFrame::reset() -> void {
   this->pointers_with_non_orphan_.clear();
   this->pointer_to_location_.clear();
   this->reachability_.clear();
+  this->references_by_destination_.clear();
+  this->location_members_children_.clear();
+  this->descendants_by_pointer_.clear();
+  this->potential_sources_by_location_.clear();
+  this->reachability_graph_.clear();
   this->root_.clear();
   this->locations_.clear();
   this->references_.clear();
@@ -1415,115 +1420,135 @@ auto SchemaFrame::populate_pointer_to_location() const -> void {
   }
 }
 
-// TODO: Find a way to split or simplify this monster while preserving
-// its performance?
-auto SchemaFrame::populate_reachability(const Location &base,
-                                        const SchemaWalker &walker,
-                                        const SchemaResolver &resolver) const
-    -> const ReachabilityCache & {
-  for (auto &entry : this->reachability_) {
-    if (entry.first == &base) {
-      return entry.second;
-    }
+auto SchemaFrame::populate_location_members(
+    const SchemaWalker &walker, const SchemaResolver &resolver) const -> void {
+  if (!this->location_members_children_.empty()) {
+    return;
   }
 
-  auto &cache =
-      this->reachability_.emplace_back(&base, ReachabilityCache{}).second;
+  this->populate_pointer_to_location();
 
-  // ---------------------------------------------------------------------------
-  // (1) Find all unreachable locations
-  // ---------------------------------------------------------------------------
-
-  if (this->pointers_with_non_orphan_.empty()) {
-    for (const auto &entry : this->locations_) {
-      if (entry.second.type != LocationType::Pointer && !entry.second.orphan) {
-        this->pointers_with_non_orphan_.insert(std::cref(entry.second.pointer));
-      }
+  for (const auto &entry : this->locations_) {
+    if (entry.second.type != LocationType::Subschema) {
+      continue;
+    }
+    if (!entry.second.parent.has_value()) {
+      continue;
+    }
+    const auto &parent_pointer{entry.second.parent.value()};
+    const auto relative{entry.second.pointer.slice(parent_pointer.size())};
+    if (relative.empty() || !relative.at(0).is_property()) {
+      continue;
+    }
+    const auto parent_location{this->traverse(parent_pointer)};
+    if (!parent_location.has_value()) {
+      continue;
+    }
+    const auto vocabs{this->vocabularies(parent_location->get(), resolver)};
+    const auto &keyword_result{walker(relative.at(0).to_property(), vocabs)};
+    if (keyword_result.type == SchemaKeywordType::LocationMembers) {
+      this->location_members_children_.insert(std::cref(entry.second.pointer));
     }
   }
+}
 
-  std::vector<const Location *> unreachable_locations;
+auto SchemaFrame::populate_descendants() const -> void {
+  if (!this->descendants_by_pointer_.empty()) {
+    return;
+  }
+
+  this->populate_pointer_to_location();
+
   for (const auto &entry : this->locations_) {
     if (entry.second.type == LocationType::Pointer) {
       continue;
     }
 
     const auto &pointer{entry.second.pointer};
-    auto cache_iter = cache.find(std::cref(pointer));
-    if (cache_iter != cache.end()) {
-      continue;
-    }
+    const auto *location{&entry.second};
 
-    bool is_reachable{false};
-    if (pointer == base.pointer) {
-      is_reachable = true;
-    } else if (pointer.starts_with(base.pointer)) {
-      is_reachable = base.orphan || this->pointers_with_non_orphan_.contains(
-                                        std::cref(pointer));
-    }
-
-    cache.emplace(std::cref(pointer), is_reachable);
-    if (!is_reachable) {
-      unreachable_locations.push_back(&entry.second);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // (2) Filter out descendants that cross a container boundary
-  // ---------------------------------------------------------------------------
-
-  if (base.orphan) {
-    std::vector<std::reference_wrapper<const WeakPointer>> nested_entries;
-    for (const auto &entry : this->locations_) {
-      if (entry.second.type != LocationType::Subschema) {
-        continue;
+    WeakPointer prefix;
+    for (std::size_t index = 0; index <= pointer.size(); ++index) {
+      auto prefix_iter = this->pointer_to_location_.find(std::cref(prefix));
+      if (prefix_iter != this->pointer_to_location_.end() &&
+          !prefix_iter->second.empty()) {
+        const auto &key_pointer{prefix_iter->second.front()->pointer};
+        this->descendants_by_pointer_[std::cref(key_pointer)].push_back(
+            location);
       }
-      const auto &pointer{entry.second.pointer};
-      if (pointer == base.pointer || !pointer.starts_with(base.pointer)) {
-        continue;
-      }
-      if (!entry.second.parent.has_value()) {
-        continue;
-      }
-      const auto &parent_pointer{entry.second.parent.value()};
-      const auto relative{pointer.slice(parent_pointer.size())};
-      if (relative.empty() || !relative.at(0).is_property()) {
-        continue;
-      }
-      const auto parent_location{this->traverse(parent_pointer)};
-      if (!parent_location.has_value()) {
-        continue;
-      }
-      const auto vocabularies{
-          this->vocabularies(parent_location->get(), resolver)};
-      const auto &keyword_result{
-          walker(relative.at(0).to_property(), vocabularies)};
-      if (keyword_result.type == SchemaKeywordType::LocationMembers) {
-        nested_entries.push_back(std::cref(pointer));
-      }
-    }
-
-    for (const auto &entry : this->locations_) {
-      if (entry.second.type == LocationType::Pointer) {
-        continue;
-      }
-      auto cache_iter = cache.find(std::cref(entry.second.pointer));
-      if (cache_iter == cache.end() || !cache_iter->second) {
-        continue;
-      }
-      for (const auto &nested : nested_entries) {
-        if (entry.second.pointer.starts_with(nested.get())) {
-          cache_iter->second = false;
-          unreachable_locations.push_back(&entry.second);
-          break;
+      if (index < pointer.size()) {
+        const auto &token{pointer.at(index)};
+        if (token.is_property()) {
+          prefix.emplace_back(token.to_property(), token.property_hash());
+        } else {
+          prefix.push_back(token.to_index());
         }
       }
     }
   }
+}
 
-  // ---------------------------------------------------------------------------
-  // (3) Build a reverse mapping from reference destinations to their sources
-  // ---------------------------------------------------------------------------
+auto SchemaFrame::populate_potential_sources(
+    const SchemaWalker &walker, const SchemaResolver &resolver) const -> void {
+  if (!this->potential_sources_by_location_.empty()) {
+    return;
+  }
+
+  this->populate_reference_graph();
+  this->populate_location_members(walker, resolver);
+
+  for (const auto &entry : this->locations_) {
+    if (entry.second.type == LocationType::Pointer) {
+      continue;
+    }
+
+    const auto &pointer{entry.second.pointer};
+    const auto *location{&entry.second};
+    std::vector<PotentialSource> sources;
+
+    WeakPointer ancestor = pointer;
+    bool first_iteration{true};
+    while (first_iteration || !ancestor.empty()) {
+      auto destination_iterator =
+          this->references_by_destination_.find(std::cref(ancestor));
+      if (destination_iterator != this->references_by_destination_.end()) {
+        bool crosses{false};
+        if (ancestor != pointer) {
+          for (const auto &boundary_ref : this->location_members_children_) {
+            const auto &boundary{boundary_ref.get()};
+            if (pointer.starts_with(boundary) &&
+                !ancestor.starts_with(boundary)) {
+              crosses = true;
+              break;
+            }
+          }
+        }
+
+        for (const auto *source_pointer : destination_iterator->second) {
+          sources.push_back(
+              PotentialSource{.source_pointer = source_pointer,
+                              .source_parent = source_pointer->initial(),
+                              .crosses = crosses});
+        }
+      }
+
+      if (ancestor.empty()) {
+        break;
+      }
+      ancestor = ancestor.initial();
+      first_iteration = false;
+    }
+
+    if (!sources.empty()) {
+      this->potential_sources_by_location_[location] = std::move(sources);
+    }
+  }
+}
+
+auto SchemaFrame::populate_reference_graph() const -> void {
+  if (!this->references_by_destination_.empty()) {
+    return;
+  }
 
   std::unordered_map<std::string_view, std::vector<const WeakPointer *>>
       dynamic_anchors_by_fragment;
@@ -1573,192 +1598,153 @@ auto SchemaFrame::populate_reachability(const Location &base,
     }
   }
 
-  std::unordered_map<std::reference_wrapper<const WeakPointer>,
-                     std::vector<const WeakPointer *>, WeakPointer::Hasher,
-                     WeakPointer::Comparator>
-      references_by_destination;
   for (const auto &[source, destination] : reference_destinations) {
-    references_by_destination[std::cref(*destination)].push_back(source);
+    this->references_by_destination_[std::cref(*destination)].push_back(source);
+  }
+}
+
+auto SchemaFrame::populate_reachability_graph(
+    const SchemaWalker &walker, const SchemaResolver &resolver) const -> void {
+  if (!this->reachability_graph_.empty()) {
+    return;
   }
 
-  // ---------------------------------------------------------------------------
-  // (4) Precompute which references could make each orphan reachable
-  // ---------------------------------------------------------------------------
-
-  std::unordered_set<WeakPointer, WeakPointer::Hasher> needed_pointers;
-  for (const auto *unreachable_location : unreachable_locations) {
-    needed_pointers.insert(unreachable_location->pointer);
-    const Location *loc{unreachable_location};
-    while (loc != nullptr && loc->parent.has_value()) {
-      auto [iter, inserted] = needed_pointers.insert(loc->parent.value());
-      if (!inserted) {
-        break;
-      }
-      loc = nullptr;
-      for (const auto &entry : this->locations_) {
-        if (entry.second.pointer == *iter) {
-          loc = &entry.second;
-          break;
-        }
-      }
-    }
-  }
+  this->populate_pointer_to_location();
+  this->populate_location_members(walker, resolver);
+  this->populate_reference_graph();
 
   for (const auto &entry : this->locations_) {
-    if (needed_pointers.contains(entry.second.pointer)) {
-      this->pointer_to_location_[std::cref(entry.second.pointer)].push_back(
-          &entry.second);
+    if (entry.second.pointer.empty()) {
+      continue;
+    }
+
+    const auto parent_pointer{entry.second.pointer.initial()};
+    auto parent_iterator =
+        this->pointer_to_location_.find(std::cref(parent_pointer));
+    if (parent_iterator == this->pointer_to_location_.end()) {
+      continue;
+    }
+
+    for (const Location *parent_location : parent_iterator->second) {
+      this->reachability_graph_[parent_location].push_back(
+          ReachabilityEdge{.target = &entry.second,
+                           .orphan_context_only = entry.second.orphan,
+                           .is_reference = false});
     }
   }
 
-  struct PotentialSource {
-    const WeakPointer *source_pointer;
-    bool crosses;
-  };
-  struct PotentialReach {
-    const Location *location;
-    std::vector<PotentialSource> potential_sources;
-  };
-  std::vector<PotentialReach> unreachable_with_sources;
-  unreachable_with_sources.reserve(unreachable_locations.size());
+  for (const auto &[destination_reference, sources] :
+       this->references_by_destination_) {
+    auto destination_locations_iterator =
+        this->pointer_to_location_.find(destination_reference);
+    if (destination_locations_iterator == this->pointer_to_location_.end()) {
+      continue;
+    }
 
-  std::unordered_map<SchemaBaseDialect, Vocabularies> vocabularies_cache;
-
-  for (const auto *unreachable_location : unreachable_locations) {
-    const auto &pointer{unreachable_location->pointer};
-    PotentialReach entry{.location = unreachable_location,
-                         .potential_sources = {}};
-
-    WeakPointer ancestor = pointer;
-    bool first_iteration{true};
-    while (first_iteration || !ancestor.empty()) {
-      auto destination_iterator =
-          references_by_destination.find(std::cref(ancestor));
-      if (destination_iterator != references_by_destination.end()) {
-        bool crosses{false};
-        if (ancestor != pointer) {
-          const Location *check_location{unreachable_location};
-          while (check_location != nullptr) {
-            if (check_location->pointer == ancestor) {
-              break;
-            }
-
-            if (!check_location->parent.has_value()) {
-              break;
-            }
-
-            const auto parent_location{
-                this->traverse(check_location->parent.value())};
-            if (!parent_location.has_value()) {
-              break;
-            }
-
-            const auto relative{check_location->pointer.slice(
-                check_location->parent.value().size())};
-            if (!relative.empty() && relative.at(0).is_property()) {
-              const auto &parent_loc{parent_location->get()};
-              auto vocab_iterator =
-                  vocabularies_cache.find(parent_loc.base_dialect);
-              if (vocab_iterator == vocabularies_cache.end()) {
-                auto [inserted_iterator, inserted] = vocabularies_cache.emplace(
-                    parent_loc.base_dialect,
-                    this->vocabularies(parent_loc, resolver));
-                vocab_iterator = inserted_iterator;
-              }
-
-              const auto &keyword_result{
-                  walker(relative.at(0).to_property(), vocab_iterator->second)};
-              if (keyword_result.type == SchemaKeywordType::LocationMembers) {
-                crosses = true;
-                break;
-              }
-            }
-
-            check_location = &parent_location->get();
-          }
-        }
-
-        for (const auto *source_pointer : destination_iterator->second) {
-          entry.potential_sources.push_back(PotentialSource{
-              .source_pointer = source_pointer, .crosses = crosses});
-        }
-      }
-
-      if (ancestor.empty()) {
+    const Location *destination_location{nullptr};
+    for (const auto *location : destination_locations_iterator->second) {
+      if (location->type != LocationType::Pointer) {
+        destination_location = location;
         break;
       }
-      ancestor = ancestor.initial();
-      first_iteration = false;
     }
 
-    if (!entry.potential_sources.empty()) {
-      unreachable_with_sources.push_back(std::move(entry));
+    if (!destination_location &&
+        !destination_locations_iterator->second.empty()) {
+      destination_location = destination_locations_iterator->second.front();
+    }
+
+    if (!destination_location) {
+      continue;
+    }
+
+    for (const auto *source_pointer : sources) {
+      if (source_pointer->empty()) {
+        continue;
+      }
+
+      const auto source_parent_pointer{source_pointer->initial()};
+      auto source_parent_iterator =
+          this->pointer_to_location_.find(std::cref(source_parent_pointer));
+      if (source_parent_iterator == this->pointer_to_location_.end()) {
+        continue;
+      }
+
+      for (const Location *source_parent_location :
+           source_parent_iterator->second) {
+        this->reachability_graph_[source_parent_location].push_back(
+            ReachabilityEdge{.target = destination_location,
+                             .orphan_context_only = false,
+                             .is_reference = true});
+      }
     }
   }
+}
 
-  std::ranges::sort(unreachable_with_sources, [](const PotentialReach &left,
-                                                 const PotentialReach &right) {
-    return left.location->pointer.size() < right.location->pointer.size();
-  });
+auto SchemaFrame::populate_reachability(const Location &base,
+                                        const SchemaWalker &walker,
+                                        const SchemaResolver &resolver) const
+    -> const ReachabilityCache & {
+  const ReachabilityKey key{.pointer = &base.pointer, .orphan = base.orphan};
+  auto cache_iterator = this->reachability_.find(key);
+  if (cache_iterator != this->reachability_.end()) {
+    return cache_iterator->second;
+  }
 
-  // ---------------------------------------------------------------------------
-  // (5) Propagate reachability through references using fixpoint iteration
-  // ---------------------------------------------------------------------------
+  auto &cache = this->reachability_[key];
+  this->populate_reachability_graph(walker, resolver);
+  const Location *base_location{&base};
+  std::vector<const Location *> queue;
+  std::unordered_set<const Location *> visited;
 
-  bool changed{true};
-  while (changed) {
-    changed = false;
-    std::vector<std::reference_wrapper<const WeakPointer>> newly_reachable;
-
-    auto write_iterator = unreachable_with_sources.begin();
-    for (auto read_iterator = unreachable_with_sources.begin();
-         read_iterator != unreachable_with_sources.end(); ++read_iterator) {
-      bool became_reachable = false;
-
-      for (const auto &potential_source : read_iterator->potential_sources) {
-        if (potential_source.crosses) {
-          continue;
+  auto mark_pointer_reachable = [this, &cache](const WeakPointer &pointer) {
+    auto locations_iterator =
+        this->pointer_to_location_.find(std::cref(pointer));
+    if (locations_iterator != this->pointer_to_location_.end()) {
+      for (const auto *location : locations_iterator->second) {
+        if (location->type != LocationType::Pointer) {
+          cache.emplace(std::cref(location->pointer), true);
         }
-
-        const auto &source_parent{potential_source.source_pointer->initial()};
-        const auto reachability_iterator{cache.find(std::cref(source_parent))};
-        const bool source_parent_reachable{reachability_iterator !=
-                                               cache.end() &&
-                                           reachability_iterator->second};
-
-        if (source_parent_reachable) {
-          became_reachable = true;
-          break;
-        }
-      }
-
-      if (became_reachable) {
-        cache[std::cref(read_iterator->location->pointer)] = true;
-        newly_reachable.push_back(std::cref(read_iterator->location->pointer));
-        changed = true;
-      } else {
-        if (write_iterator != read_iterator) {
-          *write_iterator = std::move(*read_iterator);
-        }
-        ++write_iterator;
       }
     }
-    unreachable_with_sources.erase(write_iterator,
-                                   unreachable_with_sources.end());
+  };
 
-    for (auto &[cache_pointer, cache_reachable] : cache) {
-      if (cache_reachable) {
+  queue.push_back(base_location);
+  visited.insert(base_location);
+  mark_pointer_reachable(base_location->pointer);
+
+  std::size_t queue_index{0};
+  while (queue_index < queue.size()) {
+    const Location *current = queue[queue_index++];
+
+    auto edges_iterator = this->reachability_graph_.find(current);
+    if (edges_iterator == this->reachability_graph_.end()) {
+      continue;
+    }
+
+    for (const auto &edge : edges_iterator->second) {
+      if (visited.contains(edge.target)) {
         continue;
       }
-      if (!this->pointers_with_non_orphan_.contains(cache_pointer)) {
+
+      if (edge.orphan_context_only && !base.orphan && !current->orphan) {
         continue;
       }
-      for (const auto &reached : newly_reachable) {
-        if (cache_pointer.get().starts_with(reached.get())) {
-          cache_reachable = true;
-          break;
+
+      if (!edge.is_reference && edge.orphan_context_only) {
+        auto target_iterator = this->location_members_children_.find(
+            std::cref(edge.target->pointer));
+        if (target_iterator != this->location_members_children_.end()) {
+          const auto keyword_path{edge.target->pointer.initial()};
+          if (keyword_path.starts_with(current->pointer)) {
+            continue;
+          }
         }
       }
+
+      visited.insert(edge.target);
+      queue.push_back(edge.target);
+      mark_pointer_reachable(edge.target->pointer);
     }
   }
 
@@ -1771,8 +1757,7 @@ auto SchemaFrame::is_reachable(const Location &base, const Location &location,
   assert(location.type != LocationType::Pointer);
   const auto &cache{this->populate_reachability(base, walker, resolver)};
   const auto iterator{cache.find(std::cref(location.pointer))};
-  assert(iterator != cache.end());
-  return iterator->second;
+  return iterator != cache.end() && iterator->second;
 }
 
 } // namespace sourcemeta::core

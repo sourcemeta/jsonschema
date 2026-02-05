@@ -268,11 +268,59 @@ private:
   using ReachabilityCache =
       std::unordered_map<std::reference_wrapper<const WeakPointer>, bool,
                          WeakPointer::Hasher, WeakPointer::Comparator>;
-  mutable std::vector<std::pair<const Location *, ReachabilityCache>>
+  struct ReachabilityKey {
+    const WeakPointer *pointer;
+    bool orphan;
+    auto operator==(const ReachabilityKey &other) const noexcept -> bool {
+      return this->pointer == other.pointer && this->orphan == other.orphan;
+    }
+  };
+  struct ReachabilityKeyHasher {
+    auto operator()(const ReachabilityKey &key) const noexcept -> std::size_t {
+      return std::hash<const void *>{}(key.pointer) ^
+             (std::hash<bool>{}(key.orphan) << 1);
+    }
+  };
+  mutable std::unordered_map<ReachabilityKey, ReachabilityCache,
+                             ReachabilityKeyHasher>
       reachability_;
+  mutable std::unordered_map<std::reference_wrapper<const WeakPointer>,
+                             std::vector<const WeakPointer *>,
+                             WeakPointer::Hasher, WeakPointer::Comparator>
+      references_by_destination_;
+  mutable std::unordered_set<std::reference_wrapper<const WeakPointer>,
+                             WeakPointer::Hasher, WeakPointer::Comparator>
+      location_members_children_;
+  mutable std::unordered_map<std::reference_wrapper<const WeakPointer>,
+                             std::vector<const Location *>, WeakPointer::Hasher,
+                             WeakPointer::Comparator>
+      descendants_by_pointer_;
+  struct PotentialSource {
+    const WeakPointer *source_pointer;
+    WeakPointer source_parent;
+    bool crosses;
+  };
+  mutable std::unordered_map<const Location *, std::vector<PotentialSource>>
+      potential_sources_by_location_;
+  struct ReachabilityEdge {
+    const Location *target;
+    bool orphan_context_only;
+    bool is_reference;
+  };
+  mutable std::unordered_map<const Location *, std::vector<ReachabilityEdge>>
+      reachability_graph_;
   bool standalone_{false};
 
   auto populate_pointer_to_location() const -> void;
+  auto populate_reference_graph() const -> void;
+  auto populate_location_members(const SchemaWalker &walker,
+                                 const SchemaResolver &resolver) const -> void;
+  auto populate_descendants() const -> void;
+  auto populate_potential_sources(const SchemaWalker &walker,
+                                  const SchemaResolver &resolver) const -> void;
+  auto populate_reachability_graph(const SchemaWalker &walker,
+                                   const SchemaResolver &resolver) const
+      -> void;
   auto populate_reachability(const Location &base, const SchemaWalker &walker,
                              const SchemaResolver &resolver) const
       -> const ReachabilityCache &;
