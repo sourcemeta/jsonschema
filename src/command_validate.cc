@@ -178,30 +178,23 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                       custom_resolver, dialect,
                                       schema_default_id);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_path, std::string{error.identifier()}, error.location(),
-          error.what());
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                               error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          schema_path);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+      throw Fail{3};
     } catch (
         const sourcemeta::core::SchemaReferenceObjectResourceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceObjectResourceError>(
-          schema_path, error.identifier());
+      throw Fail{3};
     }
   }()};
 
@@ -212,21 +205,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
                   dialect, schema_default_id);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+    throw Fail{3};
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
+    throw Fail{3};
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-        schema_path, error);
+    throw Fail{3};
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                             error);
+    throw Fail{3};
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_path);
+    throw Fail{3};
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+    throw Fail{3};
   }
 
   const auto schema_template{[&]() {
@@ -235,29 +225,22 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                  options);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
-      throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-          schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
-      throw FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_path, std::string{error.identifier()}, error.location(),
-          error.what());
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          schema_path, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                               error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          schema_path);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+      throw Fail{3};
     }
   }()};
 

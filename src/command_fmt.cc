@@ -72,22 +72,18 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         }
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(entry.first, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          entry.first);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(entry.first, error.what());
+      throw Fail{3};
     }
   }
 
