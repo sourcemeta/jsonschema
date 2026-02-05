@@ -429,28 +429,17 @@ auto compile(const sourcemeta::core::JSON &schema,
              const std::string_view entrypoint,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
-  const auto effective_tweaks{tweaks.value_or(Tweaks{})};
 
-  if (effective_tweaks.assume_bundled) {
-    sourcemeta::core::SchemaFrame frame{
-        sourcemeta::core::SchemaFrame::Mode::References};
-    frame.analyse(schema, walker, resolver, default_dialect, default_id);
-    return compile(schema, walker, resolver, compiler, frame,
-                   entrypoint.empty() ? frame.root() : entrypoint, mode,
-                   tweaks);
-  } else {
-    // Make sure the input schema is bundled, otherwise we won't be able to
-    // resolve remote references here
-    const sourcemeta::core::JSON result{sourcemeta::core::bundle(
-        schema, walker, resolver, default_dialect, default_id)};
+  // Make sure the input schema is bundled, otherwise we won't be able to
+  // resolve remote references here
+  const sourcemeta::core::JSON result{sourcemeta::core::bundle(
+      schema, walker, resolver, default_dialect, default_id)};
 
-    sourcemeta::core::SchemaFrame frame{
-        sourcemeta::core::SchemaFrame::Mode::References};
-    frame.analyse(result, walker, resolver, default_dialect, default_id);
-    return compile(result, walker, resolver, compiler, frame,
-                   entrypoint.empty() ? frame.root() : entrypoint, mode,
-                   tweaks);
-  }
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
+  frame.analyse(result, walker, resolver, default_dialect, default_id);
+  return compile(result, walker, resolver, compiler, frame,
+                 entrypoint.empty() ? frame.root() : entrypoint, mode, tweaks);
 }
 
 auto compile(const Context &context, const SchemaContext &schema_context,

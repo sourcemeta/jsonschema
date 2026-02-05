@@ -6,6 +6,7 @@
 #endif
 
 #include <sourcemeta/blaze/compiler.h>
+#include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/core/jsonschema.h>
 
 #include <type_traits> // std::true_type
@@ -51,6 +52,7 @@ private:
 #pragma warning(disable : 4251)
 #endif
   const Compiler compiler_;
+  mutable Evaluator evaluator_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
@@ -86,6 +88,7 @@ private:
 #pragma warning(disable : 4251)
 #endif
   const Compiler compiler_;
+  mutable Evaluator evaluator_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
