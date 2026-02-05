@@ -37,6 +37,7 @@ auto get_precompiled_schema_template_path(
 auto get_schema_template(const sourcemeta::core::JSON &bundled,
                          const sourcemeta::core::SchemaResolver &resolver,
                          const sourcemeta::core::SchemaFrame &frame,
+                         const std::string &entrypoint_uri,
                          const bool fast_mode,
                          const sourcemeta::core::Options &options)
     -> sourcemeta::blaze::Template {
@@ -61,7 +62,7 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
 
   return sourcemeta::blaze::compile(
       bundled, sourcemeta::core::schema_walker, resolver,
-      sourcemeta::blaze::default_schema_compiler, frame, frame.root(),
+      sourcemeta::blaze::default_schema_compiler, frame, entrypoint_uri,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
                 : sourcemeta::blaze::Mode::Exhaustive);
 }
@@ -170,6 +171,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 
+  if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&
+      options.contains("template") && !options.at("template").empty()) {
+    throw OptionConflictError{
+        "The --entrypoint option cannot be used with --template"};
+  }
+
   const auto schema_default_id{sourcemeta::jsonschema::default_id(schema_path)};
 
   const sourcemeta::core::JSON bundled{[&]() {
@@ -229,10 +236,24 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
   }
 
+  std::string entrypoint_uri{frame.root()};
+  if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
+    try {
+      entrypoint_uri = resolve_entrypoint(
+          frame, std::string{options.at("entrypoint").front()});
+    } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+      throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path,
+                                                                    error);
+    }
+  }
+
   const auto schema_template{[&]() {
     try {
-      return get_schema_template(bundled, custom_resolver, frame, fast_mode,
-                                 options);
+      return get_schema_template(bundled, custom_resolver, frame,
+                                 entrypoint_uri, fast_mode, options);
+    } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+      throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path,
+                                                                    error);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

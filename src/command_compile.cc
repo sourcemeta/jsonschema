@@ -38,17 +38,41 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   }
 
   const auto fast_mode{options.contains("fast")};
+  const auto &custom_resolver{
+      resolver(options, options.contains("http"), dialect, configuration)};
+  const auto schema_default_id{sourcemeta::jsonschema::default_id(schema_path)};
 
   sourcemeta::blaze::Template schema_template;
   try {
-    const auto &custom_resolver{
-        resolver(options, options.contains("http"), dialect, configuration)};
-    schema_template = sourcemeta::blaze::compile(
-        schema, sourcemeta::core::schema_walker, custom_resolver,
-        sourcemeta::blaze::default_schema_compiler,
-        fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                  : sourcemeta::blaze::Mode::Exhaustive,
-        dialect, sourcemeta::jsonschema::default_id(schema_path));
+    if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
+      const sourcemeta::core::JSON bundled{sourcemeta::core::bundle(
+          schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
+          schema_default_id)};
+
+      sourcemeta::core::SchemaFrame frame{
+          sourcemeta::core::SchemaFrame::Mode::References};
+      frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
+                    dialect, schema_default_id);
+
+      const auto entrypoint_uri{resolve_entrypoint(
+          frame, std::string{options.at("entrypoint").front()})};
+
+      schema_template = sourcemeta::blaze::compile(
+          bundled, sourcemeta::core::schema_walker, custom_resolver,
+          sourcemeta::blaze::default_schema_compiler, frame, entrypoint_uri,
+          fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                    : sourcemeta::blaze::Mode::Exhaustive);
+    } else {
+      schema_template = sourcemeta::blaze::compile(
+          schema, sourcemeta::core::schema_walker, custom_resolver,
+          sourcemeta::blaze::default_schema_compiler,
+          fast_mode ? sourcemeta::blaze::Mode::FastValidation
+                    : sourcemeta::blaze::Mode::Exhaustive,
+          dialect, schema_default_id);
+    }
+  } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+    throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path,
+                                                                  error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

@@ -163,14 +163,14 @@ auto compile(const sourcemeta::core::JSON &schema,
   const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
   if (!maybe_entrypoint_location.has_value()) {
     throw CompilerInvalidEntryPoint{
-        entrypoint, "The given entrypoint URI does not exist in the schema"};
+        entrypoint, "The given entry point URI does not exist in the schema"};
   }
 
   const auto &entrypoint_location{maybe_entrypoint_location->get()};
   if (entrypoint_location.type ==
       sourcemeta::core::SchemaFrame::LocationType::Pointer) {
     throw CompilerInvalidEntryPoint{
-        entrypoint, "The given entrypoint URI is not a valid subschema"};
+        entrypoint, "The given entry point URI is not a valid subschema"};
   }
 
   ///////////////////////////////////////////////////////////////////
