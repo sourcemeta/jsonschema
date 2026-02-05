@@ -7,7 +7,13 @@ set(BASE_URL
 set(RELEASES_DIR "${CMAKE_CURRENT_LIST_DIR}/../build/github-releases")
 file(MAKE_DIRECTORY "${RELEASES_DIR}")
 
-foreach(PLATFORM darwin-arm64 darwin-x86_64 linux-x86_64 linux-arm64 windows-x86_64)
+foreach(PLATFORM
+  darwin-arm64
+  darwin-x86_64
+  linux-x86_64
+  linux-arm64
+  linux-x86_64-musl
+  windows-x86_64)
   if(PLATFORM MATCHES "windows")
     set(OUTPUT_BINARY "${RELEASES_DIR}/jsonschema-${PLATFORM}.exe")
     set(INNER_BINARY "bin/jsonschema.exe")
