@@ -276,31 +276,37 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 std::cerr << "\n";
               }
 
-              throw Fail{3};
+               throw FileError<
+                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+                  entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
+                                                                    error);
             } catch (const sourcemeta::core::SchemaFrameError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
+                                                                  error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+                  entry.first);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaResolutionError>(
+                  entry.first, error);
             } catch (...) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -374,15 +380,21 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
-              throw Fail{3};
+               throw FileError<
+                  sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+                  entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
+                                                                    error);
             } catch (const sourcemeta::core::SchemaFrameError &error) {
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
+                                                                  error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+                  entry.first);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
-              throw Fail{3};
+              throw FileError<sourcemeta::core::SchemaResolutionError>(
+                  entry.first, error);
             }
           });
 
