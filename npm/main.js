@@ -6,8 +6,31 @@ const child_process = require('child_process');
 const PLATFORM = os.platform() === 'win32' ? 'windows' : os.platform();
 const ARCH = os.arch() === 'x64' ? 'x86_64' : os.arch();
 const EXTENSION = PLATFORM === 'windows' ? '.exe' : '';
+
+function isMusl() {
+  if (PLATFORM !== 'linux') {
+    return false;
+  }
+
+  // process.report requires Node.js 12+
+  if (typeof process.report?.getReport !== 'function') {
+    return false;
+  }
+
+  const report = process.report.getReport();
+  return report.header.glibcVersionRuntime === undefined;
+}
+
+function getExecutableName() {
+  if (PLATFORM === 'linux' && ARCH === 'x86_64' && isMusl()) {
+    return `jsonschema-${PLATFORM}-${ARCH}-musl`;
+  }
+
+  return `jsonschema-${PLATFORM}-${ARCH}${EXTENSION}`;
+}
+
 const EXECUTABLE = path.join(__dirname, '..', 'build', 'github-releases',
-  `jsonschema-${PLATFORM}-${ARCH}${EXTENSION}`);
+  getExecutableName());
 
 function spawnProcess(executable, args, options) {
   return new Promise((resolve, reject) => {
