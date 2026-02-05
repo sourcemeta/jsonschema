@@ -48,8 +48,7 @@ auto sourcemeta::jsonschema::metaschema(
       const auto dialect{
           sourcemeta::core::dialect(entry.second, default_dialect_option)};
       if (dialect.empty()) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.first);
+        throw Fail{3};
       }
 
       const auto metaschema{sourcemeta::core::metaschema(
@@ -111,16 +110,12 @@ auto sourcemeta::jsonschema::metaschema(
       }
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
-      throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-          entry.first, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
-          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+      throw Fail{3};
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      throw Fail{3};
     }
   }
 
