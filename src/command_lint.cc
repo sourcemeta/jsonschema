@@ -90,7 +90,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
       if (output_json) {
         auto error_obj = sourcemeta::core::JSON::make_object();
 
-        error_obj.assign("path", sourcemeta::core::JSON{entry.first.string()});
+        error_obj.assign("path", sourcemeta::core::JSON{entry.first});
         error_obj.assign("id", sourcemeta::core::JSON{name});
         error_obj.assign("message", sourcemeta::core::JSON{message});
         error_obj.assign("description",
@@ -106,7 +106,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 
         errors_array.push_back(error_obj);
       } else {
-        std::cout << std::filesystem::relative(entry.first).string();
+        std::cout << std::filesystem::relative(entry.resolution_base).string();
         if (position.has_value()) {
           std::cout << ":";
           std::cout << std::get<0>(position.value());
@@ -215,18 +215,18 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
   if (options.contains("fix")) {
     for (const auto &entry : for_each_json(options)) {
-      const auto configuration_path{find_configuration(entry.first)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, entry.first)};
+      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto &configuration{read_configuration(options, configuration_path,
+                                                   entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
 
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
-      LOG_VERBOSE(options) << "Linting: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
       if (entry.yaml) {
         throw YAMLInputError{
             "The --fix option is not supported for YAML input files",
-            entry.first};
+            entry.resolution_base};
       }
 
       auto copy = entry.second;
@@ -239,9 +239,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   copy, sourcemeta::core::schema_walker, custom_resolver,
                   get_lint_callback(errors_array, entry, output_json, true,
                                     printed_progress),
-                  dialect,
-                  sourcemeta::core::URI::from_path(entry.resolution_base)
-                      .recompose(),
+                  dialect, sourcemeta::jsonschema::default_id(entry),
                   EXCLUDE_KEYWORD);
               if (printed_progress) {
                 std::cerr << "\n";
@@ -259,7 +257,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 std::cerr << "\n";
               }
 
-              throw LintAutoFixError{error.what(), entry.first,
+              throw LintAutoFixError{error.what(), entry.resolution_base,
                                      error.location()};
             } catch (
                 const sourcemeta::core::SchemaBrokenReferenceError &error) {
@@ -270,7 +268,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw LintAutoFixError{
                   "Could not autofix the schema without breaking its internal "
                   "references",
-                  entry.first, error.location()};
+                  entry.resolution_base, error.location()};
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
@@ -280,35 +278,35 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               throw FileError<
                   sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-                  entry.first, error);
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
-                                                                    error);
+              throw FileError<sourcemeta::core::SchemaKeywordError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaFrameError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
-              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
-                                                                  error);
+              throw FileError<sourcemeta::core::SchemaFrameError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-                  entry.first);
+                  entry.resolution_base);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }
 
               throw FileError<sourcemeta::core::SchemaResolutionError>(
-                  entry.first, error);
+                  entry.resolution_base, error);
             } catch (...) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -333,16 +331,16 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(copy, expected, indentation);
           expected << "\n";
 
-          std::ifstream current_stream{entry.first};
+          std::ifstream current_stream{entry.resolution_base};
           std::ostringstream current;
           current << current_stream.rdbuf();
 
           if (current.str() != expected.str()) {
-            std::ofstream output{entry.first};
+            std::ofstream output{entry.resolution_base};
             output << expected.str();
           }
         } else if (copy != entry.second) {
-          std::ofstream output{entry.first};
+          std::ofstream output{entry.resolution_base};
           sourcemeta::core::prettify(copy, output, indentation);
           output << "\n";
         }
@@ -353,13 +351,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
   } else {
     for (const auto &entry : for_each_json(options)) {
-      const auto configuration_path{find_configuration(entry.first)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, entry.first)};
+      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto &configuration{read_configuration(options, configuration_path,
+                                                   entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
-      LOG_VERBOSE(options) << "Linting: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Linting: " << entry.first << "\n";
 
       bool printed_progress{false};
       const auto wrapper_result =
@@ -370,9 +368,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   custom_resolver,
                   get_lint_callback(errors_array, entry, output_json, false,
                                     printed_progress),
-                  dialect,
-                  sourcemeta::core::URI::from_path(entry.resolution_base)
-                      .recompose(),
+                  dialect, sourcemeta::jsonschema::default_id(entry),
                   EXCLUDE_KEYWORD);
               scores.emplace_back(subresult.second);
               if (subresult.first) {
@@ -386,19 +382,19 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                     &error) {
               throw FileError<
                   sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-                  entry.first, error);
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
-              throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first,
-                                                                    error);
+              throw FileError<sourcemeta::core::SchemaKeywordError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaFrameError &error) {
-              throw FileError<sourcemeta::core::SchemaFrameError>(entry.first,
-                                                                  error);
+              throw FileError<sourcemeta::core::SchemaFrameError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-                  entry.first);
+                  entry.resolution_base);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               throw FileError<sourcemeta::core::SchemaResolutionError>(
-                  entry.first, error);
+                  entry.resolution_base, error);
             }
           });
 
