@@ -106,18 +106,18 @@ public:
     if (options.contains("resolve")) {
       for (const auto &entry : for_each_json(options.at("resolve"), options)) {
         LOG_DEBUG(options) << "Detecting schema resources from file: "
-                           << entry.first.string() << "\n";
+                           << entry.first << "\n";
 
         if (!sourcemeta::core::is_schema(entry.second)) {
           throw FileError<sourcemeta::core::SchemaError>(
-              entry.first,
+              entry.resolution_base,
               "The file you provided does not represent a valid JSON Schema");
         }
 
         try {
           const auto result = this->add(
               entry.second, default_dialect,
-              sourcemeta::jsonschema::default_id(entry.first),
+              sourcemeta::jsonschema::default_id(entry),
               [&options](const auto &identifier) {
                 LOG_DEBUG(options)
                     << "Importing schema into the resolution context: "
@@ -126,15 +126,16 @@ public:
           if (!result) {
             LOG_WARNING()
                 << "No schema resources were imported from this file\n"
-                << "  at " << entry.first.string() << "\n"
+                << "  at " << entry.first << "\n"
                 << "Are you sure this schema sets any identifiers?\n";
           }
         } catch (const sourcemeta::core::SchemaFrameError &error) {
           throw FileError<sourcemeta::core::SchemaFrameError>(
-              entry.first, std::string{error.identifier()}, error.what());
+              entry.resolution_base, std::string{error.identifier()},
+              error.what());
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-              entry.first);
+              entry.resolution_base);
         }
       }
     }
