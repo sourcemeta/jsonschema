@@ -13,7 +13,7 @@ if(NOT BLAZE_COMPONENTS)
 endif()
 
 include(CMakeFindDependencyMacro)
-find_dependency(Core COMPONENTS regex uri json jsonpointer jsonschema io yaml)
+find_dependency(Core COMPONENTS regex uri json jsonpointer jsonschema io yaml crypto)
 
 foreach(component ${BLAZE_COMPONENTS})
   if(component STREQUAL "compiler")

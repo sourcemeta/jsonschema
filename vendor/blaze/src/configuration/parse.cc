@@ -3,7 +3,8 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cassert> // assert
+#include <cassert>       // assert
+#include <unordered_set> // std::unordered_set
 
 namespace sourcemeta::blaze {
 
@@ -52,6 +53,9 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
   CONFIGURATION_ENSURE(!value.defines("resolve") ||
                            value.at("resolve").is_object(),
                        "The resolve property must be an object", {"resolve"});
+  CONFIGURATION_ENSURE(
+      !value.defines("dependencies") || value.at("dependencies").is_object(),
+      "The dependencies property must be an object", {"dependencies"});
 
   result.title =
       sourcemeta::core::from_json<decltype(result.title)::value_type>(
@@ -155,6 +159,29 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
     }
   }
 
+  if (value.defines("dependencies")) {
+    std::unordered_set<std::filesystem::path> seen_paths;
+    for (const auto &pair : value.at("dependencies").as_object()) {
+      CONFIGURATION_ENSURE(
+          pair.second.is_string(),
+          "The values in the dependencies object must be strings",
+          sourcemeta::core::Pointer({"dependencies", pair.first}));
+
+      const std::filesystem::path dependency_path{pair.second.to_string()};
+      const auto absolute_dependency_path =
+          dependency_path.is_absolute()
+              ? std::filesystem::weakly_canonical(dependency_path)
+              : std::filesystem::weakly_canonical(base_path / dependency_path);
+      assert(absolute_dependency_path.is_absolute());
+      CONFIGURATION_ENSURE(
+          !seen_paths.contains(absolute_dependency_path),
+          "Multiple dependencies cannot point to the same path",
+          sourcemeta::core::Pointer({"dependencies", pair.first}));
+      seen_paths.insert(absolute_dependency_path);
+      result.dependencies.emplace(pair.first, absolute_dependency_path);
+    }
+  }
+
   assert(result.extra.is_object());
   for (const auto &subentry : value.as_object()) {
     if (subentry.first.starts_with("x-")) {
@@ -166,10 +193,11 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
   return result;
 }
 
-auto Configuration::read_json(const std::filesystem::path &path)
+auto Configuration::read_json(const std::filesystem::path &path,
+                              const Configuration::ReadCallback &reader)
     -> Configuration {
   assert(path.is_absolute());
-  const auto value{sourcemeta::core::read_json(path)};
+  const auto value{sourcemeta::core::parse_json(reader(path))};
   return from_json(value, path.parent_path());
 }
 
