@@ -588,3 +588,7 @@ add_jsonschema_test_unix_ci(precommit_lint)
 if(APPLE)
   add_jsonschema_test_unix_ci(pass_validate_json_ref_yaml_http)
 endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  add_jsonschema_test_unix_ci(pass_validate_fuse)
+endif()
