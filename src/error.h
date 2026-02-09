@@ -4,11 +4,11 @@
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/codegen/ir.h>
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 
 #include <cstdlib>          // EXIT_FAILURE
 #include <filesystem>       // std::filesystem
@@ -463,7 +463,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
-  } catch (const FileError<sourcemeta::core::SchemaConfigParseError> &error) {
+  } catch (const FileError<sourcemeta::blaze::ConfigurationParseError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;

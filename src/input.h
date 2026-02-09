@@ -1,12 +1,12 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_INPUT_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_INPUT_H_
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/yaml.h>
 
 #include "configuration.h"
@@ -39,7 +39,7 @@ struct InputJSON {
 
 inline auto parse_extensions(
     const sourcemeta::core::Options &options,
-    const std::optional<sourcemeta::core::SchemaConfig> &configuration)
+    const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> const std::set<std::string> & {
   using CacheKey =
       std::pair<std::uintptr_t, std::optional<std::filesystem::path>>;

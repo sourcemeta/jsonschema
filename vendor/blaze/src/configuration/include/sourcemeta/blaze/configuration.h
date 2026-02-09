@@ -1,21 +1,21 @@
-#ifndef SOURCEMETA_CORE_EXTENSION_SCHEMACONFIG_H_
-#define SOURCEMETA_CORE_EXTENSION_SCHEMACONFIG_H_
+#ifndef SOURCEMETA_BLAZE_CONFIGURATION_H_
+#define SOURCEMETA_BLAZE_CONFIGURATION_H_
 
-/// @defgroup schemaconfig SchemaConfig
+/// @defgroup configuration Configuration
 /// @brief A configuration manifest for JSON Schema projects
 ///
 /// This functionality is included as follows:
 ///
 /// ```cpp
-/// #include <sourcemeta/core/schemaconfig.h>
+/// #include <sourcemeta/blaze/configuration.h>
 /// ```
 
-#ifndef SOURCEMETA_CORE_SCHEMACONFIG_EXPORT
-#include <sourcemeta/core/schemaconfig_export.h>
+#ifndef SOURCEMETA_BLAZE_CONFIGURATION_EXPORT
+#include <sourcemeta/blaze/configuration_export.h>
 #endif
 
 // NOLINTBEGIN(misc-include-cleaner)
-#include <sourcemeta/core/schemaconfig_error.h>
+#include <sourcemeta/blaze/configuration_error.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <sourcemeta/core/json.h>
@@ -25,7 +25,7 @@
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 
-namespace sourcemeta::core {
+namespace sourcemeta::blaze {
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -34,20 +34,22 @@ namespace sourcemeta::core {
 #pragma warning(disable : 4251 4275)
 #endif
 
-/// @ingroup schemaconfig
+/// @ingroup configuration
 /// A configuration file format for JSON Schema projects
-struct SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfig {
-  std::optional<JSON::String> title;
-  std::optional<JSON::String> description;
-  std::optional<JSON::String> email;
-  std::optional<JSON::String> github;
-  std::optional<JSON::String> website;
+struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
+  std::optional<sourcemeta::core::JSON::String> title;
+  std::optional<sourcemeta::core::JSON::String> description;
+  std::optional<sourcemeta::core::JSON::String> email;
+  std::optional<sourcemeta::core::JSON::String> github;
+  std::optional<sourcemeta::core::JSON::String> website;
   std::filesystem::path absolute_path;
-  JSON::String base;
-  std::optional<JSON::String> default_dialect;
-  std::unordered_set<JSON::String> extension;
-  std::unordered_map<JSON::String, JSON::String> resolve;
-  JSON extra = JSON::make_object();
+  sourcemeta::core::JSON::String base;
+  std::optional<sourcemeta::core::JSON::String> default_dialect;
+  std::unordered_set<sourcemeta::core::JSON::String> extension;
+  std::unordered_map<sourcemeta::core::JSON::String,
+                     sourcemeta::core::JSON::String>
+      resolve;
+  sourcemeta::core::JSON extra = sourcemeta::core::JSON::make_object();
 
   /// Check if the given path represents a schema described by this
   /// configuration
@@ -56,12 +58,13 @@ struct SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfig {
 
   /// Parse a configuration file from its contents
   [[nodiscard]]
-  static auto from_json(const JSON &value,
-                        const std::filesystem::path &base_path) -> SchemaConfig;
+  static auto from_json(const sourcemeta::core::JSON &value,
+                        const std::filesystem::path &base_path)
+      -> Configuration;
 
   /// Read and parse a configuration file from disk
   [[nodiscard]]
-  static auto read_json(const std::filesystem::path &path) -> SchemaConfig;
+  static auto read_json(const std::filesystem::path &path) -> Configuration;
 
   /// A nearest ancestor configuration lookup
   [[nodiscard]]
@@ -73,6 +76,6 @@ struct SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfig {
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::core
+} // namespace sourcemeta::blaze
 
 #endif

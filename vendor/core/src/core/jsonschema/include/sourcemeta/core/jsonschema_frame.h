@@ -265,9 +265,7 @@ private:
   mutable std::unordered_set<std::reference_wrapper<const WeakPointer>,
                              WeakPointer::Hasher, WeakPointer::Comparator>
       pointers_with_non_orphan_;
-  using ReachabilityCache =
-      std::unordered_map<std::reference_wrapper<const WeakPointer>, bool,
-                         WeakPointer::Hasher, WeakPointer::Comparator>;
+  using ReachabilityCache = std::unordered_map<const WeakPointer *, bool>;
   struct ReachabilityKey {
     const WeakPointer *pointer;
     bool orphan;
@@ -309,6 +307,12 @@ private:
   };
   mutable std::unordered_map<const Location *, std::vector<ReachabilityEdge>>
       reachability_graph_;
+  mutable std::unordered_map<std::reference_wrapper<const WeakPointer>,
+                             const WeakPointer *, WeakPointer::Hasher,
+                             WeakPointer::Comparator>
+      canonical_pointer_;
+  mutable std::unordered_map<const Location *, const WeakPointer *>
+      location_to_canonical_;
   bool standalone_{false};
 
   auto populate_pointer_to_location() const -> void;
