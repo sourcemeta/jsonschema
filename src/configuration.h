@@ -11,6 +11,17 @@
 #include <filesystem> // std::filesystem
 #include <map>        // std::map
 #include <optional>   // std::optional
+#include <sstream>    // std::ostringstream
+#include <string>     // std::string
+
+namespace {
+auto configuration_reader(const std::filesystem::path &path) -> std::string {
+  auto stream{sourcemeta::core::read_file(path)};
+  std::ostringstream buffer;
+  buffer << stream.rdbuf();
+  return buffer.str();
+}
+} // namespace
 
 namespace sourcemeta::jsonschema {
 
@@ -44,7 +55,7 @@ inline auto read_configuration(
                        << "\n";
     try {
       result = sourcemeta::blaze::Configuration::read_json(
-          configuration_path.value());
+          configuration_path.value(), configuration_reader);
     } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
       throw FileError<sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error);
