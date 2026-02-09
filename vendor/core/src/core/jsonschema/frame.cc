@@ -1402,6 +1402,8 @@ auto SchemaFrame::reset() -> void {
   this->descendants_by_pointer_.clear();
   this->potential_sources_by_location_.clear();
   this->reachability_graph_.clear();
+  this->canonical_pointer_.clear();
+  this->location_to_canonical_.clear();
   this->root_.clear();
   this->locations_.clear();
   this->references_.clear();
@@ -1679,6 +1681,13 @@ auto SchemaFrame::populate_reachability_graph(
       }
     }
   }
+
+  for (const auto &entry : this->locations_) {
+    auto result = this->canonical_pointer_.emplace(
+        std::cref(entry.second.pointer), &entry.second.pointer);
+    this->location_to_canonical_[&entry.second] =
+        result.second ? &entry.second.pointer : result.first->second;
+  }
 }
 
 auto SchemaFrame::populate_reachability(const Location &base,
@@ -1693,25 +1702,18 @@ auto SchemaFrame::populate_reachability(const Location &base,
 
   auto &cache = this->reachability_[key];
   this->populate_reachability_graph(walker, resolver);
+
   const Location *base_location{&base};
   std::vector<const Location *> queue;
   std::unordered_set<const Location *> visited;
 
-  auto mark_pointer_reachable = [this, &cache](const WeakPointer &pointer) {
-    auto locations_iterator =
-        this->pointer_to_location_.find(std::cref(pointer));
-    if (locations_iterator != this->pointer_to_location_.end()) {
-      for (const auto *location : locations_iterator->second) {
-        if (location->type != LocationType::Pointer) {
-          cache.emplace(std::cref(location->pointer), true);
-        }
-      }
-    }
-  };
-
   queue.push_back(base_location);
   visited.insert(base_location);
-  mark_pointer_reachable(base_location->pointer);
+  auto base_canonical_iterator =
+      this->location_to_canonical_.find(base_location);
+  if (base_canonical_iterator != this->location_to_canonical_.end()) {
+    cache.emplace(base_canonical_iterator->second, true);
+  }
 
   std::size_t queue_index{0};
   while (queue_index < queue.size()) {
@@ -1744,7 +1746,12 @@ auto SchemaFrame::populate_reachability(const Location &base,
 
       visited.insert(edge.target);
       queue.push_back(edge.target);
-      mark_pointer_reachable(edge.target->pointer);
+
+      auto target_canonical_iterator =
+          this->location_to_canonical_.find(edge.target);
+      if (target_canonical_iterator != this->location_to_canonical_.end()) {
+        cache.emplace(target_canonical_iterator->second, true);
+      }
     }
   }
 
@@ -1756,7 +1763,11 @@ auto SchemaFrame::is_reachable(const Location &base, const Location &location,
                                const SchemaResolver &resolver) const -> bool {
   assert(location.type != LocationType::Pointer);
   const auto &cache{this->populate_reachability(base, walker, resolver)};
-  const auto iterator{cache.find(std::cref(location.pointer))};
+  auto canonical_iterator = this->location_to_canonical_.find(&location);
+  if (canonical_iterator == this->location_to_canonical_.end()) {
+    return false;
+  }
+  const auto iterator{cache.find(canonical_iterator->second)};
   return iterator != cache.end() && iterator->second;
 }
 

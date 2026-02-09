@@ -14,11 +14,11 @@
 #pragma clang diagnostic pop
 #endif
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/yaml.h>
 
@@ -100,7 +100,7 @@ class CustomResolver {
 public:
   CustomResolver(
       const sourcemeta::core::Options &options,
-      const std::optional<sourcemeta::core::SchemaConfig> &configuration,
+      const std::optional<sourcemeta::blaze::Configuration> &configuration,
       const bool remote, const std::string_view default_dialect)
       : options_{options}, configuration_{configuration}, remote_{remote} {
     if (options.contains("resolve")) {
@@ -190,7 +190,7 @@ public:
     const std::string string_identifier{identifier};
     if (this->configuration_.has_value()) {
 
-      // TODO: Abstract this fallback logic as a SchemaConfig method
+      // TODO: Abstract this fallback logic as a Configuration method
       auto match{this->configuration_.value().resolve.find(string_identifier)};
       if (match == this->configuration_.value().resolve.cend() &&
           !string_identifier.ends_with(".json")) {
@@ -255,14 +255,14 @@ public:
 private:
   std::map<std::string, sourcemeta::core::JSON> schemas{};
   const sourcemeta::core::Options &options_;
-  const std::optional<sourcemeta::core::SchemaConfig> configuration_;
+  const std::optional<sourcemeta::blaze::Configuration> configuration_;
   bool remote_{false};
 };
 
 inline auto
 resolver(const sourcemeta::core::Options &options, const bool remote,
          const std::string_view default_dialect,
-         const std::optional<sourcemeta::core::SchemaConfig> &configuration)
+         const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> const CustomResolver & {
   using CacheKey = std::pair<bool, std::string>;
   static std::map<CacheKey, CustomResolver> resolver_cache;

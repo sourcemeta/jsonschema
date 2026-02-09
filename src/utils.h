@@ -1,12 +1,12 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/uri.h>
 
 #include <sourcemeta/blaze/compiler.h>
@@ -62,7 +62,7 @@ inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
 
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
-    const std::optional<sourcemeta::core::SchemaConfig> &configuration)
+    const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> std::string_view {
   if (options.contains("default-dialect")) {
     return options.at("default-dialect").front();

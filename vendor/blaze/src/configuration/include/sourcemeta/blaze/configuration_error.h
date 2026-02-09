@@ -1,8 +1,8 @@
-#ifndef SOURCEMETA_CORE_SCHEMACONFIG_ERROR_H_
-#define SOURCEMETA_CORE_SCHEMACONFIG_ERROR_H_
+#ifndef SOURCEMETA_BLAZE_CONFIGURATION_ERROR_H_
+#define SOURCEMETA_BLAZE_CONFIGURATION_ERROR_H_
 
-#ifndef SOURCEMETA_CORE_SCHEMACONFIG_EXPORT
-#include <sourcemeta/core/schemaconfig_export.h>
+#ifndef SOURCEMETA_BLAZE_CONFIGURATION_EXPORT
+#include <sourcemeta/blaze/configuration_export.h>
 #endif
 
 #include <sourcemeta/core/jsonpointer.h>
@@ -12,7 +12,7 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move
 
-namespace sourcemeta::core {
+namespace sourcemeta::blaze {
 
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
@@ -21,15 +21,19 @@ namespace sourcemeta::core {
 #pragma warning(disable : 4251 4275)
 #endif
 
-/// @ingroup schemaconfig
-class SOURCEMETA_CORE_SCHEMACONFIG_EXPORT SchemaConfigParseError
+/// @ingroup configuration
+class SOURCEMETA_BLAZE_CONFIGURATION_EXPORT ConfigurationParseError
     : public std::exception {
 public:
-  SchemaConfigParseError(const char *message, Pointer location)
+  ConfigurationParseError(const char *message,
+                          sourcemeta::core::Pointer location)
       : message_{message}, location_{std::move(location)} {}
-  SchemaConfigParseError(std::string message, Pointer location) = delete;
-  SchemaConfigParseError(std::string &&message, Pointer location) = delete;
-  SchemaConfigParseError(std::string_view message, Pointer location) = delete;
+  ConfigurationParseError(std::string message,
+                          sourcemeta::core::Pointer location) = delete;
+  ConfigurationParseError(std::string &&message,
+                          sourcemeta::core::Pointer location) = delete;
+  ConfigurationParseError(std::string_view message,
+                          sourcemeta::core::Pointer location) = delete;
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return this->message_;
@@ -41,13 +45,13 @@ public:
 
 private:
   const char *message_;
-  Pointer location_;
+  sourcemeta::core::Pointer location_;
 };
 
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
 
-} // namespace sourcemeta::core
+} // namespace sourcemeta::blaze
 
 #endif

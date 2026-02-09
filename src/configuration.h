@@ -1,9 +1,9 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_CONFIGURATION_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_CONFIGURATION_H_
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 
 #include "error.h"
 #include "logger.h"
@@ -16,16 +16,16 @@ namespace sourcemeta::jsonschema {
 
 inline auto find_configuration(const std::filesystem::path &path)
     -> std::optional<std::filesystem::path> {
-  return sourcemeta::core::SchemaConfig::find(path);
+  return sourcemeta::blaze::Configuration::find(path);
 }
 
 inline auto read_configuration(
     const sourcemeta::core::Options &options,
     const std::optional<std::filesystem::path> &configuration_path,
     const std::optional<std::filesystem::path> &schema_path = std::nullopt)
-    -> const std::optional<sourcemeta::core::SchemaConfig> & {
+    -> const std::optional<sourcemeta::blaze::Configuration> & {
   using CacheKey = std::optional<std::filesystem::path>;
-  static std::map<CacheKey, std::optional<sourcemeta::core::SchemaConfig>>
+  static std::map<CacheKey, std::optional<sourcemeta::blaze::Configuration>>
       configuration_cache;
 
   // Check if configuration is already cached for this path
@@ -35,7 +35,7 @@ inline auto read_configuration(
   }
 
   // Compute and cache the configuration
-  std::optional<sourcemeta::core::SchemaConfig> result{std::nullopt};
+  std::optional<sourcemeta::blaze::Configuration> result{std::nullopt};
   if (configuration_path.has_value()) {
     LOG_DEBUG(options) << "Using configuration file: "
                        << sourcemeta::core::weakly_canonical(
@@ -43,10 +43,10 @@ inline auto read_configuration(
                               .string()
                        << "\n";
     try {
-      result =
-          sourcemeta::core::SchemaConfig::read_json(configuration_path.value());
-    } catch (const sourcemeta::core::SchemaConfigParseError &error) {
-      throw FileError<sourcemeta::core::SchemaConfigParseError>(
+      result = sourcemeta::blaze::Configuration::read_json(
+          configuration_path.value());
+    } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+      throw FileError<sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error);
     }
 
