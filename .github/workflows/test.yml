@@ -28,7 +28,9 @@ jobs:
             shell: sh
           - os: ubuntu-latest
             type: container
-            container: alpine:3.21
+            container:
+              image: alpine:3.21
+              options: --device /dev/fuse --cap-add SYS_ADMIN
             cc: gcc
             cxx: g++
             shell: sh
@@ -69,7 +71,10 @@ jobs:
 
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
-        run: apk add --no-cache cmake make g++ zsh bash jq shellcheck pipx git
+        run: >
+          apk add --no-cache cmake make g++ zsh bash jq shellcheck pipx git
+          --repository https://dl-cdn.alpinelinux.org/alpine/edge/community
+          --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing bindfs
 
       - name: Install pre-commit
         run: pipx install pre-commit
@@ -90,7 +95,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: 1
       - name: Install dependencies (Linux)
         if: runner.os == 'linux' && matrix.platform.type == 'native'
-        run: sudo apt-get update --yes && sudo apt-get install --yes zsh
+        run: sudo apt-get update --yes && sudo apt-get install --yes zsh bindfs
 
       - run: cmake --version
       - name: Configure JSON Schema
