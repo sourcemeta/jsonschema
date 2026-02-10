@@ -94,11 +94,14 @@ auto emit_debug(const sourcemeta::core::Options &options,
     return;
   }
 
+  using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
   static const char *type_names[] = {
       "fetch/start",   "fetch/end",    "bundle/start", "bundle/end",
       "write/start",   "write/end",    "verify/start", "verify/end",
       "up-to-date",    "file-missing", "orphaned",     "mismatched",
       "path-mismatch", "untracked",    "error"};
+  static_assert(sizeof(type_names) / sizeof(type_names[0]) ==
+                static_cast<std::uint8_t>(Type::Error) + 1);
   const auto type_index{static_cast<std::uint8_t>(event.type)};
   std::cerr << "debug: " << type_names[type_index] << ": " << event.uri << " ("
             << (event.index + 1) << "/" << event.total << ")";
@@ -106,15 +109,6 @@ auto emit_debug(const sourcemeta::core::Options &options,
     std::cerr << " -> " << event.path.string();
   }
   std::cerr << "\n";
-}
-
-} // namespace
-
-auto emit_json(sourcemeta::core::JSON &events_array,
-               const std::string_view type) -> void {
-  auto json_event{sourcemeta::core::JSON::make_object()};
-  json_event.assign("type", sourcemeta::core::JSON{std::string{type}});
-  events_array.push_back(std::move(json_event));
 }
 
 auto emit_json(sourcemeta::core::JSON &events_array,
@@ -133,6 +127,8 @@ auto output_json(sourcemeta::core::JSON &events_array) -> void {
   sourcemeta::core::prettify(result, std::cout);
   std::cout << "\n";
 }
+
+} // namespace
 
 auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     -> void {

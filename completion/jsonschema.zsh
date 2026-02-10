@@ -31,6 +31,7 @@ _jsonschema() {
     '(--default-dialect -d)'{--default-dialect,-d}'[Specify default dialect URI]:dialect URI:_jsonschema_dialects'
     '(--json -j)'{--json,-j}'[Prefer JSON output if supported]'
     '(--http -h)'{--http,-h}'[Enable HTTP resolution]'
+    '(--debug -g)'{--debug,-g}'[Enable debug output]'
   )
 
   _arguments -C \

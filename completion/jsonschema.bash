@@ -13,7 +13,7 @@ _jsonschema() {
 
   commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen install version help"
 
-  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h"
+  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g"
 
   if [ "${COMP_CWORD}" -eq 1 ]
   then

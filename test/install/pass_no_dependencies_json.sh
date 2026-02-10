@@ -11,7 +11,6 @@ mkdir "$TMP/project"
 
 cat << 'EOF' > "$TMP/project/jsonschema.json"
 {
-  "dependencies": {}
 }
 EOF
 

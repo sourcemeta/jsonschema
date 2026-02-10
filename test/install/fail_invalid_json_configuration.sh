@@ -41,3 +41,5 @@ cat << EOF > "$TMP/expected_json.txt"
 EOF
 
 diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
+
+test ! -f "$TMP/project/jsonschema.lock.json"
