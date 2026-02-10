@@ -170,6 +170,11 @@ auto Configuration::Lock::emplace(const sourcemeta::core::JSON::String &uri,
   this->entries_.insert_or_assign(uri, std::move(entry));
 }
 
+auto Configuration::Lock::erase(const sourcemeta::core::JSON::String &uri)
+    -> void {
+  this->entries_.erase(uri);
+}
+
 auto Configuration::Lock::size() const noexcept -> std::size_t {
   return this->entries_.size();
 }

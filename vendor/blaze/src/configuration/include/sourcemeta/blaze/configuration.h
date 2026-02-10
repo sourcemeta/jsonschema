@@ -92,6 +92,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
             const sourcemeta::core::JSON::String &hash,
             Entry::HashAlgorithm hash_algorithm = Entry::HashAlgorithm::SHA256)
         -> void;
+    auto erase(const sourcemeta::core::JSON::String &uri) -> void;
 
     [[nodiscard]] auto size() const noexcept -> std::size_t;
     [[nodiscard]] auto at(const sourcemeta::core::JSON::String &uri) const
