@@ -122,6 +122,13 @@ Commands:
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
+   install [--force/-f]
+
+       Fetch and install external schema dependencies declared in
+       jsonschema.json. Uses the lock file jsonschema.lock.json to track
+       installed dependency hashes. Pass --force/-f to re-fetch all
+       dependencies regardless of lock state.
+
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
@@ -211,6 +218,11 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("target", {"t"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::codegen(app);
+    return EXIT_SUCCESS;
+  } else if (command == "install") {
+    app.flag("force", {"f"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::install(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"

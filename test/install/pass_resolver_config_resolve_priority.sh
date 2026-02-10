@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+TMP="$(mktemp -d)"
+clean() { rm -rf "$TMP"; }
+trap clean EXIT
+
+mkdir -p "$TMP/source" "$TMP/project"
+
+cat << 'EOF' > "$TMP/source/main.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/main",
+  "$ref": "https://example.com/referenced"
+}
+EOF
+
+cat << 'EOF' > "$TMP/project/local_override.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/referenced",
+  "type": "string",
+  "description": "local override"
+}
+EOF
+
+cat << EOF > "$TMP/project/jsonschema.json"
+{
+  "resolve": {
+    "https://example.com/referenced": "./local_override.json"
+  },
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/main.json": "./vendor/main.json"
+  }
+}
+EOF
+
+cd "$TMP/project"
+"$1" install > /dev/null 2>&1
+
+test -f "$TMP/project/vendor/main.json"

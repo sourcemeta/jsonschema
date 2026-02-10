@@ -50,6 +50,7 @@ describes the available configuration options:
 | `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema` | - |
 | `extension` | String / String[] | The schema extension/s used by the project | `.json` / `.yaml` / `.yml` |
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
+| `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 
 Lookup Algorithm
 ----------------

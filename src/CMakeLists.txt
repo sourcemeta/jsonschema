@@ -12,7 +12,8 @@ add_executable(jsonschema_cli
   command_decode.cc
   command_compile.cc
   command_canonicalize.cc
-  command_codegen.cc)
+  command_codegen.cc
+  command_install.cc)
 
 sourcemeta_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
