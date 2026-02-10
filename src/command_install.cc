@@ -43,8 +43,7 @@ auto atomic_write(const std::filesystem::path &path,
 auto install_fetch(const sourcemeta::core::Options &options,
                    const std::filesystem::path &configuration_path,
                    std::string_view uri) -> sourcemeta::core::JSON {
-  auto result{
-      sourcemeta::jsonschema::fetch_schema(options, uri, true, true)};
+  auto result{sourcemeta::jsonschema::fetch_schema(options, uri, true, true)};
   if (result.has_value()) {
     return std::move(result.value());
   }
@@ -60,8 +59,8 @@ auto install_resolve(const sourcemeta::core::Options &options,
     -> std::optional<sourcemeta::core::JSON> {
   const std::string string_identifier{identifier};
 
-  const auto mapped{sourcemeta::jsonschema::resolve_map_uri(
-      configuration, string_identifier)};
+  const auto mapped{sourcemeta::jsonschema::resolve_map_uri(configuration,
+                                                            string_identifier)};
   if (mapped.has_value()) {
     try {
       auto result{
@@ -123,7 +122,8 @@ auto emit_json(sourcemeta::core::JSON &events_array,
                const std::string_view value) -> void {
   auto json_event{sourcemeta::core::JSON::make_object()};
   json_event.assign("type", sourcemeta::core::JSON{std::string{type}});
-  json_event.assign(std::string{key}, sourcemeta::core::JSON{std::string{value}});
+  json_event.assign(std::string{key},
+                    sourcemeta::core::JSON{std::string{value}});
   events_array.push_back(std::move(json_event));
 }
 
@@ -247,13 +247,11 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
           case Type::VerifyEnd:
             if (is_json) {
               auto json_event{sourcemeta::core::JSON::make_object()};
-              json_event.assign("type",
-                                sourcemeta::core::JSON{"installed"});
+              json_event.assign("type", sourcemeta::core::JSON{"installed"});
               json_event.assign("uri",
                                 sourcemeta::core::JSON{std::string{event.uri}});
-              json_event.assign(
-                  "path",
-                  sourcemeta::core::JSON{event.path.string()});
+              json_event.assign("path",
+                                sourcemeta::core::JSON{event.path.string()});
               events_array.push_back(std::move(json_event));
             } else {
               std::cerr << padded_label("Installed") << event.path.string()
@@ -274,8 +272,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
               emit_json(events_array, "file-missing", "path",
                         event.path.string());
             } else {
-              std::cerr << padded_label("File missing")
-                        << event.path.string() << "\n";
+              std::cerr << padded_label("File missing") << event.path.string()
+                        << "\n";
             }
 
             break;
@@ -319,11 +317,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
             if (is_json) {
               auto json_event{sourcemeta::core::JSON::make_object()};
               json_event.assign("type", sourcemeta::core::JSON{"error"});
-              json_event.assign(
-                  "uri", sourcemeta::core::JSON{std::string{event.uri}});
-              json_event.assign(
-                  "message",
-                  sourcemeta::core::JSON{std::string{event.details}});
+              json_event.assign("uri",
+                                sourcemeta::core::JSON{std::string{event.uri}});
+              json_event.assign("message", sourcemeta::core::JSON{
+                                               std::string{event.details}});
               events_array.push_back(std::move(json_event));
             } else {
               try_catch(options, [&]() -> int {

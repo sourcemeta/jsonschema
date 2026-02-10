@@ -60,10 +60,9 @@ static inline auto find_resolve_match(
   return match;
 }
 
-static inline auto resolve_map_uri(
-    const sourcemeta::blaze::Configuration &configuration,
-    const std::string &identifier)
-    -> std::optional<std::string> {
+static inline auto
+resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
+                const std::string &identifier) -> std::optional<std::string> {
   const auto match{find_resolve_match(configuration.resolve, identifier)};
   if (match == configuration.resolve.cend()) {
     return std::nullopt;
@@ -71,8 +70,8 @@ static inline auto resolve_map_uri(
 
   const sourcemeta::core::URI new_uri{match->second};
   if (new_uri.is_relative()) {
-    return sourcemeta::core::URI::from_path(
-               configuration.absolute_path / new_uri.to_path())
+    return sourcemeta::core::URI::from_path(configuration.absolute_path /
+                                            new_uri.to_path())
         .recompose();
   }
 
@@ -281,8 +280,8 @@ public:
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
     if (this->configuration_.has_value()) {
-      const auto mapped{resolve_map_uri(this->configuration_.value(),
-                                        string_identifier)};
+      const auto mapped{
+          resolve_map_uri(this->configuration_.value(), string_identifier)};
       if (mapped.has_value()) {
         LOG_DEBUG(this->options_)
             << "Resolving " << identifier << " as " << mapped.value()
