@@ -1,36 +1,43 @@
 Installing Dependencies
-======================
+=======================
 
 ```sh
 jsonschema install
   [--force/-f] [--verbose/-v] [--debug/-g] [--json/-j]
 ```
 
-The `install` command fetches and installs external schema dependencies
-declared in the [`jsonschema.json`](./configuration.markdown) configuration
-file. It produces a `jsonschema.lock.json` lock file that tracks the hashes of
-installed dependencies, similar to how NPM uses `package-lock.json`.
+Many applications rely on consuming schemas authored and maintained by others.
+These schemas are typically published over HTTP(S) through registries like
+[schemas.sourcemeta.com](https://schemas.sourcemeta.com) (a free public
+registry) or self-hosted solutions like [Sourcemeta
+One](https://one.sourcemeta.com). While you could manually download these
+schemas or write a custom fetching script, doing so quickly gets complicated:
+schemas often reference other schemas that also need to be fetched, and the
+results need to be
+[bundled](https://json-schema.org/blog/posts/bundling-json-schema-compound-documents)
+to inline those references for local consumption. The `install` command solves
+this in a single step.
 
-The command discovers the nearest `jsonschema.json` by walking up from the
-current working directory. Dependencies are declared as a mapping of URIs to
-relative file paths:
+To get started, create a
+[`jsonschema.json`](./configuration.markdown) configuration file in your
+project and declare your dependencies as a mapping of schema URIs to local file
+paths. For example, to pull in the [JSON-RPC 2.0
+Response](https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response)
+schema from the public registry:
 
 ```json
 {
   "dependencies": {
-    "https://example.com/schemas/user.json": "./vendor/user.json",
-    "https://example.com/schemas/product.json": "./vendor/product.json"
+    "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response": "./vendor/response.json"
   }
 }
 ```
 
-When you run `jsonschema install`, each dependency is fetched, bundled (to
-inline any remote references), and written to the specified path. The lock file
-`jsonschema.lock.json` is created or updated alongside `jsonschema.json` to
-record the hash of each installed dependency.
-
-On subsequent runs, the command only fetches dependencies that are missing,
-modified, or not yet tracked in the lock file.
+Then run `jsonschema install`. Each dependency is fetched, bundled, and written
+to the specified path. A `jsonschema.lock.json` lock file is created alongside
+`jsonschema.json` to record the hash of each installed dependency. On
+subsequent runs, only dependencies that are missing, modified, or not yet
+tracked in the lock file are fetched again.
 
 > [!TIP]
 > We recommend committing `jsonschema.lock.json` to version control (similar to
