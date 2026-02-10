@@ -94,8 +94,8 @@ EOF
 
 diff "$TMP/project/vendor/my_schema.json" "$TMP/expected_schema.json"
 
-HASH_META="$(cat "$TMP/project/vendor/custom_meta.json" | shasum -a 256 | cut -d ' ' -f 1)"
-HASH_SCHEMA="$(cat "$TMP/project/vendor/my_schema.json" | shasum -a 256 | cut -d ' ' -f 1)"
+HASH_META="$(shasum -a 256 < "$TMP/project/vendor/custom_meta.json" | cut -d ' ' -f 1)"
+HASH_SCHEMA="$(shasum -a 256 < "$TMP/project/vendor/my_schema.json" | cut -d ' ' -f 1)"
 
 cat << EOF > "$TMP/expected_lock.json"
 {

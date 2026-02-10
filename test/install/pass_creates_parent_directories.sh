@@ -44,7 +44,7 @@ EOF
 
 diff "$TMP/project/deep/nested/vendor/user.json" "$TMP/expected_schema.json"
 
-HASH="$(cat "$TMP/project/deep/nested/vendor/user.json" | shasum -a 256 | cut -d ' ' -f 1)"
+HASH="$(shasum -a 256 < "$TMP/project/deep/nested/vendor/user.json" | cut -d ' ' -f 1)"
 
 cat << EOF > "$TMP/expected_lock.json"
 {

@@ -63,7 +63,7 @@ EOF
 
 diff "$TMP/project/vendor/main.json" "$TMP/expected_schema.json"
 
-HASH="$(cat "$TMP/project/vendor/main.json" | shasum -a 256 | cut -d ' ' -f 1)"
+HASH="$(shasum -a 256 < "$TMP/project/vendor/main.json" | cut -d ' ' -f 1)"
 
 cat << EOF > "$TMP/expected_lock.json"
 {
