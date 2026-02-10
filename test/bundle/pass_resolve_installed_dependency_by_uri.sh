@@ -35,25 +35,25 @@ EOF
 
 diff "$TMP/install_output.txt" "$TMP/expected_install.txt"
 
-cat << 'EOF' > "$TMP/project/schema.json"
+cat << EOF > "$TMP/project/schema.json"
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/main",
-  "$ref": "https://example.com/types"
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "https://example.com/main",
+  "\$ref": "file://$(realpath "$TMP")/source/types.json"
 }
 EOF
 
 "$1" bundle "$TMP/project/schema.json" > "$TMP/output.json" 2>/dev/null
 
-cat << 'EOF' > "$TMP/expected.json"
+cat << EOF > "$TMP/expected.json"
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/main",
-  "$ref": "https://example.com/types",
-  "$defs": {
-    "https://example.com/types": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://example.com/types",
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "https://example.com/main",
+  "\$ref": "file://$(realpath "$TMP")/source/types.json",
+  "\$defs": {
+    "file://$(realpath "$TMP")/source/types.json": {
+      "\$schema": "https://json-schema.org/draft/2020-12/schema",
+      "\$id": "file://$(realpath "$TMP")/source/types.json",
       "type": "string"
     }
   }

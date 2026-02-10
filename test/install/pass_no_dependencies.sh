@@ -17,11 +17,11 @@ EOF
 cd "$TMP/project"
 "$1" install > "$TMP/output.txt" 2>&1
 
-cat << 'EOF' > "$TMP/expected.txt"
-No dependencies to install
+cat << EOF > "$TMP/expected.txt"
+No dependencies found
+  at $(realpath "$TMP")/project/jsonschema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-# No lock file should be created when there are no dependencies
 test ! -f "$TMP/project/jsonschema.lock.json"

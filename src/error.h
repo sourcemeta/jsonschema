@@ -156,9 +156,17 @@ private:
 
 class ConfigurationNotFoundError : public std::runtime_error {
 public:
-  ConfigurationNotFoundError()
-      : std::runtime_error{
-            "Could not find a jsonschema.json configuration file"} {}
+  ConfigurationNotFoundError(std::filesystem::path path)
+      : std::runtime_error{"Could not find a jsonschema.json configuration "
+                           "file"},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
 };
 
 class Fail : public std::runtime_error {

@@ -38,10 +38,51 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > /dev/null 2>&1
+"$1" install > "$TMP/output.txt" 2>&1
 
-test -f "$TMP/project/vendor/a.json"
-test -f "$TMP/project/vendor/meta.json"
+cat << EOF > "$TMP/expected.txt"
+Fetching       : file://$(realpath "$TMP")/source/metaschema.json
+Installed      : $(realpath "$TMP")/project/vendor/meta.json
+Fetching       : file://$(realpath "$TMP")/source/schema_a.json
+Installed      : $(realpath "$TMP")/project/vendor/a.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
+
+cat << EOF > "$TMP/expected_meta.json"
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "file://$(realpath "$TMP")/source/metaschema.json",
+  "\$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+diff "$TMP/project/vendor/meta.json" "$TMP/expected_meta.json"
+
+cat << EOF > "$TMP/expected_a.json"
+{
+  "\$schema": "file://$(realpath "$TMP")/source/metaschema.json",
+  "type": "object",
+  "\$id": "file://$(realpath "$TMP")/source/schema_a.json",
+  "\$defs": {
+    "file://$(realpath "$TMP")/source/metaschema.json": {
+      "\$schema": "https://json-schema.org/draft/2020-12/schema",
+      "\$id": "file://$(realpath "$TMP")/source/metaschema.json",
+      "\$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/vendor/a.json" "$TMP/expected_a.json"
 
 HASH_A="$(cat "$TMP/project/vendor/a.json" | shasum -a 256 | cut -d ' ' -f 1)"
 HASH_META="$(cat "$TMP/project/vendor/meta.json" | shasum -a 256 | cut -d ' ' -f 1)"

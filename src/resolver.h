@@ -176,6 +176,8 @@ public:
         } catch (...) {
           continue;
         }
+
+        this->schemas.emplace(dependency_uri, schema);
       }
     }
   }

@@ -167,14 +167,21 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const auto configuration_path{
       sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};
   if (!configuration_path.has_value()) {
-    throw ConfigurationNotFoundError{};
+    throw ConfigurationNotFoundError{std::filesystem::current_path()};
   }
 
-  const auto configuration{sourcemeta::blaze::Configuration::read_json(
-      configuration_path.value(), configuration_reader)};
+  sourcemeta::blaze::Configuration configuration;
+  try {
+    configuration = sourcemeta::blaze::Configuration::read_json(
+        configuration_path.value(), configuration_reader);
+  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+    throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+        configuration_path.value(), error.what(), error.location());
+  }
 
   if (configuration.dependencies.empty()) {
-    std::cerr << "No dependencies to install\n";
+    std::cerr << "No dependencies found\n  at "
+              << configuration_path.value().string() << "\n";
     return;
   }
 

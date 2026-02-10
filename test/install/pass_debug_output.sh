@@ -27,19 +27,47 @@ EOF
 cd "$TMP/project"
 "$1" install --debug > "$TMP/output.txt" 2>&1
 
-# Debug output should contain debug-prefixed lines
-grep -q "^debug: fetch/start:" "$TMP/output.txt"
-grep -q "^debug: fetch/end:" "$TMP/output.txt"
-grep -q "^debug: bundle/start:" "$TMP/output.txt"
-grep -q "^debug: bundle/end:" "$TMP/output.txt"
-grep -q "^debug: write/start:" "$TMP/output.txt"
-grep -q "^debug: write/end:" "$TMP/output.txt"
-grep -q "^debug: verify/start:" "$TMP/output.txt"
-grep -q "^debug: verify/end:" "$TMP/output.txt"
+cat << EOF > "$TMP/expected.txt"
+debug: fetch/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+Fetching       : file://$(realpath "$TMP")/source/user.json
+debug: fetch/end: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+debug: bundle/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+Bundling       : file://$(realpath "$TMP")/source/user.json
+debug: bundle/end: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+debug: write/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+Writing        : $(realpath "$TMP")/project/vendor/user.json
+debug: write/end: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+debug: verify/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+Verifying      : $(realpath "$TMP")/project/vendor/user.json
+debug: verify/end: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
+Installed      : $(realpath "$TMP")/project/vendor/user.json
+EOF
 
-# Normal output should also be present
-grep -q "^Fetching" "$TMP/output.txt"
-grep -q "^Installed" "$TMP/output.txt"
+diff "$TMP/output.txt" "$TMP/expected.txt"
 
-test -f "$TMP/project/vendor/user.json"
-test -f "$TMP/project/jsonschema.lock.json"
+cat << EOF > "$TMP/expected_schema.json"
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "\$id": "file://$(realpath "$TMP")/source/user.json"
+}
+EOF
+
+diff "$TMP/project/vendor/user.json" "$TMP/expected_schema.json"
+
+HASH="$(cat "$TMP/project/vendor/user.json" | shasum -a 256 | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/user.json": {
+      "path": "$(realpath "$TMP")/project/vendor/user.json",
+      "hash": "${HASH}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"

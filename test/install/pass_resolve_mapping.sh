@@ -37,9 +37,31 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > /dev/null 2>&1
+"$1" install > "$TMP/output.txt" 2>&1
 
-test -f "$TMP/project/vendor/main.json"
+cat << EOF > "$TMP/expected.txt"
+Fetching       : file://$(realpath "$TMP")/source/main.json
+Installed      : $(realpath "$TMP")/project/vendor/main.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
+
+cat << EOF > "$TMP/expected_schema.json"
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "https://example.com/main",
+  "\$ref": "https://example.com/types/name",
+  "\$defs": {
+    "https://example.com/types/name": {
+      "\$schema": "https://json-schema.org/draft/2020-12/schema",
+      "\$id": "https://example.com/types/name",
+      "type": "string"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/vendor/main.json" "$TMP/expected_schema.json"
 
 HASH="$(cat "$TMP/project/vendor/main.json" | shasum -a 256 | cut -d ' ' -f 1)"
 

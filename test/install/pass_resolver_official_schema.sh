@@ -25,9 +25,14 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > /dev/null 2>&1
+"$1" install > "$TMP/output.txt" 2>&1
 
-test -f "$TMP/project/vendor/schema.json"
+cat << EOF > "$TMP/expected.txt"
+Fetching       : file://$(realpath "$TMP")/source/schema.json
+Installed      : $(realpath "$TMP")/project/vendor/schema.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
 
 HASH="$(cat "$TMP/project/vendor/schema.json" | shasum -a 256 | cut -d ' ' -f 1)"
 
@@ -45,3 +50,5 @@ cat << EOF > "$TMP/expected_lock.json"
 EOF
 
 diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"
+
+"$1" validate "$TMP/project/vendor/schema.json" "$TMP/source/schema.json" 2>/dev/null

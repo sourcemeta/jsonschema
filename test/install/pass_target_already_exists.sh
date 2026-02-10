@@ -16,7 +16,6 @@ cat << 'EOF' > "$TMP/source/user.json"
 }
 EOF
 
-# Pre-create the target file with different contents
 cat << 'EOF' > "$TMP/project/vendor/user.json"
 {
   "old": "content"
@@ -32,7 +31,14 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > /dev/null 2>&1
+"$1" install > "$TMP/output.txt" 2>&1
+
+cat << EOF > "$TMP/expected.txt"
+Fetching       : file://$(realpath "$TMP")/source/user.json
+Installed      : $(realpath "$TMP")/project/vendor/user.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << EOF > "$TMP/expected_schema.json"
 {

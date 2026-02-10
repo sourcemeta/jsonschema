@@ -43,10 +43,56 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > /dev/null 2>&1
+"$1" install > "$TMP/output.txt" 2>&1
 
-test -f "$TMP/project/vendor/custom_meta.json"
-test -f "$TMP/project/vendor/my_schema.json"
+cat << EOF > "$TMP/expected.txt"
+Fetching       : file://$(realpath "$TMP")/source/custom_meta.json
+Installed      : $(realpath "$TMP")/project/vendor/custom_meta.json
+Fetching       : file://$(realpath "$TMP")/source/my_schema.json
+Installed      : $(realpath "$TMP")/project/vendor/my_schema.json
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"
+
+cat << EOF > "$TMP/expected_meta.json"
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "\$id": "file://$(realpath "$TMP")/source/custom_meta.json",
+  "\$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true
+  }
+}
+EOF
+
+diff "$TMP/project/vendor/custom_meta.json" "$TMP/expected_meta.json"
+
+cat << EOF > "$TMP/expected_schema.json"
+{
+  "\$schema": "file://$(realpath "$TMP")/source/custom_meta.json",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  },
+  "\$id": "file://$(realpath "$TMP")/source/my_schema.json",
+  "\$defs": {
+    "file://$(realpath "$TMP")/source/custom_meta.json": {
+      "\$schema": "https://json-schema.org/draft/2020-12/schema",
+      "\$id": "file://$(realpath "$TMP")/source/custom_meta.json",
+      "\$vocabulary": {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      }
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/vendor/my_schema.json" "$TMP/expected_schema.json"
 
 HASH_META="$(cat "$TMP/project/vendor/custom_meta.json" | shasum -a 256 | cut -d ' ' -f 1)"
 HASH_SCHEMA="$(cat "$TMP/project/vendor/my_schema.json" | shasum -a 256 | cut -d ' ' -f 1)"

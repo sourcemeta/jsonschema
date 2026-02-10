@@ -37,4 +37,29 @@ EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-test -f "$TMP/project/jsonschema.lock.json"
+cat << EOF > "$TMP/expected_schema.json"
+{
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "\$id": "file://$(realpath "$TMP")/source/user.json"
+}
+EOF
+
+diff "$TMP/project/vendor/user.json" "$TMP/expected_schema.json"
+
+HASH="$(cat "$TMP/project/vendor/user.json" | shasum -a 256 | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/user.json": {
+      "path": "$(realpath "$TMP")/project/vendor/user.json",
+      "hash": "${HASH}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"
