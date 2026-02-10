@@ -19,6 +19,7 @@ _jsonschema() {
     'encode:Encode JSON using JSON BinPack'
     'decode:Decode JSON using JSON BinPack'
     'codegen:Generate code from a JSON Schema'
+    'install:Fetch and install external schema dependencies'
     'version:Print version information'
     'help:Print help information'
   )
@@ -30,6 +31,7 @@ _jsonschema() {
     '(--default-dialect -d)'{--default-dialect,-d}'[Specify default dialect URI]:dialect URI:_jsonschema_dialects'
     '(--json -j)'{--json,-j}'[Prefer JSON output if supported]'
     '(--http -h)'{--http,-h}'[Enable HTTP resolution]'
+    '(--debug -g)'{--debug,-g}'[Enable debug output]'
   )
 
   _arguments -C \
@@ -139,6 +141,11 @@ _jsonschema() {
             '(--name -n)'{--name,-n}'[Specify type name prefix]:name:' \
             '(--target -t)'{--target,-t}'[Specify target language]:target:(typescript)' \
             '1:schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
+        install)
+          _arguments \
+            ${global_options[@]} \
+            '(--force -f)'{--force,-f}'[Re-fetch all dependencies]'
           ;;
         version|help)
           ;;

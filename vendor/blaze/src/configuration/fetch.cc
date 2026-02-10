@@ -8,6 +8,7 @@
 #include <cstdint> // std::uint8_t
 #include <sstream> // std::ostringstream
 #include <utility> // std::move
+#include <vector>  // std::vector
 
 namespace {
 
@@ -221,6 +222,21 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
     }
 
     current_index += 1;
+  }
+
+  std::vector<sourcemeta::core::JSON::String> orphaned_uris;
+  for (const auto &[lock_uri, lock_entry] : lock) {
+    if (!this->dependencies.contains(lock_uri)) {
+      orphaned_uris.push_back(lock_uri);
+      if (!emit_event(callback, FetchEvent::Type::Orphaned, lock_uri,
+                      lock_entry.path, 0, 0, {}, nullptr, true)) {
+        return;
+      }
+    }
+  }
+
+  for (const auto &uri : orphaned_uris) {
+    lock.erase(uri);
   }
 }
 

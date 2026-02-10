@@ -26,6 +26,7 @@
 #include <exception>     // std::exception_ptr
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::function
+#include <map>           // std::map
 #include <optional>      // std::optional
 #include <string>        // std::string
 #include <string_view>   // std::string_view
@@ -56,8 +57,8 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::unordered_map<sourcemeta::core::JSON::String,
                      sourcemeta::core::JSON::String>
       resolve;
-  std::unordered_map<sourcemeta::core::JSON::String, std::filesystem::path>
-      dependencies;
+  // Ordered to guarantee deterministic iteration
+  std::map<sourcemeta::core::JSON::String, std::filesystem::path> dependencies;
   sourcemeta::core::JSON extra = sourcemeta::core::JSON::make_object();
 
   /// A callback to read file contents from a path
@@ -82,8 +83,8 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
       };
     };
 
-    using const_iterator = std::unordered_map<sourcemeta::core::JSON::String,
-                                              Entry>::const_iterator;
+    using const_iterator =
+        std::map<sourcemeta::core::JSON::String, Entry>::const_iterator;
 
     auto
     emplace(const sourcemeta::core::JSON::String &uri,
@@ -91,6 +92,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
             const sourcemeta::core::JSON::String &hash,
             Entry::HashAlgorithm hash_algorithm = Entry::HashAlgorithm::SHA256)
         -> void;
+    auto erase(const sourcemeta::core::JSON::String &uri) -> void;
 
     [[nodiscard]] auto size() const noexcept -> std::size_t;
     [[nodiscard]] auto at(const sourcemeta::core::JSON::String &uri) const
@@ -108,7 +110,8 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
     auto to_json() const -> sourcemeta::core::JSON;
 
   private:
-    std::unordered_map<sourcemeta::core::JSON::String, Entry> entries_;
+    // Ordered to guarantee deterministic iteration
+    std::map<sourcemeta::core::JSON::String, Entry> entries_;
   };
 
   /// An event emitted during dependency fetching

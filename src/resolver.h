@@ -46,29 +46,48 @@ namespace sourcemeta::jsonschema {
 
 static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
-static inline auto fallback_resolver(const sourcemeta::core::Options &options,
-                                     std::string_view identifier)
-    -> std::optional<sourcemeta::core::JSON> {
-  auto official_result{sourcemeta::core::schema_resolver(identifier)};
-  if (official_result.has_value()) {
-    return official_result;
+static inline auto find_resolve_match(
+    const std::unordered_map<std::string, std::string> &resolve_map,
+    const std::string &identifier)
+    -> std::unordered_map<std::string, std::string>::const_iterator {
+  auto match{resolve_map.find(identifier)};
+  if (match == resolve_map.cend() && !identifier.ends_with(".json")) {
+    match = resolve_map.find(identifier + ".json");
   }
+  if (match == resolve_map.cend() && identifier.ends_with(".json")) {
+    match = resolve_map.find(identifier.substr(0, identifier.size() - 5));
+  }
+  return match;
+}
 
-  // If the URI is not an HTTP URL, then abort
-  const sourcemeta::core::URI uri{std::string{identifier}};
-  const auto maybe_scheme{uri.scheme()};
-  if (uri.is_urn() || !maybe_scheme.has_value() ||
-      (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
+static inline auto
+resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
+                const std::string &identifier) -> std::optional<std::string> {
+  const auto match{find_resolve_match(configuration.resolve, identifier)};
+  if (match == configuration.resolve.cend()) {
     return std::nullopt;
   }
 
+  const sourcemeta::core::URI new_uri{match->second};
+  if (new_uri.is_relative()) {
+    return sourcemeta::core::URI::from_path(configuration.absolute_path /
+                                            new_uri.to_path())
+        .recompose();
+  }
+
+  return match->second;
+}
+
+static inline auto http_fetch(const std::string &url,
+                              const sourcemeta::core::Options &options)
+    -> sourcemeta::core::JSON {
   cpr::Response response;
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
                          << static_cast<int>(attempt) << "/"
                          << static_cast<int>(HTTP_MAXIMUM_RETRIES)
-                         << "): " << identifier << "\n";
-    response = cpr::Get(cpr::Url{identifier}, cpr::Redirect{true});
+                         << "): " << url << "\n";
+    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true});
 
     if (response.status_code == 200) {
       break;
@@ -83,7 +102,7 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
 
   if (response.status_code != 200) {
     std::ostringstream error;
-    error << "HTTP " << response.status_code << "\n  at " << identifier;
+    error << "HTTP " << response.status_code << "\n  at " << url;
     throw std::runtime_error(error.str());
   }
 
@@ -91,9 +110,59 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
   if (content_type_iterator != response.header.end() &&
       content_type_iterator->second.starts_with("text/yaml")) {
     return sourcemeta::core::parse_yaml(response.text);
-  } else {
-    return sourcemeta::core::parse_json(response.text);
   }
+
+  return sourcemeta::core::parse_json(response.text);
+}
+
+static inline auto fetch_schema(const sourcemeta::core::Options &options,
+                                std::string_view identifier,
+                                const bool remote = true,
+                                const bool bundle = false)
+    -> std::optional<sourcemeta::core::JSON> {
+  auto official_result{sourcemeta::core::schema_resolver(identifier)};
+  if (official_result.has_value()) {
+    return official_result;
+  }
+
+  sourcemeta::core::URI uri;
+  try {
+    uri = sourcemeta::core::URI{std::string{identifier}};
+  } catch (const sourcemeta::core::URIParseError &) {
+    return std::nullopt;
+  }
+
+  if (uri.is_file()) {
+    const auto path{uri.to_path()};
+    LOG_DEBUG(options) << "Attempting to read file reference from disk: "
+                       << path.string() << "\n";
+    if (std::filesystem::exists(path)) {
+      return sourcemeta::core::read_yaml_or_json(path);
+    }
+
+    return std::nullopt;
+  }
+
+  if (remote) {
+    const auto scheme{uri.scheme()};
+    if (!uri.is_urn() && scheme.has_value() &&
+        (scheme.value() == "https" || scheme.value() == "http")) {
+      std::string fetch_url{identifier};
+      if (bundle) {
+        // TODO: Use sourcemeta::core::URI to set query parameters once
+        // the URI module supports setters for query strings
+        if (fetch_url.find('?') != std::string::npos) {
+          fetch_url += "&bundle=1";
+        } else {
+          fetch_url += "?bundle=1";
+        }
+      }
+
+      return http_fetch(fetch_url, options);
+    }
+  }
+
+  return std::nullopt;
 }
 
 class CustomResolver {
@@ -136,6 +205,28 @@ public:
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
               entry.first);
         }
+      }
+    }
+
+    if (this->configuration_.has_value()) {
+      for (const auto &[dependency_uri, dependency_path] :
+           this->configuration_.value().dependencies) {
+        if (!std::filesystem::exists(dependency_path)) {
+          continue;
+        }
+
+        auto schema{sourcemeta::core::read_json(dependency_path)};
+        if (!sourcemeta::core::is_schema(schema)) {
+          continue;
+        }
+
+        try {
+          this->add(schema, default_dialect);
+        } catch (...) {
+          continue;
+        }
+
+        this->schemas.emplace(dependency_uri, schema);
       }
     }
   }
@@ -189,36 +280,13 @@ public:
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
     if (this->configuration_.has_value()) {
-
-      // TODO: Abstract this fallback logic as a Configuration method
-      auto match{this->configuration_.value().resolve.find(string_identifier)};
-      if (match == this->configuration_.value().resolve.cend() &&
-          !string_identifier.ends_with(".json")) {
-        match = this->configuration_.value().resolve.find(string_identifier +
-                                                          ".json");
-      }
-      if (match == this->configuration_.value().resolve.cend() &&
-          string_identifier.ends_with(".json")) {
-        match = this->configuration_.value().resolve.find(
-            string_identifier.substr(0, string_identifier.size() - 5));
-      }
-
-      if (match != this->configuration_.value().resolve.cend()) {
-        const sourcemeta::core::URI new_uri{match->second};
-        if (new_uri.is_relative()) {
-          const auto file_uri{sourcemeta::core::URI::from_path(
-              this->configuration_.value().absolute_path / new_uri.to_path())};
-          const auto result{file_uri.recompose()};
-          LOG_DEBUG(this->options_)
-              << "Resolving " << identifier << " as " << result
-              << " given the configuration file\n";
-          return this->operator()(result);
-        } else {
-          LOG_DEBUG(this->options_)
-              << "Resolving " << identifier << " as " << match->second
-              << " given the configuration file\n";
-          return this->operator()(match->second);
-        }
+      const auto mapped{
+          resolve_map_uri(this->configuration_.value(), string_identifier)};
+      if (mapped.has_value()) {
+        LOG_DEBUG(this->options_)
+            << "Resolving " << identifier << " as " << mapped.value()
+            << " given the configuration file\n";
+        return this->operator()(mapped.value());
       }
     }
 
@@ -226,30 +294,7 @@ public:
       return this->schemas.at(string_identifier);
     }
 
-    // Fallback resolution logic
-    sourcemeta::core::URI uri;
-    try {
-      uri = sourcemeta::core::URI{std::string{identifier}};
-    } catch (const sourcemeta::core::URIParseError &) {
-      return std::nullopt;
-    }
-
-    if (uri.is_file()) {
-      const auto path{uri.to_path()};
-      LOG_DEBUG(this->options_)
-          << "Attempting to read file reference from disk: " << path.string()
-          << "\n";
-      if (std::filesystem::exists(path)) {
-        return std::optional<sourcemeta::core::JSON>{
-            sourcemeta::core::read_yaml_or_json(path)};
-      }
-    }
-
-    if (this->remote_) {
-      return fallback_resolver(this->options_, identifier);
-    } else {
-      return sourcemeta::core::schema_resolver(identifier);
-    }
+    return fetch_schema(this->options_, identifier, this->remote_);
   }
 
 private:
