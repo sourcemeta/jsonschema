@@ -177,6 +177,9 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
     throw FileError<sourcemeta::blaze::ConfigurationParseError>(
         configuration_path.value(), error.what(), error.location());
+  } catch (const sourcemeta::core::JSONParseError &error) {
+    throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
+                                               error);
   }
 
   if (configuration.dependencies.empty()) {
@@ -188,8 +191,13 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const auto lock_path{configuration.absolute_path / "jsonschema.lock.json"};
   sourcemeta::blaze::Configuration::Lock lock;
   if (std::filesystem::exists(lock_path)) {
-    lock = sourcemeta::blaze::Configuration::Lock::from_json(
-        sourcemeta::core::read_json(lock_path));
+    try {
+      lock = sourcemeta::blaze::Configuration::Lock::from_json(
+          sourcemeta::core::read_json(lock_path));
+    } catch (...) {
+      std::cerr << "warning: Ignoring corrupted lock file\n  at "
+                << lock_path.string() << "\n";
+    }
   }
 
   const auto fetch_mode{

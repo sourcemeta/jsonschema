@@ -585,7 +585,10 @@ add_jsonschema_test_unix(install/pass_debug_output)
 add_jsonschema_test_unix(install/pass_target_already_exists)
 add_jsonschema_test_unix(install/fail_duplicate_destination)
 add_jsonschema_test_unix(install/fail_creates_parent_over_file)
+add_jsonschema_test_unix(install/fail_invalid_json_configuration)
 add_jsonschema_test_unix(install/pass_remove_orphaned_dependency)
+add_jsonschema_test_unix(install/pass_corrupted_lock_invalid_json)
+add_jsonschema_test_unix(install/pass_corrupted_lock_invalid_format)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
