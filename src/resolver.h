@@ -294,11 +294,7 @@ public:
       return this->schemas.at(string_identifier);
     }
 
-    try {
-      return fetch_schema(this->options_, identifier, this->remote_);
-    } catch (...) {
-      return std::nullopt;
-    }
+    return fetch_schema(this->options_, identifier, this->remote_);
   }
 
 private:
