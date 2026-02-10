@@ -44,10 +44,18 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
-Fetching       : file://$(realpath "$TMP")/source/user.json
 {
-  "error": "Failed to write schema",
-  "uri": "file://$(realpath "$TMP")/source/user.json"
+  "events": [
+    {
+      "type": "fetching",
+      "uri": "file://$(realpath "$TMP")/source/user.json"
+    },
+    {
+      "type": "error",
+      "uri": "file://$(realpath "$TMP")/source/user.json",
+      "message": "Failed to write schema"
+    }
+  ]
 }
 EOF
 

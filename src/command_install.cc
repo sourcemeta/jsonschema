@@ -162,8 +162,34 @@ auto emit_debug(const sourcemeta::core::Options &options,
 
 } // namespace
 
+auto emit_json(sourcemeta::core::JSON &events_array,
+               const std::string_view type) -> void {
+  auto json_event{sourcemeta::core::JSON::make_object()};
+  json_event.assign("type", sourcemeta::core::JSON{std::string{type}});
+  events_array.push_back(std::move(json_event));
+}
+
+auto emit_json(sourcemeta::core::JSON &events_array,
+               const std::string_view type, const std::string_view key,
+               const std::string_view value) -> void {
+  auto json_event{sourcemeta::core::JSON::make_object()};
+  json_event.assign("type", sourcemeta::core::JSON{std::string{type}});
+  json_event.assign(std::string{key}, sourcemeta::core::JSON{std::string{value}});
+  events_array.push_back(std::move(json_event));
+}
+
+auto output_json(sourcemeta::core::JSON &events_array) -> void {
+  auto result{sourcemeta::core::JSON::make_object()};
+  result.assign("events", std::move(events_array));
+  sourcemeta::core::prettify(result, std::cout);
+  std::cout << "\n";
+}
+
 auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     -> void {
+  const auto is_json{options.contains("json")};
+  auto events_array{sourcemeta::core::JSON::make_array()};
+
   const auto configuration_path{
       sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};
   if (!configuration_path.has_value()) {
@@ -183,8 +209,13 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   }
 
   if (configuration.dependencies.empty()) {
-    std::cerr << "No dependencies found\n  at "
-              << configuration_path.value().string() << "\n";
+    if (is_json) {
+      output_json(events_array);
+    } else {
+      std::cerr << "No dependencies found\n  at "
+                << configuration_path.value().string() << "\n";
+    }
+
     return;
   }
 
@@ -195,8 +226,13 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       lock = sourcemeta::blaze::Configuration::Lock::from_json(
           sourcemeta::core::read_json(lock_path));
     } catch (...) {
-      std::cerr << "warning: Ignoring corrupted lock file\n  at "
-                << lock_path.string() << "\n";
+      if (is_json) {
+        emit_json(events_array, "warning", "message",
+                  "Ignoring corrupted lock file");
+      } else {
+        std::cerr << "warning: Ignoring corrupted lock file\n  at "
+                  << lock_path.string() << "\n";
+      }
     }
   }
 
@@ -226,7 +262,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   bool had_error{false};
   const sourcemeta::blaze::Configuration::FetchEvent::Callback on_event{
-      [&options, &had_error](
+      [&options, &had_error, &is_json, &events_array](
           const sourcemeta::blaze::Configuration::FetchEvent &event) -> bool {
         using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
 
@@ -234,7 +270,12 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
         switch (event.type) {
           case Type::FetchStart:
-            std::cerr << padded_label("Fetching") << event.uri << "\n";
+            if (is_json) {
+              emit_json(events_array, "fetching", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Fetching") << event.uri << "\n";
+            }
+
             break;
           case Type::FetchEnd:
             break;
@@ -255,36 +296,93 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
                 << padded_label("Verifying") << event.path.string() << "\n";
             break;
           case Type::VerifyEnd:
-            std::cerr << padded_label("Installed") << event.path.string()
-                      << "\n";
+            if (is_json) {
+              auto json_event{sourcemeta::core::JSON::make_object()};
+              json_event.assign("type",
+                                sourcemeta::core::JSON{"installed"});
+              json_event.assign("uri",
+                                sourcemeta::core::JSON{std::string{event.uri}});
+              json_event.assign(
+                  "path",
+                  sourcemeta::core::JSON{event.path.string()});
+              events_array.push_back(std::move(json_event));
+            } else {
+              std::cerr << padded_label("Installed") << event.path.string()
+                        << "\n";
+            }
+
             break;
           case Type::UpToDate:
-            std::cerr << padded_label("Up to date") << event.uri << "\n";
+            if (is_json) {
+              emit_json(events_array, "up-to-date", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Up to date") << event.uri << "\n";
+            }
+
             break;
           case Type::FileMissing:
-            std::cerr << padded_label("File missing") << event.path.string()
-                      << "\n";
+            if (is_json) {
+              emit_json(events_array, "file-missing", "path",
+                        event.path.string());
+            } else {
+              std::cerr << padded_label("File missing")
+                        << event.path.string() << "\n";
+            }
+
             break;
           case Type::Mismatched:
-            std::cerr << padded_label("Mismatched") << event.path.string()
-                      << "\n";
+            if (is_json) {
+              emit_json(events_array, "mismatched", "path",
+                        event.path.string());
+            } else {
+              std::cerr << padded_label("Mismatched") << event.path.string()
+                        << "\n";
+            }
+
             break;
           case Type::PathMismatch:
-            std::cerr << padded_label("Path mismatch") << event.uri << "\n";
+            if (is_json) {
+              emit_json(events_array, "path-mismatch", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Path mismatch") << event.uri << "\n";
+            }
+
             break;
           case Type::Untracked:
-            std::cerr << padded_label("Untracked") << event.uri << "\n";
+            if (is_json) {
+              emit_json(events_array, "untracked", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Untracked") << event.uri << "\n";
+            }
+
             break;
           case Type::Orphaned:
-            std::cerr << padded_label("Orphaned") << event.uri << "\n";
+            if (is_json) {
+              emit_json(events_array, "orphaned", "uri", event.uri);
+            } else {
+              std::cerr << padded_label("Orphaned") << event.uri << "\n";
+            }
+
             std::filesystem::remove(event.path);
             break;
           case Type::Error:
             had_error = true;
-            try_catch(options, [&]() -> int {
-              throw InstallError{std::string{event.details},
-                                 std::string{event.uri}};
-            });
+            if (is_json) {
+              auto json_event{sourcemeta::core::JSON::make_object()};
+              json_event.assign("type", sourcemeta::core::JSON{"error"});
+              json_event.assign(
+                  "uri", sourcemeta::core::JSON{std::string{event.uri}});
+              json_event.assign(
+                  "message",
+                  sourcemeta::core::JSON{std::string{event.details}});
+              events_array.push_back(std::move(json_event));
+            } else {
+              try_catch(options, [&]() -> int {
+                throw InstallError{std::string{event.details},
+                                   std::string{event.uri}};
+              });
+            }
+
             break;
         }
 
@@ -293,6 +391,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
                       on_event, fetch_mode);
+
+  if (is_json) {
+    output_json(events_array);
+  }
 
   if (had_error) {
     throw Fail{EXIT_FAILURE};
