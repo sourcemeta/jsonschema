@@ -269,6 +269,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
             break;
           case Type::Orphaned:
             std::cerr << padded_label("Orphaned") << event.uri << "\n";
+            std::filesystem::remove(event.path);
             break;
           case Type::Error:
             had_error = true;
