@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-mkdir -p "$TMP/source" "$TMP/project"
+mkdir -p "$TMP/source" "$TMP/project/vendor"
 
 cat << 'EOF' > "$TMP/source/user.json"
 {
@@ -16,23 +16,23 @@ cat << 'EOF' > "$TMP/source/user.json"
 }
 EOF
 
+# Pre-create the target file with different contents
+cat << 'EOF' > "$TMP/project/vendor/user.json"
+{
+  "old": "content"
+}
+EOF
+
 cat << EOF > "$TMP/project/jsonschema.json"
 {
   "dependencies": {
-    "file://$(realpath "$TMP")/source/user.json": "./deep/nested/vendor/user.json"
+    "file://$(realpath "$TMP")/source/user.json": "./vendor/user.json"
   }
 }
 EOF
 
 cd "$TMP/project"
-"$1" install > "$TMP/output.txt" 2>&1
-
-cat << EOF > "$TMP/expected.txt"
-Fetching       : file://$(realpath "$TMP")/source/user.json
-Installed      : $(realpath "$TMP")/project/deep/nested/vendor/user.json
-EOF
-
-diff "$TMP/output.txt" "$TMP/expected.txt"
+"$1" install > /dev/null 2>&1
 
 cat << EOF > "$TMP/expected_schema.json"
 {
@@ -42,16 +42,16 @@ cat << EOF > "$TMP/expected_schema.json"
 }
 EOF
 
-diff "$TMP/project/deep/nested/vendor/user.json" "$TMP/expected_schema.json"
+diff "$TMP/project/vendor/user.json" "$TMP/expected_schema.json"
 
-HASH="$(cat "$TMP/project/deep/nested/vendor/user.json" | shasum -a 256 | cut -d ' ' -f 1)"
+HASH="$(cat "$TMP/project/vendor/user.json" | shasum -a 256 | cut -d ' ' -f 1)"
 
 cat << EOF > "$TMP/expected_lock.json"
 {
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/user.json": {
-      "path": "$(realpath "$TMP")/project/deep/nested/vendor/user.json",
+      "path": "$(realpath "$TMP")/project/vendor/user.json",
       "hash": "${HASH}",
       "hashAlgorithm": "sha256"
     }

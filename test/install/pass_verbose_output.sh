@@ -36,3 +36,5 @@ Installed      : $(realpath "$TMP")/project/vendor/user.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+test -f "$TMP/project/jsonschema.lock.json"

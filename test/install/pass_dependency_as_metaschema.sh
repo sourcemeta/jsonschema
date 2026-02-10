@@ -47,4 +47,26 @@ cd "$TMP/project"
 
 test -f "$TMP/project/vendor/custom_meta.json"
 test -f "$TMP/project/vendor/my_schema.json"
-test -f "$TMP/project/jsonschema.lock.json"
+
+HASH_META="$(cat "$TMP/project/vendor/custom_meta.json" | shasum -a 256 | cut -d ' ' -f 1)"
+HASH_SCHEMA="$(cat "$TMP/project/vendor/my_schema.json" | shasum -a 256 | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/custom_meta.json": {
+      "path": "$(realpath "$TMP")/project/vendor/custom_meta.json",
+      "hash": "${HASH_META}",
+      "hashAlgorithm": "sha256"
+    },
+    "file://$(realpath "$TMP")/source/my_schema.json": {
+      "path": "$(realpath "$TMP")/project/vendor/my_schema.json",
+      "hash": "${HASH_SCHEMA}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"

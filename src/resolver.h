@@ -46,6 +46,57 @@ namespace sourcemeta::jsonschema {
 
 static constexpr std::uint8_t HTTP_MAXIMUM_RETRIES{3};
 
+static inline auto find_resolve_match(
+    const std::unordered_map<std::string, std::string> &resolve_map,
+    const std::string &identifier)
+    -> std::unordered_map<std::string, std::string>::const_iterator {
+  auto match{resolve_map.find(identifier)};
+  if (match == resolve_map.cend() && !identifier.ends_with(".json")) {
+    match = resolve_map.find(identifier + ".json");
+  }
+  if (match == resolve_map.cend() && identifier.ends_with(".json")) {
+    match = resolve_map.find(identifier.substr(0, identifier.size() - 5));
+  }
+  return match;
+}
+
+static inline auto http_fetch(const std::string &url,
+                              const sourcemeta::core::Options &options)
+    -> sourcemeta::core::JSON {
+  cpr::Response response;
+  for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
+    LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
+                         << static_cast<int>(attempt) << "/"
+                         << static_cast<int>(HTTP_MAXIMUM_RETRIES)
+                         << "): " << url << "\n";
+    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true});
+
+    if (response.status_code == 200) {
+      break;
+    }
+
+    if (attempt < HTTP_MAXIMUM_RETRIES) {
+      LOG_VERBOSE(options) << "Request failed with HTTP "
+                           << response.status_code << ", retrying...\n";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
+
+  if (response.status_code != 200) {
+    std::ostringstream error;
+    error << "HTTP " << response.status_code << "\n  at " << url;
+    throw std::runtime_error(error.str());
+  }
+
+  const auto content_type_iterator{response.header.find("content-type")};
+  if (content_type_iterator != response.header.end() &&
+      content_type_iterator->second.starts_with("text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.text);
+  }
+
+  return sourcemeta::core::parse_json(response.text);
+}
+
 static inline auto fallback_resolver(const sourcemeta::core::Options &options,
                                      std::string_view identifier)
     -> std::optional<sourcemeta::core::JSON> {
@@ -62,38 +113,7 @@ static inline auto fallback_resolver(const sourcemeta::core::Options &options,
     return std::nullopt;
   }
 
-  cpr::Response response;
-  for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
-    LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
-                         << static_cast<int>(attempt) << "/"
-                         << static_cast<int>(HTTP_MAXIMUM_RETRIES)
-                         << "): " << identifier << "\n";
-    response = cpr::Get(cpr::Url{identifier}, cpr::Redirect{true});
-
-    if (response.status_code == 200) {
-      break;
-    }
-
-    if (attempt < HTTP_MAXIMUM_RETRIES) {
-      LOG_VERBOSE(options) << "Request failed with HTTP "
-                           << response.status_code << ", retrying...\n";
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-  }
-
-  if (response.status_code != 200) {
-    std::ostringstream error;
-    error << "HTTP " << response.status_code << "\n  at " << identifier;
-    throw std::runtime_error(error.str());
-  }
-
-  const auto content_type_iterator{response.header.find("content-type")};
-  if (content_type_iterator != response.header.end() &&
-      content_type_iterator->second.starts_with("text/yaml")) {
-    return sourcemeta::core::parse_yaml(response.text);
-  } else {
-    return sourcemeta::core::parse_json(response.text);
-  }
+  return http_fetch(std::string{identifier}, options);
 }
 
 class CustomResolver {
@@ -135,6 +155,26 @@ public:
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
               entry.first);
+        }
+      }
+    }
+
+    if (this->configuration_.has_value()) {
+      for (const auto &[dependency_uri, dependency_path] :
+           this->configuration_.value().dependencies) {
+        if (!std::filesystem::exists(dependency_path)) {
+          continue;
+        }
+
+        auto schema{sourcemeta::core::read_json(dependency_path)};
+        if (!sourcemeta::core::is_schema(schema)) {
+          continue;
+        }
+
+        try {
+          this->add(schema, default_dialect);
+        } catch (...) {
+          continue;
         }
       }
     }
@@ -191,18 +231,8 @@ public:
     if (this->configuration_.has_value()) {
 
       // TODO: Abstract this fallback logic as a Configuration method
-      auto match{this->configuration_.value().resolve.find(string_identifier)};
-      if (match == this->configuration_.value().resolve.cend() &&
-          !string_identifier.ends_with(".json")) {
-        match = this->configuration_.value().resolve.find(string_identifier +
-                                                          ".json");
-      }
-      if (match == this->configuration_.value().resolve.cend() &&
-          string_identifier.ends_with(".json")) {
-        match = this->configuration_.value().resolve.find(
-            string_identifier.substr(0, string_identifier.size() - 5));
-      }
-
+      const auto match{find_resolve_match(this->configuration_.value().resolve,
+                                          string_identifier)};
       if (match != this->configuration_.value().resolve.cend()) {
         const sourcemeta::core::URI new_uri{match->second};
         if (new_uri.is_relative()) {

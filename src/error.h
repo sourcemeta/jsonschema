@@ -154,6 +154,13 @@ private:
   std::string command_;
 };
 
+class ConfigurationNotFoundError : public std::runtime_error {
+public:
+  ConfigurationNotFoundError()
+      : std::runtime_error{
+            "Could not find a jsonschema.json configuration file"} {}
+};
+
 class Fail : public std::runtime_error {
 public:
   Fail(int exit_code) : std::runtime_error{"Fail"}, exit_code_{exit_code} {}
@@ -384,6 +391,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return callback();
   } catch (const Fail &error) {
     return error.exit_code();
+  } catch (const ConfigurationNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nLearn more here: "
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
+                   "docs/install.markdown\n";
+    }
+
+    return EXIT_FAILURE;
   } catch (const NotSchemaError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

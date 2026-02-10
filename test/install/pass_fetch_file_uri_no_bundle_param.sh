@@ -36,3 +36,20 @@ cat << EOF > "$TMP/expected_schema.json"
 EOF
 
 diff "$TMP/project/vendor/schema.json" "$TMP/expected_schema.json"
+
+HASH="$(cat "$TMP/project/vendor/schema.json" | shasum -a 256 | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/schema.json": {
+      "path": "$(realpath "$TMP")/project/vendor/schema.json",
+      "hash": "${HASH}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"

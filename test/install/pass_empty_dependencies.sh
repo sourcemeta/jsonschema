@@ -23,3 +23,6 @@ No dependencies to install
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+# No lock file should be created when there are no dependencies
+test ! -f "$TMP/project/jsonschema.lock.json"

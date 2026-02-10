@@ -15,6 +15,8 @@ test "$EXIT_CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: Could not find a jsonschema.json configuration file
+
+Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/install.markdown
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -30,3 +32,6 @@ cat << 'EOF' > "$TMP/expected.txt"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+# Ensure no lock file was created
+test ! -f "$TMP/jsonschema.lock.json"

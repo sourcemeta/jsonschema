@@ -27,7 +27,7 @@ relative file paths:
 When you run `jsonschema install`, each dependency is fetched, bundled (to
 inline any remote references), and written to the specified path. The lock file
 `jsonschema.lock.json` is created or updated alongside `jsonschema.json` to
-record the SHA-256 hash of each installed dependency.
+record the hash of each installed dependency.
 
 On subsequent runs, the command only fetches dependencies that are missing,
 modified, or not yet tracked in the lock file.
@@ -36,11 +36,12 @@ modified, or not yet tracked in the lock file.
 > We recommend committing `jsonschema.lock.json` to version control (similar to
 > `package-lock.json`) to enable reproducible installs across environments.
 
-> [!NOTE]
+> [!WARNING]
 > If a dependency uses a custom meta-schema that is itself an external
 > dependency, make sure to list both the meta-schema and the schema that uses
 > it in the `dependencies` map. The install command will resolve the
-> meta-schema during bundling regardless of processing order.
+> meta-schema during bundling regardless of processing order. We are working
+> on resolving this automatically in a future release.
 
 Examples
 --------
@@ -61,13 +62,4 @@ jsonschema install --force
 
 ```sh
 jsonschema install --verbose
-```
-
-### No dependencies declared
-
-If the configuration file has no `dependencies` property or it is empty, the
-command prints a message and exits successfully:
-
-```
-No dependencies to install
 ```

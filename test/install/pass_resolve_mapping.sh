@@ -40,4 +40,20 @@ cd "$TMP/project"
 "$1" install > /dev/null 2>&1
 
 test -f "$TMP/project/vendor/main.json"
-test -f "$TMP/project/jsonschema.lock.json"
+
+HASH="$(cat "$TMP/project/vendor/main.json" | shasum -a 256 | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/main.json": {
+      "path": "$(realpath "$TMP")/project/vendor/main.json",
+      "hash": "${HASH}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"

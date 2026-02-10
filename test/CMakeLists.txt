@@ -347,6 +347,7 @@ add_jsonschema_test_unix(bundle/pass_custom_extension_yaml)
 add_jsonschema_test_unix(bundle/pass_resolve_config_match)
 add_jsonschema_test_unix(bundle/pass_resolve_config_match_implicit_extension_config)
 add_jsonschema_test_unix(bundle/pass_resolve_config_match_implicit_extension_ref)
+add_jsonschema_test_unix(bundle/pass_resolve_installed_dependency)
 add_jsonschema_test_unix(bundle/fail_invalid_id_type)
 add_jsonschema_test_unix(bundle/fail_invalid_schema_uri)
 
@@ -580,6 +581,9 @@ add_jsonschema_test_unix(install/pass_resolver_file_uri_fallback)
 add_jsonschema_test_unix(install/pass_resolver_config_resolve_priority)
 add_jsonschema_test_unix(install/pass_resolve_mapping)
 add_jsonschema_test_unix(install/pass_dependency_as_metaschema)
+add_jsonschema_test_unix(install/pass_debug_output)
+add_jsonschema_test_unix(install/pass_target_already_exists)
+add_jsonschema_test_unix(install/fail_duplicate_destination)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)

@@ -125,9 +125,8 @@ Commands:
    install [--force/-f]
 
        Fetch and install external schema dependencies declared in
-       jsonschema.json. Uses the lock file jsonschema.lock.json to track
-       installed dependency hashes. Pass --force/-f to re-fetch all
-       dependencies regardless of lock state.
+       jsonschema.json. Pass --force/-f to re-fetch all dependencies
+       regardless of lock state.
 
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
