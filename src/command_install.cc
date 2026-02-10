@@ -1,6 +1,5 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
-#include <sourcemeta/core/uri.h>
 
 #include <cassert>     // assert
 #include <cstdint>     // std::uint8_t
@@ -44,30 +43,10 @@ auto atomic_write(const std::filesystem::path &path,
 auto install_fetch(const sourcemeta::core::Options &options,
                    const std::filesystem::path &configuration_path,
                    std::string_view uri) -> sourcemeta::core::JSON {
-  auto official_result{sourcemeta::core::schema_resolver(uri)};
-  if (official_result.has_value()) {
-    return std::move(official_result.value());
-  }
-
-  const sourcemeta::core::URI parsed_uri{std::string{uri}};
-
-  if (parsed_uri.is_file()) {
-    return sourcemeta::core::read_json(parsed_uri.to_path());
-  }
-
-  const auto scheme{parsed_uri.scheme()};
-  if (scheme.has_value() &&
-      (scheme.value() == "https" || scheme.value() == "http")) {
-    // TODO: Use sourcemeta::core::URI to set query parameters once
-    // the URI module supports setters for query strings
-    std::string fetch_url{uri};
-    if (fetch_url.find('?') != std::string::npos) {
-      fetch_url += "&bundle=1";
-    } else {
-      fetch_url += "?bundle=1";
-    }
-
-    return sourcemeta::jsonschema::http_fetch(fetch_url, options);
+  auto result{
+      sourcemeta::jsonschema::fetch_schema(options, uri, true, true)};
+  if (result.has_value()) {
+    return std::move(result.value());
   }
 
   throw sourcemeta::jsonschema::FileError<
@@ -81,20 +60,16 @@ auto install_resolve(const sourcemeta::core::Options &options,
     -> std::optional<sourcemeta::core::JSON> {
   const std::string string_identifier{identifier};
 
-  const auto match{sourcemeta::jsonschema::find_resolve_match(
-      configuration.resolve, string_identifier)};
-  if (match != configuration.resolve.cend()) {
-    const sourcemeta::core::URI new_uri{match->second};
-    if (new_uri.is_relative()) {
-      const auto resolved_path{configuration.absolute_path / new_uri.to_path()};
-      if (std::filesystem::exists(resolved_path)) {
-        return sourcemeta::core::read_json(resolved_path);
+  const auto mapped{sourcemeta::jsonschema::resolve_map_uri(
+      configuration, string_identifier)};
+  if (mapped.has_value()) {
+    try {
+      auto result{
+          sourcemeta::jsonschema::fetch_schema(options, mapped.value())};
+      if (result.has_value()) {
+        return result;
       }
-    } else if (new_uri.is_file()) {
-      const auto path{new_uri.to_path()};
-      if (std::filesystem::exists(path)) {
-        return sourcemeta::core::read_json(path);
-      }
+    } catch (...) {
     }
   }
 
@@ -106,37 +81,11 @@ auto install_resolve(const sourcemeta::core::Options &options,
     }
   }
 
-  auto official_result{sourcemeta::core::schema_resolver(identifier)};
-  if (official_result.has_value()) {
-    return official_result;
-  }
-
-  sourcemeta::core::URI uri;
   try {
-    uri = sourcemeta::core::URI{std::string{identifier}};
-  } catch (const sourcemeta::core::URIParseError &) {
+    return sourcemeta::jsonschema::fetch_schema(options, identifier);
+  } catch (...) {
     return std::nullopt;
   }
-
-  if (uri.is_file()) {
-    const auto path{uri.to_path()};
-    if (std::filesystem::exists(path)) {
-      return sourcemeta::core::read_json(path);
-    }
-  }
-
-  const auto scheme{uri.scheme()};
-  if (!uri.is_urn() && scheme.has_value() &&
-      (scheme.value() == "https" || scheme.value() == "http")) {
-    try {
-      return sourcemeta::jsonschema::http_fetch(std::string{identifier},
-                                                options);
-    } catch (...) {
-      return std::nullopt;
-    }
-  }
-
-  return std::nullopt;
 }
 
 auto emit_debug(const sourcemeta::core::Options &options,

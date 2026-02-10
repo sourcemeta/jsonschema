@@ -60,6 +60,25 @@ static inline auto find_resolve_match(
   return match;
 }
 
+static inline auto resolve_map_uri(
+    const sourcemeta::blaze::Configuration &configuration,
+    const std::string &identifier)
+    -> std::optional<std::string> {
+  const auto match{find_resolve_match(configuration.resolve, identifier)};
+  if (match == configuration.resolve.cend()) {
+    return std::nullopt;
+  }
+
+  const sourcemeta::core::URI new_uri{match->second};
+  if (new_uri.is_relative()) {
+    return sourcemeta::core::URI::from_path(
+               configuration.absolute_path / new_uri.to_path())
+        .recompose();
+  }
+
+  return match->second;
+}
+
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
@@ -97,23 +116,54 @@ static inline auto http_fetch(const std::string &url,
   return sourcemeta::core::parse_json(response.text);
 }
 
-static inline auto fallback_resolver(const sourcemeta::core::Options &options,
-                                     std::string_view identifier)
+static inline auto fetch_schema(const sourcemeta::core::Options &options,
+                                std::string_view identifier,
+                                const bool remote = true,
+                                const bool bundle = false)
     -> std::optional<sourcemeta::core::JSON> {
   auto official_result{sourcemeta::core::schema_resolver(identifier)};
   if (official_result.has_value()) {
     return official_result;
   }
 
-  // If the URI is not an HTTP URL, then abort
-  const sourcemeta::core::URI uri{std::string{identifier}};
-  const auto maybe_scheme{uri.scheme()};
-  if (uri.is_urn() || !maybe_scheme.has_value() ||
-      (maybe_scheme.value() != "https" && maybe_scheme.value() != "http")) {
+  sourcemeta::core::URI uri;
+  try {
+    uri = sourcemeta::core::URI{std::string{identifier}};
+  } catch (const sourcemeta::core::URIParseError &) {
     return std::nullopt;
   }
 
-  return http_fetch(std::string{identifier}, options);
+  if (uri.is_file()) {
+    const auto path{uri.to_path()};
+    LOG_DEBUG(options) << "Attempting to read file reference from disk: "
+                       << path.string() << "\n";
+    if (std::filesystem::exists(path)) {
+      return sourcemeta::core::read_yaml_or_json(path);
+    }
+
+    return std::nullopt;
+  }
+
+  if (remote) {
+    const auto scheme{uri.scheme()};
+    if (!uri.is_urn() && scheme.has_value() &&
+        (scheme.value() == "https" || scheme.value() == "http")) {
+      std::string fetch_url{identifier};
+      if (bundle) {
+        // TODO: Use sourcemeta::core::URI to set query parameters once
+        // the URI module supports setters for query strings
+        if (fetch_url.find('?') != std::string::npos) {
+          fetch_url += "&bundle=1";
+        } else {
+          fetch_url += "?bundle=1";
+        }
+      }
+
+      return http_fetch(fetch_url, options);
+    }
+  }
+
+  return std::nullopt;
 }
 
 class CustomResolver {
@@ -231,26 +281,13 @@ public:
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
     if (this->configuration_.has_value()) {
-
-      // TODO: Abstract this fallback logic as a Configuration method
-      const auto match{find_resolve_match(this->configuration_.value().resolve,
-                                          string_identifier)};
-      if (match != this->configuration_.value().resolve.cend()) {
-        const sourcemeta::core::URI new_uri{match->second};
-        if (new_uri.is_relative()) {
-          const auto file_uri{sourcemeta::core::URI::from_path(
-              this->configuration_.value().absolute_path / new_uri.to_path())};
-          const auto result{file_uri.recompose()};
-          LOG_DEBUG(this->options_)
-              << "Resolving " << identifier << " as " << result
-              << " given the configuration file\n";
-          return this->operator()(result);
-        } else {
-          LOG_DEBUG(this->options_)
-              << "Resolving " << identifier << " as " << match->second
-              << " given the configuration file\n";
-          return this->operator()(match->second);
-        }
+      const auto mapped{resolve_map_uri(this->configuration_.value(),
+                                        string_identifier)};
+      if (mapped.has_value()) {
+        LOG_DEBUG(this->options_)
+            << "Resolving " << identifier << " as " << mapped.value()
+            << " given the configuration file\n";
+        return this->operator()(mapped.value());
       }
     }
 
@@ -258,29 +295,10 @@ public:
       return this->schemas.at(string_identifier);
     }
 
-    // Fallback resolution logic
-    sourcemeta::core::URI uri;
     try {
-      uri = sourcemeta::core::URI{std::string{identifier}};
-    } catch (const sourcemeta::core::URIParseError &) {
+      return fetch_schema(this->options_, identifier, this->remote_);
+    } catch (...) {
       return std::nullopt;
-    }
-
-    if (uri.is_file()) {
-      const auto path{uri.to_path()};
-      LOG_DEBUG(this->options_)
-          << "Attempting to read file reference from disk: " << path.string()
-          << "\n";
-      if (std::filesystem::exists(path)) {
-        return std::optional<sourcemeta::core::JSON>{
-            sourcemeta::core::read_yaml_or_json(path)};
-      }
-    }
-
-    if (this->remote_) {
-      return fallback_resolver(this->options_, identifier);
-    } else {
-      return sourcemeta::core::schema_resolver(identifier);
     }
   }
 

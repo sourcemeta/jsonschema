@@ -30,6 +30,7 @@ cd "$TMP/project"
 cat << EOF > "$TMP/expected.txt"
 debug: fetch/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
 Fetching       : file://$(realpath "$TMP")/source/user.json
+debug: Attempting to read file reference from disk: $(realpath "$TMP")/source/user.json
 debug: fetch/end: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
 debug: bundle/start: file://$(realpath "$TMP")/source/user.json (1/1) -> $(realpath "$TMP")/project/vendor/user.json
 Bundling       : file://$(realpath "$TMP")/source/user.json
