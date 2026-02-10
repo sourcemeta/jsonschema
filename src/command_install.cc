@@ -272,8 +272,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
             break;
           case Type::Error:
             had_error = true;
-            std::cerr << "error: " << event.details << "\n"
-                      << "  " << event.uri << "\n";
+            try_catch(options, [&]() -> int {
+              throw InstallError{std::string{event.details},
+                                 std::string{event.uri}};
+            });
             break;
         }
 

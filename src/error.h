@@ -169,6 +169,19 @@ private:
   std::filesystem::path path_;
 };
 
+class InstallError : public std::runtime_error {
+public:
+  InstallError(std::string message, std::string uri)
+      : std::runtime_error{std::move(message)}, uri_{std::move(uri)} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
+};
+
 class Fail : public std::runtime_error {
 public:
   Fail(int exit_code) : std::runtime_error{"Fail"}, exit_code_{exit_code} {}
@@ -399,6 +412,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return callback();
   } catch (const Fail &error) {
     return error.exit_code();
+  } catch (const InstallError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const ConfigurationNotFoundError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

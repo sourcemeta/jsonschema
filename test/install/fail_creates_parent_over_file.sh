@@ -34,9 +34,23 @@ test "$EXIT_CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 Fetching       : file://$(realpath "$TMP")/source/user.json
 error: Failed to write schema
-  file://$(realpath "$TMP")/source/user.json
+  at uri file://$(realpath "$TMP")/source/user.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+"$1" install --json > "$TMP/output_json.txt" 2>&1 \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "1" || exit 1
+
+cat << EOF > "$TMP/expected_json.txt"
+Fetching       : file://$(realpath "$TMP")/source/user.json
+{
+  "error": "Failed to write schema",
+  "uri": "file://$(realpath "$TMP")/source/user.json"
+}
+EOF
+
+diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
 
 test ! -f "$TMP/project/jsonschema.lock.json"
