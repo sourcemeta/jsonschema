@@ -150,7 +150,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     const std::filesystem::path input_path{positional_arguments.at(1)};
 
     sourcemeta::blaze::Configuration add_configuration;
-    if (configuration_path.has_value()) {
+    const bool has_existing_config{configuration_path.has_value()};
+    if (has_existing_config) {
       try {
         add_configuration = sourcemeta::blaze::Configuration::read_json(
             configuration_path.value(), configuration_reader);
@@ -181,16 +182,17 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       throw FileError<sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error.what(), error.location());
     }
-    auto config_json{add_configuration.to_json()};
-    // TODO: It is odd that we need this?
-    config_json.erase("path");
-    config_json.erase("baseUri");
+    auto config_json{
+        has_existing_config
+            ? sourcemeta::core::read_json(configuration_path.value())
+            : sourcemeta::core::JSON::make_object()};
+    config_json.assign("dependencies",
+                       add_configuration.to_json().at("dependencies"));
     atomic_write(configuration_path.value(), config_json);
 
-    auto relative_target{
-        std::filesystem::relative(absolute_target,
-                                  add_configuration.absolute_path)
-            .generic_string()};
+    auto relative_target{std::filesystem::relative(
+                             absolute_target, add_configuration.absolute_path)
+                             .generic_string()};
     if (!relative_target.starts_with("..")) {
       relative_target = "./" + relative_target;
     }
