@@ -122,11 +122,12 @@ Commands:
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
-   install [--force/-f]
+   install [<uri> <path>] [--force/-f]
 
        Fetch and install external schema dependencies declared in
-       jsonschema.json. Pass --force/-f to re-fetch all dependencies
-       regardless of lock state.
+       jsonschema.json. Pass a URI and a local file path to add a new
+       dependency before installing. Pass --force/-f to re-fetch all
+       dependencies regardless of lock state.
 
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};

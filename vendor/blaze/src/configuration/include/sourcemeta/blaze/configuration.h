@@ -20,6 +20,7 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/core/uri.h>
 
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uint8_t
@@ -53,7 +54,8 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::filesystem::path absolute_path;
   sourcemeta::core::JSON::String base;
   std::optional<sourcemeta::core::JSON::String> default_dialect;
-  std::unordered_set<sourcemeta::core::JSON::String> extension;
+  std::unordered_set<sourcemeta::core::JSON::String> extension{".json", ".yml",
+                                                               ".yaml"};
   std::unordered_map<sourcemeta::core::JSON::String,
                      sourcemeta::core::JSON::String>
       resolve;
@@ -177,6 +179,10 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
              // TODO: Make this work for real
              std::size_t concurrency = 1) const -> void;
 
+  /// Add a dependency to the configuration
+  auto add_dependency(const sourcemeta::core::URI &uri,
+                      const std::filesystem::path &path) -> void;
+
   /// Check if the given path represents a schema described by this
   /// configuration
   [[nodiscard]]
@@ -187,6 +193,10 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   static auto from_json(const sourcemeta::core::JSON &value,
                         const std::filesystem::path &base_path)
       -> Configuration;
+
+  /// Serialize a configuration to JSON
+  [[nodiscard]]
+  auto to_json() const -> sourcemeta::core::JSON;
 
   /// Read and parse a configuration file
   [[nodiscard]]

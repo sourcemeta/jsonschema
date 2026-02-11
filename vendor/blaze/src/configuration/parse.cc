@@ -3,8 +3,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cassert>       // assert
-#include <unordered_set> // std::unordered_set
+#include <cassert> // assert
 
 namespace sourcemeta::blaze {
 
@@ -113,6 +112,7 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
           value.at_or("defaultDialect", sourcemeta::core::JSON{nullptr}));
 
   if (value.defines("extension")) {
+    result.extension.clear();
     const auto &extension_value{value.at("extension")};
     if (extension_value.is_string()) {
       auto extension_string{extension_value.to_string()};
@@ -138,8 +138,6 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
         index += 1;
       }
     }
-  } else {
-    result.extension = {".json", ".yml", ".yaml"};
   }
 
   if (value.defines("resolve")) {
@@ -160,7 +158,6 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
   }
 
   if (value.defines("dependencies")) {
-    std::unordered_set<std::filesystem::path> seen_paths;
     for (const auto &pair : value.at("dependencies").as_object()) {
       CONFIGURATION_ENSURE(
           pair.second.is_string(),
@@ -171,14 +168,16 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
       const auto absolute_dependency_path =
           dependency_path.is_absolute()
               ? std::filesystem::weakly_canonical(dependency_path)
-              : std::filesystem::weakly_canonical(base_path / dependency_path);
-      assert(absolute_dependency_path.is_absolute());
-      CONFIGURATION_ENSURE(
-          !seen_paths.contains(absolute_dependency_path),
-          "Multiple dependencies cannot point to the same path",
-          sourcemeta::core::Pointer({"dependencies", pair.first}));
-      seen_paths.insert(absolute_dependency_path);
-      result.dependencies.emplace(pair.first, absolute_dependency_path);
+              : std::filesystem::weakly_canonical(result.absolute_path /
+                                                  dependency_path);
+      try {
+        result.add_dependency(sourcemeta::core::URI{pair.first},
+                              absolute_dependency_path);
+      } catch (const sourcemeta::core::URIParseError &) {
+        CONFIGURATION_ENSURE(
+            false, "The dependency URI is not valid",
+            sourcemeta::core::Pointer({"dependencies", pair.first}));
+      }
     }
   }
 

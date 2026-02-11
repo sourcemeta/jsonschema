@@ -1,5 +1,5 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME configuration
-  PRIVATE_HEADERS error.h SOURCES parse.cc configuration.cc lock.cc fetch.cc)
+  PRIVATE_HEADERS error.h SOURCES parse.cc json.cc configuration.cc lock.cc fetch.cc)
 
 if(BLAZE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT blaze NAME configuration)
