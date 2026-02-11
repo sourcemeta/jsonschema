@@ -178,6 +178,8 @@ _jsonschema() {
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -d -- "${current}") )
       fi
       ;;
     version|help)

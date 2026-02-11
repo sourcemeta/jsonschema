@@ -135,8 +135,65 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const auto is_json{options.contains("json")};
   auto events_array{sourcemeta::core::JSON::make_array()};
 
-  const auto configuration_path{
+  const auto &positional_arguments{options.positional()};
+  if (positional_arguments.size() != 0 && positional_arguments.size() != 2) {
+    throw PositionalArgumentError{
+        "The install command takes either zero or two positional arguments",
+        "jsonschema install https://example.com/schema ./vendor/schema.json"};
+  }
+
+  auto configuration_path{
       sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};
+
+  if (positional_arguments.size() == 2) {
+    const std::string dependency_uri{positional_arguments.at(0)};
+    const std::filesystem::path input_path{positional_arguments.at(1)};
+
+    sourcemeta::blaze::Configuration add_configuration;
+    if (configuration_path.has_value()) {
+      try {
+        add_configuration = sourcemeta::blaze::Configuration::read_json(
+            configuration_path.value(), configuration_reader);
+      } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+        throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+            configuration_path.value(), error.what(), error.location());
+      } catch (const sourcemeta::core::JSONParseError &error) {
+        throw sourcemeta::core::JSONFileParseError(
+            configuration_path.value(), error);
+      }
+    } else {
+      configuration_path = std::filesystem::current_path() / "jsonschema.json";
+      add_configuration.absolute_path = std::filesystem::current_path();
+      add_configuration.base =
+          sourcemeta::core::URI::from_path(add_configuration.absolute_path)
+              .recompose();
+    }
+
+    const sourcemeta::core::URI uri{dependency_uri};
+    const auto absolute_target{std::filesystem::weakly_canonical(
+        std::filesystem::current_path() / input_path)};
+    add_configuration.dependencies.erase(
+        sourcemeta::core::URI::canonicalize(uri.recompose()));
+    add_configuration.add_dependency(uri, absolute_target);
+    atomic_write(configuration_path.value(), add_configuration.to_json());
+
+    const auto relative_target{
+        "./" + std::filesystem::relative(absolute_target,
+                                         add_configuration.absolute_path)
+                   .generic_string()};
+
+    if (is_json) {
+      auto json_event{sourcemeta::core::JSON::make_object()};
+      json_event.assign("type", sourcemeta::core::JSON{"adding"});
+      json_event.assign("uri", sourcemeta::core::JSON{dependency_uri});
+      json_event.assign("path", sourcemeta::core::JSON{relative_target});
+      events_array.push_back(std::move(json_event));
+    } else {
+      std::cerr << padded_label("Adding") << dependency_uri << " -> "
+                << relative_target << "\n";
+    }
+  }
+
   if (!configuration_path.has_value()) {
     throw ConfigurationNotFoundError{std::filesystem::current_path()};
   }

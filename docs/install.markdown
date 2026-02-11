@@ -2,7 +2,7 @@ Installing Dependencies
 =======================
 
 ```sh
-jsonschema install
+jsonschema install [<uri> <path>]
   [--force/-f] [--verbose/-v] [--debug/-g] [--json/-j]
 ```
 
@@ -18,7 +18,19 @@ results need to be
 to inline those references for local consumption. The `install` command solves
 this in a single step.
 
-To get started, create a
+You can quickly add a dependency by passing a URI and a local file path
+directly on the command line. For example:
+
+```sh
+jsonschema install https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response ./vendor/response.json
+```
+
+This adds the dependency to `jsonschema.json` (creating the file if it does not
+exist) and immediately fetches it. The path is stored relative to
+`jsonschema.json`, so you can run this command from any subdirectory of your
+project.
+
+Alternatively, you can declare dependencies manually. Create a
 [`jsonschema.json`](./configuration.markdown) configuration file in your
 project and declare your dependencies as a mapping of schema URIs to local file
 paths. For example, to pull in the [JSON-RPC 2.0
@@ -52,6 +64,18 @@ tracked in the lock file are fetched again.
 
 Examples
 --------
+
+### Add a dependency
+
+```sh
+jsonschema install https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response ./vendor/response.json
+```
+
+### Add a dependency and force re-fetch all
+
+```sh
+jsonschema install --force https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response ./vendor/response.json
+```
 
 ### Install all dependencies
 

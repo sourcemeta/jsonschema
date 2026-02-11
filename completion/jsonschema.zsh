@@ -145,7 +145,9 @@ _jsonschema() {
         install)
           _arguments \
             ${global_options[@]} \
-            '(--force -f)'{--force,-f}'[Re-fetch all dependencies]'
+            '(--force -f)'{--force,-f}'[Re-fetch all dependencies]' \
+            '1:schema URI:' \
+            '2:destination path:_files'
           ;;
         version|help)
           ;;
