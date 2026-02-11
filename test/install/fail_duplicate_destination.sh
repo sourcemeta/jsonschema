@@ -42,7 +42,7 @@ test "$EXIT_CODE" = "1" || exit 1
 cat << EOF > "$TMP/expected.txt"
 error: Multiple dependencies cannot point to the same path
   at file path $(realpath "$TMP")/project/jsonschema.json
-  at location "/dependencies/file:~1~1${ESCAPED_TMP}~1source~1b.json"
+  at location "/dependencies/file:~1~1${ESCAPED_TMP}~1source~1a.json"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -55,7 +55,7 @@ cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "Multiple dependencies cannot point to the same path",
   "filePath": "$(realpath "$TMP")/project/jsonschema.json",
-  "location": "/dependencies/file:~1~1${ESCAPED_TMP}~1source~1b.json"
+  "location": "/dependencies/file:~1~1${ESCAPED_TMP}~1source~1a.json"
 }
 EOF
 

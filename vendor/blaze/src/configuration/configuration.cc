@@ -25,7 +25,7 @@ auto Configuration::add_dependency(const sourcemeta::core::URI &uri,
     if (existing.second == path) {
       throw ConfigurationParseError(
           "Multiple dependencies cannot point to the same path",
-          sourcemeta::core::Pointer({"dependencies", canonical_uri}));
+          sourcemeta::core::Pointer({"dependencies", existing.first}));
     }
   }
 

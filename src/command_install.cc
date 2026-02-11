@@ -182,9 +182,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
           configuration_path.value(), error.what(), error.location());
     }
     auto config_json{add_configuration.to_json()};
-    // TODO: Configuration::to_json() should not emit computed fields like
-    // "path" and "baseUri". Fix this upstream in Blaze so we don't need
-    // to strip them here before writing the user's config file
+    // TODO: It is odd that we need this?
     config_json.erase("path");
     config_json.erase("baseUri");
     atomic_write(configuration_path.value(), config_json);
