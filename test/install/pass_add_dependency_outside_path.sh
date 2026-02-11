@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-mkdir -p "$TMP/source" "$TMP/project"
+mkdir -p "$TMP/source" "$TMP/project" "$TMP/external"
 
 cat << 'EOF' > "$TMP/source/user.json"
 {
@@ -16,22 +16,20 @@ cat << 'EOF' > "$TMP/source/user.json"
 }
 EOF
 
-cat << EOF > "$TMP/project/jsonschema.json"
+cat << 'EOF' > "$TMP/project/jsonschema.json"
 {
-  "dependencies": {
-    "file://$(realpath "$TMP")/source/user.json": "./vendor/old_path.json"
-  }
+  "dependencies": {}
 }
 EOF
 
 cd "$TMP/project"
-"$1" install "file://$(realpath "$TMP")/source/user.json" "./vendor/new_path.json" \
+"$1" install "file://$(realpath "$TMP")/source/user.json" "../external/user.json" \
   > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Adding         : file://$(realpath "$TMP")/source/user.json -> ./vendor/new_path.json
+Adding         : file://$(realpath "$TMP")/source/user.json -> ../external/user.json
 Fetching       : file://$(realpath "$TMP")/source/user.json
-Installed      : $(realpath "$TMP")/project/vendor/new_path.json
+Installed      : $(realpath "$TMP")/external/user.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -39,7 +37,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 cat << EOF > "$TMP/expected_config.json"
 {
   "dependencies": {
-    "file://$(realpath "$TMP")/source/user.json": "./vendor/new_path.json"
+    "file://$(realpath "$TMP")/source/user.json": "../external/user.json"
   }
 }
 EOF
@@ -54,18 +52,16 @@ cat << EOF > "$TMP/expected_schema.json"
 }
 EOF
 
-diff "$TMP/project/vendor/new_path.json" "$TMP/expected_schema.json"
+diff "$TMP/external/user.json" "$TMP/expected_schema.json"
 
-test ! -f "$TMP/project/vendor/old_path.json"
-
-HASH="$(shasum -a 256 < "$TMP/project/vendor/new_path.json" | cut -d ' ' -f 1)"
+HASH="$(shasum -a 256 < "$TMP/external/user.json" | cut -d ' ' -f 1)"
 
 cat << EOF > "$TMP/expected_lock.json"
 {
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/user.json": {
-      "path": "$(realpath "$TMP")/project/vendor/new_path.json",
+      "path": "$(realpath "$TMP")/external/user.json",
       "hash": "${HASH}",
       "hashAlgorithm": "sha256"
     }

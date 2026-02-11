@@ -187,10 +187,13 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     config_json.erase("baseUri");
     atomic_write(configuration_path.value(), config_json);
 
-    const auto relative_target{
-        "./" + std::filesystem::relative(absolute_target,
-                                         add_configuration.absolute_path)
-                   .generic_string()};
+    auto relative_target{
+        std::filesystem::relative(absolute_target,
+                                  add_configuration.absolute_path)
+            .generic_string()};
+    if (!relative_target.starts_with("..")) {
+      relative_target = "./" + relative_target;
+    }
 
     if (is_json) {
       auto json_event{sourcemeta::core::JSON::make_object()};

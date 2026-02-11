@@ -73,3 +73,26 @@ cat << EOF > "$TMP/expected_product.json"
 EOF
 
 diff "$TMP/project/vendor/product.json" "$TMP/expected_product.json"
+
+HASH_PRODUCT="$(shasum -a 256 < "$TMP/project/vendor/product.json" | cut -d ' ' -f 1)"
+HASH_USER="$(shasum -a 256 < "$TMP/project/vendor/user.json" | cut -d ' ' -f 1)"
+
+cat << EOF > "$TMP/expected_lock.json"
+{
+  "version": 1,
+  "dependencies": {
+    "file://$(realpath "$TMP")/source/product.json": {
+      "path": "$(realpath "$TMP")/project/vendor/product.json",
+      "hash": "${HASH_PRODUCT}",
+      "hashAlgorithm": "sha256"
+    },
+    "file://$(realpath "$TMP")/source/user.json": {
+      "path": "$(realpath "$TMP")/project/vendor/user.json",
+      "hash": "${HASH_USER}",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+diff "$TMP/project/jsonschema.lock.json" "$TMP/expected_lock.json"
