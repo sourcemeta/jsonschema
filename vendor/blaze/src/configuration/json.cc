@@ -32,9 +32,14 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     result.assign("website", sourcemeta::core::JSON{this->website.value()});
   }
 
-  result.assign("path",
-                sourcemeta::core::JSON{this->absolute_path.generic_string()});
-  result.assign("baseUri", sourcemeta::core::JSON{this->base});
+  if (!this->absolute_path.empty()) {
+    result.assign("path",
+                  sourcemeta::core::JSON{this->absolute_path.generic_string()});
+  }
+
+  if (!this->base.empty()) {
+    result.assign("baseUri", sourcemeta::core::JSON{this->base});
+  }
 
   if (this->default_dialect.has_value()) {
     result.assign("defaultDialect",
