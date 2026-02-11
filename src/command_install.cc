@@ -158,8 +158,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         throw FileError<sourcemeta::blaze::ConfigurationParseError>(
             configuration_path.value(), error.what(), error.location());
       } catch (const sourcemeta::core::JSONParseError &error) {
-        throw sourcemeta::core::JSONFileParseError(
-            configuration_path.value(), error);
+        throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
+                                                   error);
       }
     } else {
       configuration_path = std::filesystem::current_path() / "jsonschema.json";
@@ -169,13 +169,28 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
               .recompose();
     }
 
-    const sourcemeta::core::URI uri{dependency_uri};
     const auto absolute_target{std::filesystem::weakly_canonical(
         std::filesystem::current_path() / input_path)};
-    add_configuration.dependencies.erase(
-        sourcemeta::core::URI::canonicalize(uri.recompose()));
-    add_configuration.add_dependency(uri, absolute_target);
-    atomic_write(configuration_path.value(), add_configuration.to_json());
+    try {
+      const sourcemeta::core::URI uri{dependency_uri};
+      add_configuration.dependencies.erase(
+          sourcemeta::core::URI::canonicalize(uri.recompose()));
+      add_configuration.add_dependency(uri, absolute_target);
+    } catch (const sourcemeta::core::URIParseError &) {
+      throw PositionalArgumentError{
+          "The given URI is not valid",
+          "jsonschema install https://example.com/schema ./vendor/schema.json"};
+    } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+      throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+          configuration_path.value(), error.what(), error.location());
+    }
+    auto config_json{add_configuration.to_json()};
+    // TODO: Configuration::to_json() should not emit computed fields like
+    // "path" and "baseUri". Fix this upstream in Blaze so we don't need
+    // to strip them here before writing the user's config file
+    config_json.erase("path");
+    config_json.erase("baseUri");
+    atomic_write(configuration_path.value(), config_json);
 
     const auto relative_target{
         "./" + std::filesystem::relative(absolute_target,

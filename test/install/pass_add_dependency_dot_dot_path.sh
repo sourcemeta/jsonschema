@@ -36,8 +36,6 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cat << EOF > "$TMP/expected_config.json"
 {
-  "path": "$(realpath "$TMP")/project",
-  "baseUri": "file://$(realpath "$TMP")/project",
   "dependencies": {
     "file://$(realpath "$TMP")/source/user.json": "./vendor/user.json"
   }

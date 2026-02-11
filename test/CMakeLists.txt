@@ -608,6 +608,8 @@ add_jsonschema_test_unix(install/pass_add_dependency_absolute_path)
 add_jsonschema_test_unix(install/pass_add_dependency_dot_dot_path)
 add_jsonschema_test_unix(install/fail_add_config_not_object)
 add_jsonschema_test_unix(install/fail_add_config_invalid_json)
+add_jsonschema_test_unix(install/fail_add_invalid_uri)
+add_jsonschema_test_unix(install/fail_add_duplicate_path)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
@@ -631,6 +633,7 @@ add_jsonschema_test_unix_ci(fail_validate_http_non_200)
 add_jsonschema_test_unix_ci(fail_validate_http_non_schema)
 add_jsonschema_test_unix_ci(pass_validate_http)
 add_jsonschema_test_unix_ci(pass_install_http)
+add_jsonschema_test_unix_ci(pass_install_add_http)
 add_jsonschema_test_unix_ci(precommit_lint)
 
 # TODO: Make this test pass on Linux. It hangs for some reason
