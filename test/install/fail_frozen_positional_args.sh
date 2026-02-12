@@ -21,9 +21,9 @@ cd "$TMP/project"
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-error: The --frozen option does not accept positional arguments
+error: Do not use --frozen when adding a new dependency
 
-For example: jsonschema install --frozen
+For example: jsonschema install https://example.com/schema ./vendor/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -34,7 +34,7 @@ test "$EXIT_CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected_json.txt"
 {
-  "error": "The --frozen option does not accept positional arguments"
+  "error": "Do not use --frozen when adding a new dependency"
 }
 EOF
 

@@ -285,8 +285,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   if (is_frozen && !positional_arguments.empty()) {
     throw PositionalArgumentError{
-        "The --frozen option does not accept positional arguments",
-        "jsonschema install --frozen"};
+        "Do not use --frozen when adding a new dependency",
+        "jsonschema install https://example.com/schema ./vendor/schema.json"};
   }
 
   auto configuration_path{
