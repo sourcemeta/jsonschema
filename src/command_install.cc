@@ -1,20 +1,20 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <cassert>     // assert
-#include <cstdint>     // std::uint8_t
-#include <cstdlib>     // EXIT_FAILURE
-#include <filesystem>  // std::filesystem
-#include <fstream>     // std::ofstream
-#include <iostream>    // std::cerr
-#include <optional>    // std::optional
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move
+#include <cassert>    // assert
+#include <cstdint>    // std::uint8_t
+#include <cstdlib>    // EXIT_FAILURE
+#include <filesystem> // std::filesystem
+#include <fstream>    // std::ofstream
+#include <iostream>   // std::cerr, std::cout
+#include <optional>   // std::optional
+#include <string>     // std::string
+#include <utility>    // std::move
 
 #include "command.h"
 #include "configuration.h"
 #include "error.h"
+#include "logger.h"
 #include "resolver.h"
 
 namespace {
@@ -40,9 +40,9 @@ auto atomic_write(const std::filesystem::path &path,
   std::filesystem::rename(temporary_path, path);
 }
 
-auto install_fetch(const sourcemeta::core::Options &options,
-                   const std::filesystem::path &configuration_path,
-                   std::string_view uri) -> sourcemeta::core::JSON {
+auto dependency_fetch(const sourcemeta::core::Options &options,
+                      const std::filesystem::path &configuration_path,
+                      std::string_view uri) -> sourcemeta::core::JSON {
   auto result{sourcemeta::jsonschema::fetch_schema(options, uri, true, true)};
   if (result.has_value()) {
     return std::move(result.value());
@@ -53,9 +53,9 @@ auto install_fetch(const sourcemeta::core::Options &options,
       configuration_path, std::string{uri}, "Could not resolve schema");
 }
 
-auto install_resolve(const sourcemeta::core::Options &options,
-                     const sourcemeta::blaze::Configuration &configuration,
-                     std::string_view identifier)
+auto dependency_resolve(const sourcemeta::core::Options &options,
+                        const sourcemeta::blaze::Configuration &configuration,
+                        std::string_view identifier)
     -> std::optional<sourcemeta::core::JSON> {
   const std::string string_identifier{identifier};
 
@@ -128,17 +128,164 @@ auto output_json(sourcemeta::core::JSON &events_array) -> void {
   std::cout << "\n";
 }
 
+enum class OrphanedBehavior : std::uint8_t { Delete, Error };
+
+auto make_on_event(const sourcemeta::core::Options &options, bool &had_error,
+                   const bool is_json, sourcemeta::core::JSON &events_array,
+                   const OrphanedBehavior orphaned_behavior)
+    -> sourcemeta::blaze::Configuration::FetchEvent::Callback {
+  return [&options, &had_error, is_json, &events_array, orphaned_behavior](
+             const sourcemeta::blaze::Configuration::FetchEvent &event)
+             -> bool {
+    using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
+
+    emit_debug(options, event);
+
+    switch (event.type) {
+      case Type::FetchStart:
+        if (is_json) {
+          emit_json(events_array, "fetching", "uri", event.uri);
+        } else {
+          std::cerr << padded_label("Fetching") << event.uri << "\n";
+        }
+
+        break;
+      case Type::FetchEnd:
+        break;
+      case Type::BundleStart:
+        sourcemeta::jsonschema::LOG_VERBOSE(options)
+            << padded_label("Bundling") << event.uri << "\n";
+        break;
+      case Type::BundleEnd:
+        break;
+      case Type::WriteStart:
+        sourcemeta::jsonschema::LOG_VERBOSE(options)
+            << padded_label("Writing") << event.path.string() << "\n";
+        break;
+      case Type::WriteEnd:
+        break;
+      case Type::VerifyStart:
+        sourcemeta::jsonschema::LOG_VERBOSE(options)
+            << padded_label("Verifying") << event.path.string() << "\n";
+        break;
+      case Type::VerifyEnd:
+        if (is_json) {
+          auto json_event{sourcemeta::core::JSON::make_object()};
+          json_event.assign("type", sourcemeta::core::JSON{"installed"});
+          json_event.assign("uri",
+                            sourcemeta::core::JSON{std::string{event.uri}});
+          json_event.assign("path",
+                            sourcemeta::core::JSON{event.path.string()});
+          events_array.push_back(std::move(json_event));
+        } else {
+          std::cerr << padded_label("Installed") << event.path.string() << "\n";
+        }
+
+        break;
+      case Type::UpToDate:
+        if (is_json) {
+          emit_json(events_array, "up-to-date", "uri", event.uri);
+        } else {
+          std::cerr << padded_label("Up to date") << event.uri << "\n";
+        }
+
+        break;
+      case Type::FileMissing:
+        if (is_json) {
+          emit_json(events_array, "file-missing", "path", event.path.string());
+        } else {
+          std::cerr << padded_label("File missing") << event.path.string()
+                    << "\n";
+        }
+
+        break;
+      case Type::Mismatched:
+        if (is_json) {
+          emit_json(events_array, "mismatched", "path", event.path.string());
+        } else {
+          std::cerr << padded_label("Mismatched") << event.path.string()
+                    << "\n";
+        }
+
+        break;
+      case Type::PathMismatch:
+        if (is_json) {
+          emit_json(events_array, "path-mismatch", "uri", event.uri);
+        } else {
+          std::cerr << padded_label("Path mismatch") << event.uri << "\n";
+        }
+
+        break;
+      case Type::Untracked:
+        had_error = true;
+        if (is_json) {
+          emit_json(events_array, "untracked", "uri", event.uri);
+        } else {
+          std::cerr << padded_label("Untracked") << event.uri << "\n";
+        }
+
+        break;
+      case Type::Orphaned:
+        if (is_json) {
+          emit_json(events_array, "orphaned", "uri", event.uri);
+        } else {
+          std::cerr << padded_label("Orphaned") << event.uri << "\n";
+        }
+
+        if (orphaned_behavior == OrphanedBehavior::Delete) {
+          std::filesystem::remove(event.path);
+        } else {
+          had_error = true;
+        }
+
+        break;
+      case Type::Error:
+        had_error = true;
+        if (is_json) {
+          auto json_event{sourcemeta::core::JSON::make_object()};
+          json_event.assign("type", sourcemeta::core::JSON{"error"});
+          json_event.assign("uri",
+                            sourcemeta::core::JSON{std::string{event.uri}});
+          json_event.assign("message",
+                            sourcemeta::core::JSON{std::string{event.details}});
+          events_array.push_back(std::move(json_event));
+        } else {
+          sourcemeta::jsonschema::try_catch(options, [&]() -> int {
+            throw sourcemeta::jsonschema::InstallError{
+                std::string{event.details}, std::string{event.uri}};
+          });
+        }
+
+        break;
+    }
+
+    return true;
+  };
+}
+
 } // namespace
 
 auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     -> void {
   const auto is_json{options.contains("json")};
+  const auto is_frozen{options.contains("frozen")};
   auto events_array{sourcemeta::core::JSON::make_array()};
 
   const auto &positional_arguments{options.positional()};
   if (positional_arguments.size() != 0 && positional_arguments.size() != 2) {
     throw PositionalArgumentError{
         "The install command takes either zero or two positional arguments",
+        "jsonschema install https://example.com/schema ./vendor/schema.json"};
+  }
+
+  if (is_frozen && options.contains("force")) {
+    throw OptionConflictError{
+        "The --frozen and --force options cannot be used together"};
+  }
+
+  if (is_frozen && !positional_arguments.empty()) {
+    throw PositionalArgumentError{
+        "Do not use --frozen when adding a new dependency",
         "jsonschema install https://example.com/schema ./vendor/schema.json"};
   }
 
@@ -238,7 +385,20 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
   const auto lock_path{configuration.absolute_path / "jsonschema.lock.json"};
   sourcemeta::blaze::Configuration::Lock lock;
-  if (std::filesystem::exists(lock_path)) {
+  if (is_frozen) {
+    if (!std::filesystem::exists(lock_path)) {
+      throw LockNotFoundError{lock_path};
+    }
+
+    try {
+      lock = sourcemeta::blaze::Configuration::Lock::from_json(
+          sourcemeta::core::read_json(lock_path));
+    } catch (const sourcemeta::core::JSONParseError &error) {
+      throw sourcemeta::core::JSONFileParseError(lock_path, error);
+    } catch (...) {
+      throw LockParseError{lock_path};
+    }
+  } else if (std::filesystem::exists(lock_path)) {
     try {
       lock = sourcemeta::blaze::Configuration::Lock::from_json(
           sourcemeta::core::read_json(lock_path));
@@ -253,11 +413,6 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     }
   }
 
-  const auto fetch_mode{
-      options.contains("force")
-          ? sourcemeta::blaze::Configuration::FetchMode::All
-          : sourcemeta::blaze::Configuration::FetchMode::Missing};
-
   const sourcemeta::blaze::Configuration::WriteCallback writer{
       [](const std::filesystem::path &path,
          const sourcemeta::core::JSON &document) -> void {
@@ -268,143 +423,31 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const sourcemeta::blaze::Configuration::FetchCallback fetcher{
       [&options,
        &configuration_path](std::string_view uri) -> sourcemeta::core::JSON {
-        return install_fetch(options, configuration_path.value(), uri);
+        return dependency_fetch(options, configuration_path.value(), uri);
       }};
 
   const sourcemeta::core::SchemaResolver resolver{
       [&options, &configuration](std::string_view identifier)
           -> std::optional<sourcemeta::core::JSON> {
-        return install_resolve(options, configuration, identifier);
+        return dependency_resolve(options, configuration, identifier);
       }};
 
   bool had_error{false};
-  const sourcemeta::blaze::Configuration::FetchEvent::Callback on_event{
-      [&options, &had_error, &is_json, &events_array](
-          const sourcemeta::blaze::Configuration::FetchEvent &event) -> bool {
-        using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
+  const auto on_event{make_on_event(options, had_error, is_json, events_array,
+                                    is_frozen ? OrphanedBehavior::Error
+                                              : OrphanedBehavior::Delete)};
 
-        emit_debug(options, event);
-
-        switch (event.type) {
-          case Type::FetchStart:
-            if (is_json) {
-              emit_json(events_array, "fetching", "uri", event.uri);
-            } else {
-              std::cerr << padded_label("Fetching") << event.uri << "\n";
-            }
-
-            break;
-          case Type::FetchEnd:
-            break;
-          case Type::BundleStart:
-            LOG_VERBOSE(options)
-                << padded_label("Bundling") << event.uri << "\n";
-            break;
-          case Type::BundleEnd:
-            break;
-          case Type::WriteStart:
-            LOG_VERBOSE(options)
-                << padded_label("Writing") << event.path.string() << "\n";
-            break;
-          case Type::WriteEnd:
-            break;
-          case Type::VerifyStart:
-            LOG_VERBOSE(options)
-                << padded_label("Verifying") << event.path.string() << "\n";
-            break;
-          case Type::VerifyEnd:
-            if (is_json) {
-              auto json_event{sourcemeta::core::JSON::make_object()};
-              json_event.assign("type", sourcemeta::core::JSON{"installed"});
-              json_event.assign("uri",
-                                sourcemeta::core::JSON{std::string{event.uri}});
-              json_event.assign("path",
-                                sourcemeta::core::JSON{event.path.string()});
-              events_array.push_back(std::move(json_event));
-            } else {
-              std::cerr << padded_label("Installed") << event.path.string()
-                        << "\n";
-            }
-
-            break;
-          case Type::UpToDate:
-            if (is_json) {
-              emit_json(events_array, "up-to-date", "uri", event.uri);
-            } else {
-              std::cerr << padded_label("Up to date") << event.uri << "\n";
-            }
-
-            break;
-          case Type::FileMissing:
-            if (is_json) {
-              emit_json(events_array, "file-missing", "path",
-                        event.path.string());
-            } else {
-              std::cerr << padded_label("File missing") << event.path.string()
-                        << "\n";
-            }
-
-            break;
-          case Type::Mismatched:
-            if (is_json) {
-              emit_json(events_array, "mismatched", "path",
-                        event.path.string());
-            } else {
-              std::cerr << padded_label("Mismatched") << event.path.string()
-                        << "\n";
-            }
-
-            break;
-          case Type::PathMismatch:
-            if (is_json) {
-              emit_json(events_array, "path-mismatch", "uri", event.uri);
-            } else {
-              std::cerr << padded_label("Path mismatch") << event.uri << "\n";
-            }
-
-            break;
-          case Type::Untracked:
-            if (is_json) {
-              emit_json(events_array, "untracked", "uri", event.uri);
-            } else {
-              std::cerr << padded_label("Untracked") << event.uri << "\n";
-            }
-
-            break;
-          case Type::Orphaned:
-            if (is_json) {
-              emit_json(events_array, "orphaned", "uri", event.uri);
-            } else {
-              std::cerr << padded_label("Orphaned") << event.uri << "\n";
-            }
-
-            std::filesystem::remove(event.path);
-            break;
-          case Type::Error:
-            had_error = true;
-            if (is_json) {
-              auto json_event{sourcemeta::core::JSON::make_object()};
-              json_event.assign("type", sourcemeta::core::JSON{"error"});
-              json_event.assign("uri",
-                                sourcemeta::core::JSON{std::string{event.uri}});
-              json_event.assign("message", sourcemeta::core::JSON{
-                                               std::string{event.details}});
-              events_array.push_back(std::move(json_event));
-            } else {
-              try_catch(options, [&]() -> int {
-                throw InstallError{std::string{event.details},
-                                   std::string{event.uri}};
-              });
-            }
-
-            break;
-        }
-
-        return true;
-      }};
-
-  configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
-                      on_event, fetch_mode);
+  if (is_frozen) {
+    configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
+                        on_event);
+  } else {
+    const auto fetch_mode{
+        options.contains("force")
+            ? sourcemeta::blaze::Configuration::FetchMode::All
+            : sourcemeta::blaze::Configuration::FetchMode::Missing};
+    configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
+                        on_event, fetch_mode);
+  }
 
   if (is_json) {
     output_json(events_array);
@@ -414,5 +457,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     throw Fail{EXIT_FAILURE};
   }
 
-  atomic_write(lock_path, lock.to_json());
+  if (!is_frozen) {
+    atomic_write(lock_path, lock.to_json());
+  }
 }

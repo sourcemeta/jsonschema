@@ -102,6 +102,7 @@ test_completion "jsonschema codegen --" "--target" "Codegen includes --target"
 test_completion "jsonschema codegen --" "--verbose" "Codegen includes global option --verbose"
 
 test_completion "jsonschema install --" "--force" "Install includes --force"
+test_completion "jsonschema install --" "--frozen" "Install includes --frozen"
 test_completion "jsonschema install --" "--verbose" "Install includes global option --verbose"
 test_completion "jsonschema install --" "--debug" "Install includes global option --debug"
 

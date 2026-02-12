@@ -146,6 +146,7 @@ _jsonschema() {
           _arguments \
             ${global_options[@]} \
             '(--force -f)'{--force,-f}'[Re-fetch all dependencies]' \
+            '(--frozen -z)'{--frozen,-z}'[Strictly verify against the lock file]' \
             '1:schema URI:' \
             '2:destination path:_files'
           ;;

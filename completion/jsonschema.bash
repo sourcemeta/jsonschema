@@ -174,7 +174,7 @@ _jsonschema() {
       fi
       ;;
     install)
-      local options="--force -f"
+      local options="--force -f --frozen -z"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
