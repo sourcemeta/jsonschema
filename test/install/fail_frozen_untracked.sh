@@ -40,7 +40,7 @@ cat << EOF > "$TMP/project/jsonschema.json"
 {
   "dependencies": {
     "file://$(realpath "$TMP")/source/schema.json": "./vendor/schema.json",
-    "file:///tmp/fake/new.json": "./vendor/new.json"
+    "file:///zzz/fake/new.json": "./vendor/new.json"
   }
 }
 EOF
@@ -51,7 +51,7 @@ test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Up to date     : file://$(realpath "$TMP")/source/schema.json
-Untracked      : file:///tmp/fake/new.json
+Untracked      : file:///zzz/fake/new.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -71,7 +71,7 @@ cat << EOF > "$TMP/expected_json.txt"
     },
     {
       "type": "untracked",
-      "uri": "file:///tmp/fake/new.json"
+      "uri": "file:///zzz/fake/new.json"
     }
   ]
 }
