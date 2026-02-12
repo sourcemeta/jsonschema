@@ -153,7 +153,8 @@ auto make_on_event(const sourcemeta::core::Options &options, bool &had_error,
       case Type::FetchEnd:
         break;
       case Type::BundleStart:
-        sourcemeta::jsonschema::LOG_VERBOSE(options) << padded_label("Bundling") << event.uri << "\n";
+        sourcemeta::jsonschema::LOG_VERBOSE(options)
+            << padded_label("Bundling") << event.uri << "\n";
         break;
       case Type::BundleEnd:
         break;
