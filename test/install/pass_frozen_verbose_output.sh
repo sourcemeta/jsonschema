@@ -25,36 +25,22 @@ cat << EOF > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" install > "$TMP/output_install.txt" 2>&1
-
-cat << EOF > "$TMP/expected_install.txt"
-Fetching       : file://$(realpath "$TMP")/source/schema.json
-Installed      : $(realpath "$TMP")/project/vendor/schema.json
-EOF
-
-diff "$TMP/output_install.txt" "$TMP/expected_install.txt"
+"$1" install > /dev/null 2>&1
 
 cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
 rm "$TMP/project/vendor/schema.json"
 
-"$1" ci > "$TMP/output.txt" 2>&1
+"$1" install --frozen --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 Fetching       : file://$(realpath "$TMP")/source/schema.json
+Bundling       : file://$(realpath "$TMP")/source/schema.json
+Writing        : $(realpath "$TMP")/project/vendor/schema.json
+Verifying      : $(realpath "$TMP")/project/vendor/schema.json
 Installed      : $(realpath "$TMP")/project/vendor/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
-
-cat << EOF > "$TMP/expected_schema.json"
-{
-  "\$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string",
-  "\$id": "file://$(realpath "$TMP")/source/schema.json"
-}
-EOF
-
-diff "$TMP/project/vendor/schema.json" "$TMP/expected_schema.json"

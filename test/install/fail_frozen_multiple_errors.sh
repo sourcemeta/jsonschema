@@ -36,33 +36,28 @@ diff "$TMP/output_install.txt" "$TMP/expected_install.txt"
 
 cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-rm "$TMP/project/vendor/schema.json"
-
-cat << 'EOF' > "$TMP/source/schema.json"
+cat << EOF > "$TMP/project/jsonschema.json"
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "number"
+  "dependencies": {
+    "file:///tmp/fake/new.json": "./vendor/new.json"
+  }
 }
 EOF
 
-"$1" ci > "$TMP/output.txt" 2>&1 \
+"$1" install --frozen > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-Fetching       : file://$(realpath "$TMP")/source/schema.json
-Installed      : $(realpath "$TMP")/project/vendor/schema.json
-error: Written file hash does not match lock file
-  at uri file://$(realpath "$TMP")/source/schema.json
+Untracked      : file:///tmp/fake/new.json
+Orphaned       : file://$(realpath "$TMP")/source/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-rm "$TMP/project/vendor/schema.json"
-
-"$1" ci --json > "$TMP/output_json.txt" 2>&1 \
+"$1" install --frozen --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
@@ -70,18 +65,12 @@ cat << EOF > "$TMP/expected_json.txt"
 {
   "events": [
     {
-      "type": "fetching",
+      "type": "untracked",
+      "uri": "file:///tmp/fake/new.json"
+    },
+    {
+      "type": "orphaned",
       "uri": "file://$(realpath "$TMP")/source/schema.json"
-    },
-    {
-      "type": "installed",
-      "uri": "file://$(realpath "$TMP")/source/schema.json",
-      "path": "$(realpath "$TMP")/project/vendor/schema.json"
-    },
-    {
-      "type": "error",
-      "uri": "file://$(realpath "$TMP")/source/schema.json",
-      "message": "Written file hash does not match lock file"
     }
   ]
 }

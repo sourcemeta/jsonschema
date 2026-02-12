@@ -3,7 +3,7 @@ Installing Dependencies
 
 ```sh
 jsonschema install [<uri> <path>]
-  [--force/-f] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--force/-f] [--frozen/-z] [--verbose/-v] [--debug/-g] [--json/-j]
 ```
 
 Many applications rely on consuming schemas authored and maintained by others.
@@ -18,8 +18,10 @@ results need to be
 to inline those references for local consumption. The `install` command solves
 this in a single step.
 
-**NOTE**: For CI/CD pipelines, use [`jsonschema ci`](./ci.markdown) to strictly
-verify dependencies against the lock file without modifying it.
+**NOTE**: Pass `--frozen` to strictly verify dependencies against the lock file
+without modifying it. This is intended for CI/CD pipelines where
+reproducibility is important. The lock file must exist and all dependencies
+must match.
 
 You can quickly add a dependency by passing a URI and a local file path
 directly on the command line. For example:
@@ -96,4 +98,10 @@ jsonschema install --force
 
 ```sh
 jsonschema install --verbose
+```
+
+### Strict install for CI/CD
+
+```sh
+jsonschema install --frozen
 ```

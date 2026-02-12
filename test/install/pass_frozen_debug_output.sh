@@ -31,7 +31,7 @@ cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
 rm "$TMP/project/vendor/schema.json"
 
-"$1" ci --debug > "$TMP/output.txt" 2>&1
+"$1" install --frozen --debug > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 debug: fetch/start: file://$(realpath "$TMP")/source/schema.json (1/1) -> $(realpath "$TMP")/project/vendor/schema.json

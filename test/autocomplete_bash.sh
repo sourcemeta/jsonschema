@@ -102,12 +102,8 @@ test_completion "jsonschema codegen --" "--target" "Codegen includes --target"
 test_completion "jsonschema codegen --" "--verbose" "Codegen includes global option --verbose"
 
 test_completion "jsonschema install --" "--force" "Install includes --force"
+test_completion "jsonschema install --" "--frozen" "Install includes --frozen"
 test_completion "jsonschema install --" "--verbose" "Install includes global option --verbose"
 test_completion "jsonschema install --" "--debug" "Install includes global option --debug"
-
-test_completion "jsonschema " "ci" "Command completion includes ci"
-test_completion "jsonschema ci --" "--verbose" "CI includes global option --verbose"
-test_completion "jsonschema ci --" "--debug" "CI includes global option --debug"
-test_completion "jsonschema ci --" "--json" "CI includes global option --json"
 
 echo "PASS" 1>&2

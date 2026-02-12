@@ -29,16 +29,17 @@ cd "$TMP/project"
 
 cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-rm "$TMP/project/vendor/schema.json"
-
-"$1" ci --verbose > "$TMP/output.txt" 2>&1
+"$1" install --frozen --json > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Fetching       : file://$(realpath "$TMP")/source/schema.json
-Bundling       : file://$(realpath "$TMP")/source/schema.json
-Writing        : $(realpath "$TMP")/project/vendor/schema.json
-Verifying      : $(realpath "$TMP")/project/vendor/schema.json
-Installed      : $(realpath "$TMP")/project/vendor/schema.json
+{
+  "events": [
+    {
+      "type": "up-to-date",
+      "uri": "file://$(realpath "$TMP")/source/schema.json"
+    }
+  ]
+}
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

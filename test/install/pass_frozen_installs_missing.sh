@@ -36,47 +36,25 @@ diff "$TMP/output_install.txt" "$TMP/expected_install.txt"
 
 cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-cat << EOF > "$TMP/project/jsonschema.json"
-{
-  "dependencies": {
-    "file://$(realpath "$TMP")/source/schema.json": "./vendor/schema.json",
-    "file:///tmp/fake/new.json": "./vendor/new.json"
-  }
-}
-EOF
+rm "$TMP/project/vendor/schema.json"
 
-"$1" ci > "$TMP/output.txt" 2>&1 \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+"$1" install --frozen > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Up to date     : file://$(realpath "$TMP")/source/schema.json
-Untracked      : file:///tmp/fake/new.json
+Fetching       : file://$(realpath "$TMP")/source/schema.json
+Installed      : $(realpath "$TMP")/project/vendor/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-"$1" ci --json > "$TMP/output_json.txt" 2>&1 \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
-
-cat << EOF > "$TMP/expected_json.txt"
+cat << EOF > "$TMP/expected_schema.json"
 {
-  "events": [
-    {
-      "type": "up-to-date",
-      "uri": "file://$(realpath "$TMP")/source/schema.json"
-    },
-    {
-      "type": "untracked",
-      "uri": "file:///tmp/fake/new.json"
-    }
-  ]
+  "\$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "\$id": "file://$(realpath "$TMP")/source/schema.json"
 }
 EOF
 
-diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
-
-diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
+diff "$TMP/project/vendor/schema.json" "$TMP/expected_schema.json"

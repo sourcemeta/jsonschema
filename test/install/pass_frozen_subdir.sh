@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-mkdir -p "$TMP/source" "$TMP/project"
+mkdir -p "$TMP/source" "$TMP/project/subdir"
 
 cat << 'EOF' > "$TMP/source/schema.json"
 {
@@ -36,46 +36,13 @@ diff "$TMP/output_install.txt" "$TMP/expected_install.txt"
 
 cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
-cat << EOF > "$TMP/project/jsonschema.json"
-{
-  "dependencies": {
-    "file:///tmp/fake/new.json": "./vendor/new.json"
-  }
-}
-EOF
-
-"$1" ci > "$TMP/output.txt" 2>&1 \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+cd "$TMP/project/subdir"
+"$1" install --frozen > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-Untracked      : file:///tmp/fake/new.json
-Orphaned       : file://$(realpath "$TMP")/source/schema.json
+Up to date     : file://$(realpath "$TMP")/source/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
-
-diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
-
-"$1" ci --json > "$TMP/output_json.txt" 2>&1 \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
-
-cat << EOF > "$TMP/expected_json.txt"
-{
-  "events": [
-    {
-      "type": "untracked",
-      "uri": "file:///tmp/fake/new.json"
-    },
-    {
-      "type": "orphaned",
-      "uri": "file://$(realpath "$TMP")/source/schema.json"
-    }
-  ]
-}
-EOF
-
-diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
 
 diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"

@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/project/jsonschema.json"
 EOF
 
 cd "$TMP/project"
-"$1" ci > "$TMP/output.txt" 2>&1
+"$1" install --frozen > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 No dependencies found

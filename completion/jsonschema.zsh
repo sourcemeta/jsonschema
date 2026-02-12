@@ -20,7 +20,6 @@ _jsonschema() {
     'decode:Decode JSON using JSON BinPack'
     'codegen:Generate code from a JSON Schema'
     'install:Fetch and install external schema dependencies'
-    'ci:Strictly install dependencies from the lock file'
     'version:Print version information'
     'help:Print help information'
   )
@@ -147,12 +146,9 @@ _jsonschema() {
           _arguments \
             ${global_options[@]} \
             '(--force -f)'{--force,-f}'[Re-fetch all dependencies]' \
+            '(--frozen -z)'{--frozen,-z}'[Strictly verify against the lock file]' \
             '1:schema URI:' \
             '2:destination path:_files'
-          ;;
-        ci)
-          _arguments \
-            ${global_options[@]}
           ;;
         version|help)
           ;;

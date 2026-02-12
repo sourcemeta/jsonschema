@@ -50,7 +50,7 @@ cp "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
 rm "$TMP/project/vendor/main.json"
 
-"$1" ci > "$TMP/output.txt" 2>&1
+"$1" install --frozen > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 Fetching       : file://$(realpath "$TMP")/source/main.json

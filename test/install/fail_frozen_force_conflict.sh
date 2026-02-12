@@ -17,32 +17,24 @@ cat << 'EOF' > "$TMP/project/jsonschema.json"
 }
 EOF
 
-echo "NOT VALID JSON" > "$TMP/project/jsonschema.lock.json"
-
 cd "$TMP/project"
-"$1" ci > "$TMP/output.txt" 2>&1 \
+"$1" install --frozen --force > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
-cat << EOF > "$TMP/expected.txt"
-error: Failed to parse the JSON document
-  at line 1
-  at column 1
-  at file path $(realpath "$TMP")/project/jsonschema.lock.json
+cat << 'EOF' > "$TMP/expected.txt"
+error: The --frozen and --force options cannot be used together
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-"$1" ci --json > "$TMP/output_json.txt" 2>&1 \
+"$1" install --frozen --force --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
-cat << EOF > "$TMP/expected_json.txt"
+cat << 'EOF' > "$TMP/expected_json.txt"
 {
-  "error": "Failed to parse the JSON document",
-  "line": 1,
-  "column": 1,
-  "filePath": "$(realpath "$TMP")/project/jsonschema.lock.json"
+  "error": "The --frozen and --force options cannot be used together"
 }
 EOF
 
