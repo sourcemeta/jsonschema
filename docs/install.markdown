@@ -18,6 +18,9 @@ results need to be
 to inline those references for local consumption. The `install` command solves
 this in a single step.
 
+**NOTE**: For CI/CD pipelines, use [`jsonschema ci`](./ci.markdown) to strictly
+verify dependencies against the lock file without modifying it.
+
 You can quickly add a dependency by passing a URI and a local file path
 directly on the command line. For example:
 

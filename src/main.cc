@@ -129,6 +129,12 @@ Commands:
        dependency before installing. Pass --force/-f to re-fetch all
        dependencies regardless of lock state.
 
+   ci
+
+       Strictly fetch and install dependencies from the lock file.
+       Fails on any mismatch between configuration, lock file,
+       and installed files. Intended for CI/CD environments.
+
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
@@ -223,6 +229,10 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("force", {"f"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::install(app);
+    return EXIT_SUCCESS;
+  } else if (command == "ci") {
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::ci(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"

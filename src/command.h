@@ -17,6 +17,7 @@ auto encode(const sourcemeta::core::Options &options) -> void;
 auto decode(const sourcemeta::core::Options &options) -> void;
 auto codegen(const sourcemeta::core::Options &options) -> void;
 auto install(const sourcemeta::core::Options &options) -> void;
+auto ci(const sourcemeta::core::Options &options) -> void;
 } // namespace sourcemeta::jsonschema
 
 #endif

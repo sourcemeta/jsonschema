@@ -169,6 +169,32 @@ private:
   std::filesystem::path path_;
 };
 
+class LockNotFoundError : public std::runtime_error {
+public:
+  LockNotFoundError(std::filesystem::path path)
+      : std::runtime_error{"Lock file not found"}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
+class LockParseError : public std::runtime_error {
+public:
+  LockParseError(std::filesystem::path path)
+      : std::runtime_error{"Lock file is corrupted"}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 class InstallError : public std::runtime_error {
 public:
   InstallError(std::string message, std::string uri)
@@ -425,6 +451,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "docs/install.markdown\n";
     }
 
+    return EXIT_FAILURE;
+  } catch (const LockNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const LockParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_FAILURE;
   } catch (const NotSchemaError &error) {
     const auto is_json{options.contains("json")};
