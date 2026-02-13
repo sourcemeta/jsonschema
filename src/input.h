@@ -17,6 +17,7 @@
 #include <cstdint>    // std::uintptr_t
 #include <filesystem> // std::filesystem
 #include <functional> // std::ref
+#include <iostream>   // std::cin
 #include <set>        // std::set
 #include <sstream>    // std::ostringstream
 #include <stdexcept>  // std::runtime_error
@@ -26,7 +27,9 @@
 namespace sourcemeta::jsonschema {
 
 struct InputJSON {
-  std::filesystem::path first;
+  std::string first;
+  std::filesystem::path resolution_base;
+  bool from_stdin{false};
   sourcemeta::core::JSON second;
   sourcemeta::core::PointerPositionTracker positions;
   std::size_t index{0};
@@ -143,12 +146,26 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
+inline auto read_from_stdin() -> ParsedJSON {
+  sourcemeta::core::PointerPositionTracker positions;
+  return {sourcemeta::core::parse_json(std::cin, std::ref(positions)),
+          std::move(positions), false};
+}
+
 inline auto
 handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::filesystem::path> &blacklist,
                   const std::set<std::string> &extensions,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options) -> void {
+  if (entry_path == "-") {
+    auto parsed{read_from_stdin()};
+    result.emplace_back("<stdin>", std::filesystem::current_path(), true,
+                        std::move(parsed.document), std::move(parsed.positions),
+                        0, false, parsed.yaml);
+    return;
+  }
+
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
@@ -171,7 +188,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical), false,
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
@@ -190,8 +208,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back(
-                {canonical, document, std::move(positions), index, true});
+            result.push_back({canonical.string(), canonical, false, document,
+                              std::move(positions), index, true});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -240,22 +258,26 @@ handle_json_entry(const std::filesystem::path &entry_path,
                                << canonical.string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical, std::move(entry.first),
-                              std::move(entry.second), index, true, true});
+            result.push_back({canonical.string(), canonical, false,
+                              std::move(entry.first), std::move(entry.second),
+                              index, true, true});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back(
-              {std::move(canonical), std::move(documents.front().first),
-               std::move(documents.front().second), 0, false, true});
+          result.push_back({canonical.string(), std::move(canonical), false,
+                            std::move(documents.front().first),
+                            std::move(documents.front().second), 0, false,
+                            true});
         }
       } else {
-        if (std::filesystem::is_empty(canonical)) {
+        if (std::filesystem::is_regular_file(canonical) &&
+            std::filesystem::is_empty(canonical)) {
           return;
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical), false,
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
@@ -264,9 +286,26 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
 } // namespace
 
+inline auto
+check_duplicate_stdin(const std::vector<std::string_view> &arguments) -> void {
+  bool seen_stdin{false};
+  for (const auto &arg : arguments) {
+    if (arg == "-") {
+      if (seen_stdin) {
+        throw std::runtime_error{
+            "The standard input position argument `-` can only be specified "
+            "once"};
+      }
+      seen_stdin = true;
+    }
+  }
+}
+
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
+  check_duplicate_stdin(arguments);
+
   const auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 

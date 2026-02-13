@@ -29,47 +29,47 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
-        entry.second, entry.positions, entry.first.parent_path(),
+        entry.second, entry.positions, entry.resolution_base.parent_path(),
         schema_resolver, sourcemeta::core::schema_walker,
         sourcemeta::blaze::default_schema_compiler, dialect);
   } catch (const sourcemeta::blaze::TestParseError &error) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw sourcemeta::jsonschema::FileError<sourcemeta::blaze::TestParseError>{
-        entry.first, error.what(), error.location(), error.line(),
+        entry.resolution_base, error.what(), error.location(), error.line(),
         error.column()};
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw sourcemeta::jsonschema::FileError<
-        sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{entry.first,
-                                                                  error};
+        sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
+        entry.resolution_base, error};
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw sourcemeta::jsonschema::FileError<
-        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{entry.first,
-                                                                   error};
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{
+        entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw sourcemeta::jsonschema::FileError<
-        sourcemeta::core::SchemaResolutionError>{entry.first, error};
+        sourcemeta::core::SchemaResolutionError>{entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw sourcemeta::jsonschema::FileError<
-        sourcemeta::core::SchemaUnknownBaseDialectError>{entry.first};
+        sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
   } catch (...) {
     if (!json_output) {
-      std::cout << entry.first.string() << ":\n";
+      std::cout << entry.first << ":\n";
     }
     throw;
   }
@@ -81,7 +81,7 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
 
   for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
     const auto configuration_path{
-        sourcemeta::jsonschema::find_configuration(entry.first)};
+        sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
         options, configuration_path)};
     const auto dialect{
@@ -91,7 +91,7 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
 
     auto test_suite{parse_test_suite(entry, schema_resolver, dialect, false)};
 
-    std::cout << entry.first.string() << ":";
+    std::cout << entry.first << ":";
 
     const auto suite_result{test_suite.run(
         [&](const sourcemeta::core::JSON::String &, std::size_t index,
@@ -193,7 +193,7 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 
   for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
     const auto configuration_path{
-        sourcemeta::jsonschema::find_configuration(entry.first)};
+        sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
         options, configuration_path)};
     const auto dialect{
@@ -203,8 +203,7 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 
     auto test_suite{parse_test_suite(entry, schema_resolver, dialect, true)};
 
-    const auto file_path{
-        sourcemeta::core::weakly_canonical(entry.first).string()};
+    const auto file_path{entry.first};
 
     const auto suite_result{test_suite.run(
         [&](const sourcemeta::core::JSON::String &target, std::size_t,
