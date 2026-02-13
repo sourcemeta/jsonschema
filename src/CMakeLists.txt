@@ -12,7 +12,8 @@ add_executable(jsonschema_cli
   command_decode.cc
   command_compile.cc
   command_canonicalize.cc
-  command_codegen.cc)
+  command_codegen.cc
+  command_install.cc)
 
 sourcemeta_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
@@ -27,7 +28,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::regex)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::alterschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::editorschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::options)
-target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::schemaconfig)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::configuration)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::compiler)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::jsonbinpack::runtime)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::compiler)

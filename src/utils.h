@@ -1,13 +1,15 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 #include <sourcemeta/core/uri.h>
 
+#include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
 
 #include <cassert>     // assert
@@ -29,9 +31,38 @@ inline auto default_id(const std::filesystem::path &schema_path)
       .recompose();
 }
 
+inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
+                               const std::string &entrypoint) -> std::string {
+  if (entrypoint.empty()) {
+    return std::string{frame.root()};
+  }
+
+  if (entrypoint.front() == '/' &&
+      (entrypoint.size() < 2 || entrypoint[1] != '/')) {
+    sourcemeta::core::URI result{std::string{frame.root()}};
+    result.fragment(entrypoint);
+    return result.recompose();
+  }
+
+  if (entrypoint.front() == '#') {
+    const std::string pointer_string{entrypoint.substr(1)};
+    sourcemeta::core::URI result{std::string{frame.root()}};
+    result.fragment(pointer_string);
+    return result.recompose();
+  }
+
+  try {
+    const sourcemeta::core::URI uri{entrypoint};
+    return entrypoint;
+  } catch (const sourcemeta::core::URIParseError &) {
+    throw sourcemeta::blaze::CompilerInvalidEntryPoint{
+        entrypoint, "The given entry point is not a valid URI or JSON Pointer"};
+  }
+}
+
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
-    const std::optional<sourcemeta::core::SchemaConfig> &configuration)
+    const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> std::string_view {
   if (options.contains("default-dialect")) {
     return options.at("default-dialect").front();

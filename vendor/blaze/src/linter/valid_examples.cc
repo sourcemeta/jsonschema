@@ -49,32 +49,62 @@ auto ValidExamples::condition(
     }
   }
 
+  std::size_t cursor{0};
+
+  if (frame.standalone()) {
+    const auto base{frame.uri(location.pointer)};
+    assert(base.has_value());
+    const auto schema_template{compile(root, walker, resolver, this->compiler_,
+                                       frame, base.value().get(),
+                                       Mode::Exhaustive)};
+
+    for (const auto &example : schema.at("examples").as_array()) {
+      SimpleOutput output{example};
+      const auto result{this->evaluator_.validate(schema_template, example,
+                                                  std::ref(output))};
+      if (!result) {
+        std::ostringstream message;
+        message << "Invalid example instance at index " << cursor << "\n";
+        for (const auto &entry : output) {
+          message << "  " << entry.message << "\n";
+          message << "  "
+                  << "  at instance location \"";
+          sourcemeta::core::stringify(entry.instance_location, message);
+          message << "\"\n";
+          message << "  "
+                  << "  at evaluate path \"";
+          sourcemeta::core::stringify(entry.evaluate_path, message);
+          message << "\"\n";
+        }
+
+        return {{{"examples", cursor}}, std::move(message).str()};
+      }
+
+      cursor += 1;
+    }
+
+    return false;
+  }
+
   const auto &root_base_dialect{
       frame.traverse(frame.root()).value_or(location).get().base_dialect};
   std::string_view default_id{location.base};
   if (!sourcemeta::core::identify(root, root_base_dialect).empty() ||
       default_id.empty()) {
-    // We want to only set a default identifier if the root schema does not
-    // have an explicit identifier. Otherwise, we can get into corner case
-    // when wrapping the schema
     default_id = "";
   }
 
   sourcemeta::core::WeakPointer base;
   const auto subschema{
       sourcemeta::core::wrap(root, frame, location, resolver, base)};
-  // To avoid bundling twice in vain
-  Tweaks tweaks{.assume_bundled = frame.standalone()};
   const auto schema_template{compile(subschema, walker, resolver,
                                      this->compiler_, Mode::Exhaustive,
-                                     location.dialect, default_id, "", tweaks)};
+                                     location.dialect, default_id)};
 
-  Evaluator evaluator;
-  std::size_t cursor{0};
   for (const auto &example : schema.at("examples").as_array()) {
     SimpleOutput output{example, base};
     const auto result{
-        evaluator.validate(schema_template, example, std::ref(output))};
+        this->evaluator_.validate(schema_template, example, std::ref(output))};
     if (!result) {
       std::ostringstream message;
       message << "Invalid example instance at index " << cursor << "\n";

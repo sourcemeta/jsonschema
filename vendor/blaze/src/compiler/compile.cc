@@ -163,14 +163,14 @@ auto compile(const sourcemeta::core::JSON &schema,
   const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
   if (!maybe_entrypoint_location.has_value()) {
     throw CompilerInvalidEntryPoint{
-        entrypoint, "The given entrypoint URI does not exist in the schema"};
+        entrypoint, "The given entry point URI does not exist in the schema"};
   }
 
   const auto &entrypoint_location{maybe_entrypoint_location->get()};
   if (entrypoint_location.type ==
       sourcemeta::core::SchemaFrame::LocationType::Pointer) {
     throw CompilerInvalidEntryPoint{
-        entrypoint, "The given entrypoint URI is not a valid subschema"};
+        entrypoint, "The given entry point URI is not a valid subschema"};
   }
 
   ///////////////////////////////////////////////////////////////////
@@ -429,28 +429,17 @@ auto compile(const sourcemeta::core::JSON &schema,
              const std::string_view entrypoint,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
-  const auto effective_tweaks{tweaks.value_or(Tweaks{})};
 
-  if (effective_tweaks.assume_bundled) {
-    sourcemeta::core::SchemaFrame frame{
-        sourcemeta::core::SchemaFrame::Mode::References};
-    frame.analyse(schema, walker, resolver, default_dialect, default_id);
-    return compile(schema, walker, resolver, compiler, frame,
-                   entrypoint.empty() ? frame.root() : entrypoint, mode,
-                   tweaks);
-  } else {
-    // Make sure the input schema is bundled, otherwise we won't be able to
-    // resolve remote references here
-    const sourcemeta::core::JSON result{sourcemeta::core::bundle(
-        schema, walker, resolver, default_dialect, default_id)};
+  // Make sure the input schema is bundled, otherwise we won't be able to
+  // resolve remote references here
+  const sourcemeta::core::JSON result{sourcemeta::core::bundle(
+      schema, walker, resolver, default_dialect, default_id)};
 
-    sourcemeta::core::SchemaFrame frame{
-        sourcemeta::core::SchemaFrame::Mode::References};
-    frame.analyse(result, walker, resolver, default_dialect, default_id);
-    return compile(result, walker, resolver, compiler, frame,
-                   entrypoint.empty() ? frame.root() : entrypoint, mode,
-                   tweaks);
-  }
+  sourcemeta::core::SchemaFrame frame{
+      sourcemeta::core::SchemaFrame::Mode::References};
+  frame.analyse(result, walker, resolver, default_dialect, default_id);
+  return compile(result, walker, resolver, compiler, frame,
+                 entrypoint.empty() ? frame.root() : entrypoint, mode, tweaks);
 }
 
 auto compile(const Context &context, const SchemaContext &schema_context,

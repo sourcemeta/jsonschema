@@ -4,11 +4,11 @@
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/codegen/ir.h>
 
+#include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
-#include <sourcemeta/core/schemaconfig.h>
 
 #include <cstdlib>          // EXIT_FAILURE
 #include <filesystem>       // std::filesystem
@@ -152,6 +152,60 @@ public:
 
 private:
   std::string command_;
+};
+
+class ConfigurationNotFoundError : public std::runtime_error {
+public:
+  ConfigurationNotFoundError(std::filesystem::path path)
+      : std::runtime_error{"Could not find a jsonschema.json configuration "
+                           "file"},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
+class LockNotFoundError : public std::runtime_error {
+public:
+  LockNotFoundError(std::filesystem::path path)
+      : std::runtime_error{"Lock file not found"}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
+class LockParseError : public std::runtime_error {
+public:
+  LockParseError(std::filesystem::path path)
+      : std::runtime_error{"Lock file is corrupted"}, path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
+class InstallError : public std::runtime_error {
+public:
+  InstallError(std::string message, std::string uri)
+      : std::runtime_error{std::move(message)}, uri_{std::move(uri)} {}
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->uri_;
+  }
+
+private:
+  std::string uri_;
 };
 
 class Fail : public std::runtime_error {
@@ -384,6 +438,28 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return callback();
   } catch (const Fail &error) {
     return error.exit_code();
+  } catch (const InstallError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const ConfigurationNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nLearn more here: "
+                   "https://github.com/sourcemeta/jsonschema/blob/main/"
+                   "docs/install.markdown\n";
+    }
+
+    return EXIT_FAILURE;
+  } catch (const LockNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const LockParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const NotSchemaError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -449,11 +525,21 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_FAILURE;
+  } catch (
+      const FileError<sourcemeta::blaze::CompilerInvalidEntryPoint> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr
+          << "\nUse the `inspect` command to find valid schema locations\n";
+    }
+
+    return EXIT_FAILURE;
   } catch (const FileError<sourcemeta::core::SchemaReferenceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
-  } catch (const FileError<sourcemeta::core::SchemaConfigParseError> &error) {
+  } catch (const FileError<sourcemeta::blaze::ConfigurationParseError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;

@@ -75,6 +75,7 @@ test_completion "jsonschema " "canonicalize" "Command completion includes canoni
 test_completion "jsonschema " "encode" "Command completion includes encode"
 test_completion "jsonschema " "decode" "Command completion includes decode"
 test_completion "jsonschema " "codegen" "Command completion includes codegen"
+test_completion "jsonschema " "install" "Command completion includes install"
 test_completion "jsonschema " "version" "Command completion includes version"
 test_completion "jsonschema " "help" "Command completion includes help"
 
@@ -99,5 +100,10 @@ test_completion "jsonschema canonicalize --" "--verbose" "Canonicalize includes 
 test_completion "jsonschema codegen --" "--name" "Codegen includes --name"
 test_completion "jsonschema codegen --" "--target" "Codegen includes --target"
 test_completion "jsonschema codegen --" "--verbose" "Codegen includes global option --verbose"
+
+test_completion "jsonschema install --" "--force" "Install includes --force"
+test_completion "jsonschema install --" "--frozen" "Install includes --frozen"
+test_completion "jsonschema install --" "--verbose" "Install includes global option --verbose"
+test_completion "jsonschema install --" "--debug" "Install includes global option --debug"
 
 echo "PASS" 1>&2

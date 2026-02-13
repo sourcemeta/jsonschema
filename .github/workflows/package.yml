@@ -69,7 +69,7 @@ jobs:
     steps:
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
-        run: apk add --no-cache cmake make g++ zsh bash jq pipx git
+        run: apk add --no-cache cmake make g++ zsh bash jq pipx git perl-utils
 
       - name: Install pre-commit
         run: pipx install pre-commit

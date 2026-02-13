@@ -37,7 +37,7 @@ Commands:
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
-            [--template/-m <template.json>]
+            [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
 
        Validate one or more instances against the given schema.
 
@@ -60,10 +60,11 @@ Commands:
 
    compile <schema.json|.yaml> [--extension/-e <extension>]
            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
-           [--include/-n <name>]
+           [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
 
        Compile the given schema into an internal optimised representation.
        Use --include/-n to output as a C/C++ header file.
+       Use --entrypoint/-p to compile a subschema by JSON Pointer or URI.
 
    test [schemas-or-directories...] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>]
@@ -121,6 +122,15 @@ Commands:
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
+   install [<uri> <path>] [--force/-f] [--frozen/-z]
+
+       Fetch and install external schema dependencies declared in
+       jsonschema.json. Pass a URI and a local file path to add a new
+       dependency before installing. Pass --force/-f to re-fetch all
+       dependencies regardless of lock state. Pass --frozen to strictly
+       verify dependencies against the lock file without modifying it,
+       intended for CI/CD environments.
+
 For more documentation, visit https://github.com/sourcemeta/jsonschema
 )EOF"};
 
@@ -168,6 +178,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.option("template", {"m"});
     app.option("loop", {"l"});
+    app.option("entrypoint", {"p"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
@@ -182,6 +193,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("fast", {"f"});
     app.flag("minify", {"m"});
     app.option("include", {"n"});
+    app.option("entrypoint", {"p"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
@@ -208,6 +220,12 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("target", {"t"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::codegen(app);
+    return EXIT_SUCCESS;
+  } else if (command == "install") {
+    app.flag("force", {"f"});
+    app.flag("frozen", {"z"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::install(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::cout << "JSON Schema CLI - v"

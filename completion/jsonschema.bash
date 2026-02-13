@@ -11,9 +11,9 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen version help"
+  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen install version help"
 
-  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h"
+  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g"
 
   if [ "${COMP_CWORD}" -eq 1 ]
   then
@@ -171,6 +171,15 @@ _jsonschema() {
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
         COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      ;;
+    install)
+      local options="--force -f --frozen -z"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -d -- "${current}") )
       fi
       ;;
     version|help)

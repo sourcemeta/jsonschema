@@ -86,10 +86,11 @@ documentation:
 - [`jsonschema codegen`](./docs/codegen.markdown) (for generating code from schemas)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)
+- [`jsonschema install`](./docs/install.markdown) (for fetching external schema dependencies)
 
 > See [`jsonschema.json`](./docs/configuration.markdown) for an _experimental_
 manifest for describing JSON Schema data models inspired by NPM's
-`package.json`.
+`package.json`, including dependency management.
 
 Note that YAML is supported in most commands!
 
@@ -134,7 +135,7 @@ Where `X.Y.Z` is replaced with the desired version. For example:
   uses: actions/checkout@v4
 
 - name: Install the JSON Schema CLI
-  uses: sourcemeta/jsonschema@v14.6.1
+  uses: sourcemeta/jsonschema@v14.10.0
 
 # Then use as usual
 - run: jsonschema fmt path/to/schemas --check
