@@ -26,7 +26,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" 2>"$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve schema reference
@@ -40,7 +40,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --json >"$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

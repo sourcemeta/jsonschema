@@ -538,7 +538,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const FileError<sourcemeta::core::SchemaReferenceError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
-    return EXIT_FAILURE;
+    return 3;
   } catch (const FileError<sourcemeta::blaze::ConfigurationParseError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -603,7 +603,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const FileError<sourcemeta::core::SchemaVocabularyError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
-    return EXIT_FAILURE;
+    return 3;
   } catch (
       const FileError<sourcemeta::codegen::UnsupportedKeywordError> &error) {
     const auto is_json{options.contains("json")};

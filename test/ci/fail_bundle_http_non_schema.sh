@@ -18,7 +18,7 @@ EOF
 
 "$1" bundle "$TMP/schema.json" --http 2> "$TMP/stderr.txt" \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The JSON document is not a valid JSON Schema

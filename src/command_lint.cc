@@ -276,7 +276,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 std::cerr << "\n";
               }
 
-               throw FileError<
+              throw FileError<
                   sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
                   entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {
@@ -380,7 +380,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
-               throw FileError<
+              throw FileError<
                   sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
                   entry.first, error);
             } catch (const sourcemeta::core::SchemaKeywordError &error) {

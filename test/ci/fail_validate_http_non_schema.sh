@@ -22,7 +22,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --http 2> "$TMP/stderr.txt" \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The JSON document is not a valid JSON Schema
