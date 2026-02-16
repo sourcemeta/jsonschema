@@ -24,18 +24,21 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_LINTER_EXPORT LinterInvalidNameError
     : public std::exception {
 public:
-  LinterInvalidNameError(const std::string_view name) : name_{name} {}
+  LinterInvalidNameError(const std::string_view identifier,
+                         const std::string_view message)
+      : identifier_{identifier}, message_{message} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "The schema rule name is invalid";
+    return this->message_.c_str();
   }
 
-  [[nodiscard]] auto name() const noexcept -> const std::string & {
-    return this->name_;
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
   }
 
 private:
-  std::string name_;
+  std::string identifier_;
+  std::string message_;
 };
 
 #if defined(_MSC_VER)
