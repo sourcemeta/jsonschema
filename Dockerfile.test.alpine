@@ -1,5 +1,5 @@
 FROM alpine:3.21
-RUN apk add --no-cache cmake make g++ zsh bash jq perl-utils
+RUN apk add --no-cache cmake make g++ zsh bash jq perl-utils ca-certificates
 WORKDIR /src
 COPY CMakeLists.txt .
 COPY cmake cmake
