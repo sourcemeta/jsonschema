@@ -99,9 +99,9 @@ Each rule schema must have a `title` keyword (used as the rule name) and
 optionally a `description` keyword (used as the rule message). The title must
 consist only of lowercase ASCII letters, digits, underscores, or slashes.
 
-When linting, every subschema in the target document is validated as a JSON
-instance against each custom rule schema. If a subschema does not conform, the
-rule fires and reports the validation errors.
+When linting, _every subschema in the target schema_ is validated as a JSON
+instance against each custom rule schema (not only the top one). If any
+subschema does not conform, the rule fires and reports the validation errors.
 
 For example, create a rule that requires every subschema to declare a `type`:
 
@@ -124,14 +124,6 @@ You can pass multiple custom rules:
 
 ```sh
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
-```
-
-Custom rules interact with `--only`, `--exclude`, `--list`, and
-`x-lint-exclude` the same way as built-in rules. For example, to list all
-rules including custom ones:
-
-```sh
-jsonschema lint --rule require_type.json --list
 ```
 
 Examples
