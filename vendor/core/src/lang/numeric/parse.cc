@@ -16,8 +16,13 @@ auto to_double(const std::string &input) noexcept -> std::optional<double> {
 
 auto to_int64_t(const std::string &input) noexcept
     -> std::optional<std::int64_t> {
+  return to_int64_t(input, 10);
+}
+
+auto to_int64_t(const std::string &input, const int base) noexcept
+    -> std::optional<std::int64_t> {
   try {
-    return static_cast<std::int64_t>(std::stoll(input));
+    return static_cast<std::int64_t>(std::stoll(input, nullptr, base));
   } catch (const std::invalid_argument &) {
     return std::nullopt;
   } catch (const std::out_of_range &) {

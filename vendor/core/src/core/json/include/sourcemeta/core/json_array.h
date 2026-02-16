@@ -97,6 +97,11 @@ public:
     return this->data.size();
   }
 
+  /// Reserve capacity for a given number of elements
+  auto reserve(const size_type capacity) -> void {
+    this->data.reserve(capacity);
+  }
+
 private:
   friend Value;
 // Exporting symbols that depends on the standard C++ library is considered
