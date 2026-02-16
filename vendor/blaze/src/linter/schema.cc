@@ -73,18 +73,19 @@ auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
     return false;
   }
 
-  std::ostringstream message;
+  std::vector<sourcemeta::core::Pointer> locations;
   for (const auto &entry : output) {
-    message << entry.message << "\n";
-    message << "  at instance location \"";
-    sourcemeta::core::stringify(entry.instance_location, message);
-    message << "\"\n";
-    message << "  at evaluate path \"";
-    sourcemeta::core::stringify(entry.evaluate_path, message);
-    message << "\"\n";
+    if (!entry.instance_location.empty()) {
+      locations.push_back(
+          sourcemeta::core::to_pointer(entry.instance_location));
+    }
   }
 
-  return {{}, std::move(message).str()};
+  if (output.cbegin() != output.cend()) {
+    return {std::move(locations), std::string{output.cbegin()->message}};
+  } else {
+    return {std::move(locations)};
+  }
 }
 
 } // namespace sourcemeta::blaze
