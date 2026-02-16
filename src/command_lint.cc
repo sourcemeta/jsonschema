@@ -145,6 +145,51 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   bundle.add<sourcemeta::blaze::ValidDefault>(
       sourcemeta::blaze::default_schema_compiler);
 
+  if (options.contains("rule")) {
+    for (const auto &rule_path_string : options.at("rule")) {
+      const std::filesystem::path rule_path{
+          std::filesystem::weakly_canonical(rule_path_string)};
+      LOG_VERBOSE(options) << "Loading custom rule: " << rule_path.string()
+                           << "\n";
+      const auto configuration_path{find_configuration(rule_path)};
+      const auto &configuration{
+          read_configuration(options, configuration_path, rule_path)};
+      const auto dialect{default_dialect(options, configuration)};
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect, configuration)};
+      const auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
+
+      if (rule_schema.defines("title") && rule_schema.at("title").is_string()) {
+        const auto rule_name{rule_schema.at("title").to_string()};
+        for (const auto &entry : bundle) {
+          if (std::get<0>(entry)->name() == rule_name) {
+            throw FileError<DuplicateLintRuleError>(rule_path, rule_name);
+          }
+        }
+      }
+
+      try {
+        bundle.add<sourcemeta::blaze::SchemaRule>(
+            rule_schema, sourcemeta::core::schema_walker, custom_resolver,
+            sourcemeta::blaze::default_schema_compiler, dialect);
+      } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
+        throw FileError<sourcemeta::blaze::LinterInvalidNameError>(rule_path,
+                                                                   error);
+      } catch (const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
+                   &error) {
+        throw FileError<
+            sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(rule_path,
+                                                                      error);
+      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+            rule_path);
+      } catch (const sourcemeta::core::SchemaResolutionError &error) {
+        throw FileError<sourcemeta::core::SchemaResolutionError>(rule_path,
+                                                                 error);
+      }
+    }
+  }
+
   if (options.contains("only")) {
     if (options.contains("exclude")) {
       throw OptionConflictError{

@@ -5,6 +5,7 @@
 #include <sourcemeta/codegen/ir.h>
 
 #include <sourcemeta/blaze/configuration.h>
+#include <sourcemeta/blaze/linter_error.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -96,6 +97,20 @@ class InvalidLintRuleError : public std::runtime_error {
 public:
   InvalidLintRuleError(std::string message, std::string rule)
       : std::runtime_error{std::move(message)}, rule_{std::move(rule)} {}
+
+  [[nodiscard]] auto rule() const noexcept -> const std::string & {
+    return this->rule_;
+  }
+
+private:
+  std::string rule_;
+};
+
+class DuplicateLintRuleError : public std::runtime_error {
+public:
+  DuplicateLintRuleError(std::string rule)
+      : std::runtime_error{"A lint rule with this name already exists"},
+        rule_{std::move(rule)} {}
 
   [[nodiscard]] auto rule() const noexcept -> const std::string & {
     return this->rule_;
@@ -469,6 +484,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_FAILURE;
   } catch (const InvalidLintRuleError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const FileError<DuplicateLintRuleError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
+  } catch (const FileError<sourcemeta::blaze::LinterInvalidNameError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;

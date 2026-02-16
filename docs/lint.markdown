@@ -7,6 +7,7 @@ jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
+  [--rule/-a <rule-schema>]
   [--default-dialect/-d <uri>] [--indentation/-n <spaces>]
 ```
 
@@ -88,6 +89,49 @@ To disable multiple rules, use an array:
     }
   }
 }
+```
+
+Custom Rules
+------------
+
+You can define custom lint rules as JSON Schemas using the `--rule/-a` option.
+Each rule schema must have a `title` keyword (used as the rule name) and
+optionally a `description` keyword (used as the rule message). The title must
+consist only of lowercase ASCII letters, digits, underscores, or slashes.
+
+When linting, every subschema in the target document is validated as a JSON
+instance against each custom rule schema. If a subschema does not conform, the
+rule fires and reports the validation errors.
+
+For example, create a rule that requires every subschema to declare a `type`:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every subschema must declare the type keyword",
+  "required": [ "type" ]
+}
+```
+
+Then run:
+
+```sh
+jsonschema lint --rule require_type.json path/to/my/schema.json
+```
+
+You can pass multiple custom rules:
+
+```sh
+jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
+```
+
+Custom rules interact with `--only`, `--exclude`, `--list`, and
+`x-lint-exclude` the same way as built-in rules. For example, to list all
+rules including custom ones:
+
+```sh
+jsonschema lint --rule require_type.json --list
 ```
 
 Examples
@@ -195,4 +239,16 @@ jsonschema lint path/to/my/schema.json --fix --format --keep-ordering
 
 ```sh
 jsonschema lint --list
+```
+
+### Lint with a custom rule
+
+```sh
+jsonschema lint --rule path/to/my/rule.json path/to/my/schema.json
+```
+
+### Lint with multiple custom rules
+
+```sh
+jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
 ```

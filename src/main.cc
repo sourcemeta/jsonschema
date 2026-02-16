@@ -83,6 +83,7 @@ Commands:
         [--keep-ordering/-k] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
+        [--rule/-a <rule-schema>]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
@@ -90,6 +91,7 @@ Commands:
        are no linting issues.
        Use --keep-ordering/-k with --format to preserve key order.
        Use --list/-l to print a summary of all enabled rules.
+       Use --rule/-a to add a custom lint rule defined as a JSON Schema.
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -167,6 +169,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("only", {"o"});
     app.option("ignore", {"i"});
     app.option("indentation", {"n"});
+    app.option("rule", {"a"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::lint(app);
     return EXIT_SUCCESS;
