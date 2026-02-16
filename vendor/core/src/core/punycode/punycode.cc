@@ -1,13 +1,12 @@
 #include <sourcemeta/core/punycode.h>
 #include <sourcemeta/core/punycode_error.h>
-
-#include "utf8.h"
+#include <sourcemeta/core/unicode.h>
 
 #include <algorithm> // std::ranges::sort
 #include <cassert>   // assert
 #include <cstdint>   // std::uint32_t, std::uint64_t
 #include <limits>    // std::numeric_limits
-#include <sstream>   // std::istringstream, std::ostringstream
+#include <sstream>   // std::ostringstream
 #include <vector>    // std::vector
 
 namespace sourcemeta::core {
@@ -285,12 +284,13 @@ auto punycode_to_utf8(std::istream &input, std::ostream &output) -> void {
 
   std::u32string decoded;
   punycode_decode(encoded, decoded);
-  utf32_to_utf8(decoded, output);
+  for (const auto code_point : decoded) {
+    codepoint_to_utf8(code_point, output);
+  }
 }
 
 auto utf8_to_punycode(const std::string_view input) -> std::string {
-  std::istringstream input_stream{std::string{input}};
-  const auto codepoints = utf8_to_utf32(input_stream);
+  const auto codepoints = utf8_to_utf32(input);
   if (!codepoints.has_value()) {
     throw PunycodeError("Invalid UTF-8 input");
   }
@@ -304,7 +304,9 @@ auto punycode_to_utf8(const std::string_view input) -> std::string {
   std::u32string decoded;
   punycode_decode(input, decoded);
   std::ostringstream output_stream;
-  utf32_to_utf8(decoded, output_stream);
+  for (const auto code_point : decoded) {
+    codepoint_to_utf8(code_point, output_stream);
+  }
   return output_stream.str();
 }
 
