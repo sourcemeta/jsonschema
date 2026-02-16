@@ -1,11 +1,10 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
+#include <sourcemeta/blaze/configuration.h>
+#include <sourcemeta/blaze/linter.h>
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/codegen/ir.h>
-
-#include <sourcemeta/blaze/configuration.h>
-#include <sourcemeta/blaze/linter_error.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>

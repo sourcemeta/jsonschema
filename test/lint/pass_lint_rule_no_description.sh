@@ -28,7 +28,7 @@ test "$CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 schema.json:1:1:
-   (require_type)
+  <no description> (require_type)
     at location ""
     The object value was expected to define the property "type"
 EOF

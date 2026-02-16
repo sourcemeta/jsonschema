@@ -146,6 +146,11 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       sourcemeta::blaze::default_schema_compiler);
 
   if (options.contains("rule")) {
+    std::unordered_set<std::string> rule_names;
+    for (const auto &entry : bundle) {
+      rule_names.emplace(std::get<0>(entry)->name());
+    }
+
     for (const auto &rule_path_string : options.at("rule")) {
       const std::filesystem::path rule_path{
           std::filesystem::weakly_canonical(rule_path_string)};
@@ -157,15 +162,19 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
-      const auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
+      auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
+      if (!rule_schema.defines("description")) {
+        rule_schema.assign("description",
+                           sourcemeta::core::JSON{"<no description>"});
+      }
 
       if (rule_schema.defines("title") && rule_schema.at("title").is_string()) {
         const auto rule_name{rule_schema.at("title").to_string()};
-        for (const auto &entry : bundle) {
-          if (std::get<0>(entry)->name() == rule_name) {
-            throw FileError<DuplicateLintRuleError>(rule_path, rule_name);
-          }
+        if (rule_names.contains(rule_name)) {
+          throw FileError<DuplicateLintRuleError>(rule_path, rule_name);
         }
+
+        rule_names.emplace(rule_name);
       }
 
       try {
