@@ -28,7 +28,8 @@ EOF
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema rule name is invalid
+error: The schema rule name must match ^[a-z0-9_/]+\$
+  at identifier Invalid Title
   at file path $(realpath "$TMP")/rule.json
 EOF
 
@@ -40,7 +41,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule name is invalid",
+  "error": "The schema rule name must match ^[a-z0-9_/]+\$",
+  "identifier": "Invalid Title",
   "filePath": "$(realpath "$TMP")/rule.json"
 }
 EOF

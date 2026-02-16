@@ -26,10 +26,11 @@ EOF
   > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
-cat << EOF > "$TMP/expected.txt"
-error: The schema rule name is invalid
-  at file path $(realpath "$TMP")/rule.json
-EOF
+printf '%s\n' \
+  "error: The schema rule title is missing or not a string" \
+  "  at identifier " \
+  "  at file path $(realpath "$TMP")/rule.json" \
+  > "$TMP/expected.txt"
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
@@ -39,7 +40,8 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule name is invalid",
+  "error": "The schema rule title is missing or not a string",
+  "identifier": "",
   "filePath": "$(realpath "$TMP")/rule.json"
 }
 EOF
