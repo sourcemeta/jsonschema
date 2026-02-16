@@ -26,7 +26,8 @@
 namespace sourcemeta::jsonschema {
 
 struct InputJSON {
-  std::filesystem::path first;
+  std::string first;
+  std::filesystem::path resolution_base;
   sourcemeta::core::JSON second;
   sourcemeta::core::PointerPositionTracker positions;
   std::size_t index{0};
@@ -171,7 +172,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical),
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
@@ -190,8 +192,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back(
-                {canonical, document, std::move(positions), index, true});
+            result.push_back({canonical.string(), canonical, document,
+                              std::move(positions), index, true});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -240,14 +242,16 @@ handle_json_entry(const std::filesystem::path &entry_path,
                                << canonical.string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical, std::move(entry.first),
-                              std::move(entry.second), index, true, true});
+            result.push_back({canonical.string(), canonical,
+                              std::move(entry.first), std::move(entry.second),
+                              index, true, true});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back(
-              {std::move(canonical), std::move(documents.front().first),
-               std::move(documents.front().second), 0, false, true});
+          result.push_back({canonical.string(), std::move(canonical),
+                            std::move(documents.front().first),
+                            std::move(documents.front().second), 0, false,
+                            true});
         }
       } else {
         if (std::filesystem::is_empty(canonical)) {
@@ -255,7 +259,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical),
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }

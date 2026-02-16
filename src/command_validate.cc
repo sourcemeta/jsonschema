@@ -79,8 +79,8 @@ auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {
 auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
               const sourcemeta::blaze::Template &schema_template,
               const sourcemeta::core::JSON &instance,
-              const std::filesystem::path &instance_path,
-              const int64_t instance_index, const uint64_t loop) -> bool {
+              const std::string &instance_path, const int64_t instance_index,
+              const uint64_t loop) -> bool {
   const auto iterations = static_cast<double>(loop);
   double sum = 0.0, sum2 = 0.0, empty = 0.0;
   bool result = true;
@@ -117,7 +117,7 @@ auto run_loop(sourcemeta::blaze::Evaluator &evaluator,
   auto avg = sum / iterations;
   auto stdev = loop == 1 ? 0.0 : std::sqrt(sum2 / iterations - avg * avg);
 
-  std::cout << instance_path.string();
+  std::cout << instance_path;
   if (instance_index >= 0)
     std::cout << "[" << instance_index << "]";
   std::cout << std::fixed;
@@ -349,7 +349,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           continue;
         } else if (json_output) {
           if (!entry.multidocument) {
-            std::cerr << entry.first.string() << "\n";
+            std::cerr << entry.first << "\n";
           }
           const auto suboutput{sourcemeta::blaze::standard(
               evaluator, schema_template, entry.second,
@@ -368,9 +368,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             }
           }
         } else if (subresult) {
-          LOG_VERBOSE(options)
-              << "ok: "
-              << sourcemeta::core::weakly_canonical(entry.first).string();
+          LOG_VERBOSE(options) << "ok: " << entry.first;
           if (entry.multidocument) {
             LOG_VERBOSE(options) << " (entry #" << entry.index + 1 << ")";
           }
@@ -380,8 +378,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
               << "\n";
           print_annotations(output, options, entry.positions, std::cerr);
         } else {
-          std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(entry.first).string();
+          std::cerr << "fail: " << entry.first;
           if (entry.multidocument) {
             std::cerr << " (entry #" << entry.index + 1 << ")\n\n";
             sourcemeta::core::prettify(entry.second, std::cerr);
