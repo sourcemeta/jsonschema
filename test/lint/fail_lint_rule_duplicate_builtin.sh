@@ -24,7 +24,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint --rule "$TMP/rule.json" "$TMP/schema.json" \
-  >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
+  > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
@@ -36,7 +36,7 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" lint --rule "$TMP/rule.json" --json "$TMP/schema.json" \
-  >"$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
+  > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"

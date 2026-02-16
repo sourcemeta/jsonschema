@@ -24,7 +24,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint --rule "$TMP/rule.json" --only require_type "$TMP/schema.json" \
-  >"$TMP/output.txt" 2>&1
+  > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 EOF

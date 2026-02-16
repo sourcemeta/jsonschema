@@ -17,7 +17,7 @@ cat << 'EOF' > "$TMP/rule.json"
 EOF
 
 "$1" lint --rule "$TMP/rule.json" --list --only require_type \
-  >"$TMP/output.txt" 2>&1
+  > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 require_type

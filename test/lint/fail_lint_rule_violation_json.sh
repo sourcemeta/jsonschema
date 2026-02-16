@@ -23,7 +23,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint --rule "$TMP/rule.json" --only require_type --json "$TMP/schema.json" \
-  >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
+  > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
@@ -35,7 +35,7 @@ cat << EOF > "$TMP/expected.txt"
       "path": "$(realpath "$TMP")/schema.json",
       "id": "require_type",
       "message": "Every subschema must declare the type keyword",
-      "description": "The object value was expected to define the property \"type\"\n  at instance location \"\"\n  at evaluate path \"/required\"\n",
+      "description": "The object value was expected to define the property \"type\"",
       "schemaLocation": "",
       "position": [ 1, 1, 3, 1 ]
     }

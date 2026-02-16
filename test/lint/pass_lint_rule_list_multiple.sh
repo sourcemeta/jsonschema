@@ -27,7 +27,7 @@ EOF
 
 "$1" lint --rule "$TMP/rule_zzz.json" --rule "$TMP/rule_aaa.json" \
   --list --only aaa_rule --only zzz_rule \
-  >"$TMP/output.txt" 2>&1
+  > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 aaa_rule

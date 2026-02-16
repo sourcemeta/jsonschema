@@ -28,7 +28,7 @@ EOF
   --exclude top_level_description \
   --exclude top_level_examples \
   "$TMP/schema.json" \
-  >"$TMP/output.txt" 2>&1
+  > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 EOF
