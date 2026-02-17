@@ -13,7 +13,9 @@ mkdir -p "$TMP/schemas/ignored"
 cat << 'EOF' > "$TMP/schemas/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Test"
+  "additionalProperties": false,
+  "title": "Test",
+  "properties": {"foo": {}, "bar": {}}
 }
 EOF
 
@@ -31,9 +33,29 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 cd "$TMP"
-"$1" fmt --check > "$TMP/output.txt" 2>&1
+"$1" fmt > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+cat << 'EOF' > "$TMP/expected_schema.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+diff "$TMP/schemas/schema.json" "$TMP/expected_schema.json"
+
+cat << 'EOF' > "$TMP/expected_ignored.json"
+{"$schema":"https://json-schema.org/draft/2020-12/schema","additionalProperties":false,"title":"Bad","properties":{"foo":{}}}
+EOF
+
+diff "$TMP/schemas/ignored/unformatted.json" "$TMP/expected_ignored.json"

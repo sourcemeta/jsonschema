@@ -45,9 +45,13 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instances" --ignore "$TMP/instances/experimental" 2> "$TMP/output.txt"
+"$1" validate "$TMP/schema.json" "$TMP/instances" --ignore "$TMP/instances/experimental" --verbose 2> "$TMP/output.txt"
 
-cat << 'EOF' > "$TMP/expected.txt"
+cat << EOF > "$TMP/expected.txt"
+Ignoring path: "$(realpath "$TMP")/instances/experimental"
+Ignoring path from configuration: "$(realpath "$TMP")/instances/drafts"
+ok: $(realpath "$TMP")/instances/valid.json
+  matches $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

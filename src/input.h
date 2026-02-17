@@ -12,16 +12,16 @@
 #include "configuration.h"
 #include "logger.h"
 
-#include <algorithm>  // std::any_of, std::none_of, std::sort
-#include <cstddef>    // std::size_t
-#include <cstdint>    // std::uintptr_t
-#include <filesystem> // std::filesystem
-#include <functional> // std::ref
-#include <set>        // std::set
-#include <sstream>    // std::ostringstream
-#include <stdexcept>  // std::runtime_error
-#include <string>     // std::string
-#include <vector>     // std::vector
+#include <algorithm>     // std::any_of, std::none_of, std::sort
+#include <cstddef>       // std::size_t
+#include <cstdint>       // std::uintptr_t
+#include <filesystem>    // std::filesystem
+#include <functional>    // std::ref, std::hash
+#include <set>           // std::set
+#include <sstream>       // std::ostringstream
+#include <string>        // std::string
+#include <unordered_set> // std::unordered_set
+#include <vector>        // std::vector
 
 namespace sourcemeta::jsonschema {
 
@@ -112,6 +112,24 @@ inline auto parse_ignore(const sourcemeta::core::Options &options)
   }
 
   return result;
+}
+
+inline auto
+merge_configuration_ignore(const std::filesystem::path &configuration_path,
+                           std::set<std::filesystem::path> &blacklist,
+                           const sourcemeta::core::Options &options) -> void {
+  try {
+    const auto configuration{sourcemeta::blaze::Configuration::read_json(
+        configuration_path, configuration_reader)};
+    for (const auto &ignore_path : configuration.ignore) {
+      LOG_VERBOSE(options) << "Ignoring path from configuration: "
+                           << ignore_path << "\n";
+      blacklist.insert(ignore_path);
+    }
+  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+    throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+        configuration_path, error);
+  }
 }
 
 namespace {
@@ -280,11 +298,9 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
 
-    if (configuration.has_value()) {
-      for (const auto &ignore_path : configuration.value().ignore) {
-        LOG_VERBOSE(options) << "Ignoring path: " << ignore_path << "\n";
-        blacklist.insert(ignore_path);
-      }
+    if (configuration_path.has_value()) {
+      merge_configuration_ignore(configuration_path.value(), blacklist,
+                                 options);
     }
 
     const auto extensions{parse_extensions(options, configuration)};
@@ -294,27 +310,19 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           : current_path,
                       blacklist, extensions, result, options);
   } else {
-    std::set<std::filesystem::path> seen_configurations;
+    std::unordered_set<std::string> seen_configurations;
     for (const auto &entry : arguments) {
       const auto entry_path{
           sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
-      const auto configuration_path{find_configuration(
-          std::filesystem::is_directory(entry_path) ? entry_path
-                                                    : entry_path.parent_path())};
+      const auto configuration_path{
+          find_configuration(std::filesystem::is_directory(entry_path)
+                                 ? entry_path
+                                 : entry_path.parent_path())};
       if (configuration_path.has_value() &&
-          seen_configurations.insert(configuration_path.value()).second) {
-        try {
-          const auto configuration{
-              sourcemeta::blaze::Configuration::read_json(
-                  configuration_path.value(), configuration_reader)};
-          for (const auto &ignore_path : configuration.ignore) {
-            LOG_VERBOSE(options) << "Ignoring path: " << ignore_path << "\n";
-            blacklist.insert(ignore_path);
-          }
-        } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-          throw FileError<sourcemeta::blaze::ConfigurationParseError>(
-              configuration_path.value(), error);
-        }
+          seen_configurations.insert(configuration_path.value().string())
+              .second) {
+        merge_configuration_ignore(configuration_path.value(), blacklist,
+                                   options);
       }
     }
 
