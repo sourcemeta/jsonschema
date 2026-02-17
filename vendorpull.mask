@@ -13,7 +13,6 @@ vendor/vendorpull
 action.yml
 Brewfile
 CONTRIBUTING.markdown
-DEPENDENCIES
 Dockerfile
 install
 Makefile

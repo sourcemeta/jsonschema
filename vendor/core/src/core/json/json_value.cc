@@ -977,6 +977,12 @@ auto JSON::assign_assume_new(JSON::String &&key, JSON &&value) -> void {
   this->data_object.emplace_assume_new(std::move(key), std::move(value));
 }
 
+auto JSON::assign_assume_new(JSON::String &&key, JSON &&value,
+                             Object::hash_type hash) -> void {
+  assert(this->is_object());
+  this->data_object.emplace_assume_new(std::move(key), std::move(value), hash);
+}
+
 auto JSON::erase(const JSON::String &key) -> typename Object::size_type {
   assert(this->is_object());
   return this->data_object.erase(key);

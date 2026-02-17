@@ -72,14 +72,17 @@ static constexpr CharT token_object_delimiter{'\u002C'};
 // https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 
 // Boolean
+template <typename CharT> static constexpr CharT token_true{'\u0074'};
 template <typename CharT, typename Traits>
 static constexpr std::basic_string_view<CharT, Traits> constant_true{
     "\u0074\u0072\u0075\u0065"};
+template <typename CharT> static constexpr CharT token_false{'\u0066'};
 template <typename CharT, typename Traits>
 static constexpr std::basic_string_view<CharT, Traits> constant_false{
     "\u0066\u0061\u006C\u0073\u0065"};
 
 // Null
+template <typename CharT> static constexpr CharT token_null{'\u006E'};
 template <typename CharT, typename Traits>
 static constexpr std::basic_string_view<CharT, Traits> constant_null{
     "\u006E\u0075\u006C\u006C"};
