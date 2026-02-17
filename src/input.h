@@ -186,7 +186,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
     // against where the command is being run
     auto parsed{read_from_stdin()};
     const auto current_path{std::filesystem::current_path()};
-    result.push_back({current_path, std::move(parsed.document),
+    result.push_back({current_path.string(), current_path,
+                      std::move(parsed.document),
                       std::move(parsed.positions), 0, false, parsed.yaml,
                       true});
     return;

@@ -11,7 +11,6 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 # Should fail validation (exit code 2)
-if echo '123' | "$1" validate "$TMP/schema.json" -; then
-  echo "Validation should have failed"
-  exit 1
-fi
+echo '123' | "$1" validate "$TMP/schema.json" - \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "2" || exit 1
