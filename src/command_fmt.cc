@@ -21,21 +21,26 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
+    if (entry.from_stdin) {
+      throw std::runtime_error{
+          "This command does not support reading from standard input"};
+    }
+
     if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",
-                           entry.first};
+                           entry.resolution_base};
     }
 
     if (options.contains("check")) {
-      LOG_VERBOSE(options) << "Checking: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Checking: " << entry.first << "\n";
     } else {
-      LOG_VERBOSE(options) << "Formatting: " << entry.first.string() << "\n";
+      LOG_VERBOSE(options) << "Formatting: " << entry.first << "\n";
     }
 
     try {
-      const auto configuration_path{find_configuration(entry.first)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, entry.first)};
+      const auto configuration_path{find_configuration(entry.resolution_base)};
+      const auto &configuration{read_configuration(options, configuration_path,
+                                                   entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
@@ -51,43 +56,46 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       }
       expected << "\n";
 
-      std::ifstream current_stream{entry.first};
+      std::ifstream current_stream{entry.resolution_base};
       std::ostringstream current;
       current << current_stream.rdbuf();
 
       if (options.contains("check")) {
         if (current.str() == expected.str()) {
-          LOG_VERBOSE(options) << "ok: " << entry.first.string() << "\n";
+          LOG_VERBOSE(options) << "ok: " << entry.first << "\n";
         } else if (output_json) {
-          failed_files.push_back(entry.first.string());
+          failed_files.push_back(entry.first);
           result = false;
         } else {
-          std::cerr << "fail: " << entry.first.string() << "\n";
+          std::cerr << "fail: " << entry.first << "\n";
           result = false;
         }
       } else {
         if (current.str() != expected.str()) {
-          std::ofstream output{entry.first};
+          std::ofstream output{entry.resolution_base};
           output << expected.str();
         }
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(entry.first, error);
+      throw FileError<sourcemeta::core::SchemaKeywordError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(entry.first, error);
+      throw FileError<sourcemeta::core::SchemaFrameError>(entry.resolution_base,
+                                                          error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      throw FileError<sourcemeta::core::SchemaResolutionError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          entry.first);
+          entry.resolution_base);
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(entry.first, error.what());
+      throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
+                                                     error.what());
     }
   }
 

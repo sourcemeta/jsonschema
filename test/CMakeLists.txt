@@ -208,6 +208,9 @@ add_jsonschema_test_unix(validate/fail_entrypoint_invalid_pointer_escape)
 add_jsonschema_test_unix(validate/fail_entrypoint_invalid_uri_parse)
 add_jsonschema_test_unix(validate/fail_entrypoint_mismatch)
 add_jsonschema_test_unix(validate/fail_entrypoint_with_template)
+add_jsonschema_test_unix(validate/pass_stdin_instance)
+add_jsonschema_test_unix(validate/fail_stdin_schema)
+add_jsonschema_test_unix(validate/fail_stdin_multiple)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
