@@ -37,11 +37,11 @@ cd "$TMP"
   > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
-printf '%s\n' \
-  "error: The schema rule title is missing or not a string" \
-  "  at identifier " \
-  "  at file path $(realpath "$TMP")/rule.json" \
-  > "$TMP/expected.txt"
+cat << EOF > "$TMP/expected.txt"
+error: The schema rule title is missing or not a string
+  at identifier 
+  at file path $(realpath "$TMP")/rule.json
+EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
