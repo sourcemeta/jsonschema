@@ -57,7 +57,7 @@ describes the available configuration options:
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 | `lint` | Object | Lint configuration | `{}` |
-| `lint.rules` | String[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [Custom Rules](./lint.markdown#custom-rules)) | `[]` |
+| `lint.rules` | String[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)) | `[]` |
 
 Lookup Algorithm
 ----------------

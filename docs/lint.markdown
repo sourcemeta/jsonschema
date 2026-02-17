@@ -127,8 +127,7 @@ jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
 ```
 
 Custom rules can also be declared in the
-[`jsonschema.json`](./configuration.markdown) configuration file using the
-`lint.rules` property.
+[`jsonschema.json`](./configuration.markdown) configuration file.
 
 Examples
 --------
