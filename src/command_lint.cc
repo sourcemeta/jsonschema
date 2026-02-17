@@ -134,12 +134,12 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
-static auto
-load_rule(sourcemeta::core::SchemaTransformer &bundle,
-          std::unordered_set<std::string> &rule_names,
-          const std::filesystem::path &rule_path,
-          const std::string_view dialect,
-          const sourcemeta::core::SchemaResolver &custom_resolver) -> void {
+static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
+                      std::unordered_set<std::string> &rule_names,
+                      const std::filesystem::path &rule_path,
+                      const std::string_view dialect,
+                      const sourcemeta::core::SchemaResolver &custom_resolver)
+    -> void {
   auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
   if (!rule_schema.defines("description")) {
     rule_schema.assign("description",
@@ -160,11 +160,14 @@ load_rule(sourcemeta::core::SchemaTransformer &bundle,
     bundle.add<sourcemeta::blaze::SchemaRule>(
         rule_schema, sourcemeta::core::schema_walker, custom_resolver,
         sourcemeta::blaze::default_schema_compiler, dialect);
+  } catch (const sourcemeta::blaze::LinterMissingNameError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::blaze::LinterMissingNameError>(rule_path, error);
   } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::blaze::LinterInvalidNameError>(rule_path, error);
-  } catch (const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
-               &error) {
+  } catch (
+      const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(rule_path,
                                                                   error);
@@ -199,15 +202,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   const auto &project_configuration{
       read_configuration(options, project_configuration_path)};
   if (project_configuration.has_value()) {
-    const auto project_dialect{
-        default_dialect(options, project_configuration)};
-    const auto &project_resolver{resolver(
-        options, options.contains("http"), project_dialect,
-        project_configuration)};
+    const auto project_dialect{default_dialect(options, project_configuration)};
+    const auto &project_resolver{resolver(options, options.contains("http"),
+                                          project_dialect,
+                                          project_configuration)};
     for (const auto &rule_path : project_configuration.value().lint.rules) {
-      LOG_VERBOSE(options)
-          << "Loading custom rule from configuration: " << rule_path.string()
-          << "\n";
+      LOG_VERBOSE(options) << "Loading custom rule from configuration: "
+                           << rule_path.string() << "\n";
       load_rule(bundle, rule_names, rule_path, project_dialect,
                 project_resolver);
     }

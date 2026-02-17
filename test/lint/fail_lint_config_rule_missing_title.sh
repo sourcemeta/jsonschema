@@ -38,8 +38,7 @@ cd "$TMP"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema rule title is missing or not a string
-  at identifier 
+error: The schema rule is missing a title
   at file path $(realpath "$TMP")/rule.json
 EOF
 
@@ -52,8 +51,7 @@ test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule title is missing or not a string",
-  "identifier": "",
+  "error": "The schema rule is missing a title",
   "filePath": "$(realpath "$TMP")/rule.json"
 }
 EOF

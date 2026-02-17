@@ -494,6 +494,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_FAILURE;
+  } catch (const FileError<sourcemeta::blaze::LinterMissingNameError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const InvalidIncludeIdentifier &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
