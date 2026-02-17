@@ -405,8 +405,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
-        subresult = run_loop(evaluator, schema_template, instance,
-                             instance_path.string(), (int64_t)-1, benchmark_loop);
+        subresult =
+            run_loop(evaluator, schema_template, instance,
+                     instance_path.string(), (int64_t)-1, benchmark_loop);
         if (!subresult) {
           error << "error: Schema validation failure\n";
           result = false;
