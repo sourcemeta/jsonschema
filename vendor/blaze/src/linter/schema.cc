@@ -89,18 +89,15 @@ auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
     return false;
   }
 
-  std::vector<sourcemeta::core::Pointer> locations;
-  for (const auto &entry : output) {
-    if (!entry.instance_location.empty()) {
-      locations.push_back(
-          sourcemeta::core::to_pointer(entry.instance_location));
-    }
-  }
-
   if (output.cbegin() != output.cend()) {
-    return {std::move(locations), std::string{output.cbegin()->message}};
+    if (output.cbegin()->instance_location.empty()) {
+      return {{}, std::string{output.cbegin()->message}};
+    }
+
+    return {{sourcemeta::core::to_pointer(output.cbegin()->instance_location)},
+            std::string{output.cbegin()->message}};
   } else {
-    return {std::move(locations)};
+    return true;
   }
 }
 
