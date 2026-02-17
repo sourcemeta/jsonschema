@@ -209,6 +209,26 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
     }
   }
 
+  CONFIGURATION_ENSURE(!value.defines("ignore") ||
+                           value.at("ignore").is_array(),
+                       "The ignore property must be an array", {"ignore"});
+
+  if (value.defines("ignore")) {
+    std::size_t index{0};
+    for (const auto &element : value.at("ignore").as_array()) {
+      CONFIGURATION_ENSURE(element.is_string(),
+                           "The values in the ignore array must be strings",
+                           sourcemeta::core::Pointer({"ignore", index}));
+
+      const std::filesystem::path path{element.to_string()};
+      result.ignore.push_back(
+          path.is_absolute()
+              ? std::filesystem::weakly_canonical(path)
+              : std::filesystem::weakly_canonical(result.absolute_path / path));
+      index += 1;
+    }
+  }
+
   assert(result.extra.is_object());
   for (const auto &subentry : value.as_object()) {
     if (subentry.first.starts_with("x-")) {
