@@ -602,6 +602,7 @@ add_jsonschema_test_unix(lint/fail_lint_config_rule_invalid_title)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_missing_title)
 add_jsonschema_test_unix(lint/pass_lint_config_rule_other_directory)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_other_directory)
+add_jsonschema_test_unix(lint/fail_lint_config_rule_extension_mismatch)
 
 # Install
 add_jsonschema_test_unix(install/fail_no_configuration)

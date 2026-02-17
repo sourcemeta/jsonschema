@@ -198,17 +198,16 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   std::unordered_set<std::string> seen_configurations;
-  std::vector<std::pair<std::filesystem::path, bool>> input_paths;
+  std::vector<std::filesystem::path> input_paths;
   if (options.positional().empty()) {
-    input_paths.emplace_back(std::filesystem::current_path(), false);
+    input_paths.emplace_back(std::filesystem::current_path());
   } else {
     for (const auto &argument : options.positional()) {
-      input_paths.emplace_back(std::filesystem::weakly_canonical(argument),
-                               true);
+      input_paths.emplace_back(std::filesystem::weakly_canonical(argument));
     }
   }
 
-  for (const auto &[input_path, has_schema_path] : input_paths) {
+  for (const auto &input_path : input_paths) {
     const auto configuration_path{find_configuration(input_path)};
     if (!configuration_path.has_value()) {
       continue;
@@ -221,10 +220,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
 
     seen_configurations.emplace(canonical_configuration_path);
-    const auto &configuration{
-        has_schema_path
-            ? read_configuration(options, configuration_path, input_path)
-            : read_configuration(options, configuration_path)};
+    const auto &configuration{read_configuration(options, configuration_path)};
     if (!configuration.has_value() ||
         configuration.value().lint.rules.empty()) {
       continue;
