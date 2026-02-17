@@ -32,12 +32,12 @@ auto sourcemeta::jsonschema::metaschema(
 
   for (const auto &entry : for_each_json(options)) {
     if (!sourcemeta::core::is_schema(entry.second)) {
-      throw NotSchemaError{entry.first};
+      throw NotSchemaError{entry.resolution_base};
     }
 
-    const auto configuration_path{find_configuration(entry.first)};
+    const auto configuration_path{find_configuration(entry.resolution_base)};
     const auto &configuration{
-        read_configuration(options, configuration_path, entry.first)};
+        read_configuration(options, configuration_path, entry.resolution_base)};
     const auto default_dialect_option{default_dialect(options, configuration)};
 
     const auto &custom_resolver{resolver(options, options.contains("http"),
@@ -49,7 +49,7 @@ auto sourcemeta::jsonschema::metaschema(
           sourcemeta::core::dialect(entry.second, default_dialect_option)};
       if (dialect.empty()) {
         throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            entry.first);
+            entry.resolution_base);
       }
 
       const auto metaschema{sourcemeta::core::metaschema(
@@ -80,7 +80,7 @@ auto sourcemeta::jsonschema::metaschema(
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas
-        std::cerr << entry.first.string() << "\n";
+        std::cerr << entry.first << "\n";
         const auto output{sourcemeta::blaze::standard(
             evaluator, cache.at(std::string{dialect}), entry.second,
             sourcemeta::blaze::StandardOutput::Basic, entry.positions)};
@@ -98,13 +98,9 @@ auto sourcemeta::jsonschema::metaschema(
         if (evaluator.validate(cache.at(std::string{dialect}), entry.second,
                                std::ref(output))) {
           LOG_VERBOSE(options)
-              << "ok: "
-              << sourcemeta::core::weakly_canonical(entry.first).string()
-              << "\n  matches " << dialect << "\n";
+              << "ok: " << entry.first << "\n  matches " << dialect << "\n";
         } else {
-          std::cerr << "fail: "
-                    << sourcemeta::core::weakly_canonical(entry.first).string()
-                    << "\n";
+          std::cerr << "fail: " << entry.first << "\n";
           print(output, entry.positions, std::cerr);
           result = false;
         }
@@ -112,15 +108,15 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-          entry.first, error);
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          entry.first, error);
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(entry.first,
-                                                               error);
+      throw FileError<sourcemeta::core::SchemaResolutionError>(
+          entry.resolution_base, error);
     }
   }
 
