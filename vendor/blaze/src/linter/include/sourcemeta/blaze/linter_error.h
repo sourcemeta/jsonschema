@@ -19,6 +19,16 @@ namespace sourcemeta::blaze {
 #endif
 
 /// @ingroup linter
+/// An error that represents a missing rule name
+class SOURCEMETA_BLAZE_LINTER_EXPORT LinterMissingNameError
+    : public std::exception {
+public:
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The schema rule is missing a title";
+  }
+};
+
+/// @ingroup linter
 /// An error that represents an invalid schema rule name. The name must
 /// consist only of lowercase ASCII letters, digits, underscores, or slashes.
 class SOURCEMETA_BLAZE_LINTER_EXPORT LinterInvalidNameError

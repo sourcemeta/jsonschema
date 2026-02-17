@@ -47,9 +47,15 @@ static auto extract_description(const sourcemeta::core::JSON &schema)
 }
 
 static auto extract_title(const sourcemeta::core::JSON &schema) -> std::string {
-  if (!schema.defines("title") || !schema.at("title").is_string()) {
-    throw LinterInvalidNameError(
-        "", "The schema rule title is missing or not a string");
+  if (!schema.defines("title")) {
+    throw LinterMissingNameError{};
+  }
+
+  if (!schema.at("title").is_string()) {
+    std::ostringstream result;
+    sourcemeta::core::stringify(schema.at("title"), result);
+    throw LinterInvalidNameError(std::move(result).str(),
+                                 "The schema rule title is not a string");
   }
 
   auto title{schema.at("title").to_string()};
