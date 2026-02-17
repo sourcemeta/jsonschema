@@ -1,5 +1,8 @@
 #!/bin/sh
-set -e
+
+set -o errexit
+set -o nounset
+
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
@@ -8,8 +11,7 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-# Schema from stdin should now be supported. Test that it fails
-# when both schema and instance are from stdin.
+# Schema from stdin + instance from stdin is not allowed
 "$1" validate - "$TMP/instance.json" - 2>"$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
