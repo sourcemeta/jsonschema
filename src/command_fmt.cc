@@ -26,22 +26,44 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         throw StdinError{"The --check option does not support standard input"};
       }
 
-      const auto configuration_path{find_configuration(entry.first)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, entry.first)};
-      const auto dialect{default_dialect(options, configuration)};
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
+      try {
+        const auto configuration_path{find_configuration(entry.first)};
+        const auto &configuration{
+            read_configuration(options, configuration_path, entry.first)};
+        const auto dialect{default_dialect(options, configuration)};
+        const auto &custom_resolver{
+            resolver(options, options.contains("http"), dialect, configuration)};
 
-      if (options.contains("keep-ordering")) {
-        sourcemeta::core::prettify(entry.second, std::cout, indentation);
-      } else {
-        auto copy = entry.second;
-        sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
-                                 custom_resolver, dialect);
-        sourcemeta::core::prettify(copy, std::cout, indentation);
+        if (options.contains("keep-ordering")) {
+          sourcemeta::core::prettify(entry.second, std::cout, indentation);
+        } else {
+          auto copy = entry.second;
+          sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                   custom_resolver, dialect);
+          sourcemeta::core::prettify(copy, std::cout, indentation);
+        }
+        std::cout << "\n";
+      } catch (const sourcemeta::core::SchemaKeywordError &error) {
+        throw FileError<sourcemeta::core::SchemaKeywordError>(
+            entry.resolution_base, error);
+      } catch (const sourcemeta::core::SchemaFrameError &error) {
+        throw FileError<sourcemeta::core::SchemaFrameError>(
+            entry.resolution_base, error);
+      } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                   &error) {
+        throw FileError<
+            sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+            entry.resolution_base, error);
+      } catch (const sourcemeta::core::SchemaResolutionError &error) {
+        throw FileError<sourcemeta::core::SchemaResolutionError>(
+            entry.resolution_base, error);
+      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+            entry.resolution_base);
+      } catch (const sourcemeta::core::SchemaError &error) {
+        throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
+                                                       error.what());
       }
-      std::cout << "\n";
       continue;
     }
 
