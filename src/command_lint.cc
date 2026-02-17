@@ -197,20 +197,46 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     rule_names.emplace(std::get<0>(entry)->name());
   }
 
-  const auto project_configuration_path{
-      find_configuration(std::filesystem::current_path())};
-  const auto &project_configuration{
-      read_configuration(options, project_configuration_path)};
-  if (project_configuration.has_value()) {
-    const auto project_dialect{default_dialect(options, project_configuration)};
-    const auto &project_resolver{resolver(options, options.contains("http"),
-                                          project_dialect,
-                                          project_configuration)};
-    for (const auto &rule_path : project_configuration.value().lint.rules) {
+  std::unordered_set<std::string> seen_configurations;
+  std::vector<std::pair<std::filesystem::path, bool>> input_paths;
+  if (options.positional().empty()) {
+    input_paths.emplace_back(std::filesystem::current_path(), false);
+  } else {
+    for (const auto &argument : options.positional()) {
+      input_paths.emplace_back(std::filesystem::weakly_canonical(argument),
+                               true);
+    }
+  }
+
+  for (const auto &[input_path, has_schema_path] : input_paths) {
+    const auto configuration_path{find_configuration(input_path)};
+    if (!configuration_path.has_value()) {
+      continue;
+    }
+
+    const auto canonical_configuration_path{
+        std::filesystem::weakly_canonical(configuration_path.value()).string()};
+    if (seen_configurations.contains(canonical_configuration_path)) {
+      continue;
+    }
+
+    seen_configurations.emplace(canonical_configuration_path);
+    const auto &configuration{
+        has_schema_path
+            ? read_configuration(options, configuration_path, input_path)
+            : read_configuration(options, configuration_path)};
+    if (!configuration.has_value() ||
+        configuration.value().lint.rules.empty()) {
+      continue;
+    }
+
+    const auto dialect{default_dialect(options, configuration)};
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    for (const auto &rule_path : configuration.value().lint.rules) {
       LOG_VERBOSE(options) << "Loading custom rule from configuration: "
                            << rule_path.string() << "\n";
-      load_rule(bundle, rule_names, rule_path, project_dialect,
-                project_resolver);
+      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver);
     }
   }
 
