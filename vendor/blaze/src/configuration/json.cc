@@ -91,6 +91,16 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     result.assign("dependencies", std::move(dependencies_object));
   }
 
+  if (!this->ignore.empty()) {
+    auto ignore_array{sourcemeta::core::JSON::make_array()};
+    for (const auto &entry : this->ignore) {
+      ignore_array.push_back(sourcemeta::core::JSON{
+          relative_display_path(entry, this->absolute_path)});
+    }
+
+    result.assign("ignore", std::move(ignore_array));
+  }
+
   if (!this->lint.rules.empty()) {
     auto lint_object{sourcemeta::core::JSON::make_object()};
     auto rules_array{sourcemeta::core::JSON::make_array()};

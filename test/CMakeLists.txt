@@ -71,6 +71,7 @@ add_jsonschema_test_unix(format/pass_custom_extension_json)
 add_jsonschema_test_unix(format/fail_custom_extension_yaml)
 add_jsonschema_test_unix(format/fail_invalid_id_type)
 add_jsonschema_test_unix(format/fail_invalid_schema_uri)
+add_jsonschema_test_unix(format/pass_config_ignore)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_enoent)
@@ -208,6 +209,8 @@ add_jsonschema_test_unix(validate/fail_entrypoint_invalid_pointer_escape)
 add_jsonschema_test_unix(validate/fail_entrypoint_invalid_uri_parse)
 add_jsonschema_test_unix(validate/fail_entrypoint_mismatch)
 add_jsonschema_test_unix(validate/fail_entrypoint_with_template)
+add_jsonschema_test_unix(validate/pass_config_ignore)
+add_jsonschema_test_unix(validate/pass_config_ignore_with_cli)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -243,6 +246,7 @@ add_jsonschema_test_unix(metaschema/pass_custom_extension_json)
 add_jsonschema_test_unix(metaschema/pass_custom_extension_yaml)
 add_jsonschema_test_unix(metaschema/fail_draft7_defs_ref_target)
 add_jsonschema_test_unix(metaschema/fail_draft4_x_keyword_ref_target)
+add_jsonschema_test_unix(metaschema/pass_config_ignore)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -313,6 +317,7 @@ add_jsonschema_test_unix(test/fail_false_single_resolve_json)
 add_jsonschema_test_unix(test/fail_unresolvable_json)
 add_jsonschema_test_unix(test/fail_draft7_defs_ref_target)
 add_jsonschema_test_unix(test/fail_draft4_x_keyword_ref_target)
+add_jsonschema_test_unix(test/pass_config_ignore)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)
@@ -351,6 +356,7 @@ add_jsonschema_test_unix(bundle/pass_resolve_installed_dependency)
 add_jsonschema_test_unix(bundle/pass_resolve_installed_dependency_by_uri)
 add_jsonschema_test_unix(bundle/fail_invalid_id_type)
 add_jsonschema_test_unix(bundle/fail_invalid_schema_uri)
+add_jsonschema_test_unix(bundle/pass_config_ignore)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
@@ -605,6 +611,7 @@ add_jsonschema_test_unix(lint/fail_lint_config_rule_missing_title)
 add_jsonschema_test_unix(lint/pass_lint_config_rule_other_directory)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_other_directory)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_extension_mismatch)
+add_jsonschema_test_unix(lint/pass_lint_config_ignore)
 
 # Install
 add_jsonschema_test_unix(install/fail_no_configuration)

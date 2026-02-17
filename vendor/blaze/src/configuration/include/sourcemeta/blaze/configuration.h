@@ -62,6 +62,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
       resolve;
   // Ordered to guarantee deterministic iteration
   std::map<sourcemeta::core::JSON::String, std::filesystem::path> dependencies;
+  std::vector<std::filesystem::path> ignore;
 
   struct Lint {
     std::vector<std::filesystem::path> rules;
