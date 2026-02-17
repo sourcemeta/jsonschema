@@ -33,6 +33,7 @@
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
+#include <vector>        // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -61,6 +62,12 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
       resolve;
   // Ordered to guarantee deterministic iteration
   std::map<sourcemeta::core::JSON::String, std::filesystem::path> dependencies;
+
+  struct Lint {
+    std::vector<std::filesystem::path> rules;
+  };
+
+  Lint lint;
   sourcemeta::core::JSON extra = sourcemeta::core::JSON::make_object();
 
   /// A callback to read file contents from a path
