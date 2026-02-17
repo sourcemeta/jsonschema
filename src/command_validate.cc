@@ -139,6 +139,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "jsonschema validate path/to/schema.json path/to/instance.json"};
   }
 
+  // We explicitly check for duplicate stdin here because this command iterates
+  // over arguments manually and calls for_each_json incrementally, which
+  // prevents for_each_json from detecting global duplicates across iterations.
+  sourcemeta::jsonschema::check_duplicate_stdin(options);
+
   const auto &schema_path{options.positional().at(0)};
 
   if (std::filesystem::is_directory(schema_path)) {
@@ -326,7 +331,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw OptionConflictError{"The `--benchmark/-b` option is only allowed "
                                 "given a single instance"};
     }
-    if (std::filesystem::is_directory(instance_path) ||
+    if (instance_path_view == "-" ||
+        std::filesystem::is_directory(instance_path) ||
         instance_path.extension() == ".jsonl" ||
         instance_path.extension() == ".yaml" ||
         instance_path.extension() == ".yml") {
