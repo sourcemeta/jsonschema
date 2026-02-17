@@ -10,8 +10,19 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/rule.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "missing title",
+  "title": "enum_with_type",
+  "description": "conflicting rule",
   "required": [ "type" ]
+}
+EOF
+
+cat << 'EOF' > "$TMP/jsonschema.json"
+{
+  "lint": {
+    "rules": [
+      "./rule.json"
+    ]
+  }
 }
 EOF
 
@@ -22,25 +33,29 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint --rule "$TMP/rule.json" "$TMP/schema.json" \
+cd "$TMP"
+"$1" lint "$TMP/schema.json" \
   > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema rule is missing a title
+error: A lint rule with this name already exists
   at file path $(realpath "$TMP")/rule.json
+  at rule enum_with_type
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-"$1" lint --rule "$TMP/rule.json" --json "$TMP/schema.json" \
+cd "$TMP"
+"$1" lint --json "$TMP/schema.json" \
   > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule is missing a title",
-  "filePath": "$(realpath "$TMP")/rule.json"
+  "error": "A lint rule with this name already exists",
+  "filePath": "$(realpath "$TMP")/rule.json",
+  "rule": "enum_with_type"
 }
 EOF
 

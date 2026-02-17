@@ -6,11 +6,12 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/linter.h>
 
-#include <cstdlib>  // EXIT_FAILURE
-#include <fstream>  // std::ofstream, std::ifstream
-#include <iostream> // std::cerr, std::cout
-#include <numeric>  // std::accumulate
-#include <sstream>  // std::ostringstream
+#include <cstdlib>    // EXIT_FAILURE
+#include <filesystem> // std::filesystem::current_path
+#include <fstream>    // std::ofstream, std::ifstream
+#include <iostream>   // std::cerr, std::cout
+#include <numeric>    // std::accumulate
+#include <sstream>    // std::ostringstream
 
 #include "command.h"
 #include "configuration.h"
@@ -133,6 +134,52 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
+static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
+                      std::unordered_set<std::string> &rule_names,
+                      const std::filesystem::path &rule_path,
+                      const std::string_view dialect,
+                      const sourcemeta::core::SchemaResolver &custom_resolver)
+    -> void {
+  auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
+  if (!rule_schema.defines("description")) {
+    rule_schema.assign("description",
+                       sourcemeta::core::JSON{"<no description>"});
+  }
+
+  if (rule_schema.defines("title") && rule_schema.at("title").is_string()) {
+    const auto rule_name{rule_schema.at("title").to_string()};
+    if (rule_names.contains(rule_name)) {
+      throw sourcemeta::jsonschema::FileError<
+          sourcemeta::jsonschema::DuplicateLintRuleError>(rule_path, rule_name);
+    }
+
+    rule_names.emplace(rule_name);
+  }
+
+  try {
+    bundle.add<sourcemeta::blaze::SchemaRule>(
+        rule_schema, sourcemeta::core::schema_walker, custom_resolver,
+        sourcemeta::blaze::default_schema_compiler, dialect);
+  } catch (const sourcemeta::blaze::LinterMissingNameError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::blaze::LinterMissingNameError>(rule_path, error);
+  } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::blaze::LinterInvalidNameError>(rule_path, error);
+  } catch (
+      const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(rule_path,
+                                                                  error);
+  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(rule_path);
+  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaResolutionError>(rule_path, error);
+  }
+}
+
 auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     -> void {
   const bool output_json = options.contains("json");
@@ -145,12 +192,51 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   bundle.add<sourcemeta::blaze::ValidDefault>(
       sourcemeta::blaze::default_schema_compiler);
 
-  if (options.contains("rule")) {
-    std::unordered_set<std::string> rule_names;
-    for (const auto &entry : bundle) {
-      rule_names.emplace(std::get<0>(entry)->name());
+  std::unordered_set<std::string> rule_names;
+  for (const auto &entry : bundle) {
+    rule_names.emplace(std::get<0>(entry)->name());
+  }
+
+  std::unordered_set<std::string> seen_configurations;
+  std::vector<std::filesystem::path> input_paths;
+  if (options.positional().empty()) {
+    input_paths.emplace_back(std::filesystem::current_path());
+  } else {
+    for (const auto &argument : options.positional()) {
+      input_paths.emplace_back(std::filesystem::weakly_canonical(argument));
+    }
+  }
+
+  for (const auto &input_path : input_paths) {
+    const auto configuration_path{find_configuration(input_path)};
+    if (!configuration_path.has_value()) {
+      continue;
     }
 
+    const auto canonical_configuration_path{
+        std::filesystem::weakly_canonical(configuration_path.value()).string()};
+    if (seen_configurations.contains(canonical_configuration_path)) {
+      continue;
+    }
+
+    seen_configurations.emplace(canonical_configuration_path);
+    const auto &configuration{read_configuration(options, configuration_path)};
+    if (!configuration.has_value() ||
+        configuration.value().lint.rules.empty()) {
+      continue;
+    }
+
+    const auto dialect{default_dialect(options, configuration)};
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    for (const auto &rule_path : configuration.value().lint.rules) {
+      LOG_VERBOSE(options) << "Loading custom rule from configuration: "
+                           << rule_path.string() << "\n";
+      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver);
+    }
+  }
+
+  if (options.contains("rule")) {
     for (const auto &rule_path_string : options.at("rule")) {
       const std::filesystem::path rule_path{
           std::filesystem::weakly_canonical(rule_path_string)};
@@ -162,40 +248,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
-      auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
-      if (!rule_schema.defines("description")) {
-        rule_schema.assign("description",
-                           sourcemeta::core::JSON{"<no description>"});
-      }
-
-      if (rule_schema.defines("title") && rule_schema.at("title").is_string()) {
-        const auto rule_name{rule_schema.at("title").to_string()};
-        if (rule_names.contains(rule_name)) {
-          throw FileError<DuplicateLintRuleError>(rule_path, rule_name);
-        }
-
-        rule_names.emplace(rule_name);
-      }
-
-      try {
-        bundle.add<sourcemeta::blaze::SchemaRule>(
-            rule_schema, sourcemeta::core::schema_walker, custom_resolver,
-            sourcemeta::blaze::default_schema_compiler, dialect);
-      } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
-        throw FileError<sourcemeta::blaze::LinterInvalidNameError>(rule_path,
-                                                                   error);
-      } catch (const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
-                   &error) {
-        throw FileError<
-            sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(rule_path,
-                                                                      error);
-      } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-            rule_path);
-      } catch (const sourcemeta::core::SchemaResolutionError &error) {
-        throw FileError<sourcemeta::core::SchemaResolutionError>(rule_path,
-                                                                 error);
-      }
+      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver);
     }
   }
 

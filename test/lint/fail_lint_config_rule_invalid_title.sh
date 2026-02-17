@@ -10,8 +10,19 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/rule.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "missing title",
+  "title": "Invalid Title!",
+  "description": "A rule with an invalid title",
   "required": [ "type" ]
+}
+EOF
+
+cat << 'EOF' > "$TMP/jsonschema.json"
+{
+  "lint": {
+    "rules": [
+      "./rule.json"
+    ]
+  }
 }
 EOF
 
@@ -22,24 +33,28 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" lint --rule "$TMP/rule.json" "$TMP/schema.json" \
+cd "$TMP"
+"$1" lint "$TMP/schema.json" \
   > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema rule is missing a title
+error: The schema rule name must match ^[a-z0-9_/]+\$
+  at identifier Invalid Title!
   at file path $(realpath "$TMP")/rule.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-"$1" lint --rule "$TMP/rule.json" --json "$TMP/schema.json" \
+cd "$TMP"
+"$1" lint --json "$TMP/schema.json" \
   > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
 test "$CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule is missing a title",
+  "error": "The schema rule name must match ^[a-z0-9_/]+\$",
+  "identifier": "Invalid Title!",
   "filePath": "$(realpath "$TMP")/rule.json"
 }
 EOF

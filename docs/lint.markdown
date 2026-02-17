@@ -126,6 +126,9 @@ You can pass multiple custom rules:
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
 ```
 
+Custom rules can also be declared in the
+[`jsonschema.json`](./configuration.markdown) configuration file.
+
 Examples
 --------
 

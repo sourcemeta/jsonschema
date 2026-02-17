@@ -28,6 +28,11 @@ The `jsonschema.json` file format looks like this:
   "resolve": {
     "https://example.com/schemas/user": "./schemas/user.json",
     "https://example.com/schemas/product": "./schemas/product.json"
+  },
+  "lint": {
+    "rules": [
+      "./rules/require_type.json"
+    ]
   }
 }
 ```
@@ -51,6 +56,8 @@ describes the available configuration options:
 | `extension` | String / String[] | The schema extension/s used by the project | `.json` / `.yaml` / `.yml` |
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
+| `lint` | Object | Lint configuration | `{}` |
+| `lint.rules` | String[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)) | `[]` |
 
 Lookup Algorithm
 ----------------
