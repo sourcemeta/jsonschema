@@ -272,13 +272,21 @@ handle_json_entry(const std::filesystem::path &entry_path,
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
-  const auto blacklist{parse_ignore(options)};
+  auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
     const auto current_path{std::filesystem::current_path()};
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
+
+    if (configuration.has_value()) {
+      for (const auto &ignore_path : configuration.value().ignore) {
+        LOG_VERBOSE(options) << "Ignoring path: " << ignore_path << "\n";
+        blacklist.insert(ignore_path);
+      }
+    }
+
     const auto extensions{parse_extensions(options, configuration)};
 
     handle_json_entry(configuration.has_value()
@@ -286,6 +294,30 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           : current_path,
                       blacklist, extensions, result, options);
   } else {
+    std::set<std::filesystem::path> seen_configurations;
+    for (const auto &entry : arguments) {
+      const auto entry_path{
+          sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
+      const auto configuration_path{find_configuration(
+          std::filesystem::is_directory(entry_path) ? entry_path
+                                                    : entry_path.parent_path())};
+      if (configuration_path.has_value() &&
+          seen_configurations.insert(configuration_path.value()).second) {
+        try {
+          const auto configuration{
+              sourcemeta::blaze::Configuration::read_json(
+                  configuration_path.value(), configuration_reader)};
+          for (const auto &ignore_path : configuration.ignore) {
+            LOG_VERBOSE(options) << "Ignoring path: " << ignore_path << "\n";
+            blacklist.insert(ignore_path);
+          }
+        } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+          throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+              configuration_path.value(), error);
+        }
+      }
+    }
+
     const auto extensions{parse_extensions(options, std::nullopt)};
     for (const auto &entry : arguments) {
       handle_json_entry(entry, blacklist, extensions, result, options);

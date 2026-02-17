@@ -29,6 +29,9 @@ The `jsonschema.json` file format looks like this:
     "https://example.com/schemas/user": "./schemas/user.json",
     "https://example.com/schemas/product": "./schemas/product.json"
   },
+  "ignore": [
+    "./drafts"
+  ],
   "lint": {
     "rules": [
       "./rules/require_type.json"
@@ -54,6 +57,7 @@ describes the available configuration options:
 | `path` | String | Relative path to the directory containing your schemas | Directory containing `jsonschema.json` |
 | `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema` | - |
 | `extension` | String / String[] | The schema extension/s used by the project | `.json` / `.yaml` / `.yml` |
+| `ignore` | String[] | Paths to ignore relative to `jsonschema.json`. Glob patterns are not currently supported | `[]` |
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 | `lint` | Object | Lint configuration | `{}` |
