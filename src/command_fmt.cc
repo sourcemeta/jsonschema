@@ -21,6 +21,30 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
   for (const auto &entry : for_each_json(options)) {
+    if (entry.from_stdin) {
+      if (options.contains("check")) {
+        throw StdinError{"The --check option does not support standard input"};
+      }
+
+      const auto configuration_path{find_configuration(entry.first)};
+      const auto &configuration{
+          read_configuration(options, configuration_path, entry.first)};
+      const auto dialect{default_dialect(options, configuration)};
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect, configuration)};
+
+      if (options.contains("keep-ordering")) {
+        sourcemeta::core::prettify(entry.second, std::cout, indentation);
+      } else {
+        auto copy = entry.second;
+        sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                 custom_resolver, dialect);
+        sourcemeta::core::prettify(copy, std::cout, indentation);
+      }
+      std::cout << "\n";
+      continue;
+    }
+
     if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",
                            entry.resolution_base};

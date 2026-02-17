@@ -12,7 +12,7 @@
 #include "configuration.h"
 #include "logger.h"
 
-#include <algorithm>     // std::any_of, std::none_of, std::sort
+#include <algorithm>     // std::any_of, std::none_of, std::sort, std::count
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uintptr_t
 #include <filesystem>    // std::filesystem
@@ -165,42 +165,13 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
-// We buffer stdin because we need to attempt parsing as JSON first,
-// and if that fails, rewind/reset to attempt parsing as YAML.
-// Streaming directly from std::cin would prevent this retry logic.
+// stdin is a non-seekable stream, so we cannot retry parsing after failure.
+// Unlike file-based input where we detect format by extension or try JSON
+// then YAML, stdin only supports JSON input.
 inline auto read_from_stdin() -> ParsedJSON {
-  std::ostringstream buffer;
-  buffer << std::cin.rdbuf();
-  const auto content{buffer.str()};
-
-  if (content.empty()) {
-    throw std::runtime_error("Standard input is empty");
-  }
-
-  // We are trying to determine if the input is JSON or YAML
-  try {
-    sourcemeta::core::PointerPositionTracker json_positions;
-    return {sourcemeta::core::parse_json(content, std::ref(json_positions)),
-            std::move(json_positions), false};
-  } catch (const sourcemeta::core::JSONParseError &) {
-    sourcemeta::core::PointerPositionTracker yaml_positions;
-    return {sourcemeta::core::parse_yaml(content, std::ref(yaml_positions)),
-            std::move(yaml_positions), true};
-  }
-}
-
-inline auto check_duplicate_stdin(const sourcemeta::core::Options &options)
-    -> void {
-  std::size_t stdin_count{0};
-  for (const auto &argument : options.positional()) {
-    if (argument == "-") {
-      stdin_count++;
-    }
-  }
-
-  if (stdin_count > 1) {
-    throw std::runtime_error("Cannot read from standard input more than once");
-  }
+  sourcemeta::core::PointerPositionTracker positions;
+  return {sourcemeta::core::parse_json(std::cin, std::ref(positions)),
+          std::move(positions), false};
 }
 
 inline auto
@@ -215,7 +186,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
     // against where the command is being run
     auto parsed{read_from_stdin()};
     const auto current_path{std::filesystem::current_path()};
-    result.push_back({"<stdin>", current_path, std::move(parsed.document),
+    result.push_back({current_path, std::move(parsed.document),
                       std::move(parsed.positions), 0, false, parsed.yaml,
                       true});
     return;
@@ -325,7 +296,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
                             true});
         }
       } else {
-        if (std::filesystem::is_empty(canonical)) {
+        if (std::filesystem::is_regular_file(canonical) &&
+            std::filesystem::is_empty(canonical)) {
           return;
         }
         // TODO: Print a verbose message for what is getting parsed
@@ -340,10 +312,20 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
 } // namespace
 
+inline auto
+check_no_duplicate_stdin(const std::vector<std::string_view> &arguments)
+    -> void {
+  if (std::count(arguments.cbegin(), arguments.cend(), "-") > 1) {
+    throw StdinError("Cannot read from standard input more than once");
+  }
+}
+
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
-  auto blacklist{parse_ignore(options)};
+  check_no_duplicate_stdin(arguments);
+
+  const auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
@@ -396,7 +378,6 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
 
 inline auto for_each_json(const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
-  check_duplicate_stdin(options);
   return for_each_json(options.positional(), options);
 }
 

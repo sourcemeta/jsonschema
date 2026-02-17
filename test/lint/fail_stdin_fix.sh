@@ -1,22 +1,24 @@
 #!/bin/sh
-set -e
+
+set -o errexit
+set -o nounset
+
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' > "$TMP/schema.json"
+# lint --fix does not support stdin
+cat << 'EOF' | "$1" lint --fix - 2>"$TMP/stderr.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string"
 }
 EOF
-
-echo '"foo"' | "$1" validate "$TMP/schema.json" - - 2>"$TMP/stderr.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-error: Cannot read from standard input more than once
+error: The --fix option does not support standard input
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

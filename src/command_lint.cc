@@ -325,6 +325,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
   if (options.contains("fix")) {
     for (const auto &entry : for_each_json(options)) {
+      if (entry.from_stdin) {
+        throw StdinError{"The --fix option does not support standard input"};
+      }
+
       const auto configuration_path{find_configuration(entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
