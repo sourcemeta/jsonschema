@@ -312,6 +312,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     } else {
       configuration_path = std::filesystem::current_path() / "jsonschema.json";
       add_configuration.absolute_path = std::filesystem::current_path();
+      add_configuration.base_path = std::filesystem::current_path();
     }
 
     const auto absolute_target{std::filesystem::weakly_canonical(

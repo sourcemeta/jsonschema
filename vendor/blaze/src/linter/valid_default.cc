@@ -54,8 +54,9 @@ auto ValidDefault::condition(
                                        frame, base.value().get(),
                                        Mode::Exhaustive)};
     SimpleOutput output{instance};
+    Evaluator evaluator;
     const auto result{
-        this->evaluator_.validate(schema_template, instance, std::ref(output))};
+        evaluator.validate(schema_template, instance, std::ref(output))};
     if (result) {
       return false;
     }
@@ -89,8 +90,9 @@ auto ValidDefault::condition(
                                      this->compiler_, Mode::Exhaustive,
                                      location.dialect, default_id)};
   SimpleOutput output{instance, base};
+  Evaluator evaluator;
   const auto result{
-      this->evaluator_.validate(schema_template, instance, std::ref(output))};
+      evaluator.validate(schema_template, instance, std::ref(output))};
   if (result) {
     return false;
   }

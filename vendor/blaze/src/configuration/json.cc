@@ -83,9 +83,9 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
   if (!this->dependencies.empty()) {
     auto dependencies_object{sourcemeta::core::JSON::make_object()};
     for (const auto &pair : this->dependencies) {
-      dependencies_object.assign(pair.first,
-                                 sourcemeta::core::JSON{relative_display_path(
-                                     pair.second, this->absolute_path)});
+      dependencies_object.assign(
+          pair.first, sourcemeta::core::JSON{
+                          relative_display_path(pair.second, this->base_path)});
     }
 
     result.assign("dependencies", std::move(dependencies_object));
@@ -95,7 +95,7 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     auto ignore_array{sourcemeta::core::JSON::make_array()};
     for (const auto &entry : this->ignore) {
       ignore_array.push_back(sourcemeta::core::JSON{
-          relative_display_path(entry, this->absolute_path)});
+          relative_display_path(entry, this->base_path)});
     }
 
     result.assign("ignore", std::move(ignore_array));
@@ -105,8 +105,8 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     auto lint_object{sourcemeta::core::JSON::make_object()};
     auto rules_array{sourcemeta::core::JSON::make_array()};
     for (const auto &rule : this->lint.rules) {
-      rules_array.push_back(sourcemeta::core::JSON{
-          relative_display_path(rule, this->absolute_path)});
+      rules_array.push_back(
+          sourcemeta::core::JSON{relative_display_path(rule, this->base_path)});
     }
 
     lint_object.assign("rules", std::move(rules_array));

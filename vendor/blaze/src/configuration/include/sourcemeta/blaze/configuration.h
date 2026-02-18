@@ -53,6 +53,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::optional<sourcemeta::core::JSON::String> github;
   std::optional<sourcemeta::core::JSON::String> website;
   std::filesystem::path absolute_path;
+  std::filesystem::path base_path;
   sourcemeta::core::JSON::String base;
   std::optional<sourcemeta::core::JSON::String> default_dialect;
   std::unordered_set<sourcemeta::core::JSON::String> extension{".json", ".yml",

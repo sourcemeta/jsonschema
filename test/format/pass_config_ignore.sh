@@ -27,7 +27,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 {
   "path": "./schemas",
   "ignore": [
-    "./ignored"
+    "./schemas/ignored"
   ]
 }
 EOF
