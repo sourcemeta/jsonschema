@@ -83,8 +83,9 @@ auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
                            const sourcemeta::core::SchemaResolver &) const
     -> sourcemeta::core::SchemaTransformRule::Result {
   SimpleOutput output{schema};
+  Evaluator evaluator;
   const auto result{
-      this->evaluator_.validate(this->template_, schema, std::ref(output))};
+      evaluator.validate(this->template_, schema, std::ref(output))};
   if (result) {
     return false;
   }
