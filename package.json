@@ -1,6 +1,6 @@
 {
   "name": "@sourcemeta/jsonschema",
-  "version": "14.13.0",
+  "version": "14.13.1",
   "description": "The CLI for working with JSON Schema. Covers formatting, linting, testing, and much more for both local development and CI/CD pipelines",
   "main": "npm/main.js",
   "exports": {
