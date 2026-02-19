@@ -662,6 +662,7 @@ add_jsonschema_test_unix(install/fail_add_config_not_object)
 add_jsonschema_test_unix(install/fail_add_config_invalid_json)
 add_jsonschema_test_unix(install/fail_add_invalid_uri)
 add_jsonschema_test_unix(install/fail_add_duplicate_path)
+add_jsonschema_test_unix(install/pass_lock_file_with_path)
 
 add_jsonschema_test_unix(install/fail_frozen_force_conflict)
 add_jsonschema_test_unix(install/fail_frozen_positional_args)

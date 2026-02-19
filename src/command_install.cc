@@ -384,7 +384,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     return;
   }
 
-  const auto lock_path{configuration.absolute_path / "jsonschema.lock.json"};
+  const auto lock_path{configuration.base_path / "jsonschema.lock.json"};
   sourcemeta::blaze::Configuration::Lock lock;
   if (is_frozen) {
     if (!std::filesystem::exists(lock_path)) {
