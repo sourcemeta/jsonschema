@@ -116,9 +116,11 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
                const std::filesystem::path &expected_path,
                const ReadCallback &reader) const -> Entry::Status;
     [[nodiscard]]
-    static auto from_json(const sourcemeta::core::JSON &value) -> Lock;
+    static auto from_json(const sourcemeta::core::JSON &value,
+                          const std::filesystem::path &lock_base_path) -> Lock;
     [[nodiscard]]
-    auto to_json() const -> sourcemeta::core::JSON;
+    auto to_json(const std::filesystem::path &lock_base_path) const
+        -> sourcemeta::core::JSON;
 
   private:
     // Ordered to guarantee deterministic iteration

@@ -65,7 +65,7 @@ cat << EOF > "$TMP/expected_lock.json"
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/user.json": {
-      "path": "$(realpath "$TMP")/project/vendor/new_path.json",
+      "path": "./vendor/new_path.json",
       "hash": "${HASH}",
       "hashAlgorithm": "sha256"
     }
