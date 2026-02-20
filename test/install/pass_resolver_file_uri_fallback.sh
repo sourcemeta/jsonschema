@@ -92,12 +92,12 @@ cat << EOF > "$TMP/expected_lock.json"
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/metaschema.json": {
-      "path": "$(realpath "$TMP")/project/vendor/meta.json",
+      "path": "./vendor/meta.json",
       "hash": "${HASH_META}",
       "hashAlgorithm": "sha256"
     },
     "file://$(realpath "$TMP")/source/schema_a.json": {
-      "path": "$(realpath "$TMP")/project/vendor/a.json",
+      "path": "./vendor/a.json",
       "hash": "${HASH_A}",
       "hashAlgorithm": "sha256"
     }

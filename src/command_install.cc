@@ -393,7 +393,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
 
     try {
       lock = sourcemeta::blaze::Configuration::Lock::from_json(
-          sourcemeta::core::read_json(lock_path));
+          sourcemeta::core::read_json(lock_path), configuration.base_path);
     } catch (const sourcemeta::core::JSONParseError &error) {
       throw sourcemeta::core::JSONFileParseError(lock_path, error);
     } catch (...) {
@@ -402,7 +402,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   } else if (std::filesystem::exists(lock_path)) {
     try {
       lock = sourcemeta::blaze::Configuration::Lock::from_json(
-          sourcemeta::core::read_json(lock_path));
+          sourcemeta::core::read_json(lock_path), configuration.base_path);
     } catch (...) {
       if (is_json) {
         emit_json(events_array, "warning", "message",
@@ -459,6 +459,6 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   }
 
   if (!is_frozen) {
-    atomic_write(lock_path, lock.to_json());
+    atomic_write(lock_path, lock.to_json(configuration.base_path));
   }
 }

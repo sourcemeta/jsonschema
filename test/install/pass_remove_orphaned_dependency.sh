@@ -74,12 +74,12 @@ cat << EOF > "$TMP/expected_lock.json"
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/a.json": {
-      "path": "$(realpath "$TMP")/project/vendor/a.json",
+      "path": "./vendor/a.json",
       "hash": "$HASH_A",
       "hashAlgorithm": "sha256"
     },
     "file://$(realpath "$TMP")/source/b.json": {
-      "path": "$(realpath "$TMP")/project/vendor/b.json",
+      "path": "./vendor/b.json",
       "hash": "$HASH_B",
       "hashAlgorithm": "sha256"
     }
@@ -115,7 +115,7 @@ cat << EOF > "$TMP/expected_lock_after.json"
   "version": 1,
   "dependencies": {
     "file://$(realpath "$TMP")/source/a.json": {
-      "path": "$(realpath "$TMP")/project/vendor/a.json",
+      "path": "./vendor/a.json",
       "hash": "$HASH_A",
       "hashAlgorithm": "sha256"
     }
