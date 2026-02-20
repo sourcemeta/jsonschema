@@ -262,7 +262,7 @@ public:
       sourcemeta::core::reidentify(subschema, key.second, entry.base_dialect);
 
       const auto result{this->schemas.emplace(key.second, subschema)};
-      if (!result.second && result.first->second != schema) {
+      if (!result.second && result.first->second != subschema) {
         throw sourcemeta::core::SchemaFrameError(
             key.second, "Cannot register the same identifier twice");
       }
