@@ -187,9 +187,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
     auto parsed{read_from_stdin()};
     const auto current_path{std::filesystem::current_path()};
     result.push_back({current_path.string(), current_path,
-                      std::move(parsed.document),
-                      std::move(parsed.positions), 0, false, parsed.yaml,
-                      true});
+                      std::move(parsed.document), std::move(parsed.positions),
+                      0, false, parsed.yaml, true});
     return;
   }
 
@@ -326,7 +325,7 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     -> std::vector<InputJSON> {
   check_no_duplicate_stdin(arguments);
 
-  const auto blacklist{parse_ignore(options)};
+  auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
@@ -350,6 +349,11 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
   } else {
     std::unordered_set<std::string> seen_configurations;
     for (const auto &entry : arguments) {
+      // Skip stdin when looking for configurations
+      if (entry == "-") {
+        continue;
+      }
+
       const auto entry_path{
           sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
       const auto configuration_path{

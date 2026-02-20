@@ -31,8 +31,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         const auto &configuration{
             read_configuration(options, configuration_path, entry.first)};
         const auto dialect{default_dialect(options, configuration)};
-        const auto &custom_resolver{
-            resolver(options, options.contains("http"), dialect, configuration)};
+        const auto &custom_resolver{resolver(options, options.contains("http"),
+                                             dialect, configuration)};
 
         if (options.contains("keep-ordering")) {
           sourcemeta::core::prettify(entry.second, std::cout, indentation);
