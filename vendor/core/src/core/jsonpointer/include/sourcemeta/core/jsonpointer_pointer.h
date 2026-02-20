@@ -759,15 +759,12 @@ public:
     }
 
   private:
+    // Intentionally only fold hash.a for performance, as the first
+    // 16 bytes already provide sufficient entropy for bucketing
     static auto property_hash(const typename Hash::hash_type &hash) noexcept
         -> std::size_t {
-#if defined(__SIZEOF_INT128__)
-      const auto *parts =
-          reinterpret_cast<const std::uint64_t *>(&hash.a); // NOLINT
-      return parts[0] ^ parts[1];
-#else
-      return hash.a ^ hash.b;
-#endif
+      return static_cast<std::size_t>(hash.a) ^
+             static_cast<std::size_t>(hash.a >> 64);
     }
   };
 
