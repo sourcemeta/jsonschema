@@ -357,6 +357,7 @@ add_jsonschema_test_unix(bundle/pass_resolve_installed_dependency_by_uri)
 add_jsonschema_test_unix(bundle/fail_invalid_id_type)
 add_jsonschema_test_unix(bundle/fail_invalid_schema_uri)
 add_jsonschema_test_unix(bundle/pass_config_ignore)
+add_jsonschema_test_unix(bundle/fail_ref_in_bundled_resolves_against_file_path)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
