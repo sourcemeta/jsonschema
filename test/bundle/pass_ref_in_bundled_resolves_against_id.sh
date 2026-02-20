@@ -36,16 +36,14 @@ cat << EOF > "$TMP/expected.json"
   "title": "Entry",
   "\$ref": "https://example.com/schemas/parent",
   "\$defs": {
+    "https://example.com/schemas/child": {
+      "\$id": "https://example.com/schemas/child",
+      "type": "string"
+    },
     "https://example.com/schemas/parent": {
       "\$schema": "https://json-schema.org/draft/2020-12/schema",
       "\$id": "https://example.com/schemas/parent",
-      "\$ref": "./child",
-      "\$defs": {
-        "https://example.com/schemas/child": {
-          "\$id": "https://example.com/schemas/child",
-          "type": "string"
-        }
-      }
+      "\$ref": "./child"
     }
   }
 }
