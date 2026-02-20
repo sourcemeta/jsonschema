@@ -65,20 +65,19 @@ JSON::JSON(const Char *const value) : current_type{Type::String} {
 }
 
 JSON::JSON(std::initializer_list<JSON> values) : current_type{Type::Array} {
-  new (&this->data_array) Array{values};
-
-// For some reason, if we construct a JSON by passing a single
-// JSON as argument, GCC and MSVC, in some circumstances will
-// prefer this initializer list constructor over the default copy constructor,
-// effectively creating an array of a single element. We couldn't find a nicer
-// way to force them to pick the correct constructor. This is a hacky (and
-// potentially inefficient?) way to "fix it up" to get consistent behavior
-// across compilers.
+// For direct-list-initialization (e.g. JSON x{other_json}), the C++ standard
+// mandates that initializer_list constructors are preferred over copy/move
+// constructors. GCC and MSVC follow this strictly, so a single-element brace
+// init ends up here instead of the copy constructor. Handle this case before
+// constructing the array to avoid an unnecessary heap allocation.
 #if defined(__GNUC__) || defined(_MSC_VER)
   if (values.size() == 1) {
+    this->current_type = Type::Null;
     this->operator=(*values.begin());
+    return;
   }
 #endif
+  new (&this->data_array) Array{values};
 }
 
 JSON::JSON(const Array &value) : current_type{Type::Array} {

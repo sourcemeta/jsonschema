@@ -136,8 +136,55 @@ auto parse_ipv6(const std::string_view input,
   const auto start = position;
   position += 1;
 
-  while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
+  // RFC 3986: IP-literal = "[" ( IPv6address / IPvFuture ) "]"
+  if (position < input.size() &&
+      (input[position] == 'v' || input[position] == 'V')) {
+    // IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
     position += 1;
+
+    // Require 1*HEXDIG for the version
+    if (position >= input.size() || input[position] == URI_CLOSE_BRACKET ||
+        !std::isxdigit(static_cast<unsigned char>(input[position]))) {
+      throw sourcemeta::core::URIParseError{
+          static_cast<std::uint64_t>(position + 1)};
+    }
+    while (position < input.size() && input[position] != URI_CLOSE_BRACKET &&
+           std::isxdigit(static_cast<unsigned char>(input[position]))) {
+      position += 1;
+    }
+
+    // Require "." separator
+    if (position >= input.size() || input[position] != URI_DOT) {
+      throw sourcemeta::core::URIParseError{
+          static_cast<std::uint64_t>(position + 1)};
+    }
+    position += 1;
+
+    // Require 1*( unreserved / sub-delims / ":" )
+    if (position >= input.size() || input[position] == URI_CLOSE_BRACKET) {
+      throw sourcemeta::core::URIParseError{
+          static_cast<std::uint64_t>(position + 1)};
+    }
+    while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
+      const auto current = input[position];
+      if (!uri_is_unreserved(current) && !uri_is_sub_delim(current) &&
+          current != URI_COLON) {
+        throw sourcemeta::core::URIParseError{
+            static_cast<std::uint64_t>(position + 1)};
+      }
+      position += 1;
+    }
+  } else {
+    // IPv6address: only HEXDIG, ":", and "." are valid
+    while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
+      const auto current = input[position];
+      if (!std::isxdigit(static_cast<unsigned char>(current)) &&
+          current != URI_COLON && current != URI_DOT) {
+        throw sourcemeta::core::URIParseError{
+            static_cast<std::uint64_t>(position + 1)};
+      }
+      position += 1;
+    }
   }
 
   if (position >= input.size()) {
@@ -324,14 +371,13 @@ auto parse_authority(const std::string_view input,
   uri_unescape_selective_inplace(host_raw);
   host = std::move(host_raw);
 
+  // RFC 3986: authority = [ userinfo "@" ] host [ ":" port ]
+  // port = *DIGIT (empty port after colon is valid)
   if (position < input.size() && input[position] == URI_COLON) {
-    const auto colon_position = position;
     position += 1;
     const auto port_value = parse_port(input, position);
     if (port_value.has_value()) {
       port = port_value.value();
-    } else {
-      position = colon_position;
     }
   }
 
@@ -364,11 +410,33 @@ auto URI::parse(const std::string_view input) -> void {
   if (has_authority) {
     position += 2;
     parse_authority(input, position, this->userinfo_, this->host_, this->port_);
+
+    // RFC 3986: hier-part = "//" authority path-abempty
+    // path-abempty = *( "/" segment ), so after authority the next character
+    // must be "/", "?", "#", or end-of-input
+    if (position < input.size() && input[position] != URI_SLASH &&
+        input[position] != URI_QUESTION && input[position] != URI_HASH) {
+      throw URIParseError{static_cast<std::uint64_t>(position + 1)};
+    }
   }
 
   auto path = parse_path(input, position);
 
   if (path.has_value()) {
+    // RFC 3986: relative-ref without authority uses path-noscheme,
+    // where the first segment must not contain a colon
+    if (!this->scheme_.has_value() && !has_authority) {
+      const auto &path_value = path.value();
+      if (!path_value.empty() && path_value[0] != URI_SLASH) {
+        const auto first_slash = path_value.find(URI_SLASH);
+        const auto colon_pos = path_value.find(URI_COLON);
+        if (colon_pos != std::string::npos &&
+            (first_slash == std::string::npos || colon_pos < first_slash)) {
+          throw URIParseError{static_cast<std::uint64_t>(colon_pos + 1)};
+        }
+      }
+    }
+
     uri_unescape_selective_inplace(path.value());
     this->path_ = std::move(path.value());
   } else if (has_authority || this->scheme_.has_value()) {

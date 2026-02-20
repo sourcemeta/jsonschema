@@ -43,7 +43,7 @@ cat << 'EOF' > "$TMP/expected.json"
 [
   false,
   true,
-  [ "", "https://example.com", "https://example.com/other" ],
+  [ "", "https://example.com", "https://example.com/nested" ],
   [
     [
       [

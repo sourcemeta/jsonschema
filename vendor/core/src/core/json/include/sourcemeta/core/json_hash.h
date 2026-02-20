@@ -1,8 +1,9 @@
 #ifndef SOURCEMETA_CORE_JSON_HASH_H_
 #define SOURCEMETA_CORE_JSON_HASH_H_
 
+#include <sourcemeta/core/numeric.h>
+
 #include <cassert>    // assert
-#include <cstdint>    // std::uint64_t
 #include <cstring>    // std::memcpy
 #include <functional> // std::reference_wrapper
 
@@ -29,27 +30,11 @@ template <typename T> struct HashJSON {
 /// @ingroup json
 template <typename T> struct PropertyHashJSON {
   struct hash_type {
-    // For performance when the platform allows it
-#if defined(__SIZEOF_INT128__)
-    using type = __uint128_t;
+    using type = sourcemeta::core::uint128_t;
     type a{0};
     type b{0};
-#else
-    using type = std::uint64_t;
-    type a{0};
-    type b{0};
-    type c{0};
-    type d{0};
-#endif
 
-    inline auto operator==(const hash_type &other) const noexcept -> bool {
-#if defined(__SIZEOF_INT128__)
-      return this->a == other.a && this->b == other.b;
-#else
-      return this->a == other.a && this->b == other.b && this->c == other.c &&
-             this->d == other.d;
-#endif
-    }
+    auto operator==(const hash_type &) const noexcept -> bool = default;
   };
 
   [[nodiscard]]
