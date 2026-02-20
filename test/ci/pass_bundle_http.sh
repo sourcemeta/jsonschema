@@ -28,13 +28,13 @@ cat << EOF > "$TMP/expected.json"
   "description": "Test schema",
   "allOf": [
     {
-      "\$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json"
+      "\$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema"
     }
   ],
   "definitions": {
-    "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json": {
+    "https://schemas.sourcemeta.com/jsonschema/draft4/schema": {
       "\$schema": "http://json-schema.org/draft-04/schema#",
-      "id": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json",
+      "id": "https://schemas.sourcemeta.com/jsonschema/draft4/schema",
       "description": "Core schema meta-schema",
       "default": {},
       "type": "object",

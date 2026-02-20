@@ -189,14 +189,13 @@ auto bundle_schema(sourcemeta::core::JSON &root,
     if (bundled.contains(identifier)) {
       const auto &mapped_id{bundled.at(identifier)};
       if (mapped_id != identifier) {
-        sourcemeta::core::JSON::String rewrite_value{mapped_id};
+        sourcemeta::core::URI rewrite_uri{mapped_id};
         if (reference.fragment.has_value()) {
-          rewrite_value += '#';
-          rewrite_value += reference.fragment.value();
+          rewrite_uri.fragment(reference.fragment.value());
         }
 
         ref_rewrites.emplace_back(sourcemeta::core::to_pointer(pointer),
-                                  std::move(rewrite_value));
+                                  rewrite_uri.recompose());
       }
 
       return;
@@ -257,14 +256,13 @@ auto bundle_schema(sourcemeta::core::JSON &root,
     }
 
     if (effective_id != identifier) {
-      sourcemeta::core::JSON::String rewrite_value{effective_id};
+      sourcemeta::core::URI rewrite_uri{effective_id};
       if (reference.fragment.has_value()) {
-        rewrite_value += '#';
-        rewrite_value += reference.fragment.value();
+        rewrite_uri.fragment(reference.fragment.value());
       }
 
       ref_rewrites.emplace_back(sourcemeta::core::to_pointer(pointer),
-                                std::move(rewrite_value));
+                                rewrite_uri.recompose());
     }
 
     bundled.emplace(identifier, effective_id);
