@@ -92,6 +92,11 @@ public:
       : std::runtime_error{std::move(message)} {}
 };
 
+class StdinError : public std::runtime_error {
+public:
+  StdinError(std::string message) : std::runtime_error{std::move(message)} {}
+};
+
 class InvalidLintRuleError : public std::runtime_error {
 public:
   InvalidLintRuleError(std::string message, std::string rule)
@@ -650,6 +655,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_FAILURE;
 
     // Command line parsing handling
+  } catch (const StdinError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_FAILURE;
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
