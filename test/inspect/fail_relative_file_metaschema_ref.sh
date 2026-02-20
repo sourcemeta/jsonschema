@@ -27,7 +27,7 @@ EOF
 "$1" inspect "$TMP/schemas/folder/test.json" \
   --resolve "$TMP/schemas/meta.json" > "$TMP/result.txt" 2>&1 \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Relative meta-schema URIs are not valid according to the JSON Schema specification

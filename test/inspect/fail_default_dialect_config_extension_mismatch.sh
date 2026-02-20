@@ -19,7 +19,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 "$1" inspect "$TMP/document.json" --verbose 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema
@@ -34,7 +34,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" inspect "$TMP/document.json" --json >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

@@ -21,7 +21,7 @@ EOF
 
 "$1" test "$TMP/test.json" --json > "$TMP/output.json" 2>&1 \
   && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

@@ -19,7 +19,7 @@ cat << 'EOF' > "$TMP/schemas/schema_1.json"
 EOF
 
 "$1" metaschema "$TMP/schemas" > "$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+test "$CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema
