@@ -657,8 +657,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
-  } catch (
-      const FileError<sourcemeta::codegen::UnexpectedSchemaError> &error) {
+  } catch (const FileError<sourcemeta::codegen::UnexpectedSchemaError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
