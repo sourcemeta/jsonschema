@@ -202,17 +202,10 @@ template <typename T>
   requires std::is_same_v<T, JSON::Object::hash_type>
 auto to_json(const T &hash) -> JSON {
   auto result{JSON::make_array()};
-#if defined(__SIZEOF_INT128__)
   result.push_back(JSON{static_cast<std::size_t>(hash.a >> 64)});
   result.push_back(JSON{static_cast<std::size_t>(hash.a)});
   result.push_back(JSON{static_cast<std::size_t>(hash.b >> 64)});
   result.push_back(JSON{static_cast<std::size_t>(hash.b)});
-#else
-  result.push_back(JSON{static_cast<std::size_t>(hash.a)});
-  result.push_back(JSON{static_cast<std::size_t>(hash.b)});
-  result.push_back(JSON{static_cast<std::size_t>(hash.c)});
-  result.push_back(JSON{static_cast<std::size_t>(hash.d)});
-#endif
   return result;
 }
 
@@ -228,21 +221,17 @@ auto from_json(const JSON &value) -> std::optional<T> {
     return std::nullopt;
   }
 
-#if defined(__SIZEOF_INT128__)
-  return T{(static_cast<__uint128_t>(
+  using uint128_type = JSON::Object::hash_type::type;
+  return T{(static_cast<uint128_type>(
                 static_cast<std::uint64_t>(value.at(0).to_integer()))
             << 64) |
-               static_cast<std::uint64_t>(value.at(1).to_integer()),
-           (static_cast<__uint128_t>(
+               static_cast<uint128_type>(
+                   static_cast<std::uint64_t>(value.at(1).to_integer())),
+           (static_cast<uint128_type>(
                 static_cast<std::uint64_t>(value.at(2).to_integer()))
             << 64) |
-               static_cast<std::uint64_t>(value.at(3).to_integer())};
-#else
-  return T{static_cast<std::uint64_t>(value.at(0).to_integer()),
-           static_cast<std::uint64_t>(value.at(1).to_integer()),
-           static_cast<std::uint64_t>(value.at(2).to_integer()),
-           static_cast<std::uint64_t>(value.at(3).to_integer())};
-#endif
+               static_cast<uint128_type>(
+                   static_cast<std::uint64_t>(value.at(3).to_integer()))};
 }
 
 /// @ingroup json

@@ -44,11 +44,11 @@ cat << 'EOF' > "$TMP/expected.json"
   "$id": "https://example.com",
   "title": "Test",
   "description": "Test schema",
-  "$ref": "other",
+  "$ref": "https://example.com/nested",
   "$defs": {
-    "https://example.com/other": {
+    "https://example.com/nested": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://example.com/other",
+      "$id": "https://example.com/nested",
       "type": "string"
     }
   }

@@ -12,21 +12,22 @@
 #include "configuration.h"
 #include "logger.h"
 
-#include <algorithm>  // std::any_of, std::none_of, std::sort
-#include <cstddef>    // std::size_t
-#include <cstdint>    // std::uintptr_t
-#include <filesystem> // std::filesystem
-#include <functional> // std::ref
-#include <set>        // std::set
-#include <sstream>    // std::ostringstream
-#include <stdexcept>  // std::runtime_error
-#include <string>     // std::string
-#include <vector>     // std::vector
+#include <algorithm>     // std::any_of, std::none_of, std::sort
+#include <cstddef>       // std::size_t
+#include <cstdint>       // std::uintptr_t
+#include <filesystem>    // std::filesystem
+#include <functional>    // std::ref, std::hash
+#include <set>           // std::set
+#include <sstream>       // std::ostringstream
+#include <string>        // std::string
+#include <unordered_set> // std::unordered_set
+#include <vector>        // std::vector
 
 namespace sourcemeta::jsonschema {
 
 struct InputJSON {
-  std::filesystem::path first;
+  std::string first;
+  std::filesystem::path resolution_base;
   sourcemeta::core::JSON second;
   sourcemeta::core::PointerPositionTracker positions;
   std::size_t index{0};
@@ -113,6 +114,24 @@ inline auto parse_ignore(const sourcemeta::core::Options &options)
   return result;
 }
 
+inline auto
+merge_configuration_ignore(const std::filesystem::path &configuration_path,
+                           std::set<std::filesystem::path> &blacklist,
+                           const sourcemeta::core::Options &options) -> void {
+  try {
+    const auto configuration{sourcemeta::blaze::Configuration::read_json(
+        configuration_path, configuration_reader)};
+    for (const auto &ignore_path : configuration.ignore) {
+      LOG_VERBOSE(options) << "Ignoring path from configuration: "
+                           << ignore_path << "\n";
+      blacklist.insert(ignore_path);
+    }
+  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+    throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+        configuration_path, error);
+  }
+}
+
 namespace {
 
 struct ParsedJSON {
@@ -171,7 +190,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical),
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
@@ -190,8 +210,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
           for (const auto &document : sourcemeta::core::JSONL{stream}) {
             // TODO: Get real positions for JSONL
             sourcemeta::core::PointerPositionTracker positions;
-            result.push_back(
-                {canonical, document, std::move(positions), index, true});
+            result.push_back({canonical.string(), canonical, document,
+                              std::move(positions), index, true});
             index += 1;
           }
         } catch (const sourcemeta::core::JSONParseError &error) {
@@ -240,14 +260,16 @@ handle_json_entry(const std::filesystem::path &entry_path,
                                << canonical.string() << "\n";
           std::size_t index{0};
           for (auto &entry : documents) {
-            result.push_back({canonical, std::move(entry.first),
-                              std::move(entry.second), index, true, true});
+            result.push_back({canonical.string(), canonical,
+                              std::move(entry.first), std::move(entry.second),
+                              index, true, true});
             index += 1;
           }
         } else if (documents.size() == 1) {
-          result.push_back(
-              {std::move(canonical), std::move(documents.front().first),
-               std::move(documents.front().second), 0, false, true});
+          result.push_back({canonical.string(), std::move(canonical),
+                            std::move(documents.front().first),
+                            std::move(documents.front().second), 0, false,
+                            true});
         }
       } else {
         if (std::filesystem::is_empty(canonical)) {
@@ -255,7 +277,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
         }
         // TODO: Print a verbose message for what is getting parsed
         auto parsed{read_file(canonical)};
-        result.push_back({std::move(canonical), std::move(parsed.document),
+        result.push_back({canonical.string(), std::move(canonical),
+                          std::move(parsed.document),
                           std::move(parsed.positions), 0, false, parsed.yaml});
       }
     }
@@ -267,28 +290,53 @@ handle_json_entry(const std::filesystem::path &entry_path,
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
-  const auto blacklist{parse_ignore(options)};
+  auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
   if (arguments.empty()) {
     const auto current_path{std::filesystem::current_path()};
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{read_configuration(options, configuration_path)};
+
+    if (configuration_path.has_value()) {
+      merge_configuration_ignore(configuration_path.value(), blacklist,
+                                 options);
+    }
+
     const auto extensions{parse_extensions(options, configuration)};
 
     handle_json_entry(configuration.has_value()
                           ? configuration.value().absolute_path
                           : current_path,
                       blacklist, extensions, result, options);
+    std::sort(result.begin(), result.end(),
+              [](const auto &left, const auto &right) { return left < right; });
   } else {
+    std::unordered_set<std::string> seen_configurations;
+    for (const auto &entry : arguments) {
+      const auto entry_path{
+          sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
+      const auto configuration_path{
+          find_configuration(std::filesystem::is_directory(entry_path)
+                                 ? entry_path
+                                 : entry_path.parent_path())};
+      if (configuration_path.has_value() &&
+          seen_configurations.insert(configuration_path.value().string())
+              .second) {
+        merge_configuration_ignore(configuration_path.value(), blacklist,
+                                   options);
+      }
+    }
+
     const auto extensions{parse_extensions(options, std::nullopt)};
     for (const auto &entry : arguments) {
+      const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);
+      std::sort(
+          result.begin() + static_cast<std::ptrdiff_t>(before), result.end(),
+          [](const auto &left, const auto &right) { return left < right; });
     }
   }
-
-  std::sort(result.begin(), result.end(),
-            [](const auto &left, const auto &right) { return left < right; });
 
   return result;
 }

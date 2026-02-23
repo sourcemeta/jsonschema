@@ -60,8 +60,9 @@ auto ValidExamples::condition(
 
     for (const auto &example : schema.at("examples").as_array()) {
       SimpleOutput output{example};
-      const auto result{this->evaluator_.validate(schema_template, example,
-                                                  std::ref(output))};
+      Evaluator evaluator;
+      const auto result{
+          evaluator.validate(schema_template, example, std::ref(output))};
       if (!result) {
         std::ostringstream message;
         message << "Invalid example instance at index " << cursor << "\n";
@@ -103,8 +104,9 @@ auto ValidExamples::condition(
 
   for (const auto &example : schema.at("examples").as_array()) {
     SimpleOutput output{example, base};
+    Evaluator evaluator;
     const auto result{
-        this->evaluator_.validate(schema_template, example, std::ref(output))};
+        evaluator.validate(schema_template, example, std::ref(output))};
     if (!result) {
       std::ostringstream message;
       message << "Invalid example instance at index " << cursor << "\n";

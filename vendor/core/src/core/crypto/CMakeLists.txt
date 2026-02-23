@@ -1,6 +1,12 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME crypto
-  PRIVATE_HEADERS md5.h sha256.h
-  SOURCES crypto_md5.cc crypto_sha256.cc)
+  PRIVATE_HEADERS sha256.h uuid.h
+  SOURCES crypto_sha256.cc crypto_uuid.cc)
+
+if(SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL)
+  target_compile_definitions(sourcemeta_core_crypto
+    PRIVATE SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL)
+  target_link_libraries(sourcemeta_core_crypto PRIVATE OpenSSL::Crypto)
+endif()
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME crypto)

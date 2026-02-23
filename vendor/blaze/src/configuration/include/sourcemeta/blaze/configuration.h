@@ -33,6 +33,7 @@
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
+#include <vector>        // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -52,6 +53,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::optional<sourcemeta::core::JSON::String> github;
   std::optional<sourcemeta::core::JSON::String> website;
   std::filesystem::path absolute_path;
+  std::filesystem::path base_path;
   sourcemeta::core::JSON::String base;
   std::optional<sourcemeta::core::JSON::String> default_dialect;
   std::unordered_set<sourcemeta::core::JSON::String> extension{".json", ".yml",
@@ -61,6 +63,13 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
       resolve;
   // Ordered to guarantee deterministic iteration
   std::map<sourcemeta::core::JSON::String, std::filesystem::path> dependencies;
+  std::vector<std::filesystem::path> ignore;
+
+  struct Lint {
+    std::vector<std::filesystem::path> rules;
+  };
+
+  Lint lint;
   sourcemeta::core::JSON extra = sourcemeta::core::JSON::make_object();
 
   /// A callback to read file contents from a path
@@ -107,9 +116,11 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
                const std::filesystem::path &expected_path,
                const ReadCallback &reader) const -> Entry::Status;
     [[nodiscard]]
-    static auto from_json(const sourcemeta::core::JSON &value) -> Lock;
+    static auto from_json(const sourcemeta::core::JSON &value,
+                          const std::filesystem::path &lock_base_path) -> Lock;
     [[nodiscard]]
-    auto to_json() const -> sourcemeta::core::JSON;
+    auto to_json(const std::filesystem::path &lock_base_path) const
+        -> sourcemeta::core::JSON;
 
   private:
     // Ordered to guarantee deterministic iteration

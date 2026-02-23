@@ -2,7 +2,54 @@
 
 #include <array>   // std::array
 #include <cstdint> // std::uint32_t, std::uint64_t
+
+#ifdef SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL
+#include <openssl/evp.h> // EVP_MD_CTX_new, EVP_DigestInit_ex, EVP_sha256, EVP_DigestUpdate, EVP_DigestFinal_ex, EVP_MD_CTX_free
+#include <stdexcept>     // std::runtime_error
+#else
 #include <cstring> // std::memcpy
+#endif
+
+namespace {
+constexpr std::array<char, 17> HEX_DIGITS{{'0', '1', '2', '3', '4', '5', '6',
+                                           '7', '8', '9', 'a', 'b', 'c', 'd',
+                                           'e', 'f', '\0'}};
+} // namespace
+
+#ifdef SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL
+
+namespace sourcemeta::core {
+
+auto sha256(const std::string_view input, std::ostream &output) -> void {
+  auto *context = EVP_MD_CTX_new();
+  if (context == nullptr) {
+    throw std::runtime_error("Could not allocate OpenSSL digest context");
+  }
+
+  if (EVP_DigestInit_ex(context, EVP_sha256(), nullptr) != 1 ||
+      EVP_DigestUpdate(context, input.data(), input.size()) != 1) {
+    EVP_MD_CTX_free(context);
+    throw std::runtime_error("Could not compute SHA-256 digest");
+  }
+
+  std::array<unsigned char, 32> digest{};
+  unsigned int length = 0;
+  if (EVP_DigestFinal_ex(context, digest.data(), &length) != 1) {
+    EVP_MD_CTX_free(context);
+    throw std::runtime_error("Could not finalize SHA-256 digest");
+  }
+
+  EVP_MD_CTX_free(context);
+
+  for (std::uint64_t index = 0; index < 32u; ++index) {
+    output.put(HEX_DIGITS[(digest[index] >> 4u) & 0x0fu]);
+    output.put(HEX_DIGITS[digest[index] & 0x0fu]);
+  }
+}
+
+} // namespace sourcemeta::core
+
+#else
 
 namespace {
 
@@ -169,17 +216,15 @@ auto sha256(const std::string_view input, std::ostream &output) -> void {
     sha256_process_block(final_block.data() + 64u, state);
   }
 
-  // Produce the final hex digest directly from state words (big-endian)
-  static constexpr std::array<char, 17> hex_digits{
-      {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd',
-       'e', 'f', '\0'}};
   for (std::uint64_t state_index = 0u; state_index < 8u; ++state_index) {
     const auto value = state[state_index];
     for (std::uint64_t nibble = 0u; nibble < 8u; ++nibble) {
       const auto shift = 28u - nibble * 4u;
-      output.put(hex_digits[(value >> shift) & 0x0fu]);
+      output.put(HEX_DIGITS[(value >> shift) & 0x0fu]);
     }
   }
 }
 
 } // namespace sourcemeta::core
+
+#endif

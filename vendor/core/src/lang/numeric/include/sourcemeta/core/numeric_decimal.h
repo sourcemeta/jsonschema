@@ -6,7 +6,6 @@
 #endif
 
 #include <concepts> // std::integral
-#include <cstddef>  // std::byte
 #include <cstdint>  // std::int32_t, std::int64_t, std::uint32_t, std::uint64_t
 #include <string>   // std::string
 #include <string_view> // std::string_view
@@ -69,8 +68,11 @@ public:
   /// Move assignment operator
   auto operator=(Decimal &&other) noexcept -> Decimal &;
 
-  /// Create a NaN (Not a Number) value
-  [[nodiscard]] static auto nan() -> Decimal;
+  /// Create a quiet NaN (Not a Number) value with an optional payload
+  [[nodiscard]] static auto nan(std::uint64_t payload = 0) -> Decimal;
+
+  /// Create a signaling NaN value with an optional payload
+  [[nodiscard]] static auto snan(std::uint64_t payload = 0) -> Decimal;
 
   /// Create a positive infinity value
   [[nodiscard]] static auto infinity() -> Decimal;
@@ -139,8 +141,18 @@ public:
   /// Check if the decimal number fits in a 64-bit unsigned integer
   [[nodiscard]] auto is_uint64() const -> bool;
 
-  /// Check if the decimal number is NaN (Not a Number)
+  /// Check if the decimal number is NaN (Not a Number), either quiet or
+  /// signaling
   [[nodiscard]] auto is_nan() const -> bool;
+
+  /// Check if the decimal number is a signaling NaN
+  [[nodiscard]] auto is_snan() const -> bool;
+
+  /// Check if the decimal number is a quiet NaN
+  [[nodiscard]] auto is_qnan() const -> bool;
+
+  /// Get the payload of a NaN value (0 if no payload)
+  [[nodiscard]] auto nan_payload() const -> std::uint64_t;
 
   /// Check if the decimal number is infinite
   [[nodiscard]] auto is_infinite() const -> bool;
@@ -153,6 +165,24 @@ public:
 
   /// Check if this decimal number is divisible by another
   [[nodiscard]] auto divisible_by(const Decimal &divisor) const -> bool;
+
+  /// Strip trailing zeros from the coefficient
+  [[nodiscard]] auto reduce() const -> Decimal;
+
+  /// Return the adjusted exponent (floor of base-10 logarithm)
+  [[nodiscard]] auto logb() const -> Decimal;
+
+  /// Scale the number by a power of 10
+  [[nodiscard]] auto scale_by(const Decimal &scale) const -> Decimal;
+
+  /// Check if two numbers have the same quantum (exponent)
+  [[nodiscard]] auto same_quantum(const Decimal &other) const -> bool;
+
+  /// IEEE 754 total ordering comparison returning -1, 0, or 1
+  [[nodiscard]] auto compare_total(const Decimal &other) const -> Decimal;
+
+  /// Integer division (truncate toward zero)
+  [[nodiscard]] auto divide_integer(const Decimal &other) const -> Decimal;
 
   /// Add another decimal number to this one
   auto operator+=(const Decimal &other) -> Decimal &;
@@ -221,13 +251,10 @@ public:
   [[nodiscard]] auto operator>=(const Decimal &other) const -> bool;
 
 private:
-  struct Data;
-  static constexpr std::size_t STORAGE_SIZE = 256;
-  // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-  alignas(std::max_align_t) std::byte storage[STORAGE_SIZE];
-
-  [[nodiscard]] auto data() -> Data *;
-  [[nodiscard]] auto data() const -> const Data *;
+  std::int64_t coefficient_{0};
+  std::uint64_t coefficient_high_{0};
+  std::int32_t exponent_{0};
+  std::uint8_t flags_{0};
 };
 
 template <typename T>

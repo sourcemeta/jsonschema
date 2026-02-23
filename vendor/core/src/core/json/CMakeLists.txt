@@ -7,4 +7,5 @@ if(SOURCEMETA_CORE_INSTALL)
 endif()
 
 target_link_libraries(sourcemeta_core_json PRIVATE sourcemeta::core::io)
+target_link_libraries(sourcemeta_core_json PRIVATE sourcemeta::core::unicode)
 target_link_libraries(sourcemeta_core_json PUBLIC sourcemeta::core::numeric)

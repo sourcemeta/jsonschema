@@ -223,7 +223,7 @@ cat << EOF > "$TMP/expected_lock.json"
   "version": 1,
   "dependencies": {
     "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response": {
-      "path": "$(realpath "$TMP")/project/vendor/response.json",
+      "path": "./vendor/response.json",
       "hash": "${HASH}",
       "hashAlgorithm": "sha256"
     }

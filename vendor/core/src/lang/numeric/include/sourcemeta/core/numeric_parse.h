@@ -22,6 +22,12 @@ SOURCEMETA_CORE_NUMERIC_EXPORT
 auto to_int64_t(const std::string &input) noexcept
     -> std::optional<std::int64_t>;
 
+/// @ingroup numeric
+/// Attempt to parse a string as a signed 64-bit integer in a given base
+SOURCEMETA_CORE_NUMERIC_EXPORT
+auto to_int64_t(const std::string &input, const int base) noexcept
+    -> std::optional<std::int64_t>;
+
 } // namespace sourcemeta::core
 
 #endif

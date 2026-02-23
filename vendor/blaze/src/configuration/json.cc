@@ -8,6 +8,17 @@
 
 namespace sourcemeta::blaze {
 
+static auto relative_display_path(const std::filesystem::path &path,
+                                  const std::filesystem::path &base)
+    -> std::string {
+  auto relative_path{std::filesystem::relative(path, base).generic_string()};
+  if (relative_path.starts_with("..")) {
+    return relative_path;
+  }
+
+  return "./" + relative_path;
+}
+
 auto Configuration::to_json() const -> sourcemeta::core::JSON {
   auto result{sourcemeta::core::JSON::make_object()};
 
@@ -73,19 +84,33 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     auto dependencies_object{sourcemeta::core::JSON::make_object()};
     for (const auto &pair : this->dependencies) {
       dependencies_object.assign(
-          pair.first, sourcemeta::core::JSON{[&]() -> std::string {
-            auto relative_path =
-                std::filesystem::relative(pair.second, this->absolute_path)
-                    .generic_string();
-            if (relative_path.starts_with("..")) {
-              return relative_path;
-            }
-
-            return "./" + relative_path;
-          }()});
+          pair.first, sourcemeta::core::JSON{
+                          relative_display_path(pair.second, this->base_path)});
     }
 
     result.assign("dependencies", std::move(dependencies_object));
+  }
+
+  if (!this->ignore.empty()) {
+    auto ignore_array{sourcemeta::core::JSON::make_array()};
+    for (const auto &entry : this->ignore) {
+      ignore_array.push_back(sourcemeta::core::JSON{
+          relative_display_path(entry, this->base_path)});
+    }
+
+    result.assign("ignore", std::move(ignore_array));
+  }
+
+  if (!this->lint.rules.empty()) {
+    auto lint_object{sourcemeta::core::JSON::make_object()};
+    auto rules_array{sourcemeta::core::JSON::make_array()};
+    for (const auto &rule : this->lint.rules) {
+      rules_array.push_back(
+          sourcemeta::core::JSON{relative_display_path(rule, this->base_path)});
+    }
+
+    lint_object.assign("rules", std::move(rules_array));
+    result.assign("lint", std::move(lint_object));
   }
 
   for (const auto &pair : this->extra.as_object()) {

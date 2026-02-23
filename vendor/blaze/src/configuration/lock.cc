@@ -63,8 +63,10 @@ auto string_to_hash_algorithm(const sourcemeta::core::JSON::String &value,
 
 namespace sourcemeta::blaze {
 
-auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value)
+auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value,
+                                    const std::filesystem::path &lock_base_path)
     -> Lock {
+  assert(lock_base_path.is_absolute());
   Lock result;
 
   if (!value.is_object()) {
@@ -116,14 +118,21 @@ auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value)
 
       const std::filesystem::path entry_path{
           pair.second.at("path").to_string()};
-      if (!entry_path.is_absolute()) {
-        throw ConfigurationParseError(
-            "The lock file dependency entry path must be absolute",
-            {"dependencies", pair.first, "path"});
-      }
 
       Entry entry;
-      entry.path = entry_path;
+      if (entry_path.is_absolute()) {
+        entry.path = entry_path;
+      } else {
+        try {
+          entry.path =
+              std::filesystem::weakly_canonical(lock_base_path / entry_path);
+        } catch (const std::filesystem::filesystem_error &) {
+          throw ConfigurationParseError(
+              "The lock file dependency entry path could not be resolved",
+              {"dependencies", pair.first, "path"});
+        }
+      }
+
       entry.hash = pair.second.at("hash").to_string();
       entry.hash_algorithm = string_to_hash_algorithm(
           pair.second.at("hashAlgorithm").to_string(),
@@ -136,7 +145,9 @@ auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value)
   return result;
 }
 
-auto Configuration::Lock::to_json() const -> sourcemeta::core::JSON {
+auto Configuration::Lock::to_json(const std::filesystem::path &lock_base_path)
+    const -> sourcemeta::core::JSON {
+  assert(lock_base_path.is_absolute());
   auto result{sourcemeta::core::JSON::make_object()};
   result.assign("version", sourcemeta::core::JSON{1});
 
@@ -144,8 +155,14 @@ auto Configuration::Lock::to_json() const -> sourcemeta::core::JSON {
   for (const auto &pair : this->entries_) {
     assert(pair.second.path.is_absolute());
     auto entry_json{sourcemeta::core::JSON::make_object()};
-    entry_json.assign(
-        "path", sourcemeta::core::JSON{pair.second.path.generic_string()});
+    auto relative_path{
+        std::filesystem::relative(pair.second.path, lock_base_path)
+            .generic_string()};
+    if (!relative_path.starts_with("..")) {
+      relative_path.insert(0, "./");
+    }
+
+    entry_json.assign("path", sourcemeta::core::JSON{relative_path});
     entry_json.assign("hash", sourcemeta::core::JSON{pair.second.hash});
     entry_json.assign("hashAlgorithm",
                       sourcemeta::core::JSON{hash_algorithm_to_string(

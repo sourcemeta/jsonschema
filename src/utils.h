@@ -12,6 +12,8 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
 
+#include "input.h"
+
 #include <cassert>     // assert
 #include <filesystem>  // std::filesystem::path
 #include <iterator>    // std::next
@@ -29,6 +31,10 @@ inline auto default_id(const std::filesystem::path &schema_path)
   return sourcemeta::core::URI::from_path(
              sourcemeta::core::weakly_canonical(schema_path))
       .recompose();
+}
+
+inline auto default_id(const InputJSON &entry) -> std::string {
+  return default_id(entry.resolution_base);
 }
 
 inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
