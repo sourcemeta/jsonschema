@@ -198,13 +198,32 @@ public:
                 << "  at " << entry.first << "\n"
                 << "Are you sure this schema sets any identifiers?\n";
           }
+        } catch (const sourcemeta::core::SchemaKeywordError &error) {
+          throw FileError<sourcemeta::core::SchemaKeywordError>(
+              entry.resolution_base, error);
         } catch (const sourcemeta::core::SchemaFrameError &error) {
           throw FileError<sourcemeta::core::SchemaFrameError>(
               entry.resolution_base, std::string{error.identifier()},
               error.what());
+        } catch (const sourcemeta::core::SchemaReferenceError &error) {
+          throw FileError<sourcemeta::core::SchemaReferenceError>(
+              entry.resolution_base, std::string{error.identifier()},
+              error.location(), error.what());
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
               entry.resolution_base);
+        } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                     &error) {
+          throw FileError<
+              sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+              entry.resolution_base, error);
+        } catch (const sourcemeta::core::SchemaResolutionError &error) {
+          throw FileError<sourcemeta::core::SchemaResolutionError>(
+              entry.resolution_base, std::string{error.identifier()},
+              error.what());
+        } catch (const sourcemeta::core::SchemaError &error) {
+          throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
+                                                         error.what());
         }
       }
     }
