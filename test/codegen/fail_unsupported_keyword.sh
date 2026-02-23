@@ -17,8 +17,9 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" codegen "$TMP/schema.json" --target typescript \
-  2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Unsupported keyword in subschema
@@ -30,8 +31,9 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" codegen "$TMP/schema.json" --target typescript --json \
-  >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

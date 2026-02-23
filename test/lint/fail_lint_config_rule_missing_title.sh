@@ -34,8 +34,9 @@ EOF
 
 cd "$TMP"
 "$1" lint "$TMP/schema.json" \
-  > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The schema rule is missing a title
@@ -46,8 +47,9 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cd "$TMP"
 "$1" lint --json "$TMP/schema.json" \
-  > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {

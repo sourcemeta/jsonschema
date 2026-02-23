@@ -17,8 +17,9 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" metaschema "$TMP/schema.json" --trace > "$TMP/output.txt" \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Metaschema validation failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 -> (push) "/dependencies" (AssertionPropertyDependencies)

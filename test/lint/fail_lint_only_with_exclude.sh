@@ -19,8 +19,9 @@ EOF
 
 "$1" lint "$TMP/schema.json" \
   --only enum_with_type --exclude const_with_type --verbose \
-  >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Cannot use --only and --exclude at the same time

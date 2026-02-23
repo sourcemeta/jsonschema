@@ -16,8 +16,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" metaschema "$TMP/schema.json" --json > "$TMP/output.json" && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" metaschema "$TMP/schema.json" --json > "$TMP/output.json" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Metaschema validation failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

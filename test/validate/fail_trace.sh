@@ -26,6 +26,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace > "$TMP/output.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
 test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"

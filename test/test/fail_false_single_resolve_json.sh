@@ -29,8 +29,9 @@ cat << 'EOF' > "$TMP/test.json"
 EOF
 
 "$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --json > "$TMP/output.json" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Test assertion failure
+test "$EXIT_CODE" = "2" || exit 1
 
 # Validate against CTRF schema
 CTRF_SCHEMA="$(dirname "$0")/../../vendor/ctrf/specification/schema-0.0.0.json"

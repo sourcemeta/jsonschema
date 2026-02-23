@@ -40,7 +40,8 @@ echo "TAMPERED CONTENT" > "$TMP/project/vendor/schema.json"
 
 "$1" install --frozen > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Integrity verification failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Mismatched     : $(realpath "$TMP")/project/vendor/schema.json
@@ -54,7 +55,8 @@ diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 
 "$1" install --frozen --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Integrity verification failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {

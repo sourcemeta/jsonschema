@@ -11,8 +11,9 @@ cat << 'EOF' > "$TMP/document.json"
 [ { "foo": 1 } ]
 EOF
 
-"$1" metaschema "$TMP/document.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" metaschema "$TMP/document.json" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The schema file you provided does not represent a valid JSON Schema
@@ -22,8 +23,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" metaschema "$TMP/document.json" --json >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" metaschema "$TMP/document.json" --json >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

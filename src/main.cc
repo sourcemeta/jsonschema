@@ -1,7 +1,7 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
 
-#include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
+#include <cstdlib>     // EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
 #include <iostream>    // std::cerr, std::cout
 #include <string>      // std::string

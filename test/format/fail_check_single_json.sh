@@ -19,8 +19,9 @@ cat << 'EOF' > "$TMP/this/is/a/very/very/very/very/very/very/long/path/schema.js
 EOF
 
 "$1" fmt "$TMP/this/is/a/very/very/very/very/very/very/long/path/schema.json" \
-  --check --json >"$TMP/output.json" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  --check --json >"$TMP/output.json" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Format check failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.json"
 {

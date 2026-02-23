@@ -26,8 +26,9 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --entrypoint "/\$defs/PositiveInt" --verbose > "$TMP/output.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/instance.json
@@ -41,8 +42,9 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --entrypoint "/\$defs/PositiveInt" --json > "$TMP/stdout.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

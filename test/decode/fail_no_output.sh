@@ -12,8 +12,9 @@ cat << 'EOF' > "$TMP/document.json"
 EOF
 
 "$1" encode "$TMP/document.json" "$TMP/output.binpack"
-"$1" decode "$TMP/output.binpack" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" decode "$TMP/output.binpack" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: This command expects a path to a binary file and an output path
@@ -25,8 +26,9 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" encode "$TMP/document.json" "$TMP/output.binpack"
-"$1" decode "$TMP/output.binpack" --json > "$TMP/stdout.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" decode "$TMP/output.binpack" --json > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

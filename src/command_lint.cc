@@ -6,7 +6,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/linter.h>
 
-#include <cstdlib>    // EXIT_FAILURE
+#include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem::current_path
 #include <fstream>    // std::ofstream, std::ifstream
 #include <iostream>   // std::cerr, std::cout
@@ -174,6 +174,9 @@ static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>(rule_path);
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>(rule_path);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaResolutionError>(rule_path, error);
@@ -353,7 +356,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               }
               scores.emplace_back(apply_result.second);
               if (!apply_result.first) {
-                return 2;
+                return EXIT_EXPECTED_FAILURE;
               }
 
               return EXIT_SUCCESS;
@@ -407,6 +410,13 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
                   entry.resolution_base);
+            } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+                  entry.resolution_base);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -423,7 +433,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             }
           });
 
-      if (wrapper_result == EXIT_SUCCESS || wrapper_result == 2) {
+      if (wrapper_result == EXIT_SUCCESS ||
+          wrapper_result == EXIT_EXPECTED_FAILURE) {
         if (wrapper_result != EXIT_SUCCESS) {
           result = false;
         }
@@ -452,8 +463,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           output << "\n";
         }
       } else {
-        // Exception was caught - exit immediately with error code 1
-        throw Fail{EXIT_FAILURE};
+        throw Fail{wrapper_result};
       }
     }
   } else {
@@ -482,7 +492,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 return EXIT_SUCCESS;
               } else {
                 // Return 2 for logical lint failures
-                return 2;
+                return EXIT_EXPECTED_FAILURE;
               }
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
@@ -499,18 +509,19 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
                   entry.resolution_base);
+            } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+              throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+                  entry.resolution_base);
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               throw FileError<sourcemeta::core::SchemaResolutionError>(
                   entry.resolution_base, error);
             }
           });
 
-      if (wrapper_result == 2) {
-        // Logical lint failure
+      if (wrapper_result == EXIT_EXPECTED_FAILURE) {
         result = false;
       } else if (wrapper_result != EXIT_SUCCESS) {
-        // Exception was caught - exit immediately with error code 1
-        throw Fail{EXIT_FAILURE};
+        throw Fail{wrapper_result};
       }
     }
   }
@@ -541,8 +552,6 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   if (!result) {
-    // Report a different exit code for linting failures, to
-    // distinguish them from other errors
-    throw Fail{2};
+    throw Fail{EXIT_EXPECTED_FAILURE};
   }
 }

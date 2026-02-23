@@ -34,8 +34,9 @@ EOF
 cp "$TMP/schema.json" "$TMP/original.json"
 
 cd "$TMP"
-"$1" lint "$TMP/schema.json" --fix >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" lint "$TMP/schema.json" --fix >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Internal error
+test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 .

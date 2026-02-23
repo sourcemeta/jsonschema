@@ -23,8 +23,9 @@ cat << 'EOF' > "$TMP/test.json"
 EOF
 
 "$1" test "$TMP/test.json" 1> "$TMP/output.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
@@ -41,8 +42,9 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" test "$TMP/test.json" --json > "$TMP/stdout.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

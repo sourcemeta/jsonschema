@@ -212,6 +212,9 @@ public:
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
               entry.resolution_base);
+        } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+          throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+              entry.resolution_base);
         } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                      &error) {
           throw FileError<

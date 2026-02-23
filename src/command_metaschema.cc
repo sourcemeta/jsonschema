@@ -117,12 +117,13 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw FileError<sourcemeta::core::SchemaResolutionError>(
           entry.resolution_base, error);
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+          entry.resolution_base);
     }
   }
 
   if (!result) {
-    // Report a different exit code for validation failures, to
-    // distinguish them from other errors
-    throw Fail{2};
+    throw Fail{EXIT_EXPECTED_FAILURE};
   }
 }

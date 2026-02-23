@@ -34,8 +34,9 @@ EOF
 
 cd "$TMP"
 "$1" lint --only require_type "$TMP/schema.json" \
-  > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 schema.json:1:1:
@@ -48,8 +49,9 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 cd "$TMP"
 "$1" lint --only require_type --json "$TMP/schema.json" \
-  > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
