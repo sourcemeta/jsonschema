@@ -78,6 +78,9 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
     throw FileError<sourcemeta::codegen::UnsupportedKeywordValueError>(
         schema_path, error.json(), error.pointer(),
         std::string{error.keyword()}, error.what());
+  } catch (const sourcemeta::codegen::UnexpectedSchemaError &error) {
+    throw FileError<sourcemeta::codegen::UnexpectedSchemaError>(
+        schema_path, error.json(), error.pointer(), error.what());
   }
 
   std::ostringstream output;
