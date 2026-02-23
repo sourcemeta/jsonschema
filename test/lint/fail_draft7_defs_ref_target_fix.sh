@@ -25,7 +25,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint "$TMP/schema.json" --fix 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Internal error
+# Unexpected error
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
@@ -49,7 +49,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" lint "$TMP/schema.json" --fix --json >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Internal error
+# Unexpected error
 test "$EXIT_CODE" = "1" || exit 1
 
 cat << EOF > "$TMP/expected.txt"

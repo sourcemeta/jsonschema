@@ -22,8 +22,8 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --http 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Failed to parse the JSON document
