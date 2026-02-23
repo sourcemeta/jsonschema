@@ -309,6 +309,8 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           ? configuration.value().absolute_path
                           : current_path,
                       blacklist, extensions, result, options);
+    std::sort(result.begin(), result.end(),
+              [](const auto &left, const auto &right) { return left < right; });
   } else {
     std::unordered_set<std::string> seen_configurations;
     for (const auto &entry : arguments) {
@@ -328,12 +330,13 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
 
     const auto extensions{parse_extensions(options, std::nullopt)};
     for (const auto &entry : arguments) {
+      const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);
+      std::sort(
+          result.begin() + static_cast<std::ptrdiff_t>(before), result.end(),
+          [](const auto &left, const auto &right) { return left < right; });
     }
   }
-
-  std::sort(result.begin(), result.end(),
-            [](const auto &left, const auto &right) { return left < right; });
 
   return result;
 }
