@@ -11,8 +11,9 @@ cat << 'EOF' > "$TMP/schema.json"
 { "foo": "bar" }
 EOF
 
-"$1" lint "$TMP/schema.json" --fix >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" lint "$TMP/schema.json" --fix >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema

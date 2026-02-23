@@ -73,6 +73,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
         schema_path);
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
   }

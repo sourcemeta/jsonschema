@@ -19,8 +19,9 @@ EOF
 cd "$TMP"
 "$1" lint "$TMP/schema.json" \
   --default-dialect "http://json-schema.org/draft-04/schema#" \
-  >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+  >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:5:3:

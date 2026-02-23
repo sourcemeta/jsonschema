@@ -25,7 +25,8 @@ cat << 'EOF' > "$TMP/instance_2.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" "$TMP/instance_2.json" --benchmark 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: The `--benchmark/-b` option is only allowed given a single instance
@@ -35,7 +36,8 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" "$TMP/instance_2.json" --benchmark --json > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

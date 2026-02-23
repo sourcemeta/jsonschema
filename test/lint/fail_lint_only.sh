@@ -20,8 +20,9 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cd "$TMP"
-"$1" lint "$TMP/schema.json" >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" lint "$TMP/schema.json" >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:7:3:
@@ -37,7 +38,7 @@ EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
-"$1" lint "$TMP/schema.json" --only content_media_type_without_encoding >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
+"$1" lint "$TMP/schema.json" --only content_media_type_without_encoding >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:7:3:

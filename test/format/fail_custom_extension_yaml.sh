@@ -13,8 +13,9 @@ $schema: https://json-schema.org/draft/2020-12/schema
 type: string
 EOF
 
-"$1" fmt "$TMP/schema.custom" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" fmt "$TMP/schema.custom" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: This command does not support YAML input files yet

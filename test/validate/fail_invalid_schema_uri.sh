@@ -18,8 +18,9 @@ cat << 'EOF' > "$TMP/instance.json"
 "hello"
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The dialect is not a valid URI

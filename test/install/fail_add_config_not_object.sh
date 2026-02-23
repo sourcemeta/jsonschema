@@ -17,7 +17,8 @@ cd "$TMP/project"
 "$1" install "https://example.com/foo" "./vendor/foo.json" \
   > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The configuration must be an object
@@ -30,7 +31,8 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 "$1" install --json "https://example.com/foo" "./vendor/foo.json" \
   > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {

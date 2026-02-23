@@ -15,8 +15,9 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint --rule "$TMP/nonexistent.json" "$TMP/schema.json" \
-  > "$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: No such file or directory
@@ -26,8 +27,9 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" lint --rule "$TMP/nonexistent.json" --json "$TMP/schema.json" \
-  > "$TMP/output_json.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {

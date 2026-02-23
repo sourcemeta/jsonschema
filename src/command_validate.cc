@@ -165,7 +165,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto benchmark{options.contains("benchmark")};
   const auto benchmark_loop{parse_loop(options)};
   if (benchmark_loop == 0) {
-    throw std::runtime_error("The loop number cannot be zero");
+    throw OptionConflictError{"The loop number cannot be zero"};
   }
 
   const auto trace{options.contains("trace")};
@@ -203,6 +203,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
           schema_path);
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
     } catch (
@@ -232,6 +234,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
         schema_path);
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
   }
@@ -277,6 +281,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
           schema_path);
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
     }
@@ -295,30 +301,30 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   }
 
   if (trace && instance_arguments.size() > 1) {
-    throw std::runtime_error{
+    throw OptionConflictError{
         "The `--trace/-t` option is only allowed given a single instance"};
   }
 
   if (benchmark && instance_arguments.size() > 1) {
-    throw std::runtime_error{
+    throw OptionConflictError{
         "The `--benchmark/-b` option is only allowed given a single instance"};
   }
 
   for (const auto &instance_path_view : instance_arguments) {
     const std::filesystem::path instance_path{instance_path_view};
     if (trace && instance_path.extension() == ".jsonl") {
-      throw std::runtime_error{
+      throw OptionConflictError{
           "The `--trace/-t` option is only allowed given a single instance"};
     }
 
     if (trace && std::filesystem::is_directory(instance_path)) {
-      throw std::runtime_error{
+      throw OptionConflictError{
           "The `--trace/-t` option is only allowed given a single instance"};
     }
 
     if (benchmark && std::filesystem::is_directory(instance_path)) {
-      throw std::runtime_error{"The `--benchmark/-b` option is only allowed "
-                               "given a single instance"};
+      throw OptionConflictError{"The `--benchmark/-b` option is only allowed "
+                                "given a single instance"};
     }
     if (std::filesystem::is_directory(instance_path) ||
         instance_path.extension() == ".jsonl" ||
@@ -459,8 +465,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   }
 
   if (!result) {
-    // Report a different exit code for validation failures, to
-    // distinguish them from other errors
-    throw Fail{2};
+    throw Fail{EXIT_EXPECTED_FAILURE};
   }
 }

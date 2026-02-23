@@ -3,7 +3,6 @@
 
 #include <cassert>    // assert
 #include <cstdint>    // std::uint8_t
-#include <cstdlib>    // EXIT_FAILURE
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ofstream
 #include <iostream>   // std::cerr, std::cout
@@ -130,11 +129,13 @@ auto output_json(sourcemeta::core::JSON &events_array) -> void {
 
 enum class OrphanedBehavior : std::uint8_t { Delete, Error };
 
-auto make_on_event(const sourcemeta::core::Options &options, bool &had_error,
-                   const bool is_json, sourcemeta::core::JSON &events_array,
+auto make_on_event(const sourcemeta::core::Options &options,
+                   int &error_exit_code, const bool is_json,
+                   sourcemeta::core::JSON &events_array,
                    const OrphanedBehavior orphaned_behavior)
     -> sourcemeta::blaze::Configuration::FetchEvent::Callback {
-  return [&options, &had_error, is_json, &events_array, orphaned_behavior](
+  return [&options, &error_exit_code, is_json, &events_array,
+          orphaned_behavior](
              const sourcemeta::blaze::Configuration::FetchEvent &event)
              -> bool {
     using Type = sourcemeta::blaze::Configuration::FetchEvent::Type;
@@ -217,7 +218,7 @@ auto make_on_event(const sourcemeta::core::Options &options, bool &had_error,
 
         break;
       case Type::Untracked:
-        had_error = true;
+        error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
         if (is_json) {
           emit_json(events_array, "untracked", "uri", event.uri);
         } else {
@@ -235,12 +236,14 @@ auto make_on_event(const sourcemeta::core::Options &options, bool &had_error,
         if (orphaned_behavior == OrphanedBehavior::Delete) {
           std::filesystem::remove(event.path);
         } else {
-          had_error = true;
+          error_exit_code = sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE;
         }
 
         break;
       case Type::Error:
-        had_error = true;
+        error_exit_code = orphaned_behavior == OrphanedBehavior::Error
+                              ? sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE
+                              : sourcemeta::jsonschema::EXIT_OTHER_INPUT_ERROR;
         if (is_json) {
           auto json_event{sourcemeta::core::JSON::make_object()};
           json_event.assign("type", sourcemeta::core::JSON{"error"});
@@ -433,10 +436,10 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         return dependency_resolve(options, configuration, identifier);
       }};
 
-  bool had_error{false};
-  const auto on_event{make_on_event(options, had_error, is_json, events_array,
-                                    is_frozen ? OrphanedBehavior::Error
-                                              : OrphanedBehavior::Delete)};
+  int error_exit_code{0};
+  const auto on_event{make_on_event(
+      options, error_exit_code, is_json, events_array,
+      is_frozen ? OrphanedBehavior::Error : OrphanedBehavior::Delete)};
 
   if (is_frozen) {
     configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
@@ -454,8 +457,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     output_json(events_array);
   }
 
-  if (had_error) {
-    throw Fail{EXIT_FAILURE};
+  if (error_exit_code != 0) {
+    throw Fail{error_exit_code};
   }
 
   if (!is_frozen) {

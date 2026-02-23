@@ -13,8 +13,9 @@ type: string
 EOF
 
 "$1" lint "$TMP/schema.yaml" --fix --format >"$TMP/stderr.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The --fix option is not supported for YAML input files
@@ -25,8 +26,9 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" lint "$TMP/schema.yaml" --fix --format --json >"$TMP/stdout.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Not supported
+test "$EXIT_CODE" = "3" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

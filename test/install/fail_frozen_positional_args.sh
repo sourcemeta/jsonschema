@@ -18,7 +18,8 @@ EOF
 cd "$TMP/project"
 "$1" install --frozen https://example.com/schema ./vendor/schema.json > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: Do not use --frozen when adding a new dependency
@@ -30,7 +31,8 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" install --frozen --json https://example.com/schema ./vendor/schema.json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Invalid CLI arguments
+test "$EXIT_CODE" = "5" || exit 1
 
 cat << 'EOF' > "$TMP/expected_json.txt"
 {

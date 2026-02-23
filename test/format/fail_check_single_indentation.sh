@@ -16,8 +16,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --indentation 4 --check >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" fmt "$TMP/schema.json" --indentation 4 --check >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Format check failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.json

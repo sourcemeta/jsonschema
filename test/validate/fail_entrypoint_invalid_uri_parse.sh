@@ -20,8 +20,9 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --entrypoint 'https://example.com/foo bar' > "$TMP/output.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: The given entry point is not a valid URI or JSON Pointer
@@ -35,8 +36,9 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --entrypoint 'https://example.com/foo bar' --json > "$TMP/stdout.txt" 2>&1 \
-  && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

@@ -88,6 +88,9 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
+    } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+          entry.resolution_base);
     } catch (const sourcemeta::core::SchemaError &error) {
       throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
                                                      error.what());
@@ -118,8 +121,6 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
                 << "\n";
     }
 
-    // Report a different exit code for formatting check failures, to
-    // distinguish them from other errors
-    throw Fail{2};
+    throw Fail{EXIT_EXPECTED_FAILURE};
   }
 }

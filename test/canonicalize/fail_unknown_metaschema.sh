@@ -14,8 +14,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" canonicalize "$TMP/schema.json" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" canonicalize "$TMP/schema.json" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema
@@ -28,8 +29,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" canonicalize "$TMP/schema.json" --json >"$TMP/stdout.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" canonicalize "$TMP/schema.json" --json >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {

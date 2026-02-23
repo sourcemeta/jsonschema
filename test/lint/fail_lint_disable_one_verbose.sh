@@ -20,8 +20,9 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cd "$TMP"
-"$1" lint "$TMP/schema.json" --verbose --exclude enum_to_const >"$TMP/stderr.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" lint "$TMP/schema.json" --verbose --exclude enum_to_const >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 Disabling rule: enum_to_const

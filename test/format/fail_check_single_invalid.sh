@@ -16,8 +16,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --check >"$TMP/output.txt" 2>&1 && CODE="$?" || CODE="$?"
-test "$CODE" = "1" || exit 1
+"$1" fmt "$TMP/schema.json" --check >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Failed to parse the JSON document

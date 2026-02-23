@@ -27,8 +27,9 @@ cat << 'EOF' > "$TMP/schemas/schema_2.json"
 }
 EOF
 
-"$1" metaschema "$TMP/schemas" 2>"$TMP/stderr.txt" && CODE="$?" || CODE="$?"
-test "$CODE" = "2" || exit 1
+"$1" metaschema "$TMP/schemas" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Metaschema validation failure
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schemas/schema_2.json

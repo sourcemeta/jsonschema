@@ -5,7 +5,6 @@
 #include <sourcemeta/core/json.h>
 
 #include <chrono>      // std::chrono
-#include <cstdlib>     // EXIT_FAILURE
 #include <iostream>    // std::cerr, std::cout
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
@@ -67,6 +66,12 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     }
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    if (!json_output) {
+      std::cout << entry.first << ":\n";
+    }
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
   } catch (...) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
@@ -157,7 +162,8 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
   }
 
   if (!result) {
-    throw sourcemeta::jsonschema::Fail{2};
+    throw sourcemeta::jsonschema::Fail{
+        sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE};
   }
 }
 
@@ -313,7 +319,8 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
   std::cout << "\n";
 
   if (!result) {
-    throw sourcemeta::jsonschema::Fail{2};
+    throw sourcemeta::jsonschema::Fail{
+        sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE};
   }
 }
 

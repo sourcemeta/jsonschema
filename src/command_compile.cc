@@ -54,8 +54,14 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
       frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
                     dialect, schema_default_id);
 
-      const auto entrypoint_uri{resolve_entrypoint(
-          frame, std::string{options.at("entrypoint").front()})};
+      std::string entrypoint_uri;
+      try {
+        entrypoint_uri = resolve_entrypoint(
+            frame, std::string{options.at("entrypoint").front()});
+      } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
+        throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(
+            schema_path, error);
+      }
 
       schema_template = sourcemeta::blaze::compile(
           bundled, sourcemeta::core::schema_walker, custom_resolver,
@@ -91,6 +97,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
         schema_path);
+  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaError &error) {
     throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
   }

@@ -26,7 +26,8 @@ EOF
 cd "$TMP/project"
 "$1" install --frozen > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 error: Lock file is corrupted
@@ -37,7 +38,8 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" install --frozen --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "1" || exit 1
+# Other input error
+test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {

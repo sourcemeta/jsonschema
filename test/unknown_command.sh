@@ -6,10 +6,11 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-"$1" unknown_command 1> "$TMP/stdout" 2> "$TMP/stderr" && CODE="$?" || CODE="$?"
-if [ "$CODE" != "1" ]
+"$1" unknown_command 1> "$TMP/stdout" 2> "$TMP/stderr" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Invalid CLI arguments
+if [ "$EXIT_CODE" != "5" ]
 then
-  echo "FAIL: Unknown command did not return exit code 1" 1>&2
+  echo "FAIL: Unknown command did not return exit code 5" 1>&2
   exit 1
 fi
 if [ -s "$TMP/stdout" ]
