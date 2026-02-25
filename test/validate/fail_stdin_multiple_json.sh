@@ -1,5 +1,8 @@
 #!/bin/sh
-set -e
+
+set -o errexit
+set -o nounset
+
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
@@ -11,7 +14,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '"foo"' | "$1" validate "$TMP/schema.json" - - --json > "$TMP/output.json" 2>&1 \
+echo '"foo"' | "$1" validate "$TMP/schema.json" - - --json >"$TMP/output.json" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1
 

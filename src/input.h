@@ -18,8 +18,8 @@
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::ref, std::hash
 #include <iostream>      // std::cin
+#include <optional>      // std::optional
 #include <set>           // std::set
-#include <sstream>       // std::ostringstream
 #include <stdexcept>     // std::runtime_error
 #include <string>        // std::string
 #include <unordered_set> // std::unordered_set
@@ -181,9 +181,6 @@ handle_json_entry(const std::filesystem::path &entry_path,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options) -> void {
   if (entry_path == "-") {
-    // We treat stdin as a single file, and its "resolution base" is
-    // the current working directory, so relative references are resolved
-    // against where the command is being run
     auto parsed{read_from_stdin()};
     const auto current_path{std::filesystem::current_path()};
     result.push_back({current_path.string(), current_path,

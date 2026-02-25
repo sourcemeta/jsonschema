@@ -1,5 +1,8 @@
 #!/bin/sh
-set -e
+
+set -o errexit
+set -o nounset
+
 TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT

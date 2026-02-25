@@ -14,12 +14,29 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-# Should fail validation via stdin (exit code 2)
-echo '123' | "$1" validate "$TMP/schema.json" - --json > "$TMP/output.json" 2>&1 \
+echo '123' | "$1" validate "$TMP/schema.json" - --json >"$TMP/stdout.json" 2>"$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "2" || exit 1
 
-# Validate that JSON output has the correct structure
-grep -q '"valid": false' "$TMP/output.json" || exit 1
-grep -q '"errors"' "$TMP/output.json" || exit 1
-grep -q '"keywordLocation"' "$TMP/output.json" || exit 1
+cat << EOF > "$TMP/expected_stderr.txt"
+$(pwd)
+EOF
+
+diff "$TMP/stderr.txt" "$TMP/expected_stderr.txt"
+
+cat << EOF > "$TMP/expected.json"
+{
+  "valid": false,
+  "errors": [
+    {
+      "keywordLocation": "/type",
+      "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/type",
+      "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 3 ],
+      "error": "The value was expected to be of type string but it was of type integer"
+    }
+  ]
+}
+EOF
+
+diff "$TMP/stdout.json" "$TMP/expected.json"

@@ -7,19 +7,16 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-# fmt --check does not support stdin (JSON error output)
 cat << 'EOF' | "$1" fmt --check - --json >"$TMP/output.json" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
-}
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
 EOF
-test "$EXIT_CODE" = "1" || exit 1
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.json"
 {
-  "error": "The --check option does not support standard input"
+  "valid": false,
+  "errors": [ "(stdin)" ]
 }
 EOF
 
