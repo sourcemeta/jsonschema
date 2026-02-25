@@ -7,18 +7,16 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-# fmt --check does not support stdin
-cat << 'EOF' | "$1" fmt --check - 2>"$TMP/stderr.txt" \
+cat << 'EOF' | "$1" fmt --check - >"$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string"
-}
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
 EOF
-test "$EXIT_CODE" = "1" || exit 1
+test "$EXIT_CODE" = "2" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
-error: The --check option does not support standard input
+fail: (stdin)
+
+Run the `fmt` command without `--check/-c` to fix the formatting
 EOF
 
-diff "$TMP/stderr.txt" "$TMP/expected.txt"
+diff "$TMP/output.txt" "$TMP/expected.txt"

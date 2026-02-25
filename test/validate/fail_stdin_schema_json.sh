@@ -11,7 +11,6 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-# Schema from stdin + instance from stdin JSON error output
 "$1" validate - "$TMP/instance.json" - --json >"$TMP/output.json" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "1" || exit 1

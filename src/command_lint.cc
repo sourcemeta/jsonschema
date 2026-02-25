@@ -329,11 +329,6 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
   if (options.contains("fix")) {
     const auto entries = for_each_json(options);
-    for (const auto &entry : entries) {
-      if (entry.from_stdin) {
-        throw StdinError{"The --fix option does not support standard input"};
-      }
-    }
 
     for (const auto &entry : entries) {
       const auto configuration_path{find_configuration(entry.resolution_base)};
@@ -450,7 +445,17 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           result = false;
         }
 
-        if (format_output) {
+        if (entry.from_stdin) {
+          if (format_output) {
+            if (!keep_ordering) {
+              sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                       custom_resolver, dialect);
+            }
+          }
+
+          sourcemeta::core::prettify(copy, std::cout, indentation);
+          std::cout << "\n";
+        } else if (format_output) {
           if (!keep_ordering) {
             sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
                                      custom_resolver, dialect);

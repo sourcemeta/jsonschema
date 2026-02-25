@@ -332,6 +332,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     instance_arguments.push_back(".");
   }
 
+  check_no_duplicate_stdin(instance_arguments);
+
   if (trace && instance_arguments.size() > 1) {
     throw OptionConflictError{
         "The `--trace/-t` option is only allowed given a single instance"};
@@ -342,7 +344,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "The `--benchmark/-b` option is only allowed given a single instance"};
   }
 
-<<<<<<< HEAD
   for (const auto &instance_path_view : instance_arguments) {
     const std::filesystem::path instance_path{instance_path_view};
     if (trace && instance_path.extension() == ".jsonl") {
@@ -416,8 +417,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
           LOG_VERBOSE(options)
               << "\n  matches "
-              << sourcemeta::core::weakly_canonical(
-                     schema_resolution_base).string()
+              << sourcemeta::core::weakly_canonical(schema_resolution_base)
+                     .string()
               << "\n";
           print_annotations(output, options, entry.positions, std::cerr);
         } else {
@@ -435,58 +436,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           if (entry.multidocument) {
             break;
           }
-=======
-  for (const auto &entry : entries) {
-    std::ostringstream error;
-    sourcemeta::blaze::SimpleOutput output{entry.second};
-    sourcemeta::blaze::TraceOutput trace_output{
-        sourcemeta::core::schema_walker, custom_resolver,
-        sourcemeta::core::empty_weak_pointer, frame};
-    bool subresult{true};
-    if (benchmark) {
-      subresult = run_loop(
-          evaluator, schema_template, entry.second, entry.first,
-          entry.multidocument ? static_cast<std::int64_t>(entry.index + 1)
-                              : static_cast<std::int64_t>(-1),
-          benchmark_loop);
-      if (!subresult) {
-        error << "error: Schema validation failure\n";
-        result = false;
-      }
-    } else if (trace) {
-      subresult = evaluator.validate(schema_template, entry.second,
-                                     std::ref(trace_output));
-    } else if (fast_mode) {
-      subresult = evaluator.validate(schema_template, entry.second);
-    } else if (!json_output) {
-      subresult =
-          evaluator.validate(schema_template, entry.second, std::ref(output));
-    }
-
-    if (benchmark) {
-      continue;
-    } else if (trace) {
-      print(trace_output, entry.positions, std::cout);
-      result = subresult;
-    } else if (json_output) {
-      if (!entry.multidocument && entries.size() > 1) {
-        std::cerr << entry.first << "\n";
-      }
-      const auto suboutput{sourcemeta::blaze::standard(
-          evaluator, schema_template, entry.second,
-          fast_mode ? sourcemeta::blaze::StandardOutput::Flag
-                    : sourcemeta::blaze::StandardOutput::Basic,
-          entry.positions)};
-      assert(suboutput.is_object());
-      assert(suboutput.defines("valid"));
-      assert(suboutput.at("valid").is_boolean());
-      sourcemeta::core::prettify(suboutput, std::cout);
-      std::cout << "\n";
-      if (!suboutput.at("valid").to_boolean()) {
-        result = false;
-        if (entry.multidocument) {
-          break;
->>>>>>> b624d7ae (fix: address stdin support PR review issues)
         }
       }
     } else {
@@ -540,8 +489,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "
-            << sourcemeta::core::weakly_canonical(
-                   schema_resolution_base).string()
+            << sourcemeta::core::weakly_canonical(schema_resolution_base)
+                   .string()
             << "\n";
         print_annotations(output, options, tracker, std::cerr);
       } else {
