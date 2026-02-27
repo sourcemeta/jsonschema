@@ -252,10 +252,10 @@ License
 This project is released under the terms of the [GNU Affero General Public
 License v3.0](./LICENSE).
 
-**A note for enterprises:** Using the JSON Schema CLI during local development
-or as part of your CI/CD pipelines does not trigger the AGPL copyleft
-requirements. Your schemas, data, and surrounding code remain entirely yours.
-The copyleft provisions only apply if you modify the CLI source code itself or
-embed it within your own software. This is the same way that managing your
-proprietary code with [Git](https://git-scm.com) does not make your code
-subject to the [GPL](https://www.gnu.org/licenses/gpl-3.0.en.html).
+**A note for enterprises:** Using the JSON Schema CLI as a tool during local
+development or as part of your CI/CD pipelines does not trigger the AGPL
+copyleft requirements. Your schemas, data, and surrounding code remain entirely
+yours. This is the same way that managing your proprietary code with
+[Git](https://git-scm.com) does not make your code subject to the
+[GPL](https://www.gnu.org/licenses/gpl-3.0.en.html). For any other use, please
+refer to the full [license](./LICENSE).
