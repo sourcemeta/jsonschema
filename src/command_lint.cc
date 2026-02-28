@@ -206,7 +206,11 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     input_paths.emplace_back(std::filesystem::current_path());
   } else {
     for (const auto &argument : options.positional()) {
-      input_paths.emplace_back(std::filesystem::weakly_canonical(argument));
+      if (argument == "-") {
+        input_paths.emplace_back(std::filesystem::current_path());
+      } else {
+        input_paths.emplace_back(std::filesystem::weakly_canonical(argument));
+      }
     }
   }
 
@@ -324,7 +328,9 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   const auto indentation{parse_indentation(options)};
 
   if (options.contains("fix")) {
-    for (const auto &entry : for_each_json(options)) {
+    const auto entries = for_each_json(options);
+
+    for (const auto &entry : entries) {
       const auto configuration_path{find_configuration(entry.resolution_base)};
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
@@ -439,7 +445,17 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           result = false;
         }
 
-        if (format_output) {
+        if (entry.from_stdin) {
+          if (format_output) {
+            if (!keep_ordering) {
+              sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                       custom_resolver, dialect);
+            }
+          }
+
+          sourcemeta::core::prettify(copy, std::cout, indentation);
+          std::cout << "\n";
+        } else if (format_output) {
           if (!keep_ordering) {
             sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
                                      custom_resolver, dialect);

@@ -72,6 +72,10 @@ add_jsonschema_test_unix(format/fail_custom_extension_yaml)
 add_jsonschema_test_unix(format/fail_invalid_id_type)
 add_jsonschema_test_unix(format/fail_invalid_schema_uri)
 add_jsonschema_test_unix(format/pass_config_ignore)
+add_jsonschema_test_unix(format/pass_stdin)
+add_jsonschema_test_unix(format/pass_stdin_check)
+add_jsonschema_test_unix(format/fail_stdin_check)
+add_jsonschema_test_unix(format/fail_stdin_check_json)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_enoent)
@@ -217,6 +221,14 @@ add_jsonschema_test_unix(validate/fail_entrypoint_mismatch)
 add_jsonschema_test_unix(validate/fail_entrypoint_with_template)
 add_jsonschema_test_unix(validate/pass_config_ignore)
 add_jsonschema_test_unix(validate/pass_config_ignore_with_cli)
+add_jsonschema_test_unix(validate/pass_stdin_instance)
+add_jsonschema_test_unix(validate/fail_stdin_instance)
+add_jsonschema_test_unix(validate/fail_stdin_instance_json)
+add_jsonschema_test_unix(validate/pass_stdin_schema)
+add_jsonschema_test_unix(validate/fail_stdin_schema)
+add_jsonschema_test_unix(validate/fail_stdin_schema_json)
+add_jsonschema_test_unix(validate/fail_stdin_multiple)
+add_jsonschema_test_unix(validate/fail_stdin_multiple_json)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -253,6 +265,7 @@ add_jsonschema_test_unix(metaschema/pass_custom_extension_yaml)
 add_jsonschema_test_unix(metaschema/fail_draft7_defs_ref_target)
 add_jsonschema_test_unix(metaschema/fail_draft4_x_keyword_ref_target)
 add_jsonschema_test_unix(metaschema/pass_config_ignore)
+add_jsonschema_test_unix(metaschema/pass_stdin_metaschema)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -620,6 +633,8 @@ add_jsonschema_test_unix(lint/pass_lint_config_rule_other_directory)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_other_directory)
 add_jsonschema_test_unix(lint/fail_lint_config_rule_extension_mismatch)
 add_jsonschema_test_unix(lint/pass_lint_config_ignore)
+add_jsonschema_test_unix(lint/pass_stdin_lint)
+add_jsonschema_test_unix(lint/pass_stdin_fix)
 
 # Install
 add_jsonschema_test_unix(install/fail_no_configuration)

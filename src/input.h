@@ -12,13 +12,15 @@
 #include "configuration.h"
 #include "logger.h"
 
-#include <algorithm>     // std::any_of, std::none_of, std::sort
+#include <algorithm>     // std::any_of, std::none_of, std::sort, std::count
 #include <cstddef>       // std::size_t
 #include <cstdint>       // std::uintptr_t
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::ref, std::hash
+#include <iostream>      // std::cin
+#include <optional>      // std::optional
 #include <set>           // std::set
-#include <sstream>       // std::ostringstream
+#include <stdexcept>     // std::runtime_error
 #include <string>        // std::string
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
@@ -33,6 +35,7 @@ struct InputJSON {
   std::size_t index{0};
   bool multidocument{false};
   bool yaml{false};
+  bool from_stdin{false};
   auto operator<(const InputJSON &other) const noexcept -> bool {
     return this->first < other.first;
   }
@@ -162,12 +165,30 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
+// stdin is a non-seekable stream, so we cannot retry parsing after failure.
+// Unlike file-based input where we detect format by extension or try JSON
+// then YAML, stdin only supports JSON input.
+inline auto read_from_stdin() -> ParsedJSON {
+  sourcemeta::core::PointerPositionTracker positions;
+  return {sourcemeta::core::parse_json(std::cin, std::ref(positions)),
+          std::move(positions), false};
+}
+
 inline auto
 handle_json_entry(const std::filesystem::path &entry_path,
                   const std::set<std::filesystem::path> &blacklist,
                   const std::set<std::string> &extensions,
                   std::vector<sourcemeta::jsonschema::InputJSON> &result,
                   const sourcemeta::core::Options &options) -> void {
+  if (entry_path == "-") {
+    auto parsed{read_from_stdin()};
+    const auto current_path{std::filesystem::current_path()};
+    result.push_back({current_path.string(), current_path,
+                      std::move(parsed.document), std::move(parsed.positions),
+                      0, false, parsed.yaml, true});
+    return;
+  }
+
   if (std::filesystem::is_directory(entry_path)) {
     for (auto const &entry :
          std::filesystem::recursive_directory_iterator{entry_path}) {
@@ -272,7 +293,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
                             true});
         }
       } else {
-        if (std::filesystem::is_empty(canonical)) {
+        if (std::filesystem::is_regular_file(canonical) &&
+            std::filesystem::is_empty(canonical)) {
           return;
         }
         // TODO: Print a verbose message for what is getting parsed
@@ -287,9 +309,19 @@ handle_json_entry(const std::filesystem::path &entry_path,
 
 } // namespace
 
+inline auto
+check_no_duplicate_stdin(const std::vector<std::string_view> &arguments)
+    -> void {
+  if (std::count(arguments.cbegin(), arguments.cend(), "-") > 1) {
+    throw StdinError("Cannot read from standard input more than once");
+  }
+}
+
 inline auto for_each_json(const std::vector<std::string_view> &arguments,
                           const sourcemeta::core::Options &options)
     -> std::vector<InputJSON> {
+  check_no_duplicate_stdin(arguments);
+
   auto blacklist{parse_ignore(options)};
   std::vector<InputJSON> result;
 
@@ -314,6 +346,11 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
   } else {
     std::unordered_set<std::string> seen_configurations;
     for (const auto &entry : arguments) {
+      // Skip stdin when looking for configurations
+      if (entry == "-") {
+        continue;
+      }
+
       const auto entry_path{
           sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
       const auto configuration_path{

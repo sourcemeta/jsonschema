@@ -20,7 +20,86 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   bool result{true};
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
-  for (const auto &entry : for_each_json(options)) {
+
+  // Helper lambda to handle a single stdin entry.
+  // For --check, we must locally buffer stdin to compare raw input against
+  // expected formatted output. This is the same approach used for files
+  // (which re-read the file for comparison). For non-check, we parse
+  // directly from std::cin and write straight to stdout (no buffering).
+  const auto handle_stdin = [&]() {
+    try {
+      const auto current_path{std::filesystem::current_path()};
+      const auto configuration_path{find_configuration(current_path)};
+      const auto &configuration{
+          read_configuration(options, configuration_path, current_path)};
+      const auto dialect{default_dialect(options, configuration)};
+      const auto &custom_resolver{
+          resolver(options, options.contains("http"), dialect, configuration)};
+
+      if (options.contains("check")) {
+        std::ostringstream stdin_buf;
+        stdin_buf << std::cin.rdbuf();
+        const auto raw_stdin{stdin_buf.str()};
+        std::istringstream parse_stream{raw_stdin};
+        const auto document{sourcemeta::core::parse_json(parse_stream)};
+
+        std::ostringstream expected;
+        if (options.contains("keep-ordering")) {
+          sourcemeta::core::prettify(document, expected, indentation);
+        } else {
+          auto copy = document;
+          sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                   custom_resolver, dialect);
+          sourcemeta::core::prettify(copy, expected, indentation);
+        }
+        expected << "\n";
+
+        if (raw_stdin == expected.str()) {
+          LOG_VERBOSE(options) << "ok: (stdin)\n";
+        } else if (output_json) {
+          failed_files.push_back("(stdin)");
+          result = false;
+        } else {
+          std::cerr << "fail: (stdin)\n";
+          result = false;
+        }
+      } else {
+        const auto document{sourcemeta::core::parse_json(std::cin)};
+        if (options.contains("keep-ordering")) {
+          sourcemeta::core::prettify(document, std::cout, indentation);
+        } else {
+          auto copy = document;
+          sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
+                                   custom_resolver, dialect);
+          sourcemeta::core::prettify(copy, std::cout, indentation);
+        }
+        std::cout << "\n";
+      }
+    } catch (const sourcemeta::core::SchemaKeywordError &error) {
+      throw FileError<sourcemeta::core::SchemaKeywordError>(
+          std::filesystem::current_path(), error);
+    } catch (const sourcemeta::core::SchemaFrameError &error) {
+      throw FileError<sourcemeta::core::SchemaFrameError>(
+          std::filesystem::current_path(), error);
+    } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
+                 &error) {
+      throw FileError<
+          sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+          std::filesystem::current_path(), error);
+    } catch (const sourcemeta::core::SchemaResolutionError &error) {
+      throw FileError<sourcemeta::core::SchemaResolutionError>(
+          std::filesystem::current_path(), error);
+    } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+          std::filesystem::current_path());
+    } catch (const sourcemeta::core::SchemaError &error) {
+      throw FileError<sourcemeta::core::SchemaError>(
+          std::filesystem::current_path(), error.what());
+    }
+  };
+
+  // Helper lambda to handle a single file entry from for_each_json
+  const auto handle_file_entry = [&](const InputJSON &entry) {
     if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",
                            entry.resolution_base};
@@ -94,6 +173,26 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaError &error) {
       throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
                                                      error.what());
+    }
+  };
+
+  // Process arguments in order to preserve argument ordering semantics.
+  // When no positional arguments are given, default to for_each_json(options)
+  // which scans the current directory.
+  if (options.positional().empty()) {
+    for (const auto &entry : for_each_json(options)) {
+      handle_file_entry(entry);
+    }
+  } else {
+    check_no_duplicate_stdin(options.positional());
+    for (const auto &arg : options.positional()) {
+      if (arg == "-") {
+        handle_stdin();
+      } else {
+        for (const auto &entry : for_each_json({arg}, options)) {
+          handle_file_entry(entry);
+        }
+      }
     }
   }
 
