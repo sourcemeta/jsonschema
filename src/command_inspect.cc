@@ -166,8 +166,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   }
 
   const auto schema_resolution_base{
-      schema_from_stdin ? std::filesystem::current_path()
-                        : std::filesystem::path{std::string{schema_path}}};
+      schema_from_stdin ? std::filesystem::current_path() : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
   const sourcemeta::core::JSON schema{
@@ -175,6 +174,10 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
           ? sourcemeta::core::parse_json(std::cin, std::ref(positions))
           : sourcemeta::core::read_yaml_or_json(schema_path,
                                                 std::ref(positions))};
+
+  if (!sourcemeta::core::is_schema(schema)) {
+    throw NotSchemaError{schema_resolution_base};
+  }
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{

@@ -152,9 +152,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   }
 
   // For stdin, use the current working directory as the resolution base
-  const auto schema_resolution_base{
-      schema_from_stdin ? std::filesystem::current_path()
-                        : std::filesystem::path{std::string{schema_path}}};
+  const auto schema_resolution_base{schema_from_stdin
+                                        ? std::filesystem::current_path()
+                                        : std::filesystem::path(schema_path)};
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{

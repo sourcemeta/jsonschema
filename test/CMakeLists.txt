@@ -77,6 +77,7 @@ add_jsonschema_test_unix(format/pass_stdin_check)
 add_jsonschema_test_unix(format/pass_stdin_verbose)
 add_jsonschema_test_unix(format/pass_stdin_check_verbose)
 add_jsonschema_test_unix(format/fail_stdin_check)
+add_jsonschema_test_unix(format/fail_stdin_duplicate)
 
 # Validate
 add_jsonschema_test_unix(validate/fail_instance_enoent)
@@ -269,6 +270,7 @@ add_jsonschema_test_unix(metaschema/fail_draft4_x_keyword_ref_target)
 add_jsonschema_test_unix(metaschema/pass_config_ignore)
 add_jsonschema_test_unix(metaschema/pass_stdin_metaschema)
 add_jsonschema_test_unix(metaschema/pass_stdin_metaschema_verbose)
+add_jsonschema_test_unix(metaschema/fail_stdin_metaschema)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -382,6 +384,7 @@ add_jsonschema_test_unix(bundle/pass_config_ignore)
 add_jsonschema_test_unix(bundle/pass_ref_in_bundled_resolves_against_id)
 add_jsonschema_test_unix(bundle/pass_resolve_deduplicate_embedded)
 add_jsonschema_test_unix(bundle/pass_stdin)
+add_jsonschema_test_unix(bundle/fail_stdin_not_schema)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
@@ -405,6 +408,8 @@ add_jsonschema_test_unix(inspect/pass_custom_extension_yaml)
 add_jsonschema_test_unix(inspect/fail_invalid_id_type)
 add_jsonschema_test_unix(inspect/fail_invalid_schema_uri)
 add_jsonschema_test_unix(inspect/pass_stdin)
+add_jsonschema_test_unix(inspect/pass_stdin_json)
+add_jsonschema_test_unix(inspect/fail_stdin_not_schema)
 
 # Compile
 add_jsonschema_test_unix(compile/pass)
@@ -460,6 +465,7 @@ add_jsonschema_test_unix(canonicalize/fail_unknown_metaschema)
 add_jsonschema_test_unix(canonicalize/fail_invalid_id_type)
 add_jsonschema_test_unix(canonicalize/fail_invalid_schema_uri)
 add_jsonschema_test_unix(canonicalize/pass_stdin)
+add_jsonschema_test_unix(canonicalize/fail_stdin_not_schema)
 
 # Codegen
 add_jsonschema_test_unix(codegen/pass_typescript)

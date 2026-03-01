@@ -32,8 +32,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   }
 
   const auto schema_resolution_base{
-      schema_from_stdin ? std::filesystem::current_path()
-                        : std::filesystem::path{std::string{schema_path}}};
+      schema_from_stdin ? std::filesystem::current_path() : schema_path};
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{
@@ -42,6 +41,11 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   auto schema{schema_from_stdin
                   ? sourcemeta::core::parse_json(std::cin)
                   : sourcemeta::core::read_yaml_or_json(schema_path)};
+
+  if (!sourcemeta::core::is_schema(schema)) {
+    throw NotSchemaError{schema_resolution_base};
+  }
+
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 

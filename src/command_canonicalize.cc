@@ -38,8 +38,7 @@ auto sourcemeta::jsonschema::canonicalize(
   }
 
   const auto schema_resolution_base{
-      schema_from_stdin ? std::filesystem::current_path()
-                        : std::filesystem::path{std::string{schema_path}}};
+      schema_from_stdin ? std::filesystem::current_path() : schema_path};
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{
