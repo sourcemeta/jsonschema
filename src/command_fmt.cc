@@ -55,12 +55,12 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         expected << "\n";
 
         if (raw_stdin == expected.str()) {
-          LOG_VERBOSE(options) << "ok: (stdin)\n";
+          LOG_VERBOSE(options) << "ok: <stdin>\n";
         } else if (output_json) {
-          failed_files.push_back("(stdin)");
+          failed_files.push_back("<stdin>");
           result = false;
         } else {
-          std::cerr << "fail: (stdin)\n";
+          std::cerr << "fail: <stdin>\n";
           result = false;
         }
       } else {

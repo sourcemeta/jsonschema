@@ -142,15 +142,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto &schema_path{options.positional().at(0)};
   const bool schema_from_stdin = (schema_path == "-");
 
-  // Cannot use stdin for both schema and instances
-  if (schema_from_stdin) {
-    for (std::size_t i = 1; i < options.positional().size(); ++i) {
-      if (options.positional().at(i) == "-") {
-        throw StdinError{
-            "Cannot read both schema and instance from standard input"};
-      }
-    }
-  }
+  // Centralized duplicate stdin check for all positional arguments
+  check_no_duplicate_stdin(options.positional());
 
   if (!schema_from_stdin && std::filesystem::is_directory(schema_path)) {
     throw std::filesystem::filesystem_error{
@@ -335,8 +328,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     instance_arguments.push_back(".");
   }
 
-  check_no_duplicate_stdin(instance_arguments);
-
   if (trace && instance_arguments.size() > 1) {
     throw OptionConflictError{
         "The `--trace/-t` option is only allowed given a single instance"};
@@ -420,8 +411,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
           LOG_VERBOSE(options)
               << "\n  matches "
-              << sourcemeta::core::weakly_canonical(schema_resolution_base)
-                     .string()
+              << (schema_from_stdin ? "<stdin>"
+                                    : sourcemeta::core::weakly_canonical(
+                                          schema_resolution_base)
+                                          .string())
               << "\n";
           print_annotations(output, options, entry.positions, std::cerr);
         } else {
@@ -492,8 +485,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "
-            << sourcemeta::core::weakly_canonical(schema_resolution_base)
-                   .string()
+            << (schema_from_stdin
+                    ? "<stdin>"
+                    : sourcemeta::core::weakly_canonical(schema_resolution_base)
+                          .string())
             << "\n";
         print_annotations(output, options, tracker, std::cerr);
       } else {

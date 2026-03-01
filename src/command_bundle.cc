@@ -4,11 +4,12 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <iostream> // std::cout
+#include <iostream> // std::cin, std::cout
 
 #include "command.h"
 #include "configuration.h"
 #include "error.h"
+#include "input.h"
 #include "logger.h"
 #include "resolver.h"
 #include "utils.h"
@@ -22,18 +23,32 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   }
 
   const std::filesystem::path schema_path{options.positional().front()};
-  const auto configuration_path{find_configuration(schema_path)};
+  const bool schema_from_stdin = (schema_path == "-");
+
+  if (!schema_from_stdin && std::filesystem::is_directory(schema_path)) {
+    throw std::filesystem::filesystem_error{
+        "The input was supposed to be a file but it is a directory",
+        schema_path, std::make_error_code(std::errc::is_a_directory)};
+  }
+
+  const auto schema_resolution_base{
+      schema_from_stdin ? std::filesystem::current_path()
+                        : std::filesystem::path{std::string{schema_path}}};
+
+  const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{
-      read_configuration(options, configuration_path, schema_path)};
+      read_configuration(options, configuration_path, schema_resolution_base)};
   const auto dialect{default_dialect(options, configuration)};
-  auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto schema{schema_from_stdin
+                  ? sourcemeta::core::parse_json(std::cin)
+                  : sourcemeta::core::read_yaml_or_json(schema_path)};
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
   try {
-    sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
-                             custom_resolver, dialect,
-                             sourcemeta::jsonschema::default_id(schema_path));
+    sourcemeta::core::bundle(
+        schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
+        sourcemeta::jsonschema::default_id(schema_resolution_base));
 
     if (options.contains("without-id")) {
       sourcemeta::jsonschema::LOG_WARNING()
@@ -56,27 +71,31 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+    throw FileError<sourcemeta::core::SchemaKeywordError>(
+        schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
+    throw FileError<sourcemeta::core::SchemaFrameError>(schema_resolution_base,
+                                                        error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_path, std::string{error.identifier()}, error.location(),
-        error.what());
+        schema_resolution_base, std::string{error.identifier()},
+        error.location(), error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-        schema_path, error);
+        schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                             error);
+    throw FileError<sourcemeta::core::SchemaResolutionError>(
+        schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_path);
+        schema_resolution_base);
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
+    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
+        schema_resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+    throw FileError<sourcemeta::core::SchemaError>(schema_resolution_base,
+                                                   error.what());
   }
 
   sourcemeta::core::prettify(schema, std::cout);

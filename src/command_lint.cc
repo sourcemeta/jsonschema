@@ -107,7 +107,12 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
 
         errors_array.push_back(error_obj);
       } else {
-        std::cout << std::filesystem::relative(entry.resolution_base).string();
+        if (entry.from_stdin) {
+          std::cout << "<stdin>";
+        } else {
+          std::cout
+              << std::filesystem::relative(entry.resolution_base).string();
+        }
         if (position.has_value()) {
           std::cout << ":";
           std::cout << std::get<0>(position.value());
