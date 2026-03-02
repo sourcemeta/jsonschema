@@ -364,6 +364,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       for (const auto &entry : for_each_json({instance_path_view}, options)) {
         std::ostringstream error;
         sourcemeta::blaze::SimpleOutput output{entry.second};
+        sourcemeta::blaze::TraceOutput trace_output{
+            sourcemeta::core::schema_walker, custom_resolver,
+            sourcemeta::core::empty_weak_pointer, frame};
         bool subresult{true};
         if (benchmark) {
           subresult = run_loop(
@@ -375,6 +378,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             error << "error: Schema validation failure\n";
             result = false;
           }
+        } else if (trace) {
+          subresult = evaluator.validate(schema_template, entry.second,
+                                         std::ref(trace_output));
         } else if (fast_mode) {
           subresult = evaluator.validate(schema_template, entry.second);
         } else if (!json_output) {
@@ -384,6 +390,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
         if (benchmark) {
           continue;
+        } else if (trace) {
+          print(trace_output, entry.positions, std::cout);
+          result = result && subresult;
         } else if (json_output) {
           if (!entry.multidocument) {
             std::cerr << entry.first << "\n";
@@ -464,7 +473,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
       if (trace) {
         print(trace_output, tracker, std::cout);
-        result = subresult;
+        result = result && subresult;
       } else if (json_output) {
         const auto suboutput{sourcemeta::blaze::standard(
             evaluator, schema_template, instance,

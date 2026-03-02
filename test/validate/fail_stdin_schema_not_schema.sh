@@ -7,11 +7,14 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
+cat << 'EOF' > "$TMP/instance.json"
+{ "foo": "bar" }
+EOF
+
 CWD="$(pwd -P)"
 
-echo '[ 1, 2, 3 ]' | "$1" inspect - 2>"$TMP/stderr.txt" \
+echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" 2>"$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
 test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
@@ -22,7 +25,7 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '[ 1, 2, 3 ]' | "$1" inspect - --json >"$TMP/stdout.txt" \
+echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" --json >"$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "4" || exit 1
 
