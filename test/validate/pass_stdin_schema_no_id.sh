@@ -7,12 +7,13 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" lint - > "$TMP/output.txt" 2>&1
+cat << 'EOF' > "$TMP/instance.json"
+"hello"
+EOF
+
+cat << 'EOF' | "$1" validate - "$TMP/instance.json" > "$TMP/output.txt" 2>&1
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Test",
-  "description": "Test description",
-  "examples": ["foo"],
   "type": "string"
 }
 EOF

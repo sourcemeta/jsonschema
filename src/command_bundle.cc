@@ -5,6 +5,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include <iostream> // std::cin, std::cout
+#include <sstream>  // std::ostringstream, std::istringstream
 
 #include "command.h"
 #include "configuration.h"
@@ -38,12 +39,28 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
   const auto &configuration{
       read_configuration(options, configuration_path, schema_resolution_base)};
   const auto dialect{default_dialect(options, configuration)};
-  auto schema{schema_from_stdin
-                  ? sourcemeta::core::parse_json(std::cin)
-                  : sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto schema{
+      schema_from_stdin ? [&]() {
+        std::ostringstream buffer;
+        buffer << std::cin.rdbuf();
+        const auto input{buffer.str()};
+        try {
+          std::istringstream stream{input};
+          return sourcemeta::core::parse_json(stream);
+        } catch (const sourcemeta::core::JSONParseError &json_error) {
+          try {
+            std::istringstream stream{input};
+            return sourcemeta::core::parse_yaml(stream);
+          } catch (...) {
+            throw json_error;
+          }
+        }
+      }()
+                        : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    throw NotSchemaError{schema_resolution_base};
+    throw NotSchemaError{schema_from_stdin ? stdin_error_path()
+                                           : schema_resolution_base};
   }
 
   const auto &custom_resolver{

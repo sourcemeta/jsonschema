@@ -19,7 +19,5 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '{ "foo": "bar" }' | "$1" validate "$TMP/schema.json" - --benchmark > "$TMP/output.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
+echo '{ "foo": "bar" }' | "$1" validate "$TMP/schema.json" - --benchmark > "$TMP/output.txt"
 test -s "$TMP/output.txt" || exit 1

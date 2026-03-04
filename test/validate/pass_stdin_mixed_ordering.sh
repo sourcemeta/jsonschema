@@ -23,19 +23,15 @@ cat << 'EOF' > "$TMP/instance2.json"
 EOF
 
 echo '{ "c": 3 }' | "$1" validate "$TMP/schema.json" \
-  "$TMP/instance1.json" - "$TMP/instance2.json" --verbose 2>"$TMP/stderr.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
-
-TMPREAL="$(cd "$TMP" && pwd -P)"
+  "$TMP/instance1.json" - "$TMP/instance2.json" --verbose 2>"$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
-ok: $TMPREAL/instance1.json
-  matches $TMPREAL/schema.json
+ok: $(realpath "$TMP")/instance1.json
+  matches $(realpath "$TMP")/schema.json
 ok: <stdin>
-  matches $TMPREAL/schema.json
-ok: $TMPREAL/instance2.json
-  matches $TMPREAL/schema.json
+  matches $(realpath "$TMP")/schema.json
+ok: $(realpath "$TMP")/instance2.json
+  matches $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

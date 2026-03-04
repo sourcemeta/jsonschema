@@ -20,6 +20,7 @@
 #include <iostream>      // std::cin
 #include <optional>      // std::optional
 #include <set>           // std::set
+#include <sstream>       // std::ostringstream, std::istringstream
 #include <stdexcept>     // std::runtime_error
 #include <string>        // std::string
 #include <unordered_set> // std::unordered_set
@@ -165,13 +166,27 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   }
 }
 
-// stdin is a non-seekable stream, so we cannot retry parsing after failure.
-// Unlike file-based input where we detect format by extension or try JSON
-// then YAML, stdin only supports JSON input.
+// Read stdin into a buffer and try JSON first, then YAML
 inline auto read_from_stdin() -> ParsedJSON {
-  sourcemeta::core::PointerPositionTracker positions;
-  return {sourcemeta::core::parse_json(std::cin, std::ref(positions)),
-          std::move(positions), false};
+  std::ostringstream buffer;
+  buffer << std::cin.rdbuf();
+  const auto input{buffer.str()};
+
+  try {
+    std::istringstream json_stream{input};
+    sourcemeta::core::PointerPositionTracker positions;
+    return {sourcemeta::core::parse_json(json_stream, std::ref(positions)),
+            std::move(positions), false};
+  } catch (const sourcemeta::core::JSONParseError &json_error) {
+    try {
+      std::istringstream yaml_stream{input};
+      sourcemeta::core::PointerPositionTracker positions;
+      return {sourcemeta::core::parse_yaml(yaml_stream, std::ref(positions)),
+              std::move(positions), true};
+    } catch (...) {
+      throw json_error;
+    }
+  }
 }
 
 inline auto
