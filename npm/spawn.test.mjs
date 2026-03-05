@@ -21,12 +21,12 @@ test('spawn returns help with --help flag', async () => {
 
 test('spawn returns non-zero exit code for invalid command', async () => {
   const result = await spawn(['invalid-command']);
-  assert.strictEqual(result.code, 1);
+  assert.strictEqual(result.code, 5);
 });
 
 test('spawn captures stderr on error', async () => {
   const result = await spawn(['validate']);
-  assert.strictEqual(result.code, 1);
+  assert.strictEqual(result.code, 5);
   assert.ok(result.stderr.length > 0);
 });
 
@@ -51,7 +51,7 @@ test('spawn with json option appends --json and parses stdout', async () => {
 
 test('spawn with json option on error returns parsed JSON error', async () => {
   const result = await spawn(['inspect', '/nonexistent/path.json'], { json: true });
-  assert.strictEqual(result.code, 1);
+  assert.strictEqual(result.code, 6);
   assert.deepStrictEqual(result.stdout, {
     error: 'No such file or directory',
     filePath: '/nonexistent/path.json'
