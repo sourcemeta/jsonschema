@@ -6,7 +6,7 @@ set -o nounset
 TMP="$(mktemp -d)"
 FUSE_MOUNT="$(mktemp -d)"
 clean() {
-  fusermount -u "$FUSE_MOUNT" 2>/dev/null || true
+  fusermount3 -u "$FUSE_MOUNT" || fusermount -u "$FUSE_MOUNT" || true
   rm -rf "$TMP" "$FUSE_MOUNT"
 }
 trap clean EXIT
