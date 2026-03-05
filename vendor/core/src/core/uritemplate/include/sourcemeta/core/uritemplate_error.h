@@ -123,6 +123,26 @@ private:
   const char *message_;
 };
 
+/// @ingroup uritemplate
+/// An error that represents a failure to read the router from disk
+class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterReadError
+    : public std::exception {
+public:
+  URITemplateRouterReadError(std::filesystem::path path)
+      : path_{std::move(path)} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "Failed to open router file for reading";
+  }
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

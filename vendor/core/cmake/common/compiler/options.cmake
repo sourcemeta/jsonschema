@@ -46,6 +46,10 @@ function(sourcemeta_add_default_options visibility target)
 
       # To improve how much GCC/Clang will vectorize
       -fno-math-errno
+      -fno-trapping-math
+      -fno-signed-zeros
+      -freciprocal-math
+      -fassociative-math
 
       # Assume that signed arithmetic overflow of addition, subtraction and
       # multiplication wraps around using twos-complement representation
@@ -82,7 +86,6 @@ function(sourcemeta_add_default_options visibility target)
       -fslp-vectorize)
   elseif(SOURCEMETA_COMPILER_GCC)
     target_compile_options("${target}" ${visibility}
-      -fno-trapping-math
       # Newer versions of GCC (i.e. 14) seem to print a lot of false-positives here
       $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wno-dangling-reference>
       # GCC seems to print a lot of false-positives here

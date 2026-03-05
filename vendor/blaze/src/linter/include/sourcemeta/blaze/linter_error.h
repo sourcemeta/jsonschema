@@ -34,12 +34,17 @@ public:
 class SOURCEMETA_BLAZE_LINTER_EXPORT LinterInvalidNameError
     : public std::exception {
 public:
-  LinterInvalidNameError(const std::string_view identifier,
-                         const std::string_view message)
+  LinterInvalidNameError(const std::string_view identifier, const char *message)
       : identifier_{identifier}, message_{message} {}
+  LinterInvalidNameError(const std::string_view identifier,
+                         std::string message) = delete;
+  LinterInvalidNameError(const std::string_view identifier,
+                         std::string &&message) = delete;
+  LinterInvalidNameError(const std::string_view identifier,
+                         std::string_view message) = delete;
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -48,7 +53,34 @@ public:
 
 private:
   std::string identifier_;
-  std::string message_;
+  const char *message_;
+};
+
+/// @ingroup linter
+/// An error that represents a schema rule name that does not match
+/// the required pattern
+class SOURCEMETA_BLAZE_LINTER_EXPORT LinterInvalidNamePatternError
+    : public std::exception {
+public:
+  LinterInvalidNamePatternError(const std::string_view identifier,
+                                const std::string_view regex)
+      : identifier_{identifier}, regex_{regex} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The schema rule name does not match the required pattern";
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto regex() const noexcept -> const std::string & {
+    return this->regex_;
+  }
+
+private:
+  std::string identifier_;
+  std::string regex_;
 };
 
 #if defined(_MSC_VER)

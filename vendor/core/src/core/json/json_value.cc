@@ -3,7 +3,7 @@
 
 #include <algorithm>        // std::find
 #include <cassert>          // assert
-#include <cmath>            // std::isinf, std::isnan, std::modf, std::trunc
+#include <cmath>            // std::isinf, std::isnan, std::modf
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t
 #include <functional>       // std::reference_wrapper
@@ -417,41 +417,6 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   return *this = *this - substractive;
 }
 
-[[nodiscard]] auto JSON::is_boolean() const noexcept -> bool {
-  return this->current_type == Type::Boolean;
-}
-
-[[nodiscard]] auto JSON::is_null() const noexcept -> bool {
-  return this->current_type == Type::Null;
-}
-
-[[nodiscard]] auto JSON::is_integer() const noexcept -> bool {
-  return this->current_type == Type::Integer;
-}
-
-[[nodiscard]] auto JSON::is_real() const noexcept -> bool {
-  return this->current_type == Type::Real;
-}
-
-[[nodiscard]] auto JSON::is_integral() const noexcept -> bool {
-  switch (this->type()) {
-    case Type::Integer:
-      return true;
-    case Type::Real: {
-      Real integral = 0.0;
-      return std::modf(this->to_real(), &integral) == 0.0;
-    }
-    case Type::Decimal:
-      return this->to_decimal().is_integral();
-    default:
-      return false;
-  }
-}
-
-[[nodiscard]] auto JSON::is_number() const noexcept -> bool {
-  return this->is_integer() || this->is_real() || this->is_decimal();
-}
-
 [[nodiscard]] auto JSON::is_positive() const noexcept -> bool {
   switch (this->type()) {
     case Type::Integer:
@@ -465,139 +430,10 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   }
 }
 
-[[nodiscard]] auto JSON::is_string() const noexcept -> bool {
-  return this->current_type == Type::String;
-}
-
-[[nodiscard]] auto JSON::is_array() const noexcept -> bool {
-  return this->current_type == Type::Array;
-}
-
-[[nodiscard]] auto JSON::is_object() const noexcept -> bool {
-  return this->current_type == Type::Object;
-}
-
-[[nodiscard]] auto JSON::is_decimal() const noexcept -> bool {
-  return this->current_type == Type::Decimal;
-}
-
-[[nodiscard]] auto JSON::type() const noexcept -> Type {
-  return this->current_type;
-}
-
-[[nodiscard]] auto JSON::to_boolean() const noexcept -> bool {
-  assert(this->is_boolean());
-  return this->data_boolean;
-}
-
-[[nodiscard]] auto JSON::to_integer() const noexcept -> Integer {
-  assert(this->is_integer());
-  return this->data_integer;
-}
-
-[[nodiscard]] auto JSON::to_real() const noexcept -> Real {
-  assert(this->is_real());
-  // This MUST not happen
-  assert(!std::isinf(this->data_real));
-  assert(!std::isnan(this->data_real));
-  return this->data_real;
-}
-
-[[nodiscard]] auto JSON::to_decimal() const noexcept -> const Decimal & {
-  assert(this->is_decimal());
-  // This MUST not happen
-  assert(this->data_decimal->is_finite());
-  assert(!this->data_decimal->is_nan());
-  return *this->data_decimal;
-}
-
-[[nodiscard]] auto JSON::to_string() const noexcept -> const JSON::String & {
-  assert(this->is_string());
-  return this->data_string;
-}
-
 [[nodiscard]] auto JSON::to_stringstream() const
     -> std::basic_istringstream<Char, CharTraits, Allocator<Char>> {
   return std::basic_istringstream<Char, CharTraits, Allocator<Char>>{
       this->data_string};
-}
-
-[[nodiscard]] auto JSON::as_array() const noexcept -> const JSON::Array & {
-  assert(this->is_array());
-  return this->data_array;
-}
-
-[[nodiscard]] auto JSON::as_array() noexcept -> JSON::Array & {
-  assert(this->is_array());
-  return this->data_array;
-}
-
-[[nodiscard]] auto JSON::as_object() noexcept -> Object & {
-  assert(this->is_object());
-  return this->data_object;
-}
-
-[[nodiscard]] auto JSON::as_object() const noexcept -> const Object & {
-  assert(this->is_object());
-  return this->data_object;
-}
-
-[[nodiscard]] auto JSON::as_real() const noexcept -> Real {
-  assert(this->is_number());
-  return this->is_real() ? this->to_real()
-                         : static_cast<Real>(this->to_integer());
-}
-
-[[nodiscard]] auto JSON::as_integer() const noexcept -> Integer {
-  assert(this->is_number());
-  if (this->is_integer()) {
-    return this->to_integer();
-  } else {
-    return static_cast<Integer>(std::trunc(this->to_real()));
-  }
-}
-
-[[nodiscard]] auto JSON::at(const typename JSON::Array::size_type index) const
-    -> const JSON & {
-  assert(this->is_array());
-  assert(index < this->size());
-  return data_array.data.at(index);
-}
-
-[[nodiscard]] auto JSON::at(const typename JSON::Array::size_type index)
-    -> JSON & {
-  assert(this->is_array());
-  assert(index < this->size());
-  return this->data_array.data.at(index);
-}
-
-[[nodiscard]] auto JSON::at(const JSON::String &key) const -> const JSON & {
-  assert(this->is_object());
-  assert(this->defines(key));
-  const auto &object{this->data_object};
-  return object.at(key, object.hash(key));
-}
-
-[[nodiscard]] auto JSON::at(const String &key,
-                            const typename Object::hash_type hash) const
-    -> const JSON & {
-  assert(this->is_object());
-  assert(this->defines(key));
-  return this->data_object.at(key, hash);
-}
-
-[[nodiscard]] auto JSON::at(const JSON::String &key) -> JSON & {
-  assert(this->is_object());
-  assert(this->defines(key));
-  auto &object{this->data_object};
-  return object.at(key, object.hash(key));
-}
-
-[[nodiscard]] auto JSON::at(const String &key,
-                            const typename Object::hash_type hash) -> JSON & {
-  assert(this->is_object());
-  assert(this->defines(key));
-  return this->data_object.at(key, hash);
 }
 
 [[nodiscard]] auto JSON::at_or(const String &key,
@@ -612,60 +448,6 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
     -> const JSON & {
   assert(this->is_object());
   return this->at_or(key, this->data_object.hash(key), otherwise);
-}
-
-[[nodiscard]] auto JSON::front() -> JSON & {
-  assert(this->is_array());
-  assert(!this->empty());
-  return this->data_array.data.front();
-}
-
-[[nodiscard]] auto JSON::front() const -> const JSON & {
-  assert(this->is_array());
-  assert(!this->empty());
-  return this->data_array.data.front();
-}
-
-[[nodiscard]] auto JSON::back() -> JSON & {
-  assert(this->is_array());
-  assert(!this->empty());
-  return this->data_array.data.back();
-}
-
-[[nodiscard]] auto JSON::back() const -> const JSON & {
-  assert(this->is_array());
-  assert(!this->empty());
-  return this->data_array.data.back();
-}
-
-[[nodiscard]] auto JSON::size() const -> std::size_t {
-  if (this->is_object()) {
-    return this->object_size();
-  } else if (this->is_array()) {
-    return this->array_size();
-  } else {
-    return this->string_size();
-  }
-}
-
-[[nodiscard]] auto JSON::string_size() const -> std::size_t {
-  assert(this->is_string());
-  return JSON::size(this->data_string);
-}
-
-[[nodiscard]] auto JSON::array_size() const -> std::size_t {
-  assert(this->is_array());
-  return this->data_array.data.size();
-}
-
-[[nodiscard]] auto JSON::object_size() const -> std::size_t {
-  assert(this->is_object());
-  return this->data_object.size();
-}
-
-[[nodiscard]] auto JSON::byte_size() const -> std::size_t {
-  assert(this->is_string());
-  return this->data_string.size();
 }
 
 [[nodiscard]] auto JSON::estimated_byte_size() const -> std::uint64_t {
@@ -791,48 +573,6 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
 
   const Decimal dividend_decimal{this->to_real()};
   return dividend_decimal.divisible_by(divisor.to_decimal());
-}
-
-[[nodiscard]] auto JSON::empty() const -> bool {
-  if (this->is_object()) {
-    return this->data_object.empty();
-  } else if (this->is_array()) {
-    return this->data_array.data.empty();
-  } else {
-    return this->data_string.empty();
-  }
-}
-
-[[nodiscard]] auto JSON::try_at(const JSON::String &key) const -> const JSON * {
-  assert(this->is_object());
-  const auto &object{this->data_object};
-  return object.try_at(key, object.hash(key));
-}
-
-[[nodiscard]] auto JSON::try_at(const String &key,
-                                const typename Object::hash_type hash) const
-    -> const JSON * {
-  assert(this->is_object());
-  const auto &object{this->data_object};
-  return object.try_at(key, hash);
-}
-
-[[nodiscard]] auto JSON::defines(const JSON::String &key) const -> bool {
-  assert(this->is_object());
-  const auto &object{this->data_object};
-  return object.defines(key, object.hash(key));
-}
-
-[[nodiscard]] auto
-JSON::defines(const JSON::String &key,
-              const typename JSON::Object::hash_type hash) const -> bool {
-  assert(this->is_object());
-  return this->data_object.defines(key, hash);
-}
-
-[[nodiscard]] auto
-JSON::defines(const typename JSON::Array::size_type index) const -> bool {
-  return this->defines(std::to_string(index));
 }
 
 [[nodiscard]] auto

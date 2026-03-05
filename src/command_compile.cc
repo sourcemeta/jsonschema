@@ -79,6 +79,9 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
     throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path,
                                                                   error);
+  } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+    throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(schema_path,
+                                                                  error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

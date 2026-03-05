@@ -340,6 +340,14 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) { current.regex(); }) {
+    if (is_json) {
+      error_json.assign("regex", sourcemeta::core::JSON{exception.regex()});
+    } else {
+      std::cerr << "  at regex " << exception.regex() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) {
                   {
                     current.path()
@@ -496,6 +504,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const FileError<sourcemeta::blaze::LinterInvalidNamePatternError>
+               &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const FileError<sourcemeta::blaze::LinterMissingNameError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -560,6 +573,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     if (!is_json) {
       std::cerr
           << "\nUse the `inspect` command to find valid schema locations\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (
+      const FileError<sourcemeta::blaze::CompilerInvalidRegexError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nDetailed regex error messages are not yet supported\n"
+                   "Try tools like https://regex101.com to debug further\n";
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;

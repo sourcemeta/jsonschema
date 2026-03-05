@@ -24,10 +24,10 @@ namespace sourcemeta::core {
 
 /// @ingroup process
 /// An executable program could not be found
-class SOURCEMETA_CORE_PROCESS_EXPORT ProcessProgramNotNotFoundError
+class SOURCEMETA_CORE_PROCESS_EXPORT ProcessProgramNotFoundError
     : public std::exception {
 public:
-  ProcessProgramNotNotFoundError(const std::string_view program)
+  ProcessProgramNotFoundError(const std::string_view program)
       : program_{program} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {

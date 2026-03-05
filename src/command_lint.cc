@@ -166,6 +166,9 @@ static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
   } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::blaze::LinterInvalidNameError>(rule_path, error);
+  } catch (const sourcemeta::blaze::LinterInvalidNamePatternError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::blaze::LinterInvalidNamePatternError>(rule_path, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw sourcemeta::jsonschema::FileError<
@@ -380,6 +383,14 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                   "references",
                   entry.resolution_base, error.location()};
             } catch (
+                const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(
+                  entry.resolution_base, error);
+            } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {
               if (printed_progress) {
@@ -494,6 +505,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
                 // Return 2 for logical lint failures
                 return EXIT_EXPECTED_FAILURE;
               }
+            } catch (
+                const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+              throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(
+                  entry.resolution_base, error);
             } catch (
                 const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError
                     &error) {

@@ -618,12 +618,21 @@ inline auto preprocess_regex(const std::string &pattern)
       const bool starts_with_nested =
           !nested_content.empty() && nested_content[0] == '[';
 
+      // Check if the character after the simple bracket end continues
+      // the class with more v-flag syntax (another nested class or outer
+      // closing bracket). This distinguishes true v-flag nesting like
+      // [[a-z][A-Z]] from a literal [ inside a standard class like [[(]
+      const bool after_simple_continues_class =
+          simple_end < pattern.size() &&
+          (pattern[simple_end] == '[' || pattern[simple_end] == ']');
+
       // Use v-flag mode if:
       // 1. Nested content has v-flag operators (-- or &&), OR
       // 2. Content starts with [ (indicating v-flag nested class syntax)
-      //    AND the ends differ (so there's actual nesting being tracked)
+      //    AND the ends differ AND the class continues after simple end
       const bool use_v_flag =
-          nested_has_ops || (starts_with_nested && simple_end != nested_end);
+          nested_has_ops || (starts_with_nested && simple_end != nested_end &&
+                             after_simple_continues_class);
 
       if (use_v_flag) {
         const auto expanded = expand_char_class(nested_content);

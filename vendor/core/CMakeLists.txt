@@ -3,6 +3,7 @@ project(core VERSION 0.0.0 LANGUAGES C CXX ASM_MASM DESCRIPTION "Sourcemeta Core
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
+option(SOURCEMETA_CORE_LANG_PREPROCESSOR "Build the Sourcemeta Core language preprocessor library" ON)
 option(SOURCEMETA_CORE_LANG_IO "Build the Sourcemeta Core language I/O library" ON)
 option(SOURCEMETA_CORE_LANG_PROCESS "Build the Sourcemeta Core language Process library" ON)
 option(SOURCEMETA_CORE_LANG_PARALLEL "Build the Sourcemeta Core language parallel library" ON)
@@ -24,7 +25,6 @@ option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
 option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
 option(SOURCEMETA_CORE_EXTENSION_ALTERSCHEMA "Build the Sourcemeta Core AlterSchema library" ON)
 option(SOURCEMETA_CORE_EXTENSION_EDITORSCHEMA "Build the Sourcemeta Core EditorSchema library" ON)
-option(SOURCEMETA_CORE_EXTENSION_BUILD "Build the Sourcemeta Core Build library" ON)
 option(SOURCEMETA_CORE_TESTS "Build the Sourcemeta Core tests" OFF)
 option(SOURCEMETA_CORE_BENCHMARK "Build the Sourcemeta Core benchmarks" OFF)
 option(SOURCEMETA_CORE_DOCS "Build the Sourcemeta Core docs" OFF)
@@ -57,6 +57,10 @@ if(SOURCEMETA_CORE_INSTALL)
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     COMPONENT sourcemeta_${PROJECT_NAME}_dev)
+endif()
+
+if(SOURCEMETA_CORE_LANG_PREPROCESSOR)
+  add_subdirectory(src/lang/preprocessor)
 endif()
 
 if(SOURCEMETA_CORE_LANG_IO)
@@ -142,10 +146,6 @@ endif()
 
 if(SOURCEMETA_CORE_EXTENSION_EDITORSCHEMA)
   add_subdirectory(src/extension/editorschema)
-endif()
-
-if(SOURCEMETA_CORE_EXTENSION_BUILD)
-  add_subdirectory(src/extension/build)
 endif()
 
 if(SOURCEMETA_CORE_ADDRESS_SANITIZER)
@@ -257,10 +257,6 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_EXTENSION_EDITORSCHEMA)
     add_subdirectory(test/editorschema)
-  endif()
-
-  if(SOURCEMETA_CORE_EXTENSION_BUILD)
-    add_subdirectory(test/build)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

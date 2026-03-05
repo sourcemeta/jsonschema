@@ -25,38 +25,32 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint "$TMP/schema.json" --fix 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Unexpected error
-test "$EXIT_CODE" = "1" || exit 1
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 .
-error: Could not autofix the schema without breaking its internal references
+error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
+  at identifier file://$(realpath "$TMP")/schema.json#/x-\$defs/not-a-schema
   at file path $(realpath "$TMP")/schema.json
-  at location "/allOf/0/\$ref"
+  at location "/x-\$defs"
 
-This is an unexpected error, as making the auto-fix functionality work in all
-cases is tricky. We are working hard to improve the auto-fixing functionality
-to handle all possible edge cases, but for now, try again without \`--fix/-f\`
-and apply the suggestions by hand.
-
-Also consider consider reporting this problematic case to the issue tracker,
-so we can add it to the test suite and fix it:
-
-https://github.com/sourcemeta/jsonschema/issues
+Are you sure the reported location is a valid JSON Schema keyword in this dialect?
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" lint "$TMP/schema.json" --fix --json >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Unexpected error
-test "$EXIT_CODE" = "1" || exit 1
+# Schema input error
+test "$EXIT_CODE" = "4" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "Could not autofix the schema without breaking its internal references",
+  "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
+  "identifier": "file://$(realpath "$TMP")/schema.json#/x-\$defs/not-a-schema",
   "filePath": "$(realpath "$TMP")/schema.json",
-  "location": "/allOf/0/\$ref"
+  "location": "/x-\$defs"
 }
 EOF
 

@@ -5,6 +5,9 @@
 #include <sourcemeta/core/numeric_export.h>
 #endif
 
+#include <sourcemeta/core/preprocessor.h>
+
+#include <cassert>  // assert
 #include <concepts> // std::integral
 #include <cstdint>  // std::int32_t, std::int64_t, std::uint32_t, std::uint64_t
 #include <string>   // std::string
@@ -113,13 +116,19 @@ public:
 
   /// Check if the decimal number represents an integer value _without_ a
   /// decimal component in its original representation.
-  [[nodiscard]] auto is_integer() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_integer() const -> bool {
+    return this->is_integral() && this->exponent_ >= 0;
+  }
 
   /// Check if the decimal number is finite
-  [[nodiscard]] auto is_finite() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_finite() const -> bool {
+    return !(this->flags_ & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE));
+  }
 
   /// Check if the decimal number is a real number (finite and not NaN)
-  [[nodiscard]] auto is_real() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_real() const -> bool {
+    return this->is_finite() && !this->is_integral();
+  }
 
   /// Check if the decimal number can be represented as a 32-bit float without
   /// precision loss
@@ -143,22 +152,36 @@ public:
 
   /// Check if the decimal number is NaN (Not a Number), either quiet or
   /// signaling
-  [[nodiscard]] auto is_nan() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_nan() const -> bool {
+    return (this->flags_ & FLAG_NAN) != 0;
+  }
 
   /// Check if the decimal number is a signaling NaN
-  [[nodiscard]] auto is_snan() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_snan() const -> bool {
+    return (this->flags_ & FLAG_SNAN) != 0;
+  }
 
   /// Check if the decimal number is a quiet NaN
-  [[nodiscard]] auto is_qnan() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_qnan() const -> bool {
+    return (this->flags_ & FLAG_NAN) != 0 && !(this->flags_ & FLAG_SNAN);
+  }
 
   /// Get the payload of a NaN value (0 if no payload)
-  [[nodiscard]] auto nan_payload() const -> std::uint64_t;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto nan_payload() const
+      -> std::uint64_t {
+    assert(this->is_nan());
+    return static_cast<std::uint64_t>(this->coefficient_);
+  }
 
   /// Check if the decimal number is infinite
-  [[nodiscard]] auto is_infinite() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_infinite() const -> bool {
+    return (this->flags_ & FLAG_INFINITE) != 0;
+  }
 
   /// Check if the decimal number is signed (negative, including -0)
-  [[nodiscard]] auto is_signed() const -> bool;
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_signed() const -> bool {
+    return (this->flags_ & FLAG_SIGN) != 0;
+  }
 
   /// Round the decimal number to an integral value
   [[nodiscard]] auto to_integral() const -> Decimal;
@@ -251,6 +274,11 @@ public:
   [[nodiscard]] auto operator>=(const Decimal &other) const -> bool;
 
 private:
+  static constexpr std::uint8_t FLAG_SIGN = 0x01;
+  static constexpr std::uint8_t FLAG_NAN = 0x02;
+  static constexpr std::uint8_t FLAG_SNAN = 0x04;
+  static constexpr std::uint8_t FLAG_INFINITE = 0x08;
+
   std::int64_t coefficient_{0};
   std::uint64_t coefficient_high_{0};
   std::int32_t exponent_{0};

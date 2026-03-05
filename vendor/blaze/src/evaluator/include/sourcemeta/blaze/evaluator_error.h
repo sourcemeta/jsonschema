@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/evaluator_export.h>
 #endif
 
-#include <exception> // std::exception
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::blaze {
 
@@ -23,13 +23,16 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_EVALUATOR_EXPORT EvaluationError
     : public std::exception {
 public:
-  EvaluationError(std::string message) : message_{std::move(message)} {}
+  EvaluationError(const char *message) : message_{message} {}
+  EvaluationError(std::string message) = delete;
+  EvaluationError(std::string &&message) = delete;
+  EvaluationError(std::string_view message) = delete;
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
 private:
-  std::string message_;
+  const char *message_;
 };
 
 #if defined(_MSC_VER)
