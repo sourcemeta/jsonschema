@@ -714,18 +714,6 @@ auto Decimal::is_integral() const -> bool {
   return exponent >= 0;
 }
 
-auto Decimal::is_integer() const -> bool {
-  return this->is_integral() && this->exponent_ >= 0;
-}
-
-auto Decimal::is_finite() const -> bool {
-  return !(this->flags_ & (FLAG_NAN | FLAG_SNAN | FLAG_INFINITE));
-}
-
-auto Decimal::is_real() const -> bool {
-  return this->is_finite() && !this->is_integral();
-}
-
 auto Decimal::is_float() const -> bool {
   return is_representable_as_floating_point<float>(*this);
 }
@@ -756,29 +744,6 @@ auto Decimal::is_uint64() const -> bool {
   assert(this->is_integer());
   return *this >= Decimal{0} &&
          *this <= Decimal{std::numeric_limits<std::uint64_t>::max()};
-}
-
-auto Decimal::is_nan() const -> bool { return (this->flags_ & FLAG_NAN) != 0; }
-
-auto Decimal::is_snan() const -> bool {
-  return (this->flags_ & FLAG_SNAN) != 0;
-}
-
-auto Decimal::is_qnan() const -> bool {
-  return (this->flags_ & FLAG_NAN) != 0 && !(this->flags_ & FLAG_SNAN);
-}
-
-auto Decimal::nan_payload() const -> std::uint64_t {
-  assert(this->is_nan());
-  return static_cast<std::uint64_t>(this->coefficient_);
-}
-
-auto Decimal::is_infinite() const -> bool {
-  return (this->flags_ & FLAG_INFINITE) != 0;
-}
-
-auto Decimal::is_signed() const -> bool {
-  return (this->flags_ & FLAG_SIGN) != 0;
 }
 
 auto Decimal::to_integral() const -> Decimal {

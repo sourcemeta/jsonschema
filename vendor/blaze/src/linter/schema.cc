@@ -25,9 +25,7 @@ static auto validate_name(const std::string_view name) -> void {
   }
 
   if (!sourcemeta::core::matches(pattern.value(), std::string{name})) {
-    std::string message{"The schema rule name must match "};
-    message += NAME_PATTERN;
-    throw LinterInvalidNameError(name, message);
+    throw LinterInvalidNamePatternError(name, NAME_PATTERN);
   }
 }
 

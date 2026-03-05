@@ -335,7 +335,7 @@ public:
   ///
   /// const sourcemeta::core::URI
   ///   uri{"https://www.sourcemeta.com/foo#bar"};
-  /// assert(uri.recompose_without_fragment().has_value()");
+  /// assert(uri.recompose_without_fragment().has_value());
   /// assert(uri.recompose_without_fragment().value() ==
   /// "https://sourcemeta.com/foo");
   /// ```
@@ -349,7 +349,7 @@ public:
   /// #include <cassert>
   ///
   /// sourcemeta::core::URI uri{"hTtP://exAmpLe.com:80/TEST"};
-  /// uri.canonicalize():
+  /// uri.canonicalize();
   /// assert(uri.recompose() == "http://example.com/TEST");
   /// ```
   auto canonicalize() -> URI &;
@@ -417,7 +417,7 @@ public:
   ///
   /// const sourcemeta::core::URI uri{"https://user:@host"};
   /// assert(uri.userinfo().has_value());
-  /// assert(uri.userinfo().value() == "user:);
+  /// assert(uri.userinfo().value() == "user:");
   /// ```
   ///
   /// As mentioned in RFC 3986, the format "user:password" is deprecated.

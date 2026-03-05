@@ -105,6 +105,9 @@ auto sourcemeta::jsonschema::metaschema(
           result = false;
         }
       }
+    } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
+      throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(
+          entry.resolution_base, error);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
       throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(

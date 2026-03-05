@@ -1,6 +1,7 @@
 #include <sourcemeta/core/process.h>
 
 #include <cassert>          // assert
+#include <cerrno>           // ENOENT
 #include <filesystem>       // std::filesystem
 #include <initializer_list> // std::initializer_list
 #include <span>             // std::span
@@ -70,7 +71,13 @@ auto spawn(const std::string &program,
       );
 
   if (!success) {
-    throw ProcessProgramNotNotFoundError{program};
+    const DWORD error_code{GetLastError()};
+    if (error_code == ERROR_FILE_NOT_FOUND ||
+        error_code == ERROR_PATH_NOT_FOUND) {
+      throw ProcessProgramNotFoundError{program};
+    }
+
+    throw ProcessSpawnError{program, arguments};
   }
 
   WaitForSingleObject(process_info.hProcess, INFINITE);
@@ -126,7 +133,11 @@ auto spawn(const std::string &program,
 #endif
 
   if (spawn_result != 0) {
-    throw ProcessProgramNotNotFoundError{program};
+    if (spawn_result == ENOENT) {
+      throw ProcessProgramNotFoundError{program};
+    }
+
+    throw ProcessSpawnError{program, arguments};
   }
 
   int status;

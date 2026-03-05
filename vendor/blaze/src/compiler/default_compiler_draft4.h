@@ -9,7 +9,6 @@
 #include <algorithm> // std::sort, std::any_of, std::all_of, std::find_if, std::none_of
 #include <cassert> // assert
 #include <set>     // std::set
-#include <sstream> // std::ostringstream
 #include <utility> // std::move
 
 #include "compile_helpers.h"
@@ -20,10 +19,8 @@ static auto parse_regex(const std::string &pattern,
     -> sourcemeta::core::Regex {
   const auto result{sourcemeta::core::to_regex(pattern)};
   if (!result.has_value()) {
-    std::ostringstream message;
-    message << "Invalid regular expression: " << pattern;
-    throw sourcemeta::blaze::CompilerError(base, to_pointer(schema_location),
-                                           message.str());
+    throw sourcemeta::blaze::CompilerInvalidRegexError(
+        base, to_pointer(schema_location), pattern);
   }
 
   return result.value();

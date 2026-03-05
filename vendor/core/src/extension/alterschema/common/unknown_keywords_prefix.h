@@ -36,6 +36,7 @@ public:
   }
 
   auto transform(JSON &schema, const Result &result) const -> void override {
+    this->renames_.clear();
     for (const auto &location : result.locations) {
       const auto &keyword{location.at(0).to_property()};
       assert(schema.defines(keyword));
@@ -44,7 +45,26 @@ public:
         prefixed_name.insert(0, "x-");
       }
 
+      this->renames_.emplace(keyword, prefixed_name);
       schema.rename(keyword, std::move(prefixed_name));
     }
   }
+
+  [[nodiscard]] auto rereference(const std::string_view, const Pointer &,
+                                 const Pointer &target,
+                                 const Pointer &current) const
+      -> Pointer override {
+    for (const auto &[old_name, new_name] : this->renames_) {
+      const auto result{target.rebase(current.concat(Pointer{old_name}),
+                                      current.concat(Pointer{new_name}))};
+      if (result != target) {
+        return result;
+      }
+    }
+
+    return target;
+  }
+
+private:
+  mutable std::unordered_map<std::string, std::string> renames_;
 };

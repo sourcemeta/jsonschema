@@ -415,7 +415,7 @@ auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
 /// const std::string foo = "foo";
 /// const sourcemeta::core::WeakPointer pointer{std::cref(foo)};
 /// const sourcemeta::core::Pointer result{
-///   sourcemeta::core::to_pointer(pointer)}:
+///   sourcemeta::core::to_pointer(pointer)};
 /// assert(result.size() == 1);
 /// assert(result.at(0).is_property());
 /// assert(result.at(0).to_property() == "foo");

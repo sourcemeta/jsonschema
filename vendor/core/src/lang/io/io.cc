@@ -6,8 +6,14 @@
 #include <windows.h> // HANDLE, CreateFileW, FlushFileBuffers, CloseHandle
 #else
 #include <cerrno>   // errno (for error codes)
-#include <fcntl.h>  // open, O_RDWR
+#include <fcntl.h>  // open, O_RDWR, AT_FDCWD
 #include <unistd.h> // close, fsync
+#if defined(__linux__)
+#include <linux/fs.h>    // RENAME_EXCHANGE
+#include <sys/syscall.h> // SYS_renameat2, syscall
+#elif defined(__APPLE__)
+#include <sys/stdio.h> // renameatx_np, RENAME_SWAP
+#endif
 #endif
 
 namespace sourcemeta::core {
@@ -45,6 +51,74 @@ auto starts_with(const std::filesystem::path &path,
   }
 
   return true;
+}
+
+auto hardlink_directory(const std::filesystem::path &source,
+                        const std::filesystem::path &destination) -> void {
+  assert(std::filesystem::is_directory(source));
+  assert(!std::filesystem::exists(destination) ||
+         std::filesystem::is_directory(destination));
+  assert(!starts_with(destination, source));
+  std::filesystem::create_directories(destination);
+  for (const auto &entry :
+       std::filesystem::recursive_directory_iterator{source}) {
+    const auto target{destination /
+                      std::filesystem::relative(entry.path(), source)};
+    if (entry.is_directory()) {
+      std::filesystem::create_directories(target);
+    } else if (entry.is_regular_file()) {
+      std::filesystem::create_hard_link(entry.path(), target);
+    }
+  }
+}
+
+auto atomic_directory_swap(const std::filesystem::path &original,
+                           const std::filesystem::path &replacement) -> void {
+  assert(std::filesystem::is_directory(replacement));
+  assert(!std::filesystem::exists(original) ||
+         std::filesystem::is_directory(original));
+  assert(!original.parent_path().empty());
+
+  if (!std::filesystem::exists(original)) {
+    std::filesystem::rename(replacement, original);
+    return;
+  }
+
+  // Atomic swap via renameat2 with RENAME_EXCHANGE
+#if defined(__linux__)
+  if (syscall(SYS_renameat2, AT_FDCWD, replacement.c_str(), AT_FDCWD,
+              original.c_str(), RENAME_EXCHANGE) != 0) {
+    throw std::filesystem::filesystem_error{
+        "failed to atomically swap directories", replacement, original,
+        std::error_code{errno, std::generic_category()}};
+  }
+
+  // Atomic swap via renameatx_np with RENAME_SWAP
+#elif defined(__APPLE__)
+  if (renameatx_np(AT_FDCWD, replacement.c_str(), AT_FDCWD, original.c_str(),
+                   RENAME_SWAP) != 0) {
+    throw std::filesystem::filesystem_error{
+        "failed to atomically swap directories", replacement, original,
+        std::error_code{errno, std::generic_category()}};
+  }
+
+#else
+  // Non-atomic fallback: two-rename approach with rollback
+  //
+  // Note we cannot safely use the temporary directory of the system as it
+  // might be in another volume
+  TemporaryDirectory temporary{original.parent_path(), ".swap-"};
+  std::filesystem::remove(temporary.path());
+  std::filesystem::rename(original, temporary.path());
+  try {
+    std::filesystem::rename(replacement, original);
+  } catch (...) {
+    std::filesystem::rename(temporary.path(), original);
+    throw;
+  }
+
+  std::filesystem::rename(temporary.path(), replacement);
+#endif
 }
 
 auto flush(const std::filesystem::path &path) -> void {

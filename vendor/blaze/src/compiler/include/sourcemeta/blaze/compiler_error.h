@@ -27,11 +27,20 @@ namespace sourcemeta::blaze {
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerError : public std::exception {
 public:
   CompilerError(sourcemeta::core::URI base,
-                sourcemeta::core::Pointer schema_location, std::string message)
+                sourcemeta::core::Pointer schema_location, const char *message)
       : base_{std::move(base)}, schema_location_{std::move(schema_location)},
-        message_{std::move(message)} {}
+        message_{message} {}
+  CompilerError(sourcemeta::core::URI base,
+                sourcemeta::core::Pointer schema_location,
+                std::string message) = delete;
+  CompilerError(sourcemeta::core::URI base,
+                sourcemeta::core::Pointer schema_location,
+                std::string &&message) = delete;
+  CompilerError(sourcemeta::core::URI base,
+                sourcemeta::core::Pointer schema_location,
+                std::string_view message) = delete;
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   [[nodiscard]] auto base() const noexcept -> const sourcemeta::core::URI & {
@@ -46,7 +55,40 @@ public:
 private:
   sourcemeta::core::URI base_;
   sourcemeta::core::Pointer schema_location_;
-  std::string message_;
+  const char *message_;
+};
+
+/// @ingroup jsonschema
+/// An error that represents an invalid regular expression during compilation
+class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInvalidRegexError
+    : public std::exception {
+public:
+  CompilerInvalidRegexError(sourcemeta::core::URI base,
+                            sourcemeta::core::Pointer schema_location,
+                            std::string regex)
+      : base_{std::move(base)}, schema_location_{std::move(schema_location)},
+        regex_{std::move(regex)} {}
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "Invalid regular expression";
+  }
+
+  [[nodiscard]] auto base() const noexcept -> const sourcemeta::core::URI & {
+    return this->base_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->schema_location_;
+  }
+
+  [[nodiscard]] auto regex() const noexcept -> const std::string & {
+    return this->regex_;
+  }
+
+private:
+  sourcemeta::core::URI base_;
+  sourcemeta::core::Pointer schema_location_;
+  std::string regex_;
 };
 
 /// @ingroup jsonschema
@@ -84,11 +126,17 @@ class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInvalidEntryPoint
     : public std::exception {
 public:
   CompilerInvalidEntryPoint(const std::string_view entrypoint,
-                            const std::string_view message)
+                            const char *message)
       : identifier_{entrypoint}, message_{message} {}
+  CompilerInvalidEntryPoint(const std::string_view entrypoint,
+                            std::string message) = delete;
+  CompilerInvalidEntryPoint(const std::string_view entrypoint,
+                            std::string &&message) = delete;
+  CompilerInvalidEntryPoint(const std::string_view entrypoint,
+                            std::string_view message) = delete;
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_.c_str();
+    return this->message_;
   }
 
   [[nodiscard]] auto identifier() const noexcept -> const std::string & {
@@ -97,7 +145,7 @@ public:
 
 private:
   std::string identifier_;
-  std::string message_;
+  const char *message_;
 };
 
 #if defined(_MSC_VER)

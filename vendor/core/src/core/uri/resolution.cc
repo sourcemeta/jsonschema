@@ -202,8 +202,16 @@ auto URI::relative_to(const URI &base) -> URI & {
     return *this;
   }
 
-  // Hosts must match (but both can be null for URNs)
+  // The full authority must match (but components can be null for URNs)
+  if (this->userinfo_ != base.userinfo_) {
+    return *this;
+  }
+
   if (this->host_ != base.host_) {
+    return *this;
+  }
+
+  if (this->port_ != base.port_) {
     return *this;
   }
 

@@ -29,8 +29,9 @@ EOF
 test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema rule name must match ^[a-z0-9_/]+\$
+error: The schema rule name does not match the required pattern
   at identifier Invalid Title
+  at regex ^[a-z0-9_/]+\$
   at file path $(realpath "$TMP")/rule.json
 EOF
 
@@ -43,8 +44,9 @@ test "$EXIT_CODE" = "6" || exit 1
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The schema rule name must match ^[a-z0-9_/]+\$",
+  "error": "The schema rule name does not match the required pattern",
   "identifier": "Invalid Title",
+  "regex": "^[a-z0-9_/]+\$",
   "filePath": "$(realpath "$TMP")/rule.json"
 }
 EOF

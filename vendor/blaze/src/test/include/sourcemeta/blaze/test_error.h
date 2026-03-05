@@ -7,10 +7,11 @@
 
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <cstdint>   // std::uint64_t
-#include <stdexcept> // std::runtime_error
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <cstdint>     // std::uint64_t
+#include <exception>   // std::exception
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::blaze {
 
@@ -23,12 +24,22 @@ namespace sourcemeta::blaze {
 
 /// @ingroup test
 /// An error that occurs when parsing a test file
-class SOURCEMETA_BLAZE_TEST_EXPORT TestParseError : public std::runtime_error {
+class SOURCEMETA_BLAZE_TEST_EXPORT TestParseError : public std::exception {
 public:
-  TestParseError(const std::string &message, sourcemeta::core::Pointer location,
+  TestParseError(const char *message, sourcemeta::core::Pointer location,
                  std::uint64_t line, std::uint64_t column)
-      : std::runtime_error{message}, location_{std::move(location)},
-        line_{line}, column_{column} {}
+      : message_{message}, location_{std::move(location)}, line_{line},
+        column_{column} {}
+  TestParseError(std::string message, sourcemeta::core::Pointer location,
+                 std::uint64_t line, std::uint64_t column) = delete;
+  TestParseError(std::string &&message, sourcemeta::core::Pointer location,
+                 std::uint64_t line, std::uint64_t column) = delete;
+  TestParseError(std::string_view message, sourcemeta::core::Pointer location,
+                 std::uint64_t line, std::uint64_t column) = delete;
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_;
+  }
 
   [[nodiscard]] auto location() const noexcept
       -> const sourcemeta::core::Pointer & {
@@ -44,6 +55,7 @@ public:
   }
 
 private:
+  const char *message_;
   sourcemeta::core::Pointer location_;
   std::uint64_t line_;
   std::uint64_t column_;

@@ -19,7 +19,7 @@ auto is_official_metaschema_reference(
   assert(!pointer.empty());
   assert(pointer.back().is_property());
   return pointer.back().to_property() == "$schema" &&
-         sourcemeta::core::schema_resolver(destination).has_value();
+         sourcemeta::core::is_known_schema(destination);
 }
 
 auto dependencies_internal(const sourcemeta::core::JSON &schema,

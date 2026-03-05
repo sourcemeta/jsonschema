@@ -13,6 +13,8 @@
 #include <utility>          // std::move
 #include <vector>           // std::vector
 
+#include <sourcemeta/core/preprocessor.h>
+
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer
@@ -131,7 +133,7 @@ public:
   /// assert(pointer.back().is_property());
   /// assert(pointer.back().to_property() == "bar");
   /// ```
-  [[nodiscard]] auto back() const -> const_reference {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto back() const -> const_reference {
     assert(!this->empty());
     return this->data.back();
   }
@@ -146,7 +148,7 @@ public:
   /// const sourcemeta::core::Pointer pointer{"foo", "bar"};
   /// assert(pointer.size() == 2);
   /// ```
-  [[nodiscard]] auto size() const noexcept -> size_type {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto size() const noexcept -> size_type {
     return this->data.size();
   }
 
@@ -162,7 +164,7 @@ public:
   /// assert(empty_pointer.empty());
   /// assert(!non_empty_pointer.empty());
   /// ```
-  [[nodiscard]] auto empty() const noexcept -> bool {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE auto empty() const noexcept -> bool {
     return this->data.empty();
   }
 
@@ -179,7 +181,8 @@ public:
   /// assert(!pointer.empty());
   /// assert(token.is_property());
   /// ```
-  template <class... Args> auto emplace_back(Args &&...args) -> reference {
+  template <class... Args>
+  SOURCEMETA_FORCEINLINE auto emplace_back(Args &&...args) -> reference {
     return this->data.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -215,7 +218,8 @@ public:
   /// assert(pointer.at(1).to_property() == "bar");
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
-  auto push_back(const GenericPointer<PropertyT, Hash> &other) -> void {
+  SOURCEMETA_FORCEINLINE auto
+  push_back(const GenericPointer<PropertyT, Hash> &other) -> void {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {
@@ -248,7 +252,8 @@ public:
   /// assert(pointer.at(1).to_property() == "bar");
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
-  auto push_back(GenericPointer<PropertyT, Hash> &&other) -> void {
+  SOURCEMETA_FORCEINLINE auto push_back(GenericPointer<PropertyT, Hash> &&other)
+      -> void {
     if (other.empty()) {
       return;
     } else if (other.size() == 1) {
@@ -284,7 +289,8 @@ public:
   /// assert(pointer.at(2).to_property() == "baz");
   /// ```
   template <typename OtherT>
-  auto push_back(const GenericPointer<OtherT, Hash> &other) -> void
+  SOURCEMETA_FORCEINLINE auto
+  push_back(const GenericPointer<OtherT, Hash> &other) -> void
     requires std::is_same_v<PropertyT, std::reference_wrapper<const OtherT>>
   {
     if (other.empty()) {
@@ -328,7 +334,8 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_property() == "bar");
   /// ```
-  auto push_back(const typename Token::Property &property) -> void {
+  SOURCEMETA_FORCEINLINE auto
+  push_back(const typename Token::Property &property) -> void {
     this->data.emplace_back(property);
   }
 
@@ -349,7 +356,8 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_property() == "bar");
   /// ```
-  auto push_back(typename Token::Property &&property) -> void {
+  SOURCEMETA_FORCEINLINE auto push_back(typename Token::Property &&property)
+      -> void {
     this->data.emplace_back(std::move(property));
   }
 
@@ -371,7 +379,8 @@ public:
   /// assert(pointer.at(0).to_property() == "foo");
   /// assert(pointer.at(1).to_index() == 0);
   /// ```
-  auto push_back(const typename Token::Index &index) -> void {
+  SOURCEMETA_FORCEINLINE auto push_back(const typename Token::Index &index)
+      -> void {
     this->data.emplace_back(index);
   }
 
