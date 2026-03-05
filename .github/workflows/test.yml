@@ -71,11 +71,9 @@ jobs:
 
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
-        run: >
+        run: |
           apk add --no-cache cmake make g++ zsh bash jq shellcheck pipx git perl-utils ca-certificates
-          --repository https://dl-cdn.alpinelinux.org/alpine/edge/main
-          --repository https://dl-cdn.alpinelinux.org/alpine/edge/community
-          --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
+          apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --repository https://dl-cdn.alpinelinux.org/alpine/edge/community --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
 
       - name: Install pre-commit
         run: pipx install pre-commit
