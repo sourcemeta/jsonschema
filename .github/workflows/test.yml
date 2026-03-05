@@ -30,7 +30,7 @@ jobs:
             type: container
             container:
               image: alpine:3.21
-              options: --device /dev/fuse --cap-add SYS_ADMIN
+              options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
             cc: gcc
             cxx: g++
             shell: sh
