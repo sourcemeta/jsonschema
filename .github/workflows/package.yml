@@ -89,7 +89,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: 1
       - name: Install dependencies (Linux)
         if: runner.os == 'linux' && matrix.platform.type == 'native'
-        run: sudo apt-get update --yes && sudo apt-get install --yes zsh
+        run: sudo apt-get update --yes && sudo apt-get install --yes zsh bindfs
 
       - run: cmake --version
 
