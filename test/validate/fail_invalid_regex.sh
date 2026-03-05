@@ -28,6 +28,7 @@ error: Invalid regular expression
   at regex [invalid(
   at file path $(realpath "$TMP")/schema.json
   at location "/pattern"
+  at base uri file://$(realpath "$TMP")/schema.json
 
 Detailed regex error messages are not yet supported
 Try tools like https://regex101.com to debug further
@@ -44,7 +45,8 @@ cat << EOF > "$TMP/expected.txt"
   "error": "Invalid regular expression",
   "regex": "[invalid(",
   "filePath": "$(realpath "$TMP")/schema.json",
-  "location": "/pattern"
+  "location": "/pattern",
+  "baseURI": "file://$(realpath "$TMP")/schema.json"
 }
 EOF
 

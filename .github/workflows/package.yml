@@ -32,7 +32,9 @@ jobs:
           - os: ubuntu-latest
             type: container
             artifact: alpine-x64
-            container: alpine:3.21
+            container:
+              image: alpine:3.21
+              options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
             cc: gcc
             cxx: g++
             shell: sh
@@ -69,7 +71,9 @@ jobs:
     steps:
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
-        run: apk add --no-cache cmake make g++ zsh bash jq pipx git perl-utils
+        run: |
+          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates
+          apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --repository https://dl-cdn.alpinelinux.org/alpine/edge/community --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
 
       - name: Install pre-commit
         run: pipx install pre-commit

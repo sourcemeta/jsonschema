@@ -392,6 +392,17 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) {
+                  current.base().recompose();
+                }) {
+    if (is_json) {
+      error_json.assign("baseURI",
+                        sourcemeta::core::JSON{exception.base().recompose()});
+    } else {
+      std::cerr << "  at base uri " << exception.base().recompose() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.uri(); }) {
     if (is_json) {
       error_json.assign("uri", sourcemeta::core::JSON{exception.uri()});
