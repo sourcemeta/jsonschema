@@ -65,6 +65,14 @@ What our users are saying
 [@alombarte](https://github.com/alombarte), co-founder of the
 [KrakenD](https://www.krakend.io) API Gateway.
 
+> Huge shout out to this tool. Our governance pipeline uses it to produce
+> better analysis of the examples in our OpenAPI documents. While Spectral does
+> some basic validation of examples, the diagnostics from this tool are far
+> superior.
+
+[@DavidBiesack](https://github.com/DavidBiesack), Chief API Officer at
+[Apiture](https://www.apiture.com).
+
 Usage
 -----
 
