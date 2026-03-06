@@ -78,10 +78,12 @@ private:
                                const SchemaWalker &walker,
                                const SchemaResolver &resolver,
                                const JSON::String &property) const -> bool {
-    if (location.parent.has_value()) {
-      const auto &parent_pointer{location.parent.value()};
-      const auto relative_pointer{
-          location.pointer.resolve_from(parent_pointer)};
+    auto current_pointer = location.pointer;
+    auto current_parent = location.parent;
+
+    while (current_parent.has_value()) {
+      const auto &parent_pointer{current_parent.value()};
+      const auto relative_pointer{current_pointer.resolve_from(parent_pointer)};
       assert(!relative_pointer.empty() && relative_pointer.at(0).is_property());
       const auto parent{
           frame.traverse(frame.uri(parent_pointer).value().get())};
@@ -89,14 +91,21 @@ private:
       const auto type{walker(relative_pointer.at(0).to_property(),
                              frame.vocabularies(parent.value().get(), resolver))
                           .type};
-      if (type == SchemaKeywordType::ApplicatorElementsInPlaceSome ||
-          type == SchemaKeywordType::ApplicatorElementsInPlace ||
-          type == SchemaKeywordType::ApplicatorValueInPlaceMaybe ||
-          type == SchemaKeywordType::ApplicatorValueInPlaceNegate ||
-          type == SchemaKeywordType::ApplicatorValueInPlaceOther) {
-        return this->defined_in_properties_sibling(get(root, parent_pointer),
-                                                   property);
+      if (type != SchemaKeywordType::ApplicatorElementsInPlaceSome &&
+          type != SchemaKeywordType::ApplicatorElementsInPlace &&
+          type != SchemaKeywordType::ApplicatorValueInPlaceMaybe &&
+          type != SchemaKeywordType::ApplicatorValueInPlaceNegate &&
+          type != SchemaKeywordType::ApplicatorValueInPlaceOther) {
+        return false;
       }
+
+      if (this->defined_in_properties_sibling(get(root, parent_pointer),
+                                              property)) {
+        return true;
+      }
+
+      current_pointer = parent_pointer;
+      current_parent = parent.value().get().parent;
     }
 
     return false;
