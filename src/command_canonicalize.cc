@@ -2,8 +2,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <iostream> // std::cin, std::cout
-#include <sstream>  // std::ostringstream, std::istringstream
+#include <iostream> // std::cout
 
 #include "command.h"
 #include "configuration.h"
@@ -45,24 +44,9 @@ auto sourcemeta::jsonschema::canonicalize(
   const auto &configuration{
       read_configuration(options, configuration_path, schema_resolution_base)};
   const auto dialect{default_dialect(options, configuration)};
-  auto schema{
-      schema_from_stdin ? [&]() {
-        std::ostringstream buffer;
-        buffer << std::cin.rdbuf();
-        const auto input{buffer.str()};
-        try {
-          std::istringstream stream{input};
-          return sourcemeta::core::parse_json(stream);
-        } catch (const sourcemeta::core::JSONParseError &json_error) {
-          try {
-            std::istringstream stream{input};
-            return sourcemeta::core::parse_yaml(stream);
-          } catch (...) {
-            throw json_error;
-          }
-        }
-      }()
-                        : sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto schema{schema_from_stdin
+                  ? read_from_stdin().document
+                  : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
     throw NotSchemaError{schema_from_stdin ? stdin_error_path()

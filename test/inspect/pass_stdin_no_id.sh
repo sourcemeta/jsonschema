@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-CWD="$(pwd -P)"
+CWD="$(realpath .)"
 
 cat << 'EOF' | "$1" inspect - > "$TMP/output.txt" 2>&1
 {

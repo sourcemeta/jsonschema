@@ -19,7 +19,7 @@ echo '42' | "$1" validate "$TMP/schema.json" - --trace > "$TMP/output.txt" \
 # Validation failure
 test "$EXIT_CODE" = "2" || exit 1
 
-SCHEMA_PATH="$(cd "$TMP" && pwd -P)/schema.json"
+SCHEMA_PATH="$(realpath "$TMP")/schema.json"
 
 cat << EOF > "$TMP/expected.txt"
 -> (push) "/type" (AssertionTypeStrict)

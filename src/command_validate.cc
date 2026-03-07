@@ -11,7 +11,6 @@
 #include <chrono>      // std::chrono
 #include <cmath>       // std::sqrt
 #include <iostream>    // std::cerr
-#include <sstream>     // std::ostringstream, std::istringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -162,23 +161,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_resolution_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  const auto schema{
-      schema_from_stdin ? [&]() {
-        std::ostringstream buffer;
-        buffer << std::cin.rdbuf();
-        const auto input{buffer.str()};
-        try {
-          std::istringstream stream{input};
-          return sourcemeta::core::parse_json(stream);
-        } catch (const sourcemeta::core::JSONParseError &json_error) {
-          try {
-            std::istringstream stream{input};
-            return sourcemeta::core::parse_yaml(stream);
-          } catch (...) {
-            throw json_error;
-          }
-        }
-      }()
+  const auto schema{schema_from_stdin
+                        ? read_from_stdin().document
                         : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {

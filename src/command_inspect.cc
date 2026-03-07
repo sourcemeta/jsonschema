@@ -3,9 +3,8 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <iostream> // std::cin, std::cout
+#include <iostream> // std::cout
 #include <ostream>  // std::ostream
-#include <sstream>  // std::ostringstream, std::istringstream
 
 #include "command.h"
 #include "configuration.h"
@@ -170,27 +169,15 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
-  const sourcemeta::core::JSON schema{
-      schema_from_stdin
-          ? [&]() {
-              std::ostringstream buffer;
-              buffer << std::cin.rdbuf();
-              const auto input{buffer.str()};
-              try {
-                std::istringstream stream{input};
-                return sourcemeta::core::parse_json(stream,
-                                                    std::ref(positions));
-              } catch (const sourcemeta::core::JSONParseError &json_error) {
-                try {
-                  std::istringstream stream{input};
-                  return sourcemeta::core::parse_yaml(stream,
-                                                      std::ref(positions));
-                } catch (...) {
-                  throw json_error;
-                }
-              }
-            }()
-          : sourcemeta::core::read_yaml_or_json(schema_path, std::ref(positions))};
+  const sourcemeta::core::JSON schema{[&]() {
+    if (schema_from_stdin) {
+      auto parsed{read_from_stdin()};
+      positions = std::move(parsed.positions);
+      return std::move(parsed.document);
+    }
+    return sourcemeta::core::read_yaml_or_json(schema_path,
+                                               std::ref(positions));
+  }()};
 
   if (!sourcemeta::core::is_schema(schema)) {
     throw NotSchemaError{schema_from_stdin ? stdin_error_path()

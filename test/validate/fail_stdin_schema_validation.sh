@@ -69,7 +69,7 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" >"$TMP/output_no_id.txt" 2>&
 EOF
 test "$EXIT_CODE" = "2" || exit 1
 
-CWD="$(pwd -P)"
+CWD="$(realpath .)"
 
 cat << EOF > "$TMP/expected_no_id.txt"
 fail: $(realpath "$TMP")/instance.json
