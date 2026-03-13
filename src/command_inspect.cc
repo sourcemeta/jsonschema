@@ -165,8 +165,8 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
         schema_path, std::make_error_code(std::errc::is_a_directory)};
   }
 
-  const auto schema_resolution_base{
-      schema_from_stdin ? stdin_error_path() : schema_path};
+  const auto schema_resolution_base{schema_from_stdin ? stdin_error_path()
+                                                      : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
   const sourcemeta::core::JSON schema{[&]() {

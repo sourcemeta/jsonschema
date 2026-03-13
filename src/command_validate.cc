@@ -494,8 +494,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "
-                << (schema_from_stdin
-                  ? "/dev/stdin"
+            << (schema_from_stdin
+                    ? "/dev/stdin"
                     : sourcemeta::core::weakly_canonical(schema_resolution_base)
                           .string())
             << "\n";
