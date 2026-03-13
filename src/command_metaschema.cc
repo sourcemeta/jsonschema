@@ -32,7 +32,8 @@ auto sourcemeta::jsonschema::metaschema(
 
   for (const auto &entry : for_each_json(options)) {
     if (!sourcemeta::core::is_schema(entry.second)) {
-      throw NotSchemaError{entry.resolution_base};
+      throw NotSchemaError{entry.from_stdin ? stdin_error_path()
+                                            : entry.resolution_base};
     }
 
     const auto configuration_path{find_configuration(entry.resolution_base)};

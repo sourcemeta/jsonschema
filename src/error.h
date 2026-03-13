@@ -94,6 +94,11 @@ public:
       : std::runtime_error{std::move(message)} {}
 };
 
+class StdinError : public std::runtime_error {
+public:
+  StdinError(std::string message) : std::runtime_error{std::move(message)} {}
+};
+
 class InvalidLintRuleError : public std::runtime_error {
 public:
   InvalidLintRuleError(std::string message, std::string rule)
@@ -252,6 +257,28 @@ private:
   std::filesystem::path path_;
 };
 
+inline auto stdin_error_path() -> std::filesystem::path {
+#ifdef _WIN32
+  return std::filesystem::path{"<stdin>"};
+#else
+  return std::filesystem::path{"/dev/stdin"};
+#endif
+}
+
+inline auto stdin_error_path_string(const std::filesystem::path &p)
+    -> std::string {
+#ifdef _WIN32
+  if (p.string() == "<stdin>") {
+    return "<stdin>";
+  }
+#else
+  if (p == std::filesystem::path{"/dev/stdin"}) {
+    return "/dev/stdin";
+  }
+#endif
+  return sourcemeta::core::weakly_canonical(p).string();
+}
+
 template <typename Exception>
 inline auto print_exception(const bool is_json, const Exception &exception)
     -> void {
@@ -353,15 +380,12 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                     current.path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
+    const auto &error_path{exception.path()};
+    const auto error_path_string{stdin_error_path_string(error_path)};
     if (is_json) {
-      error_json.assign(
-          "filePath",
-          sourcemeta::core::JSON{
-              sourcemeta::core::weakly_canonical(exception.path()).string()});
+      error_json.assign("filePath", sourcemeta::core::JSON{error_path_string});
     } else {
-      std::cerr << "  at file path "
-                << sourcemeta::core::weakly_canonical(exception.path()).string()
-                << "\n";
+      std::cerr << "  at file path " << error_path_string << "\n";
     }
   } else if constexpr (requires(const Exception &current) {
                          {
@@ -705,6 +729,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
 
     // Command line parsing handling
+  } catch (const StdinError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
