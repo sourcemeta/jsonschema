@@ -14,28 +14,30 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-printf '   \n' | "$1" validate "$TMP/schema.json" - 2>"$TMP/stderr.txt" \
+printf '   \n' | "$1" validate "$TMP/schema.json" - 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: Failed to parse the JSON document
   at line 2
   at column 1
+  at file path /dev/stdin
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-printf '   \n' | "$1" validate "$TMP/schema.json" - --json >"$TMP/stdout.txt" 2>&1 \
+printf '   \n' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {
   "error": "Failed to parse the JSON document",
   "line": 2,
-  "column": 1
+  "column": 1,
+  "filePath": "/dev/stdin"
 }
 EOF
 

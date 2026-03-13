@@ -144,6 +144,14 @@ struct ParsedJSON {
   bool yaml{false};
 };
 
+inline auto stdin_path() -> std::filesystem::path {
+#ifdef _WIN32
+  return std::filesystem::path{"<stdin>"};
+#else
+  return std::filesystem::path{"/dev/stdin"};
+#endif
+}
+
 inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   const auto extension{path.extension()};
   sourcemeta::core::PointerPositionTracker positions;
@@ -167,10 +175,13 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
 }
 
 // Read stdin into a buffer and try JSON first, then YAML
-inline auto read_from_stdin() -> ParsedJSON {
+inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
   std::ostringstream buffer;
   buffer << std::cin.rdbuf();
   const auto input{buffer.str()};
+  if (raw_input != nullptr) {
+    *raw_input = input;
+  }
 
   try {
     std::istringstream json_stream{input};
@@ -184,7 +195,7 @@ inline auto read_from_stdin() -> ParsedJSON {
       return {sourcemeta::core::parse_yaml(yaml_stream, std::ref(positions)),
               std::move(positions), true};
     } catch (...) {
-      throw json_error;
+      throw sourcemeta::core::JSONFileParseError(stdin_path(), json_error);
     }
   }
 }
@@ -197,8 +208,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
                   const sourcemeta::core::Options &options) -> void {
   if (entry_path == "-") {
     auto parsed{read_from_stdin()};
-    const auto current_path{std::filesystem::current_path()};
-    result.push_back({"<stdin>", current_path, std::move(parsed.document),
+    const auto path{stdin_path()};
+    result.push_back({path.string(), path, std::move(parsed.document),
                       std::move(parsed.positions), 0, false, parsed.yaml,
                       true});
     return;

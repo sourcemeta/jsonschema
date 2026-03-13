@@ -14,7 +14,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '"hello"' | "$1" validate "$TMP/schema.json" - --trace --benchmark > "$TMP/output.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
-test -s "$TMP/output.txt" || exit 1
+echo '"hello"' | "$1" validate "$TMP/schema.json" - --trace --benchmark > "$TMP/output.txt"
+
+sed -E 's/[0-9]+\.[0-9]+/<FLOAT>/g' "$TMP/output.txt" > "$TMP/normalized.txt"
+
+cat << 'EOF' > "$TMP/expected.txt"
+/dev/stdin: PASS <FLOAT> +- <FLOAT> us (<FLOAT>)
+EOF
+
+diff "$TMP/normalized.txt" "$TMP/expected.txt"

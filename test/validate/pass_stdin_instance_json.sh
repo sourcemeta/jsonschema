@@ -21,9 +21,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '{ "foo": "bar" }' | "$1" validate "$TMP/schema.json" - --json > "$TMP/output.json" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
+echo '{ "foo": "bar" }' | "$1" validate "$TMP/schema.json" - --json > "$TMP/output.json"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

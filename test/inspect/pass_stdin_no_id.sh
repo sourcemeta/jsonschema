@@ -7,8 +7,6 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-CWD="$(realpath .)"
-
 cat << 'EOF' | "$1" inspect - > "$TMP/output.txt" 2>&1
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -17,12 +15,12 @@ cat << 'EOF' | "$1" inspect - > "$TMP/output.txt" 2>&1
 EOF
 
 cat << EOF > "$TMP/expected.txt"
-(RESOURCE) URI: file://$CWD
+(RESOURCE) URI: file:///dev/stdin
     Type              : Static
-    Root              : file://$CWD
+    Root              : file:///dev/stdin
     Pointer           :
     File Position     : 1:1
-    Base              : file://$CWD
+    Base              : file:///dev/stdin
     Relative Pointer  :
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -30,12 +28,12 @@ cat << EOF > "$TMP/expected.txt"
     Property Name     : no
     Orphan            : no
 
-(POINTER) URI: file://$CWD#/\$schema
+(POINTER) URI: file:///dev/stdin#/\$schema
     Type              : Static
-    Root              : file://$CWD
+    Root              : file:///dev/stdin
     Pointer           : /\$schema
     File Position     : 2:3
-    Base              : file://$CWD
+    Base              : file:///dev/stdin
     Relative Pointer  : /\$schema
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -43,12 +41,12 @@ cat << EOF > "$TMP/expected.txt"
     Property Name     : no
     Orphan            : no
 
-(POINTER) URI: file://$CWD#/type
+(POINTER) URI: file:///dev/stdin#/type
     Type              : Static
-    Root              : file://$CWD
+    Root              : file:///dev/stdin
     Pointer           : /type
     File Position     : 3:3
-    Base              : file://$CWD
+    Base              : file:///dev/stdin
     Relative Pointer  : /type
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema

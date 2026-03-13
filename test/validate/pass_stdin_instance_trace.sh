@@ -14,9 +14,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '"hello"' | "$1" validate "$TMP/schema.json" - --trace > "$TMP/output.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
+echo '"hello"' | "$1" validate "$TMP/schema.json" - --trace > "$TMP/output.txt"
 
 SCHEMA_PATH="$(realpath "$TMP")/schema.json"
 

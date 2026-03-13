@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" metaschema - --verbose 2>"$TMP/stderr.txt"
+cat << 'EOF' | "$1" metaschema - --verbose 2> "$TMP/stderr.txt"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string"
@@ -15,7 +15,7 @@ cat << 'EOF' | "$1" metaschema - --verbose 2>"$TMP/stderr.txt"
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-ok: <stdin>
+ok: /dev/stdin
   matches https://json-schema.org/draft/2020-12/schema
 EOF
 

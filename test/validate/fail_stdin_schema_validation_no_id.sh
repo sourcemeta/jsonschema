@@ -15,7 +15,6 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/test-schema",
   "type": "string"
 }
 EOF
@@ -31,12 +30,10 @@ EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-# JSON error
 cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/test-schema",
   "type": "string"
 }
 EOF
@@ -48,7 +45,7 @@ cat << 'EOF' > "$TMP/expected.txt"
   "errors": [
     {
       "keywordLocation": "/type",
-      "absoluteKeywordLocation": "https://example.com/test-schema#/type",
+      "absoluteKeywordLocation": "file:///dev/stdin#/type",
       "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 3 ],
       "error": "The value was expected to be of type string but it was of type integer"

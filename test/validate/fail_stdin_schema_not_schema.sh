@@ -11,9 +11,9 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" 2>"$TMP/stderr.txt" \
+echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: The schema file you provided does not represent a valid JSON Schema
@@ -23,9 +23,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" --json >"$TMP/stdout.txt" \
+echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

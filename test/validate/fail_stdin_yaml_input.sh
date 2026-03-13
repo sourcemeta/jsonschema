@@ -14,12 +14,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - >"$TMP/output.txt" 2>&1 \
+printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: <stdin>
+fail: /dev/stdin
 error: Schema validation failure
   The value was expected to be of type string but it was of type object
     at instance location "" (line 1, column 1)
@@ -29,12 +29,12 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
-printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - --json >"$TMP/stdout.txt" 2>&1 \
+printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
-<stdin>
+/dev/stdin
 {
   "valid": false,
   "errors": [

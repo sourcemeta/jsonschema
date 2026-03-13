@@ -17,7 +17,7 @@ EOF
 echo '42' | "$1" validate "$TMP/schema.json" - --trace > "$TMP/output.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 SCHEMA_PATH="$(realpath "$TMP")/schema.json"
 
@@ -36,12 +36,12 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '42' | "$1" validate "$TMP/schema.json" - --json >"$TMP/stdout.txt" 2>&1 \
+echo '42' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.json"
-<stdin>
+/dev/stdin
 {
   "valid": false,
   "errors": [

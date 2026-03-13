@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" lint - >"$TMP/output.txt" 2>&1 \
+cat << 'EOF' | "$1" lint - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -17,13 +17,13 @@ cat << 'EOF' | "$1" lint - >"$TMP/output.txt" 2>&1 \
   "enum": [ "foo" ]
 }
 EOF
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-<stdin>:6:3:
+/dev/stdin:6:3:
   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/enum"
-<stdin>:5:3:
+/dev/stdin:5:3:
   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/type"
 EOF
@@ -31,7 +31,7 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
-cat << 'EOF' | "$1" lint - --json >"$TMP/stdout.txt" 2>&1 \
+cat << 'EOF' | "$1" lint - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -41,7 +41,7 @@ cat << 'EOF' | "$1" lint - --json >"$TMP/stdout.txt" 2>&1 \
   "enum": [ "foo" ]
 }
 EOF
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {
@@ -49,7 +49,7 @@ cat << 'EOF' > "$TMP/expected.txt"
   "health": 0,
   "errors": [
     {
-      "path": "<stdin>",
+      "path": "/dev/stdin",
       "id": "enum_with_type",
       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
@@ -57,7 +57,7 @@ cat << 'EOF' > "$TMP/expected.txt"
       "position": [ 5, 3, 5, 18 ]
     },
     {
-      "path": "<stdin>",
+      "path": "/dev/stdin",
       "id": "enum_with_type",
       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,

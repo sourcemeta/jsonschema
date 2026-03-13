@@ -166,7 +166,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   }
 
   const auto schema_resolution_base{
-      schema_from_stdin ? std::filesystem::current_path() : schema_path};
+      schema_from_stdin ? stdin_error_path() : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
   const sourcemeta::core::JSON schema{[&]() {

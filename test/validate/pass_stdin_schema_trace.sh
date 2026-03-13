@@ -11,15 +11,13 @@ cat << 'EOF' > "$TMP/instance.json"
 "hello"
 EOF
 
-cat << 'EOF' | "$1" validate - "$TMP/instance.json" --trace > "$TMP/output.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
+cat << 'EOF' | "$1" validate - "$TMP/instance.json" --trace > "$TMP/output.txt"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/test-schema",
   "type": "string"
 }
 EOF
-test "$EXIT_CODE" = "0" || exit 1
 
 cat << 'EOF' > "$TMP/expected.txt"
 -> (push) "/type" (AssertionTypeStrict)

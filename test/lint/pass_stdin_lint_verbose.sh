@@ -18,7 +18,7 @@ cat << 'EOF' | "$1" lint - --verbose > "$TMP/output.txt" 2>&1
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-Linting: <stdin>
+Linting: /dev/stdin
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

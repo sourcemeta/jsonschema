@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" fmt --check - --verbose >"$TMP/output.txt" 2>&1
+cat << 'EOF' | "$1" fmt --check - --verbose > "$TMP/output.txt" 2>&1
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string"
@@ -15,7 +15,7 @@ cat << 'EOF' | "$1" fmt --check - --verbose >"$TMP/output.txt" 2>&1
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-ok: <stdin>
+ok: /dev/stdin
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

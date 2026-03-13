@@ -732,7 +732,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const StdinError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
-    return EXIT_FAILURE;
+    return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const OptionConflictError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

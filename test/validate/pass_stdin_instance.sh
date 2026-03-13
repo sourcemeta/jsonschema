@@ -14,7 +14,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-echo '"foo"' | "$1" validate "$TMP/schema.json" - >"$TMP/output.txt" 2>&1
+echo '"foo"' | "$1" validate "$TMP/schema.json" - > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 EOF

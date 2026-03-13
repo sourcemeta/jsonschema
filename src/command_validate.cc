@@ -151,9 +151,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         schema_path, std::make_error_code(std::errc::is_a_directory)};
   }
 
-  // For stdin, use the current working directory as the resolution base
+  // For stdin, use the logical stdin path as the resolution base
   const auto schema_resolution_base{schema_from_stdin
-                                        ? std::filesystem::current_path()
+                                        ? stdin_error_path()
                                         : std::filesystem::path(schema_path)};
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
@@ -420,7 +420,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           }
           LOG_VERBOSE(options)
               << "\n  matches "
-              << (schema_from_stdin ? "<stdin>"
+              << (schema_from_stdin ? "/dev/stdin"
                                     : sourcemeta::core::weakly_canonical(
                                           schema_resolution_base)
                                           .string())
@@ -494,8 +494,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
             << "ok: "
             << sourcemeta::core::weakly_canonical(instance_path).string()
             << "\n  matches "
-            << (schema_from_stdin
-                    ? "<stdin>"
+                << (schema_from_stdin
+                  ? "/dev/stdin"
                     : sourcemeta::core::weakly_canonical(schema_resolution_base)
                           .string())
             << "\n";

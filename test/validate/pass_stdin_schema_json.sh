@@ -11,8 +11,7 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/output.json" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
+cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/output.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com",
@@ -22,7 +21,6 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/output.json" 
   }
 }
 EOF
-test "$EXIT_CODE" = "0" || exit 1
 
 cat << 'EOF' > "$TMP/expected.json"
 {

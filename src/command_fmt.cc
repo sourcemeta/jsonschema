@@ -37,11 +37,15 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           resolver(options, options.contains("http"), dialect, configuration)};
 
       if (options.contains("check")) {
-        std::ostringstream stdin_buf;
-        stdin_buf << std::cin.rdbuf();
-        const auto raw_stdin{stdin_buf.str()};
-        std::istringstream parse_stream{raw_stdin};
-        const auto document{sourcemeta::core::parse_json(parse_stream)};
+        std::string raw_stdin;
+        const auto parsed{read_from_stdin(&raw_stdin)};
+        const auto stdin_label{stdin_path().string()};
+        if (parsed.yaml) {
+          throw YAMLInputError{
+              "This command does not support YAML input files yet",
+              stdin_path()};
+        }
+        const auto &document{parsed.document};
 
         std::ostringstream expected;
         if (options.contains("keep-ordering")) {
@@ -55,12 +59,12 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         expected << "\n";
 
         if (raw_stdin == expected.str()) {
-          LOG_VERBOSE(options) << "ok: <stdin>\n";
+          LOG_VERBOSE(options) << "ok: " << stdin_label << "\n";
         } else if (output_json) {
-          failed_files.push_back("<stdin>");
+          failed_files.push_back(stdin_label);
           result = false;
         } else {
-          std::cerr << "fail: <stdin>\n";
+          std::cerr << "fail: " << stdin_label << "\n";
           result = false;
         }
       } else {
@@ -75,6 +79,8 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         }
         std::cout << "\n";
       }
+    } catch (const sourcemeta::core::JSONParseError &error) {
+      throw sourcemeta::core::JSONFileParseError(stdin_path(), error);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw FileError<sourcemeta::core::SchemaKeywordError>(
           std::filesystem::current_path(), error);

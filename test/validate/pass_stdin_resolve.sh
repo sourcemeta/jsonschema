@@ -21,7 +21,13 @@ EOF
 
 # Schema from stdin referencing a resolved external schema
 cat << 'EOF' | "$1" validate - "$TMP/instance.json" --resolve "$TMP/defs.json" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
+  --verbose > "$TMP/output.txt" 2>&1
 {"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.com/defs"}
 EOF
-test "$EXIT_CODE" = "0" || exit 1
+
+cat << EOF > "$TMP/expected.txt"
+ok: $(realpath "$TMP")/instance.json
+  matches /dev/stdin
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"

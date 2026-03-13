@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" metaschema - 2>"$TMP/stderr.txt" \
+cat << 'EOF' | "$1" metaschema - 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
@@ -15,10 +15,10 @@ cat << 'EOF' | "$1" metaschema - 2>"$TMP/stderr.txt" \
 }
 EOF
 # Metaschema validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: <stdin>
+fail: /dev/stdin
 error: Schema validation failure
   The integer value 1 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
     at instance location "/type" (line 3, column 3)
@@ -40,17 +40,17 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-cat << 'EOF' | "$1" metaschema - --json >"$TMP/stdout.txt" 2>&1 \
+cat << 'EOF' | "$1" metaschema - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "type": 1
 }
 EOF
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-<stdin>
+/dev/stdin
 {
   "valid": false,
   "errors": [

@@ -15,9 +15,7 @@ cat << 'EOF' > "$TMP/lf.json"
 }
 EOF
 awk '{ printf "%s\r\n", $0 }' "$TMP/lf.json" \
-  | "$1" fmt - > "$TMP/output.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "0" || exit 1
+  | "$1" fmt - > "$TMP/output.txt"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

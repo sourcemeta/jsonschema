@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" canonicalize - >"$TMP/output.json"
+cat << 'EOF' | "$1" canonicalize - > "$TMP/output.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string"

@@ -7,8 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" lint --fix --format - > "$TMP/output.json" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
+cat << 'EOF' | "$1" lint --fix --format - > "$TMP/output.json"
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
   "description": "Test schema",
@@ -18,7 +17,6 @@ cat << 'EOF' | "$1" lint --fix --format - > "$TMP/output.json" \
   "title": "I should not be moved up"
 }
 EOF
-test "$EXIT_CODE" = "0" || exit 1
 
 cat << 'EOF' > "$TMP/expected.json"
 {

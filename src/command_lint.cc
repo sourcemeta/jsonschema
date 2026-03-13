@@ -108,7 +108,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
         errors_array.push_back(error_obj);
       } else {
         if (entry.from_stdin) {
-          std::cout << "<stdin>";
+          std::cout << "/dev/stdin";
         } else {
           std::cout
               << std::filesystem::relative(entry.resolution_base).string();

@@ -13,12 +13,12 @@ cat << 'EOF' > "$TMP/schema_noeol.json"
 EOF
 # $(cat) strips trailing newline; printf '%s' prints without adding one
 printf '%s' "$(cat "$TMP/schema_noeol.json")" \
-  | "$1" fmt --check - >"$TMP/output.txt" 2>&1 \
+  | "$1" fmt --check - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: <stdin>
+fail: /dev/stdin
 
 Run the `fmt` command without `--check/-c` to fix the formatting
 EOF
@@ -27,14 +27,14 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 # JSON error
 printf '%s' "$(cat "$TMP/schema_noeol.json")" \
-  | "$1" fmt --check - --json >"$TMP/stdout.txt" 2>&1 \
+  | "$1" fmt --check - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {
   "valid": false,
-  "errors": [ "<stdin>" ]
+  "errors": [ "/dev/stdin" ]
 }
 EOF
 

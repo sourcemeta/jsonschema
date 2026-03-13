@@ -23,12 +23,12 @@ cat << 'EOF' > "$TMP/instance2.json"
 EOF
 
 echo '{ "c": 3 }' | "$1" validate "$TMP/schema.json" \
-  "$TMP/instance1.json" - "$TMP/instance2.json" --verbose 2>"$TMP/stderr.txt"
+  "$TMP/instance1.json" - "$TMP/instance2.json" --verbose 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance1.json
   matches $(realpath "$TMP")/schema.json
-ok: <stdin>
+ok: /dev/stdin
   matches $(realpath "$TMP")/schema.json
 ok: $(realpath "$TMP")/instance2.json
   matches $(realpath "$TMP")/schema.json

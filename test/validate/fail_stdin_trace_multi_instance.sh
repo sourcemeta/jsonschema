@@ -22,9 +22,9 @@ cat << 'EOF' > "$TMP/instance_2.json"
 "bar"
 EOF
 
-echo '"world"' | "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" - "$TMP/instance_2.json" --trace 2>"$TMP/stderr.txt" \
+echo '"world"' | "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" - "$TMP/instance_2.json" --trace 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: The `--trace/-t` option is only allowed given a single instance
@@ -33,9 +33,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '"world"' | "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" - "$TMP/instance_2.json" --trace --json >"$TMP/stdout.txt" 2>&1 \
+echo '"world"' | "$1" validate "$TMP/schema.json" "$TMP/instance_1.json" - "$TMP/instance_2.json" --trace --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

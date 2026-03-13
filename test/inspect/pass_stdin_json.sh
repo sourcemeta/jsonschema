@@ -7,7 +7,7 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-cat << 'EOF' | "$1" inspect - --json >"$TMP/output.txt" 2>&1
+cat << 'EOF' | "$1" inspect - --json > "$TMP/output.txt" 2>&1
 {
   "$id": "https://example.com/test-stdin-inspect",
   "$schema": "https://json-schema.org/draft/2020-12/schema",

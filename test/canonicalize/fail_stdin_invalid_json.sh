@@ -7,28 +7,30 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-echo '{ "foo" 1 }' | "$1" canonicalize - 2>"$TMP/stderr.txt" \
+echo '{ "foo" 1 }' | "$1" canonicalize - 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: Failed to parse the JSON document
   at line 1
   at column 9
+  at file path /dev/stdin
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '{ "foo" 1 }' | "$1" canonicalize - --json >"$TMP/stdout.txt" 2>&1 \
+echo '{ "foo" 1 }' | "$1" canonicalize - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {
   "error": "Failed to parse the JSON document",
   "line": 1,
-  "column": 9
+  "column": 9,
+  "filePath": "/dev/stdin"
 }
 EOF
 

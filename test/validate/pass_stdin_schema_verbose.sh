@@ -11,7 +11,7 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-cat << 'EOF' | "$1" validate - "$TMP/instance.json" --verbose 2>"$TMP/stderr.txt"
+cat << 'EOF' | "$1" validate - "$TMP/instance.json" --verbose 2> "$TMP/stderr.txt"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
@@ -23,7 +23,7 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance.json
-  matches <stdin>
+  matches /dev/stdin
 annotation: "foo"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
