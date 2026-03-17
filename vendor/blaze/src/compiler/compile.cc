@@ -64,7 +64,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
       // Just a sanity check to ensure every keyword location is indeed valid
       assert(context.frame.locations().contains(
           {sourcemeta::core::SchemaReferenceType::Static,
-           step.keyword_location}));
+           context.extra[step.extra_index].keyword_location}));
       steps.push_back(std::move(step));
     }
   }
@@ -297,6 +297,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   auto unevaluated{
       sourcemeta::blaze::unevaluated(schema, frame, walker, resolver)};
 
+  std::vector<InstructionExtra> instruction_extra;
   const Context context{.root = schema,
                         .frame = frame,
                         .resources = std::move(resources),
@@ -307,7 +308,8 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .uses_dynamic_scopes = uses_dynamic_scopes,
                         .unevaluated = std::move(unevaluated),
                         .tweaks = effective_tweaks,
-                        .targets = std::move(targets_map)};
+                        .targets = std::move(targets_map),
+                        .extra = instruction_extra};
 
   ///////////////////////////////////////////////////////////////////
   // (5) Build labels map for dynamic anchors
@@ -399,7 +401,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   ///////////////////////////////////////////////////////////////////
 
   if (mode == Mode::FastValidation) {
-    postprocess(compiled_targets, effective_tweaks, uses_dynamic_scopes);
+    postprocess(compiled_targets, instruction_extra, effective_tweaks,
+                uses_dynamic_scopes);
   }
 
   ///////////////////////////////////////////////////////////////////
@@ -417,7 +420,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   return {.dynamic = uses_dynamic_scopes,
           .track = track,
           .targets = std::move(compiled_targets),
-          .labels = std::move(labels_map)};
+          .labels = std::move(labels_map),
+          .extra = std::move(instruction_extra)};
 }
 
 auto compile(const sourcemeta::core::JSON &schema,

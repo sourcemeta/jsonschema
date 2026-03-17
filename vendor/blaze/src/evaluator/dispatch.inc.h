@@ -792,7 +792,8 @@ INSTRUCTION_HANDLER(LogicalCondition) {
     defined(SOURCEMETA_EVALUATOR_TRACK)
     if (track) {
       context.evaluator->evaluate_path.pop_back(
-          instruction.relative_schema_location.size());
+          context.schema->extra[instruction.extra_index]
+              .relative_schema_location.size());
     }
 #endif
 
@@ -807,7 +808,8 @@ INSTRUCTION_HANDLER(LogicalCondition) {
     defined(SOURCEMETA_EVALUATOR_TRACK)
     if (track) {
       context.evaluator->evaluate_path.push_back(
-          instruction.relative_schema_location);
+          context.schema->extra[instruction.extra_index]
+              .relative_schema_location);
     }
 #endif
   }

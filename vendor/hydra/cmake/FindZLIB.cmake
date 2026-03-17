@@ -1,16 +1,7 @@
 if(NOT ZLIB_FOUND)
-  if(UNIX OR CMAKE_SYSTEM_NAME STREQUAL "MSYS")
-    set(Z_HAVE_UNISTD_H ON)
-  else()
-    set(Z_HAVE_UNISTD_H OFF)
-  endif()
-
-  configure_file("${PROJECT_SOURCE_DIR}/vendor/zlib/zconf.h.cmakein"
-    "${CMAKE_CURRENT_BINARY_DIR}/zlib/zconf.h" @ONLY)
-
   set(ZLIB_DIR "${PROJECT_SOURCE_DIR}/vendor/zlib")
   set(ZLIB_PUBLIC_HEADER "${ZLIB_DIR}/zlib.h")
-  set(ZLIB_PRIVATE_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/zlib/zconf.h")
+  set(ZLIB_PRIVATE_HEADERS "${ZLIB_DIR}/zconf.h")
 
   add_library(zlib
     "${ZLIB_PUBLIC_HEADER}" ${ZLIB_PRIVATE_HEADERS}
@@ -72,6 +63,12 @@ if(NOT ZLIB_FOUND)
         -ftree-vectorize
         -fno-math-errno
         -fwrapv)
+    endif()
+
+    # Disable LTO for zlib to work around GCC LTO linker plugin not
+    # properly rescanning this archive for transitive dependencies
+    if(HYDRA_COMPILER_GCC)
+      target_compile_options(zlib PRIVATE -fno-lto)
     endif()
   endif()
 

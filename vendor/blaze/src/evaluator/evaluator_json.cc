@@ -46,8 +46,10 @@ auto value_from_json(const sourcemeta::core::JSON &wrapper)
   }
 }
 
-auto instructions_from_json(const sourcemeta::core::JSON &instructions,
-                            const sourcemeta::core::JSON &resources)
+auto instructions_from_json(
+    const sourcemeta::core::JSON &instructions,
+    const sourcemeta::core::JSON &resources,
+    std::vector<sourcemeta::blaze::InstructionExtra> &extra)
     -> std::optional<sourcemeta::blaze::Instructions> {
   if (!instructions.is_array()) {
     return std::nullopt;
@@ -84,7 +86,7 @@ auto instructions_from_json(const sourcemeta::core::JSON &instructions,
     // Parse children if there
     std::optional<sourcemeta::blaze::Instructions> children_result{
         instruction.array_size() == 7
-            ? instructions_from_json(instruction.at(6), resources)
+            ? instructions_from_json(instruction.at(6), resources, extra)
             : sourcemeta::blaze::Instructions{}};
 
     if (!type_result.has_value() ||
@@ -96,28 +98,31 @@ auto instructions_from_json(const sourcemeta::core::JSON &instructions,
       return std::nullopt;
     }
 
+    const auto extra_index{extra.size()};
+
     if (schema_resource_result.value() > 0 &&
         resources.array_size() >= schema_resource_result.value() &&
         keyword_location_result.value().starts_with('#')) {
-      // TODO: Maybe we should emplace here?
-      result.push_back(
-          {std::move(type_result).value(),
-           std::move(relative_schema_location_result).value(),
-           std::move(relative_instance_location_result).value(),
-           resources.at(schema_resource_result.value() - 1).to_string() +
+      extra.push_back(
+          {.relative_schema_location =
+               std::move(relative_schema_location_result).value(),
+           .keyword_location =
+               resources.at(schema_resource_result.value() - 1).to_string() +
                std::move(keyword_location_result).value(),
-           schema_resource_result.value(), std::move(value_result).value(),
-           std::move(children_result).value()});
+           .schema_resource = schema_resource_result.value()});
     } else {
-      // TODO: Maybe we should emplace here?
-      result.push_back({std::move(type_result).value(),
-                        std::move(relative_schema_location_result).value(),
-                        std::move(relative_instance_location_result).value(),
-                        std::move(keyword_location_result).value(),
-                        std::move(schema_resource_result).value(),
-                        std::move(value_result).value(),
-                        std::move(children_result).value()});
+      extra.push_back(
+          {.relative_schema_location =
+               std::move(relative_schema_location_result).value(),
+           .keyword_location = std::move(keyword_location_result).value(),
+           .schema_resource = std::move(schema_resource_result).value()});
     }
+
+    // TODO: Maybe we should emplace here?
+    result.push_back({std::move(type_result).value(),
+                      std::move(relative_instance_location_result).value(),
+                      std::move(value_result).value(),
+                      std::move(children_result).value(), extra_index});
   }
 
   return result;
@@ -145,10 +150,12 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     return std::nullopt;
   }
 
+  std::vector<InstructionExtra> template_extra;
   std::vector<Instructions> targets_result;
   targets_result.reserve(targets.size());
   for (const auto &target : targets.as_array()) {
-    auto target_result{instructions_from_json(target, resources)};
+    auto target_result{
+        instructions_from_json(target, resources, template_extra)};
     if (!target_result.has_value()) {
       return std::nullopt;
     }
@@ -175,7 +182,8 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
   return Template{.dynamic = dynamic.to_boolean(),
                   .track = track.to_boolean(),
                   .targets = std::move(targets_result),
-                  .labels = std::move(labels_result)};
+                  .labels = std::move(labels_result),
+                  .extra = std::move(template_extra)};
 }
 
 } // namespace sourcemeta::blaze

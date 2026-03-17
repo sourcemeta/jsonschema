@@ -236,16 +236,22 @@ struct Instruction;
 using Instructions = std::vector<Instruction>;
 
 /// @ingroup evaluator
+/// Satellite data for an instruction that is not needed during fast evaluation
+struct InstructionExtra {
+  sourcemeta::core::Pointer relative_schema_location;
+  std::string keyword_location;
+  std::size_t schema_resource;
+};
+
+/// @ingroup evaluator
 /// Represents a single instruction to be evaluated
 // NOLINTNEXTLINE(bugprone-exception-escape)
 struct Instruction {
   InstructionIndex type;
-  sourcemeta::core::Pointer relative_schema_location;
   sourcemeta::core::Pointer relative_instance_location;
-  std::string keyword_location;
-  std::size_t schema_resource;
   Value value;
   Instructions children;
+  std::size_t extra_index;
 };
 
 /// @ingroup evaluator

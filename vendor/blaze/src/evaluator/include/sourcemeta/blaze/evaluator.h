@@ -36,6 +36,7 @@ struct Template {
   bool track;
   std::vector<Instructions> targets;
   std::vector<std::pair<std::size_t, std::size_t>> labels;
+  std::vector<InstructionExtra> extra;
 };
 
 /// @ingroup evaluator
@@ -55,13 +56,14 @@ enum class EvaluationType : std::uint8_t { Pre, Post };
 /// - Whether the evaluation was successful or not (always true before
 /// evaluation)
 /// - The instruction that was just evaluated
+/// - The extra data associated with the instruction
 /// - The evaluation path
 /// - The instance location
 /// - The annotation result, if any (otherwise null)
 ///
 /// You can use this callback mechanism to implement arbitrary output formats.
 using Callback = std::function<void(
-    const EvaluationType, bool, const Instruction &,
+    const EvaluationType, bool, const Instruction &, const InstructionExtra &,
     const sourcemeta::core::WeakPointer &,
     const sourcemeta::core::WeakPointer &, const sourcemeta::core::JSON &)>;
 

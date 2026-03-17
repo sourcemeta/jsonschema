@@ -10,7 +10,8 @@
     return true;                                                               \
   }                                                                            \
   context.evaluator->evaluate_path.push_back(                                  \
-      instruction.relative_schema_location);                                   \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location);                                          \
   [[maybe_unused]] constexpr bool track{true};                                 \
   bool result{false};
 
@@ -22,7 +23,8 @@
     return true;                                                               \
   }                                                                            \
   context.evaluator->evaluate_path.push_back(                                  \
-      instruction.relative_schema_location);                                   \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location);                                          \
   [[maybe_unused]] constexpr bool track{true};                                 \
   bool result{false};
 
@@ -35,7 +37,8 @@
     return true;                                                               \
   }                                                                            \
   context.evaluator->evaluate_path.push_back(                                  \
-      instruction.relative_schema_location);                                   \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location);                                          \
   const auto &target{*maybe_target};                                           \
   bool result{false};
 
@@ -58,13 +61,15 @@
     return true;                                                               \
   }                                                                            \
   context.evaluator->evaluate_path.push_back(                                  \
-      instruction.relative_schema_location);                                   \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location);                                          \
   bool result{false};
 
 #define EVALUATE_BEGIN_NO_PRECONDITION(instruction_type)                       \
   assert(instruction.type == InstructionIndex::instruction_type);              \
   context.evaluator->evaluate_path.push_back(                                  \
-      instruction.relative_schema_location);                                   \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location);                                          \
   [[maybe_unused]] constexpr bool track{true};                                 \
   bool result{false};
 
@@ -78,7 +83,8 @@
 
 #define EVALUATE_END(instruction_type)                                         \
   context.evaluator->evaluate_path.pop_back(                                   \
-      instruction.relative_schema_location.size());                            \
+      context.schema->extra[instruction.extra_index]                           \
+          .relative_schema_location.size());                                   \
   return result;
 
 #define EVALUATE_END_NO_POP(instruction_type) return result;

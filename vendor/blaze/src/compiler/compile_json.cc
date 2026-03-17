@@ -6,6 +6,7 @@
 
 namespace {
 auto to_json(const sourcemeta::blaze::Instruction &instruction,
+             const std::vector<sourcemeta::blaze::InstructionExtra> &extra,
              std::vector<sourcemeta::core::JSON::String> &resources)
     -> sourcemeta::core::JSON {
   // Note that we purposely avoid objects to help consumers avoid potentially
@@ -16,29 +17,29 @@ auto to_json(const sourcemeta::blaze::Instruction &instruction,
   // is not meant to be human-readable anyway
   result.push_back(sourcemeta::core::to_json(instruction.type));
 
-  result.push_back(
-      sourcemeta::core::to_json(instruction.relative_schema_location));
+  const auto &meta{extra[instruction.extra_index]};
+  result.push_back(sourcemeta::core::to_json(meta.relative_schema_location));
   result.push_back(
       sourcemeta::core::to_json(instruction.relative_instance_location));
 
-  const auto match{instruction.keyword_location.find('#')};
-  if (instruction.schema_resource > 0 && match != std::string::npos) {
-    if (resources.size() < instruction.schema_resource) {
-      resources.resize(instruction.schema_resource);
+  const auto match{meta.keyword_location.find('#')};
+  if (meta.schema_resource > 0 && match != std::string::npos) {
+    if (resources.size() < meta.schema_resource) {
+      resources.resize(meta.schema_resource);
     }
 
-    if (resources[instruction.schema_resource - 1].empty()) {
-      resources[instruction.schema_resource - 1] =
-          instruction.keyword_location.substr(0, match);
+    if (resources[meta.schema_resource - 1].empty()) {
+      resources[meta.schema_resource - 1] =
+          meta.keyword_location.substr(0, match);
     }
 
     result.push_back(
-        sourcemeta::core::JSON{instruction.keyword_location.substr(match)});
+        sourcemeta::core::JSON{meta.keyword_location.substr(match)});
   } else {
-    result.push_back(sourcemeta::core::to_json(instruction.keyword_location));
+    result.push_back(sourcemeta::core::to_json(meta.keyword_location));
   }
 
-  result.push_back(sourcemeta::core::to_json(instruction.schema_resource));
+  result.push_back(sourcemeta::core::to_json(meta.schema_resource));
 
   // Note that we purposely avoid objects to help consumers avoid potentially
   // expensive hash-map or flat-map lookups when parsing back
@@ -59,8 +60,8 @@ auto to_json(const sourcemeta::blaze::Instruction &instruction,
   if (!instruction.children.empty()) {
     auto children_json{sourcemeta::core::JSON::make_array()};
     result.push_back(sourcemeta::core::to_json(
-        instruction.children, [&resources](const auto &subinstruction) {
-          return to_json(subinstruction, resources);
+        instruction.children, [&extra, &resources](const auto &subinstruction) {
+          return to_json(subinstruction, extra, resources);
         }));
   }
 
@@ -81,8 +82,8 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
   auto targets{sourcemeta::core::JSON::make_array()};
   for (const auto &target : schema_template.targets) {
     targets.push_back(sourcemeta::core::to_json(
-        target, [&resources](const auto &instruction) {
-          return ::to_json(instruction, resources);
+        target, [&schema_template, &resources](const auto &instruction) {
+          return ::to_json(instruction, schema_template.extra, resources);
         }));
   }
 

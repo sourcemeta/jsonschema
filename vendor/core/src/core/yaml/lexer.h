@@ -9,6 +9,7 @@
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 namespace sourcemeta::core::yaml {
 
@@ -42,6 +43,8 @@ enum class ScalarStyle : std::uint8_t {
   Folded
 };
 
+enum class BlockChomping : std::uint8_t { Clip, Strip, Keep };
+
 struct Token {
   TokenType type;
   std::string_view value;
@@ -49,15 +52,28 @@ struct Token {
   std::uint64_t column;
   std::size_t position{0};
   ScalarStyle scalar_style{ScalarStyle::Plain};
+  BlockChomping chomping{BlockChomping::Clip};
   bool multiline{false};
+  std::string_view block_original{};
+  std::string_view quoted_original{};
+  std::size_t explicit_indent{0};
+  bool indent_before_chomping{false};
+  bool compact_separator{false};
 };
 
 class Lexer {
 public:
-  Lexer(const std::string_view input) : input_{input} {}
+  Lexer(const std::string_view input, const bool roundtrip_mode = false)
+      : input_{input}, roundtrip_{roundtrip_mode} {}
 
   auto next() -> std::optional<Token> {
+    if (this->roundtrip_) {
+      this->inline_comment_buffer_.reset();
+    }
     this->skip_whitespace_and_comments();
+    if (this->roundtrip_) {
+      this->comment_reference_line_ = this->line_;
+    }
 
     if (this->position_ >= this->input_.size()) {
       if (!this->stream_started_) {
@@ -164,10 +180,15 @@ public:
       }
       if (current == ',') {
         this->advance(1);
+        const bool compact{this->roundtrip_ &&
+                           this->position_ < this->input_.size() &&
+                           this->peek() != ' ' && this->peek() != '\n' &&
+                           this->peek() != '\r'};
         return Token{.type = TokenType::FlowEntry,
                      .value = ",",
                      .line = current_line,
-                     .column = current_column};
+                     .column = current_column,
+                     .compact_separator = compact};
       }
     } else if (current == '-' && this->is_followed_by_whitespace()) {
       this->advance(1);
@@ -270,6 +291,24 @@ public:
     return this->position_;
   }
 
+  auto take_inline_comment() -> std::optional<std::string> {
+    auto result{std::move(this->inline_comment_buffer_)};
+    this->inline_comment_buffer_.reset();
+    return result;
+  }
+
+  auto take_preceding_comments() -> std::vector<std::string> {
+    auto result{std::move(this->preceding_comments_buffer_)};
+    this->preceding_comments_buffer_.clear();
+    return result;
+  }
+
+  auto take_block_scalar_comment() -> std::optional<std::string> {
+    auto result{std::move(this->block_scalar_comment_)};
+    this->block_scalar_comment_.reset();
+    return result;
+  }
+
 private:
   [[nodiscard]] static auto is_whitespace(const char character) noexcept
       -> bool {
@@ -312,6 +351,7 @@ private:
         (this->position_ > 0 &&
          is_whitespace(this->input_[this->position_ - 1]))};
     bool at_line_start{this->column_ == 1};
+    bool blank_line{at_line_start};
     this->tab_at_line_start_ = false;
     while (this->position_ < this->input_.size()) {
       const char current{this->peek()};
@@ -332,19 +372,37 @@ private:
       }
 
       if (current == '\n' || current == '\r') {
+        if (this->roundtrip_ && blank_line) {
+          this->preceding_comments_buffer_.emplace_back();
+        }
         this->advance(1);
         if (current == '\r' && this->peek() == '\n') {
           this->advance(1);
         }
         preceded_by_whitespace = true;
         at_line_start = true;
+        blank_line = true;
         this->tab_at_line_start_ = false;
         continue;
       }
 
       if (current == '#' && preceded_by_whitespace) {
+        blank_line = false;
+        const auto comment_line{this->line_};
+        const auto comment_start{this->position_};
         while (this->position_ < this->input_.size() && this->peek() != '\n') {
           this->advance(1);
+        }
+        if (this->roundtrip_) {
+          std::string text{this->input_.substr(
+              comment_start, this->position_ - comment_start)};
+          if (comment_line == this->comment_reference_line_ &&
+              this->comment_reference_line_ > 0 &&
+              !this->inline_comment_buffer_.has_value()) {
+            this->inline_comment_buffer_ = std::move(text);
+          } else {
+            this->preceding_comments_buffer_.push_back(std::move(text));
+          }
         }
         continue;
       }
@@ -503,6 +561,7 @@ private:
   auto scan_single_quoted_scalar() -> Token {
     const auto start_line{this->line_};
     const auto start_column{this->column_};
+    const auto quote_start{this->position_};
 
     this->advance(1);
 
@@ -544,12 +603,18 @@ private:
 
     this->validate_trailing_content();
 
+    const auto quoted_raw{
+        this->roundtrip_
+            ? this->input_.substr(quote_start + 1,
+                                  this->position_ - quote_start - 2)
+            : std::string_view{}};
     return Token{.type = TokenType::Scalar,
                  .value = buffer,
                  .line = start_line,
                  .column = start_column,
                  .scalar_style = ScalarStyle::SingleQuoted,
-                 .multiline = !first_line};
+                 .multiline = !first_line,
+                 .quoted_original = quoted_raw};
   }
 
   auto flush_flow_line(std::string &buffer, std::string &line_content,
@@ -658,6 +723,7 @@ private:
   auto scan_double_quoted_scalar() -> Token {
     const auto start_line{this->line_};
     const auto start_column{this->column_};
+    const auto quote_start{this->position_};
 
     this->advance(1);
 
@@ -783,12 +849,18 @@ private:
 
     this->validate_trailing_content();
 
+    const auto quoted_raw{
+        this->roundtrip_
+            ? this->input_.substr(quote_start + 1,
+                                  this->position_ - quote_start - 2)
+            : std::string_view{}};
     return Token{.type = TokenType::Scalar,
                  .value = buffer,
                  .line = start_line,
                  .column = start_column,
                  .scalar_style = ScalarStyle::DoubleQuoted,
-                 .multiline = !first_line};
+                 .multiline = !first_line,
+                 .quoted_original = quoted_raw};
   }
 
   auto parse_hex_escape(const std::size_t digits) -> std::string {
@@ -925,6 +997,7 @@ private:
 
     char chomping{'c'};
     std::size_t explicit_indent{0};
+    bool indent_first{false};
 
     bool seen_header_whitespace{false};
     while (this->position_ < this->input_.size()) {
@@ -937,13 +1010,21 @@ private:
         this->advance(1);
       } else if (current >= '1' && current <= '9') {
         explicit_indent = static_cast<std::size_t>(current - '0');
+        if (chomping == 'c') {
+          indent_first = true;
+        }
         this->advance(1);
       } else if (current == ' ' || current == '\t') {
         seen_header_whitespace = true;
         this->advance(1);
       } else if (current == '#' && seen_header_whitespace) {
+        const auto comment_start{this->position_};
         while (this->position_ < this->input_.size() && this->peek() != '\n') {
           this->advance(1);
+        }
+        if (this->roundtrip_) {
+          this->block_scalar_comment_ = std::string{this->input_.substr(
+              comment_start, this->position_ - comment_start)};
         }
       } else if (current == '\n' || current == '\r') {
         break;
@@ -961,6 +1042,16 @@ private:
     }
 
     auto &buffer{this->get_buffer()};
+
+    // For folded scalars in roundtrip mode, build a parallel buffer that
+    // preserves original line breaks (literal-style) for round-trip output
+    const bool build_original{style == ScalarStyle::Folded && this->roundtrip_};
+    std::string *original{nullptr};
+    std::string original_trailing;
+    if (build_original) {
+      original = &this->get_buffer();
+    }
+
     const auto content_indent{this->detect_block_scalar_indent(
         explicit_indent, indicator_position, start_line, start_column)};
 
@@ -990,6 +1081,17 @@ private:
           trailing_newlines += '\n';
         } else {
           blank_line_count++;
+          if (original) {
+            if (line_indent > content_indent) {
+              *original += original_trailing;
+              original_trailing.clear();
+              for (std::size_t index = content_indent; index < line_indent;
+                   ++index) {
+                *original += ' ';
+              }
+            }
+            original_trailing += '\n';
+          }
         }
         this->advance(1);
         if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
@@ -1042,15 +1144,27 @@ private:
         blank_line_count = 0;
         had_line_break = false;
         previous_started_with_whitespace = starts_with_whitespace;
+
+        if (original) {
+          *original += original_trailing;
+          original_trailing.clear();
+        }
       }
 
       for (std::size_t index = content_indent; index < line_indent; ++index) {
         buffer += ' ';
+        if (original) {
+          *original += ' ';
+        }
       }
 
       while (this->position_ < this->input_.size() && this->peek() != '\n' &&
              this->peek() != '\r') {
-        buffer += this->peek();
+        const auto character{this->peek()};
+        buffer += character;
+        if (original) {
+          *original += character;
+        }
         this->advance(1);
       }
 
@@ -1063,6 +1177,9 @@ private:
           trailing_newlines += '\n';
         } else {
           had_line_break = true;
+          if (original) {
+            original_trailing += '\n';
+          }
         }
         this->advance(1);
         if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
@@ -1081,6 +1198,9 @@ private:
         for (std::size_t count = 0; count < blank_line_count; ++count) {
           buffer += '\n';
         }
+        if (original) {
+          *original += original_trailing;
+        }
       }
     } else if (chomping == 'c' && !buffer.empty()) {
       if (style == ScalarStyle::Literal) {
@@ -1089,14 +1209,29 @@ private:
         }
       } else if (had_line_break || blank_line_count > 0) {
         buffer += '\n';
+        if (original && !original_trailing.empty()) {
+          *original += '\n';
+        }
       }
+    }
+
+    BlockChomping block_chomping{BlockChomping::Clip};
+    if (chomping == '-') {
+      block_chomping = BlockChomping::Strip;
+    } else if (chomping == '+') {
+      block_chomping = BlockChomping::Keep;
     }
 
     return Token{.type = TokenType::Scalar,
                  .value = buffer,
                  .line = start_line,
                  .column = start_column,
-                 .scalar_style = style};
+                 .scalar_style = style,
+                 .chomping = block_chomping,
+                 .block_original = original ? std::string_view{*original}
+                                            : std::string_view{},
+                 .explicit_indent = explicit_indent,
+                 .indent_before_chomping = indent_first};
   }
 
   auto scan_plain_scalar() -> Token {
@@ -1301,12 +1436,22 @@ private:
     }
 
     if (used_multiline && buffer != nullptr) {
+      auto raw_end{this->position_};
+      while (raw_end > start_position && (this->input_[raw_end - 1] == ' ' ||
+                                          this->input_[raw_end - 1] == '\t')) {
+        raw_end--;
+      }
       return Token{.type = TokenType::Scalar,
                    .value = *buffer,
                    .line = start_line,
                    .column = start_column,
                    .scalar_style = ScalarStyle::Plain,
-                   .multiline = true};
+                   .multiline = true,
+                   .block_original =
+                       this->roundtrip_
+                           ? this->input_.substr(start_position,
+                                                 raw_end - start_position)
+                           : std::string_view{}};
     }
 
     auto length{this->position_ - start_position};
@@ -1336,6 +1481,11 @@ private:
   bool stream_ended_{false};
   bool last_was_quoted_scalar_{false};
   bool tab_at_line_start_{false};
+  bool roundtrip_{false};
+  std::uint64_t comment_reference_line_{0};
+  std::optional<std::string> inline_comment_buffer_;
+  std::optional<std::string> block_scalar_comment_;
+  std::vector<std::string> preceding_comments_buffer_;
   // SIZE_MAX means "not set" (top-level), 0 means parent at indent 0
   std::size_t block_indent_{SIZE_MAX};
   std::deque<std::string> scalar_buffers_;
