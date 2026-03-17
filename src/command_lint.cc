@@ -185,6 +185,10 @@ static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaUnknownDialectError>(rule_path);
+  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaVocabularyError>(
+        rule_path, std::string{error.uri()}, error.what());
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaResolutionError>(rule_path, error);
@@ -439,6 +443,14 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
                   entry.resolution_base);
+            } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              throw FileError<sourcemeta::core::SchemaVocabularyError>(
+                  entry.resolution_base, std::string{error.uri()},
+                  error.what());
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -548,6 +560,10 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
               throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
                   entry.resolution_base);
+            } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+              throw FileError<sourcemeta::core::SchemaVocabularyError>(
+                  entry.resolution_base, std::string{error.uri()},
+                  error.what());
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               throw FileError<sourcemeta::core::SchemaResolutionError>(
                   entry.resolution_base, error);
