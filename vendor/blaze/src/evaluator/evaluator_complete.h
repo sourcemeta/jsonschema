@@ -12,15 +12,18 @@
   const auto track{context.schema->track || *context.callback};                \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
   if (context.schema->dynamic) {                                               \
-    context.evaluator->resources.push_back(instruction.schema_resource);       \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
   }                                                                            \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -37,15 +40,18 @@
   const auto track{context.schema->track || *context.callback};                \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
   if (context.schema->dynamic) {                                               \
-    context.evaluator->resources.push_back(instruction.schema_resource);       \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
   }                                                                            \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -63,15 +69,18 @@
   const auto track{context.schema->track || *context.callback};                \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
   if (context.schema->dynamic) {                                               \
-    context.evaluator->resources.push_back(instruction.schema_resource);       \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
   }                                                                            \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -100,15 +109,18 @@
   const auto track{context.schema->track || *context.callback};                \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
   if (context.schema->dynamic) {                                               \
-    context.evaluator->resources.push_back(instruction.schema_resource);       \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
   }                                                                            \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -120,15 +132,18 @@
   const auto track{context.schema->track || *context.callback};                \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
   }                                                                            \
   if (context.schema->dynamic) {                                               \
-    context.evaluator->resources.push_back(instruction.schema_resource);       \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
   }                                                                            \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -139,6 +154,7 @@
   assert(instruction.type == InstructionIndex::instruction_type);              \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -152,13 +168,15 @@
 #define EVALUATE_END(instruction_type)                                         \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Post, result, instruction,             \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
   }                                                                            \
   if (track) {                                                                 \
     context.evaluator->evaluate_path.pop_back(                                 \
-        instruction.relative_schema_location.size());                          \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location.size());                                 \
     context.evaluator->instance_location.pop_back(                             \
         instruction.relative_instance_location.size());                        \
   }                                                                            \
@@ -170,6 +188,7 @@
 #define EVALUATE_END_NO_POP(instruction_type)                                  \
   if (*context.callback) {                                                     \
     (*context.callback)(EvaluationType::Post, result, instruction,             \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path,                      \
                         context.evaluator->instance_location,                  \
                         Evaluator::null);                                      \
@@ -181,17 +200,21 @@
 #define EVALUATE_ANNOTATION(instruction_type, destination, annotation_value)   \
   if (*context.callback) {                                                     \
     context.evaluator->evaluate_path.push_back(                                \
-        instruction.relative_schema_location);                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
     context.evaluator->instance_location.push_back(                            \
         instruction.relative_instance_location);                               \
     (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path, destination,         \
                         Evaluator::null);                                      \
     (*context.callback)(EvaluationType::Post, true, instruction,               \
+                        context.schema->extra[instruction.extra_index],        \
                         context.evaluator->evaluate_path, destination,         \
                         annotation_value);                                     \
     context.evaluator->evaluate_path.pop_back(                                 \
-        instruction.relative_schema_location.size());                          \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location.size());                                 \
     context.evaluator->instance_location.pop_back(                             \
         instruction.relative_instance_location.size());                        \
   }                                                                            \

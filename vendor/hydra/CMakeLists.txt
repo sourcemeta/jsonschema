@@ -5,6 +5,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 option(SOURCEMETA_HYDRA_INSTALL "Install the Sourcemeta Hydra library" ON)
 option(SOURCEMETA_HYDRA_TESTS "Build the Sourcemeta Hydra tests" OFF)
+option(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL "Use the system OpenSSL library" OFF)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   set(HYDRA_COMPILER_LLVM ON)
@@ -22,7 +23,10 @@ endif()
 
 find_package(ZLIB REQUIRED)
 
-if(NOT WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "MSYS")
+if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+  message(STATUS "Using system OpenSSL instead of vendored mbedtls")
+  find_package(OpenSSL REQUIRED)
+elseif(NOT WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "MSYS")
   find_package(MbedTLS REQUIRED)
 endif()
 

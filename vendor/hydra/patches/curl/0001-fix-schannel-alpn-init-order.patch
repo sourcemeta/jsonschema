@@ -1,0 +1,49 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Juan Cruz Viotti <jv@jviotti.com>
+Date: Thu, 13 Mar 2026 00:00:00 +0000
+Subject: [PATCH] Fix Schannel ALPN init order on Windows
+
+Curl_ssl_init() is called before Curl_win32_init() in global_init().
+The new curlx_verify_windows_version() requires curlx_verify_windows_init()
+to be called first (from Curl_win32_init), but schannel_init() (called via
+Curl_ssl_init) uses curlx_verify_windows_version() to check ALPN support.
+Without the init, it falls back to VerifyVersionInfoW which lies about the
+OS version on Windows 10+ without a compatibility manifest, causing the
+ALPN check for >= 6.3 to fail and disabling HTTP/2.
+
+Move Curl_win32_init() before Curl_ssl_init() so the version function
+pointer is set up before Schannel needs it.
+---
+ lib/easy.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/easy.c b/lib/easy.c
+index d05674e..a74d1da 100644
+--- a/lib/easy.c
++++ b/lib/easy.c
+@@ -140,6 +140,11 @@ static CURLcode global_init(long flags, bool memoryfuncs)
+     goto fail;
+   }
+ 
++  if(Curl_win32_init(flags)) {
++    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
++    goto fail;
++  }
++
+   if(!Curl_ssl_init()) {
+     DEBUGF(curl_mfprintf(stderr, "Error: Curl_ssl_init failed\n"));
+     goto fail;
+@@ -150,11 +155,6 @@ static CURLcode global_init(long flags, bool memoryfuncs)
+     goto fail;
+   }
+ 
+-  if(Curl_win32_init(flags)) {
+-    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
+-    goto fail;
+-  }
+-
+   if(Curl_amiga_init()) {
+     DEBUGF(curl_mfprintf(stderr, "Error: Curl_amiga_init failed\n"));
+     goto fail;
+-- 
+2.47.1

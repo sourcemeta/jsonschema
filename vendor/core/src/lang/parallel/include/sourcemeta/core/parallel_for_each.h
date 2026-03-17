@@ -76,6 +76,25 @@ auto parallel_for_each(
     Iterator first, Iterator last, Callback &&callback,
     const std::size_t parallelism = std::thread::hardware_concurrency(),
     const std::size_t stack_size_bytes = 0) -> void {
+  const auto effective_parallelism{
+      std::max(parallelism, static_cast<std::size_t>(1))};
+
+  // Empty list
+  if (first == last) {
+    return;
+  }
+
+  // If it is a single element or there is no parallelism,
+  // just do a normal loop without dealing with threads
+  if (effective_parallelism == 1 || std::next(first) == last) {
+    std::size_t cursor{1};
+    for (auto iterator = first; iterator != last; ++iterator, ++cursor) {
+      callback(*iterator, effective_parallelism, cursor);
+    }
+
+    return;
+  }
+
   std::queue<Iterator> tasks;
   for (auto iterator = first; iterator != last; ++iterator) {
     tasks.push(iterator);
@@ -95,8 +114,6 @@ auto parallel_for_each(
     }
   };
 
-  const auto effective_parallelism{
-      std::max(parallelism, static_cast<std::size_t>(1))};
   std::vector<std::thread> workers;
   workers.reserve(effective_parallelism);
 

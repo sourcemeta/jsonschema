@@ -127,6 +127,8 @@ struct Context {
       std::tuple<sourcemeta::core::SchemaReferenceType, std::string_view, bool>,
       std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
       targets;
+  /// Accumulator for instruction extra data during compilation
+  std::vector<InstructionExtra> &extra;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 

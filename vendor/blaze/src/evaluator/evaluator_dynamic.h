@@ -9,7 +9,8 @@
   if (!(precondition)) [[unlikely]] {                                          \
     return true;                                                               \
   }                                                                            \
-  context.evaluator->resources.push_back(instruction.schema_resource);         \
+  context.evaluator->resources.push_back(                                      \
+      context.schema->extra[instruction.extra_index].schema_resource);         \
   [[maybe_unused]] constexpr bool track{false};                                \
   bool result{false};
 
@@ -20,7 +21,8 @@
   if (!(precondition)) [[unlikely]] {                                          \
     return true;                                                               \
   }                                                                            \
-  context.evaluator->resources.push_back(instruction.schema_resource);         \
+  context.evaluator->resources.push_back(                                      \
+      context.schema->extra[instruction.extra_index].schema_resource);         \
   [[maybe_unused]] constexpr bool track{false};                                \
   bool result{false};
 
@@ -32,7 +34,8 @@
   if (!maybe_target) [[unlikely]] {                                            \
     return true;                                                               \
   }                                                                            \
-  context.evaluator->resources.push_back(instruction.schema_resource);         \
+  context.evaluator->resources.push_back(                                      \
+      context.schema->extra[instruction.extra_index].schema_resource);         \
   const auto &target{*maybe_target};                                           \
   bool result{false};
 
@@ -54,12 +57,14 @@
   if (!target_check) [[unlikely]] {                                            \
     return true;                                                               \
   }                                                                            \
-  context.evaluator->resources.push_back(instruction.schema_resource);         \
+  context.evaluator->resources.push_back(                                      \
+      context.schema->extra[instruction.extra_index].schema_resource);         \
   bool result{false};
 
 #define EVALUATE_BEGIN_NO_PRECONDITION(instruction_type)                       \
   assert(instruction.type == InstructionIndex::instruction_type);              \
-  context.evaluator->resources.push_back(instruction.schema_resource);         \
+  context.evaluator->resources.push_back(                                      \
+      context.schema->extra[instruction.extra_index].schema_resource);         \
   [[maybe_unused]] constexpr bool track{false};                                \
   bool result{false};
 

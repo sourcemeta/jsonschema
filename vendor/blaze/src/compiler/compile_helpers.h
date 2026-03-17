@@ -78,16 +78,19 @@ inline auto make_with_resource(const InstructionIndex type,
           ? to_pointer(dynamic_context.base_schema_location)
           : to_pointer(dynamic_context.base_schema_location)
                 .concat({dynamic_context.keyword})};
+  const auto extra_index{context.extra.size()};
+  context.extra.push_back(
+      {.relative_schema_location = schema_location,
+       .keyword_location =
+           to_uri(schema_context.relative_pointer, schema_context.base)
+               .recompose(),
+       .schema_resource = schema_resource_id(context.resources, resource)});
   return {.type = type,
-          .relative_schema_location = schema_location,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
-          .keyword_location =
-              to_uri(schema_context.relative_pointer, schema_context.base)
-                  .recompose(),
-          .schema_resource = schema_resource_id(context.resources, resource),
           .value = value,
-          .children = {}};
+          .children = {},
+          .extra_index = extra_index};
 }
 
 // Instantiate a value-oriented step
@@ -109,42 +112,47 @@ inline auto make(const InstructionIndex type, const Context &context,
           ? to_pointer(dynamic_context.base_schema_location)
           : to_pointer(dynamic_context.base_schema_location)
                 .concat({dynamic_context.keyword})};
+  const auto extra_index{context.extra.size()};
+  context.extra.push_back(
+      {.relative_schema_location = schema_location,
+       .keyword_location =
+           to_uri(schema_context.relative_pointer, schema_context.base)
+               .recompose(),
+       .schema_resource = schema_resource_id(context.resources,
+                                             schema_context.base.recompose())});
   return {.type = type,
-          .relative_schema_location = schema_location,
           .relative_instance_location =
               to_pointer(dynamic_context.base_instance_location),
-          .keyword_location =
-              to_uri(schema_context.relative_pointer, schema_context.base)
-                  .recompose(),
-          .schema_resource = schema_resource_id(
-              context.resources, schema_context.base.recompose()),
           .value = std::move(value),
-          .children = std::move(children)};
+          .children = std::move(children),
+          .extra_index = extra_index};
 }
 
-inline auto unroll(const Instruction &step,
+inline auto unroll(const Context &context, const Instruction &step,
                    const sourcemeta::core::WeakPointer &base_instance_location =
                        sourcemeta::core::empty_weak_pointer) -> Instruction {
+  auto source_extra{context.extra[step.extra_index]};
+  const auto extra_index{context.extra.size()};
+  context.extra.push_back(std::move(source_extra));
   return {.type = step.type,
-          .relative_schema_location = step.relative_schema_location,
           .relative_instance_location =
               to_pointer(base_instance_location)
                   .concat(step.relative_instance_location),
-          .keyword_location = step.keyword_location,
-          .schema_resource = step.schema_resource,
           .value = step.value,
-          .children = {}};
+          .children = {},
+          .extra_index = extra_index};
 }
 
-inline auto rephrase(const InstructionIndex type, const Instruction &step)
-    -> Instruction {
+inline auto rephrase(const Context &context, const InstructionIndex type,
+                     const Instruction &step) -> Instruction {
+  auto source_extra{context.extra[step.extra_index]};
+  const auto extra_index{context.extra.size()};
+  context.extra.push_back(std::move(source_extra));
   return {.type = type,
-          .relative_schema_location = step.relative_schema_location,
           .relative_instance_location = step.relative_instance_location,
-          .keyword_location = step.keyword_location,
-          .schema_resource = step.schema_resource,
           .value = step.value,
-          .children = {}};
+          .children = {},
+          .extra_index = extra_index};
 }
 
 inline auto

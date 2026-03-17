@@ -87,11 +87,24 @@ inline auto convert_to_property_type_assertions(Instructions &instructions)
   }
 }
 
+inline auto duplicate_metadata(Instruction &instruction,
+                               std::vector<InstructionExtra> &extra) -> void {
+  const auto new_index{extra.size()};
+  auto source_extra{extra[instruction.extra_index]};
+  extra.push_back(std::move(source_extra));
+  instruction.extra_index = new_index;
+  for (auto &child : instruction.children) {
+    duplicate_metadata(child, extra);
+  }
+}
+
 inline auto rebase(Instruction &instruction,
+                   std::vector<InstructionExtra> &extra,
                    const sourcemeta::core::Pointer &schema_prefix,
                    const sourcemeta::core::Pointer &instance_prefix) -> void {
-  instruction.relative_schema_location =
-      schema_prefix.concat(instruction.relative_schema_location);
+  extra[instruction.extra_index].relative_schema_location =
+      schema_prefix.concat(
+          extra[instruction.extra_index].relative_schema_location);
   instruction.relative_instance_location =
       instance_prefix.concat(instruction.relative_instance_location);
 
@@ -101,11 +114,12 @@ inline auto rebase(Instruction &instruction,
     for (std::size_t index = then_cursor; index < instruction.children.size();
          ++index) {
       auto &child{instruction.children[index]};
-      child.relative_schema_location =
-          schema_prefix.concat(child.relative_schema_location);
+      extra[child.extra_index].relative_schema_location = schema_prefix.concat(
+          extra[child.extra_index].relative_schema_location);
       for (auto &grandchild : child.children) {
-        grandchild.relative_schema_location =
-            schema_prefix.concat(grandchild.relative_schema_location);
+        extra[grandchild.extra_index].relative_schema_location =
+            schema_prefix.concat(
+                extra[grandchild.extra_index].relative_schema_location);
       }
     }
   }
@@ -132,6 +146,7 @@ inline auto collect_statistics(const Instructions &instructions,
 
 inline auto
 transform_instruction(Instruction &instruction, Instructions &output,
+                      std::vector<InstructionExtra> &extra,
                       const std::vector<Instructions> &targets,
                       const std::vector<TargetStatistics> &statistics,
                       TargetStatistics &current_stats, const Tweaks &tweaks,
@@ -162,8 +177,11 @@ transform_instruction(Instruction &instruction, Instructions &output,
       current_stats.requires_empty_instance_location |=
           jump_target_stats.requires_empty_instance_location;
 
+      const auto schema_prefix{
+          extra[instruction.extra_index].relative_schema_location};
       for (auto target_instruction : targets[jump_target_index]) {
-        rebase(target_instruction, instruction.relative_schema_location,
+        duplicate_metadata(target_instruction, extra);
+        rebase(target_instruction, extra, schema_prefix,
                instruction.relative_instance_location);
         output.push_back(std::move(target_instruction));
       }
@@ -183,47 +201,61 @@ transform_instruction(Instruction &instruction, Instructions &output,
       instruction.children.size() == 1) {
     auto &child{instruction.children.front()};
     if (child.type == InstructionIndex::AssertionTypeStrict) {
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeStrict,
-                      .relative_schema_location =
-                          instruction.relative_schema_location.concat(
-                              child.relative_schema_location),
                       .relative_instance_location =
                           std::move(instruction.relative_instance_location),
-                      .keyword_location = std::move(child.keyword_location),
-                      .schema_resource = child.schema_resource,
                       .value = std::move(child.value),
-                      .children = {}});
+                      .children = {},
+                      .extra_index = new_extra_index});
       return true;
     }
 
     if (child.type == InstructionIndex::AssertionType) {
-      output.push_back(
-          Instruction{.type = InstructionIndex::LoopPropertiesType,
-                      .relative_schema_location =
-                          instruction.relative_schema_location.concat(
-                              child.relative_schema_location),
-                      .relative_instance_location =
-                          std::move(instruction.relative_instance_location),
-                      .keyword_location = std::move(child.keyword_location),
-                      .schema_resource = child.schema_resource,
-                      .value = std::move(child.value),
-                      .children = {}});
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
+      output.push_back(Instruction{.type = InstructionIndex::LoopPropertiesType,
+                                   .relative_instance_location = std::move(
+                                       instruction.relative_instance_location),
+                                   .value = std::move(child.value),
+                                   .children = {},
+                                   .extra_index = new_extra_index});
       return true;
     }
 
     if (child.type == InstructionIndex::AssertionTypeStrictAny) {
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeStrictAny,
-                      .relative_schema_location =
-                          instruction.relative_schema_location.concat(
-                              child.relative_schema_location),
                       .relative_instance_location =
                           std::move(instruction.relative_instance_location),
-                      .keyword_location = std::move(child.keyword_location),
-                      .schema_resource = child.schema_resource,
                       .value = std::move(child.value),
-                      .children = {}});
+                      .children = {},
+                      .extra_index = new_extra_index});
       return true;
     }
   }
@@ -232,47 +264,62 @@ transform_instruction(Instruction &instruction, Instructions &output,
       instruction.children.size() == 1) {
     auto &child{instruction.children.front()};
     if (child.type == InstructionIndex::AssertionTypeStrict) {
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
       output.push_back(Instruction{
           .type = InstructionIndex::LoopPropertiesTypeStrictEvaluate,
-          .relative_schema_location =
-              instruction.relative_schema_location.concat(
-                  child.relative_schema_location),
           .relative_instance_location =
               std::move(instruction.relative_instance_location),
-          .keyword_location = std::move(child.keyword_location),
-          .schema_resource = child.schema_resource,
           .value = std::move(child.value),
-          .children = {}});
+          .children = {},
+          .extra_index = new_extra_index});
       return true;
     }
 
     if (child.type == InstructionIndex::AssertionType) {
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
       output.push_back(
           Instruction{.type = InstructionIndex::LoopPropertiesTypeEvaluate,
-                      .relative_schema_location =
-                          instruction.relative_schema_location.concat(
-                              child.relative_schema_location),
                       .relative_instance_location =
                           std::move(instruction.relative_instance_location),
-                      .keyword_location = std::move(child.keyword_location),
-                      .schema_resource = child.schema_resource,
                       .value = std::move(child.value),
-                      .children = {}});
+                      .children = {},
+                      .extra_index = new_extra_index});
       return true;
     }
 
     if (child.type == InstructionIndex::AssertionTypeStrictAny) {
+      const auto new_extra_index{extra.size()};
+      auto &instruction_meta{extra[instruction.extra_index]};
+      auto &child_meta{extra[child.extra_index]};
+      extra.push_back(
+          {.relative_schema_location =
+               instruction_meta.relative_schema_location.concat(
+                   child_meta.relative_schema_location),
+           .keyword_location = std::move(child_meta.keyword_location),
+           .schema_resource = child_meta.schema_resource});
       output.push_back(Instruction{
           .type = InstructionIndex::LoopPropertiesTypeStrictAnyEvaluate,
-          .relative_schema_location =
-              instruction.relative_schema_location.concat(
-                  child.relative_schema_location),
           .relative_instance_location =
               std::move(instruction.relative_instance_location),
-          .keyword_location = std::move(child.keyword_location),
-          .schema_resource = child.schema_resource,
           .value = std::move(child.value),
-          .children = {}});
+          .children = {},
+          .extra_index = new_extra_index});
       return true;
     }
   }
@@ -305,6 +352,7 @@ transform_instruction(Instruction &instruction, Instructions &output,
 }
 
 inline auto postprocess(std::vector<Instructions> &targets,
+                        std::vector<InstructionExtra> &extra,
                         const Tweaks &tweaks, const bool uses_dynamic_scopes)
     -> void {
   std::vector<TargetStatistics> statistics;
@@ -352,8 +400,9 @@ inline auto postprocess(std::vector<Instructions> &targets,
         result.reserve(current->size());
 
         for (auto &instruction : *current) {
-          if (transform_instruction(instruction, result, targets, statistics,
-                                    current_stats, tweaks, uses_dynamic_scopes))
+          if (transform_instruction(instruction, result, extra, targets,
+                                    statistics, current_stats, tweaks,
+                                    uses_dynamic_scopes))
             changed = true;
         }
 
