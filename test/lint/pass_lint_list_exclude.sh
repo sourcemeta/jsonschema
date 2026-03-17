@@ -25,6 +25,12 @@ anyof_true_simplify
 comment_trim
   Comments should not contain leading or trailing whitespace
 
+const_in_enum
+  If the `const` and `enum` keyword overlap, then `enum` is redundant and can be removed
+
+const_not_in_enum
+  Do not set the `const` and `enum` keyword at the same time, mainly when their values diverge
+
 const_with_type
   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type
 
@@ -238,7 +244,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 76
+Number of rules: 78
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
