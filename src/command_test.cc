@@ -66,6 +66,13 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     }
     throw sourcemeta::jsonschema::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+    if (!json_output) {
+      std::cout << entry.first << ":\n";
+    }
+    throw sourcemeta::jsonschema::FileError<
+        sourcemeta::core::SchemaVocabularyError>{
+        entry.resolution_base, std::string{error.uri()}, error.what()};
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";

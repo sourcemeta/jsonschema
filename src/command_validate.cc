@@ -311,6 +311,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
           schema_resolution_base);
+    } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+      throw FileError<sourcemeta::core::SchemaVocabularyError>(
+          schema_resolution_base, std::string{error.uri()}, error.what());
     } catch (const sourcemeta::core::SchemaError &error) {
       throw FileError<sourcemeta::core::SchemaError>(schema_resolution_base,
                                                      error.what());

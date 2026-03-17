@@ -121,6 +121,9 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
       throw FileError<sourcemeta::core::SchemaResolutionError>(
           entry.resolution_base, error);
+    } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+      throw FileError<sourcemeta::core::SchemaVocabularyError>(
+          entry.resolution_base, std::string{error.uri()}, error.what());
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
           entry.resolution_base);
