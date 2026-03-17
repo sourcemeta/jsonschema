@@ -154,9 +154,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   const auto schema_config_base{schema_from_stdin
                                     ? std::filesystem::current_path()
                                     : std::filesystem::path(schema_path)};
-  const auto schema_resolution_base{schema_from_stdin
-                                        ? stdin_error_path()
-                                        : std::filesystem::path(schema_path)};
+  const auto schema_resolution_base{
+      schema_from_stdin ? stdin_path() : std::filesystem::path(schema_path)};
 
   const auto configuration_path{find_configuration(schema_config_base)};
   const auto &configuration{
@@ -168,7 +167,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                         : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    throw NotSchemaError{schema_from_stdin ? stdin_error_path()
+    throw NotSchemaError{schema_from_stdin ? stdin_path()
                                            : schema_resolution_base};
   }
 

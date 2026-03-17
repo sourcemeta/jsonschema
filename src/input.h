@@ -21,7 +21,6 @@
 #include <optional>      // std::optional
 #include <set>           // std::set
 #include <sstream>       // std::ostringstream, std::istringstream
-#include <stdexcept>     // std::runtime_error
 #include <string>        // std::string
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
@@ -143,14 +142,6 @@ struct ParsedJSON {
   sourcemeta::core::PointerPositionTracker positions;
   bool yaml{false};
 };
-
-inline auto stdin_path() -> std::filesystem::path {
-#ifdef _WIN32
-  return std::filesystem::path{"<stdin>"};
-#else
-  return std::filesystem::path{"/dev/stdin"};
-#endif
-}
 
 inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   const auto extension{path.extension()};

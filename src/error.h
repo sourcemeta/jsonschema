@@ -96,7 +96,8 @@ public:
 
 class StdinError : public std::runtime_error {
 public:
-  StdinError(std::string message) : std::runtime_error{std::move(message)} {}
+  explicit StdinError(std::string message)
+      : std::runtime_error{std::move(message)} {}
 };
 
 class InvalidLintRuleError : public std::runtime_error {
@@ -257,7 +258,7 @@ private:
   std::filesystem::path path_;
 };
 
-inline auto stdin_error_path() -> std::filesystem::path {
+inline auto stdin_path() -> std::filesystem::path {
 #ifdef _WIN32
   return std::filesystem::path{"<stdin>"};
 #else
@@ -265,8 +266,7 @@ inline auto stdin_error_path() -> std::filesystem::path {
 #endif
 }
 
-inline auto stdin_error_path_string(const std::filesystem::path &p)
-    -> std::string {
+inline auto stdin_path_string(const std::filesystem::path &p) -> std::string {
 #ifdef _WIN32
   if (p.string() == "<stdin>") {
     return "<stdin>";
@@ -381,7 +381,7 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
     const auto &error_path{exception.path()};
-    const auto error_path_string{stdin_error_path_string(error_path)};
+    const auto error_path_string{stdin_path_string(error_path)};
     if (is_json) {
       error_json.assign("filePath", sourcemeta::core::JSON{error_path_string});
     } else {

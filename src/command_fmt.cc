@@ -21,32 +21,28 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
   std::vector<std::string> failed_files;
   const auto indentation{parse_indentation(options)};
 
-  // Helper lambda to handle a single stdin entry.
-  // For --check, we must locally buffer stdin to compare raw input against
-  // expected formatted output. This is the same approach used for files
-  // (which re-read the file for comparison). For non-check, we parse
-  // directly from std::cin and write straight to stdout (no buffering).
   const auto handle_stdin = [&]() {
+    const auto current_path{std::filesystem::current_path()};
+    const auto configuration_path{find_configuration(current_path)};
+    const auto &configuration{
+        read_configuration(options, configuration_path, current_path)};
+    const auto dialect{default_dialect(options, configuration)};
+    const auto &custom_resolver{
+        resolver(options, options.contains("http"), dialect, configuration)};
+    const auto display_path{stdin_path()};
+
+    std::string raw_stdin;
+    const auto parsed{read_from_stdin(&raw_stdin)};
+    if (parsed.yaml) {
+      throw YAMLInputError{"This command does not support YAML input files yet",
+                           display_path};
+    }
+
+    const auto &document{parsed.document};
+    const auto stdin_label{display_path.string()};
+
     try {
-      const auto current_path{std::filesystem::current_path()};
-      const auto configuration_path{find_configuration(current_path)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, current_path)};
-      const auto dialect{default_dialect(options, configuration)};
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
-
       if (options.contains("check")) {
-        std::string raw_stdin;
-        const auto parsed{read_from_stdin(&raw_stdin)};
-        const auto stdin_label{stdin_path().string()};
-        if (parsed.yaml) {
-          throw YAMLInputError{
-              "This command does not support YAML input files yet",
-              stdin_path()};
-        }
-        const auto &document{parsed.document};
-
         std::ostringstream expected;
         if (options.contains("keep-ordering")) {
           sourcemeta::core::prettify(document, expected, indentation);
@@ -68,7 +64,6 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           result = false;
         }
       } else {
-        const auto document{sourcemeta::core::parse_json(std::cin)};
         if (options.contains("keep-ordering")) {
           sourcemeta::core::prettify(document, std::cout, indentation);
         } else {
@@ -79,32 +74,28 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         }
         std::cout << "\n";
       }
-    } catch (const sourcemeta::core::JSONParseError &error) {
-      throw sourcemeta::core::JSONFileParseError(stdin_path(), error);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(
-          std::filesystem::current_path(), error);
+      throw FileError<sourcemeta::core::SchemaKeywordError>(display_path,
+                                                            error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(
-          std::filesystem::current_path(), error);
+      throw FileError<sourcemeta::core::SchemaFrameError>(display_path, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-          std::filesystem::current_path(), error);
+          display_path, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(
-          std::filesystem::current_path(), error);
+      throw FileError<sourcemeta::core::SchemaResolutionError>(display_path,
+                                                               error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
       throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          std::filesystem::current_path());
+          display_path);
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(
-          std::filesystem::current_path(), error.what());
+      throw FileError<sourcemeta::core::SchemaError>(display_path,
+                                                     error.what());
     }
   };
 
-  // Helper lambda to handle a single file entry from for_each_json
   const auto handle_file_entry = [&](const InputJSON &entry) {
     if (entry.yaml) {
       throw YAMLInputError{"This command does not support YAML input files yet",

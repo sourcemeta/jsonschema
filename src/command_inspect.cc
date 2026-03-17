@@ -167,7 +167,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
 
   const auto schema_config_base{
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
-  const auto schema_resolution_base{schema_from_stdin ? stdin_error_path()
+  const auto schema_resolution_base{schema_from_stdin ? stdin_path()
                                                       : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
@@ -182,7 +182,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   }()};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    throw NotSchemaError{schema_from_stdin ? stdin_error_path()
+    throw NotSchemaError{schema_from_stdin ? stdin_path()
                                            : schema_resolution_base};
   }
 
