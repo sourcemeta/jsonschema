@@ -1354,53 +1354,6 @@ auto compiler_draft4_validation_pattern(const Context &context,
                       .second = regex_string})};
 }
 
-auto compiler_draft4_validation_format(const Context &context,
-                                       const SchemaContext &schema_context,
-                                       const DynamicContext &dynamic_context,
-                                       const Instructions &) -> Instructions {
-  if (!schema_context.schema.at(dynamic_context.keyword).is_string()) {
-    return {};
-  }
-
-  if (schema_context.schema.defines("type") &&
-      schema_context.schema.at("type").is_string() &&
-      schema_context.schema.at("type").to_string() != "string") {
-    return {};
-  }
-
-  // Regular expressions
-
-  static const std::string FORMAT_REGEX_IPV4{
-      "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.(25[0-5]|2[0-4][0-"
-      "9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-"
-      "9][0-9]|[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$"};
-
-  const auto &format{
-      schema_context.schema.at(dynamic_context.keyword).to_string()};
-
-  if (format == "uri") {
-    return {make(sourcemeta::blaze::InstructionIndex::AssertionStringType,
-                 context, schema_context, dynamic_context,
-                 ValueStringType::URI)};
-  }
-
-#define COMPILE_FORMAT_REGEX(name, regular_expression)                         \
-  if (format == (name)) {                                                      \
-    return {                                                                   \
-        make(sourcemeta::blaze::InstructionIndex::AssertionRegex, context,     \
-             schema_context, dynamic_context,                                  \
-             ValueRegex{parse_regex(regular_expression, schema_context.base,   \
-                                    schema_context.relative_pointer),          \
-                        (regular_expression)})};                               \
-  }
-
-  COMPILE_FORMAT_REGEX("ipv4", FORMAT_REGEX_IPV4)
-
-#undef COMPILE_FORMAT_REGEX
-
-  return {};
-}
-
 auto compiler_draft4_applicator_not(const Context &context,
                                     const SchemaContext &schema_context,
                                     const DynamicContext &dynamic_context,

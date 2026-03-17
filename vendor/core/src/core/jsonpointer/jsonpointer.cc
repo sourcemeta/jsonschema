@@ -15,6 +15,7 @@
 #include <ostream>     // std::basic_ostream
 #include <sstream>     // std::basic_ostringstream, std::basic_stringstream
 #include <string>      // std::basic_string
+#include <string_view> // std::string_view
 #include <type_traits> // std::is_same_v
 #include <utility>     // std::move
 
@@ -302,7 +303,7 @@ auto remove(JSON &document, const WeakPointer &pointer) -> bool {
 auto to_pointer(const JSON &document) -> Pointer {
   assert(document.is_string());
   auto stream{document.to_stringstream()};
-  return parse_pointer(stream);
+  return parse_pointer<false>(stream);
 }
 
 auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
@@ -405,6 +406,16 @@ auto to_uri(const WeakPointer &pointer, const std::string_view base) -> URI {
   }
 
   return to_uri(pointer).resolve_from(URI{base}).canonicalize();
+}
+
+auto is_pointer(const std::string_view input) noexcept -> bool {
+  try {
+    std::basic_istringstream<JSON::Char> stream{std::string{input}};
+    parse_pointer<true>(stream);
+    return true;
+  } catch (...) {
+    return false;
+  }
 }
 
 } // namespace sourcemeta::core

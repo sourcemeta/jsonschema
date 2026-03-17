@@ -27,7 +27,6 @@ auto sourcemeta::blaze::default_schema_compiler(
                              Known::JSON_Schema_2020_12_Validation,
                              Known::JSON_Schema_2020_12_Meta_Data,
                              Known::JSON_Schema_2020_12_Format_Annotation,
-                             Known::JSON_Schema_2020_12_Format_Assertion,
                              Known::JSON_Schema_2020_12_Content,
                              Known::JSON_Schema_2019_09_Core,
                              Known::JSON_Schema_2019_09_Applicator,
@@ -513,8 +512,6 @@ auto sourcemeta::blaze::default_schema_compiler(
               "maxLength", compiler_draft4_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "minLength", compiler_draft4_validation_minlength);
-  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "format", compiler_draft4_validation_format);
 
   // Number
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
