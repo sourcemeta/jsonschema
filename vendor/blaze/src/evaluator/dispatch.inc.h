@@ -490,13 +490,7 @@ INSTRUCTION_HANDLER(AssertionStringType) {
   const auto value{*std::get_if<ValueStringType>(&instruction.value)};
   switch (value) {
     case ValueStringType::URI:
-      try {
-        // TODO: This implies a string copy
-        result = URI{target}.is_absolute();
-      } catch (const URIParseError &) {
-        result = false;
-      }
-
+      result = URI::is_uri(target);
       break;
     default:
       // We should never get here

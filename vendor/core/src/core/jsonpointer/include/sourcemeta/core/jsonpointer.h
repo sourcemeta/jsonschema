@@ -424,6 +424,21 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_pointer(const WeakPointer &pointer) -> Pointer;
 
 /// @ingroup jsonpointer
+/// Check if the given string is a valid JSON Pointer per RFC 6901 without
+/// constructing a JSON Pointer object. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_pointer("/foo/bar/0"));
+/// assert(sourcemeta::core::is_pointer(""));
+/// assert(!sourcemeta::core::is_pointer("foo"));
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto is_pointer(std::string_view input) noexcept -> bool;
+
+/// @ingroup jsonpointer
 /// Convert a JSON Pointer into a JSON WeakPointer. For example:
 ///
 /// ```cpp

@@ -24,6 +24,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/anyof_false_simplify.h
     common/anyof_remove_false_schemas.h
     common/anyof_true_simplify.h
+    common/const_in_enum.h
     common/const_with_type.h
     common/orphan_definitions.h
     common/content_media_type_without_encoding.h
@@ -71,6 +72,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
 
     # Linter
     linter/comment_trim.h
+    linter/const_not_in_enum.h
     linter/content_schema_default.h
     linter/definitions_to_defs.h
     linter/dependencies_default.h
