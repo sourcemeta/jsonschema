@@ -11,6 +11,7 @@ cat << 'EOF' | "$1" fmt --check - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
 EOF
+# Format check failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -26,6 +27,7 @@ cat << 'EOF' | "$1" fmt --check - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
 EOF
+# Format check failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

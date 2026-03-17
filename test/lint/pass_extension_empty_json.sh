@@ -39,7 +39,7 @@ cat << 'EOF' > "$TMP/schemas/ignored.json"
 }
 EOF
 
-"$1" lint "$TMP/schemas" --extension '' --verbose >"$TMP/output.txt" 2>&1
+"$1" lint "$TMP/schemas" --extension '' --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 warning: Matching files with no extension

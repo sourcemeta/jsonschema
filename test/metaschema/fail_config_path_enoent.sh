@@ -18,7 +18,7 @@ EOF
 cd "$TMP/bar"
 "$1" metaschema --verbose > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 Using extension: .json
@@ -34,7 +34,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 cd "$TMP/bar"
 "$1" metaschema --json > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {

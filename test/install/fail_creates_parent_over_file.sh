@@ -30,7 +30,7 @@ cd "$TMP/project"
 "$1" install > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 Fetching       : file://$(realpath "$TMP")/source/user.json
@@ -43,7 +43,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 "$1" install --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected_json.txt"
 {

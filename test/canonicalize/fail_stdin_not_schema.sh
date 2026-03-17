@@ -22,6 +22,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 echo '[ 1, 2, 3 ]' | "$1" canonicalize - --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << 'EOF' > "$TMP/expected.txt"

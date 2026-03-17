@@ -28,7 +28,7 @@ EOF
 
 cp "$TMP/schemas/ignored.json" "$TMP/schemas/ignored_original.json"
 
-"$1" fmt "$TMP/schemas" --extension '' --verbose >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP/schemas" --extension '' --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected_output.txt"
 warning: Matching files with no extension

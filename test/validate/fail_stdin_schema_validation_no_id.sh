@@ -18,6 +18,7 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" > "$TMP/output.txt" 2>&1 \
   "type": "string"
 }
 EOF
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
@@ -30,13 +31,15 @@ EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
-cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" 2>&1 \
+# JSON error
+cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string"
 }
 EOF
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

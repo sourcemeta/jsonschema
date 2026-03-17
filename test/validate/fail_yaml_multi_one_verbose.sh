@@ -25,10 +25,10 @@ foo: 1
 foo: 3
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.yaml" --verbose 2>"$TMP/stderr.txt" \
+"$1" validate "$TMP/schema.json" "$TMP/instance.yaml" --verbose 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 Interpreting input as YAML multi-document: $(realpath "$TMP")/instance.yaml

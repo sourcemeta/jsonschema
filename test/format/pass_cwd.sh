@@ -22,7 +22,7 @@ cat << 'EOF' > "$TMP/schema_2.json"
 EOF
 
 cd "$TMP"
-"$1" fmt >"$TMP/output.txt" 2>&1
+"$1" fmt > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected_output.txt"
 EOF

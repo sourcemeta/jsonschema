@@ -33,6 +33,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   const auto schema_resolution_base{
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
+  const auto schema_display_path{schema_from_stdin ? stdin_error_path()
+                                                   : schema_path};
 
   const auto configuration_path{find_configuration(schema_resolution_base)};
   const auto &configuration{
@@ -43,8 +45,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
                   : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (!sourcemeta::core::is_schema(schema)) {
-    throw NotSchemaError{schema_from_stdin ? stdin_error_path()
-                                           : schema_resolution_base};
+    throw NotSchemaError{schema_display_path};
   }
 
   const auto &custom_resolver{
@@ -76,30 +77,30 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(
-        schema_resolution_base, error);
+    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_display_path,
+                                                          error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_resolution_base,
+    throw FileError<sourcemeta::core::SchemaFrameError>(schema_display_path,
                                                         error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_resolution_base, std::string{error.identifier()},
-        error.location(), error.what());
+        schema_display_path, std::string{error.identifier()}, error.location(),
+        error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-        schema_resolution_base, error);
+        schema_display_path, error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw FileError<sourcemeta::core::SchemaResolutionError>(
-        schema_resolution_base, error);
+        schema_display_path, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_resolution_base);
+        schema_display_path);
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
-        schema_resolution_base);
+        schema_display_path);
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_resolution_base,
+    throw FileError<sourcemeta::core::SchemaError>(schema_display_path,
                                                    error.what());
   }
 

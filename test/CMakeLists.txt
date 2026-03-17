@@ -368,6 +368,11 @@ add_jsonschema_test_unix(test/fail_unresolvable_json)
 add_jsonschema_test_unix(test/fail_draft7_defs_ref_target)
 add_jsonschema_test_unix(test/fail_draft4_x_keyword_ref_target)
 add_jsonschema_test_unix(test/pass_config_ignore)
+add_jsonschema_test_unix(test/pass_stdin)
+add_jsonschema_test_unix(test/pass_stdin_verbose)
+add_jsonschema_test_unix(test/fail_stdin_invalid_json)
+add_jsonschema_test_unix(test/fail_stdin_not_object)
+add_jsonschema_test_unix(test/fail_stdin_test_failure)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)

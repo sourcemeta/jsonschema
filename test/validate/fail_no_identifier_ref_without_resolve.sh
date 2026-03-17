@@ -23,7 +23,7 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --verbose > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the reference to an external schema

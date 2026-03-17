@@ -43,9 +43,9 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
@@ -59,9 +59,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --json >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --json > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

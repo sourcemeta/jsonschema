@@ -13,9 +13,9 @@ type: string
 enum: [ foo ]
 EOF
 
-"$1" lint "$TMP/schema.custom" --fix 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" lint "$TMP/schema.custom" --fix 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Not supported
-test "$EXIT_CODE" = "3" || exit 1
+test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 error: The --fix option is not supported for YAML input files

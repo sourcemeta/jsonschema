@@ -19,6 +19,7 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" > "$TMP/output.txt" 2>&1 \
   "type": "string"
 }
 EOF
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
@@ -40,6 +41,7 @@ cat << 'EOF' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" 2
   "type": "string"
 }
 EOF
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

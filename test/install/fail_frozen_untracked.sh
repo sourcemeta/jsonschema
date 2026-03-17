@@ -48,7 +48,7 @@ EOF
 "$1" install --frozen > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Integrity verification failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 Up to date     : file://$(realpath "$TMP")/source/schema.json
@@ -62,7 +62,7 @@ diff "$TMP/project/jsonschema.lock.json" "$TMP/lock_before.json"
 "$1" install --frozen --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Integrity verification failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected_json.txt"
 {

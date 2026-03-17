@@ -47,6 +47,7 @@ cat << 'EOF' | "$1" metaschema - --json > "$TMP/stdout.txt" 2>&1 \
   "type": 1
 }
 EOF
+# Metaschema validation failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

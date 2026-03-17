@@ -29,7 +29,7 @@ EOF
 
 "$1" metaschema "$TMP/schemas" --json > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Metaschema validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/schemas/schema_1.json

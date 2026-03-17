@@ -17,7 +17,7 @@ cat << 'EOF' > "$TMP/schema"
 }
 EOF
 
-"$1" fmt "$TMP/schema" >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP/schema" > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected_output.txt"
 EOF

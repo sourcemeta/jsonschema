@@ -9,6 +9,7 @@ trap clean EXIT
 
 echo '{ "foo" 1 }' | "$1" fmt - 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -23,6 +24,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 echo '{ "foo" 1 }' | "$1" fmt - --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"

@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" fmt "$TMP/schema.json" --check >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP/schema.json" --check > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected_output.txt"
 EOF

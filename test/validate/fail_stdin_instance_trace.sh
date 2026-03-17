@@ -38,6 +38,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 # JSON error
 echo '42' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.json"

@@ -13,7 +13,7 @@ EOF
 
 "$1" encode 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: This command expects a path to a JSON document and an output path
@@ -26,7 +26,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 "$1" encode --json > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

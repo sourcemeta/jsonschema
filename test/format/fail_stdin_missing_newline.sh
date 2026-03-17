@@ -14,6 +14,7 @@ EOF
 printf '%s' "$(cat "$TMP/schema_noeol.json")" \
   | "$1" fmt --check - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Format check failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -28,6 +29,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 printf '%s' "$(cat "$TMP/schema_noeol.json")" \
   | "$1" fmt --check - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Format check failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

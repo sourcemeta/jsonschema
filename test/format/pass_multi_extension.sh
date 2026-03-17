@@ -20,7 +20,7 @@ cat << 'EOF' > "$TMP/schema_2.schema.json"
 EOF
 
 cd "$TMP"
-"$1" fmt --extension .schema.json -v >"$TMP/output.txt" 2>&1
+"$1" fmt --extension .schema.json -v > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected_output.txt"
 Using extension: .schema.json

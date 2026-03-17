@@ -9,6 +9,7 @@ trap clean EXIT
 
 echo '{ "foo" 1 }' | "$1" lint - 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -21,8 +22,9 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '{ "foo" 1 }' | "$1" lint - --json > "$TMP/stdout.txt" 2>&1 \
+echo '{ "foo" 1 }' | "$1" lint - --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"

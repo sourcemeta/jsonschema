@@ -19,9 +19,9 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 "$1" codegen "$TMP/document.json" --target typescript --verbose \
-  2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+  2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema
@@ -36,9 +36,9 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" codegen "$TMP/document.json" --target typescript --json \
-  >"$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+  > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

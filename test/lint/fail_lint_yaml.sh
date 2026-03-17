@@ -16,9 +16,9 @@ enum: [ foo ]
 EOF
 
 cd "$TMP"
-"$1" lint "$TMP/schema.yaml" >"$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" lint "$TMP/schema.yaml" > "$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Lint violation
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 schema.yaml:5:1:

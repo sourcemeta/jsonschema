@@ -30,7 +30,7 @@ EOF
   --resolve "$TMP/schemas/meta.json" > "$TMP/result.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Relative meta-schema URIs are not valid according to the JSON Schema specification
@@ -45,7 +45,7 @@ diff "$TMP/result.txt" "$TMP/expected.txt"
   --resolve "$TMP/schemas/meta.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

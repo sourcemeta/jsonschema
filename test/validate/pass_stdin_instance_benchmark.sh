@@ -28,4 +28,3 @@ cat << 'EOF' > "$TMP/expected.txt"
 EOF
 
 diff "$TMP/normalized.txt" "$TMP/expected.txt"
-

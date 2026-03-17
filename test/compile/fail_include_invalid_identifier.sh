@@ -16,10 +16,10 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 # Test with hyphen (invalid)
-"$1" compile "$TMP/schema.json" --include my-schema 2>"$TMP/stderr.txt" \
+"$1" compile "$TMP/schema.json" --include my-schema 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: The include identifier is not a valid C/C++ identifier
@@ -32,7 +32,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 "$1" compile "$TMP/schema.json" --include my-schema --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

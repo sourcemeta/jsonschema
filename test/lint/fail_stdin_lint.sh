@@ -17,6 +17,7 @@ cat << 'EOF' | "$1" lint - > "$TMP/output.txt" 2>&1 \
   "enum": [ "foo" ]
 }
 EOF
+# Lint violation
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -41,6 +42,7 @@ cat << 'EOF' | "$1" lint - --json > "$TMP/stdout.txt" 2>&1 \
   "enum": [ "foo" ]
 }
 EOF
+# Lint violation
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"

@@ -21,7 +21,7 @@ cat << 'EOF' > "$TMP/schema_2.json"
 {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String", "description": "Test schema"}
 EOF
 
-"$1" fmt "$TMP" >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP" > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected_output.txt"
 EOF

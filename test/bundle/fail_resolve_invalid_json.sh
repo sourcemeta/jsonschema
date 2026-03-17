@@ -22,10 +22,10 @@ cat << 'EOF' > "$TMP/invalid.json"
 EOF
 
 "$1" bundle "$TMP/schema.json" \
-  --resolve "$TMP/invalid.json" 2>"$TMP/stderr.txt" \
+  --resolve "$TMP/invalid.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: Failed to parse the JSON document
@@ -38,10 +38,10 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" bundle "$TMP/schema.json" \
-  --resolve "$TMP/invalid.json" --json >"$TMP/stdout.txt" \
+  --resolve "$TMP/invalid.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {

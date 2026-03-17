@@ -27,10 +27,10 @@ cat << 'EOF' > "$TMP/instance.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/resolve.json" 2>"$TMP/stderr.txt" \
+  --resolve "$TMP/resolve.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The identifier is not a valid URI
@@ -44,10 +44,10 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/resolve.json" --json >"$TMP/stdout.txt" \
+  --resolve "$TMP/resolve.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

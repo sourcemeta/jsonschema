@@ -13,6 +13,7 @@ EOF
 
 echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -25,6 +26,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 echo '[ 1, 2, 3 ]' | "$1" validate - "$TMP/instance.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << 'EOF' > "$TMP/expected.txt"

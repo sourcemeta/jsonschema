@@ -151,14 +151,16 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         schema_path, std::make_error_code(std::errc::is_a_directory)};
   }
 
-  // For stdin, use the logical stdin path as the resolution base
+  const auto schema_config_base{schema_from_stdin
+                                    ? std::filesystem::current_path()
+                                    : std::filesystem::path(schema_path)};
   const auto schema_resolution_base{schema_from_stdin
                                         ? stdin_error_path()
                                         : std::filesystem::path(schema_path)};
 
-  const auto configuration_path{find_configuration(schema_resolution_base)};
+  const auto configuration_path{find_configuration(schema_config_base)};
   const auto &configuration{
-      read_configuration(options, configuration_path, schema_resolution_base)};
+      read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
   const auto schema{schema_from_stdin

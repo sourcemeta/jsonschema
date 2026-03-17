@@ -16,6 +16,7 @@ EOF
 
 printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
@@ -31,6 +32,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 # JSON error
 printf 'foo: bar\nbaz: 1\n' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"

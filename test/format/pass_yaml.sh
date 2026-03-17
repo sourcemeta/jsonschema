@@ -12,9 +12,9 @@ additionalProperties: false
 title: Hello World
 EOF
 
-"$1" fmt "$TMP/schema.yaml" >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" fmt "$TMP/schema.yaml" > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Not supported
-test "$EXIT_CODE" = "3" || exit 1
+test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 error: This command does not support YAML input files yet

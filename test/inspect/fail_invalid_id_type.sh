@@ -14,9 +14,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" inspect "$TMP/schema.json" >"$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" inspect "$TMP/schema.json" > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The schema identifier is invalid

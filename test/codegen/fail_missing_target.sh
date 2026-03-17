@@ -14,9 +14,9 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" codegen "$TMP/schema.json" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" codegen "$TMP/schema.json" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: You must pass a target using the `--target/-t` option
@@ -26,9 +26,9 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" codegen "$TMP/schema.json" --json \
-  >"$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+  > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

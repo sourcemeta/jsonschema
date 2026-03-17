@@ -28,7 +28,7 @@ EOF
 mtime_old="$(mtime "$TMP/schema.json")"
 sleep 1
 
-"$1" fmt "$TMP/schema.json" >"$TMP/output.txt" 2>&1
+"$1" fmt "$TMP/schema.json" > "$TMP/output.txt" 2>&1
 mtime_new="$(mtime "$TMP/schema.json")"
 
 cat << 'EOF' > "$TMP/expected_output.txt"

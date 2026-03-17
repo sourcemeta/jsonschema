@@ -28,7 +28,7 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: A schema with a top-level \`\$ref\` in JSON Schema Draft 7 and older dialects ignores every sibling keywords (like identifiers and meta-schema declarations) and therefore many operations, like bundling, are not possible without undefined behavior
@@ -41,7 +41,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" --json > "$TMP/stdout.json" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.json"
 {
