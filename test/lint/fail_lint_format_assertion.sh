@@ -41,3 +41,18 @@ error: Cannot compile unsupported vocabulary
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+"$1" lint "$TMP/schema.json" \
+  --resolve "$TMP/metaschema.json" --json > "$TMP/stdout.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "4"
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "Cannot compile unsupported vocabulary",
+  "filePath": "$(realpath "$TMP")/schema.json",
+  "uri": "https://json-schema.org/draft/2020-12/vocab/format-assertion"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"
