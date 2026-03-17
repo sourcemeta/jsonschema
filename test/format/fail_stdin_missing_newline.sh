@@ -11,7 +11,6 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema_noeol.json"
 {"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
 EOF
-# $(cat) strips trailing newline; printf '%s' prints without adding one
 printf '%s' "$(cat "$TMP/schema_noeol.json")" \
   | "$1" fmt --check - > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
