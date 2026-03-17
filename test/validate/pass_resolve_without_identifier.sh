@@ -28,7 +28,7 @@ cat << 'EOF' > "$TMP/no-id.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/no-id.json" --verbose 2>"$TMP/stderr.txt"
+  --resolve "$TMP/no-id.json" --verbose 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance.json

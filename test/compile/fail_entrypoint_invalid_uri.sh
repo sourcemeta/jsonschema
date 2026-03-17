@@ -19,7 +19,7 @@ EOF
   --entrypoint 'https://example.com/nonexistent' > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The given entry point URI does not exist in the schema
@@ -35,7 +35,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
   --entrypoint 'https://example.com/nonexistent' --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

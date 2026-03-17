@@ -66,7 +66,7 @@ EOF
 "$1" test "$TMP/tests" --resolve "$TMP/schema.json" 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Test assertion failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/tests/1.json:

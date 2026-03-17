@@ -11,9 +11,9 @@ cat << 'EOF' > "$TMP/document.json"
 { "version": 2.0 }
 EOF
 
-"$1" decode 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" decode 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 error: This command expects a path to a binary file and an output path
@@ -26,7 +26,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 # JSON error
 "$1" decode --json > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Invalid CLI arguments
-test "$EXIT_CODE" = "5" || exit 1
+test "$EXIT_CODE" = "5"
 
 cat << 'EOF' > "$TMP/expected.txt"
 {

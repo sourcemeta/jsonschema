@@ -43,7 +43,7 @@ cat << 'EOF' > "$TMP/project/schema.json"
 }
 EOF
 
-"$1" bundle "$TMP/project/schema.json" > "$TMP/output.json" 2>"$TMP/stderr.txt"
+"$1" bundle "$TMP/project/schema.json" > "$TMP/output.json" 2> "$TMP/stderr.txt"
 
 cat /dev/null > "$TMP/expected_stderr.txt"
 diff "$TMP/stderr.txt" "$TMP/expected_stderr.txt"

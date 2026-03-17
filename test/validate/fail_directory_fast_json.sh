@@ -33,7 +33,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instances" --fast --json > "$TMP/stdout.txt" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected_stderr.txt"
 $(realpath "$TMP")/instances/instance_1.json

@@ -26,7 +26,7 @@ EOF
 "$1" lint --rule "$TMP/rule.json" "$TMP/schema.json" \
   > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the reference to an external schema
@@ -41,7 +41,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 "$1" lint --rule "$TMP/rule.json" --json "$TMP/schema.json" \
   > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected_json.txt"
 {

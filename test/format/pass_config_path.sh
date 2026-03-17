@@ -27,7 +27,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 EOF
 
 cd "$TMP/bar"
-"$1" fmt --verbose >"$TMP/output.txt" 2>&1
+"$1" fmt --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 Using extension: .json

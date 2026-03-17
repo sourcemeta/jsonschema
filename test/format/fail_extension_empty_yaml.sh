@@ -16,9 +16,9 @@ additionalProperties: false
 title: Hello World
 EOF
 
-"$1" fmt "$TMP/schemas" --extension '' 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" fmt "$TMP/schemas" --extension '' 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Not supported
-test "$EXIT_CODE" = "3" || exit 1
+test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 warning: Matching files with no extension

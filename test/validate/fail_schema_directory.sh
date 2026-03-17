@@ -13,10 +13,10 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": 1 }
 EOF
 
-"$1" validate "$TMP/schema-directory" "$TMP/instance.json" 2>"$TMP/stderr.txt" \
+"$1" validate "$TMP/schema-directory" "$TMP/instance.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The input was supposed to be a file but it is a directory
@@ -26,10 +26,10 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" validate "$TMP/schema-directory" "$TMP/instance.json" --json >"$TMP/stdout.txt" \
+"$1" validate "$TMP/schema-directory" "$TMP/instance.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {

@@ -23,10 +23,10 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" >"$TMP/output.txt" 2>&1 \
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The defaultDialect property must be a string

@@ -16,10 +16,10 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/foo.json" 2>"$TMP/stderr.txt" \
+"$1" validate "$TMP/schema.json" "$TMP/foo.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: No such file or directory
@@ -29,10 +29,10 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" validate "$TMP/schema.json" "$TMP/foo.json" --json >"$TMP/stdout.txt" \
+"$1" validate "$TMP/schema.json" "$TMP/foo.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {

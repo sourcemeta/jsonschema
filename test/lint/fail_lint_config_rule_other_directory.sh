@@ -39,7 +39,7 @@ cd "$TMP/other"
 "$1" lint --only require_type "$TMP/project/schema.json" \
   > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Lint violation
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 ../project/schema.json:1:1:
@@ -54,7 +54,7 @@ cd "$TMP/other"
 "$1" lint --only require_type --json "$TMP/project/schema.json" \
   > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Lint violation
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected_json.txt"
 {

@@ -23,7 +23,7 @@ EOF
 
 cd "$TMP"
 
-"$1" fmt schema.json --verbose >"$TMP/output.txt" 2>&1
+"$1" fmt schema.json --verbose > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.json"
 {

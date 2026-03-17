@@ -17,9 +17,9 @@ properties:
   bar: {}
 EOF
 
-"$1" fmt "$TMP/schema" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" fmt "$TMP/schema" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Not supported
-test "$EXIT_CODE" = "3" || exit 1
+test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 error: This command does not support YAML input files yet

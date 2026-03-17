@@ -22,10 +22,10 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 }
 EOF
 
-"$1" validate "$TMP/document.json" "$TMP/instance.json" --verbose 2>"$TMP/stderr.txt" \
+"$1" validate "$TMP/document.json" "$TMP/instance.json" --verbose 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema
@@ -39,10 +39,10 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-"$1" validate "$TMP/document.json" "$TMP/instance.json" --json >"$TMP/stdout.txt" \
+"$1" validate "$TMP/document.json" "$TMP/instance.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

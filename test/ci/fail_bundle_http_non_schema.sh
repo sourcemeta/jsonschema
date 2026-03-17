@@ -19,7 +19,7 @@ EOF
 "$1" bundle "$TMP/schema.json" --http 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The JSON document is not a valid JSON Schema

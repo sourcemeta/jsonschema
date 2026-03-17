@@ -29,10 +29,10 @@ cat << 'EOF' > "$TMP/invalid.json"
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/invalid.json" 2>"$TMP/stderr.txt" \
+  --resolve "$TMP/invalid.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The file you provided does not represent a valid JSON Schema
@@ -43,10 +43,10 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
-  --resolve "$TMP/invalid.json" --json >"$TMP/stdout.txt" \
+  --resolve "$TMP/invalid.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {

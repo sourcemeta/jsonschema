@@ -38,7 +38,7 @@ EOF
 "$1" test "$TMP/schemas/test.json" --verbose --resolve "$TMP" 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not determine the base dialect of the schema

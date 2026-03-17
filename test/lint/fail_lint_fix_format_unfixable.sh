@@ -17,10 +17,10 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cd "$TMP"
-"$1" lint "$TMP/schema.json" --fix --format >"$TMP/output.txt" 2>&1 \
+"$1" lint "$TMP/schema.json" --fix --format > "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Lint violation
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected_output.txt"
 schema.json:1:1:
@@ -45,10 +45,10 @@ EOF
 diff "$TMP/schema.json" "$TMP/expected.json"
 
 # JSON output
-"$1" lint "$TMP/schema.json" --fix --format --json >"$TMP/output_json.txt" 2>&1 \
+"$1" lint "$TMP/schema.json" --fix --format --json > "$TMP/output_json.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Lint violation
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected_output_json.txt"
 {

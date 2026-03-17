@@ -20,7 +20,7 @@ EOF
 
 "$1" metaschema "$TMP/schemas" > "$TMP/stderr.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
-test "$EXIT_CODE" = "4" || exit 1
+test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not resolve the metaschema of the schema

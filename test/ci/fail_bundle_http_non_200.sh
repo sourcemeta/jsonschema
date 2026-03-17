@@ -19,7 +19,7 @@ EOF
 "$1" bundle "$TMP/schema.json" --http 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
-test "$EXIT_CODE" = "6" || exit 1
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: Failed to parse the JSON document

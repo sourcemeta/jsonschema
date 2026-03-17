@@ -40,7 +40,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --resolve "$TMP/zz-meta.json" \
-  --resolve "$TMP/aa-schema.json" --debug 2>"$TMP/stderr.txt"
+  --resolve "$TMP/aa-schema.json" --debug 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
 debug: Detecting schema resources from file: $(realpath "$TMP")/zz-meta.json

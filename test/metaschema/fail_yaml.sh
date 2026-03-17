@@ -12,9 +12,9 @@ $schema: http://json-schema.org/draft-04/schema#
 type: 1
 EOF
 
-"$1" metaschema "$TMP/schema.yaml" 2>"$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+"$1" metaschema "$TMP/schema.yaml" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Metaschema validation failure
-test "$EXIT_CODE" = "2" || exit 1
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 fail: $(realpath "$TMP")/schema.yaml
