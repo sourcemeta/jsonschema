@@ -5,7 +5,6 @@
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/uri.h>
 
-#include "grammar.h"
 #include "parser.h"
 #include "stringify.h"
 
@@ -309,13 +308,10 @@ auto to_pointer(const JSON &document) -> Pointer {
 auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
                                         std::allocator<JSON::Char>> &input)
     -> Pointer {
-  std::basic_stringstream<JSON::Char, JSON::CharTraits,
-                          std::allocator<JSON::Char>>
-      stream;
-  stream << internal::token_pointer_quote<JSON::Char>;
-  stream << input;
-  stream << internal::token_pointer_quote<JSON::Char>;
-  return to_pointer(parse_json(stream));
+  std::basic_istringstream<JSON::Char, JSON::CharTraits,
+                           std::allocator<JSON::Char>>
+      stream{input};
+  return parse_pointer<false>(stream);
 }
 
 auto to_pointer(const WeakPointer &pointer) -> Pointer {

@@ -10,10 +10,14 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/regex.h>
 
-#include <chrono>      // std::chrono
+#include <algorithm>   // std::min, std::any_of, std::find
+#include <cassert>     // assert
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
+#include <limits>      // std::numeric_limits
+#include <ranges>      // std::ranges
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
 #include <vector>      // std::vector
@@ -98,8 +102,25 @@ public:
   /// const auto result{evaluator.validate(schema_template, instance)};
   /// assert(result);
   /// ```
-  auto validate(const Template &schema, const sourcemeta::core::JSON &instance)
-      -> bool;
+  inline auto validate(const Template &schema,
+                       const sourcemeta::core::JSON &instance) -> bool {
+    assert(this->evaluate_path.empty());
+    assert(this->instance_location.empty());
+    assert(this->resources.empty());
+
+    if (schema.track && schema.dynamic) [[unlikely]] {
+      this->evaluated_.clear();
+      return this->evaluate_impl<true, true, false>(schema, instance, nullptr);
+    } else if (schema.track) [[unlikely]] {
+      this->evaluated_.clear();
+      return this->evaluate_impl<true, false, false>(schema, instance, nullptr);
+    } else if (schema.dynamic) [[unlikely]] {
+      return this->evaluate_impl<false, true, false>(schema, instance, nullptr);
+    } else {
+      return this->evaluate_impl<false, false, false>(schema, instance,
+                                                      nullptr);
+    }
+  }
 
   /// This method evaluates a schema compiler template, executing the given
   /// callback at every step of the way. For example:
@@ -152,26 +173,68 @@ public:
   ///
   /// assert(result);
   /// ```
-  auto validate(const Template &schema, const sourcemeta::core::JSON &instance,
-                const Callback &callback) -> bool;
+  inline auto validate(const Template &schema,
+                       const sourcemeta::core::JSON &instance,
+                       const Callback &callback) -> bool {
+    assert(this->evaluate_path.empty());
+    assert(this->instance_location.empty());
+    assert(this->resources.empty());
+    this->evaluated_.clear();
+    return this->evaluate_impl<true, true, true>(schema, instance, &callback);
+  }
 
-  // All of these members are considered internal and no
-  // client must depend on them
 #ifndef DOXYGEN
-  static const sourcemeta::core::JSON null;
-  static const sourcemeta::core::JSON empty_string;
+  template <bool Track, bool Dynamic, bool HasCallback>
+  auto evaluate_impl(const Template &schema,
+                     const sourcemeta::core::JSON &instance,
+                     const Callback *callback) -> bool;
+
+  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+  static inline const sourcemeta::core::JSON null{nullptr};
+  static inline const sourcemeta::core::JSON empty_string{""};
+  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
   [[nodiscard]] static auto hash(const std::size_t resource,
-                                 std::string_view fragment) noexcept
-      -> std::size_t;
+                                 const std::string_view fragment) noexcept
+      -> std::size_t {
+    std::size_t result{14695981039346656037ULL};
+    for (const auto byte : fragment) {
+      result ^= static_cast<std::size_t>(static_cast<unsigned char>(byte));
+      result *= 1099511628211ULL;
+    }
 
-  auto evaluate(const sourcemeta::core::JSON *target) -> void;
-  auto is_evaluated(const sourcemeta::core::JSON *target) const -> bool;
-  auto unevaluate() -> void;
+    return resource + result;
+  }
 
-// Exporting symbols that depends on the standard C++ library is considered
-// safe.
-// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
+  auto evaluate(const sourcemeta::core::JSON *target) -> void {
+    Evaluation mark{.instance = target,
+                    .evaluate_path = this->evaluate_path,
+                    .skip = false};
+    this->evaluated_.push_back(std::move(mark));
+  }
+
+  [[nodiscard]] auto is_evaluated(const sourcemeta::core::JSON *target) const
+      -> bool {
+    // NOLINTNEXTLINE(modernize-loop-convert)
+    for (auto iterator = this->evaluated_.rbegin();
+         iterator != this->evaluated_.rend(); ++iterator) {
+      if (target == iterator->instance && !iterator->skip &&
+          iterator->evaluate_path.starts_with_initial(this->evaluate_path)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  auto unevaluate() -> void {
+    for (auto &entry : this->evaluated_) {
+      if (!entry.skip && entry.evaluate_path.starts_with(this->evaluate_path)) {
+        entry.skip = true;
+      }
+    }
+  }
+
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251 4275)
 #endif
@@ -193,5 +256,43 @@ public:
 };
 
 } // namespace sourcemeta::blaze
+
+#ifndef DOXYGEN
+
+#include <sourcemeta/blaze/evaluator_dispatch.h>
+
+template <bool Track, bool Dynamic, bool HasCallback>
+auto sourcemeta::blaze::Evaluator::evaluate_impl(
+    const Template &schema, const sourcemeta::core::JSON &instance,
+    const Callback *callback) -> bool {
+  assert(!schema.targets.empty());
+  dispatch::DispatchContext<Track, Dynamic, HasCallback> context{
+      .schema = &schema,
+      .callback = callback,
+      .evaluator = this,
+      .property_target = nullptr};
+  bool overall{true};
+  for (const auto &instruction : schema.targets[0]) {
+    if (!dispatch::evaluate_instruction(instruction, instance, 0, context))
+        [[unlikely]] {
+      overall = false;
+      break;
+    }
+  }
+
+  if constexpr (Track || HasCallback) {
+    assert(this->evaluate_path.empty());
+  }
+  if constexpr (HasCallback) {
+    assert(this->instance_location.empty());
+  }
+  if constexpr (Dynamic) {
+    assert(this->resources.empty());
+  }
+
+  return overall;
+}
+
+#endif // !DOXYGEN
 
 #endif

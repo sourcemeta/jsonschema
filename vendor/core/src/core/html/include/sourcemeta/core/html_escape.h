@@ -5,7 +5,10 @@
 #include <sourcemeta/core/html_export.h>
 #endif
 
-#include <string> // std::string
+#include <sourcemeta/core/html_buffer.h>
+
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -32,6 +35,17 @@ namespace sourcemeta::core {
 /// ```
 SOURCEMETA_CORE_HTML_EXPORT
 auto html_escape(std::string &text) -> void;
+
+/// @ingroup html
+/// Append the HTML-escaped form of `input` directly to `output`,
+/// without allocating a temporary string.
+SOURCEMETA_CORE_HTML_EXPORT
+auto html_escape_append(std::string &output, std::string_view input) -> void;
+
+/// @ingroup html
+/// Append the HTML-escaped form of `input` directly to a buffer.
+SOURCEMETA_CORE_HTML_EXPORT
+auto html_escape_append(HTMLBuffer &output, std::string_view input) -> void;
 
 } // namespace sourcemeta::core
 

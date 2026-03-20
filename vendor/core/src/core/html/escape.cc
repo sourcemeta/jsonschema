@@ -93,4 +93,81 @@ auto html_escape(std::string &text) -> void {
   }
 }
 
+static auto needs_escape(const std::string_view input) -> bool {
+  for (const char character : input) {
+    switch (character) {
+      case '&':
+      case '<':
+      case '>':
+      case '"':
+      case '\'':
+        return true;
+      default:
+        break;
+    }
+  }
+
+  return false;
+}
+
+auto html_escape_append(std::string &output, const std::string_view input)
+    -> void {
+  if (!needs_escape(input)) {
+    output += input;
+    return;
+  }
+
+  for (const char character : input) {
+    switch (character) {
+      case '&':
+        output += "&amp;";
+        break;
+      case '<':
+        output += "&lt;";
+        break;
+      case '>':
+        output += "&gt;";
+        break;
+      case '"':
+        output += "&quot;";
+        break;
+      case '\'':
+        output += "&#39;";
+        break;
+      default:
+        output += character;
+    }
+  }
+}
+
+auto html_escape_append(HTMLBuffer &output, const std::string_view input)
+    -> void {
+  if (!needs_escape(input)) {
+    output.append(input);
+    return;
+  }
+
+  for (const char character : input) {
+    switch (character) {
+      case '&':
+        output.append("&amp;");
+        break;
+      case '<':
+        output.append("&lt;");
+        break;
+      case '>':
+        output.append("&gt;");
+        break;
+      case '"':
+        output.append("&quot;");
+        break;
+      case '\'':
+        output.append("&#39;");
+        break;
+      default:
+        output.append(character);
+    }
+  }
+}
+
 } // namespace sourcemeta::core

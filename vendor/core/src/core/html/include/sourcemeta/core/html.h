@@ -11,7 +11,6 @@
 /// #include <sourcemeta/core/html.h>
 /// ```
 
-#include <sourcemeta/core/html_elements.h>
-#include <sourcemeta/core/html_encoder.h>
+#include <sourcemeta/core/html_writer.h>
 
 #endif
