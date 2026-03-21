@@ -1,28 +1,254 @@
-struct DispatchContext {
+#ifndef SOURCEMETA_BLAZE_EVALUATOR_DISPATCH_H_
+#define SOURCEMETA_BLAZE_EVALUATOR_DISPATCH_H_
+
+#include <sourcemeta/blaze/evaluator.h>
+
+#define SOURCEMETA_STRINGIFY(x) #x
+
+#define EVALUATE_PUSH()                                                        \
+  if constexpr (Track) {                                                       \
+    context.evaluator->evaluate_path.push_back(                                \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
+  }                                                                            \
+  if constexpr (HasCallback) {                                                 \
+    context.evaluator->instance_location.push_back(                            \
+        instruction.relative_instance_location);                               \
+  }                                                                            \
+  if constexpr (Dynamic) {                                                     \
+    context.evaluator->resources.push_back(                                    \
+        context.schema->extra[instruction.extra_index].schema_resource);       \
+  }                                                                            \
+  if constexpr (HasCallback) {                                                 \
+    (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path,                      \
+                        context.evaluator->instance_location,                  \
+                        Evaluator::null);                                      \
+  }
+
+#define EVALUATE_POP()                                                         \
+  if constexpr (HasCallback) {                                                 \
+    (*context.callback)(EvaluationType::Post, result, instruction,             \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path,                      \
+                        context.evaluator->instance_location,                  \
+                        Evaluator::null);                                      \
+  }                                                                            \
+  if constexpr (Track) {                                                       \
+    context.evaluator->evaluate_path.pop_back(                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location.size());                                 \
+  }                                                                            \
+  if constexpr (HasCallback) {                                                 \
+    context.evaluator->instance_location.pop_back(                             \
+        instruction.relative_instance_location.size());                        \
+  }                                                                            \
+  if constexpr (Dynamic) {                                                     \
+    context.evaluator->resources.pop_back();                                   \
+  }
+
+#define EVALUATE_BEGIN(instruction_type, precondition)                         \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  const auto &target{resolve_target(                                           \
+      context.property_target,                                                 \
+      resolve_instance(instance, instruction.relative_instance_location))};    \
+  if (!(precondition)) [[unlikely]] {                                          \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool track{Track || HasCallback};                 \
+  EVALUATE_PUSH()                                                              \
+  bool result{false};
+
+#define EVALUATE_BEGIN_NON_STRING(instruction_type, precondition)              \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  const auto &target{                                                          \
+      resolve_instance(instance, instruction.relative_instance_location)};     \
+  if (!(precondition)) [[unlikely]] {                                          \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool track{Track || HasCallback};                 \
+  EVALUATE_PUSH()                                                              \
+  bool result{false};
+
+#define EVALUATE_BEGIN_IF_STRING(instruction_type)                             \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  const auto *maybe_target{                                                    \
+      resolve_string_target(context.property_target, instance,                 \
+                            instruction.relative_instance_location)};          \
+  if (!maybe_target) [[unlikely]] {                                            \
+    return true;                                                               \
+  }                                                                            \
+  EVALUATE_PUSH()                                                              \
+  const auto &target{*maybe_target};                                           \
+  bool result{false};
+
+#define EVALUATE_BEGIN_TRY_TARGET(instruction_type)                            \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  const auto &target{instance};                                                \
+  if (!target.is_object()) [[unlikely]] {                                      \
+    return true;                                                               \
+  }                                                                            \
+  assert(!instruction.relative_instance_location.empty());                     \
+  const auto *target_check{                                                    \
+      instruction.relative_instance_location.size() == 1                       \
+          ? target.try_at(                                                     \
+                instruction.relative_instance_location.at(0).to_property(),    \
+                instruction.relative_instance_location.at(0).property_hash())  \
+          : try_get(target, instruction.relative_instance_location)};          \
+  if (!target_check) [[unlikely]] {                                            \
+    return true;                                                               \
+  }                                                                            \
+  EVALUATE_PUSH()                                                              \
+  bool result{false};
+
+#define EVALUATE_BEGIN_NO_PRECONDITION(instruction_type)                       \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  [[maybe_unused]] constexpr bool track{Track || HasCallback};                 \
+  EVALUATE_PUSH()                                                              \
+  bool result{false};
+
+#define EVALUATE_BEGIN_NO_PRECONDITION_AND_NO_PUSH(instruction_type)           \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  if constexpr (HasCallback) {                                                 \
+    (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path,                      \
+                        context.evaluator->instance_location,                  \
+                        Evaluator::null);                                      \
+  }                                                                            \
+  bool result{true};
+
+#define EVALUATE_BEGIN_PASS_THROUGH(instruction_type)                          \
+  assert(instruction.type == InstructionIndex::instruction_type);              \
+  bool result{true};
+
+#define EVALUATE_END(instruction_type)                                         \
+  EVALUATE_POP()                                                               \
+  return result;
+
+#define EVALUATE_END_NO_POP(instruction_type)                                  \
+  if constexpr (HasCallback) {                                                 \
+    (*context.callback)(EvaluationType::Post, result, instruction,             \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path,                      \
+                        context.evaluator->instance_location,                  \
+                        Evaluator::null);                                      \
+  }                                                                            \
+  return result;
+
+#define EVALUATE_END_PASS_THROUGH(instruction_type) return result;
+
+#define EVALUATE_ANNOTATION(instruction_type, destination, annotation_value)   \
+  if constexpr (HasCallback) {                                                 \
+    context.evaluator->evaluate_path.push_back(                                \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location);                                        \
+    context.evaluator->instance_location.push_back(                            \
+        instruction.relative_instance_location);                               \
+    (*context.callback)(EvaluationType::Pre, true, instruction,                \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path, destination,         \
+                        Evaluator::null);                                      \
+    (*context.callback)(EvaluationType::Post, true, instruction,               \
+                        context.schema->extra[instruction.extra_index],        \
+                        context.evaluator->evaluate_path, destination,         \
+                        annotation_value);                                     \
+    context.evaluator->evaluate_path.pop_back(                                 \
+        context.schema->extra[instruction.extra_index]                         \
+            .relative_schema_location.size());                                 \
+    context.evaluator->instance_location.pop_back(                             \
+        instruction.relative_instance_location.size());                        \
+  }                                                                            \
+  return true;
+
+#define EVALUATE_RECURSE(child, target)                                        \
+  evaluate_instruction(child, target, depth + 1, context)
+#define EVALUATE_RECURSE_ON_PROPERTY_NAME(child, target, name)                 \
+  evaluate_instruction_with_property(child, target, depth + 1, context, name)
+
+namespace sourcemeta::blaze::dispatch {
+using namespace sourcemeta::core;
+
+inline auto resolve_target(const JSON::String *property_target,
+                           const JSON &instance) noexcept -> const JSON & {
+  if (property_target) [[unlikely]] {
+    return Evaluator::empty_string;
+  }
+
+  // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
+  return instance;
+}
+
+inline auto resolve_instance(const JSON &instance,
+                             const Pointer &relative_instance_location)
+    -> const JSON & {
+  if (relative_instance_location.empty()) {
+    // NOLINTNEXTLINE(bugprone-return-const-ref-from-parameter)
+    return instance;
+  }
+
+  return get(instance, relative_instance_location);
+}
+
+inline auto
+resolve_string_target(const JSON::String *property_target, const JSON &instance,
+                      const Pointer &relative_instance_location) noexcept
+    -> const JSON::String * {
+  if (property_target) [[unlikely]] {
+    return property_target;
+  }
+
+  const auto &target{resolve_instance(instance, relative_instance_location)};
+  if (!target.is_string()) [[unlikely]] {
+    return nullptr;
+  } else {
+    return &target.to_string();
+  }
+}
+
+inline auto effective_type_strict_real(const JSON &instance) noexcept
+    -> JSON::Type {
+  const auto real_type{instance.type()};
+  switch (real_type) {
+    case JSON::Type::Decimal:
+      return instance.to_decimal().is_integer() ? JSON::Type::Integer
+                                                : JSON::Type::Real;
+    default:
+      return real_type;
+  }
+}
+
+template <bool Track, bool Dynamic, bool HasCallback> struct DispatchContext {
   const sourcemeta::blaze::Template *schema;
   const sourcemeta::blaze::Callback *callback;
   sourcemeta::blaze::Evaluator *evaluator;
   const sourcemeta::core::JSON::String *property_target;
 };
 
+template <bool Track, bool Dynamic, bool HasCallback>
 inline auto
 evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                      const sourcemeta::core::JSON &instance,
-                     const std::uint64_t depth, DispatchContext &context)
+                     const std::uint64_t depth,
+                     DispatchContext<Track, Dynamic, HasCallback> &context)
     -> bool;
 
+template <bool Track, bool Dynamic, bool HasCallback>
 inline auto evaluate_instruction_with_property(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
-    DispatchContext &context, const sourcemeta::core::JSON::String &name)
-    -> bool;
+    DispatchContext<Track, Dynamic, HasCallback> &context,
+    const sourcemeta::core::JSON::String &name) -> bool;
 
 #define INSTRUCTION_HANDLER(name)                                              \
+  template <bool Track, bool Dynamic, bool HasCallback>                        \
   static inline auto name(                                                     \
       [[maybe_unused]] const sourcemeta::blaze::Instruction &instruction,      \
       [[maybe_unused]] const sourcemeta::core::JSON &instance,                 \
       [[maybe_unused]] const std::uint64_t depth,                              \
-      [[maybe_unused]] DispatchContext &context) -> bool
+      [[maybe_unused]] DispatchContext<Track, Dynamic, HasCallback> &context)  \
+      -> bool
 
 INSTRUCTION_HANDLER(AssertionFail) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionFail);
@@ -782,14 +1008,13 @@ INSTRUCTION_HANDLER(LogicalCondition) {
                                                           : children_size};
   result = true;
   if (consequence_start > 0) {
-#if defined(SOURCEMETA_EVALUATOR_COMPLETE) ||                                  \
-    defined(SOURCEMETA_EVALUATOR_TRACK)
-    if (track) {
-      context.evaluator->evaluate_path.pop_back(
-          context.schema->extra[instruction.extra_index]
-              .relative_schema_location.size());
+    if constexpr (Track || HasCallback) {
+      if (track) {
+        context.evaluator->evaluate_path.pop_back(
+            context.schema->extra[instruction.extra_index]
+                .relative_schema_location.size());
+      }
     }
-#endif
 
     for (auto cursor = consequence_start; cursor < consequence_end; cursor++) {
       if (!EVALUATE_RECURSE(instruction.children[cursor], target)) {
@@ -798,14 +1023,13 @@ INSTRUCTION_HANDLER(LogicalCondition) {
       }
     }
 
-#if defined(SOURCEMETA_EVALUATOR_COMPLETE) ||                                  \
-    defined(SOURCEMETA_EVALUATOR_TRACK)
-    if (track) {
-      context.evaluator->evaluate_path.push_back(
-          context.schema->extra[instruction.extra_index]
-              .relative_schema_location);
+    if constexpr (Track || HasCallback) {
+      if (track) {
+        context.evaluator->evaluate_path.push_back(
+            context.schema->extra[instruction.extra_index]
+                .relative_schema_location);
+      }
     }
-#endif
   }
 
   EVALUATE_END(LogicalCondition);
@@ -941,17 +1165,13 @@ INSTRUCTION_HANDLER(ControlJump) {
 }
 
 INSTRUCTION_HANDLER(AnnotationEmit) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
   const auto &value{*std::get_if<ValueJSON>(&instruction.value)};
-#endif
   EVALUATE_ANNOTATION(AnnotationEmit, context.evaluator->instance_location,
                       value);
 }
 
 INSTRUCTION_HANDLER(AnnotationToParent) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
   const auto &value{*std::get_if<ValueJSON>(&instruction.value)};
-#endif
   EVALUATE_ANNOTATION(
       AnnotationToParent,
       // TODO: Can we avoid a copy of the instance location here?
@@ -1018,22 +1238,22 @@ INSTRUCTION_HANDLER(LoopPropertiesUnevaluated) {
         continue;
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.push_back(entry.first);
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
       for (const auto &child : instruction.children) {
         if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
           result = false;
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-          context.evaluator->instance_location.pop_back();
-#endif
+          if constexpr (HasCallback) {
+            context.evaluator->instance_location.pop_back();
+          }
           EVALUATE_END(LoopPropertiesUnevaluated);
         }
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.pop_back();
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
 
     context.evaluator->evaluate(&target);
@@ -1076,22 +1296,22 @@ INSTRUCTION_HANDLER(LoopPropertiesUnevaluatedExcept) {
         continue;
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.push_back(entry.first);
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
       for (const auto &child : instruction.children) {
         if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
           result = false;
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-          context.evaluator->instance_location.pop_back();
-#endif
+          if constexpr (HasCallback) {
+            context.evaluator->instance_location.pop_back();
+          }
           EVALUATE_END(LoopPropertiesUnevaluatedExcept);
         }
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.pop_back();
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
 
     context.evaluator->evaluate(&target);
@@ -1156,31 +1376,31 @@ INSTRUCTION_HANDLER(LoopProperties) {
   assert(!instruction.children.empty());
   result = true;
   for (const auto &entry : target.as_object()) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopProperties);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopProperties);
@@ -1191,31 +1411,31 @@ INSTRUCTION_HANDLER(LoopPropertiesEvaluate) {
   assert(!instruction.children.empty());
   result = true;
   for (const auto &entry : target.as_object()) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopPropertiesEvaluate);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   context.evaluator->evaluate(&target);
@@ -1232,31 +1452,31 @@ INSTRUCTION_HANDLER(LoopPropertiesRegex) {
       continue;
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopPropertiesRegex);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopPropertiesRegex);
@@ -1276,31 +1496,31 @@ INSTRUCTION_HANDLER(LoopPropertiesRegexClosed) {
       continue;
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopPropertiesRegexClosed);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopPropertiesRegexClosed);
@@ -1316,31 +1536,31 @@ INSTRUCTION_HANDLER(LoopPropertiesStartsWith) {
       continue;
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopPropertiesStartsWith);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopPropertiesStartsWith);
@@ -1374,31 +1594,31 @@ INSTRUCTION_HANDLER(LoopPropertiesExcept) {
       continue;
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, entry.second)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopPropertiesExcept);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopPropertiesExcept);
@@ -1593,32 +1813,32 @@ INSTRUCTION_HANDLER(LoopKeys) {
   assert(!instruction.children.empty());
   result = true;
   for (const auto &entry : target.as_object()) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(entry.first);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(entry.first);
+      }
     }
-#endif
 
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE_ON_PROPERTY_NAME(child, Evaluator::null,
                                              entry.first)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopKeys);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopKeys);
@@ -1630,45 +1850,45 @@ INSTRUCTION_HANDLER(LoopItems) {
   result = true;
 
   // To avoid index lookups and unnecessary conditionals
-#ifdef SOURCEMETA_EVALUATOR_FAST
-  for (const auto &new_instance : target.as_array()) {
-    for (const auto &child : instruction.children) {
-      if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
-        result = false;
-        EVALUATE_END(LoopItems);
+  if constexpr (!Track && !HasCallback) {
+    for (const auto &new_instance : target.as_array()) {
+      for (const auto &child : instruction.children) {
+        if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
+          result = false;
+          EVALUATE_END(LoopItems);
+        }
       }
     }
-  }
-#else
-  for (std::size_t index = 0; index < target.array_size(); index++) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(index);
-    }
-#endif
+  } else {
+    for (std::size_t index = 0; index < target.array_size(); index++) {
+      if constexpr (HasCallback) {
+        if (track) {
+          context.evaluator->instance_location.push_back(index);
+        }
+      }
 
-    const auto &new_instance{target.at(index)};
-    for (const auto &child : instruction.children) {
-      if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
-        result = false;
+      const auto &new_instance{target.at(index)};
+      for (const auto &child : instruction.children) {
+        if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
+          result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
+          if constexpr (HasCallback) {
+            if (track) {
+              context.evaluator->instance_location.pop_back();
+            }
+          }
+
+          EVALUATE_END(LoopItems);
+        }
+      }
+
+      if constexpr (HasCallback) {
         if (track) {
           context.evaluator->instance_location.pop_back();
         }
-#endif
-
-        EVALUATE_END(LoopItems);
       }
     }
-
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
-    }
-#endif
   }
-#endif
 
   EVALUATE_END(LoopItems);
 }
@@ -1680,32 +1900,32 @@ INSTRUCTION_HANDLER(LoopItemsFrom) {
   assert(!instruction.children.empty());
   result = true;
   for (std::size_t index = value; index < target.array_size(); index++) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(index);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(index);
+      }
     }
-#endif
 
     const auto &new_instance{target.at(index)};
     for (const auto &child : instruction.children) {
       if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
         result = false;
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-        if (track) {
-          context.evaluator->instance_location.pop_back();
+        if constexpr (HasCallback) {
+          if (track) {
+            context.evaluator->instance_location.pop_back();
+          }
         }
-#endif
 
         EVALUATE_END(LoopItemsFrom);
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
   }
 
   EVALUATE_END(LoopItemsFrom);
@@ -1723,22 +1943,22 @@ INSTRUCTION_HANDLER(LoopItemsUnevaluated) {
         continue;
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.push_back(index);
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.push_back(index);
+      }
       for (const auto &child : instruction.children) {
         if (!EVALUATE_RECURSE(child, new_instance)) [[unlikely]] {
           result = false;
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-          context.evaluator->instance_location.pop_back();
-#endif
+          if constexpr (HasCallback) {
+            context.evaluator->instance_location.pop_back();
+          }
           EVALUATE_END(LoopItemsUnevaluated);
         }
       }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-      context.evaluator->instance_location.pop_back();
-#endif
+      if constexpr (HasCallback) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
 
     context.evaluator->evaluate(&target);
@@ -1962,11 +2182,11 @@ INSTRUCTION_HANDLER(LoopContains) {
   auto match_count{std::numeric_limits<decltype(minimum)>::min()};
 
   for (std::size_t index = 0; index < target.array_size(); index++) {
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.push_back(index);
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.push_back(index);
+      }
     }
-#endif
 
     const auto &new_instance{target.at(index)};
     bool subresult{true};
@@ -1977,11 +2197,11 @@ INSTRUCTION_HANDLER(LoopContains) {
       }
     }
 
-#ifdef SOURCEMETA_EVALUATOR_COMPLETE
-    if (track) {
-      context.evaluator->instance_location.pop_back();
+    if constexpr (HasCallback) {
+      if (track) {
+        context.evaluator->instance_location.pop_back();
+      }
     }
-#endif
 
     if (subresult) {
       match_count += 1;
@@ -2013,13 +2233,15 @@ INSTRUCTION_HANDLER(LoopContains) {
 
 #undef INSTRUCTION_HANDLER
 
-using DispatchHandler = bool (*)(const sourcemeta::blaze::Instruction &,
-                                 const sourcemeta::core::JSON &, std::uint64_t,
-                                 DispatchContext &);
+template <bool Track, bool Dynamic, bool HasCallback>
+using DispatchHandler = bool (*)(
+    const sourcemeta::blaze::Instruction &, const sourcemeta::core::JSON &,
+    std::uint64_t, DispatchContext<Track, Dynamic, HasCallback> &);
 
+template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler handlers[95] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[95] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2113,29 +2335,30 @@ static constexpr DispatchHandler handlers[95] = {
     ControlDynamicAnchorJump,
     ControlJump};
 
+template <bool Track, bool Dynamic, bool HasCallback>
 inline auto
 evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
                      const sourcemeta::core::JSON &instance,
-                     const std::uint64_t depth, DispatchContext &context)
+                     const std::uint64_t depth,
+                     DispatchContext<Track, Dynamic, HasCallback> &context)
     -> bool {
-  // Guard against infinite recursion in a cheap manner, as
-  // infinite recursion will manifest itself through huge
-  // ever-growing evaluate paths
   constexpr auto DEPTH_LIMIT{300};
   if (depth > DEPTH_LIMIT) [[unlikely]] {
     throw EvaluationError("The evaluation path depth limit was reached "
                           "likely due to infinite recursion");
   }
 
-  return handlers[static_cast<std::underlying_type_t<InstructionIndex>>(
-      instruction.type)](instruction, instance, depth, context);
+  return handlers<Track, Dynamic, HasCallback>[static_cast<
+      std::underlying_type_t<InstructionIndex>>(instruction.type)](
+      instruction, instance, depth, context);
 }
 
+template <bool Track, bool Dynamic, bool HasCallback>
 inline auto evaluate_instruction_with_property(
     const sourcemeta::blaze::Instruction &instruction,
     const sourcemeta::core::JSON &instance, const std::uint64_t depth,
-    DispatchContext &context, const sourcemeta::core::JSON::String &name)
-    -> bool {
+    DispatchContext<Track, Dynamic, HasCallback> &context,
+    const sourcemeta::core::JSON::String &name) -> bool {
   const auto *previous = context.property_target;
   context.property_target = &name;
   const auto result =
@@ -2143,3 +2366,24 @@ inline auto evaluate_instruction_with_property(
   context.property_target = previous;
   return result;
 }
+
+} // namespace sourcemeta::blaze::dispatch
+
+#undef EVALUATE_PUSH
+#undef EVALUATE_POP
+#undef EVALUATE_BEGIN
+#undef EVALUATE_BEGIN_NON_STRING
+#undef EVALUATE_BEGIN_IF_STRING
+#undef EVALUATE_BEGIN_TRY_TARGET
+#undef EVALUATE_BEGIN_NO_PRECONDITION
+#undef EVALUATE_BEGIN_NO_PRECONDITION_AND_NO_PUSH
+#undef EVALUATE_BEGIN_PASS_THROUGH
+#undef EVALUATE_END
+#undef EVALUATE_END_NO_POP
+#undef EVALUATE_END_PASS_THROUGH
+#undef EVALUATE_ANNOTATION
+#undef EVALUATE_RECURSE
+#undef EVALUATE_RECURSE_ON_PROPERTY_NAME
+#undef SOURCEMETA_STRINGIFY
+
+#endif

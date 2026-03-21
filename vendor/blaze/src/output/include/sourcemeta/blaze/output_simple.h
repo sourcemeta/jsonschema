@@ -14,7 +14,6 @@
 #include <functional> // std::reference_wrapper
 #include <map>        // std::map
 #include <ostream>    // std::ostream
-#include <set>        // std::set
 #include <string>     // std::string
 #include <tuple>      // std::tie
 #include <utility>    // std::pair
@@ -130,7 +129,7 @@ private:
   const sourcemeta::core::JSON &instance_;
   const sourcemeta::core::WeakPointer base_;
   container_type output;
-  std::set<
+  std::vector<
       std::pair<sourcemeta::core::WeakPointer, sourcemeta::core::WeakPointer>>
       mask;
   std::map<

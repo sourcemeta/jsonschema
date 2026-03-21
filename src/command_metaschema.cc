@@ -74,10 +74,10 @@ auto sourcemeta::jsonschema::metaschema(
       if (trace) {
         sourcemeta::blaze::TraceOutput output{
             sourcemeta::core::schema_walker, custom_resolver,
+            trace_callback(entry.positions, std::cout),
             sourcemeta::core::empty_weak_pointer, frame};
         result = evaluator.validate(cache.at(std::string{dialect}),
                                     entry.second, std::ref(output));
-        print(output, entry.positions, std::cout);
       } else if (json_output) {
         // Otherwise its impossible to correlate the output
         // when validating i.e. a directory of schemas

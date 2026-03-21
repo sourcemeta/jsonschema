@@ -370,6 +370,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         sourcemeta::blaze::SimpleOutput output{entry.second};
         sourcemeta::blaze::TraceOutput trace_output{
             sourcemeta::core::schema_walker, custom_resolver,
+            trace_callback(entry.positions, std::cout),
             sourcemeta::core::empty_weak_pointer, frame};
         bool subresult{true};
         if (benchmark) {
@@ -395,7 +396,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         if (benchmark) {
           continue;
         } else if (trace) {
-          print(trace_output, entry.positions, std::cout);
           result = result && subresult;
         } else if (json_output) {
           if (!entry.multidocument) {
@@ -455,6 +455,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
           sourcemeta::core::schema_walker, custom_resolver,
+          trace_callback(tracker, std::cout),
           sourcemeta::core::empty_weak_pointer, frame};
       bool subresult{true};
       if (benchmark) {
@@ -476,7 +477,6 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
 
       if (trace) {
-        print(trace_output, tracker, std::cout);
         result = result && subresult;
       } else if (json_output) {
         const auto suboutput{sourcemeta::blaze::standard(

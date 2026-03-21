@@ -12,12 +12,10 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <cstdint>     // std::uint8_t
-#include <functional>  // std::reference_wrapper
+#include <functional>  // std::function, std::reference_wrapper
 #include <optional>    // std::optional, std::nullopt
-#include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
-#include <vector>      // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -35,6 +33,7 @@ namespace sourcemeta::blaze {
 ///
 /// #include <cassert>
 /// #include <functional>
+/// #include <iostream>
 ///
 /// const sourcemeta::core::JSON schema =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -49,41 +48,39 @@ namespace sourcemeta::blaze {
 ///
 /// const sourcemeta::core::JSON instance{5};
 ///
-/// sourcemeta::blaze::TraceOutput output;
+/// sourcemeta::blaze::TraceOutput output{
+///     sourcemeta::core::schema_walker,
+///     sourcemeta::core::schema_resolver,
+///     [](const sourcemeta::blaze::TraceOutput::Entry &entry) {
+///       std::cerr << entry.name << "\n";
+///     }};
 /// sourcemeta::blaze::Evaluator evaluator;
 /// const auto result{evaluator.validate(
 ///   schema_template, instance, std::ref(output))};
-///
-/// if (!result) {
-///   for (const auto &entry : output) {
-//      switch (entry.type) {
-//        case sourcemeta::blaze::TraceOutput::EntryType::Push:
-//          std::cerr << "-> (push) ";
-//          break;
-//        case sourcemeta::blaze::TraceOutput::EntryType::Pass:
-//          std::cerr << "<- (pass) ";
-//          break;
-//        case sourcemeta::blaze::TraceOutput::EntryType::Fail:
-//          std::cerr << "<- (fail) ";
-//          break;
-//      }
-///
-///     std::cerr << entry.name << "\n";
-///     std::cerr << entry.keyword_location << "\n";
-///     sourcemeta::core::stringify(entry.instance_location, std::cerr);
-///     std::cerr << "\n";
-///     sourcemeta::core::stringify(entry.evaluate_path, std::cerr);
-///     std::cerr << "\n";
-///   }
-/// }
 /// ```
 class SOURCEMETA_BLAZE_OUTPUT_EXPORT TraceOutput {
 public:
-  // Passing a frame of the schema is optional, but allows the output
-  // formatter to give you back additional information
+  enum class EntryType : std::uint8_t { Push, Pass, Fail, Annotation };
+
+  // NOLINTNEXTLINE(bugprone-exception-escape)
+  struct Entry {
+    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+    const EntryType type;
+    const std::string_view name;
+    const sourcemeta::core::WeakPointer &instance_location;
+    const sourcemeta::core::WeakPointer &evaluate_path;
+    const std::string_view keyword_location;
+    const sourcemeta::core::JSON &annotation;
+    const std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>
+        &vocabulary;
+    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
+  };
+
+  using Callback = std::function<void(const Entry &)>;
+
   TraceOutput(
       sourcemeta::core::SchemaWalker walker,
-      sourcemeta::core::SchemaResolver resolver,
+      sourcemeta::core::SchemaResolver resolver, Callback callback,
       sourcemeta::core::WeakPointer base = sourcemeta::core::empty_weak_pointer,
       const std::optional<
           std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame =
@@ -93,37 +90,12 @@ public:
   TraceOutput(const TraceOutput &) = delete;
   auto operator=(const TraceOutput &) -> TraceOutput & = delete;
 
-  enum class EntryType : std::uint8_t { Push, Pass, Fail, Annotation };
-
-  // NOLINTNEXTLINE(bugprone-exception-escape)
-  struct Entry {
-    // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
-    const EntryType type;
-    const std::string_view name;
-    const sourcemeta::core::WeakPointer instance_location;
-    const sourcemeta::core::WeakPointer evaluate_path;
-    const std::string keyword_location;
-    const std::optional<sourcemeta::core::JSON> annotation;
-    // Whether we were able to collect vocabulary information,
-    // and the vocabulary URI, if any
-    const std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>
-        vocabulary;
-    // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
-  };
-
   auto operator()(const EvaluationType type, const bool result,
                   const Instruction &step,
                   const InstructionExtra &step_metadata,
                   const sourcemeta::core::WeakPointer &evaluate_path,
                   const sourcemeta::core::WeakPointer &instance_location,
                   const sourcemeta::core::JSON &annotation) -> void;
-
-  using container_type = typename std::vector<Entry>;
-  using const_iterator = typename container_type::const_iterator;
-  [[nodiscard]] auto begin() const -> const_iterator;
-  [[nodiscard]] auto end() const -> const_iterator;
-  [[nodiscard]] auto cbegin() const -> const_iterator;
-  [[nodiscard]] auto cend() const -> const_iterator;
 
 private:
 // Exporting symbols that depends on the standard C++ library is considered
@@ -138,7 +110,10 @@ private:
   const std::optional<
       std::reference_wrapper<const sourcemeta::core::SchemaFrame>>
       frame_;
-  container_type output;
+  Callback callback_;
+  std::vector<
+      std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>>
+      vocabulary_stack_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

@@ -690,6 +690,10 @@ public:
   [[nodiscard]] auto
   resolve_from(const GenericPointer<PropertyT, Hash> &base) const
       -> GenericPointer<PropertyT, Hash> {
+    if (base.empty()) {
+      return *this;
+    }
+
     typename Container::size_type index{0};
     while (index < base.size()) {
       if (index >= this->size() || base.data[index] != this->data[index]) {
@@ -703,6 +707,9 @@ public:
     auto new_begin{this->data.cbegin()};
     std::advance(new_begin, index);
     GenericPointer<PropertyT, Hash> result;
+    const auto remaining{static_cast<typename Container::size_type>(
+        this->data.cend() - new_begin)};
+    result.data.reserve(remaining);
     std::copy(new_begin, this->data.cend(), std::back_inserter(result.data));
     return result;
   }

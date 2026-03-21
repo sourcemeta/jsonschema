@@ -16,7 +16,7 @@
 
 #include <cassert>     // assert
 #include <filesystem>  // std::filesystem::path
-#include <iterator>    // std::next
+#include <memory>      // std::make_shared
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <string>      // std::string, std::stoull
@@ -142,14 +142,22 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
   }
 }
 
-inline auto print(const sourcemeta::blaze::TraceOutput &output,
-                  const sourcemeta::core::PointerPositionTracker &tracker,
-                  std::ostream &stream) -> void {
-  for (auto iterator = output.cbegin(); iterator != output.cend(); iterator++) {
-    const auto &entry{*iterator};
-
+inline auto
+trace_callback(const sourcemeta::core::PointerPositionTracker &tracker,
+               std::ostream &stream)
+    -> sourcemeta::blaze::TraceOutput::Callback {
+  auto first = std::make_shared<bool>(true);
+  return [&tracker, &stream,
+          first](const sourcemeta::blaze::TraceOutput::Entry &entry) -> void {
     if (entry.evaluate_path.empty()) {
-      continue;
+      return;
+    }
+
+    // To make it easier to read
+    if (*first) {
+      *first = false;
+    } else {
+      stream << "\n";
     }
 
     switch (entry.type) {
@@ -175,13 +183,13 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
     stream << "\"";
     stream << " (" << entry.name << ")\n";
 
-    if (entry.annotation.has_value()) {
+    if (!entry.annotation.is_null()) {
       stream << "   value ";
 
-      if (entry.annotation.value().is_object()) {
-        sourcemeta::core::stringify(entry.annotation.value(), stream);
+      if (entry.annotation.is_object()) {
+        sourcemeta::core::stringify(entry.annotation, stream);
       } else {
-        sourcemeta::core::prettify(entry.annotation.value(), stream);
+        sourcemeta::core::prettify(entry.annotation, stream);
       }
 
       stream << "\n";
@@ -211,12 +219,7 @@ inline auto print(const sourcemeta::blaze::TraceOutput &output,
       }
       stream << "\"\n";
     }
-
-    // To make it easier to read
-    if (std::next(iterator) != output.cend()) {
-      stream << "\n";
-    }
-  }
+  };
 }
 
 } // namespace sourcemeta::jsonschema

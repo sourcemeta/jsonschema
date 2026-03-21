@@ -33,24 +33,12 @@ namespace sourcemeta::blaze {
 
 TraceOutput::TraceOutput(
     sourcemeta::core::SchemaWalker walker,
-    sourcemeta::core::SchemaResolver resolver,
+    sourcemeta::core::SchemaResolver resolver, Callback callback,
     sourcemeta::core::WeakPointer base,
     const std::optional<
         std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame)
     : walker_{std::move(walker)}, resolver_{std::move(resolver)},
-      base_{std::move(base)}, frame_{frame} {}
-
-auto TraceOutput::begin() const -> const_iterator {
-  return this->output.begin();
-}
-
-auto TraceOutput::end() const -> const_iterator { return this->output.end(); }
-
-auto TraceOutput::cbegin() const -> const_iterator {
-  return this->output.cbegin();
-}
-
-auto TraceOutput::cend() const -> const_iterator { return this->output.cend(); }
+      base_{std::move(base)}, frame_{frame}, callback_{std::move(callback)} {}
 
 auto TraceOutput::operator()(
     const EvaluationType type, const bool result, const Instruction &step,
@@ -62,37 +50,60 @@ auto TraceOutput::operator()(
   const auto short_step_name{
       InstructionNames[static_cast<std::underlying_type_t<InstructionIndex>>(
           step.type)]};
-  auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
 
-  // Attempt to get vocabulary information if we can get it
-  auto vocabulary{try_vocabulary(this->frame_, evaluate_path, this->walker_,
-                                 this->resolver_,
-                                 step_metadata.keyword_location)};
-
+  // Only resolve vocabulary on Pre callbacks and cache for Post
   if (is_annotation(step.type)) {
     if (type == EvaluationType::Pre) {
       return;
-    } else {
-      this->output.push_back(
-          {EntryType::Annotation, short_step_name, instance_location,
-           std::move(effective_evaluate_path), step_metadata.keyword_location,
-           annotation, std::move(vocabulary)});
     }
+
+    auto vocabulary{try_vocabulary(this->frame_, evaluate_path, this->walker_,
+                                   this->resolver_,
+                                   step_metadata.keyword_location)};
+    this->vocabulary_stack_.push_back(std::move(vocabulary));
   } else if (type == EvaluationType::Pre) {
-    this->output.push_back({EntryType::Push, short_step_name, instance_location,
-                            std::move(effective_evaluate_path),
-                            step_metadata.keyword_location, std::nullopt,
-                            std::move(vocabulary)});
+    this->vocabulary_stack_.push_back(
+        try_vocabulary(this->frame_, evaluate_path, this->walker_,
+                       this->resolver_, step_metadata.keyword_location));
+  }
+
+  const auto &vocabulary{this->vocabulary_stack_.back()};
+
+  // Determine the entry type
+  EntryType entry_type;
+  if (is_annotation(step.type)) {
+    entry_type = EntryType::Annotation;
+  } else if (type == EvaluationType::Pre) {
+    entry_type = EntryType::Push;
   } else if (result) {
-    this->output.push_back({EntryType::Pass, short_step_name, instance_location,
-                            std::move(effective_evaluate_path),
-                            step_metadata.keyword_location, std::nullopt,
-                            std::move(vocabulary)});
+    entry_type = EntryType::Pass;
   } else {
-    this->output.push_back({EntryType::Fail, short_step_name, instance_location,
-                            std::move(effective_evaluate_path),
-                            step_metadata.keyword_location, std::nullopt,
-                            std::move(vocabulary)});
+    entry_type = EntryType::Fail;
+  }
+
+  if (this->base_.empty()) {
+    const Entry entry{.type = entry_type,
+                      .name = short_step_name,
+                      .instance_location = instance_location,
+                      .evaluate_path = evaluate_path,
+                      .keyword_location = step_metadata.keyword_location,
+                      .annotation = annotation,
+                      .vocabulary = vocabulary};
+    this->callback_(entry);
+  } else {
+    auto effective_evaluate_path{evaluate_path.resolve_from(this->base_)};
+    const Entry entry{.type = entry_type,
+                      .name = short_step_name,
+                      .instance_location = instance_location,
+                      .evaluate_path = effective_evaluate_path,
+                      .keyword_location = step_metadata.keyword_location,
+                      .annotation = annotation,
+                      .vocabulary = vocabulary};
+    this->callback_(entry);
+  }
+
+  if (type == EvaluationType::Post || is_annotation(step.type)) {
+    this->vocabulary_stack_.pop_back();
   }
 }
 

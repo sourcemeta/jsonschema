@@ -7,9 +7,10 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <optional> // std::optional
-#include <utility>  // std::pair
-#include <vector>   // std::vector
+#include <algorithm> // std::ranges::sort
+#include <optional>  // std::optional
+#include <utility>   // std::pair, std::move
+#include <vector>    // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -26,8 +27,24 @@ public:
   using difference_type = typename underlying_type::difference_type;
   using const_iterator = typename underlying_type::const_iterator;
 
-  [[nodiscard]] auto contains(const string_type &value,
-                              const hash_type hash) const -> bool;
+  [[nodiscard]] inline auto contains(const string_type &value,
+                                     const hash_type hash) const -> bool {
+    if (this->hasher.is_perfect(hash)) {
+      for (const auto &entry : this->data) {
+        if (entry.second == hash) {
+          return true;
+        }
+      }
+    } else {
+      for (const auto &entry : this->data) {
+        if (entry.second == hash && entry.first == value) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
   [[nodiscard]] inline auto contains(const string_type &value) const -> bool {
     return this->contains(value, this->hasher(value));
   }
@@ -37,8 +54,24 @@ public:
     return this->data[index];
   }
 
-  auto insert(const string_type &value) -> void;
-  auto insert(string_type &&value) -> void;
+  inline auto insert(const string_type &value) -> void {
+    const auto hash{this->hasher(value)};
+    if (!this->contains(value, hash)) {
+      this->data.emplace_back(value, hash);
+      std::ranges::sort(this->data, [](const auto &left, const auto &right) {
+        return left.first < right.first;
+      });
+    }
+  }
+  inline auto insert(string_type &&value) -> void {
+    const auto hash{this->hasher(value)};
+    if (!this->contains(value, hash)) {
+      this->data.emplace_back(std::move(value), hash);
+      std::ranges::sort(this->data, [](const auto &left, const auto &right) {
+        return left.first < right.first;
+      });
+    }
+  }
 
   [[nodiscard]] inline auto empty() const noexcept -> bool {
     return this->data.empty();

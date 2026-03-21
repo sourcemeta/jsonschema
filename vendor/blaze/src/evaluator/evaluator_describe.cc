@@ -27,7 +27,7 @@ auto describe_stringify(const sourcemeta::core::JSON &value, T &stream)
   }
 }
 
-auto to_string(const sourcemeta::core::JSON::Type type) -> std::string {
+auto type_name(const sourcemeta::core::JSON::Type type) -> std::string {
   // Otherwise the type "real" might not make a lot
   // of sense to JSON Schema users
   if (type == sourcemeta::core::JSON::Type::Real) {
@@ -43,7 +43,7 @@ auto value_type_name(const sourcemeta::core::JSON &value) -> std::string {
   if (value.type() == sourcemeta::core::JSON::Type::Decimal) {
     return value.to_decimal().is_integer() ? "integer" : "number";
   }
-  return to_string(value.type());
+  return type_name(value.type());
 }
 
 auto escape_string(const std::string &input) -> std::string {
@@ -67,13 +67,13 @@ auto describe_type_check(const bool valid,
                          const sourcemeta::core::JSON::Type expected,
                          std::ostringstream &message) -> void {
   message << "The value was expected to be of type ";
-  message << to_string(expected);
+  message << type_name(expected);
   if (!valid) {
     message << " but it was of type ";
     if (current == sourcemeta::core::JSON::Type::Decimal) {
       message << "number";
     } else {
-      message << to_string(current);
+      message << type_name(current);
     }
   }
 }
@@ -136,7 +136,7 @@ auto describe_types_check(const bool valid,
       if (bit == last_bit) {
         message << "or ";
       }
-      message << to_string(static_cast<sourcemeta::core::JSON::Type>(bit));
+      message << type_name(static_cast<sourcemeta::core::JSON::Type>(bit));
       first = false;
     }
   }
@@ -155,13 +155,13 @@ auto describe_types_check(const bool valid,
              current == sourcemeta::core::JSON::Type::Decimal) {
     message << "number";
   } else {
-    message << to_string(current);
+    message << type_name(current);
   }
 }
 
 auto describe_reference(const sourcemeta::core::JSON &target) -> std::string {
   std::ostringstream message;
-  message << "The " << to_string(target.type())
+  message << "The " << type_name(target.type())
           << " value was expected to validate against the referenced schema";
   return message.str();
 }
@@ -228,7 +228,7 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalOr) {
     assert(!step.children.empty());
     std::ostringstream message;
-    message << "The " << to_string(target.type())
+    message << "The " << type_name(target.type())
             << " value was expected to validate against ";
     if (step.children.size() > 1) {
       message << "at least one of the " << step.children.size()
@@ -244,7 +244,7 @@ auto describe(const bool valid, const Instruction &step,
     if (keyword == "allOf") {
       assert(!step.children.empty());
       std::ostringstream message;
-      message << "The " << to_string(target.type())
+      message << "The " << type_name(target.type())
               << " value was expected to validate against the ";
       if (step.children.size() > 1) {
         message << step.children.size() << " given subschemas";
@@ -275,7 +275,7 @@ auto describe(const bool valid, const Instruction &step,
       message << "The property name "
               << escape_string(instance_location.back().to_property());
     } else {
-      message << "The " << to_string(target.type()) << " value";
+      message << "The " << type_name(target.type()) << " value";
     }
 
     message << " was expected to validate against ";
@@ -291,7 +291,7 @@ auto describe(const bool valid, const Instruction &step,
 
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalCondition) {
     std::ostringstream message;
-    message << "The " << to_string(target.type())
+    message << "The " << type_name(target.type())
             << " value was expected to validate against the given conditional";
     return message.str();
   }
@@ -299,7 +299,7 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalNot) {
     std::ostringstream message;
     message
-        << "The " << to_string(target.type())
+        << "The " << type_name(target.type())
         << " value was expected to not validate against the given subschema";
     if (!valid) {
       message << ", but it did";
@@ -311,7 +311,7 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalNotEvaluate) {
     std::ostringstream message;
     message
-        << "The " << to_string(target.type())
+        << "The " << type_name(target.type())
         << " value was expected to not validate against the given subschema";
     if (!valid) {
       message << ", but it did";
@@ -329,7 +329,7 @@ auto describe(const bool valid, const Instruction &step,
     if (keyword == "$dynamicRef") {
       const auto &value{instruction_value<ValueString>(step)};
       std::ostringstream message;
-      message << "The " << to_string(target.type())
+      message << "The " << type_name(target.type())
               << " value was expected to validate against the first subschema "
                  "in scope that declared the dynamic anchor "
               << escape_string(value);
@@ -338,7 +338,7 @@ auto describe(const bool valid, const Instruction &step,
 
     assert(keyword == "$recursiveRef");
     std::ostringstream message;
-    message << "The " << to_string(target.type())
+    message << "The " << type_name(target.type())
             << " value was expected to validate against the first subschema "
                "in scope that declared a recursive anchor";
     return message.str();
@@ -735,7 +735,7 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::LoopPropertiesExactlyTypeStrict) {
     std::ostringstream message;
     message << "The required object properties were expected to be of type "
-            << to_string(instruction_value<ValueTypedProperties>(step).first);
+            << type_name(instruction_value<ValueTypedProperties>(step).first);
     return message.str();
   }
 
@@ -743,7 +743,7 @@ auto describe(const bool valid, const Instruction &step,
                        LoopPropertiesExactlyTypeStrictHash) {
     std::ostringstream message;
     message << "The required object properties were expected to be of type "
-            << to_string(instruction_value<ValueTypedHashes>(step).first);
+            << type_name(instruction_value<ValueTypedHashes>(step).first);
     return message.str();
   }
 
@@ -754,14 +754,14 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     message << "Every item in the array was expected to be an object whose "
                "required properties were of type "
-            << to_string(instruction_value<ValueTypedHashes>(step).first);
+            << type_name(instruction_value<ValueTypedHashes>(step).first);
     return message.str();
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::LoopPropertiesType) {
     std::ostringstream message;
     message << "The object properties were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
@@ -769,7 +769,7 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeEvaluate) {
     std::ostringstream message;
     message << "The object properties were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
@@ -777,7 +777,7 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeStrict) {
     std::ostringstream message;
     message << "The object properties were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
@@ -785,7 +785,7 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::LoopPropertiesTypeStrictEvaluate) {
     std::ostringstream message;
     message << "The object properties were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
@@ -825,7 +825,7 @@ auto describe(const bool valid, const Instruction &step,
           break;
         }
       }
-      message << to_string(
+      message << type_name(
           static_cast<sourcemeta::core::JSON::Type>(type_index));
     } else {
       bool first{true};
@@ -844,7 +844,7 @@ auto describe(const bool valid, const Instruction &step,
           if (bit == last_bit) {
             message << "or ";
           }
-          message << to_string(static_cast<sourcemeta::core::JSON::Type>(bit));
+          message << type_name(static_cast<sourcemeta::core::JSON::Type>(bit));
           first = false;
         }
       }
@@ -889,7 +889,7 @@ auto describe(const bool valid, const Instruction &step,
           break;
         }
       }
-      message << to_string(
+      message << type_name(
           static_cast<sourcemeta::core::JSON::Type>(type_index));
     } else {
       bool first{true};
@@ -908,7 +908,7 @@ auto describe(const bool valid, const Instruction &step,
           if (bit == last_bit) {
             message << "or ";
           }
-          message << to_string(static_cast<sourcemeta::core::JSON::Type>(bit));
+          message << type_name(static_cast<sourcemeta::core::JSON::Type>(bit));
           first = false;
         }
       }
@@ -979,14 +979,14 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::LoopItemsType) {
     std::ostringstream message;
     message << "The array items were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::LoopItemsTypeStrict) {
     std::ostringstream message;
     message << "The array items were expected to be of type "
-            << to_string(instruction_value<ValueType>(step));
+            << type_name(instruction_value<ValueType>(step));
     return message.str();
   }
 
@@ -1026,7 +1026,7 @@ auto describe(const bool valid, const Instruction &step,
           break;
         }
       }
-      message << to_string(
+      message << type_name(
           static_cast<sourcemeta::core::JSON::Type>(type_index));
     } else {
       bool first{true};
@@ -1045,7 +1045,7 @@ auto describe(const bool valid, const Instruction &step,
           if (bit == last_bit) {
             message << "or ";
           }
-          message << to_string(static_cast<sourcemeta::core::JSON::Type>(bit));
+          message << type_name(static_cast<sourcemeta::core::JSON::Type>(bit));
           first = false;
         }
       }
@@ -1261,7 +1261,7 @@ auto describe(const bool valid, const Instruction &step,
       message << "The property name "
               << escape_string(instance_location.back().to_property())
               << " was expected to be of type "
-              << to_string(instruction_value<ValueType>(step));
+              << type_name(instruction_value<ValueType>(step));
       return message.str();
     }
 
@@ -1666,11 +1666,11 @@ auto describe(const bool valid, const Instruction &step,
       message << "The property name "
               << escape_string(instance_location.back().to_property());
     } else {
-      message << "The " << to_string(target.type()) << " value ";
+      message << "The " << type_name(target.type()) << " value ";
       describe_stringify(target, message);
     }
 
-    message << " was expected to equal the " << to_string(value.type())
+    message << " was expected to equal the " << type_name(value.type())
             << " constant ";
     describe_stringify(value, message);
     return message.str();
@@ -1794,13 +1794,13 @@ auto describe(const bool valid, const Instruction &step,
       message << "The property name "
               << escape_string(instance_location.back().to_property());
     } else {
-      message << "The " << to_string(target.type()) << " value ";
+      message << "The " << type_name(target.type()) << " value ";
       describe_stringify(target, message);
     }
 
     if (value.size() == 1) {
       message << " was expected to equal the "
-              << to_string(value.cbegin()->type()) << " constant ";
+              << type_name(value.cbegin()->type()) << " constant ";
       describe_stringify(*(value.cbegin()), message);
     } else {
       if (valid) {
@@ -1841,7 +1841,7 @@ auto describe(const bool valid, const Instruction &step,
       message << "The property name "
               << escape_string(instance_location.back().to_property());
     } else {
-      message << "The " << to_string(target.type()) << " value ";
+      message << "The " << type_name(target.type()) << " value ";
       describe_stringify(target, message);
     }
 
