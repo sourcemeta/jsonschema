@@ -256,7 +256,7 @@ add_jsonschema_test_unix(validate/pass_stdin_mixed_ordering)
 add_jsonschema_test_unix(validate/pass_stdin_resolve)
 add_jsonschema_test_unix(validate/pass_stdin_yaml)
 add_jsonschema_test_unix(validate/fail_stdin_trace_multi_instance)
-add_jsonschema_test_unix(validate/pass_stdin_trace_benchmark)
+add_jsonschema_test_unix(validate/fail_trace_benchmark)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)

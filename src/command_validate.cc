@@ -332,6 +332,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     instance_arguments.push_back(".");
   }
 
+  if (trace && benchmark) {
+    throw OptionConflictError{
+        "The `--trace/-t` and `--benchmark/-b` options are mutually exclusive"};
+  }
+
   if (trace && instance_arguments.size() > 1) {
     throw OptionConflictError{
         "The `--trace/-t` option is only allowed given a single instance"};
@@ -449,8 +454,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
     } else {
       sourcemeta::core::PointerPositionTracker tracker;
-      const auto instance{sourcemeta::core::read_yaml_or_json(
-          instance_path, std::ref(tracker))};
+      const bool track_positions{(!fast_mode && !benchmark) || trace};
+      const auto instance{
+          track_positions ? sourcemeta::core::read_yaml_or_json(
+                                instance_path, std::ref(tracker))
+                          : sourcemeta::core::read_yaml_or_json(instance_path)};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{
