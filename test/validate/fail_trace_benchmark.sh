@@ -28,7 +28,7 @@ EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace --benchmark --json 2>"$TMP/stderr_json.txt" \
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace --benchmark --json > "$TMP/stdout_json.txt" 2>/dev/null \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 test "$EXIT_CODE" = "5"
 
@@ -38,4 +38,4 @@ cat << 'EOF' > "$TMP/expected_json.txt"
 }
 EOF
 
-diff "$TMP/stderr_json.txt" "$TMP/expected_json.txt"
+diff "$TMP/stdout_json.txt" "$TMP/expected_json.txt"
