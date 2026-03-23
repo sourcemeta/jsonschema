@@ -454,11 +454,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
     } else {
       sourcemeta::core::PointerPositionTracker tracker;
+      std::deque<std::string> property_storage;
       const bool track_positions{(!fast_mode && !benchmark) || trace};
-      const auto instance{
-          track_positions ? sourcemeta::core::read_yaml_or_json(
-                                instance_path, std::ref(tracker))
-                          : sourcemeta::core::read_yaml_or_json(instance_path)};
+      const auto instance{[&]() -> sourcemeta::core::JSON {
+        if (track_positions) {
+          sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
+          auto callback = make_position_callback(tracker, property_storage);
+          sourcemeta::core::read_yaml_or_json(instance_path, document,
+                                              callback);
+          return document;
+        }
+        return sourcemeta::core::read_yaml_or_json(instance_path);
+      }()};
       std::ostringstream error;
       sourcemeta::blaze::SimpleOutput output{instance};
       sourcemeta::blaze::TraceOutput trace_output{

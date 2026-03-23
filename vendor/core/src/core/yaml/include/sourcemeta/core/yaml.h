@@ -43,8 +43,8 @@ namespace sourcemeta::core {
 /// assert(document.is_object());
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
-                const JSON::ParseCallback &callback = nullptr) -> JSON;
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
+    -> JSON;
 
 /// @ingroup yaml
 ///
@@ -64,8 +64,7 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto parse_yaml(const JSON::String &input,
-                const JSON::ParseCallback &callback = nullptr) -> JSON;
+auto parse_yaml(const JSON::String &input) -> JSON;
 
 /// @ingroup yaml
 ///
@@ -86,8 +85,38 @@ auto parse_yaml(const JSON::String &input,
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto read_yaml(const std::filesystem::path &path,
-               const JSON::ParseCallback &callback = nullptr) -> JSON;
+auto read_yaml(const std::filesystem::path &path) -> JSON;
+
+/// @ingroup yaml
+///
+/// Parse a YAML document from a C++ standard input stream into an existing
+/// JSON value, invoking the given callback during parsing. The result is
+/// constructed directly into the given reference rather than returned by value
+/// to ensure that references passed through the parse callback remain valid
+/// after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
+                JSON &output, const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Parse a YAML string into an existing JSON value, invoking the given
+/// callback during parsing. The result is constructed directly into the given
+/// reference rather than returned by value to ensure that references passed
+/// through the parse callback remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(const JSON::String &input, JSON &output,
+                const JSON::ParseCallback &callback) -> void;
+
+/// @ingroup yaml
+///
+/// Read a YAML file into an existing JSON value, invoking the given callback
+/// during parsing. The result is constructed directly into the given reference
+/// rather than returned by value to ensure that references passed through the
+/// parse callback remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml(const std::filesystem::path &path, JSON &output,
+               const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///
@@ -108,8 +137,18 @@ auto read_yaml(const std::filesystem::path &path,
 /// std::cerr << "\n";
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
-auto read_yaml_or_json(const std::filesystem::path &path,
-                       const JSON::ParseCallback &callback = nullptr) -> JSON;
+auto read_yaml_or_json(const std::filesystem::path &path) -> JSON;
+
+/// @ingroup yaml
+///
+/// Read a JSON document from a file that represents YAML or JSON, constructing
+/// into the given reference and invoking the callback during parsing. The
+/// result is constructed directly into the given reference rather than returned
+/// by value to ensure that references passed through the parse callback (such
+/// as object property names) remain valid after parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
+auto read_yaml_or_json(const std::filesystem::path &path, JSON &output,
+                       const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///
@@ -126,8 +165,18 @@ auto read_yaml_or_json(const std::filesystem::path &path,
 ///   sourcemeta::core::parse_yaml(input, roundtrip);
 /// ```
 SOURCEMETA_CORE_YAML_EXPORT
+auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip) -> JSON;
+
+/// @ingroup yaml
+///
+/// Parse a YAML string with round-trip metadata into an existing JSON value,
+/// invoking the given callback during parsing. The result is constructed
+/// directly into the given reference rather than returned by value to ensure
+/// that references passed through the parse callback remain valid after
+/// parsing completes.
+SOURCEMETA_CORE_YAML_EXPORT
 auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
-                const JSON::ParseCallback &callback = nullptr) -> JSON;
+                JSON &output, const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup yaml
 ///

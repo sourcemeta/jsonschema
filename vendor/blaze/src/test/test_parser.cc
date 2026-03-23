@@ -75,8 +75,9 @@ auto TestCase::parse(
   } else {
     const std::filesystem::path data_path{sourcemeta::core::weakly_canonical(
         base_path / test_case_json.at("dataPath").to_string())};
-    auto data{
-        sourcemeta::core::read_yaml_or_json(data_path, std::ref(data_tracker))};
+    sourcemeta::core::JSON data{nullptr};
+    sourcemeta::core::read_yaml_or_json(data_path, data,
+                                        std::ref(data_tracker));
     return TestCase{.description = std::move(description),
                     .valid = test_case_json.at("valid").to_boolean(),
                     .data = std::move(data),
