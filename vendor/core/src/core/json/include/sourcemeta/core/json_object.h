@@ -389,6 +389,12 @@ public:
     this->data.push_back({key, std::move(value), key_hash});
   }
 
+  /// Get the key of the last-inserted property
+  [[nodiscard]] inline auto back_key() const noexcept -> const Key & {
+    assert(!this->data.empty());
+    return this->data.back().first;
+  }
+
   /// Remove every property in the object
   inline auto clear() noexcept -> void { this->data.clear(); }
 

@@ -284,7 +284,7 @@ handle_json_entry(const std::filesystem::path &entry_path,
                           const sourcemeta::core::JSON::StringView property) {
                 max_line = std::max(max_line, line);
                 positions(phase, type, line + current_offset, column, context,
-                          index, property);
+                          index, sourcemeta::core::JSON::String{property});
               };
           documents.emplace_back(sourcemeta::core::parse_yaml(stream, callback),
                                  std::move(positions));

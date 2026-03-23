@@ -118,7 +118,7 @@ public:
     }
 
     auto result{this->parse_value(token.value(), JSON::ParseContext::Root, 0,
-                                  std::string_view{})};
+                                  empty_property_)};
 
     auto pos_before_token{this->lexer_->position()};
     token = this->next_token();
@@ -207,7 +207,7 @@ public:
                              "Unexpected content after document"};
       }
       this->parse_value(token.value(), JSON::ParseContext::Root, 0,
-                        std::string_view{});
+                        empty_property_);
       saw_document_end = false;
       token = this->next_token();
       while (token.has_value() && token->type == TokenType::DocumentEnd) {
@@ -318,7 +318,7 @@ private:
   auto invoke_callback(const JSON::ParsePhase phase, const JSON::Type type,
                        const std::uint64_t line, const std::uint64_t column,
                        const JSON::ParseContext context,
-                       const std::size_t index, const std::string_view property)
+                       const std::size_t index, const std::string &property)
       -> void {
     if (this->callback_ && *this->callback_) {
       (*this->callback_)(phase, type, line, column, context, index, property);
@@ -362,7 +362,7 @@ private:
   }
 
   auto parse_value(const Token &token, const JSON::ParseContext context,
-                   const std::size_t index, const std::string_view property,
+                   const std::size_t index, const std::string &property,
                    const std::uint64_t key_line = 0,
                    const std::uint64_t key_column = 0) -> JSON {
     if (this->roundtrip_) {
@@ -650,7 +650,7 @@ private:
 
   auto parse_scalar(const Token &token, const std::optional<std::string> &tag,
                     const JSON::ParseContext context, const std::size_t index,
-                    const std::string_view property,
+                    const std::string &property,
                     const std::uint64_t key_line = 0,
                     const std::uint64_t key_column = 0) -> JSON {
     JSON result{this->interpret_scalar(token.value, token.scalar_style, tag)};
@@ -672,7 +672,7 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, result.type(), token.line,
                           end_column, JSON::ParseContext::Root, 0,
-                          std::string_view{});
+                          empty_property_);
 
     return result;
   }
@@ -872,8 +872,7 @@ private:
 
   auto parse_flow_mapping(const Token &start_token,
                           const JSON::ParseContext context,
-                          const std::size_t index,
-                          const std::string_view property,
+                          const std::size_t index, const std::string &property,
                           const std::uint64_t key_line = 0,
                           const std::uint64_t key_column = 0) -> JSON {
     this->invoke_callback(
@@ -996,7 +995,7 @@ private:
                                             : this->lexer_->column()};
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          std::string_view{});
+                          empty_property_);
 
     if (this->roundtrip_ && found_compact_separator) {
       this->roundtrip_->styles[this->pointer_stack_].compact_flow = true;
@@ -1007,8 +1006,7 @@ private:
 
   auto parse_flow_sequence(const Token &start_token,
                            const JSON::ParseContext context,
-                           const std::size_t index,
-                           const std::string_view property,
+                           const std::size_t index, const std::string &property,
                            const std::uint64_t key_line = 0,
                            const std::uint64_t key_column = 0) -> JSON {
     this->invoke_callback(
@@ -1067,7 +1065,7 @@ private:
           // For non-scalar keys, parse the value and stringify
           auto key_value{this->parse_value(token.value(),
                                            JSON::ParseContext::Index,
-                                           element_index, std::string_view{})};
+                                           element_index, empty_property_)};
           key_string = this->json_to_key_string(key_value);
           token = this->next_token();
         }
@@ -1092,7 +1090,7 @@ private:
       }
 
       auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                   element_index, std::string_view{})};
+                                   element_index, empty_property_)};
       result.push_back(std::move(value));
       element_index++;
 
@@ -1113,7 +1111,7 @@ private:
                                             : this->lexer_->column()};
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Array, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          std::string_view{});
+                          empty_property_);
 
     if (this->roundtrip_ && found_compact_separator) {
       this->roundtrip_->styles[this->pointer_stack_].compact_flow = true;
@@ -1125,7 +1123,7 @@ private:
   auto parse_block_sequence(const Token &start_token,
                             const JSON::ParseContext context,
                             const std::size_t index,
-                            const std::string_view property,
+                            const std::string &property,
                             const std::uint64_t key_line = 0,
                             const std::uint64_t key_column = 0) -> JSON {
     this->invoke_callback(
@@ -1154,7 +1152,7 @@ private:
         token->type != TokenType::DocumentEnd &&
         token->type != TokenType::DocumentStart) {
       auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                   element_index, std::string_view{})};
+                                   element_index, empty_property_)};
       result.push_back(std::move(value));
       element_index++;
       token = this->next_token();
@@ -1179,7 +1177,7 @@ private:
                                "Wrong indentation for sequence entry"};
         }
         auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                     element_index, std::string_view{})};
+                                     element_index, empty_property_)};
         result.push_back(std::move(value));
         element_index++;
         token = this->next_token();
@@ -1200,7 +1198,7 @@ private:
         result.push_back(JSON{nullptr});
       } else {
         auto value{this->parse_value(token.value(), JSON::ParseContext::Index,
-                                     element_index, std::string_view{})};
+                                     element_index, empty_property_)};
         result.push_back(std::move(value));
         token = this->next_token();
       }
@@ -1223,15 +1221,14 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Array, end_line,
                           end_column, JSON::ParseContext::Root, 0,
-                          std::string_view{});
+                          empty_property_);
 
     return result;
   }
 
   auto parse_block_mapping(const Token &start_token,
                            const JSON::ParseContext context,
-                           const std::size_t index,
-                           const std::string_view property,
+                           const std::size_t index, const std::string &property,
                            const std::uint64_t key_line = 0,
                            const std::uint64_t key_column = 0) -> JSON {
     this->invoke_callback(
@@ -1241,7 +1238,7 @@ private:
         index, property);
 
     JSON result{JSON::make_object()};
-    std::unordered_set<std::string_view> seen_keys;
+    std::unordered_set<std::string> seen_keys;
 
     auto token{start_token};
     const auto mapping_indent{
@@ -1273,7 +1270,7 @@ private:
         break;
       }
 
-      std::string_view key;
+      std::string key;
       std::uint64_t current_key_line{0};
       std::uint64_t current_key_column{0};
 
@@ -1352,13 +1349,13 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object,
                           this->lexer_->line(), this->lexer_->column(),
-                          JSON::ParseContext::Root, 0, std::string_view{});
+                          JSON::ParseContext::Root, 0, empty_property_);
 
     return result;
   }
 
   auto resolve_alias(const Token &token, const JSON::ParseContext context,
-                     const std::size_t index, const std::string_view property,
+                     const std::size_t index, const std::string &property,
                      const std::uint64_t key_line = 0,
                      const std::uint64_t key_column = 0) -> JSON {
     const std::string anchor_name{token.value};
@@ -1383,7 +1380,7 @@ private:
       std::uint64_t callback_column{record.column};
       auto callback_context{record.context};
       auto callback_idx{record.index};
-      std::string_view callback_property{record.property};
+      std::string callback_property{record.property};
 
       if (is_first_pre && record.phase == JSON::ParsePhase::Pre) {
         if (context == JSON::ParseContext::Property && key_line > 0) {
@@ -1401,7 +1398,7 @@ private:
         callback_column = alias_end_column;
         callback_context = JSON::ParseContext::Root;
         callback_idx = 0;
-        callback_property = std::string_view{};
+        callback_property.clear();
       }
 
       this->invoke_callback(record.phase, record.type, callback_line,
@@ -1429,7 +1426,7 @@ private:
 
   auto parse_block_mapping_from_first_key(
       const Token &key_token, const JSON::ParseContext context,
-      const std::size_t index, const std::string_view property,
+      const std::size_t index, const std::string &property,
       const std::uint64_t parent_key_line = 0,
       const std::uint64_t parent_key_column = 0,
       const std::uint64_t node_start_column = 0) -> JSON {
@@ -1479,7 +1476,7 @@ private:
                                     static_cast<std::uint64_t>(key.size())};
         this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Null,
                               key_line, null_post_column,
-                              JSON::ParseContext::Root, 0, std::string_view{});
+                              JSON::ParseContext::Root, 0, empty_property_);
         result.assign(std::string{key}, JSON{nullptr});
       }
     } else if (next->type == TokenType::MappingStart ||
@@ -1722,7 +1719,7 @@ private:
 
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Object,
                           this->lexer_->line(), this->lexer_->column(),
-                          JSON::ParseContext::Root, 0, std::string_view{});
+                          JSON::ParseContext::Root, 0, empty_property_);
 
     return result;
   }
@@ -1801,13 +1798,11 @@ private:
     this->pointer_stack_.pop_back();
   }
 
-  auto register_anchored_null(const std::string_view anchor_name,
-                              const Token &token,
-                              const JSON::ParseContext context,
-                              const std::size_t index,
-                              const std::string_view property,
-                              std::optional<std::string> &inline_comment)
-      -> void {
+  auto
+  register_anchored_null(const std::string_view anchor_name, const Token &token,
+                         const JSON::ParseContext context,
+                         const std::size_t index, const std::string &property,
+                         std::optional<std::string> &inline_comment) -> void {
     this->recording_anchor_ = true;
     this->current_anchor_callbacks_.clear();
     JSON null_value{nullptr};
@@ -1815,7 +1810,7 @@ private:
                           token.column, context, index, property);
     this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Null, token.line,
                           token.column, JSON::ParseContext::Root, 0,
-                          std::string_view{});
+                          empty_property_);
     this->recording_anchor_ = false;
     this->anchors_.insert_or_assign(
         std::string{anchor_name},
@@ -1946,6 +1941,7 @@ private:
     }
   }
 
+  inline static const std::string empty_property_{};
   Lexer *lexer_;
   const JSON::ParseCallback *callback_;
   YAMLRoundTrip *roundtrip_{nullptr};

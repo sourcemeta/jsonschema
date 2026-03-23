@@ -78,7 +78,7 @@ public:
   using ParseCallback = std::function<void(
       const ParsePhase phase, const Type type, const std::uint64_t line,
       const std::uint64_t column, const ParseContext context,
-      const std::size_t index, const StringView property)>;
+      const std::size_t index, const String &property)>;
 
   /// A comparison function between object property keys.
   /// See https://en.cppreference.com/w/cpp/named_req/Compare

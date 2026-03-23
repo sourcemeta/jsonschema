@@ -11,12 +11,12 @@ namespace sourcemeta::core {
 auto PointerPositionTracker::operator()(
     const JSON::ParsePhase phase, const JSON::Type, const std::uint64_t line,
     const std::uint64_t column, const JSON::ParseContext context,
-    const std::size_t index, const JSON::StringView property) -> void {
+    const std::size_t index, const JSON::String &property) -> void {
   if (phase == JSON::ParsePhase::Pre) {
     this->stack.emplace(line, column);
     switch (context) {
       case JSON::ParseContext::Property:
-        this->current.push_back(JSON::String{property});
+        this->current.push_back(property);
         break;
       case JSON::ParseContext::Index:
         this->current.push_back(index);
