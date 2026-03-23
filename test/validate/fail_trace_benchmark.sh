@@ -27,3 +27,15 @@ error: The `--trace/-t` and `--benchmark/-b` options are mutually exclusive
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" --trace --benchmark --json 2>"$TMP/stderr_json.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "5"
+
+cat << 'EOF' > "$TMP/expected_json.txt"
+{
+  "error": "The `--trace/-t` and `--benchmark/-b` options are mutually exclusive"
+}
+EOF
+
+diff "$TMP/stderr_json.txt" "$TMP/expected_json.txt"
