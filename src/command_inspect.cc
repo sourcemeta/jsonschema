@@ -171,7 +171,7 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
                                                       : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
-  std::deque<std::string> property_storage;
+  auto property_storage = std::make_shared<std::deque<std::string>>();
   const sourcemeta::core::JSON schema{[&]() {
     if (schema_from_stdin) {
       auto parsed{read_from_stdin()};

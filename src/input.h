@@ -19,6 +19,7 @@
 #include <filesystem>    // std::filesystem
 #include <functional>    // std::ref, std::hash
 #include <iostream>      // std::cin
+#include <memory>        // std::shared_ptr, std::make_shared
 #include <optional>      // std::optional
 #include <set>           // std::set
 #include <sstream>       // std::ostringstream, std::istringstream
@@ -37,7 +38,7 @@ struct InputJSON {
   bool multidocument{false};
   bool yaml{false};
   bool from_stdin{false};
-  std::deque<std::string> property_storage;
+  std::shared_ptr<std::deque<std::string>> property_storage;
   auto operator<(const InputJSON &other) const noexcept -> bool {
     return this->first < other.first;
   }
@@ -142,13 +143,13 @@ namespace {
 struct ParsedJSON {
   sourcemeta::core::JSON document;
   sourcemeta::core::PointerPositionTracker positions;
-  std::deque<std::string> property_storage;
+  std::shared_ptr<std::deque<std::string>> property_storage;
   bool yaml{false};
 };
 
 inline auto
 make_position_callback(sourcemeta::core::PointerPositionTracker &tracker,
-                       std::deque<std::string> &storage)
+                       std::shared_ptr<std::deque<std::string>> &storage)
     -> sourcemeta::core::JSON::ParseCallback {
   return
       [&tracker, &storage](const sourcemeta::core::JSON::ParsePhase phase,
@@ -157,15 +158,15 @@ make_position_callback(sourcemeta::core::PointerPositionTracker &tracker,
                            const sourcemeta::core::JSON::ParseContext context,
                            const std::size_t index,
                            const sourcemeta::core::JSON::String &property) {
-        storage.emplace_back(property);
-        tracker(phase, type, line, column, context, index, storage.back());
+        storage->emplace_back(property);
+        tracker(phase, type, line, column, context, index, storage->back());
       };
 }
 
 inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
   const auto extension{path.extension()};
   sourcemeta::core::PointerPositionTracker positions;
-  std::deque<std::string> property_storage;
+  auto property_storage = std::make_shared<std::deque<std::string>>();
   sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
 
   if (extension == ".yaml" || extension == ".yml") {
@@ -187,7 +188,7 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
             std::move(property_storage), false};
   } catch (const sourcemeta::core::JSONParseError &) {
     sourcemeta::core::PointerPositionTracker yaml_positions;
-    std::deque<std::string> yaml_property_storage;
+    auto yaml_property_storage = std::make_shared<std::deque<std::string>>();
     auto callback =
         make_position_callback(yaml_positions, yaml_property_storage);
     sourcemeta::core::read_yaml(path, document, callback);
@@ -208,7 +209,7 @@ inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
   try {
     std::istringstream json_stream{input};
     sourcemeta::core::PointerPositionTracker positions;
-    std::deque<std::string> property_storage;
+    auto property_storage = std::make_shared<std::deque<std::string>>();
     sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
     auto callback = make_position_callback(positions, property_storage);
     sourcemeta::core::parse_json(json_stream, document, callback);
@@ -218,7 +219,7 @@ inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
     try {
       std::istringstream yaml_stream{input};
       sourcemeta::core::PointerPositionTracker positions;
-      std::deque<std::string> property_storage;
+      auto property_storage = std::make_shared<std::deque<std::string>>();
       sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
       auto callback = make_position_callback(positions, property_storage);
       sourcemeta::core::parse_yaml(yaml_stream, document, callback);
@@ -315,14 +316,14 @@ handle_json_entry(const std::filesystem::path &entry_path,
         struct MultiDocEntry {
           sourcemeta::core::JSON document;
           sourcemeta::core::PointerPositionTracker positions;
-          std::deque<std::string> property_storage;
+          std::shared_ptr<std::deque<std::string>> property_storage;
         };
         std::vector<MultiDocEntry> documents;
         std::uint64_t line_offset{0};
         std::uint64_t max_line{0};
         while (stream.peek() != std::char_traits<char>::eof()) {
           sourcemeta::core::PointerPositionTracker positions;
-          std::deque<std::string> property_storage;
+          auto property_storage = std::make_shared<std::deque<std::string>>();
           const std::uint64_t current_offset{line_offset};
           max_line = 0;
           auto callback =
@@ -334,9 +335,9 @@ handle_json_entry(const std::filesystem::path &entry_path,
                           const std::size_t index,
                           const sourcemeta::core::JSON::String &property) {
                 max_line = std::max(max_line, line);
-                property_storage.emplace_back(property);
+                property_storage->emplace_back(property);
                 positions(phase, type, line + current_offset, column, context,
-                          index, property_storage.back());
+                          index, property_storage->back());
               };
           sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
           sourcemeta::core::parse_yaml(stream, document, callback);

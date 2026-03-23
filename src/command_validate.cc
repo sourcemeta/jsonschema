@@ -454,7 +454,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       }
     } else {
       sourcemeta::core::PointerPositionTracker tracker;
-      std::deque<std::string> property_storage;
+      auto property_storage = std::make_shared<std::deque<std::string>>();
       const bool track_positions{(!fast_mode && !benchmark) || trace};
       const auto instance{[&]() -> sourcemeta::core::JSON {
         if (track_positions) {
