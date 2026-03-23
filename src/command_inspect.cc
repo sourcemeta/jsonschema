@@ -171,14 +171,18 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
                                                       : schema_path};
 
   sourcemeta::core::PointerPositionTracker positions;
+  auto property_storage = std::make_shared<std::deque<std::string>>();
   const sourcemeta::core::JSON schema{[&]() {
     if (schema_from_stdin) {
       auto parsed{read_from_stdin()};
       positions = std::move(parsed.positions);
+      property_storage = std::move(parsed.property_storage);
       return std::move(parsed.document);
     }
-    return sourcemeta::core::read_yaml_or_json(schema_path,
-                                               std::ref(positions));
+    sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
+    auto callback = make_position_callback(positions, property_storage);
+    sourcemeta::core::read_yaml_or_json(schema_path, document, callback);
+    return document;
   }()};
 
   if (!sourcemeta::core::is_schema(schema)) {

@@ -14,7 +14,6 @@
 #include <cstdint>    // std::uint64_t, std::uint32_t
 #include <cstring>    // std::memchr
 #include <functional> // std::reference_wrapper
-#include <optional>   // std::optional
 #include <stdexcept>  // std::invalid_argument
 #include <utility>    // std::move
 #include <vector>     // std::vector
@@ -245,14 +244,14 @@ inline auto post_column_for(const TapeEntry &entry) -> std::uint64_t {
 
 inline auto construct_json(const char *buffer,
                            const std::vector<TapeEntry> &tape,
-                           const JSON::ParseCallback &callback) -> JSON {
+                           const JSON::ParseCallback &callback, JSON &output)
+    -> void {
   using Result = JSON;
   enum class Container : std::uint8_t { Array, Object };
   std::vector<Container> levels;
   std::vector<std::reference_wrapper<Result>> frames;
   levels.reserve(32);
   frames.reserve(32);
-  std::optional<Result> result;
   typename Result::String key;
   typename Result::Object::hash_type key_hash;
   std::uint64_t key_line{0};
@@ -269,21 +268,25 @@ inline auto construct_json(const char *buffer,
     case TapeType::True:
       CALLBACK_PRE(Boolean, entry, JSON::ParseContext::Root, 0, empty_property);
       CALLBACK_POST(Boolean, entry.line, internal::post_column_for(entry));
-      return JSON{true};
+      output = JSON{true};
+      return;
     case TapeType::False:
       CALLBACK_PRE(Boolean, entry, JSON::ParseContext::Root, 0, empty_property);
       CALLBACK_POST(Boolean, entry.line, internal::post_column_for(entry));
-      return JSON{false};
+      output = JSON{false};
+      return;
     case TapeType::Null:
       CALLBACK_PRE(Null, entry, JSON::ParseContext::Root, 0, empty_property);
       CALLBACK_POST(Null, entry.line, internal::post_column_for(entry));
-      return JSON{nullptr};
+      output = JSON{nullptr};
+      return;
     case TapeType::String: {
       CALLBACK_PRE(String, entry, JSON::ParseContext::Root, 0, empty_property);
       auto value{Result{
           internal::unescape_string(buffer + entry.offset, entry.length)}};
       CALLBACK_POST(String, entry.line, internal::post_column_for(entry));
-      return value;
+      output = std::move(value);
+      return;
     }
     case TapeType::Number: {
       auto value =
@@ -300,7 +303,8 @@ inline auto construct_json(const char *buffer,
         CALLBACK_PRE(Real, entry, JSON::ParseContext::Root, 0, empty_property);
         CALLBACK_POST(Real, entry.line, internal::post_column_for(entry));
       }
-      return value;
+      output = std::move(value);
+      return;
     }
     case TapeType::ArrayStart:
       CALLBACK_PRE(Array, entry, JSON::ParseContext::Root, 0, empty_property);
@@ -323,10 +327,9 @@ do_construct_array: {
   tape_index++;
 
   if (levels.empty()) {
-    assert(!result.has_value());
     levels.push_back(Container::Array);
-    result = std::make_optional<Result>(Result::make_array());
-    frames.emplace_back(result.value());
+    output = Result::make_array();
+    frames.emplace_back(output);
   } else if (levels.back() == Container::Array) {
     levels.push_back(Container::Array);
     frames.back().get().push_back(Result::make_array());
@@ -457,10 +460,9 @@ do_construct_object: {
   tape_index++;
 
   if (levels.empty()) {
-    assert(!result.has_value());
     levels.push_back(Container::Object);
-    result = std::make_optional<Result>(Result::make_object());
-    frames.emplace_back(result.value());
+    output = Result::make_object();
+    frames.emplace_back(output);
   } else if (levels.back() == Container::Array) {
     levels.push_back(Container::Object);
     frames.back().get().push_back(Result::make_object());
@@ -624,7 +626,7 @@ do_construct_object_property_end:
 do_construct_container_end:
   assert(!levels.empty());
   if (levels.size() == 1) {
-    return std::move(*result);
+    return;
   }
 
   frames.pop_back();
