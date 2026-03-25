@@ -75,24 +75,25 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         std::cout << "\n";
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(display_path,
-                                                            error);
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+          display_path, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(display_path, error);
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+          display_path, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
+      throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           display_path, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(display_path,
-                                                               error);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaResolutionError>(display_path, error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-          display_path);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaUnknownBaseDialectError>(display_path);
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(display_path,
-                                                     error.what());
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+          display_path, error.what());
     }
   };
 
@@ -148,28 +149,30 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         }
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
-      throw FileError<sourcemeta::core::SchemaKeywordError>(
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaFrameError &error) {
-      throw FileError<sourcemeta::core::SchemaFrameError>(entry.resolution_base,
-                                                          error);
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+          entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
+      throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(
-          entry.resolution_base, error);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaResolutionError>(entry.resolution_base,
+                                                   error);
     } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaUnknownBaseDialectError>(
           entry.resolution_base);
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
-          entry.resolution_base);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
     } catch (const sourcemeta::core::SchemaError &error) {
-      throw FileError<sourcemeta::core::SchemaError>(entry.resolution_base,
-                                                     error.what());
+      throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+          entry.resolution_base, error.what());
     }
   };
 

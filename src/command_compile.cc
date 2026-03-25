@@ -59,8 +59,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         entrypoint_uri = resolve_entrypoint(
             frame, std::string{options.at("entrypoint").front()});
       } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
-        throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(
-            schema_path, error);
+        throw sourcemeta::core::FileError<
+            sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path, error);
       }
 
       schema_template = sourcemeta::blaze::compile(
@@ -77,36 +77,42 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
           dialect, schema_default_id);
     }
   } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
-    throw FileError<sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path,
-                                                                  error);
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path, error);
   } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
-    throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(schema_path,
-                                                                  error);
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerInvalidRegexError>(schema_path, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
-    throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
-        schema_path, error);
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(schema_path,
+                                                                  error);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_path, error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+        schema_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_path, error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        schema_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
-        schema_path, error);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(schema_path,
+                                                                   error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(schema_path,
-                                                             error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
+        schema_path, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_path);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(schema_path);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-    throw FileError<sourcemeta::core::SchemaVocabularyError>(
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
         schema_path, std::string{error.uri()}, error.what());
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_path, error.what());
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        schema_path, error.what());
   }
 
   const auto template_json{sourcemeta::blaze::to_json(schema_template)};

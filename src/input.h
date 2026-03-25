@@ -133,8 +133,8 @@ merge_configuration_ignore(const std::filesystem::path &configuration_path,
       blacklist.insert(ignore_path);
     }
   } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-    throw FileError<sourcemeta::blaze::ConfigurationParseError>(
-        configuration_path, error);
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::ConfigurationParseError>(configuration_path, error);
   }
 }
 

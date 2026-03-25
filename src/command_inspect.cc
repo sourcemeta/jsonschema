@@ -214,27 +214,29 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
             ? ""
             : sourcemeta::jsonschema::default_id(schema_resolution_base));
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
         schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_resolution_base,
-                                                        error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        schema_resolution_base, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
         schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         schema_resolution_base, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(
         schema_resolution_base);
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
-        schema_resolution_base);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>(schema_resolution_base);
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_resolution_base,
-                                                   error.what());
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        schema_resolution_base, error.what());
   }
 
   if (options.contains("json")) {
