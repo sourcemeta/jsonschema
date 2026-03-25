@@ -1,5 +1,6 @@
 #include <sourcemeta/core/uri.h>
 
+#include "escaping.h"
 #include "normalize.h"
 
 #include <cctype>   // std::tolower
@@ -46,6 +47,26 @@ auto URI::canonicalize() -> URI & {
   // Remove empty fragment (empty fragments are optional per RFC 3986)
   if (this->fragment_.has_value() && this->fragment_.value().empty()) {
     this->fragment_ = std::nullopt;
+  }
+
+  if (this->path_.has_value()) {
+    uri_normalize_percent_encoding_inplace(this->path_.value());
+  }
+
+  if (this->query_.has_value()) {
+    uri_normalize_percent_encoding_inplace(this->query_.value());
+  }
+
+  if (this->fragment_.has_value()) {
+    uri_normalize_percent_encoding_inplace(this->fragment_.value());
+  }
+
+  if (this->userinfo_.has_value()) {
+    uri_normalize_percent_encoding_inplace(this->userinfo_.value());
+  }
+
+  if (this->host_.has_value()) {
+    uri_normalize_percent_encoding_inplace(this->host_.value());
   }
 
   // Remove default ports (80 for http, 443 for https)

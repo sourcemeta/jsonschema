@@ -7,8 +7,10 @@
 #include <limits>        // std::numeric_limits
 #include <numeric>       // std::accumulate
 #include <sstream>       // std::ostringstream
+#include <string_view>   // std::string_view
 #include <type_traits>   // std::remove_reference_t
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <utility>       // std::move
 
 auto sourcemeta::core::is_schema(const sourcemeta::core::JSON &schema) -> bool {
@@ -244,10 +246,12 @@ auto sourcemeta::core::metaschema(
   return maybe_metaschema.value();
 }
 
-auto sourcemeta::core::base_dialect(
-    const sourcemeta::core::JSON &schema,
-    const sourcemeta::core::SchemaResolver &resolver,
-    std::string_view default_dialect) -> std::optional<SchemaBaseDialect> {
+static auto
+base_dialect_with_visited(const sourcemeta::core::JSON &schema,
+                          const sourcemeta::core::SchemaResolver &resolver,
+                          std::string_view default_dialect,
+                          std::unordered_set<std::string_view> &visited)
+    -> std::optional<sourcemeta::core::SchemaBaseDialect> {
   assert(sourcemeta::core::is_schema(schema));
   const std::string_view effective_dialect{
       sourcemeta::core::dialect(schema, default_dialect)};
@@ -259,19 +263,24 @@ auto sourcemeta::core::base_dialect(
   }
 
   // Check for known base dialects
-  const auto result{to_base_dialect(effective_dialect)};
+  const auto result{sourcemeta::core::to_base_dialect(effective_dialect)};
   if (result.has_value()) {
     return result;
+  }
+
+  // Detect cycles in the metaschema chain
+  if (!visited.emplace(effective_dialect).second) {
+    throw sourcemeta::core::SchemaUnknownBaseDialectError();
   }
 
   // Otherwise, traverse the metaschema hierarchy up
   const std::optional<sourcemeta::core::JSON> metaschema{
       resolver(effective_dialect)};
   if (!metaschema.has_value()) {
-    URI effective_dialect_uri;
+    sourcemeta::core::URI effective_dialect_uri;
     try {
-      effective_dialect_uri = URI{effective_dialect};
-    } catch (const URIParseError &) {
+      effective_dialect_uri = sourcemeta::core::URI{effective_dialect};
+    } catch (const sourcemeta::core::URIParseError &) {
       throw sourcemeta::core::SchemaKeywordError(
           "$schema", std::string{effective_dialect},
           "The dialect is not a valid URI");
@@ -292,12 +301,21 @@ auto sourcemeta::core::base_dialect(
   // If the metaschema declares the same dialect (self-descriptive), and it's
   // not an official dialect, we cannot determine the base dialect
   const std::string_view metaschema_dialect{
-      dialect(metaschema.value(), effective_dialect)};
+      sourcemeta::core::dialect(metaschema.value(), effective_dialect)};
   if (metaschema_dialect == effective_dialect) {
     throw sourcemeta::core::SchemaUnknownBaseDialectError();
   }
 
-  return base_dialect(metaschema.value(), resolver, effective_dialect);
+  return base_dialect_with_visited(metaschema.value(), resolver,
+                                   effective_dialect, visited);
+}
+
+auto sourcemeta::core::base_dialect(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaResolver &resolver,
+    std::string_view default_dialect) -> std::optional<SchemaBaseDialect> {
+  std::unordered_set<std::string_view> visited;
+  return base_dialect_with_visited(schema, resolver, default_dialect, visited);
 }
 
 namespace {
