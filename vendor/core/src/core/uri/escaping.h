@@ -214,6 +214,36 @@ inline auto uri_normalize_percent_encoding_inplace(std::string &input) -> void {
   }
 }
 
+template <typename Predicate>
+inline auto uri_unescape_if_inplace(std::string &input, Predicate should_decode)
+    -> void {
+  std::string::size_type write_position = 0;
+
+  for (std::string::size_type read_position = 0;
+       read_position < input.size();) {
+    if (uri_is_percent_encoded(input, read_position)) {
+      const auto value = static_cast<unsigned char>(
+          (uri_hex_to_int(input[read_position + 1]) << 4) |
+          uri_hex_to_int(input[read_position + 2]));
+      const auto decoded = static_cast<char>(value);
+
+      if (should_decode(decoded)) {
+        input[write_position++] = decoded;
+      } else {
+        input[write_position++] = input[read_position];
+        input[write_position++] = input[read_position + 1];
+        input[write_position++] = input[read_position + 2];
+      }
+
+      read_position += 3;
+    } else {
+      input[write_position++] = input[read_position++];
+    }
+  }
+
+  input.resize(write_position);
+}
+
 } // namespace sourcemeta::core
 
 #endif
