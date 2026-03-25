@@ -49,7 +49,8 @@ auto sourcemeta::jsonschema::metaschema(
       const auto dialect{
           sourcemeta::core::dialect(entry.second, default_dialect_option)};
       if (dialect.empty()) {
-        throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
+        throw sourcemeta::core::FileError<
+            sourcemeta::core::SchemaUnknownBaseDialectError>(
             entry.resolution_base);
       }
 
@@ -107,26 +108,30 @@ auto sourcemeta::jsonschema::metaschema(
         }
       }
     } catch (const sourcemeta::blaze::CompilerInvalidRegexError &error) {
-      throw FileError<sourcemeta::blaze::CompilerInvalidRegexError>(
-          entry.resolution_base, error);
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerInvalidRegexError>(entry.resolution_base,
+                                                        error);
     } catch (
         const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
-      throw FileError<sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
-      throw FileError<
+      throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
           entry.resolution_base, error);
     } catch (const sourcemeta::core::SchemaResolutionError &error) {
-      throw FileError<sourcemeta::core::SchemaResolutionError>(
-          entry.resolution_base, error);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaResolutionError>(entry.resolution_base,
+                                                   error);
     } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-      throw FileError<sourcemeta::core::SchemaVocabularyError>(
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaVocabularyError>(
           entry.resolution_base, std::string{error.uri()}, error.what());
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-      throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
-          entry.resolution_base);
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
     }
   }
 

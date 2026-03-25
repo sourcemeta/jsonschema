@@ -77,31 +77,32 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     sourcemeta::core::format(schema, sourcemeta::core::schema_walker,
                              custom_resolver, dialect);
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw FileError<sourcemeta::core::SchemaKeywordError>(schema_display_path,
-                                                          error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+        schema_display_path, error);
   } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw FileError<sourcemeta::core::SchemaFrameError>(schema_display_path,
-                                                        error);
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+        schema_display_path, error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
-    throw FileError<sourcemeta::core::SchemaReferenceError>(
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
         schema_display_path, std::string{error.identifier()}, error.location(),
         error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(
         schema_display_path, error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw FileError<sourcemeta::core::SchemaResolutionError>(
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         schema_display_path, error);
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownBaseDialectError>(
-        schema_display_path);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownBaseDialectError>(schema_display_path);
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
-    throw FileError<sourcemeta::core::SchemaUnknownDialectError>(
-        schema_display_path);
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaUnknownDialectError>(schema_display_path);
   } catch (const sourcemeta::core::SchemaError &error) {
-    throw FileError<sourcemeta::core::SchemaError>(schema_display_path,
-                                                   error.what());
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+        schema_display_path, error.what());
   }
 
   sourcemeta::core::prettify(schema, std::cout);

@@ -8,6 +8,7 @@ option(SOURCEMETA_CORE_LANG_IO "Build the Sourcemeta Core language I/O library" 
 option(SOURCEMETA_CORE_LANG_PROCESS "Build the Sourcemeta Core language Process library" ON)
 option(SOURCEMETA_CORE_LANG_PARALLEL "Build the Sourcemeta Core language parallel library" ON)
 option(SOURCEMETA_CORE_LANG_NUMERIC "Build the Sourcemeta Core language numeric library" ON)
+option(SOURCEMETA_CORE_LANG_ERROR "Build the Sourcemeta Core language error library" ON)
 option(SOURCEMETA_CORE_LANG_OPTIONS "Build the Sourcemeta Core Options library" ON)
 option(SOURCEMETA_CORE_UNICODE "Build the Sourcemeta Core Unicode library" ON)
 option(SOURCEMETA_CORE_PUNYCODE "Build the Sourcemeta Core Punycode library" ON)
@@ -79,6 +80,10 @@ endif()
 
 if(SOURCEMETA_CORE_LANG_NUMERIC)
   add_subdirectory(src/lang/numeric)
+endif()
+
+if(SOURCEMETA_CORE_LANG_ERROR)
+  add_subdirectory(src/lang/error)
 endif()
 
 if(SOURCEMETA_CORE_LANG_OPTIONS)
@@ -198,6 +203,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_LANG_NUMERIC)
     add_subdirectory(test/numeric)
+  endif()
+
+  if(SOURCEMETA_CORE_LANG_ERROR)
+    add_subdirectory(test/error)
   endif()
 
   if(SOURCEMETA_CORE_LANG_OPTIONS)

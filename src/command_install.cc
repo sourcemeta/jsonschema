@@ -47,8 +47,7 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
     return std::move(result.value());
   }
 
-  throw sourcemeta::jsonschema::FileError<
-      sourcemeta::core::SchemaResolutionError>(
+  throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
       configuration_path, std::string{uri}, "Could not resolve schema");
 }
 
@@ -306,7 +305,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         add_configuration = sourcemeta::blaze::Configuration::read_json(
             configuration_path.value(), configuration_reader);
       } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-        throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+        throw sourcemeta::core::FileError<
+            sourcemeta::blaze::ConfigurationParseError>(
             configuration_path.value(), error.what(), error.location());
       } catch (const sourcemeta::core::JSONParseError &error) {
         throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
@@ -330,7 +330,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
           "The given URI is not valid",
           "jsonschema install https://example.com/schema ./vendor/schema.json"};
     } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-      throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error.what(), error.location());
     }
     auto config_json{
@@ -369,7 +370,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     configuration = sourcemeta::blaze::Configuration::read_json(
         configuration_path.value(), configuration_reader);
   } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-    throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+    throw sourcemeta::core::FileError<
+        sourcemeta::blaze::ConfigurationParseError>(
         configuration_path.value(), error.what(), error.location());
   } catch (const sourcemeta::core::JSONParseError &error) {
     throw sourcemeta::core::JSONFileParseError(configuration_path.value(),

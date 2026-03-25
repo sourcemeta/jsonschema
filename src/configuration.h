@@ -57,7 +57,8 @@ inline auto read_configuration(
       result = sourcemeta::blaze::Configuration::read_json(
           configuration_path.value(), configuration_reader);
     } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-      throw FileError<sourcemeta::blaze::ConfigurationParseError>(
+      throw sourcemeta::core::FileError<
+          sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error);
     }
 

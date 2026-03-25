@@ -35,7 +35,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<sourcemeta::blaze::TestParseError>{
+    throw sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>{
         entry.resolution_base, error.what(), error.location(), error.line(),
         error.column()};
   } catch (
@@ -43,7 +43,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
+    throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
         entry.resolution_base, error};
   } catch (
@@ -51,33 +51,32 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
+    throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
-        sourcemeta::core::SchemaResolutionError>{entry.resolution_base, error};
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>{
+        entry.resolution_base, error};
   } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
+    throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
-        sourcemeta::core::SchemaVocabularyError>{
+    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
         entry.resolution_base, std::string{error.uri()}, error.what()};
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::jsonschema::FileError<
+    throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
   } catch (...) {
     if (!json_output) {
