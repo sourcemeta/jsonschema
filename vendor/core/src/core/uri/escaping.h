@@ -20,15 +20,12 @@ enum class URIEscapeMode : std::uint8_t {
   // "sub-delims" ABNF categories
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   SkipSubDelims,
-  // Escape every characted that is not in either the URI "fragment" category
-  //
-  // unreserved  = ALPHA / DIGIT / "-" / "." / "_" / "~"
-  // pct-encoded = "%" HEXDIG HEXDIG
-  // sub-delims  = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" /
-  // "="
-  // pchar       = unreserved / pct-encoded / sub-delims / ":" / "@"
-  // fragment    = *( pchar / "/" / "?" )
-  //
+  // pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
+  // path  = *( pchar / "/" )
+  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+  Path,
+  // pchar    = unreserved / pct-encoded / sub-delims / ":" / "@"
+  // fragment = *( pchar / "/" / "?" )
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   Fragment,
   // Like SkipSubDelims but also preserves ":" for Windows filesystem paths
@@ -68,21 +65,23 @@ inline auto uri_escape(std::istream &input, std::ostream &output,
       continue;
     }
 
-    if (mode == URIEscapeMode::SkipSubDelims ||
+    if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
         mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem) {
-      // sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";"
-      // / "="
-      // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
       if (uri_is_sub_delim(character)) {
         output << character;
         continue;
       }
     }
 
+    if (mode == URIEscapeMode::Path) {
+      if (character == URI_COLON || character == URI_AT ||
+          character == URI_SLASH) {
+        output << character;
+        continue;
+      }
+    }
+
     if (mode == URIEscapeMode::Fragment) {
-      // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
-      // pchar = unreserved / pct-encoded / sub-delims / ":" / "@"
-      // fragment = *( pchar / "/" / "?" )
       if (character == URI_COLON || character == URI_AT ||
           character == URI_SLASH || character == URI_QUESTION) {
         output << character;
@@ -91,20 +90,19 @@ inline auto uri_escape(std::istream &input, std::ostream &output,
     }
 
     if (mode == URIEscapeMode::Filesystem) {
-      // Preserve ":" for Windows drive letters (e.g., C:)
       if (character == URI_COLON) {
         output << character;
         continue;
       }
     }
 
-    // Percent encode this character
-    output << URI_PERCENT << std::hex << std::uppercase
-           << +(static_cast<unsigned char>(character));
+    const auto byte{static_cast<unsigned char>(character)};
+    const auto high{(byte >> 4) & 0x0F};
+    const auto low{byte & 0x0F};
+    output << URI_PERCENT;
+    output << static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10);
+    output << static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10);
   }
-
-  // Reset stream format flags
-  output << std::dec << std::nouppercase;
 }
 
 inline auto uri_unescape(std::istream &input, std::ostream &output) -> void {
@@ -133,55 +131,117 @@ inline auto uri_unescape(std::istream &input, std::ostream &output) -> void {
   }
 }
 
-// Full unescaping for URI normalization (in-place modification)
-// Decodes all percent-encoded sequences
-// Modifies the input string in-place for zero-copy performance
-inline auto uri_unescape_selective_inplace(std::string &str) -> void {
-  std::string::size_type write_pos = 0;
+inline auto uri_hex_to_int(char character) -> unsigned char {
+  if (character >= '0' && character <= '9') {
+    return static_cast<unsigned char>(character - '0');
+  }
 
-  for (std::string::size_type read_pos = 0; read_pos < str.size();) {
-    if (str[read_pos] == URI_PERCENT && read_pos + 2 < str.size() &&
-        std::isxdigit(static_cast<unsigned char>(str[read_pos + 1])) &&
-        std::isxdigit(static_cast<unsigned char>(str[read_pos + 2]))) {
-      // Parse the hex value
-      const auto first_digit = str[read_pos + 1];
-      const auto second_digit = str[read_pos + 2];
+  if (character >= 'A' && character <= 'F') {
+    return static_cast<unsigned char>(character - 'A' + 10);
+  }
 
-      const auto hex_to_int = [](char c) -> unsigned char {
-        if (c >= '0' && c <= '9') {
-          return static_cast<unsigned char>(c - '0');
-        }
-        if (c >= 'A' && c <= 'F') {
-          return static_cast<unsigned char>(c - 'A' + 10);
-        }
-        if (c >= 'a' && c <= 'f') {
-          return static_cast<unsigned char>(c - 'a' + 10);
-        }
-        return 0;
-      };
+  if (character >= 'a' && character <= 'f') {
+    return static_cast<unsigned char>(character - 'a' + 10);
+  }
 
+  return 0;
+}
+
+inline auto uri_is_percent_encoded(const std::string &input,
+                                   std::string::size_type position) -> bool {
+  return position < input.size() && input[position] == URI_PERCENT &&
+         position + 2 < input.size() &&
+         std::isxdigit(static_cast<unsigned char>(input[position + 1])) &&
+         std::isxdigit(static_cast<unsigned char>(input[position + 2]));
+}
+
+inline auto uri_unescape_all_inplace(std::string &input) -> void {
+  std::string::size_type write_position = 0;
+
+  for (std::string::size_type read_position = 0;
+       read_position < input.size();) {
+    if (uri_is_percent_encoded(input, read_position)) {
       const auto value = static_cast<unsigned char>(
-          (hex_to_int(first_digit) << 4) | hex_to_int(second_digit));
-
-      // Decode all percent-encoded sequences
-      // Internal storage is always fully decoded
-      str[write_pos++] = static_cast<char>(value);
-      read_pos += 3;
+          (uri_hex_to_int(input[read_position + 1]) << 4) |
+          uri_hex_to_int(input[read_position + 2]));
+      input[write_position++] = static_cast<char>(value);
+      read_position += 3;
     } else {
-      str[write_pos++] = str[read_pos++];
+      input[write_position++] = input[read_position++];
     }
   }
 
-  str.resize(write_pos);
+  input.resize(write_position);
 }
 
-// Full unescaping for URI normalization (copy version for compatibility)
-// Decodes all percent-encoded sequences
-inline auto uri_unescape_selective(const std::string_view input)
-    -> std::string {
-  std::string result{input};
-  uri_unescape_selective_inplace(result);
-  return result;
+inline auto uri_unescape_unreserved_inplace(std::string &input) -> void {
+  std::string::size_type write_position = 0;
+
+  for (std::string::size_type read_position = 0;
+       read_position < input.size();) {
+    if (uri_is_percent_encoded(input, read_position)) {
+      const auto value = static_cast<unsigned char>(
+          (uri_hex_to_int(input[read_position + 1]) << 4) |
+          uri_hex_to_int(input[read_position + 2]));
+      if (uri_is_unreserved(static_cast<char>(value))) {
+        input[write_position++] = static_cast<char>(value);
+      } else {
+        input[write_position++] = input[read_position];
+        input[write_position++] = input[read_position + 1];
+        input[write_position++] = input[read_position + 2];
+      }
+
+      read_position += 3;
+    } else {
+      input[write_position++] = input[read_position++];
+    }
+  }
+
+  input.resize(write_position);
+}
+
+inline auto uri_normalize_percent_encoding_inplace(std::string &input) -> void {
+  for (std::string::size_type position = 0; position < input.size();) {
+    if (uri_is_percent_encoded(input, position)) {
+      input[position + 1] = static_cast<char>(
+          std::toupper(static_cast<unsigned char>(input[position + 1])));
+      input[position + 2] = static_cast<char>(
+          std::toupper(static_cast<unsigned char>(input[position + 2])));
+      position += 3;
+    } else {
+      ++position;
+    }
+  }
+}
+
+template <typename Predicate>
+inline auto uri_unescape_if_inplace(std::string &input, Predicate should_decode)
+    -> void {
+  std::string::size_type write_position = 0;
+
+  for (std::string::size_type read_position = 0;
+       read_position < input.size();) {
+    if (uri_is_percent_encoded(input, read_position)) {
+      const auto value = static_cast<unsigned char>(
+          (uri_hex_to_int(input[read_position + 1]) << 4) |
+          uri_hex_to_int(input[read_position + 2]));
+      const auto decoded = static_cast<char>(value);
+
+      if (should_decode(decoded)) {
+        input[write_position++] = decoded;
+      } else {
+        input[write_position++] = input[read_position];
+        input[write_position++] = input[read_position + 1];
+        input[write_position++] = input[read_position + 2];
+      }
+
+      read_position += 3;
+    } else {
+      input[write_position++] = input[read_position++];
+    }
+  }
+
+  input.resize(write_position);
 }
 
 } // namespace sourcemeta::core

@@ -456,12 +456,12 @@ auto parse_authority(const std::string_view input,
   } else {
     auto userinfo_raw = parse_userinfo<false>(input, position);
     if (userinfo_raw.has_value()) {
-      uri_unescape_selective_inplace(userinfo_raw.value());
+      uri_unescape_unreserved_inplace(userinfo_raw.value());
       userinfo = std::move(userinfo_raw.value());
     }
 
     auto host_raw = parse_host<false>(input, position);
-    uri_unescape_selective_inplace(host_raw);
+    uri_unescape_unreserved_inplace(host_raw);
     host = std::move(host_raw);
   }
 
@@ -556,7 +556,7 @@ auto do_parse(const std::string_view input,
         }
       }
 
-      uri_unescape_selective_inplace(parsed_path.value());
+      uri_unescape_unreserved_inplace(parsed_path.value());
       path = std::move(parsed_path.value());
     } else if (has_authority || has_scheme) {
       if (input.ends_with(URI_SLASH) || input == "/") {
@@ -587,13 +587,13 @@ auto do_parse(const std::string_view input,
   } else {
     auto parsed_query = parse_query<false>(input, position);
     if (parsed_query.has_value()) {
-      uri_unescape_selective_inplace(parsed_query.value());
+      uri_unescape_unreserved_inplace(parsed_query.value());
       query = std::move(parsed_query.value());
     }
 
     auto parsed_fragment = parse_fragment<false>(input, position);
     if (parsed_fragment.has_value()) {
-      uri_unescape_selective_inplace(parsed_fragment.value());
+      uri_unescape_unreserved_inplace(parsed_fragment.value());
       fragment = std::move(parsed_fragment.value());
     }
   }

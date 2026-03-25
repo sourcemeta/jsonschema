@@ -1,5 +1,7 @@
 #include <sourcemeta/core/uri.h>
 
+#include "escaping.h"
+
 #include <algorithm>  // std::ranges::replace
 #include <filesystem> // std::filesystem
 #include <iterator>   // std::advance, std::next
@@ -25,7 +27,7 @@ auto URI::to_path() const -> std::filesystem::path {
     std::ranges::replace(path, '/', '\\');
   }
 
-  // Path is already fully decoded, just return it
+  uri_unescape_all_inplace(path);
   return path;
 }
 

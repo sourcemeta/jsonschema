@@ -17,15 +17,36 @@ auto escape_component_to_string(std::string &output, std::string_view input,
                                 const URIEscapeMode mode) -> void {
   output.reserve(output.size() + input.size() * 3);
 
-  for (const char character : input) {
+  for (std::string_view::size_type index = 0; index < input.size(); ++index) {
+    const char character = input[index];
+
+    // Preserve existing percent-encoded sequences
+    if (character == URI_PERCENT && index + 2 < input.size() &&
+        std::isxdigit(static_cast<unsigned char>(input[index + 1])) &&
+        std::isxdigit(static_cast<unsigned char>(input[index + 2]))) {
+      output += input[index];
+      output += input[index + 1];
+      output += input[index + 2];
+      index += 2;
+      continue;
+    }
+
     if (uri_is_unreserved(character)) {
       output += character;
       continue;
     }
 
-    if (mode == URIEscapeMode::SkipSubDelims ||
+    if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
         mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem) {
       if (uri_is_sub_delim(character)) {
+        output += character;
+        continue;
+      }
+    }
+
+    if (mode == URIEscapeMode::Path) {
+      if (character == URI_COLON || character == URI_AT ||
+          character == URI_SLASH) {
         output += character;
         continue;
       }
@@ -132,9 +153,9 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
     if (result_scheme.has_value() && !has_authority &&
         path_value.starts_with("/") && !path_value.starts_with("//")) {
       escape_component_to_string(result, path_value.substr(1),
-                                 URIEscapeMode::Fragment);
+                                 URIEscapeMode::Path);
     } else {
-      escape_component_to_string(result, path_value, URIEscapeMode::Fragment);
+      escape_component_to_string(result, path_value, URIEscapeMode::Path);
     }
   }
 
