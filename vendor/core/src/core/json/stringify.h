@@ -6,6 +6,9 @@
 #include "grammar.h"
 
 #include <algorithm> // std::transform, std::sort
+#include <array>     // std::array
+#include <cassert>   // assert
+#include <charconv>  // std::to_chars
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::int64_t
 #include <iomanip>   // std::setprecision
@@ -82,11 +85,12 @@ auto stringify(
     stream.flags(flags);
     stream.precision(precision);
   } else {
-    const auto flags{stream.flags()};
-    const auto precision{stream.precision()};
-    stream << std::noshowpoint << value;
-    stream.flags(flags);
-    stream.precision(precision);
+    std::array<char, 64> buffer{};
+    const auto result{
+        std::to_chars(buffer.data(), buffer.data() + buffer.size(), value)};
+    // This can't realistically happen on production given the buffer size
+    assert(result.ec == std::errc{});
+    stream.write(buffer.data(), result.ptr - buffer.data());
   }
 }
 
