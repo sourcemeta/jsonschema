@@ -33,4 +33,5 @@ eslint.config.mjs
 package.json
 package-lock.json
 npm
+release.sh
 Dockerfile.test.alpine
