@@ -440,6 +440,55 @@ auto is_pre_vocabulary_base_dialect(
 }
 } // namespace
 
+auto sourcemeta::core::parse_vocabularies(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaBaseDialect base_dialect)
+    -> std::optional<sourcemeta::core::Vocabularies> {
+  if (base_dialect !=
+          sourcemeta::core::SchemaBaseDialect::JSON_Schema_2020_12 &&
+      base_dialect !=
+          sourcemeta::core::SchemaBaseDialect::JSON_Schema_2020_12_Hyper &&
+      base_dialect !=
+          sourcemeta::core::SchemaBaseDialect::JSON_Schema_2019_09 &&
+      base_dialect !=
+          sourcemeta::core::SchemaBaseDialect::JSON_Schema_2019_09_Hyper) {
+    return std::nullopt;
+  }
+
+  if (!schema.is_object()) {
+    return std::nullopt;
+  }
+
+  const auto *vocabulary_entry{schema.try_at("$vocabulary")};
+  if (!vocabulary_entry) {
+    return std::nullopt;
+  }
+
+  assert(vocabulary_entry->is_object());
+  sourcemeta::core::Vocabularies result;
+  for (const auto &entry : vocabulary_entry->as_object()) {
+    assert(entry.second.is_boolean());
+    result.insert(entry.first, entry.second.to_boolean());
+  }
+
+  return result;
+}
+
+auto sourcemeta::core::parse_vocabularies(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::core::SchemaResolver &resolver,
+    std::string_view default_dialect)
+    -> std::optional<sourcemeta::core::Vocabularies> {
+  const auto schema_base_dialect{
+      sourcemeta::core::base_dialect(schema, resolver, default_dialect)};
+  if (schema_base_dialect.has_value()) {
+    return sourcemeta::core::parse_vocabularies(schema,
+                                                schema_base_dialect.value());
+  } else {
+    return std::nullopt;
+  }
+}
+
 auto sourcemeta::core::vocabularies(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::core::SchemaResolver &resolver,
@@ -545,16 +594,10 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
    * dialect
    */
 
-  Vocabularies result;
   const auto core{core_vocabulary_known(base_dialect)};
-  if (schema_dialect.defines("$vocabulary")) {
-    const sourcemeta::core::JSON &vocabularies{
-        schema_dialect.at("$vocabulary")};
-    assert(vocabularies.is_object());
-    for (const auto &entry : vocabularies.as_object()) {
-      result.insert(entry.first, entry.second.to_boolean());
-    }
-  } else {
+  auto result{parse_vocabularies(schema_dialect, base_dialect)
+                  .value_or(Vocabularies{})};
+  if (result.empty()) {
     result.insert(core, true);
   }
 
