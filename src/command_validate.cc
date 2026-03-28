@@ -13,6 +13,7 @@
 #include <iostream>    // std::cerr
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::as_const
 
 #include "command.h"
 #include "configuration.h"
@@ -173,15 +174,19 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                         : sourcemeta::core::read_yaml_or_json(schema_path)};
 
   if (options.contains("path") && !options.at("path").empty()) {
+    // Invalid pointer syntax is handled by to_pointer(), consistent with
+    // --entrypoint behavior.
     const auto path_string{std::string{options.at("path").front()}};
     const auto pointer{sourcemeta::core::to_pointer(path_string)};
     const auto *const result{sourcemeta::core::try_get(schema, pointer)};
     // We intentionally reuse NotSchemaError here to align with existing CLI
     // error semantics without introducing a new error type.
     if (!result) {
-      throw NotSchemaError{schema_from_stdin ? stdin_path()
-                                             : schema_resolution_base};
+      throw NotSchemaError{schema_resolution_base};
     }
+    // Note: extracting a sub-schema may break $ref references outside the
+    // selected subtree. This is expected behavior for --path given the current
+    // CLI design.
     // `result` points into `schema`, so we must copy before reassigning to
     // avoid a use-after-free (the copy assignment destroys schema's storage
     // before reading from other when they alias).
