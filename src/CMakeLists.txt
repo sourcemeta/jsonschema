@@ -8,6 +8,7 @@ add_executable(jsonschema_cli
   command_lint.cc
   command_metaschema.cc
   command_validate.cc
+  command_compatibility.cc
   command_encode.cc
   command_decode.cc
   command_compile.cc
