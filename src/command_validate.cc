@@ -151,6 +151,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         schema_path, std::make_error_code(std::errc::is_a_directory)};
   }
 
+  if (options.contains("path") && !options.at("path").empty() &&
+      options.contains("template") && !options.at("template").empty()) {
+    throw OptionConflictError{
+        "The --path option cannot be used with --template"};
+  }
+
   const auto schema_config_base{schema_from_stdin
                                     ? std::filesystem::current_path()
                                     : std::filesystem::path(schema_path)};
@@ -162,9 +168,26 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  const auto schema{schema_from_stdin
-                        ? read_from_stdin().document
+  sourcemeta::core::JSON schema{
+      schema_from_stdin ? read_from_stdin().document
                         : sourcemeta::core::read_yaml_or_json(schema_path)};
+
+  if (options.contains("path") && !options.at("path").empty()) {
+    const auto path_string{std::string{options.at("path").front()}};
+    const auto pointer{sourcemeta::core::to_pointer(path_string)};
+    const auto *const result{sourcemeta::core::try_get(schema, pointer)};
+    // We intentionally reuse NotSchemaError here to align with existing CLI
+    // error semantics without introducing a new error type.
+    if (!result) {
+      throw NotSchemaError{schema_from_stdin ? stdin_path()
+                                             : schema_resolution_base};
+    }
+    // `result` points into `schema`, so we must copy before reassigning to
+    // avoid a use-after-free (the copy assignment destroys schema's storage
+    // before reading from other when they alias).
+    sourcemeta::core::JSON subschema{*result};
+    schema = std::move(subschema);
+  }
 
   if (!sourcemeta::core::is_schema(schema)) {
     throw NotSchemaError{schema_from_stdin ? stdin_path()
@@ -195,9 +218,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const sourcemeta::core::JSON bundled{[&]() {
     try {
-      return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
-                                      custom_resolver, dialect,
-                                      schema_default_id);
+      return sourcemeta::core::bundle(
+          std::as_const(schema), sourcemeta::core::schema_walker,
+          custom_resolver, dialect, schema_default_id);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           schema_resolution_base, error);

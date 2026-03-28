@@ -38,6 +38,7 @@ Commands:
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
+            [--path <pointer>]
 
        Validate one or more instances against the given schema.
 
@@ -51,6 +52,10 @@ Commands:
        `compile` command). However, you still need to pass the original schema
        for error reporting purposes. Make sure they match or you will get
        non-sense results.
+
+       Use --path to extract a sub-schema from the input document using
+       a JSON Pointer before validation. This is useful for validating
+       against schemas embedded in larger documents, such as OpenAPI.
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
@@ -182,6 +187,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("template", {"m"});
     app.option("loop", {"l"});
     app.option("entrypoint", {"p"});
+    app.option("path", {});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::validate(app);
     return EXIT_SUCCESS;
