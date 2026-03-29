@@ -3,14 +3,12 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <filesystem>  // std::filesystem
-#include <iostream>    // std::cout
-#include <string>      // std::string
-#include <string_view> // std::string_view
-
 #include "command.h"
 #include "error.h"
 #include "input.h"
+#include <filesystem> // std::filesystem
+#include <iostream>   // std::cout
+#include <string>     // std::string
 
 namespace {
 
@@ -19,7 +17,7 @@ struct LoadedSchema {
   sourcemeta::core::JSON document;
 };
 
-auto read_schema(const std::string_view source) -> LoadedSchema {
+auto read_schema(const std::string &source) -> LoadedSchema {
   const std::filesystem::path path{source};
   const bool from_stdin = (path == "-");
 
@@ -42,11 +40,11 @@ auto read_schema(const std::string_view source) -> LoadedSchema {
 }
 
 auto option_value_or_default(const sourcemeta::core::Options &options,
-                             const std::string_view name,
-                             const std::string_view fallback) -> std::string {
-  const auto option_name{std::string{name}};
+                             const std::string &name,
+                             const std::string &fallback) -> std::string {
+  const auto &option_name{name};
   if (!options.contains(option_name) || options.at(option_name).empty()) {
-    return std::string{fallback};
+    return fallback;
   }
 
   return std::string{options.at(option_name).front()};
