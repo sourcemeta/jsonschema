@@ -27,7 +27,7 @@ auto read_schema(const std::string &source) -> LoadedSchema {
         std::make_error_code(std::errc::is_a_directory)};
   }
 
-  auto document{from_stdin ? read_from_stdin().document
+  auto document{from_stdin ? sourcemeta::jsonschema::read_from_stdin().document
                            : sourcemeta::core::read_yaml_or_json(path)};
   const auto display_path{from_stdin ? sourcemeta::jsonschema::stdin_path()
                                      : path};
