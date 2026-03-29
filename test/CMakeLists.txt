@@ -693,6 +693,11 @@ add_jsonschema_test_unix(lint/fail_stdin_lint)
 add_jsonschema_test_unix(lint/fail_stdin_duplicate)
 add_jsonschema_test_unix(lint/fail_stdin_invalid_json)
 
+# Compat
+add_jsonschema_test_unix(compat/pass_basic)
+add_jsonschema_test_unix(compat/pass_json)
+add_jsonschema_test_unix(compat/fail_on_breaking)
+
 # Install
 add_jsonschema_test_unix(install/fail_no_configuration)
 add_jsonschema_test_unix(install/pass_no_dependencies)

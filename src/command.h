@@ -7,6 +7,7 @@ namespace sourcemeta::jsonschema {
 auto fmt(const sourcemeta::core::Options &options) -> void;
 auto inspect(const sourcemeta::core::Options &options) -> void;
 auto bundle(const sourcemeta::core::Options &options) -> void;
+auto compat(const sourcemeta::core::Options &options) -> void;
 auto test(const sourcemeta::core::Options &options) -> void;
 auto lint(const sourcemeta::core::Options &options) -> void;
 auto validate(const sourcemeta::core::Options &options) -> void;

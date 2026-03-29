@@ -14,6 +14,7 @@ _jsonschema() {
     'fmt:Format schemas in-place or check formatting'
     'lint:Lint schemas and optionally fix issues'
     'bundle:Inline remote references in a schema'
+    'compat:Compare two schema versions for compatibility'
     'inspect:Display schema locations and references'
     'canonicalize:Transform a schema into a canonical form'
     'encode:Encode JSON using JSON BinPack'
@@ -112,6 +113,13 @@ _jsonschema() {
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
             '(--without-id -w)'{--without-id,-w}'[Bundle without ID]' \
             '1:schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
+        compat)
+          _arguments \
+            ${global_options[@]} \
+            '(--fail-on-breaking)'--fail-on-breaking'[Return a non-zero exit code when breaking changes exist]' \
+            '1:old schema file:_files -g "*.json *.yaml *.yml"' \
+            '2:new schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         inspect)
           _arguments \

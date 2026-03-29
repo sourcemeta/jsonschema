@@ -99,6 +99,14 @@ Commands:
        Perform JSON Schema Bundling on a schema to inline remote references,
        printing the result to standard output.
 
+   compat <old_schema.json|.yaml> <new_schema.json|.yaml>
+          [--fail-on-breaking]
+
+       Compare two schema versions and report breaking, warning, and safe
+       compatibility changes. Pass --json/-j for machine-readable output.
+       Pass --fail-on-breaking to return a non-zero exit code when breaking
+       changes are detected.
+
    inspect <schema.json|.yaml>
 
        Statically inspect a schema to display schema locations and
@@ -158,6 +166,11 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::bundle(app);
+    return EXIT_SUCCESS;
+  } else if (command == "compat") {
+    app.flag("fail-on-breaking", {});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::compat(app);
     return EXIT_SUCCESS;
   } else if (command == "lint") {
     app.flag("fix", {"f"});
