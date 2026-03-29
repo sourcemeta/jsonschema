@@ -4,6 +4,7 @@
 #include <sourcemeta/core/options.h>
 
 namespace sourcemeta::jsonschema {
+auto compat(const sourcemeta::core::Options &options) -> void;
 auto fmt(const sourcemeta::core::Options &options) -> void;
 auto inspect(const sourcemeta::core::Options &options) -> void;
 auto bundle(const sourcemeta::core::Options &options) -> void;

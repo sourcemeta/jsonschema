@@ -82,6 +82,7 @@ Schema CLI without passing a command will print convenient reference
 documentation:
 
 - [`jsonschema version`](./docs/version.markdown)
+- [`jsonschema compat`](./docs/compat.markdown) (prototype for schema compatibility checking)
 - [`jsonschema validate`](./docs/validate.markdown)
 - [`jsonschema metaschema`](./docs/metaschema.markdown) (ensure a schema is valid)
 - [`jsonschema compile`](./docs/compile.markdown) (for pre-compiling schemas)

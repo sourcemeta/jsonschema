@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen install version help"
+  commands="compat compatibility validate metaschema compile test fmt lint bundle inspect canonicalize encode decode codegen install version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g"
 
@@ -55,20 +55,64 @@ _jsonschema() {
     --loop|-l)
       return 0
       ;;
-    --exclude|-x|--only|-o)
+    --exclude|--only|-o)
       return 0
       ;;
-    --template|-m)
+    -x)
+      if [ "${command}" = "compat" ] || [ "${command}" = "compatibility" ]
+      then
+        COMPREPLY=( $(compgen -W "none warning breaking" -- "${current}") )
+      fi
+      return 0
+      ;;
+    --template)
       COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
+      return 0
+      ;;
+    -m)
+      if [ "${command}" = "validate" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
+      elif [ "${command}" = "compat" ] || [ "${command}" = "compatibility" ]
+      then
+        COMPREPLY=( $(compgen -W "backward forward full" -- "${current}") )
+      fi
       return 0
       ;;
     --target|-t)
       COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
       return 0
       ;;
+    --mode)
+      COMPREPLY=( $(compgen -W "backward forward full" -- "${current}") )
+      return 0
+      ;;
+    --format|-f)
+      if [ "${command}" = "compat" ] || [ "${command}" = "compatibility" ]
+      then
+        COMPREPLY=( $(compgen -W "text json" -- "${current}") )
+      fi
+      return 0
+      ;;
+    --fail-on)
+      if [ "${command}" = "compat" ] || [ "${command}" = "compatibility" ]
+      then
+        COMPREPLY=( $(compgen -W "none warning breaking" -- "${current}") )
+      fi
+      return 0
+      ;;
   esac
 
   case "${command}" in
+    compat|compatibility)
+      local options="--mode -m --format -f --fail-on -x"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      ;;
     validate)
       local options="--benchmark -b --loop -l --extension -e --ignore -i --trace -t --fast -f --template -m"
       if [[ ${current} == -* ]]

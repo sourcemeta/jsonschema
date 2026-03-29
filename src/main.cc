@@ -34,6 +34,15 @@ Commands:
 
        Print this command reference help.
 
+   compat / compatibility <base-schema.json|.yaml> <candidate-schema.json|.yaml>
+           [--mode/-m <backward|forward|full>]
+           [--format/-f <text|json>]
+           [--fail-on/-x <none|warning|breaking>]
+
+       Compare two schemas using a compatibility-oriented command surface.
+       This prototype validates inputs and reserves the final CLI contract
+       while the semantic comparison engine is integrated.
+
    validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
@@ -139,7 +148,14 @@ For more documentation, visit https://github.com/sourcemeta/jsonschema
 auto jsonschema_main(const std::string &program, const std::string &command,
                      sourcemeta::core::Options &app, int argc, char *argv[])
     -> int {
-  if (command == "fmt") {
+  if (command == "compat" || command == "compatibility") {
+    app.option("mode", {"m"});
+    app.option("format", {"f"});
+    app.option("fail-on", {"x"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::compat(app);
+    return EXIT_SUCCESS;
+  } else if (command == "fmt") {
     app.flag("check", {"c"});
     app.flag("keep-ordering", {"k"});
     app.option("extension", {"e"});

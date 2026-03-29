@@ -7,6 +7,8 @@ _jsonschema() {
 
   local -a commands
   commands=(
+    'compat:Compare two schema versions (prototype)'
+    'compatibility:Alias for compat'
     'validate:Validate instances against a schema'
     'metaschema:Validate schemas against their metaschemas'
     'compile:Compile a schema into an optimised representation'
@@ -46,6 +48,15 @@ _jsonschema() {
     option-or-argument)
       local command=$line[1]
       case $command in
+        compat|compatibility)
+          _arguments \
+            ${global_options[@]} \
+            '(--mode -m)'{--mode,-m}'[Select compatibility mode]:mode:(backward forward full)' \
+            '(--format -f)'{--format,-f}'[Select output format]:format:(text json)' \
+            '(--fail-on -x)'{--fail-on,-x}'[Fail when findings reach this level]:threshold:(none warning breaking)' \
+            '1:base schema file:_files -g "*.json *.yaml *.yml"' \
+            '2:candidate schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
         validate)
           _arguments \
             ${global_options[@]} \

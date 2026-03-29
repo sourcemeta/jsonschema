@@ -27,6 +27,10 @@ add_jsonschema_test_unix(option_without_value)
 add_jsonschema_test_unix(flag_with_value)
 add_jsonschema_test_unix(autocomplete_bash)
 add_jsonschema_test_unix(autocomplete_zsh)
+add_jsonschema_test_unix(compat/fail_no_schema)
+add_jsonschema_test_unix(compat/fail_invalid_mode)
+add_jsonschema_test_unix(compat/pass_text_output)
+add_jsonschema_test_unix(compat/pass_json_output)
 
 # Format
 add_jsonschema_test_unix(format/pass_single)

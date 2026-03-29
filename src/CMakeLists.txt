@@ -1,6 +1,7 @@
 add_executable(jsonschema_cli
   main.cc configure.h.in command.h
   utils.h error.h exit_code.h logger.h configuration.h input.h resolver.h
+  command_compat.cc
   command_fmt.cc
   command_inspect.cc
   command_bundle.cc
