@@ -3,9 +3,9 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <filesystem> // std::filesystem
-#include <iostream>   // std::cout
-#include <string>     // std::string
+#include <filesystem>  // std::filesystem
+#include <iostream>    // std::cout
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 #include "command.h"
@@ -81,7 +81,8 @@ auto sourcemeta::jsonschema::compat(const sourcemeta::core::Options &options)
   auto fail_on{option_value_or_default(options, "fail-on", "breaking")};
   if (fail_on != "none" && fail_on != "warning" && fail_on != "breaking") {
     throw InvalidOptionEnumerationValueError{
-        "Unknown compatibility failure threshold", "fail-on",
+        "Unknown compatibility failure threshold",
+        "fail-on",
         {"none", "warning", "breaking"}};
   }
 
