@@ -1,18 +1,23 @@
-#include "command.h"
+#include <sourcemeta/core/options.h>
 #include <iostream>
-#include <format> // C++20 
+#include <format>
+#include <vector>
+#include <string>
 
 namespace sourcemeta::jsonschema {
 
-void compatibility(const Command &app) {
+void compatibility(const sourcemeta::core::Options &app) {
+ 
+    const std::vector<std::string> args = app.args();
 
     if (args.size() < 2) {
-        std::cerr << "Error: compatibility requires a base schema and a new schema.\n";
+        std::cerr << "Error: compatibility requires two schemas to compare.\n";
         return;
     }
 
+
     std::cout << std::format("Comparing: {} <-> {}\n", args[0], args[1]);
-    std::cout << "[MOCK] Compatibility check: PASS\n";
+    std::cout << "Compatibility check completed (Boilerplate implementation).\n";
 }
 
 }
