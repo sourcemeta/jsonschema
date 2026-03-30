@@ -7,16 +7,17 @@
 namespace sourcemeta::jsonschema {
 
 
-auto compatibility(const sourcemeta::core::Options &app_options) -> void {
-    const std::vector<std::string_view> &args = app_options.positional();
+auto compatibility(const sourcemeta::core::Options &app) -> void {
 
-    if (args.size() < 2) {
-        std::cerr << "Error: compatibility requires two schemas to compare.\n";
-        return;
-    }
+  const std::vector<std::string_view> &args = app.arguments;
 
-    std::cout << "Comparing: " << args[0] << " <-> " << args[1] << "\n";
-    std::cout << "Compatibility check completed.\n";
+  if (args.size() < 2) {
+    std::cerr << "Error: compatibility requires two schemas to compare.\n";
+    return;
+  }
+
+  std::cout << "Comparing: " << args[0] << " <-> " << args[1] << "\n";
+  std::cout << "Compatibility check completed.\n";
 }
 
 } 
