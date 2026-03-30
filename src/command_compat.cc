@@ -5,7 +5,6 @@
 
 #include "command.h"
 #include "error.h"
-#include "input.h"
 #include <filesystem> // std::filesystem
 #include <iostream>   // std::cout
 #include <string>     // std::string
@@ -18,16 +17,14 @@ struct LoadedSchema {
 };
 
 auto read_schema(const std::string &source) -> LoadedSchema {
-  const std::filesystem::path path{source};
-  const bool from_stdin = (path == "-");
-
-  if (from_stdin) {
+  if (source == "-") {
     throw sourcemeta::jsonschema::StdinError{
         "This command does not support reading schemas from standard input "
         "yet"};
   }
 
-  if (!from_stdin && std::filesystem::is_directory(path)) {
+  const std::filesystem::path path{source};
+  if (std::filesystem::is_directory(path)) {
     throw std::filesystem::filesystem_error{
         "The input was supposed to be a file but it is a directory", path,
         std::make_error_code(std::errc::is_a_directory)};
@@ -65,8 +62,6 @@ auto sourcemeta::jsonschema::compat(const sourcemeta::core::Options &options)
         "jsonschema compat path/to/base.schema.json "
         "path/to/candidate.schema.json"};
   }
-
-  check_no_duplicate_stdin(options.positional());
 
   auto mode{option_value_or_default(options, "mode", "backward")};
   if (mode != "backward" && mode != "forward" && mode != "full") {
