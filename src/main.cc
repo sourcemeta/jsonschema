@@ -116,6 +116,12 @@ Commands:
        Generate code from a JSON Schema. Currently only supports
        --target/-t set to typescript and JSON Schema 2020-12.
 
+   compatibility <schema1.json> <schema2.json>
+                [--severity/-s <level>] [--format/-f <format>]
+                [--fail-on/-o <condition>]
+
+       Check if two JSON schemas are compatible and detect breaking changes.
+
    encode <document.json|.jsonl> <output.binpack>
 
        Encode a JSON document or JSONL dataset using JSON BinPack.
@@ -188,7 +194,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "compatibility") {
     app.option("severity", {"s"});
     app.option("format", {"f"});
-    app.option("fail-on", {"o"}); 
+    app.option("fail-on", {"o"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compatibility(app);
     return EXIT_SUCCESS;
