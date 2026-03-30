@@ -5,9 +5,10 @@
 
 #include "command.h"
 #include "error.h"
-#include <filesystem> // std::filesystem
-#include <iostream>   // std::cout
-#include <string>     // std::string
+#include <filesystem>  // std::filesystem
+#include <iostream>    // std::cout
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace {
 
@@ -16,14 +17,14 @@ struct LoadedSchema {
   sourcemeta::core::JSON document;
 };
 
-auto read_schema(const std::string &source) -> LoadedSchema {
+auto read_schema(const std::string_view source) -> LoadedSchema {
   if (source == "-") {
     throw sourcemeta::jsonschema::StdinError{
         "This command does not support reading schemas from standard input "
         "yet"};
   }
 
-  const std::filesystem::path path{source};
+  const std::filesystem::path path{std::string{source}};
   if (std::filesystem::is_directory(path)) {
     throw std::filesystem::filesystem_error{
         "The input was supposed to be a file but it is a directory", path,
