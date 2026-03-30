@@ -7,12 +7,13 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonpointer_error.h>
 
-#include <cstdint>     // std::uint64_t
-#include <istream>     // std::basic_istream
-#include <sstream>     // std::basic_stringstream
-#include <stdexcept>   // std::out_of_range
-#include <string>      // std::stoi
-#include <type_traits> // std::conditional_t
+#include <charconv>     // std::from_chars
+#include <cstdint>      // std::uint64_t
+#include <istream>      // std::basic_istream
+#include <sstream>      // std::basic_stringstream
+#include <string>       // std::string
+#include <system_error> // std::errc
+#include <type_traits>  // std::conditional_t
 
 namespace sourcemeta::core::internal {
 template <typename CharT, typename Traits,
@@ -28,12 +29,16 @@ template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
 inline auto
 parse_index(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
-            const std::uint64_t column) -> decltype(auto) {
-  try {
-    return std::stoul(stream.str());
-  } catch (const std::out_of_range &) {
+            const std::uint64_t column) -> unsigned long {
+  const auto input = stream.str();
+  unsigned long index_value{};
+  const auto result =
+      std::from_chars(input.data(), input.data() + input.size(), index_value);
+  if (result.ec != std::errc{}) [[unlikely]] {
     throw PointerParseError(column);
   }
+
+  return index_value;
 }
 
 } // namespace sourcemeta::core::internal

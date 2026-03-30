@@ -7,11 +7,13 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <bitset>        // std::bitset
-#include <cassert>       // assert
-#include <cstdint>       // std::uint32_t, std::size_t
+#include <bitset>  // std::bitset
+#include <cassert> // assert
+#include <cstdint> // std::uint32_t, std::size_t
+#include <format> // std::formatter, std::format_context, std::format_parse_context, std::format_to
 #include <optional>      // std::optional
 #include <ostream>       // std::ostream
+#include <sstream>       // std::ostringstream
 #include <stdexcept>     // std::out_of_range
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
@@ -164,5 +166,33 @@ SOURCEMETA_CORE_JSONSCHEMA_EXPORT auto
 to_string(const Vocabularies::URI &vocabulary) -> std::string_view;
 
 } // namespace sourcemeta::core
+
+template <> struct std::formatter<sourcemeta::core::Vocabularies::Known> {
+  constexpr auto parse(std::format_parse_context &context)
+      -> decltype(context.begin()) {
+    return context.begin();
+  }
+
+  auto format(const sourcemeta::core::Vocabularies::Known value,
+              std::format_context &context) const -> decltype(context.out()) {
+    std::ostringstream stream;
+    stream << value;
+    return std::format_to(context.out(), "{}", stream.str());
+  }
+};
+
+template <> struct std::formatter<sourcemeta::core::Vocabularies::URI> {
+  constexpr auto parse(std::format_parse_context &context)
+      -> decltype(context.begin()) {
+    return context.begin();
+  }
+
+  auto format(const sourcemeta::core::Vocabularies::URI &value,
+              std::format_context &context) const -> decltype(context.out()) {
+    std::ostringstream stream;
+    stream << value;
+    return std::format_to(context.out(), "{}", stream.str());
+  }
+};
 
 #endif

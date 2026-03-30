@@ -2,7 +2,7 @@
 
 #include "helpers.h"
 
-#include <algorithm>     // std::sort, std::all_of, std::any_of
+#include <algorithm> // std::ranges::all_of, std::ranges::contains, std::ranges::sort
 #include <cassert>       // assert
 #include <functional>    // std::less
 #include <map>           // std::map
@@ -105,11 +105,10 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
            sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_6))) {
     if (schema.defines("$id")) {
       assert(schema.at("$id").is_string());
-      const auto &id_string{schema.at("$id").to_string()};
-      if (id_string.starts_with('#')) {
+      const std::string_view id_view{schema.at("$id").to_string()};
+      if (id_view.starts_with('#')) {
         // The original string is "#fragment", skip the '#'
-        result.emplace_back(std::string_view{id_string}.substr(1),
-                            AnchorType::Static);
+        result.emplace_back(id_view.substr(1), AnchorType::Static);
       }
     }
   }
@@ -121,11 +120,10 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
           sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_4)) {
     if (schema.defines("id")) {
       assert(schema.at("id").is_string());
-      const auto &id_string{schema.at("id").to_string()};
-      if (id_string.starts_with('#')) {
+      const std::string_view id_view{schema.at("id").to_string()};
+      if (id_view.starts_with('#')) {
         // The original string is "#fragment", skip the '#'
-        result.emplace_back(std::string_view{id_string}.substr(1),
-                            AnchorType::Static);
+        result.emplace_back(id_view.substr(1), AnchorType::Static);
       }
     }
   }
@@ -242,26 +240,26 @@ auto supports_id_anchors(const sourcemeta::core::SchemaBaseDialect base_dialect)
 
 auto set_base_and_fragment(
     sourcemeta::core::SchemaFrame::ReferencesEntry &entry) -> void {
-  if (entry.destination.empty()) {
+  const std::string_view destination_view{entry.destination};
+  if (destination_view.empty()) {
     entry.base = std::string_view{};
     entry.fragment = std::nullopt;
     return;
   }
 
-  const auto hash_position{entry.destination.find('#')};
+  const auto hash_position{destination_view.find('#')};
   if (hash_position != std::string::npos) {
     // Has a fragment
     if (hash_position == 0) {
       // Starts with #, so no base
       entry.base = std::string_view{};
     } else {
-      entry.base = std::string_view{entry.destination}.substr(0, hash_position);
+      entry.base = destination_view.substr(0, hash_position);
     }
-    entry.fragment =
-        std::string_view{entry.destination}.substr(hash_position + 1);
+    entry.fragment = destination_view.substr(hash_position + 1);
   } else {
     // No fragment
-    entry.base = std::string_view{entry.destination};
+    entry.base = destination_view;
     entry.fragment = std::nullopt;
   }
 }
@@ -627,9 +625,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
 
             auto base_uri_match{base_uris.find(common_pointer_weak)};
             if (base_uri_match != base_uris.cend()) {
-              if (std::find(base_uri_match->second.cbegin(),
-                            base_uri_match->second.cend(),
-                            new_id) == base_uri_match->second.cend()) {
+              if (!std::ranges::contains(base_uri_match->second, new_id)) {
                 base_uri_match->second.push_back(new_id);
               }
             } else {
@@ -1270,25 +1266,6 @@ auto SchemaFrame::dereference(const Location &location,
                              maybe_reference_entry->second.destination})};
   assert(destination != this->locations_.cend());
   return {SchemaReferenceType::Static, destination->second};
-}
-
-auto SchemaFrame::for_each_resource_uri(
-    const std::function<void(std::string_view)> &callback) const -> void {
-  for (const auto &[key, location] : this->locations_) {
-    if (location.type == LocationType::Resource) {
-      callback(key.second);
-    }
-  }
-}
-
-auto SchemaFrame::for_each_unresolved_reference(
-    const std::function<void(const WeakPointer &, const ReferencesEntry &)>
-        &callback) const -> void {
-  for (const auto &[key, reference] : this->references_) {
-    if (!this->traverse(reference.destination).has_value()) {
-      callback(key.second, reference);
-    }
-  }
 }
 
 auto SchemaFrame::has_references_to(const WeakPointer &pointer) const -> bool {

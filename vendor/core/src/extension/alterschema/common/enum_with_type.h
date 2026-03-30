@@ -32,7 +32,7 @@ public:
     const auto current_types{parse_schema_type(schema.at("type"))};
     ONLY_CONTINUE_IF(std::ranges::all_of(
         schema.at("enum").as_array(), [&current_types](const auto &item) {
-          return current_types.test(static_cast<std::size_t>(item.type()));
+          return current_types.test(std::to_underlying(item.type()));
         }));
 
     return APPLIES_TO_KEYWORDS("enum", "type");

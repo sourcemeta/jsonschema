@@ -11,6 +11,7 @@
 #include <sourcemeta/core/jsonschema_types.h>
 #include <sourcemeta/core/jsonschema_walker.h>
 
+#include <concepts>      // std::invocable
 #include <cstdint>       // std::uint8_t
 #include <functional>    // std::reference_wrapper
 #include <map>           // std::map
@@ -127,6 +128,8 @@ public:
   /// A JSON Schema reference frame is a mapping of URIs to schema identifiers,
   /// JSON Pointers within the schema, and subschemas dialects. We call it
   /// reference frame as this mapping is essential for resolving references.
+  // TODO: Consider replacing std::map with std::flat_map once libc++
+  // supports it (__cpp_lib_flat_map) for better cache locality
   using Locations =
       // While it might seem weird that we namespace the location URIs with a
       // reference type, it is essential for distinguishing schema resource URIs
@@ -209,14 +212,25 @@ public:
                    std::optional<std::reference_wrapper<const Location>>>;
 
   /// Iterate over all resource URIs in the frame
-  auto for_each_resource_uri(
-      const std::function<void(std::string_view)> &callback) const -> void;
+  template <std::invocable<std::string_view> F>
+  auto for_each_resource_uri(const F &callback) const -> void {
+    for (const auto &[key, location] : this->locations_) {
+      if (location.type == LocationType::Resource) {
+        callback(key.second);
+      }
+    }
+  }
 
   /// Iterate over all unresolved references (where destination cannot be
   /// traversed)
-  auto for_each_unresolved_reference(
-      const std::function<void(const WeakPointer &, const ReferencesEntry &)>
-          &callback) const -> void;
+  template <std::invocable<const WeakPointer &, const ReferencesEntry &> F>
+  auto for_each_unresolved_reference(const F &callback) const -> void {
+    for (const auto &[key, reference] : this->references_) {
+      if (!this->traverse(reference.destination).has_value()) {
+        callback(key.second, reference);
+      }
+    }
+  }
 
   /// Check if there are any references to a given location pointer
   [[nodiscard]] auto has_references_to(const WeakPointer &pointer) const

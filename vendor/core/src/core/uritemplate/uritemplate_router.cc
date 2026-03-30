@@ -95,11 +95,22 @@ inline auto extract_segment(const char *start, const char *end)
 } // namespace
 
 auto URITemplateRouter::add(const std::string_view uri_template,
-                            const Identifier identifier) -> void {
+                            const Identifier identifier,
+                            const std::span<const Argument> arguments) -> void {
   assert(identifier > 0);
 
   if (uri_template.empty()) {
     this->root_.identifier = identifier;
+    if (!arguments.empty()) {
+      assert(std::ranges::none_of(this->arguments_,
+                                  [&identifier](const auto &entry) {
+                                    return entry.first == identifier;
+                                  }));
+      this->arguments_.emplace_back(
+          identifier,
+          std::vector<Argument>{arguments.begin(), arguments.end()});
+    }
+
     return;
   }
 
@@ -257,11 +268,39 @@ auto URITemplateRouter::add(const std::string_view uri_template,
 
   if (!absorbed && current != nullptr) {
     current->identifier = identifier;
+    if (!arguments.empty()) {
+      assert(std::ranges::none_of(this->arguments_,
+                                  [&identifier](const auto &entry) {
+                                    return entry.first == identifier;
+                                  }));
+      this->arguments_.emplace_back(
+          identifier,
+          std::vector<Argument>{arguments.begin(), arguments.end()});
+    }
   }
 }
 
 auto URITemplateRouter::root() const noexcept -> const Node & {
   return this->root_;
+}
+
+auto URITemplateRouter::arguments(const Identifier identifier,
+                                  const ArgumentCallback &callback) const
+    -> void {
+  for (const auto &entry : this->arguments_) {
+    if (entry.first == identifier) {
+      for (const auto &argument : entry.second) {
+        callback(argument.first, argument.second);
+      }
+
+      return;
+    }
+  }
+}
+
+auto URITemplateRouter::arguments() const noexcept
+    -> const std::vector<std::pair<Identifier, std::vector<Argument>>> & {
+  return this->arguments_;
 }
 
 auto URITemplateRouter::match(const std::string_view path,

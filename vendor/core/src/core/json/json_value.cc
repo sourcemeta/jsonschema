@@ -1,19 +1,19 @@
 #include <sourcemeta/core/json_array.h>
 #include <sourcemeta/core/json_value.h>
 
-#include <algorithm>        // std::find
+#include <algorithm>        // std::ranges::contains, std::ranges::fold_left
 #include <cassert>          // assert
 #include <cmath>            // std::isinf, std::isnan, std::modf
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
-#include <numeric>          // std::transform
+#include <memory>           // std::construct_at
 #include <sstream>          // std::basic_istringstream
 #include <stdexcept>        // std::invalid_argument
 #include <string>           // std::to_string
 #include <string_view>      // std::basic_string_view
-#include <utility>          // std::move
+#include <utility>          // std::exchange, std::move
 #include <vector>           // std::vector
 
 namespace sourcemeta::core {
@@ -52,16 +52,16 @@ JSON::JSON(const bool value) : current_type{Type::Boolean} {
 JSON::JSON(const std::nullptr_t) {}
 
 JSON::JSON(const String &value) : current_type{Type::String} {
-  new (&this->data_string) String{value};
+  std::construct_at(&this->data_string, value);
 }
 
 JSON::JSON(const std::basic_string_view<Char, CharTraits> &value)
     : current_type{Type::String} {
-  new (&this->data_string) String{value};
+  std::construct_at(&this->data_string, value);
 }
 
 JSON::JSON(const Char *const value) : current_type{Type::String} {
-  new (&this->data_string) String{value};
+  std::construct_at(&this->data_string, value);
 }
 
 JSON::JSON(std::initializer_list<JSON> values) : current_type{Type::Array} {
@@ -77,20 +77,20 @@ JSON::JSON(std::initializer_list<JSON> values) : current_type{Type::Array} {
     return;
   }
 #endif
-  new (&this->data_array) Array{values};
+  std::construct_at(&this->data_array, values);
 }
 
 JSON::JSON(const Array &value) : current_type{Type::Array} {
-  new (&this->data_array) Array{value};
+  std::construct_at(&this->data_array, value);
 }
 
 JSON::JSON(std::initializer_list<typename Object::pair_value_type> values)
     : current_type{Type::Object} {
-  new (&this->data_object) Object{values};
+  std::construct_at(&this->data_object, values);
 }
 
 JSON::JSON(const Object &value) : current_type{Type::Object} {
-  new (&this->data_object) Object{value};
+  std::construct_at(&this->data_object, value);
 }
 
 JSON::JSON(const Decimal &value) : current_type{Type::Decimal} {
@@ -121,13 +121,13 @@ JSON::JSON(const JSON &other) : current_type{other.current_type} {
       this->data_real = other.data_real;
       break;
     case Type::String:
-      new (&this->data_string) String{other.data_string};
+      std::construct_at(&this->data_string, other.data_string);
       break;
     case Type::Array:
-      new (&this->data_array) Array{other.data_array};
+      std::construct_at(&this->data_array, other.data_array);
       break;
     case Type::Object:
-      new (&this->data_object) Object{other.data_object};
+      std::construct_at(&this->data_object, other.data_object);
       break;
     case Type::Decimal:
       this->data_decimal = new Decimal{*other.data_decimal};
@@ -149,20 +149,19 @@ JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
       this->data_real = other.data_real;
       break;
     case Type::String:
-      new (&this->data_string) String{std::move(other.data_string)};
+      std::construct_at(&this->data_string, std::move(other.data_string));
       other.current_type = Type::Null;
       break;
     case Type::Array:
-      new (&this->data_array) Array{std::move(other.data_array)};
+      std::construct_at(&this->data_array, std::move(other.data_array));
       other.current_type = Type::Null;
       break;
     case Type::Object:
-      new (&this->data_object) Object{std::move(other.data_object)};
+      std::construct_at(&this->data_object, std::move(other.data_object));
       other.current_type = Type::Null;
       break;
     case Type::Decimal:
-      this->data_decimal = other.data_decimal;
-      other.data_decimal = nullptr;
+      this->data_decimal = std::exchange(other.data_decimal, nullptr);
       other.current_type = Type::Null;
       break;
     default:
@@ -184,13 +183,13 @@ auto JSON::operator=(const JSON &other) -> JSON & {
       this->data_real = other.data_real;
       break;
     case Type::String:
-      new (&this->data_string) String{other.data_string};
+      std::construct_at(&this->data_string, other.data_string);
       break;
     case Type::Array:
-      new (&this->data_array) Array{other.data_array};
+      std::construct_at(&this->data_array, other.data_array);
       break;
     case Type::Object:
-      new (&this->data_object) Object{other.data_object};
+      std::construct_at(&this->data_object, other.data_object);
       break;
     case Type::Decimal:
       this->data_decimal = new Decimal{*other.data_decimal};
@@ -216,20 +215,19 @@ auto JSON::operator=(JSON &&other) noexcept -> JSON & {
       this->data_real = other.data_real;
       break;
     case Type::String:
-      new (&this->data_string) String{std::move(other.data_string)};
+      std::construct_at(&this->data_string, std::move(other.data_string));
       other.current_type = Type::Null;
       break;
     case Type::Array:
-      new (&this->data_array) Array{std::move(other.data_array)};
+      std::construct_at(&this->data_array, std::move(other.data_array));
       other.current_type = Type::Null;
       break;
     case Type::Object:
-      new (&this->data_object) Object{std::move(other.data_object)};
+      std::construct_at(&this->data_object, std::move(other.data_object));
       other.current_type = Type::Null;
       break;
     case Type::Decimal:
-      this->data_decimal = other.data_decimal;
-      other.data_decimal = nullptr;
+      this->data_decimal = std::exchange(other.data_decimal, nullptr);
       other.current_type = Type::Null;
       break;
     default:
@@ -455,18 +453,17 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   // which we are not taking into account here, as its typically
   // implementation dependent. This function is just a rough estimate.
   if (this->is_object()) {
-    return std::accumulate(this->as_object().cbegin(), this->as_object().cend(),
-                           static_cast<std::uint64_t>(0),
-                           [](const std::uint64_t accumulator,
-                              const typename Object::value_type &pair) {
-                             return accumulator +
-                                    (pair.first.size() * sizeof(Char)) +
-                                    pair.second.estimated_byte_size();
-                           });
+    return std::ranges::fold_left(this->as_object(),
+                                  static_cast<std::uint64_t>(0),
+                                  [](const std::uint64_t accumulator,
+                                     const typename Object::value_type &pair) {
+                                    return accumulator +
+                                           (pair.first.size() * sizeof(Char)) +
+                                           pair.second.estimated_byte_size();
+                                  });
   } else if (this->is_array()) {
-    return std::accumulate(
-        this->as_array().cbegin(), this->as_array().cend(),
-        static_cast<std::uint64_t>(0),
+    return std::ranges::fold_left(
+        this->as_array(), static_cast<std::uint64_t>(0),
         [](const std::uint64_t accumulator, const JSON &item) {
           return accumulator + item.estimated_byte_size();
         });
@@ -499,21 +496,19 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
     case Type::String:
       return 3 + this->byte_size();
     case Type::Array:
-      return std::accumulate(
-          this->as_array().cbegin(), this->as_array().cend(),
-          static_cast<std::uint64_t>(6),
+      return std::ranges::fold_left(
+          this->as_array(), static_cast<std::uint64_t>(6),
           [](const std::uint64_t accumulator, const JSON &item) {
             return accumulator + 1 + item.fast_hash();
           });
     case Type::Object:
-      return std::accumulate(this->as_object().cbegin(),
-                             this->as_object().cend(),
-                             static_cast<std::uint64_t>(7),
-                             [](const std::uint64_t accumulator,
-                                const typename Object::value_type &pair) {
-                               return accumulator + 1 + pair.first.size() +
-                                      pair.second.fast_hash();
-                             });
+      return std::ranges::fold_left(
+          this->as_object(), static_cast<std::uint64_t>(7),
+          [](const std::uint64_t accumulator,
+             const typename Object::value_type &pair) {
+            return accumulator + 1 + pair.first.size() +
+                   pair.second.fast_hash();
+          });
     case Type::Decimal:
       return 8;
     default:
@@ -582,8 +577,7 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 [[nodiscard]] auto JSON::contains(const JSON &element) const -> bool {
   assert(this->is_array());
-  return std::find(this->as_array().cbegin(), this->as_array().cend(),
-                   element) != this->as_array().cend();
+  return std::ranges::contains(this->as_array(), element);
 }
 
 [[nodiscard]] auto JSON::contains(const JSON::StringView element) const
@@ -600,13 +594,13 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
 
 [[nodiscard]] auto JSON::includes(const JSON::String &input) const -> bool {
   assert(this->is_string());
-  return this->to_string().find(input) != JSON::String::npos;
+  return this->to_string().contains(input);
 }
 
 [[nodiscard]] auto JSON::includes(const JSON::String::value_type input) const
     -> bool {
   assert(this->is_string());
-  return this->to_string().find(input) != JSON::String::npos;
+  return this->to_string().contains(input);
 }
 
 [[nodiscard]] auto JSON::unique() const -> bool {
@@ -653,12 +647,11 @@ auto JSON::push_back_if_unique(const JSON &value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
   auto &array_data{this->as_array().data};
-  const auto match{std::ranges::find(array_data, value)};
-  if (match == array_data.cend()) {
+  if (!std::ranges::contains(array_data, value)) {
     array_data.push_back(value);
     return {array_data.back(), true};
   } else {
-    return {*match, false};
+    return {*std::ranges::find(array_data, value), false};
   }
 }
 
@@ -666,12 +659,11 @@ auto JSON::push_back_if_unique(JSON &&value)
     -> std::pair<std::reference_wrapper<const JSON>, bool> {
   assert(this->is_array());
   auto &array_data{this->as_array().data};
-  const auto match{std::ranges::find(array_data, value)};
-  if (match == array_data.cend()) {
+  if (!std::ranges::contains(array_data, value)) {
     array_data.push_back(std::move(value));
     return {array_data.back(), true};
   } else {
-    return {*match, false};
+    return {*std::ranges::find(array_data, value), false};
   }
 }
 

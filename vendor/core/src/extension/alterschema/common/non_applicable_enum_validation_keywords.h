@@ -33,7 +33,7 @@ public:
 
     sourcemeta::core::JSON::TypeSet enum_types;
     for (const auto &value : schema.at("enum").as_array()) {
-      enum_types.set(static_cast<std::size_t>(value.type()));
+      enum_types.set(std::to_underlying(value.type()));
     }
 
     ONLY_CONTINUE_IF(enum_types.any());

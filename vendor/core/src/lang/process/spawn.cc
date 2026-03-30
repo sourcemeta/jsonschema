@@ -42,7 +42,7 @@ auto spawn(const std::string &program,
     command_line << " ";
     // Quote arguments that contain spaces
     const std::string arg_str{argument};
-    if (arg_str.find(' ') != std::string::npos) {
+    if (arg_str.contains(' ')) {
       command_line << "\"" << arg_str << "\"";
     } else {
       command_line << arg_str;

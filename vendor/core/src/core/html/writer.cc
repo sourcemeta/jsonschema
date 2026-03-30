@@ -9,8 +9,7 @@ auto HTMLBuffer::grow(const std::size_t needed) -> void {
       this->cursor_
           ? static_cast<std::size_t>(this->cursor_ - this->buffer_.data())
           : 0};
-  auto new_capacity{this->buffer_.empty() ? std::size_t{1024}
-                                          : this->buffer_.size() * 2};
+  auto new_capacity{this->buffer_.empty() ? 1024uz : this->buffer_.size() * 2};
   while (new_capacity < current_size + needed) {
     new_capacity *= 2;
   }

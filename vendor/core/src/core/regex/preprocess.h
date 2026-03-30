@@ -99,37 +99,81 @@ inline auto parse_hex_digits(const std::string &content, std::size_t start,
   return value;
 }
 
-inline auto set_range(std::bitset<128> &bits, int from, int to) -> void {
-  for (int code = from; code <= to; ++code) {
-    bits.set(static_cast<std::size_t>(code));
+constexpr auto make_digit_class() -> std::bitset<128> {
+  std::bitset<128> result;
+  for (int code = '0'; code <= '9'; ++code) {
+    result.set(static_cast<std::size_t>(code));
   }
+
+  return result;
 }
+
+constexpr auto make_word_class() -> std::bitset<128> {
+  std::bitset<128> result;
+  for (int code = 'a'; code <= 'z'; ++code) {
+    result.set(static_cast<std::size_t>(code));
+  }
+
+  for (int code = 'A'; code <= 'Z'; ++code) {
+    result.set(static_cast<std::size_t>(code));
+  }
+
+  for (int code = '0'; code <= '9'; ++code) {
+    result.set(static_cast<std::size_t>(code));
+  }
+
+  result.set('_');
+  return result;
+}
+
+constexpr auto make_space_class() -> std::bitset<128> {
+  std::bitset<128> result;
+  result.set(' ');
+  result.set('\t');
+  result.set('\n');
+  result.set('\r');
+  result.set('\f');
+  result.set('\v');
+  return result;
+}
+
+constexpr auto negate_class(const std::bitset<128> &base) -> std::bitset<128> {
+  auto result = ~base;
+  result.reset(0);
+  return result;
+}
+
+constexpr auto digit_class = make_digit_class();
+constexpr auto word_class = make_word_class();
+constexpr auto space_class = make_space_class();
+constexpr auto non_digit_class = negate_class(digit_class);
+constexpr auto non_word_class = negate_class(word_class);
+constexpr auto non_space_class = negate_class(space_class);
 
 inline auto set_shorthand_class(std::bitset<128> &characters,
                                 const char shorthand) -> void {
-  std::bitset<128> base;
-  const char lower = static_cast<char>(shorthand | 32);
-  if (lower == 'd') {
-    set_range(base, '0', '9');
-  } else if (lower == 'w') {
-    set_range(base, 'a', 'z');
-    set_range(base, 'A', 'Z');
-    set_range(base, '0', '9');
-    base.set('_');
-  } else if (lower == 's') {
-    for (const char code : {' ', '\t', '\n', '\r', '\f', '\v'}) {
-      base.set(static_cast<std::size_t>(code));
-    }
-  } else {
-    return;
+  switch (shorthand) {
+    case 'd':
+      characters |= digit_class;
+      return;
+    case 'D':
+      characters |= non_digit_class;
+      return;
+    case 'w':
+      characters |= word_class;
+      return;
+    case 'W':
+      characters |= non_word_class;
+      return;
+    case 's':
+      characters |= space_class;
+      return;
+    case 'S':
+      characters |= non_space_class;
+      return;
+    default:
+      return;
   }
-
-  if (shorthand >= 'A' && shorthand <= 'Z') {
-    base.flip();
-    base.reset(0);
-  }
-
-  characters |= base;
 }
 
 inline auto find_bracket_end(const std::string &content, std::size_t start,
@@ -214,7 +258,7 @@ inline auto parse_escape(const std::string &content, std::size_t position,
     code_point = static_cast<unsigned char>(simple_escape_values[escape_index]);
   } else if (next == '0') {
     code_point = 0;
-  } else if (shorthand_chars.find(next) != std::string_view::npos) {
+  } else if (shorthand_chars.contains(next)) {
     code_point = -1;
   } else {
     code_point = static_cast<unsigned char>(next);
@@ -281,7 +325,7 @@ inline auto parse_class_to_bitset(const std::string &content, std::size_t start,
 
   while (position < content.size() && content[position] != ']') {
     if (content[position] == '\\' && position + 1 < content.size() &&
-        shorthand_chars.find(content[position + 1]) != std::string_view::npos) {
+        shorthand_chars.contains(content[position + 1])) {
       set_shorthand_class(characters, content[position + 1]);
       position += 2;
       continue;
@@ -423,7 +467,7 @@ inline auto is_valid_escape(const std::string &content, std::size_t position)
     return (ctrl >= 'A' && ctrl <= 'Z') || (ctrl >= 'a' && ctrl <= 'z');
   }
 
-  return v_flag_syntax.find(next) != std::string_view::npos;
+  return v_flag_syntax.contains(next);
 }
 
 inline auto is_valid_operand(const std::string &operand) -> bool {
@@ -453,7 +497,7 @@ inline auto is_valid_operand(const std::string &operand) -> bool {
   }
 
   if (operand.size() == 2 && operand[0] == '\\' &&
-      shorthand_chars.find(operand[1]) != std::string_view::npos) {
+      shorthand_chars.contains(operand[1])) {
     return true;
   }
 
@@ -610,8 +654,7 @@ inline auto preprocess_regex(const std::string &pattern)
 
       // Check for v-flag operators in nested content
       const bool nested_has_ops =
-          nested_content.find("--") != std::string::npos ||
-          nested_content.find("&&") != std::string::npos;
+          nested_content.contains("--") || nested_content.contains("&&");
 
       // Check if nested content starts with a nested bracket
       // This indicates true v-flag nested class syntax like [[a-z]...]
@@ -658,7 +701,7 @@ inline auto preprocess_regex(const std::string &pattern)
     }
 
     const char next = pattern[position + 1];
-    if (std::string_view{"\\[]^$"}.find(next) != std::string_view::npos) {
+    if (std::string_view{"\\[]^$"}.contains(next)) {
       result += current;
       result += next;
       ++position;

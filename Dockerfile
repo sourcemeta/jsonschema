@@ -1,4 +1,4 @@
-FROM debian:bookworm AS builder
+FROM debian:trixie AS builder
 RUN apt-get --yes update && apt-get install --yes --no-install-recommends \
   build-essential cmake && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -16,7 +16,7 @@ RUN cmake -S /source -B ./build \
 RUN cmake --build /build --config Release --parallel 4
 RUN cmake --install /build --prefix /usr/local --config Release --verbose --component sourcemeta_jsonschema
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 COPY --from=builder /usr/local/bin/jsonschema /usr/local/bin/jsonschema
 WORKDIR /workspace
 ENTRYPOINT [ "/usr/local/bin/jsonschema" ]

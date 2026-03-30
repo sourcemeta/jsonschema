@@ -124,8 +124,7 @@ auto URI::resolve_from(const URI &base) -> URI & {
     const auto base_path = base.path_.value_or("");
     if (!base_path.starts_with('/') && this->path_.has_value()) {
       const auto &ref_path = this->path_.value();
-      if (!ref_path.starts_with('/') &&
-          ref_path.find('/') == std::string::npos) {
+      if (!ref_path.starts_with('/') && !ref_path.contains('/')) {
         auto merged = merge_paths(base_path, ref_path, false);
         this->path_ = remove_dot_segments(merged);
         return *this;

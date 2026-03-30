@@ -13,12 +13,14 @@
 
 #include <sourcemeta/core/preprocessor.h>
 
-#include <cstdint>          // std::uint64_t
-#include <filesystem>       // std::filesystem
+#include <cstdint>    // std::uint64_t
+#include <filesystem> // std::filesystem
+#include <format> // std::formatter, std::format_context, std::format_parse_context, std::format_to
 #include <fstream>          // std::basic_ifstream
 #include <initializer_list> // std::initializer_list
 #include <istream>          // std::basic_istream
 #include <ostream>          // std::basic_ostream
+#include <sstream>          // std::ostringstream
 #include <string>           // std::basic_string
 
 /// @defgroup json JSON
@@ -302,5 +304,33 @@ make_set(std::initializer_list<JSON::Type> types) -> JSON::TypeSet {
 }
 
 } // namespace sourcemeta::core
+
+template <> struct std::formatter<sourcemeta::core::JSON> {
+  constexpr auto parse(std::format_parse_context &context)
+      -> decltype(context.begin()) {
+    return context.begin();
+  }
+
+  auto format(const sourcemeta::core::JSON &value,
+              std::format_context &context) const -> decltype(context.out()) {
+    std::ostringstream stream;
+    stream << value;
+    return std::format_to(context.out(), "{}", stream.str());
+  }
+};
+
+template <> struct std::formatter<sourcemeta::core::JSON::Type> {
+  constexpr auto parse(std::format_parse_context &context)
+      -> decltype(context.begin()) {
+    return context.begin();
+  }
+
+  auto format(const sourcemeta::core::JSON::Type value,
+              std::format_context &context) const -> decltype(context.out()) {
+    std::ostringstream stream;
+    stream << value;
+    return std::format_to(context.out(), "{}", stream.str());
+  }
+};
 
 #endif

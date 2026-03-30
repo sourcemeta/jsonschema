@@ -152,7 +152,18 @@ public:
   /// ```
   [[nodiscard]] auto is_relative() const -> bool;
 
-  /// Check if the host is an ipv6 address. For example:
+  /// Check if the host is an IPv4 address. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"http://192.168.1.1/index.html"};
+  /// assert(uri.is_ipv4());
+  /// ```
+  [[nodiscard]] auto is_ipv4() const -> bool;
+
+  /// Check if the host is an IPv6 address. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -513,6 +524,7 @@ private:
   std::optional<std::string> scheme_{};
   std::optional<std::string> fragment_{};
   std::optional<std::string> query_{};
+  bool ip_literal_{false};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

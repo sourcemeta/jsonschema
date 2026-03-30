@@ -1,3 +1,4 @@
+#include <sourcemeta/core/ip.h>
 #include <sourcemeta/core/uri.h>
 
 #include <cstdint>  // std::uint32_t
@@ -6,10 +7,7 @@
 
 namespace sourcemeta::core {
 
-auto URI::is_relative() const -> bool {
-  return !this->scheme().has_value() ||
-         (this->path_.has_value() && this->path_.value().starts_with("."));
-}
+auto URI::is_relative() const -> bool { return !this->scheme().has_value(); }
 
 auto URI::is_absolute() const noexcept -> bool {
   return this->scheme_.has_value();
@@ -35,9 +33,14 @@ auto URI::is_file() const -> bool {
   return scheme.has_value() && scheme.value() == "file";
 }
 
+auto URI::is_ipv4() const -> bool {
+  return this->host_.has_value() &&
+         sourcemeta::core::is_ipv4(this->host_.value());
+}
+
 auto URI::is_ipv6() const -> bool {
   return this->host_.has_value() &&
-         this->host_.value().find(':') != std::string::npos;
+         sourcemeta::core::is_ipv6(this->host_.value());
 }
 
 auto URI::is_fragment_only() const -> bool {

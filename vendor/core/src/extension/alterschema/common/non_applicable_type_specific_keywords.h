@@ -46,7 +46,7 @@ public:
              Vocabularies::Known::JSON_Schema_Draft_1}) &&
         schema.defines("enum") && schema.at("enum").is_array()) {
       for (const auto &entry : schema.at("enum").as_array()) {
-        current_types.set(static_cast<std::size_t>(entry.type()));
+        current_types.set(std::to_underlying(entry.type()));
       }
     }
 
@@ -56,7 +56,7 @@ public:
              Vocabularies::Known::JSON_Schema_Draft_7,
              Vocabularies::Known::JSON_Schema_Draft_6}) &&
         schema.defines("const")) {
-      current_types.set(static_cast<std::size_t>(schema.at("const").type()));
+      current_types.set(std::to_underlying(schema.at("const").type()));
     }
 
     // This means that the schema has no explicit type constraints,

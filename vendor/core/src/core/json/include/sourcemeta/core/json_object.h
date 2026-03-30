@@ -6,7 +6,7 @@
 #include <cstddef>          // std::size_t
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::advance
-#include <utility>          // std::pair, std::move
+#include <utility>          // std::pair, std::move, std::unreachable
 #include <vector>           // std::vector
 
 namespace sourcemeta::core {
@@ -220,12 +220,7 @@ public:
       }
     }
 
-// See https://en.cppreference.com/w/cpp/utility/unreachable
-#if defined(_MSC_VER) && !defined(__clang__)
-    __assume(false);
-#else
-    __builtin_unreachable();
-#endif
+    std::unreachable();
   }
 
   /// Access an object entry by its key name
@@ -247,12 +242,7 @@ public:
       }
     }
 
-// See https://en.cppreference.com/w/cpp/utility/unreachable
-#if defined(_MSC_VER) && !defined(__clang__)
-    __assume(false);
-#else
-    __builtin_unreachable();
-#endif
+    std::unreachable();
   }
 
   /// Try to access an object entry by its underlying positional index

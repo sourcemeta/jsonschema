@@ -8,7 +8,7 @@
 #include <memory>        // std::unique_ptr, std::make_unique
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
+#include <utility>       // std::move, std::to_underlying
 namespace sourcemeta::core {
 
 template <typename... Args>

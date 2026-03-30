@@ -73,10 +73,10 @@ inline auto scan_null(const std::uint64_t line, std::uint64_t &column,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    if (*cursor != character) {
+    if (*cursor != character) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     cursor++;
@@ -93,10 +93,10 @@ inline auto scan_true(const std::uint64_t line, std::uint64_t &column,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    if (*cursor != character) {
+    if (*cursor != character) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     cursor++;
@@ -113,10 +113,10 @@ inline auto scan_false(const std::uint64_t line, std::uint64_t &column,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    if (*cursor != character) {
+    if (*cursor != character) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     cursor++;
@@ -133,7 +133,7 @@ inline auto scan_string_unicode_code_point(const std::uint64_t line,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     const char hex_char{*cursor++};
@@ -144,7 +144,7 @@ inline auto scan_string_unicode_code_point(const std::uint64_t line,
       digit = static_cast<unsigned long>(hex_char - 'a') + 10;
     } else if (hex_char >= 'A' && hex_char <= 'F') {
       digit = static_cast<unsigned long>(hex_char - 'A') + 10;
-    } else {
+    } else [[unlikely]] {
       throw JSONParseError(line, column);
     }
     result = (result << 4) | digit;
@@ -161,7 +161,7 @@ inline auto scan_string_unicode(const std::uint64_t line, std::uint64_t &column,
                                                                  cursor, end)};
   using CharT = typename JSON::Char;
 
-  if (code_point >= 0xDC00 && code_point <= 0xDFFF) {
+  if (code_point >= 0xDC00 && code_point <= 0xDFFF) [[unlikely]] {
     throw JSONParseError(line, column);
   }
 
@@ -169,10 +169,10 @@ inline auto scan_string_unicode(const std::uint64_t line, std::uint64_t &column,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    if (*cursor != internal::token_string_escape<CharT>) {
+    if (*cursor != internal::token_string_escape<CharT>) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     cursor++;
@@ -180,10 +180,10 @@ inline auto scan_string_unicode(const std::uint64_t line, std::uint64_t &column,
     if constexpr (TrackPositions) {
       column += 1;
     }
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    if (*cursor != internal::token_string_escape_unicode<CharT>) {
+    if (*cursor != internal::token_string_escape_unicode<CharT>) [[unlikely]] {
       throw JSONParseError(line, column);
     }
     cursor++;
@@ -193,7 +193,7 @@ inline auto scan_string_unicode(const std::uint64_t line, std::uint64_t &column,
 
     // See
     // https://en.wikipedia.org/wiki/UTF-16#Code_points_from_U+010000_to_U+10FFFF
-    if (low_code_point < 0xDC00 || low_code_point > 0xDFFF) {
+    if (low_code_point < 0xDC00 || low_code_point > 0xDFFF) [[unlikely]] {
       throw JSONParseError(line, column);
     }
   }
@@ -205,7 +205,7 @@ inline auto scan_string_escape(const std::uint64_t line, std::uint64_t &column,
   if constexpr (TrackPositions) {
     column += 1;
   }
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     throw JSONParseError(line, column);
   }
   switch (*cursor++) {
@@ -222,7 +222,7 @@ inline auto scan_string_escape(const std::uint64_t line, std::uint64_t &column,
       scan_string_unicode<TrackPositions>(line, column, cursor, end);
       return;
     default:
-      throw JSONParseError(line, column);
+      [[unlikely]] throw JSONParseError(line, column);
   }
 }
 
@@ -245,7 +245,7 @@ inline auto scan_string(const std::uint64_t line, std::uint64_t &column,
       cursor = scan;
     }
 
-    if (cursor >= end) {
+    if (cursor >= end) [[unlikely]] {
       if constexpr (TrackPositions) {
         column += 1;
       }
@@ -264,7 +264,7 @@ inline auto scan_string(const std::uint64_t line, std::uint64_t &column,
         scan_string_escape<TrackPositions>(line, column, cursor, end);
         break;
       default:
-        throw JSONParseError(line, column);
+        [[unlikely]] throw JSONParseError(line, column);
     }
   }
 
@@ -288,7 +288,7 @@ inline auto scan_digits(const std::uint64_t line, std::uint64_t &column,
     }
     cursor++;
   }
-  if (at_least_one && !found) {
+  if (at_least_one && !found) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -303,7 +303,7 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
   using CharT = typename JSON::Char;
   if (first == internal::token_number_minus<CharT>) {
     if (cursor >= end || *cursor < internal::token_number_zero<CharT> ||
-        *cursor > internal::token_number_nine<CharT>) {
+        *cursor > internal::token_number_nine<CharT>) [[unlikely]] {
       if constexpr (TrackPositions) {
         column += 1;
       }
@@ -322,7 +322,7 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
 
   if (int_start == internal::token_number_zero<CharT>) {
     if (cursor < end && *cursor >= internal::token_number_zero<CharT> &&
-        *cursor <= internal::token_number_nine<CharT>) {
+        *cursor <= internal::token_number_nine<CharT>) [[unlikely]] {
       if constexpr (TrackPositions) {
         column += 1;
       }
@@ -378,7 +378,7 @@ inline auto scan_json(const char *&cursor, const char *end,
   container_stack.reserve(32);
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -441,7 +441,7 @@ inline auto scan_json(const char *&cursor, const char *end,
         return;
       }
       default:
-        throw JSONParseError(line, column);
+        [[unlikely]] throw JSONParseError(line, column);
     }
   }
 
@@ -455,7 +455,7 @@ do_scan_array: {
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -481,7 +481,7 @@ do_scan_array_item:
   container_stack.back().child_count++;
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -544,13 +544,13 @@ do_scan_array_item:
         goto do_scan_array_item_separator;
       }
       default:
-        throw JSONParseError(line, column);
+        [[unlikely]] throw JSONParseError(line, column);
     }
   }
 
 do_scan_array_item_separator:
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -572,7 +572,7 @@ do_scan_array_item_separator:
       goto do_scan_container_end;
     }
     default:
-      throw JSONParseError(line, column);
+      [[unlikely]] throw JSONParseError(line, column);
   }
 
   /*
@@ -585,7 +585,7 @@ do_scan_object: {
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -611,7 +611,7 @@ do_scan_object_key:
   container_stack.back().child_count++;
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -634,12 +634,12 @@ do_scan_object_key:
       goto do_scan_object_separator;
     }
     default:
-      throw JSONParseError(line, column);
+      [[unlikely]] throw JSONParseError(line, column);
   }
 
 do_scan_object_separator:
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -653,12 +653,12 @@ do_scan_object_separator:
     case internal::token_object_key_delimiter<CharT>:
       goto do_scan_object_value;
     default:
-      throw JSONParseError(line, column);
+      [[unlikely]] throw JSONParseError(line, column);
   }
 
 do_scan_object_value:
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -721,13 +721,13 @@ do_scan_object_value:
         goto do_scan_object_property_end;
       }
       default:
-        throw JSONParseError(line, column);
+        [[unlikely]] throw JSONParseError(line, column);
     }
   }
 
 do_scan_object_property_end:
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
-  if (cursor >= end) {
+  if (cursor >= end) [[unlikely]] {
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -749,7 +749,7 @@ do_scan_object_property_end:
       goto do_scan_container_end;
     }
     default:
-      throw JSONParseError(line, column);
+      [[unlikely]] throw JSONParseError(line, column);
   }
 
 do_scan_container_end:

@@ -3,27 +3,24 @@
 
 #include <sourcemeta/core/json_value.h>
 
-#include <algorithm>  // std::sort
-#include <bitset>     // std::bitset
-#include <cassert>    // assert
-#include <chrono>     // std::chrono
-#include <concepts>   // std::same_as, std::constructible_from
+#include <algorithm> // std::sort
+#include <bitset>    // std::bitset
+#include <cassert>   // assert
+#include <chrono>    // std::chrono
+#include <concepts> // std::same_as, std::constructible_from, std::invocable, std::invocable
 #include <filesystem> // std::filesystem
 #include <functional> // std::function
 #include <optional>   // std::optional, std::nullopt, std::bad_optional_access
 #include <tuple> // std::tuple, std::apply, std::tuple_element_t, std::tuple_size, std::tuple_size_v
-#include <type_traits> // std::false_type, std::true_type, std::void_t, std::is_enum_v, std::underlying_type_t, std::is_same_v, std::is_base_of_v, std::remove_cvref_t
+#include <type_traits> // std::false_type, std::true_type, std::is_enum_v, std::underlying_type_t, std::is_same_v, std::is_base_of_v, std::remove_cvref_t
 #include <utility> // std::pair, std:::make_index_sequence, std::index_sequence
 #include <variant> // std::variant, std::variant_size_v, std::variant_alternative_t, std::visit
 
 namespace sourcemeta::core {
 
 /// @ingroup json
-template <typename, typename = void>
-struct json_auto_has_mapped_type : std::false_type {};
 template <typename T>
-struct json_auto_has_mapped_type<T, std::void_t<typename T::mapped_type>>
-    : std::true_type {};
+concept json_auto_has_mapped_type = requires { typename T::mapped_type; };
 
 /// @ingroup json
 template <typename T> struct json_auto_is_basic_string : std::false_type {};
@@ -57,14 +54,10 @@ concept json_auto_has_method_to = requires(const T value) {
 /// @ingroup json
 /// Container-like classes can opt-out from automatic JSON
 /// serialisation by setting `using json_auto = std::false_type;`
-template <typename, typename = void>
-struct json_auto_supports_auto_impl : std::true_type {};
 template <typename T>
-struct json_auto_supports_auto_impl<T, std::void_t<typename T::json_auto>>
-    : std::bool_constant<
-          !std::is_same_v<typename T::json_auto, std::false_type>> {};
-template <typename T>
-concept json_auto_supports_auto = json_auto_supports_auto_impl<T>::value;
+concept json_auto_supports_auto = !requires {
+  typename T::json_auto;
+} || !std::is_same_v<typename T::json_auto, std::false_type>;
 
 /// @ingroup json
 template <typename T>
@@ -74,7 +67,7 @@ concept json_auto_list_like =
       typename T::const_iterator;
       { type.cbegin() } -> std::same_as<typename T::const_iterator>;
       { type.cend() } -> std::same_as<typename T::const_iterator>;
-    } && json_auto_supports_auto<T> && !json_auto_has_mapped_type<T>::value &&
+    } && json_auto_supports_auto<T> && !json_auto_has_mapped_type<T> &&
     !json_auto_has_method_from<T> && !json_auto_has_method_to<T> &&
     !json_auto_is_basic_string<T>::value;
 
@@ -87,19 +80,14 @@ concept json_auto_map_like =
       typename T::key_type;
       { type.cbegin() } -> std::same_as<typename T::const_iterator>;
       { type.cend() } -> std::same_as<typename T::const_iterator>;
-    } && json_auto_supports_auto<T> && json_auto_has_mapped_type<T>::value &&
+    } && json_auto_supports_auto<T> && json_auto_has_mapped_type<T> &&
     !json_auto_has_method_from<T> && !json_auto_has_method_to<T> &&
     std::is_same_v<typename T::key_type, JSON::String>;
 
 /// @ingroup json
-template <typename, typename = void>
-struct json_auto_has_reverse_iterator : std::false_type {};
-
-/// @ingroup json
 template <typename T>
-struct json_auto_has_reverse_iterator<T,
-                                      std::void_t<typename T::reverse_iterator>>
-    : std::true_type {};
+concept json_auto_has_reverse_iterator =
+    requires { typename T::reverse_iterator; };
 
 /// @ingroup json
 template <typename T> struct json_auto_is_pair : std::false_type {};
@@ -393,7 +381,7 @@ auto to_json(typename T::const_iterator begin, typename T::const_iterator end)
   }
 
   // To guarantee ordering across implementations
-  if constexpr (!json_auto_has_reverse_iterator<T>::value) {
+  if constexpr (!json_auto_has_reverse_iterator<T>) {
     std::sort(result.as_array().begin(), result.as_array().end());
   }
 
@@ -401,11 +389,10 @@ auto to_json(typename T::const_iterator begin, typename T::const_iterator end)
 }
 
 /// @ingroup json
-template <json_auto_list_like T>
-auto to_json(
-    typename T::const_iterator begin, typename T::const_iterator end,
-    const std::function<JSON(const typename T::value_type &)> &callback)
-    -> JSON {
+template <json_auto_list_like T,
+          std::invocable<const typename T::value_type &> F>
+auto to_json(typename T::const_iterator begin, typename T::const_iterator end,
+             const F &callback) -> JSON {
   // TODO: Extend `make_array` to optionally take iterators, etc
   auto result{JSON::make_array()};
   for (auto iterator = begin; iterator != end; ++iterator) {
@@ -413,7 +400,7 @@ auto to_json(
   }
 
   // To guarantee ordering across implementations
-  if constexpr (!json_auto_has_reverse_iterator<T>::value) {
+  if constexpr (!json_auto_has_reverse_iterator<T>) {
     std::sort(result.as_array().begin(), result.as_array().end());
   }
 
@@ -426,11 +413,9 @@ template <json_auto_list_like T> auto to_json(const T &value) -> JSON {
 }
 
 /// @ingroup json
-template <json_auto_list_like T>
-auto to_json(
-    const T &value,
-    const std::function<JSON(const typename T::value_type &)> &callback)
-    -> JSON {
+template <json_auto_list_like T,
+          std::invocable<const typename T::value_type &> F>
+auto to_json(const T &value, const F &callback) -> JSON {
   return to_json<T>(value.cbegin(), value.cend(), callback);
 }
 
@@ -513,11 +498,10 @@ template <json_auto_map_like T> auto to_json(const T &value) -> JSON {
 }
 
 /// @ingroup json
-template <json_auto_map_like T>
-auto to_json(
-    typename T::const_iterator begin, typename T::const_iterator end,
-    const std::function<JSON(const typename T::mapped_type &)> &callback)
-    -> JSON {
+template <json_auto_map_like T,
+          std::invocable<const typename T::mapped_type &> F>
+auto to_json(typename T::const_iterator begin, typename T::const_iterator end,
+             const F &callback) -> JSON {
   auto result{JSON::make_object()};
   for (auto iterator = begin; iterator != end; ++iterator) {
     result.assign(iterator->first, callback(iterator->second));
@@ -570,11 +554,9 @@ auto from_json(
 }
 
 /// @ingroup json
-template <json_auto_map_like T>
-auto to_json(
-    const T &value,
-    const std::function<JSON(const typename T::mapped_type &)> &callback)
-    -> JSON {
+template <json_auto_map_like T,
+          std::invocable<const typename T::mapped_type &> F>
+auto to_json(const T &value, const F &callback) -> JSON {
   return to_json<T>(value.cbegin(), value.cend(), callback);
 }
 

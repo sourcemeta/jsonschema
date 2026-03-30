@@ -54,14 +54,16 @@ public:
       }
     } else {
       token = this->lexer_->next();
-      if (!token.has_value() || token->type != TokenType::StreamStart) {
+      if (!token.has_value() || token->type != TokenType::StreamStart)
+          [[unlikely]] {
         throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                              "Expected stream start"};
       }
       token = this->lexer_->next();
     }
 
-    if (!token.has_value() || token->type == TokenType::StreamEnd) {
+    if (!token.has_value() || token->type == TokenType::StreamEnd)
+        [[unlikely]] {
       throw YAMLParseError{1, 1, "Empty YAML document"};
     }
 
@@ -94,13 +96,15 @@ public:
         }
         return JSON{nullptr};
       }
-    } else if (!token.has_value() || token->type == TokenType::StreamEnd) {
+    } else if (!token.has_value() || token->type == TokenType::StreamEnd)
+        [[unlikely]] {
       throw YAMLParseError{1, 1, "Empty YAML document"};
     } else if (token->type == TokenType::DocumentEnd) {
       while (token.has_value() && token->type == TokenType::DocumentEnd) {
         token = this->lexer_->next();
       }
-      if (!token.has_value() || token->type == TokenType::StreamEnd) {
+      if (!token.has_value() || token->type == TokenType::StreamEnd)
+          [[unlikely]] {
         throw YAMLParseError{1, 1, "Empty YAML document"};
       }
       this->pending_tokens_.push_back(token.value());
@@ -194,7 +198,7 @@ public:
       if (token->type == TokenType::DirectiveYAML ||
           token->type == TokenType::DirectiveTag ||
           token->type == TokenType::DirectiveReserved) {
-        if (!saw_document_end) {
+        if (!saw_document_end) [[unlikely]] {
           throw YAMLParseError{token->line, token->column,
                                "Directive not allowed without preceding "
                                "document end marker"};
@@ -202,7 +206,8 @@ public:
         this->process_directives(token.value());
         continue;
       }
-      if (!saw_document_end && token->type != TokenType::DocumentStart) {
+      if (!saw_document_end && token->type != TokenType::DocumentStart)
+          [[unlikely]] {
         throw YAMLParseError{token->line, token->column,
                              "Unexpected content after document"};
       }
@@ -224,13 +229,13 @@ private:
            token.type == TokenType::DirectiveTag ||
            token.type == TokenType::DirectiveReserved) {
       if (token.type == TokenType::DirectiveYAML) {
-        if (seen_yaml_directive) {
+        if (seen_yaml_directive) [[unlikely]] {
           throw YAMLParseError{token.line, token.column,
                                "Duplicate %YAML directive"};
         }
         seen_yaml_directive = true;
         const auto content{token.value};
-        auto cursor{static_cast<std::size_t>(5)};
+        auto cursor{5uz};
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
@@ -243,13 +248,13 @@ private:
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
         }
-        if (cursor < content.size() && content[cursor] != '#') {
+        if (cursor < content.size() && content[cursor] != '#') [[unlikely]] {
           throw YAMLParseError{token.line, token.column,
                                "Invalid content in %YAML directive"};
         }
       } else if (token.type == TokenType::DirectiveTag) {
         const auto content{token.value};
-        auto cursor{static_cast<std::size_t>(4)};
+        auto cursor{4uz};
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
@@ -390,9 +395,10 @@ private:
         const auto value_indent{
             current_token.column > 0
                 ? static_cast<std::size_t>(current_token.column - 1)
-                : static_cast<std::size_t>(0)};
+                : 0uz};
         const auto parent_indent{this->lexer_->block_indent()};
-        if (parent_indent != SIZE_MAX && value_indent <= parent_indent) {
+        if (parent_indent != SIZE_MAX && value_indent <= parent_indent)
+            [[unlikely]] {
           throw YAMLParseError{current_token.line, current_token.column,
                                "Node property at wrong indentation level"};
         }
@@ -462,7 +468,7 @@ private:
         const auto entry_indent{
             current_token.column > 0
                 ? static_cast<std::size_t>(current_token.column - 1)
-                : static_cast<std::size_t>(0)};
+                : 0uz};
         if (block_indent != SIZE_MAX && entry_indent <= block_indent) {
           this->pending_tokens_.push_back(current_token);
           this->register_anchored_null(anchor_name.value(), token, context,
@@ -495,7 +501,7 @@ private:
 
     if ((anchor_name.has_value() || tag.has_value()) &&
         this->lexer_->flow_level() == 0 && current_token.line == prefix_line &&
-        current_token.type == TokenType::BlockSequenceEntry) {
+        current_token.type == TokenType::BlockSequenceEntry) [[unlikely]] {
       throw YAMLParseError{current_token.line, current_token.column,
                            "Block sequence after node property must start "
                            "on a new line"};
@@ -512,19 +518,19 @@ private:
       case TokenType::Scalar: {
         auto next{this->next_token()};
         if (next.has_value() && next->type == TokenType::BlockMappingValue) {
-          if (current_token.multiline) {
+          if (current_token.multiline) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
                                  "Multi-line implicit mapping key"};
           }
           if (this->lexer_->flow_level() > 0 &&
-              next->line != current_token.line) {
+              next->line != current_token.line) [[unlikely]] {
             throw YAMLParseError{next->line, next->column,
                                  "Implicit key and value indicator on "
                                  "different lines in flow context"};
           }
           if (this->lexer_->flow_level() == 0 &&
               context == JSON::ParseContext::Property && key_line > 0 &&
-              current_token.line == key_line) {
+              current_token.line == key_line) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
                                  "Implicit mapping key in block value on "
                                  "same line as parent key"};
@@ -532,7 +538,7 @@ private:
           if (this->lexer_->flow_level() == 0 &&
               (anchor_name.has_value() || tag.has_value()) &&
               this->document_start_line_ > 0 &&
-              current_token.line == this->document_start_line_) {
+              current_token.line == this->document_start_line_) [[unlikely]] {
             throw YAMLParseError{
                 current_token.line, current_token.column,
                 "Node properties before implicit mapping key on "
@@ -553,7 +559,7 @@ private:
               current_token, context, index, property, key_line, key_column,
               node_start_column);
         } else {
-          if (anchor_count > 1) {
+          if (anchor_count > 1) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
                                  "Multiple anchors on a scalar node"};
           }
@@ -589,7 +595,7 @@ private:
         if (next.has_value() && next->type == TokenType::BlockMappingValue) {
           const std::string alias_name{current_token.value};
           const auto iterator{this->anchors_.find(alias_name)};
-          if (iterator == this->anchors_.end()) {
+          if (iterator == this->anchors_.end()) [[unlikely]] {
             throw YAMLUnknownAnchorError{alias_name, current_token.line,
                                          current_token.column};
           }
@@ -602,7 +608,7 @@ private:
               key_token, context, index, property, key_line, key_column,
               node_start_column);
         } else {
-          if (anchor_name.has_value()) {
+          if (anchor_name.has_value()) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
                                  "Cannot anchor an alias node"};
           }
@@ -905,7 +911,7 @@ private:
           key_tag = this->resolve_tag(key_token.value);
         }
         token = this->next_token();
-        if (!token.has_value()) {
+        if (!token.has_value()) [[unlikely]] {
           throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                                "Unexpected end of input in flow mapping"};
         }
@@ -921,12 +927,12 @@ private:
         key = std::string{key_token.value};
         this->record_key_scalar_style(key, key_token.scalar_style,
                                       key_token.quoted_original);
-      } else {
+      } else [[unlikely]] {
         throw YAMLParseError{key_token.line, key_token.column,
                              "Expected scalar key in mapping"};
       }
 
-      if (seen_keys.contains(key)) {
+      if (seen_keys.contains(key)) [[unlikely]] {
         throw YAMLDuplicateKeyError{key, key_token.line, key_token.column};
       }
       seen_keys.insert(key);
@@ -934,7 +940,7 @@ private:
       if (key_token.type != TokenType::BlockMappingValue) {
         token = this->next_token();
 
-        if (!token.has_value()) {
+        if (!token.has_value()) [[unlikely]] {
           throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                                "Unexpected end of input in flow mapping"};
         }
@@ -948,7 +954,7 @@ private:
           continue;
         }
 
-        if (token->type != TokenType::BlockMappingValue) {
+        if (token->type != TokenType::BlockMappingValue) [[unlikely]] {
           const auto colon_column{key_token.column +
                                   static_cast<std::uint64_t>(key.size())};
           throw YAMLParseError{key_token.line, colon_column,
@@ -957,7 +963,7 @@ private:
       }
 
       token = this->next_token();
-      if (!token.has_value()) {
+      if (!token.has_value()) [[unlikely]] {
         throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                              "Expected value after ':'"};
       }
@@ -983,7 +989,7 @@ private:
           found_compact_separator = true;
         }
         if (token.has_value() && token->type != TokenType::FlowEntry &&
-            token->type != TokenType::MappingEnd) {
+            token->type != TokenType::MappingEnd) [[unlikely]] {
           throw YAMLParseError{token->line, token->column,
                                "Missing comma between flow mapping entries"};
         }
@@ -1026,15 +1032,15 @@ private:
       if (parent_block_indent != SIZE_MAX && token->line != start_token.line) {
         const auto token_indent{
             token->column > 0 ? static_cast<std::size_t>(token->column - 1)
-                              : static_cast<std::size_t>(0)};
-        if (token_indent <= parent_block_indent) {
+                              : 0uz};
+        if (token_indent <= parent_block_indent) [[unlikely]] {
           throw YAMLParseError{
               token->line, token->column,
               "Flow content indented less than or equal to parent block level"};
         }
       }
       if (token->type == TokenType::FlowEntry) {
-        if (element_index == 0) {
+        if (element_index == 0) [[unlikely]] {
           throw YAMLParseError{token->line, token->column,
                                "Leading comma in flow sequence"};
         }
@@ -1042,7 +1048,8 @@ private:
           found_compact_separator = true;
         }
         token = this->next_token();
-        if (token.has_value() && token->type == TokenType::FlowEntry) {
+        if (token.has_value() && token->type == TokenType::FlowEntry)
+            [[unlikely]] {
           throw YAMLParseError{token->line, token->column,
                                "Empty entry in flow sequence"};
         }
@@ -1052,7 +1059,7 @@ private:
       if (token->type == TokenType::BlockMappingKey) {
         auto mapping{JSON::make_object()};
         token = this->next_token();
-        if (!token.has_value()) {
+        if (!token.has_value()) [[unlikely]] {
           throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
                                "Unexpected end after explicit key in flow"};
         }
@@ -1100,7 +1107,7 @@ private:
         found_compact_separator = true;
       }
       if (token.has_value() && token->type != TokenType::FlowEntry &&
-          token->type != TokenType::SequenceEnd) {
+          token->type != TokenType::SequenceEnd) [[unlikely]] {
         throw YAMLParseError{token->line, token->column,
                              "Missing comma in flow sequence"};
       }
@@ -1135,9 +1142,8 @@ private:
     JSON result{JSON::make_array()};
     std::size_t element_index{0};
     const auto base_column{start_token.column};
-    const auto sequence_indent{base_column > 0
-                                   ? static_cast<std::size_t>(base_column - 1)
-                                   : static_cast<std::size_t>(0)};
+    const auto sequence_indent{
+        base_column > 0 ? static_cast<std::size_t>(base_column - 1) : 0uz};
     this->detect_indent_width(key_column, base_column);
     this->lexer_->set_block_indent(sequence_indent);
     this->record_preceding_comments_for_index(0);
@@ -1172,7 +1178,7 @@ private:
       this->lexer_->set_block_indent(sequence_indent);
 
       if (token->column > base_column) {
-        if (token->column < base_column + 2) {
+        if (token->column < base_column + 2) [[unlikely]] {
           throw YAMLParseError{token->line, token->column,
                                "Wrong indentation for sequence entry"};
         }
@@ -1244,7 +1250,7 @@ private:
     const auto mapping_indent{
         start_token.column > 0
             ? static_cast<std::size_t>(start_token.column - 1)
-            : static_cast<std::size_t>(0)};
+            : 0uz};
 
     while (true) {
       this->lexer_->set_block_indent(mapping_indent);
@@ -1279,7 +1285,7 @@ private:
         current_key_line = token.line;
         current_key_column = token.column;
 
-        if (seen_keys.contains(key)) {
+        if (seen_keys.contains(key)) [[unlikely]] {
           throw YAMLDuplicateKeyError{key, token.line, token.column};
         }
         seen_keys.insert(key);
@@ -1323,7 +1329,7 @@ private:
 
         if (key.empty() && next->type == TokenType::Scalar) {
           key = next->value;
-          if (seen_keys.contains(key)) {
+          if (seen_keys.contains(key)) [[unlikely]] {
             throw YAMLDuplicateKeyError{key, next->line, next->column};
           }
           seen_keys.insert(key);
@@ -1361,7 +1367,7 @@ private:
     const std::string anchor_name{token.value};
     const auto iterator{this->anchors_.find(anchor_name)};
 
-    if (iterator == this->anchors_.end()) {
+    if (iterator == this->anchors_.end()) [[unlikely]] {
       throw YAMLUnknownAnchorError{anchor_name, token.line, token.column};
     }
 
@@ -1484,8 +1490,8 @@ private:
                next->type == TokenType::BlockSequenceEntry ||
                next->type == TokenType::Anchor ||
                next->type == TokenType::Tag || next->type == TokenType::Alias) {
-      if (next->type == TokenType::BlockSequenceEntry &&
-          next->line == key_line) {
+      if (next->type == TokenType::BlockSequenceEntry && next->line == key_line)
+          [[unlikely]] {
         throw YAMLParseError{
             next->line, next->column,
             "Block sequence entry on same line as mapping key"};
@@ -1507,7 +1513,7 @@ private:
             next->type == TokenType::Alias)) {
       if (this->document_start_line_ > 0 &&
           first_key_line == this->document_start_line_ &&
-          next->line != this->document_start_line_) {
+          next->line != this->document_start_line_) [[unlikely]] {
         throw YAMLParseError{next->line, next->column,
                              "Block mapping continuation after document "
                              "start line"};
@@ -1531,7 +1537,7 @@ private:
         this->record_key_scalar_style(key, next->scalar_style,
                                       next->quoted_original);
 
-        if (seen_keys.contains(key)) {
+        if (seen_keys.contains(key)) [[unlikely]] {
           throw YAMLDuplicateKeyError{key, next->line, next->column};
         }
         seen_keys.insert(key);
@@ -1594,14 +1600,14 @@ private:
         }
         const std::string alias_name{next->value};
         const auto iterator{this->anchors_.find(alias_name)};
-        if (iterator == this->anchors_.end()) {
+        if (iterator == this->anchors_.end()) [[unlikely]] {
           throw YAMLUnknownAnchorError{alias_name, next->line, next->column};
         }
         key = this->json_to_key_string(iterator->second.value);
         key_line = next->line;
         key_column = next->column;
 
-        if (seen_keys.contains(key)) {
+        if (seen_keys.contains(key)) [[unlikely]] {
           throw YAMLDuplicateKeyError{key, next->line, next->column};
         }
         seen_keys.insert(key);
@@ -1655,12 +1661,12 @@ private:
                                     next->quoted_original);
       this->record_preceding_comments_for_key(key);
 
-      if (next->multiline) {
+      if (next->multiline) [[unlikely]] {
         throw YAMLParseError{next->line, next->column,
                              "Multi-line implicit mapping key"};
       }
 
-      if (seen_keys.contains(key)) {
+      if (seen_keys.contains(key)) [[unlikely]] {
         throw YAMLDuplicateKeyError{key, next->line, next->column};
       }
       seen_keys.insert(key);
@@ -1793,8 +1799,7 @@ private:
     this->pointer_stack_.push_back(index);
     auto indicator_comment{this->lexer_->take_inline_comment()};
     this->roundtrip_->styles[this->pointer_stack_].comment_on_indicator =
-        indicator_comment.has_value() ? std::move(indicator_comment.value())
-                                      : std::string{};
+        std::move(indicator_comment).value_or(std::string{});
     this->pointer_stack_.pop_back();
   }
 

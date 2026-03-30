@@ -5,12 +5,15 @@
 #include <sourcemeta/core/uritemplate_export.h>
 #endif
 
-#include <cstddef>     // std::size_t
-#include <cstdint>     // std::uint16_t, std::uint32_t, std::uint8_t
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint16_t, std::uint32_t, std::uint8_t, std::int64_t
 #include <filesystem>  // std::filesystem::path
 #include <functional>  // std::function
 #include <memory>      // std::unique_ptr
+#include <span>        // std::span
 #include <string_view> // std::string_view
+#include <utility>     // std::pair
+#include <variant>     // std::variant
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -35,6 +38,11 @@ public:
   /// The match callback (index, name, value)
   using Callback =
       std::function<void(Index, std::string_view, std::string_view)>;
+
+  using ArgumentValue = std::variant<std::string_view, std::int64_t, bool>;
+  using Argument = std::pair<std::string_view, ArgumentValue>;
+  using ArgumentCallback =
+      std::function<void(std::string_view, const ArgumentValue &)>;
 
   /// The type of a node in the router trie
   enum class NodeType : std::uint8_t {
@@ -68,8 +76,8 @@ public:
 
   /// Add a route to the router. Make sure the string lifetime survives the
   /// router
-  auto add(const std::string_view uri_template, const Identifier identifier)
-      -> void;
+  auto add(const std::string_view uri_template, const Identifier identifier,
+           const std::span<const Argument> arguments = {}) -> void;
 
   /// Match a path against the router. Note the callback might fire for
   /// initial matches even though the entire match might still fail
@@ -79,8 +87,17 @@ public:
   /// Access the root node of the trie
   [[nodiscard]] auto root() const noexcept -> const Node &;
 
+  /// Access the stored arguments for a given route identifier
+  auto arguments(const Identifier identifier,
+                 const ArgumentCallback &callback) const -> void;
+
+  /// Access all stored route arguments
+  [[nodiscard]] auto arguments() const noexcept
+      -> const std::vector<std::pair<Identifier, std::vector<Argument>>> &;
+
 private:
   Node root_;
+  std::vector<std::pair<Identifier, std::vector<Argument>>> arguments_;
 };
 
 /// @ingroup uritemplate
@@ -125,6 +142,11 @@ public:
   [[nodiscard]] auto match(const std::string_view path,
                            const URITemplateRouter::Callback &callback) const
       -> URITemplateRouter::Identifier;
+
+  /// Access the stored arguments for a given route identifier
+  auto arguments(const URITemplateRouter::Identifier identifier,
+                 const URITemplateRouter::ArgumentCallback &callback) const
+      -> void;
 
 private:
   std::vector<std::uint8_t> data_;

@@ -6,12 +6,14 @@
 
 #include "grammar.h"
 
-#include <cassert> // assert
-#include <ios>     // std::basic_ostream
-#include <ostream> // std::basic_ostream
-#include <sstream> // std::basic_istringstream
-#include <string>  // std::to_string, std::basic_string
-#include <variant> // std::holds_alternative
+#include <array>    // std::array
+#include <cassert>  // assert
+#include <charconv> // std::to_chars
+#include <ios>      // std::basic_ostream
+#include <ostream>  // std::basic_ostream
+#include <sstream>  // std::basic_istringstream
+#include <string>   // std::basic_string
+#include <variant>  // std::holds_alternative
 
 namespace sourcemeta::core::internal {
 inline auto
@@ -369,11 +371,13 @@ auto stringify_token(const TokenT &token,
       }
     }
   } else {
-    const auto index{std::to_string(token.to_index())};
+    std::array<char, 20> buffer{};
+    const auto [end_pointer, error_code] = std::to_chars(
+        buffer.data(), buffer.data() + buffer.size(), token.to_index());
     stream.write(
-        index.c_str(),
+        buffer.data(),
         static_cast<typename std::basic_ostream<CharT, Traits>::int_type>(
-            index.size()));
+            end_pointer - buffer.data()));
   }
 }
 

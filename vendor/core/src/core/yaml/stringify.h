@@ -5,14 +5,15 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/yaml_roundtrip.h>
 
-#include <array>   // std::array
-#include <cassert> // assert
-#include <cmath>   // std::modf
-#include <cstddef> // std::size_t
-#include <iomanip> // std::setprecision
-#include <ios>     // std::noshowpoint, std::fixed
-#include <ostream> // std::basic_ostream
-#include <string>  // std::to_string
+#include <array>    // std::array
+#include <cassert>  // assert
+#include <charconv> // std::to_chars
+#include <cmath>    // std::modf
+#include <cstddef>  // std::size_t
+#include <iomanip>  // std::setprecision
+#include <ios>      // std::noshowpoint, std::fixed
+#include <ostream>  // std::basic_ostream
+#include <string>   // std::string
 
 namespace sourcemeta::core::yaml {
 
@@ -380,8 +381,11 @@ inline auto write_inline_value(OutputStream &stream, const JSON &value,
       }
       break;
     case JSON::Type::Integer: {
-      const auto string{std::to_string(value.to_integer())};
-      stream.write(string.c_str(), static_cast<std::streamsize>(string.size()));
+      std::array<char, 20> buffer{};
+      const auto [end_pointer, error_code] = std::to_chars(
+          buffer.data(), buffer.data() + buffer.size(), value.to_integer());
+      stream.write(buffer.data(),
+                   static_cast<std::streamsize>(end_pointer - buffer.data()));
     } break;
     case JSON::Type::Real: {
       const auto real{value.to_real()};
