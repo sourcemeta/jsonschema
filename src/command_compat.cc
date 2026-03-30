@@ -21,16 +21,20 @@ auto read_schema(const std::string &source) -> LoadedSchema {
   const std::filesystem::path path{source};
   const bool from_stdin = (path == "-");
 
+  if (from_stdin) {
+    throw sourcemeta::jsonschema::StdinError{
+        "This command does not support reading schemas from standard input "
+        "yet"};
+  }
+
   if (!from_stdin && std::filesystem::is_directory(path)) {
     throw std::filesystem::filesystem_error{
         "The input was supposed to be a file but it is a directory", path,
         std::make_error_code(std::errc::is_a_directory)};
   }
 
-  auto document{from_stdin ? sourcemeta::jsonschema::read_from_stdin().document
-                           : sourcemeta::core::read_yaml_or_json(path)};
-  const auto display_path{from_stdin ? sourcemeta::jsonschema::stdin_path()
-                                     : path};
+  auto document{sourcemeta::core::read_yaml_or_json(path)};
+  const auto display_path{path};
 
   if (!sourcemeta::core::is_schema(document)) {
     throw sourcemeta::jsonschema::NotSchemaError{display_path};
