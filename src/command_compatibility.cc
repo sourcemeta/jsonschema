@@ -5,9 +5,10 @@
 
 namespace sourcemeta::jsonschema {
 
-void compatibility(const sourcemeta::core::Options &app) {
+
+auto compatibility(const sourcemeta::core::Options &options) -> void {
     
-    const std::vector<std::string_view> &args = app.positional();
+    const std::vector<std::string_view> &args = options.positional();
 
     if (args.size() < 2) {
         std::cerr << "Error: compatibility requires two schemas to compare.\n";
