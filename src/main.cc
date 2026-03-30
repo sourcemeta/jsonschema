@@ -188,7 +188,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "compatibility") {
     app.option("severity", {"s"});
     app.option("format", {"f"});
-    app.option("fail-on", {"o"});  
+    app.option("fail-on", {"o"}); 
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compatibility(app);
     return EXIT_SUCCESS;

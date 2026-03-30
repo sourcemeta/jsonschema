@@ -15,6 +15,7 @@ void compatibility(const sourcemeta::core::Options &app) {
         return;
     }
 
+
     std::cout << std::format("Comparing: {} <-> {}\n", args[0], args[1]);
     std::cout << "Compatibility check completed.\n";
 }
