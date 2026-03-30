@@ -26,8 +26,8 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         11,
-        "/type",
-        "",
+        [ "type" ],
+        [],
         "#/type",
         2,
         [ 8, 4 ]

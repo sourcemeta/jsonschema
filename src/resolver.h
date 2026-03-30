@@ -307,15 +307,16 @@ public:
   auto operator()(std::string_view identifier) const
       -> std::optional<sourcemeta::core::JSON> {
     const std::string string_identifier{identifier};
-    if (this->configuration_.has_value()) {
-      const auto mapped{
-          resolve_map_uri(this->configuration_.value(), string_identifier)};
-      if (mapped.has_value()) {
-        LOG_DEBUG(this->options_)
-            << "Resolving " << identifier << " as " << mapped.value()
-            << " given the configuration file\n";
-        return this->operator()(mapped.value());
-      }
+    const auto mapped_result = this->configuration_.and_then(
+        [&string_identifier](const sourcemeta::blaze::Configuration &config)
+            -> std::optional<std::string> {
+          return resolve_map_uri(config, string_identifier);
+        });
+    if (mapped_result.has_value()) {
+      LOG_DEBUG(this->options_)
+          << "Resolving " << identifier << " as " << mapped_result.value()
+          << " given the configuration file\n";
+      return this->operator()(mapped_result.value());
     }
 
     if (this->schemas.contains(string_identifier)) {

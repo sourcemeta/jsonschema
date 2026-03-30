@@ -47,9 +47,9 @@ cat << EOF > "$TMP/expected.json"
   "valid": false,
   "errors": [
     {
-      "keywordLocation": "/type",
+      "keywordLocation": [ "type" ],
       "absoluteKeywordLocation": "file://$SCHEMA_PATH#/type",
-      "instanceLocation": "",
+      "instanceLocation": [],
       "instancePosition": [ 1, 1, 1, 2 ],
       "error": "The value was expected to be of type string but it was of type integer"
     }

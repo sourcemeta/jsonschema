@@ -26,8 +26,8 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         91,
-        "/$ref",
-        "",
+        [ "$ref" ],
+        [],
         "#/$ref",
         2,
         [ 10, 1 ]
@@ -36,8 +36,8 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         11,
-        "/type",
-        "",
+        [ "type" ],
+        [],
         "#/$defs/string/type",
         2,
         [ 8, 4 ]

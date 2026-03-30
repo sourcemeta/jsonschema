@@ -8,7 +8,6 @@
 #include <cassert>    // assert
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ifstream
-#include <iostream>   // std::cout, std::endl
 
 #include "command.h"
 #include "configuration.h"

@@ -33,16 +33,16 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         21,
-        "/minLength",
-        "",
+        [ "minLength" ],
+        [],
         "#/$defs/Name/minLength",
         2,
         [ 10, 0 ]
       ],
       [
         11,
-        "/type",
-        "",
+        [ "type" ],
+        [],
         "#/$defs/Name/type",
         2,
         [ 8, 4 ]

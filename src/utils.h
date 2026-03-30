@@ -14,14 +14,13 @@
 
 #include "input.h"
 
-#include <cassert>     // assert
 #include <filesystem>  // std::filesystem::path
 #include <memory>      // std::make_shared
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <string>      // std::string, std::stoull
 #include <string_view> // std::string_view
-#include <tuple>       // std::get
+#include <utility>     // std::unreachable
 #include <variant>     // std::visit
 
 namespace sourcemeta::jsonschema {
@@ -72,9 +71,15 @@ inline auto default_dialect(
     -> std::string_view {
   if (options.contains("default-dialect")) {
     return options.at("default-dialect").front();
-  } else if (configuration.has_value() &&
-             configuration.value().default_dialect.has_value()) {
-    return configuration.value().default_dialect.value();
+  }
+
+  const auto from_config = configuration.and_then(
+      [](const sourcemeta::blaze::Configuration &config)
+          -> std::optional<std::string_view> {
+        return config.default_dialect;
+      });
+  if (from_config.has_value()) {
+    return from_config.value();
   }
 
   return "";
@@ -102,8 +107,8 @@ inline auto print(const sourcemeta::blaze::SimpleOutput &output,
     const auto position{
         tracker.get(sourcemeta::core::to_pointer(entry.instance_location))};
     if (position.has_value()) {
-      stream << " (line " << std::get<0>(position.value()) << ", column "
-             << std::get<1>(position.value()) << ")";
+      const auto [line, column, end_line, end_column] = position.value();
+      stream << " (line " << line << ", column " << column << ")";
     }
 
     stream << "\n";
@@ -130,8 +135,8 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
         const auto position{tracker.get(
             sourcemeta::core::to_pointer(annotation.first.instance_location))};
         if (position.has_value()) {
-          stream << " (line " << std::get<0>(position.value()) << ", column "
-                 << std::get<1>(position.value()) << ")";
+          const auto [line, column, end_line, end_column] = position.value();
+          stream << " (line " << line << ", column " << column << ")";
         }
 
         stream << "\n  at evaluate path \"";
@@ -174,8 +179,7 @@ trace_callback(const sourcemeta::core::PointerPositionTracker &tracker,
         stream << "@- (annotation) ";
         break;
       default:
-        assert(false);
-        break;
+        std::unreachable();
     }
 
     stream << "\"";
@@ -202,8 +206,8 @@ trace_callback(const sourcemeta::core::PointerPositionTracker &tracker,
     const auto position{
         tracker.get(sourcemeta::core::to_pointer(entry.instance_location))};
     if (position.has_value()) {
-      stream << " (line " << std::get<0>(position.value()) << ", column "
-             << std::get<1>(position.value()) << ")";
+      const auto [line, column, end_line, end_column] = position.value();
+      stream << " (line " << line << ", column " << column << ")";
     }
 
     stream << "\n";

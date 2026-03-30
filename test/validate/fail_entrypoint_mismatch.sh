@@ -51,9 +51,9 @@ cat << EOF > "$TMP/expected.txt"
   "valid": false,
   "errors": [
     {
-      "keywordLocation": "/minimum",
+      "keywordLocation": [ "minimum" ],
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/\$defs/PositiveInt/minimum",
-      "instanceLocation": "",
+      "instanceLocation": [],
       "instancePosition": [ 1, 1, 1, 2 ],
       "error": "The integer value -5 was expected to be greater than or equal to the integer 1"
     }

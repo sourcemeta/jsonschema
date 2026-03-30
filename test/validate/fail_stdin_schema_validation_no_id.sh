@@ -47,9 +47,9 @@ cat << 'EOF' > "$TMP/expected.txt"
   "valid": false,
   "errors": [
     {
-      "keywordLocation": "/type",
+      "keywordLocation": [ "type" ],
       "absoluteKeywordLocation": "file:///dev/stdin#/type",
-      "instanceLocation": "",
+      "instanceLocation": [],
       "instancePosition": [ 1, 1, 1, 3 ],
       "error": "The value was expected to be of type string but it was of type integer"
     }

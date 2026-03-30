@@ -34,7 +34,7 @@ cat << EOF > "$TMP/expected.json"
       "id": "unknown_keywords_prefix",
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
-      "schemaLocation": "/additionalProperties/unknown-1",
+      "schemaLocation": [ "additionalProperties", "unknown-1" ],
       "position": [ 6, 5, 6, 18 ]
     },
     {
@@ -42,7 +42,7 @@ cat << EOF > "$TMP/expected.json"
       "id": "unknown_keywords_prefix",
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
-      "schemaLocation": "/additionalProperties/unknown-2",
+      "schemaLocation": [ "additionalProperties", "unknown-2" ],
       "position": [ 7, 5, 7, 18 ]
     },
     {
@@ -50,7 +50,7 @@ cat << EOF > "$TMP/expected.json"
       "id": "unknown_keywords_prefix",
       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
       "description": null,
-      "schemaLocation": "/additionalProperties/unknown-3",
+      "schemaLocation": [ "additionalProperties", "unknown-3" ],
       "position": [ 8, 5, 8, 18 ]
     }
   ]

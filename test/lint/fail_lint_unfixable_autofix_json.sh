@@ -30,7 +30,7 @@ cat << EOF > "$TMP/expected.json"
       "id": "top_level_title",
       "message": "Set a concise non-empty title at the top level of the schema to explain what the definition is about",
       "description": null,
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 4, 1 ]
     },
     {
@@ -38,7 +38,7 @@ cat << EOF > "$TMP/expected.json"
       "id": "top_level_description",
       "message": "Set a non-empty description at the top level of the schema to explain what the definition is about in detail",
       "description": null,
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 4, 1 ]
     }
   ]

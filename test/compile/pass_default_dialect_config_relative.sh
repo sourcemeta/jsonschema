@@ -35,24 +35,24 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         61,
-        "/additionalProperties",
-        "",
+        [ "additionalProperties" ],
+        [],
         "#/additionalProperties",
         2,
         [ 0 ],
         [
           [
             11,
-            "/type",
-            "",
+            [ "type" ],
+            [],
             "#/additionalProperties/type",
             2,
             [ 8, 4 ]
           ],
           [
             46,
-            "",
-            "",
+            [],
+            [],
             "#/additionalProperties",
             2,
             [ 0 ]

@@ -51,7 +51,7 @@ cat << EOF > "$TMP/expected.txt"
       "id": "all_properties_camelcase",
       "message": "Ensures camelCase properties",
       "description": "The property name \"INVALID_PROPERTY\" was expected to match the regular expression \"^[a-z][a-zA-Z0-9]*\$\"",
-      "schemaLocation": "/properties/INVALID_PROPERTY",
+      "schemaLocation": [ "properties", "INVALID_PROPERTY" ],
       "position": [ 7, 5, 9, 5 ]
     }
   ]

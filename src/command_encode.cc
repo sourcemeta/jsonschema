@@ -9,7 +9,7 @@
 
 #include <filesystem> // std::filesystem
 #include <fstream>    // std::ofstream
-#include <iostream>   // std::cout, std::endl
+#include <print>      // std::println
 
 #include "command.h"
 #include "configuration.h"
@@ -45,7 +45,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
 
   const std::filesystem::path document{options.positional().front()};
   const auto original_size{std::filesystem::file_size(document)};
-  std::cerr << "original file size: " << original_size << " bytes\n";
+  std::println(stderr, "original file size: {} bytes", original_size);
 
   if (document.extension() == ".jsonl") {
     LOG_VERBOSE(options)
@@ -66,12 +66,12 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
     }
 
     output_stream.flush();
-    const auto total_size{output_stream.tellp()};
+    const auto total_size{
+        static_cast<std::uint64_t>(output_stream.tellp())};
     output_stream.close();
-    std::cerr << "encoded file size: " << total_size << " bytes\n";
-    std::cerr << "compression ratio: "
-              << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
-              << "%\n";
+    std::println(stderr, "encoded file size: {} bytes", total_size);
+    std::println(stderr, "compression ratio: {}%",
+                 total_size * 100 / original_size);
   } else {
     const auto entry{
         sourcemeta::core::read_yaml_or_json(options.positional().front())};
@@ -82,11 +82,11 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     encoder.write(entry, encoding);
     output_stream.flush();
-    const auto total_size{output_stream.tellp()};
+    const auto total_size{
+        static_cast<std::uint64_t>(output_stream.tellp())};
     output_stream.close();
-    std::cerr << "encoded file size: " << total_size << " bytes\n";
-    std::cerr << "compression ratio: "
-              << (static_cast<std::uint64_t>(total_size) * 100 / original_size)
-              << "%\n";
+    std::println(stderr, "encoded file size: {} bytes", total_size);
+    std::println(stderr, "compression ratio: {}%",
+                 total_size * 100 / original_size);
   }
 }

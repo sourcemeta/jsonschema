@@ -114,10 +114,11 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
               << std::filesystem::relative(entry.resolution_base).string();
         }
         if (position.has_value()) {
+          const auto [line, column, end_line, end_column] = position.value();
           std::cout << ":";
-          std::cout << std::get<0>(position.value());
+          std::cout << line;
           std::cout << ":";
-          std::cout << std::get<1>(position.value());
+          std::cout << column;
         } else {
           std::cout << ":<unknown>:<unknown>";
         }
@@ -208,7 +209,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
   std::unordered_set<std::string> rule_names;
   for (const auto &entry : bundle) {
-    rule_names.emplace(std::get<0>(entry)->name());
+    const auto &[rule, check_flag, fix_flag] = entry;
+    rule_names.emplace(rule->name());
   }
 
   std::unordered_set<std::string> seen_configurations;
@@ -277,8 +279,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
 
     std::unordered_set<std::string_view> blacklist;
-    for (const auto &entry : bundle) {
-      blacklist.emplace(std::get<0>(entry)->name());
+    for (const auto &[rule, check_flag, fix_flag] : bundle) {
+      blacklist.emplace(rule->name());
     }
 
     for (const auto &only : options.at("only")) {
@@ -299,9 +301,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
   if (options.contains("list")) {
     std::vector<std::pair<std::string_view, std::string_view>> rules;
-    for (const auto &entry : bundle) {
-      rules.emplace_back(std::get<0>(entry)->name(),
-                         std::get<0>(entry)->message());
+    for (const auto &[rule, check_flag, fix_flag] : bundle) {
+      rules.emplace_back(rule->name(), rule->message());
     }
 
     std::sort(
