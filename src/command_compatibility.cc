@@ -1,10 +1,10 @@
+#include "command.h"
 #include <sourcemeta/core/options.h>
 #include <iostream>
 #include <vector>
 #include <string_view>
 
 namespace sourcemeta::jsonschema {
-
 
 auto compatibility(const sourcemeta::core::Options &options) -> void {
     
