@@ -190,7 +190,13 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("format", {"f"});
     app.option("fail-on", {"o"}); 
     app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::compatibility(app);
+   
+    std::vector<std::string> args;
+    for (int i = 2; i < argc; ++i) {
+        args.push_back(argv[i]);
+    }
+
+    sourcemeta::jsonschema::compatibility(args);
     return EXIT_SUCCESS;
   } else if (command == "metaschema") {
     app.flag("trace", {"t"});
