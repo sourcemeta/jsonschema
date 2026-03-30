@@ -73,9 +73,9 @@ inline auto default_dialect(
     return options.at("default-dialect").front();
   }
 
-  const auto from_config = configuration.and_then(
-      [](const sourcemeta::blaze::Configuration &config)
-          -> std::optional<std::string_view> {
+  const auto from_config =
+      configuration.and_then([](const sourcemeta::blaze::Configuration &config)
+                                 -> std::optional<std::string_view> {
         return config.default_dialect;
       });
   if (from_config.has_value()) {

@@ -243,9 +243,8 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 
           const auto [test_line, test_column, test_end_line, test_end_column] =
               test_case.position;
-          test_object.assign(
-              "line",
-              sourcemeta::core::JSON{static_cast<std::int64_t>(test_line)});
+          test_object.assign("line", sourcemeta::core::JSON{
+                                         static_cast<std::int64_t>(test_line)});
           test_object.assign(
               "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
           test_object.assign("flaky", sourcemeta::core::JSON{false});

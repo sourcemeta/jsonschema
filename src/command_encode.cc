@@ -66,8 +66,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
     }
 
     output_stream.flush();
-    const auto total_size{
-        static_cast<std::uint64_t>(output_stream.tellp())};
+    const auto total_size{static_cast<std::uint64_t>(output_stream.tellp())};
     output_stream.close();
     std::println(stderr, "encoded file size: {} bytes", total_size);
     std::println(stderr, "compression ratio: {}%",
@@ -82,8 +81,7 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
     sourcemeta::jsonbinpack::Encoder encoder{output_stream};
     encoder.write(entry, encoding);
     output_stream.flush();
-    const auto total_size{
-        static_cast<std::uint64_t>(output_stream.tellp())};
+    const auto total_size{static_cast<std::uint64_t>(output_stream.tellp())};
     output_stream.close();
     std::println(stderr, "encoded file size: {} bytes", total_size);
     std::println(stderr, "compression ratio: {}%",
