@@ -49,6 +49,7 @@ auto ValidExamples::condition(
     }
   }
 
+  // TODO(C++23): Use std::views::enumerate when available in libc++
   std::size_t cursor{0};
 
   if (frame.standalone()) {

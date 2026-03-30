@@ -12,12 +12,13 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <functional> // std::reference_wrapper
-#include <map>        // std::map
-#include <ostream>    // std::ostream
-#include <string>     // std::string
-#include <tuple>      // std::tie
-#include <utility>    // std::pair
-#include <vector>     // std::vector
+// TODO(C++23): Consider std::flat_map/std::flat_set when available in libc++
+#include <map>     // std::map
+#include <ostream> // std::ostream
+#include <string>  // std::string
+#include <tuple>   // std::tie
+#include <utility> // std::pair
+#include <vector>  // std::vector
 
 namespace sourcemeta::blaze {
 

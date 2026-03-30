@@ -15,14 +15,14 @@ auto Configuration::add_dependency(const sourcemeta::core::URI &uri,
   const auto canonical_uri{
       sourcemeta::core::URI::canonicalize(uri.recompose())};
 
-  if (this->dependencies.contains(canonical_uri)) {
+  if (this->dependencies.contains(canonical_uri)) [[unlikely]] {
     throw ConfigurationParseError(
         "The dependency already exists",
         sourcemeta::core::Pointer({"dependencies", canonical_uri}));
   }
 
   for (const auto &existing : this->dependencies) {
-    if (existing.second == path) {
+    if (existing.second == path) [[unlikely]] {
       throw ConfigurationParseError(
           "Multiple dependencies cannot point to the same path",
           sourcemeta::core::Pointer({"dependencies", existing.first}));

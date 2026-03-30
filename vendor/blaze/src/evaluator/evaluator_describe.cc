@@ -1,9 +1,12 @@
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <algorithm> // std::ranges::any_of
-#include <cassert>   // assert
-#include <sstream>   // std::ostringstream
-#include <variant>   // std::visit
+#include <algorithm>   // std::ranges::any_of
+#include <cassert>     // assert
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::to_underlying, std::unreachable
+#include <variant>     // std::visit
 
 namespace {
 using namespace sourcemeta::blaze;
@@ -27,19 +30,30 @@ auto describe_stringify(const sourcemeta::core::JSON &value, T &stream)
   }
 }
 
-auto type_name(const sourcemeta::core::JSON::Type type) -> std::string {
-  // Otherwise the type "real" might not make a lot
-  // of sense to JSON Schema users
-  if (type == sourcemeta::core::JSON::Type::Real) {
-    return "number";
-  } else {
-    std::ostringstream result;
-    result << type;
-    return result.str();
+auto type_name(const sourcemeta::core::JSON::Type type) -> std::string_view {
+  using Type = sourcemeta::core::JSON::Type;
+  switch (type) {
+    case Type::Null:
+      return "null";
+    case Type::Boolean:
+      return "boolean";
+    case Type::Integer:
+      return "integer";
+    case Type::Real:
+    case Type::Decimal:
+      return "number";
+    case Type::String:
+      return "string";
+    case Type::Array:
+      return "array";
+    case Type::Object:
+      return "object";
+    default:
+      std::unreachable();
   }
 }
 
-auto value_type_name(const sourcemeta::core::JSON &value) -> std::string {
+auto value_type_name(const sourcemeta::core::JSON &value) -> std::string_view {
   if (value.type() == sourcemeta::core::JSON::Type::Decimal) {
     return value.to_decimal().is_integer() ? "integer" : "number";
   }
@@ -47,19 +61,26 @@ auto value_type_name(const sourcemeta::core::JSON &value) -> std::string {
 }
 
 auto escape_string(const std::string &input) -> std::string {
-  std::ostringstream result;
-  result << '"';
-
+  std::size_t size{2};
   for (const auto character : input) {
-    if (character == '"') {
-      result << "\\\"";
-    } else {
-      result << character;
-    }
+    size += (character == '"') ? 2 : 1;
   }
 
-  result << '"';
-  return result.str();
+  std::string result;
+  result.resize_and_overwrite(size, [&](char *buffer, std::size_t) {
+    auto *cursor{buffer};
+    *cursor++ = '"';
+    for (const auto character : input) {
+      if (character == '"') {
+        *cursor++ = '\\';
+      }
+      *cursor++ = character;
+    }
+    *cursor++ = '"';
+    return static_cast<std::size_t>(cursor - buffer);
+  });
+
+  return result;
 }
 
 auto describe_type_check(const bool valid,
@@ -83,24 +104,21 @@ auto describe_types_check(const bool valid,
                           const ValueTypes expected,
                           std::ostringstream &message) -> void {
   ValueTypes types{expected};
-  const auto has_real{types.test(
-      static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real))};
-  const auto has_integer{types.test(
-      static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer))};
-  const auto has_decimal{types.test(
-      static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal))};
+  const auto has_real{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))};
+  const auto has_integer{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+  const auto has_decimal{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Decimal))};
 
   if (has_real && has_integer) {
-    types.reset(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
   }
   if (has_real && has_decimal) {
-    types.reset(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
   }
   if (has_integer && has_decimal) {
-    types.reset(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
   }
 
   const auto popcount{types.count()};
@@ -174,7 +192,6 @@ auto is_within_keyword(const sourcemeta::core::WeakPointer &evaluate_path,
 }
 
 auto unknown() -> std::string {
-  // In theory we should never get here
   assert(false);
   return "<unknown>";
 }
@@ -795,24 +812,21 @@ auto describe(const bool valid, const Instruction &step,
     message << "The object properties were expected to be of type ";
     ValueTypes types{instruction_value<ValueTypes>(step)};
 
-    const auto has_real{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real))};
-    const auto has_integer{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer))};
-    const auto has_decimal{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal))};
+    const auto has_real{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))};
+    const auto has_integer{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+    const auto has_decimal{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Decimal))};
 
     if (has_real && has_integer) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
     }
     if (has_real && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
     if (has_integer && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
 
     const auto popcount{types.count()};
@@ -859,24 +873,21 @@ auto describe(const bool valid, const Instruction &step,
     message << "The object properties were expected to be of type ";
     ValueTypes types{instruction_value<ValueTypes>(step)};
 
-    const auto has_real{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real))};
-    const auto has_integer{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer))};
-    const auto has_decimal{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal))};
+    const auto has_real{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))};
+    const auto has_integer{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+    const auto has_decimal{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Decimal))};
 
     if (has_real && has_integer) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
     }
     if (has_real && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
     if (has_integer && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
 
     const auto popcount{types.count()};
@@ -996,24 +1007,21 @@ auto describe(const bool valid, const Instruction &step,
     message << "The array items were expected to be of type ";
     ValueTypes types{instruction_value<ValueTypes>(step)};
 
-    const auto has_real{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real))};
-    const auto has_integer{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer))};
-    const auto has_decimal{types.test(
-        static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal))};
+    const auto has_real{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))};
+    const auto has_integer{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+    const auto has_decimal{
+        types.test(std::to_underlying(sourcemeta::core::JSON::Type::Decimal))};
 
     if (has_real && has_integer) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
     }
     if (has_real && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
     if (has_integer && has_decimal) {
-      types.reset(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
     }
 
     const auto popcount{types.count()};
@@ -1058,8 +1066,7 @@ auto describe(const bool valid, const Instruction &step,
     assert(target.is_array());
     std::ostringstream message;
     const auto &value{instruction_value<ValueRange>(step)};
-    const auto minimum{std::get<0>(value)};
-    const auto maximum{std::get<1>(value)};
+    const auto &[minimum, maximum, exhaustive] = value;
     bool plural{true};
 
     message << "The array value was expected to contain ";
@@ -1290,8 +1297,8 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionTypeStringBounded) {
     std::ostringstream message;
 
-    const auto minimum{std::get<0>(instruction_value<ValueRange>(step))};
-    const auto maximum{std::get<1>(instruction_value<ValueRange>(step))};
+    const auto &[minimum, maximum, exhaustive] =
+        instruction_value<ValueRange>(step);
     if (minimum == 0 && maximum.has_value()) {
       message << "The value was expected to consist of a string of at most "
               << maximum.value()
@@ -1323,8 +1330,8 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionTypeArrayBounded) {
     std::ostringstream message;
 
-    const auto minimum{std::get<0>(instruction_value<ValueRange>(step))};
-    const auto maximum{std::get<1>(instruction_value<ValueRange>(step))};
+    const auto &[minimum, maximum, exhaustive] =
+        instruction_value<ValueRange>(step);
     if (minimum == 0 && maximum.has_value()) {
       message << "The value was expected to consist of an array of at most "
               << maximum.value() << (maximum.value() == 1 ? " item" : " items");
@@ -1354,8 +1361,8 @@ auto describe(const bool valid, const Instruction &step,
       sourcemeta::blaze::InstructionIndex::AssertionTypeObjectBounded) {
     std::ostringstream message;
 
-    const auto minimum{std::get<0>(instruction_value<ValueRange>(step))};
-    const auto maximum{std::get<1>(instruction_value<ValueRange>(step))};
+    const auto &[minimum, maximum, exhaustive] =
+        instruction_value<ValueRange>(step);
     if (minimum == 0 && maximum.has_value()) {
       message << "The value was expected to consist of an object of at most "
               << maximum.value()

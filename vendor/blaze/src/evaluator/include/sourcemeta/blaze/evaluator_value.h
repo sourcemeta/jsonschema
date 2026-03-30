@@ -147,8 +147,9 @@ using ValueTypedProperties = std::pair<ValueType, ValueStringSet>;
 
 /// @ingroup evaluator
 /// Represents a compiler step types property hashes value
-using ValueStringHashes = std::pair<std::vector<ValueStringSet::hash_type>,
-                                    std::vector<ValueIndexPair>>;
+using ValueStringHashes =
+    std::pair<std::vector<std::pair<ValueStringSet::hash_type, ValueString>>,
+              std::vector<ValueIndexPair>>;
 
 /// @ingroup evaluator
 /// Represents a compiler step types property hashes value

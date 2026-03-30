@@ -9,6 +9,7 @@ auto TestSuite::run(const Callback &callback) -> Result {
                 .passed = 0,
                 .start = std::chrono::steady_clock::now(),
                 .end = {}};
+  // TODO(C++23): Use std::views::enumerate when available in libc++
   for (std::size_t index = 0; index < this->tests.size(); ++index) {
     const auto &test_case = this->tests[index];
     const auto start{std::chrono::steady_clock::now()};

@@ -34,13 +34,15 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
         auto unit{sourcemeta::core::JSON::make_object()};
         unit.assign_assume_new(
             "keywordLocation",
-            sourcemeta::core::to_json(annotation.first.evaluate_path));
+            sourcemeta::core::JSON{
+                sourcemeta::core::to_string(annotation.first.evaluate_path)});
         unit.assign_assume_new(
             "absoluteKeywordLocation",
             sourcemeta::core::JSON{annotation.first.schema_location});
         unit.assign_assume_new(
             "instanceLocation",
-            sourcemeta::core::to_json(annotation.first.instance_location));
+            sourcemeta::core::JSON{sourcemeta::core::to_string(
+                annotation.first.instance_location)});
 
         if (tracker != nullptr) {
           const auto position{tracker->get(sourcemeta::core::to_pointer(
@@ -67,13 +69,16 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
       auto errors{sourcemeta::core::JSON::make_array()};
       for (const auto &entry : output) {
         auto unit{sourcemeta::core::JSON::make_object()};
-        unit.assign_assume_new("keywordLocation",
-                               sourcemeta::core::to_json(entry.evaluate_path));
+        unit.assign_assume_new(
+            "keywordLocation",
+            sourcemeta::core::JSON{
+                sourcemeta::core::to_string(entry.evaluate_path)});
         unit.assign_assume_new("absoluteKeywordLocation",
                                sourcemeta::core::JSON{entry.schema_location});
         unit.assign_assume_new(
             "instanceLocation",
-            sourcemeta::core::to_json(entry.instance_location));
+            sourcemeta::core::JSON{
+                sourcemeta::core::to_string(entry.instance_location)});
 
         if (tracker != nullptr) {
           const auto position{tracker->get(

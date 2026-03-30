@@ -111,6 +111,7 @@ inline auto rebase(Instruction &instruction,
   if (instruction.type == InstructionIndex::LogicalCondition) {
     const auto &value{std::get<ValueIndexPair>(instruction.value)};
     const auto then_cursor{value.first};
+    // TODO(C++23): Use std::views::enumerate when available in libc++
     for (std::size_t index = then_cursor; index < instruction.children.size();
          ++index) {
       auto &child{instruction.children[index]};

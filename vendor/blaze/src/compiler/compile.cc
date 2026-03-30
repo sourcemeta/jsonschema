@@ -3,8 +3,9 @@
 
 #include <sourcemeta/core/jsonschema.h>
 
-#include <algorithm>     // std::move, std::sort, std::unique
-#include <cassert>       // assert
+#include <algorithm> // std::move, std::sort, std::unique
+#include <cassert>   // assert
+// TODO(C++23): Consider std::flat_map/std::flat_set when available in libc++
 #include <map>           // std::map
 #include <set>           // std::set
 #include <string_view>   // std::string_view
@@ -161,14 +162,14 @@ auto compile(const sourcemeta::core::JSON &schema,
   const auto effective_tweaks{tweaks.value_or(Tweaks{})};
 
   const auto maybe_entrypoint_location{frame.traverse(entrypoint)};
-  if (!maybe_entrypoint_location.has_value()) {
+  if (!maybe_entrypoint_location.has_value()) [[unlikely]] {
     throw CompilerInvalidEntryPoint{
         entrypoint, "The given entry point URI does not exist in the schema"};
   }
 
   const auto &entrypoint_location{maybe_entrypoint_location->get()};
   if (entrypoint_location.type ==
-      sourcemeta::core::SchemaFrame::LocationType::Pointer) {
+      sourcemeta::core::SchemaFrame::LocationType::Pointer) [[unlikely]] {
     throw CompilerInvalidEntryPoint{
         entrypoint, "The given entry point URI is not a valid subschema"};
   }
@@ -367,7 +368,8 @@ auto compile(const sourcemeta::core::JSON &schema,
 
     if (entry.type != sourcemeta::core::SchemaFrame::LocationType::Subschema &&
         entry.type != sourcemeta::core::SchemaFrame::LocationType::Resource &&
-        entry.type != sourcemeta::core::SchemaFrame::LocationType::Anchor) {
+        entry.type != sourcemeta::core::SchemaFrame::LocationType::Anchor)
+        [[unlikely]] {
       assert(reference_pointer != nullptr);
       const auto parent_size{entry.parent ? entry.parent->size() : 0};
       throw CompilerReferenceTargetNotSchemaError(
@@ -462,7 +464,8 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   // Otherwise the recursion attempt is non-sense
   if (!context.frame.locations().contains(
-          {sourcemeta::core::SchemaReferenceType::Static, destination})) {
+          {sourcemeta::core::SchemaReferenceType::Static, destination}))
+      [[unlikely]] {
     throw sourcemeta::core::SchemaReferenceError(
         destination, to_pointer(schema_context.relative_pointer),
         "The target of the reference does not exist in the schema");

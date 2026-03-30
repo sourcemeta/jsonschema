@@ -105,6 +105,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   Evaluator evaluator;
 
   /// A callback invoked for each test case during execution
+  // TODO(C++23): Use std::move_only_function when available in libc++
   using Callback = std::function<void(
       const sourcemeta::core::JSON::String &target, std::size_t index,
       std::size_t total, const TestCase &test_case, bool actual,

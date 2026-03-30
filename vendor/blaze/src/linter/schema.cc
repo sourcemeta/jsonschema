@@ -19,12 +19,13 @@ static auto validate_name(const std::string_view name) -> void {
   static const auto pattern{
       sourcemeta::core::to_regex(std::string{NAME_PATTERN})};
   assert(pattern.has_value());
-  if (name.empty()) {
+  if (name.empty()) [[unlikely]] {
     throw LinterInvalidNameError(name,
                                  "The schema rule name must not be empty");
   }
 
-  if (!sourcemeta::core::matches(pattern.value(), std::string{name})) {
+  if (!sourcemeta::core::matches(pattern.value(), std::string{name}))
+      [[unlikely]] {
     throw LinterInvalidNamePatternError(name, NAME_PATTERN);
   }
 }
@@ -45,11 +46,11 @@ static auto extract_description(const sourcemeta::core::JSON &schema)
 }
 
 static auto extract_title(const sourcemeta::core::JSON &schema) -> std::string {
-  if (!schema.defines("title")) {
+  if (!schema.defines("title")) [[unlikely]] {
     throw LinterMissingNameError{};
   }
 
-  if (!schema.at("title").is_string()) {
+  if (!schema.at("title").is_string()) [[unlikely]] {
     std::ostringstream result;
     sourcemeta::core::stringify(schema.at("title"), result);
     throw LinterInvalidNameError(std::move(result).str(),

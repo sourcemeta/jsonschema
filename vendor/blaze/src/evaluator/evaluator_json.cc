@@ -1,6 +1,7 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <cassert> // assert
+#include <utility> // std::unreachable
 
 namespace {
 auto value_from_json(const sourcemeta::core::JSON &wrapper)
@@ -41,8 +42,7 @@ auto value_from_json(const sourcemeta::core::JSON &wrapper)
     case 21: return sourcemeta::core::from_json<ValueTypedHashes>(value);
     // clang-format on
     default:
-      assert(false);
-      return ValueNone{};
+      std::unreachable();
   }
 }
 

@@ -13,7 +13,7 @@ namespace {
 inline auto TEST_ERROR_IF(
     bool condition, const sourcemeta::core::PointerPositionTracker &tracker,
     const sourcemeta::core::Pointer &pointer, const char *message) -> void {
-  if (condition) {
+  if (condition) [[unlikely]] {
     const auto position{tracker.get(pointer)};
     assert(position.has_value());
     throw sourcemeta::blaze::TestParseError{message, pointer,
@@ -120,6 +120,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
   TestSuite test_suite;
   test_suite.target = schema_uri.recompose();
 
+  // TODO(C++23): Use std::views::enumerate when available in libc++
   std::size_t index{0};
   for (const auto &test_case_json : document.at("tests").as_array()) {
     const sourcemeta::core::Pointer location{"tests", index};
