@@ -7,7 +7,6 @@
 namespace sourcemeta::jsonschema {
 
 void compatibility(const sourcemeta::core::Options &app) {
-
     const std::vector<std::string> args = app.args();
 
     if (args.size() < 2) {
@@ -15,9 +14,7 @@ void compatibility(const sourcemeta::core::Options &app) {
         return;
     }
 
-
     std::cout << std::format("Comparing: {} <-> {}\n", args[0], args[1]);
-    std::cout << "Compatibility check completed (Boilerplate implementation).\n";
 }
 
 } 
