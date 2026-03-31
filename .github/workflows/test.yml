@@ -65,7 +65,7 @@ jobs:
       - uses: Vampire/setup-wsl@v5
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
-          distribution: Ubuntu-22.04
+          distribution: Ubuntu-24.04
           additional-packages: cmake build-essential shellcheck pipx zsh jq bindfs
           wsl-version: 2
 
