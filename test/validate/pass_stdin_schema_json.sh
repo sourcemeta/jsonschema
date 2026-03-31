@@ -27,9 +27,9 @@ cat << 'EOF' > "$TMP/expected.json"
   "valid": true,
   "annotations": [
     {
-      "keywordLocation": [ "properties" ],
+      "keywordLocation": "/properties",
       "absoluteKeywordLocation": "https://example.com#/properties",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "foo" ]
     }

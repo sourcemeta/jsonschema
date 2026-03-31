@@ -48,16 +48,16 @@ $(realpath "$TMP")/instances/instance_2.json
   "valid": false,
   "errors": [
     {
-      "keywordLocation": [ "properties", "age", "type" ],
+      "keywordLocation": "/properties/age/type",
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/properties/age/type",
-      "instanceLocation": [ "age" ],
+      "instanceLocation": "/age",
       "instancePosition": [ 1, 18, 1, 33 ],
       "error": "The value was expected to be of type integer but it was of type string"
     },
     {
-      "keywordLocation": [ "properties" ],
+      "keywordLocation": "/properties",
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/properties",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 35 ],
       "error": "The object value was expected to validate against the defined properties subschemas"
     }

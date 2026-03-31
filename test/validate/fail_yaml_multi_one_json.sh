@@ -38,9 +38,9 @@ cat << EOF > "$TMP/expected.txt"
   "valid": false,
   "errors": [
     {
-      "keywordLocation": [ "type" ],
+      "keywordLocation": "/type",
       "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/type",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 4, 1, 5, 0 ],
       "error": "The value was expected to be of type object but it was of type array"
     }

@@ -32,23 +32,23 @@ cat << EOF > "$TMP/expected.json"
   "valid": true,
   "annotations": [
     {
-      "keywordLocation": [ "description" ],
+      "keywordLocation": "/description",
       "absoluteKeywordLocation": "https://example.com#/description",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "Test schema" ]
     },
     {
-      "keywordLocation": [ "properties" ],
+      "keywordLocation": "/properties",
       "absoluteKeywordLocation": "https://example.com#/properties",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "foo" ]
     },
     {
-      "keywordLocation": [ "title" ],
+      "keywordLocation": "/title",
       "absoluteKeywordLocation": "https://example.com#/title",
-      "instanceLocation": [],
+      "instanceLocation": "",
       "instancePosition": [ 1, 1, 1, 16 ],
       "annotation": [ "Test" ]
     }
