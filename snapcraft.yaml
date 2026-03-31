@@ -1,6 +1,6 @@
 # See https://documentation.ubuntu.com/snapcraft/stable/reference/project-file/snapcraft-yaml
 name: jsonschema
-base: core22
+base: core24
 adopt-info: jsonschema
 title: JSON Schema CLI
 summary: The command-line tool for working with JSON Schema
@@ -24,6 +24,11 @@ parts:
   jsonschema:
     plugin: cmake
     source: .
+    build-packages:
+      - g++-14
+    build-environment:
+      - CC: gcc-14
+      - CXX: g++-14
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE:STRING=Release
     override-pull: |
