@@ -22,14 +22,12 @@ jobs:
             artifact: ubuntu-x64
             cc: gcc-14
             cxx: g++-14
-            options: -DCMAKE_EXE_LINKER_FLAGS:STRING="-static-libstdc++ -static-libgcc"
             shell: sh
           - os: ubuntu-22.04-arm
             type: native
             artifact: ubuntu-arm
             cc: gcc-14
             cxx: g++-14
-            options: -DCMAKE_EXE_LINKER_FLAGS:STRING="-static-libstdc++ -static-libgcc"
             shell: sh
           - os: ubuntu-latest
             type: container
@@ -109,7 +107,6 @@ jobs:
           -DJSONSCHEMA_CONTINUOUS:BOOL=ON
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
-          ${{ matrix.platform.options }}
 
       - name: Configure JSON Schema (Release)
         if: github.ref_type == 'tag'
@@ -122,7 +119,6 @@ jobs:
           -DJSONSCHEMA_CONTINUOUS:BOOL=OFF
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
-          ${{ matrix.platform.options }}
 
       - run: cmake --build ./build --config Release --parallel 4
       - run: >

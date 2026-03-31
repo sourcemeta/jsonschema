@@ -20,13 +20,11 @@ jobs:
             type: native
             cc: gcc-14
             cxx: g++-14
-            options: -DCMAKE_EXE_LINKER_FLAGS:STRING="-static-libstdc++ -static-libgcc"
             shell: sh
           - os: ubuntu-22.04-arm
             type: native
             cc: gcc-14
             cxx: g++-14
-            options: -DCMAKE_EXE_LINKER_FLAGS:STRING="-static-libstdc++ -static-libgcc"
             shell: sh
           - os: ubuntu-latest
             type: container
@@ -111,7 +109,6 @@ jobs:
           -DJSONSCHEMA_DEVELOPMENT:BOOL=ON
           -DBUILD_SHARED_LIBS:BOOL=OFF
           -DCMAKE_COMPILE_WARNING_AS_ERROR:BOOL=ON
-          ${{ matrix.platform.options }}
       - run: cmake --build ./build --config Release --target clang_format_test
         # TODO: As the downloaded `clang-format` binary won't run on Alpine
         if: matrix.platform.type != 'container'
