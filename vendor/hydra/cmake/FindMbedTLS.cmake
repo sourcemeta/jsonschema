@@ -67,6 +67,7 @@ if(NOT MbedTLS_FOUND)
     "${MBEDTLS_DIR}/library/psa_crypto_hash.c"
     "${MBEDTLS_DIR}/library/psa_crypto_mac.c"
     "${MBEDTLS_DIR}/library/psa_crypto_pake.c"
+    "${MBEDTLS_DIR}/library/psa_crypto_random.c"
     "${MBEDTLS_DIR}/library/psa_crypto_rsa.c"
     "${MBEDTLS_DIR}/library/psa_crypto_se.c"
     "${MBEDTLS_DIR}/library/psa_crypto_slot_management.c"

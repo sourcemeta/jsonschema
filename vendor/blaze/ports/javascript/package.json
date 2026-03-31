@@ -1,0 +1,10 @@
+{
+  "name": "@sourcemeta/blaze",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test.mjs",
+    "benchmark": "node benchmark.mjs"
+  }
+}

@@ -51,8 +51,12 @@ function(sourcemeta_executable)
     target_link_options(${TARGET_NAME} PRIVATE /guard:cf /CETCOMPAT)
   endif()
 
-  # Linux-specific ELF linker hardening options
+  # Linux-specific ELF linker hardening and compatibility options
   if(SOURCEMETA_OS_LINUX AND (SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC))
+    # Maximize compatibility of pre-built binaries across Linux distros
+    if(NOT BUILD_SHARED_LIBS)
+      target_link_options(${TARGET_NAME} PRIVATE -static-libstdc++ -static-libgcc)
+    endif()
     target_link_options(${TARGET_NAME} PRIVATE
       "LINKER:-z,nodlopen"
       "LINKER:-z,noexecstack"
