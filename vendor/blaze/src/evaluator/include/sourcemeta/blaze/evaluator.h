@@ -66,6 +66,7 @@ enum class EvaluationType : std::uint8_t { Pre, Post };
 /// - The annotation result, if any (otherwise null)
 ///
 /// You can use this callback mechanism to implement arbitrary output formats.
+// TODO(C++23): Use std::move_only_function when available in libc++
 using Callback = std::function<void(
     const EvaluationType, bool, const Instruction &, const InstructionExtra &,
     const sourcemeta::core::WeakPointer &,
@@ -194,16 +195,20 @@ public:
   static inline const sourcemeta::core::JSON empty_string{""};
   // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
+  // Compute a hash that fits within the IEEE 754 double-precision safe
+  // integer range (2^53 - 1), ensuring the serialized template labels
+  // are usable from JavaScript and other languages whose numbers are doubles
   [[nodiscard]] static auto hash(const std::size_t resource,
                                  const std::string_view fragment) noexcept
       -> std::size_t {
-    std::size_t result{14695981039346656037ULL};
+    constexpr std::size_t mask{(1ULL << 53) - 1};
+    std::size_t result{14695981039346656037ULL & mask};
     for (const auto byte : fragment) {
       result ^= static_cast<std::size_t>(static_cast<unsigned char>(byte));
-      result *= 1099511628211ULL;
+      result = (result * 1099511628211ULL) & mask;
     }
 
-    return resource + result;
+    return (resource + result) & mask;
   }
 
   auto evaluate(const sourcemeta::core::JSON *target) -> void {

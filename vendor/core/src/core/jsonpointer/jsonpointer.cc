@@ -8,7 +8,9 @@
 #include "parser.h"
 #include "stringify.h"
 
+#include <array>       // std::array
 #include <cassert>     // assert
+#include <charconv>    // std::to_chars
 #include <iterator>    // std::cbegin, std::cend, std::prev, std::advance
 #include <memory>      // std::allocator
 #include <ostream>     // std::basic_ostream
@@ -56,7 +58,10 @@ auto traverse(V &document, typename PointerT::const_iterator begin,
       // token.
       // See https://www.rfc-editor.org/rfc/rfc6901#section-4
       if (current->is_object()) {
-        current = &current->at(std::to_string(iterator->to_index()));
+        std::array<char, 20> buffer{};
+        const auto [end_pointer, error_code] = std::to_chars(
+            buffer.data(), buffer.data() + buffer.size(), iterator->to_index());
+        current = &current->at(std::string{buffer.data(), end_pointer});
       } else {
         current = &current->at(iterator->to_index());
       }
@@ -83,7 +88,10 @@ auto traverse_all(V &document, const PointerT &pointer) -> V & {
       current = &current->at(token.to_property(), token.property_hash());
     } else {
       if (current->is_object()) {
-        current = &current->at(std::to_string(token.to_index()));
+        std::array<char, 20> buffer{};
+        const auto [end_pointer, error_code] = std::to_chars(
+            buffer.data(), buffer.data() + buffer.size(), token.to_index());
+        current = &current->at(std::string{buffer.data(), end_pointer});
       } else {
         current = &current->at(token.to_index());
       }
@@ -120,7 +128,10 @@ auto try_traverse(const sourcemeta::core::JSON &document,
       const auto index{token.to_index()};
       if (index < current->size()) {
         if (is_object) {
-          current = &current->at(std::to_string(index));
+          std::array<char, 20> buffer{};
+          const auto [end_pointer, error_code] = std::to_chars(
+              buffer.data(), buffer.data() + buffer.size(), index);
+          current = &current->at(std::string{buffer.data(), end_pointer});
         } else {
           current = &current->at(index);
         }
@@ -223,7 +234,10 @@ auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
     current.at(last.to_property()).into(value);
   } else {
     if (current.is_object()) {
-      current.at(std::to_string(last.to_index())).into(value);
+      std::array<char, 20> buffer{};
+      const auto [end_pointer, error_code] = std::to_chars(
+          buffer.data(), buffer.data() + buffer.size(), last.to_index());
+      current.at(std::string{buffer.data(), end_pointer}).into(value);
     } else {
       current.at(last.to_index()).into(value);
     }
@@ -273,8 +287,12 @@ auto remove_pointer(JSON &document, const PointerT &pointer) -> bool {
     return current.erase(last.to_property()) < current_size;
   } else {
     if (current.is_object()) {
+      std::array<char, 20> buffer{};
+      const auto [end_pointer, error_code] = std::to_chars(
+          buffer.data(), buffer.data() + buffer.size(), last.to_index());
       const auto current_size{current.size()};
-      return current.erase(std::to_string(last.to_index())) < current_size;
+      return current.erase(std::string{buffer.data(), end_pointer}) <
+             current_size;
     } else {
       const auto index{last.to_index()};
       const auto &array{current.as_array()};

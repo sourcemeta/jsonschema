@@ -76,8 +76,7 @@ auto parallel_for_each(
     Iterator first, Iterator last, Callback &&callback,
     const std::size_t parallelism = std::thread::hardware_concurrency(),
     const std::size_t stack_size_bytes = 0) -> void {
-  const auto effective_parallelism{
-      std::max(parallelism, static_cast<std::size_t>(1))};
+  const auto effective_parallelism{std::max(parallelism, 1uz)};
 
   // Empty list
   if (first == last) {
@@ -144,6 +143,8 @@ auto parallel_for_each(
     }
   };
 
+  // TODO: Replace std::function with std::move_only_function once
+  // Apple Clang ships libc++ 19+ (__cpp_lib_move_only_function)
 #if defined(_WIN32)
   for (std::size_t index = 0; index < effective_parallelism; ++index) {
     auto *heap_function = new std::function<void()>(worker_callable);

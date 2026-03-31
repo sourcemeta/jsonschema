@@ -2,7 +2,7 @@
 
 #include <sourcemeta/core/jsonschema.h>
 
-#include <utility> // std::move
+#include <utility> // std::move, std::to_underlying
 #include <variant> // std::visit
 
 static auto try_vocabulary(
@@ -47,9 +47,7 @@ auto TraceOutput::operator()(
     const sourcemeta::core::WeakPointer &instance_location,
     const sourcemeta::core::JSON &annotation) -> void {
 
-  const auto short_step_name{
-      InstructionNames[static_cast<std::underlying_type_t<InstructionIndex>>(
-          step.type)]};
+  const auto short_step_name{InstructionNames[std::to_underlying(step.type)]};
 
   // Only resolve vocabulary on Pre callbacks and cache for Post
   if (is_annotation(step.type)) {

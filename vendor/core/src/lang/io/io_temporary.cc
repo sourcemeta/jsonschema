@@ -17,8 +17,8 @@ namespace sourcemeta::core {
 TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
                                        const std::string_view prefix) {
   assert(!prefix.empty());
-  assert(prefix.find('/') == std::string_view::npos);
-  assert(prefix.find('\\') == std::string_view::npos);
+  assert(!prefix.contains('/'));
+  assert(!prefix.contains('\\'));
   if (std::filesystem::exists(parent) &&
       !std::filesystem::is_directory(parent)) {
     throw std::filesystem::filesystem_error{

@@ -76,6 +76,7 @@ public:
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
 
+  // TODO(C++23): Use std::move_only_function when available in libc++
   using Callback = std::function<void(const Entry &)>;
 
   TraceOutput(

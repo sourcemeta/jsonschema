@@ -5,8 +5,7 @@
 namespace sourcemeta::core {
 
 auto html_escape(std::string &text) -> void {
-  std::size_t write_position{0};
-  std::size_t original_size{text.size()};
+  const std::size_t original_size{text.size()};
 
   // First pass: count how much space we need
   std::size_t required_size{0};
@@ -35,62 +34,64 @@ auto html_escape(std::string &text) -> void {
     return;
   }
 
-  // Resize string to accommodate escaped characters
-  text.resize(required_size);
+  // Write escaped characters backwards to avoid overwriting unprocessed data
+  text.resize_and_overwrite(required_size,
+                            [original_size](char *buffer, std::size_t count) {
+                              auto read_position = original_size;
+                              auto write_position = count;
 
-  // Second pass: work backwards to avoid overwriting data
-  std::size_t read_position{original_size};
-  write_position = required_size;
+                              while (read_position > 0) {
+                                --read_position;
+                                const auto character = buffer[read_position];
 
-  while (read_position > 0) {
-    --read_position;
-    char character = text[read_position];
+                                switch (character) {
+                                  case '&':
+                                    write_position -= 5;
+                                    buffer[write_position] = '&';
+                                    buffer[write_position + 1] = 'a';
+                                    buffer[write_position + 2] = 'm';
+                                    buffer[write_position + 3] = 'p';
+                                    buffer[write_position + 4] = ';';
+                                    break;
+                                  case '<':
+                                    write_position -= 4;
+                                    buffer[write_position] = '&';
+                                    buffer[write_position + 1] = 'l';
+                                    buffer[write_position + 2] = 't';
+                                    buffer[write_position + 3] = ';';
+                                    break;
+                                  case '>':
+                                    write_position -= 4;
+                                    buffer[write_position] = '&';
+                                    buffer[write_position + 1] = 'g';
+                                    buffer[write_position + 2] = 't';
+                                    buffer[write_position + 3] = ';';
+                                    break;
+                                  case '"':
+                                    write_position -= 6;
+                                    buffer[write_position] = '&';
+                                    buffer[write_position + 1] = 'q';
+                                    buffer[write_position + 2] = 'u';
+                                    buffer[write_position + 3] = 'o';
+                                    buffer[write_position + 4] = 't';
+                                    buffer[write_position + 5] = ';';
+                                    break;
+                                  case '\'':
+                                    write_position -= 5;
+                                    buffer[write_position] = '&';
+                                    buffer[write_position + 1] = '#';
+                                    buffer[write_position + 2] = '3';
+                                    buffer[write_position + 3] = '9';
+                                    buffer[write_position + 4] = ';';
+                                    break;
+                                  default:
+                                    --write_position;
+                                    buffer[write_position] = character;
+                                }
+                              }
 
-    switch (character) {
-      case '&':
-        write_position -= 5;
-        text[write_position] = '&';
-        text[write_position + 1] = 'a';
-        text[write_position + 2] = 'm';
-        text[write_position + 3] = 'p';
-        text[write_position + 4] = ';';
-        break;
-      case '<':
-        write_position -= 4;
-        text[write_position] = '&';
-        text[write_position + 1] = 'l';
-        text[write_position + 2] = 't';
-        text[write_position + 3] = ';';
-        break;
-      case '>':
-        write_position -= 4;
-        text[write_position] = '&';
-        text[write_position + 1] = 'g';
-        text[write_position + 2] = 't';
-        text[write_position + 3] = ';';
-        break;
-      case '"':
-        write_position -= 6;
-        text[write_position] = '&';
-        text[write_position + 1] = 'q';
-        text[write_position + 2] = 'u';
-        text[write_position + 3] = 'o';
-        text[write_position + 4] = 't';
-        text[write_position + 5] = ';';
-        break;
-      case '\'':
-        write_position -= 5;
-        text[write_position] = '&';
-        text[write_position + 1] = '#';
-        text[write_position + 2] = '3';
-        text[write_position + 3] = '9';
-        text[write_position + 4] = ';';
-        break;
-      default:
-        --write_position;
-        text[write_position] = character;
-    }
-  }
+                              return count;
+                            });
 }
 
 static auto needs_escape(const std::string_view input) -> bool {

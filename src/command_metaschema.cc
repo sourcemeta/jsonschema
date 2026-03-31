@@ -8,7 +8,7 @@
 #include <sourcemeta/blaze/output.h>
 
 #include <cassert>  // assert
-#include <iostream> // std::cerr
+#include <iostream> // std::cout, std::cerr
 #include <map>      // std::map
 #include <string>   // std::string
 

@@ -2,16 +2,16 @@
 
 #include "helpers.h"
 
+#include <algorithm>     // std::max, std::ranges::fold_left
 #include <cassert>       // assert
 #include <cstdint>       // std::uint64_t
 #include <limits>        // std::numeric_limits
-#include <numeric>       // std::accumulate
 #include <sstream>       // std::ostringstream
 #include <string_view>   // std::string_view
 #include <type_traits>   // std::remove_reference_t
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
+#include <utility>       // std::move, std::to_underlying
 
 auto sourcemeta::core::is_schema(const sourcemeta::core::JSON &schema) -> bool {
   return schema.is_object() || schema.is_boolean();
@@ -621,17 +621,15 @@ auto sourcemeta::core::schema_keyword_priority(
     const sourcemeta::core::Vocabularies &vocabularies,
     const sourcemeta::core::SchemaWalker &walker) -> std::uint64_t {
   const auto &result{walker(keyword, vocabularies)};
-  const auto priority_from_dependencies{std::accumulate(
-      result.dependencies.cbegin(), result.dependencies.cend(),
-      static_cast<std::uint64_t>(0),
+  const auto priority_from_dependencies{std::ranges::fold_left(
+      result.dependencies, static_cast<std::uint64_t>(0),
       [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
         return std::max(
             accumulator,
             schema_keyword_priority(dependency, vocabularies, walker) + 1);
       })};
-  const auto priority_from_order_dependencies{std::accumulate(
-      result.order_dependencies.cbegin(), result.order_dependencies.cend(),
-      static_cast<std::uint64_t>(0),
+  const auto priority_from_order_dependencies{std::ranges::fold_left(
+      result.order_dependencies, static_cast<std::uint64_t>(0),
       [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
         return std::max(
             accumulator,
@@ -746,20 +744,20 @@ static auto parse_schema_type_string(const sourcemeta::core::JSON::String &type,
                                      sourcemeta::core::JSON::TypeSet &result)
     -> void {
   if (type == "null") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Null));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Null));
   } else if (type == "boolean") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Boolean));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Boolean));
   } else if (type == "object") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Object));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Object));
   } else if (type == "array") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Array));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
   } else if (type == "number") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Integer));
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Real));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
   } else if (type == "integer") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::Integer));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
   } else if (type == "string") {
-    result.set(static_cast<std::size_t>(sourcemeta::core::JSON::Type::String));
+    result.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
   }
 }
 

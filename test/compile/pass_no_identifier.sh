@@ -33,40 +33,40 @@ cat << EOF > "$TMP/expected.json"
     [
       [
         44,
-        "/description",
-        "",
+        [ "description" ],
+        [],
         "#/description",
         1,
         [ 1, "Test schema" ]
       ],
       [
         44,
-        "/title",
-        "",
+        [ "title" ],
+        [],
         "#/title",
         1,
         [ 1, "Test" ]
       ],
       [
         61,
-        "/additionalProperties",
-        "",
+        [ "additionalProperties" ],
+        [],
         "#/additionalProperties",
         1,
         [ 0 ],
         [
           [
             11,
-            "/type",
-            "",
+            [ "type" ],
+            [],
             "#/additionalProperties/type",
             1,
             [ 8, 4 ]
           ],
           [
             46,
-            "",
-            "",
+            [],
+            [],
             "#/additionalProperties",
             1,
             [ 0 ]

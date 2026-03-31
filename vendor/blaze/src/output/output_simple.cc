@@ -100,9 +100,13 @@ auto SimpleOutput::operator()(
       if (!result && keyword != "not" && keyword != "if") {
         auto buffered{this->masked_traces.find(mask_key)};
         if (buffered != this->masked_traces.end()) {
+#ifdef __cpp_lib_containers_ranges
+          this->output.append_range(std::move(buffered->second));
+#else
           this->output.insert(this->output.end(),
                               std::make_move_iterator(buffered->second.begin()),
                               std::make_move_iterator(buffered->second.end()));
+#endif
           this->masked_traces.erase(buffered);
         }
       } else {
@@ -124,7 +128,7 @@ auto SimpleOutput::operator()(
           iterator->first.instance_location == instance_location) {
         iterator = this->annotations_.erase(iterator);
       } else {
-        iterator++;
+        ++iterator;
       }
     }
   }

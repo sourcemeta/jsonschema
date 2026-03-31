@@ -37,7 +37,7 @@ cat << EOF > "$TMP/expected.txt"
       "id": "require_type",
       "message": "Every subschema must declare the type keyword",
       "description": "The object value was expected to define the property \"type\"",
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 3, 1 ]
     }
   ]

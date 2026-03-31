@@ -41,6 +41,8 @@ auto sha256(const std::string_view input, std::ostream &output) -> void {
 
   EVP_MD_CTX_free(context);
 
+  // TODO: Use std::views::enumerate once libc++ supports it
+  // (__cpp_lib_ranges_enumerate)
   for (std::uint64_t index = 0; index < 32u; ++index) {
     output.put(HEX_DIGITS[(digest[index] >> 4u) & 0x0fu]);
     output.put(HEX_DIGITS[digest[index] & 0x0fu]);

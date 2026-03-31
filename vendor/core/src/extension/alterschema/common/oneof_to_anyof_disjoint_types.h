@@ -60,12 +60,12 @@ public:
         type_sets.push_back(parse_schema_type(branch.at("type")));
       } else if (has_const && !has_enum) {
         JSON::TypeSet branch_types;
-        branch_types.set(static_cast<std::size_t>(branch.at("const").type()));
+        branch_types.set(std::to_underlying(branch.at("const").type()));
         type_sets.push_back(branch_types);
       } else if (has_enum && !has_const) {
         JSON::TypeSet branch_types;
         for (const auto &item : branch.at("enum").as_array()) {
-          branch_types.set(static_cast<std::size_t>(item.type()));
+          branch_types.set(std::to_underlying(item.type()));
         }
         type_sets.push_back(branch_types);
       } else {

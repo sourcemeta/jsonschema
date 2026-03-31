@@ -98,8 +98,13 @@ public:
         locations.reserve(input.size());
       }
 
+// TODO: Remove once GitHub Actions ship proper C++23 support
+#if __cpp_lib_containers_ranges >= 202202L
+      locations.assign_range(input);
+#else
       locations.assign(std::make_move_iterator(std::begin(input)),
                        std::make_move_iterator(std::end(input)));
+#endif
     }
 
     Result(std::vector<Pointer> &&locations_, JSON::String &&description_)

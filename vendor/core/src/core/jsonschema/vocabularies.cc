@@ -6,7 +6,7 @@
 #include <optional> // std::optional
 #include <sstream>  // std::ostringstream
 #include <string>   // std::string
-#include <utility>  // std::pair
+#include <utility>  // std::pair, std::to_underlying
 #include <vector>   // std::vector
 
 // X-macro defining all known vocabulary mappings (enum, URI)
@@ -106,8 +106,7 @@ sourcemeta::core::Vocabularies::Vocabularies(
 auto sourcemeta::core::Vocabularies::contains(
     const JSON::String &uri) const noexcept -> bool {
   if (this->unknown.has_value()) {
-    const auto iterator{this->unknown->find(uri)};
-    if (iterator != this->unknown->end()) {
+    if (this->unknown->contains(uri)) {
       return true;
     }
   }
@@ -126,7 +125,7 @@ auto sourcemeta::core::Vocabularies::contains(
 
 auto sourcemeta::core::Vocabularies::contains(Known vocabulary) const noexcept
     -> bool {
-  const auto index = static_cast<std::size_t>(vocabulary);
+  const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
   return this->required_known[index] || this->optional_known[index];
 }
@@ -159,7 +158,7 @@ auto sourcemeta::core::Vocabularies::insert(const JSON::String &uri,
 
 auto sourcemeta::core::Vocabularies::insert(Known vocabulary,
                                             bool required) noexcept -> void {
-  const auto index = static_cast<std::size_t>(vocabulary);
+  const auto index = std::to_underlying(vocabulary);
   if (required) {
     this->required_known[index] = true;
     this->optional_known[index] = false;
@@ -194,7 +193,7 @@ auto sourcemeta::core::Vocabularies::get(const JSON::String &uri) const noexcept
 
 auto sourcemeta::core::Vocabularies::get(Known vocabulary) const noexcept
     -> std::optional<bool> {
-  const auto index = static_cast<std::size_t>(vocabulary);
+  const auto index = std::to_underlying(vocabulary);
   // Use [] operator instead of test() to avoid exceptions in noexcept function
   assert(!this->required_known[index] || !this->optional_known[index]);
   if (this->required_known[index]) {

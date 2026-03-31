@@ -48,7 +48,7 @@ public:
 
     const auto remaining{
         this->cursor_ ? static_cast<std::size_t>(this->end_ - this->cursor_)
-                      : std::size_t{0}};
+                      : 0uz};
     if (remaining < length) [[unlikely]] {
       this->grow(length);
     }

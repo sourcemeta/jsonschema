@@ -409,6 +409,8 @@ sourcemeta::core::SchemaKeywordIterator::SchemaKeywordIterator(
                                            resolved_dialect)
           : Vocabularies{}};
 
+  // TODO: Use std::ranges::to<std::vector>() once libc++ supports it
+  // (__cpp_lib_ranges_to_container)
   for (const auto &entry : schema.as_object()) {
     sourcemeta::core::WeakPointer entry_pointer;
     entry_pointer.push_back(std::cref(entry.first));

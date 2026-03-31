@@ -25,7 +25,7 @@
 #include <sstream>          // std::basic_istringstream
 #include <string>           // std::basic_string, std::char_traits
 #include <string_view>      // std::basic_string_view
-#include <type_traits>      // std::enable_if_t, std::is_same_v
+#include <type_traits>      // std::is_same_v
 #include <utility>          // std::pair
 
 namespace sourcemeta::core {
@@ -683,6 +683,9 @@ public:
   ///                           << "\n";
   ///               });
   /// ```
+  // TODO: Merge const/non-const overloads of as_array, as_object, at, front,
+  // back using deducing this once Apple Clang supports it
+  // (__cpp_explicit_this_parameter)
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto as_array() const noexcept
       -> const Array & {
     assert(this->is_array());

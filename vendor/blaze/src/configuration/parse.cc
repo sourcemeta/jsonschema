@@ -15,7 +15,7 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
   result.base_path = base_path;
 
 #define CONFIGURATION_ENSURE(condition, message, location)                     \
-  if (!(condition)) {                                                          \
+  if (!(condition)) [[unlikely]] {                                             \
     throw ConfigurationParseError((message),                                   \
                                   sourcemeta::core::Pointer(location));        \
   }
@@ -123,6 +123,7 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
 
       result.extension.emplace(std::move(extension_string));
     } else {
+      // TODO(C++23): Use std::views::enumerate when available in libc++
       std::size_t index{0};
       for (const auto &element : extension_value.as_array()) {
         CONFIGURATION_ENSURE(

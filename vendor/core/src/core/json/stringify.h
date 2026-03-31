@@ -16,7 +16,7 @@
 #include <iterator>  // std::next, std::cbegin, std::cend, std::back_inserter
 #include <ostream>   // std::basic_ostream
 #include <sstream>   // std::ostringstream
-#include <string>    // std::to_string
+#include <string>    // std::basic_string
 #include <vector>    // std::vector
 
 namespace sourcemeta::core::internal {
@@ -64,11 +64,13 @@ auto stringify(
     const std::int64_t value,
     std::basic_ostream<typename JSON::Char, typename JSON::CharTraits> &stream)
     -> void {
-  const auto string{std::to_string(value)};
-  stream.write(string.c_str(),
+  std::array<char, 20> buffer{};
+  const auto [end_pointer, error_code] =
+      std::to_chars(buffer.data(), buffer.data() + buffer.size(), value);
+  stream.write(buffer.data(),
                static_cast<typename std::basic_ostream<
                    typename JSON::Char, typename JSON::CharTraits>::int_type>(
-                   string.size()));
+                   end_pointer - buffer.data()));
 }
 
 template <template <typename T> typename Allocator>

@@ -32,6 +32,7 @@
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
+// TODO(C++23): Consider std::flat_map/std::flat_set when available in libc++
 #include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
@@ -74,6 +75,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
 
   /// A callback to read file contents from a path
   using ReadCallback =
+      // TODO(C++23): Use std::move_only_function when available in libc++
       std::function<std::string(const std::filesystem::path &)>;
 
   /// A lock file that tracks fetched dependency hashes

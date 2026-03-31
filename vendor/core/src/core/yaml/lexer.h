@@ -4,12 +4,14 @@
 #include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/yaml_error.h>
 
-#include <cstdint>     // std::uint8_t, std::uint64_t
-#include <deque>       // std::deque
-#include <optional>    // std::optional
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <vector>      // std::vector
+#include <charconv>     // std::from_chars
+#include <cstdint>      // std::uint8_t, std::uint64_t
+#include <deque>        // std::deque
+#include <optional>     // std::optional
+#include <string>       // std::string
+#include <string_view>  // std::string_view
+#include <system_error> // std::errc
+#include <vector>       // std::vector
 
 namespace sourcemeta::core::yaml {
 
@@ -110,7 +112,7 @@ public:
     if (this->tab_at_line_start_) {
       this->tab_at_line_start_ = false;
       const char next_char{this->peek()};
-      if (next_char != '{' && next_char != '[') {
+      if (next_char != '{' && next_char != '[') [[unlikely]] {
         throw YAMLParseError{current_line, current_column,
                              "Tab characters cannot be used for indentation"};
       }
@@ -251,7 +253,7 @@ public:
       return this->scan_block_scalar(ScalarStyle::Folded);
     }
 
-    if (current == '#') {
+    if (current == '#') [[unlikely]] {
       throw YAMLParseError{current_line, current_column,
                            "Unexpected '#' character"};
     }
@@ -518,7 +520,7 @@ private:
 
     if (this->position_ < this->input_.size() && this->flow_level_ == 0) {
       const char after_tag{this->peek()};
-      if (after_tag == ',') {
+      if (after_tag == ',') [[unlikely]] {
         throw YAMLParseError{this->line_, this->column_,
                              "Invalid character after tag in block context"};
       }
@@ -596,7 +598,7 @@ private:
       }
     }
 
-    if (!found_closing_quote) {
+    if (!found_closing_quote) [[unlikely]] {
       throw YAMLParseError{start_line, start_column,
                            "Missing closing quote in single-quoted scalar"};
     }
@@ -676,13 +678,13 @@ private:
       return;
     }
     if (this->column_ == 1 && (this->check_document_marker('-') ||
-                               this->check_document_marker('.'))) {
+                               this->check_document_marker('.'))) [[unlikely]] {
       throw YAMLParseError{this->line_, this->column_,
                            "Document marker inside flow scalar"};
     }
     if (this->flow_level_ == 0 && this->block_indent_ != SIZE_MAX) {
       const auto current_indent{static_cast<std::size_t>(this->column_ - 1)};
-      if (current_indent <= this->block_indent_) {
+      if (current_indent <= this->block_indent_) [[unlikely]] {
         throw YAMLParseError{this->line_, this->column_,
                              "Insufficient indentation in flow scalar"};
       }
@@ -842,7 +844,7 @@ private:
       }
     }
 
-    if (!found_closing_quote) {
+    if (!found_closing_quote) [[unlikely]] {
       throw YAMLParseError{start_line, start_column,
                            "Missing closing quote in double-quoted scalar"};
     }
@@ -871,21 +873,16 @@ private:
       this->advance(1);
     }
 
-    if (hex.size() != digits) {
+    if (hex.size() != digits) [[unlikely]] {
       throw YAMLParseError{this->line_, this->column_,
                            "Truncated hex escape sequence"};
     }
 
-    std::size_t parsed{0};
     unsigned long codepoint{};
-    try {
-      codepoint = std::stoul(hex, &parsed, 16);
-    } catch (...) {
-      throw YAMLParseError{this->line_, this->column_,
-                           "Invalid hex escape sequence"};
-    }
-
-    if (parsed != hex.size()) {
+    const auto result =
+        std::from_chars(hex.data(), hex.data() + hex.size(), codepoint, 16);
+    if (result.ec != std::errc{} || result.ptr != hex.data() + hex.size())
+        [[unlikely]] {
       throw YAMLParseError{this->line_, this->column_,
                            "Invalid hex escape sequence"};
     }
@@ -974,7 +971,8 @@ private:
       this->line_ = saved_line;
       this->column_ = saved_column;
 
-      if (max_leading_empty_indent > content_indent && content_indent > 0) {
+      if (max_leading_empty_indent > content_indent && content_indent > 0)
+          [[unlikely]] {
         throw YAMLParseError{
             start_line, start_column,
             "Leading empty line has more spaces than content indentation"};
@@ -1244,7 +1242,8 @@ private:
       const char first{this->peek()};
       if (first == '-' || first == '?' || first == ':') {
         const char after{this->peek(1)};
-        if (after == '\0' || is_whitespace(after) || is_flow_indicator(after)) {
+        if (after == '\0' || is_whitespace(after) || is_flow_indicator(after))
+            [[unlikely]] {
           throw YAMLParseError{start_line, start_column,
                                "Invalid plain scalar start in flow context"};
         }

@@ -60,7 +60,7 @@ cat << EOF > "$TMP/expected_output_json.txt"
       "id": "top_level_description",
       "message": "Set a non-empty description at the top level of the schema to explain what the definition is about in detail",
       "description": null,
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 6, 1 ]
     },
     {
@@ -68,7 +68,7 @@ cat << EOF > "$TMP/expected_output_json.txt"
       "id": "top_level_examples",
       "message": "Set a non-empty examples array at the top level of the schema to illustrate the expected data",
       "description": null,
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 6, 1 ]
     }
   ]

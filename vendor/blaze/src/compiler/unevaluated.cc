@@ -64,6 +64,7 @@ auto find_adjacent_dependencies(
 
       // Static
       case SchemaKeywordType::ApplicatorElementsInPlace:
+        // TODO(C++23): Use std::views::enumerate when available in libc++
         for (std::size_t index = 0; index < property.second.size(); index++) {
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,

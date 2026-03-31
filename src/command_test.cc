@@ -5,7 +5,7 @@
 #include <sourcemeta/core/json.h>
 
 #include <chrono>      // std::chrono
-#include <iostream>    // std::cerr, std::cout
+#include <iostream>    // std::cout
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -241,9 +241,10 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
           test_object.assign("type", sourcemeta::core::JSON{"unit"});
           test_object.assign("filePath", sourcemeta::core::JSON{file_path});
 
-          test_object.assign("line",
-                             sourcemeta::core::JSON{static_cast<std::int64_t>(
-                                 std::get<0>(test_case.position))});
+          const auto [test_line, test_column, test_end_line, test_end_column] =
+              test_case.position;
+          test_object.assign("line", sourcemeta::core::JSON{
+                                         static_cast<std::int64_t>(test_line)});
           test_object.assign(
               "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
           test_object.assign("flaky", sourcemeta::core::JSON{false});

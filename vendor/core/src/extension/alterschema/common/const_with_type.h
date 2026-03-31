@@ -26,8 +26,8 @@ public:
                      schema.defines("const"));
 
     const auto current_types{parse_schema_type(schema.at("type"))};
-    ONLY_CONTINUE_IF(current_types.test(
-        static_cast<std::size_t>(schema.at("const").type())));
+    ONLY_CONTINUE_IF(
+        current_types.test(std::to_underlying(schema.at("const").type())));
     return APPLIES_TO_KEYWORDS("const", "type");
   }
 

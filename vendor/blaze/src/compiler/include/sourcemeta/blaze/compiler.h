@@ -73,6 +73,7 @@ struct Context;
 /// contexts into a compiler template. You can provide your own to implement
 /// your own keywords
 using Compiler =
+    // TODO(C++23): Use std::move_only_function when available in libc++
     std::function<Instructions(const Context &, const SchemaContext &,
                                const DynamicContext &, const Instructions &)>;
 

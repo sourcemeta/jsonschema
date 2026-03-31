@@ -8,7 +8,7 @@
 #include <iostream>   // std::cerr, std::cout
 #include <optional>   // std::optional
 #include <string>     // std::string
-#include <utility>    // std::move
+#include <utility>    // std::move, std::to_underlying
 
 #include "command.h"
 #include "configuration.h"
@@ -99,8 +99,8 @@ auto emit_debug(const sourcemeta::core::Options &options,
       "up-to-date",    "file-missing", "orphaned",     "mismatched",
       "path-mismatch", "untracked",    "error"};
   static_assert(sizeof(type_names) / sizeof(type_names[0]) ==
-                static_cast<std::uint8_t>(Type::Error) + 1);
-  const auto type_index{static_cast<std::uint8_t>(event.type)};
+                std::to_underlying(Type::Error) + 1);
+  const auto type_index{std::to_underlying(event.type)};
   std::cerr << "debug: " << type_names[type_index] << ": " << event.uri << " ("
             << (event.index + 1) << "/" << event.total << ")";
   if (!event.path.empty()) {

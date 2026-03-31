@@ -3,7 +3,8 @@
 
 #include <sourcemeta/blaze/compiler.h>
 
-#include <algorithm> // std::all_of
+#include <algorithm> // std::ranges::all_of
+#include <utility>   // std::to_underlying
 
 #include "compile_helpers.h"
 
@@ -22,9 +23,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_null(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_null(); })) {
         return {};
       }
 
@@ -41,9 +42,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_boolean(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_boolean(); })) {
         return {};
       }
 
@@ -79,9 +80,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_object(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_object(); })) {
         return {};
       }
 
@@ -134,9 +135,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_array(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_array(); })) {
         return {};
       }
 
@@ -153,9 +154,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_number(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_number(); })) {
         return {};
       }
 
@@ -166,20 +167,18 @@ auto compiler_draft6_validation_type(const Context &context,
       }
 
       ValueTypes types{};
-      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
-      types.set(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
-      types.set(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_integral(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_integral(); })) {
         return {};
       }
 
@@ -219,9 +218,9 @@ auto compiler_draft6_validation_type(const Context &context,
       if (context.mode == Mode::FastValidation &&
           schema_context.schema.defines("enum") &&
           schema_context.schema.at("enum").is_array() &&
-          std::all_of(schema_context.schema.at("enum").as_array().cbegin(),
-                      schema_context.schema.at("enum").as_array().cend(),
-                      [](const auto &value) { return value.is_string(); })) {
+          std::ranges::all_of(
+              schema_context.schema.at("enum").as_array(),
+              [](const auto &value) { return value.is_string(); })) {
         return {};
       }
 
@@ -262,11 +261,9 @@ auto compiler_draft6_validation_type(const Context &context,
                    sourcemeta::core::JSON::Type::Array)};
     } else if (type == "number") {
       ValueTypes types{};
-      types.set(static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
-      types.set(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
-      types.set(
-          static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+      types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,
                    context, schema_context, dynamic_context, types)};
     } else if (type == "integer") {
@@ -291,34 +288,25 @@ auto compiler_draft6_validation_type(const Context &context,
       assert(type.is_string());
       const auto &type_string{type.to_string()};
       if (type_string == "null") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Null));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Null));
       } else if (type_string == "boolean") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Boolean));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Boolean));
       } else if (type_string == "object") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Object));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Object));
       } else if (type_string == "array") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Array));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Array));
       } else if (type_string == "number") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Real));
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Decimal));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Real));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
       } else if (type_string == "integer") {
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::Integer));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
       } else if (type_string == "string") {
         if (schema_context.is_property_name) {
           continue;
         }
 
-        types.set(
-            static_cast<std::uint8_t>(sourcemeta::core::JSON::Type::String));
+        types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
       }
     }
 

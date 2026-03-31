@@ -4,7 +4,7 @@
 
 #include <cassert>       // assert
 #include <functional>    // std::reference_wrapper
-#include <sstream>       // std::ostringstream
+#include <string>        // std::string
 #include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
@@ -123,14 +123,13 @@ auto embed_schema(sourcemeta::core::JSON &root,
         "Could not bundle to a container path that is not an object");
   }
 
-  std::ostringstream key;
-  key << identifier;
+  std::string key{identifier};
   // Ensure we get a definitions entry that does not exist
-  while (current->defines(key.str())) {
-    key << "/x";
+  while (current->defines(key)) {
+    key += "/x";
   }
 
-  current->assign(key.str(), std::move(target));
+  current->assign(key, std::move(target));
 }
 
 auto elevate_embedded_resources(
@@ -171,8 +170,7 @@ auto elevate_embedded_resources(
     const auto &value{entry.second};
     const auto entry_dialect{
         sourcemeta::core::base_dialect(value, resolver, default_dialect)};
-    const auto effective_entry_dialect{
-        entry_dialect.has_value() ? entry_dialect.value() : remote_dialect};
+    const auto effective_entry_dialect{entry_dialect.value_or(remote_dialect)};
     const auto identifier{
         sourcemeta::core::identify(value, effective_entry_dialect)};
     if (identifier.empty() || identifier != key ||
@@ -413,7 +411,7 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
   SchemaFrame initial_frame{SchemaFrame::Mode::Locations};
   initial_frame.analyse(schema, walker, resolver, default_dialect, default_id,
                         paths);
-  initial_frame.for_each_resource_uri([&bundled](const auto uri) {
+  initial_frame.for_each_resource_uri([&bundled](const auto &uri) {
     bundled.emplace(JSON::String{uri}, JSON::String{uri});
   });
   if (default_container.has_value()) {

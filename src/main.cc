@@ -3,7 +3,7 @@
 
 #include <cstdlib>     // EXIT_SUCCESS
 #include <filesystem>  // std::filesystem
-#include <iostream>    // std::cerr, std::cout
+#include <print>       // std::print, std::println
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -231,15 +231,15 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::install(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
-    std::cout << "JSON Schema CLI - v"
-              << sourcemeta::jsonschema::PROJECT_VERSION << "\n";
-    std::cout << "Usage: " << std::filesystem::path{program}.filename().string()
-              << " <command> [arguments...]\n";
-    std::cout << USAGE_DETAILS;
+    std::println("JSON Schema CLI - v{}",
+                 sourcemeta::jsonschema::PROJECT_VERSION);
+    std::println("Usage: {} <command> [arguments...]",
+                 std::filesystem::path{program}.filename().string());
+    std::print("{}", USAGE_DETAILS);
     return EXIT_SUCCESS;
   } else if (command == "version" || command == "--version" ||
              command == "-v") {
-    std::cout << sourcemeta::jsonschema::PROJECT_VERSION << "\n";
+    std::println("{}", sourcemeta::jsonschema::PROJECT_VERSION);
     return EXIT_SUCCESS;
   } else {
     throw sourcemeta::jsonschema::UnknownCommandError{command};

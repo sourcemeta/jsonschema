@@ -3,7 +3,9 @@
 
 #include "grammar.h"
 
+#include <array>    // std::array
 #include <cctype>   // std::isalnum
+#include <charconv> // std::from_chars
 #include <cstdint>  // std::uint8_t
 #include <istream>  // std::istream
 #include <iterator> // std::istream_iterator
@@ -115,9 +117,11 @@ inline auto uri_unescape(std::istream &input, std::ostream &output) -> void {
   while (iterator != end) {
     if (*iterator == URI_PERCENT && plus_1 != end && plus_2 != end &&
         std::isxdigit(*(plus_1)) && std::isxdigit(*(plus_2))) {
-      std::string hex{*plus_1, *plus_2};
-      char decoded_char = static_cast<char>(std::stoi(hex, nullptr, hex_base));
-      output << decoded_char;
+      const std::array<char, 2> hex{{*plus_1, *plus_2}};
+      int decoded_value{};
+      std::from_chars(hex.data(), hex.data() + hex.size(), decoded_value,
+                      hex_base);
+      output << static_cast<char>(decoded_value);
 
       iterator = std::ranges::next(plus_2, 1, end);
       plus_1 = std::ranges::next(iterator, 1, end);

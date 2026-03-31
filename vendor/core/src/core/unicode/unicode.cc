@@ -107,6 +107,8 @@ auto utf8_to_utf32(std::istream &input) -> std::optional<std::u32string> {
 
 auto utf8_to_utf32(const std::string_view input)
     -> std::optional<std::u32string> {
+  // TODO: Replace std::istringstream with std::ispanstream once libc++
+  // supports it (__cpp_lib_spanstream), to avoid copying the input string
   std::istringstream stream{std::string{input}};
   return utf8_to_utf32(stream);
 }

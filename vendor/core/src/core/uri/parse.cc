@@ -3,15 +3,17 @@
 #include "escaping.h"
 #include "grammar.h"
 
-#include <cassert>   // assert
-#include <cctype>    // std::isalnum, std::isxdigit, std::isalpha, std::isdigit
-#include <cstdint>   // std::uint64_t
-#include <limits>    // std::numeric_limits
-#include <optional>  // std::optional
-#include <stdexcept> // std::out_of_range
-#include <string>    // std::string, std::stoul
-#include <string_view> // std::string_view
-#include <type_traits> // std::conditional_t
+#include <array>    // std::array
+#include <cassert>  // assert
+#include <cctype>   // std::isalnum, std::isxdigit, std::isalpha, std::isdigit
+#include <charconv> // std::from_chars
+#include <cstdint>  // std::uint64_t
+#include <limits>   // std::numeric_limits
+#include <optional> // std::optional
+#include <string>   // std::string
+#include <string_view>  // std::string_view
+#include <system_error> // std::errc
+#include <type_traits>  // std::conditional_t
 
 namespace {
 
@@ -24,7 +26,7 @@ auto validate_percent_encoded_utf8(const std::string_view input,
     return 3;
   }
 
-  if (position + 2 >= input.size()) {
+  if (position + 2 >= input.size()) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
@@ -32,19 +34,21 @@ auto validate_percent_encoded_utf8(const std::string_view input,
   const auto first_hex = static_cast<unsigned char>(input[position + 1]);
   const auto second_hex = static_cast<unsigned char>(input[position + 2]);
 
-  if (!std::isxdigit(first_hex) || !std::isxdigit(second_hex)) {
+  if (!std::isxdigit(first_hex) || !std::isxdigit(second_hex)) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
 
-  std::string hex{input[position + 1], input[position + 2]};
-  const auto value = static_cast<unsigned char>(std::stoi(hex, nullptr, 16));
+  const std::array<char, 2> hex{{input[position + 1], input[position + 2]}};
+  int parsed_value{};
+  std::from_chars(hex.data(), hex.data() + hex.size(), parsed_value, 16);
+  const auto value = static_cast<unsigned char>(parsed_value);
 
   if ((value & 0x80) == 0) {
     return 3;
   }
 
-  if ((value & 0xC0) == 0x80) {
+  if ((value & 0xC0) == 0x80) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
@@ -61,7 +65,7 @@ auto validate_percent_encoded_utf8(const std::string_view input,
   for (std::string::size_type index = 1; index <= continuation_count; ++index) {
     const std::string::size_type next_position = position + (index * 3);
     if (next_position + 2 >= input.size() ||
-        input[next_position] != URI_PERCENT) {
+        input[next_position] != URI_PERCENT) [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -71,16 +75,20 @@ auto validate_percent_encoded_utf8(const std::string_view input,
     const auto cont_second =
         static_cast<unsigned char>(input[next_position + 2]);
 
-    if (!std::isxdigit(cont_first) || !std::isxdigit(cont_second)) {
+    if (!std::isxdigit(cont_first) || !std::isxdigit(cont_second))
+        [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(next_position + 1)};
     }
 
-    std::string cont_hex{input[next_position + 1], input[next_position + 2]};
-    const auto cont_value =
-        static_cast<unsigned char>(std::stoi(cont_hex, nullptr, 16));
+    const std::array<char, 2> cont_hex{
+        {input[next_position + 1], input[next_position + 2]}};
+    int cont_parsed_value{};
+    std::from_chars(cont_hex.data(), cont_hex.data() + cont_hex.size(),
+                    cont_parsed_value, 16);
+    const auto cont_value = static_cast<unsigned char>(cont_parsed_value);
 
-    if ((cont_value & 0xC0) != 0x80) {
+    if ((cont_value & 0xC0) != 0x80) [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(next_position + 1)};
     }
@@ -150,13 +158,16 @@ auto parse_port(const std::string_view input,
   if constexpr (CheckOnly) {
     return true;
   } else {
-    try {
-      const std::string port_string{input.substr(start, position - start)};
-      return std::stoul(port_string);
-    } catch (const std::out_of_range &) {
+    const auto port_view = input.substr(start, position - start);
+    unsigned long port_value{};
+    const auto result = std::from_chars(
+        port_view.data(), port_view.data() + port_view.size(), port_value);
+    if (result.ec != std::errc{}) [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(start + 1)};
     }
+
+    return port_value;
   }
 }
 
@@ -177,7 +188,8 @@ auto parse_ipv6(const std::string_view input,
 
     // Require 1*HEXDIG for the version
     if (position >= input.size() || input[position] == URI_CLOSE_BRACKET ||
-        !std::isxdigit(static_cast<unsigned char>(input[position]))) {
+        !std::isxdigit(static_cast<unsigned char>(input[position])))
+        [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -187,21 +199,22 @@ auto parse_ipv6(const std::string_view input,
     }
 
     // Require "." separator
-    if (position >= input.size() || input[position] != URI_DOT) {
+    if (position >= input.size() || input[position] != URI_DOT) [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
     position += 1;
 
     // Require 1*( unreserved / sub-delims / ":" )
-    if (position >= input.size() || input[position] == URI_CLOSE_BRACKET) {
+    if (position >= input.size() || input[position] == URI_CLOSE_BRACKET)
+        [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
     while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
       const auto current = input[position];
       if (!uri_is_unreserved(current) && !uri_is_sub_delim(current) &&
-          current != URI_COLON) {
+          current != URI_COLON) [[unlikely]] {
         throw sourcemeta::core::URIParseError{
             static_cast<std::uint64_t>(position + 1)};
       }
@@ -212,7 +225,7 @@ auto parse_ipv6(const std::string_view input,
     while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
       const auto current = input[position];
       if (!std::isxdigit(static_cast<unsigned char>(current)) &&
-          current != URI_COLON && current != URI_DOT) {
+          current != URI_COLON && current != URI_DOT) [[unlikely]] {
         throw sourcemeta::core::URIParseError{
             static_cast<std::uint64_t>(position + 1)};
       }
@@ -220,7 +233,7 @@ auto parse_ipv6(const std::string_view input,
     }
   }
 
-  if (position >= input.size()) {
+  if (position >= input.size()) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(start + 1)};
   }
@@ -236,7 +249,8 @@ auto parse_ipv6(const std::string_view input,
 
 template <bool CheckOnly>
 auto parse_host(const std::string_view input,
-                std::string_view::size_type &position)
+                std::string_view::size_type &position,
+                [[maybe_unused]] bool &ip_literal)
     -> std::conditional_t<CheckOnly, void, std::string> {
   if (position >= input.size()) {
     if constexpr (!CheckOnly) {
@@ -247,6 +261,7 @@ auto parse_host(const std::string_view input,
   }
 
   if (input[position] == URI_OPEN_BRACKET) {
+    ip_literal = true;
     if constexpr (CheckOnly) {
       parse_ipv6<true>(input, position);
       return;
@@ -268,7 +283,7 @@ auto parse_host(const std::string_view input,
       position += skip;
     } else if (uri_is_unreserved(current) || uri_is_sub_delim(current)) {
       position += 1;
-    } else {
+    } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -353,7 +368,7 @@ auto parse_path(const std::string_view input,
       position += skip;
     } else if (uri_is_pchar(current) || current == URI_SLASH) {
       position += 1;
-    } else {
+    } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -393,7 +408,7 @@ auto parse_query(const std::string_view input,
     } else if (uri_is_pchar(current) || current == URI_SLASH ||
                current == URI_QUESTION) {
       position += 1;
-    } else {
+    } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -430,7 +445,7 @@ auto parse_fragment(const std::string_view input,
     } else if (uri_is_pchar(current) || current == URI_SLASH ||
                current == URI_QUESTION) {
       position += 1;
-    } else {
+    } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -448,11 +463,11 @@ auto parse_authority(const std::string_view input,
                      std::string_view::size_type &position,
                      [[maybe_unused]] std::optional<std::string> &userinfo,
                      [[maybe_unused]] std::optional<std::string> &host,
-                     [[maybe_unused]] std::optional<std::uint32_t> &port)
-    -> void {
+                     [[maybe_unused]] std::optional<std::uint32_t> &port,
+                     [[maybe_unused]] bool &ip_literal) -> void {
   if constexpr (CheckOnly) {
     parse_userinfo<true>(input, position);
-    parse_host<true>(input, position);
+    parse_host<true>(input, position, ip_literal);
   } else {
     auto userinfo_raw = parse_userinfo<false>(input, position);
     if (userinfo_raw.has_value()) {
@@ -460,7 +475,7 @@ auto parse_authority(const std::string_view input,
       userinfo = std::move(userinfo_raw.value());
     }
 
-    auto host_raw = parse_host<false>(input, position);
+    auto host_raw = parse_host<false>(input, position, ip_literal);
     uri_unescape_unreserved_inplace(host_raw);
     host = std::move(host_raw);
   }
@@ -475,7 +490,8 @@ auto parse_authority(const std::string_view input,
       const auto port_start = position;
       const auto port_value = parse_port<false>(input, position);
       if (port_value.has_value()) {
-        if (port_value.value() > std::numeric_limits<std::uint32_t>::max()) {
+        if (port_value.value() > std::numeric_limits<std::uint32_t>::max())
+            [[unlikely]] {
           throw sourcemeta::core::URIParseError{
               static_cast<std::uint64_t>(port_start + 1)};
         }
@@ -485,7 +501,7 @@ auto parse_authority(const std::string_view input,
     }
   }
 
-  if (position < input.size() && input[position] == URI_AT) {
+  if (position < input.size() && input[position] == URI_AT) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
@@ -499,7 +515,8 @@ auto do_parse(const std::string_view input,
               [[maybe_unused]] std::optional<std::uint32_t> &port,
               [[maybe_unused]] std::optional<std::string> &path,
               [[maybe_unused]] std::optional<std::string> &query,
-              [[maybe_unused]] std::optional<std::string> &fragment) -> bool {
+              [[maybe_unused]] std::optional<std::string> &fragment,
+              [[maybe_unused]] bool &ip_literal) -> bool {
   if (input.empty()) {
     return false;
   }
@@ -520,13 +537,15 @@ auto do_parse(const std::string_view input,
 
   if (has_authority) {
     position += 2;
-    parse_authority<CheckOnly>(input, position, userinfo, host, port);
+    parse_authority<CheckOnly>(input, position, userinfo, host, port,
+                               ip_literal);
 
     // RFC 3986: hier-part = "//" authority path-abempty
     // path-abempty = *( "/" segment ), so after authority the next character
     // must be "/", "?", "#", or end-of-input
     if (position < input.size() && input[position] != URI_SLASH &&
-        input[position] != URI_QUESTION && input[position] != URI_HASH) {
+        input[position] != URI_QUESTION && input[position] != URI_HASH)
+        [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
@@ -549,7 +568,8 @@ auto do_parse(const std::string_view input,
           const auto first_slash = path_value.find(URI_SLASH);
           const auto colon_pos = path_value.find(URI_COLON);
           if (colon_pos != std::string::npos &&
-              (first_slash == std::string::npos || colon_pos < first_slash)) {
+              (first_slash == std::string::npos || colon_pos < first_slash))
+              [[unlikely]] {
             throw sourcemeta::core::URIParseError{
                 static_cast<std::uint64_t>(colon_pos + 1)};
           }
@@ -572,8 +592,8 @@ auto do_parse(const std::string_view input,
         const auto first_slash = path_view.find(URI_SLASH);
         const auto colon_pos = path_view.find(URI_COLON);
         if (colon_pos != std::string_view::npos &&
-            (first_slash == std::string_view::npos ||
-             colon_pos < first_slash)) {
+            (first_slash == std::string_view::npos || colon_pos < first_slash))
+            [[unlikely]] {
           throw sourcemeta::core::URIParseError{
               static_cast<std::uint64_t>(path_start + colon_pos + 1)};
         }
@@ -598,7 +618,7 @@ auto do_parse(const std::string_view input,
     }
   }
 
-  if (position < input.size()) {
+  if (position < input.size()) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
@@ -619,15 +639,17 @@ auto URI::parse(const std::string_view input) -> void {
   assert(!this->query_.has_value());
   assert(!this->fragment_.has_value());
   do_parse<false>(input, this->scheme_, this->userinfo_, this->host_,
-                  this->port_, this->path_, this->query_, this->fragment_);
+                  this->port_, this->path_, this->query_, this->fragment_,
+                  this->ip_literal_);
 }
 
 auto URI::is_uri(const std::string_view input) noexcept -> bool {
   try {
     std::optional<std::string> scheme, userinfo, host, path, query, fragment;
     std::optional<std::uint32_t> port;
+    bool ip_literal{false};
     return do_parse<true>(input, scheme, userinfo, host, port, path, query,
-                          fragment);
+                          fragment, ip_literal);
   } catch (...) {
     return false;
   }
@@ -637,7 +659,9 @@ auto URI::is_uri_reference(const std::string_view input) noexcept -> bool {
   try {
     std::optional<std::string> scheme, userinfo, host, path, query, fragment;
     std::optional<std::uint32_t> port;
-    do_parse<true>(input, scheme, userinfo, host, port, path, query, fragment);
+    bool ip_literal{false};
+    do_parse<true>(input, scheme, userinfo, host, port, path, query, fragment,
+                   ip_literal);
     return true;
   } catch (...) {
     return false;

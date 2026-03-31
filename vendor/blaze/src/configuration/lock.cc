@@ -69,48 +69,50 @@ auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value,
   assert(lock_base_path.is_absolute());
   Lock result;
 
-  if (!value.is_object()) {
+  if (!value.is_object()) [[unlikely]] {
     throw ConfigurationParseError("The lock file must be an object", {});
   }
 
-  if (!value.defines("version")) {
+  if (!value.defines("version")) [[unlikely]] {
     throw ConfigurationParseError("The lock file must have a version property",
                                   {});
   }
 
   if (!value.at("version").is_integer() ||
-      value.at("version").to_integer() != 1) {
+      value.at("version").to_integer() != 1) [[unlikely]] {
     throw ConfigurationParseError("Unsupported lock file version", {"version"});
   }
 
   if (value.defines("dependencies")) {
-    if (!value.at("dependencies").is_object()) {
+    if (!value.at("dependencies").is_object()) [[unlikely]] {
       throw ConfigurationParseError(
           "The lock file dependencies property must be an object",
           {"dependencies"});
     }
 
     for (const auto &pair : value.at("dependencies").as_object()) {
-      if (!pair.second.is_object()) {
+      if (!pair.second.is_object()) [[unlikely]] {
         throw ConfigurationParseError(
             "The lock file dependency entry must be an object",
             {"dependencies", pair.first});
       }
 
-      if (!pair.second.defines("path") || !pair.second.at("path").is_string()) {
+      if (!pair.second.defines("path") || !pair.second.at("path").is_string())
+          [[unlikely]] {
         throw ConfigurationParseError(
             "The lock file dependency entry must have a path",
             {"dependencies", pair.first, "path"});
       }
 
-      if (!pair.second.defines("hash") || !pair.second.at("hash").is_string()) {
+      if (!pair.second.defines("hash") || !pair.second.at("hash").is_string())
+          [[unlikely]] {
         throw ConfigurationParseError(
             "The lock file dependency entry must have a hash",
             {"dependencies", pair.first, "hash"});
       }
 
       if (!pair.second.defines("hashAlgorithm") ||
-          !pair.second.at("hashAlgorithm").is_string()) {
+          !pair.second.at("hashAlgorithm").is_string()) [[unlikely]] {
         throw ConfigurationParseError(
             "The lock file dependency entry must have a hash algorithm",
             {"dependencies", pair.first, "hashAlgorithm"});

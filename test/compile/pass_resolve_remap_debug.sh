@@ -48,24 +48,24 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         91,
-        "/$ref",
-        "",
+        [ "$ref" ],
+        [],
         "#/$ref",
         2,
         [ 10, 1 ]
       ],
       [
         44,
-        "/description",
-        "",
+        [ "description" ],
+        [],
         "#/description",
         2,
         [ 1, "Test schema" ]
       ],
       [
         44,
-        "/title",
-        "",
+        [ "title" ],
+        [],
         "#/title",
         2,
         [ 1, "Test" ]
@@ -74,24 +74,24 @@ cat << 'EOF' > "$TMP/expected.json"
     [
       [
         44,
-        "/description",
-        "",
+        [ "description" ],
+        [],
         "#/description",
         3,
         [ 1, "Test schema" ]
       ],
       [
         44,
-        "/title",
-        "",
+        [ "title" ],
+        [],
         "#/title",
         3,
         [ 1, "Test" ]
       ],
       [
         11,
-        "/type",
-        "",
+        [ "type" ],
+        [],
         "#/type",
         3,
         [ 8, 4 ]

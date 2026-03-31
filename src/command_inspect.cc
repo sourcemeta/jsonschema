@@ -5,6 +5,7 @@
 
 #include <iostream> // std::cout
 #include <ostream>  // std::ostream
+#include <utility>  // std::unreachable
 
 #include "command.h"
 #include "configuration.h"
@@ -39,7 +40,7 @@ auto print_frame(std::ostream &stream,
         stream << "(SUBSCHEMA)";
         break;
       default:
-        assert(false);
+        std::unreachable();
     }
 
     stream << " URI: " << location.first.second << "\n";
@@ -64,8 +65,8 @@ auto print_frame(std::ostream &stream,
     const auto position{
         positions.get(sourcemeta::core::to_pointer(location.second.pointer))};
     if (position.has_value()) {
-      stream << "    File Position     : " << std::get<0>(position.value())
-             << ":" << std::get<1>(position.value()) << "\n";
+      const auto [line, column, end_line, end_column] = position.value();
+      stream << "    File Position     : " << line << ":" << column << "\n";
     } else {
       stream << "    File Position     : <unknown>:<unknown>\n";
     }
@@ -133,8 +134,8 @@ auto print_frame(std::ostream &stream,
     const auto position{
         positions.get(sourcemeta::core::to_pointer(reference.first.second))};
     if (position.has_value()) {
-      stream << "    File Position     : " << std::get<0>(position.value())
-             << ":" << std::get<1>(position.value()) << "\n";
+      const auto [line, column, end_line, end_column] = position.value();
+      stream << "    File Position     : " << line << ":" << column << "\n";
     } else {
       stream << "    File Position     : <unknown>:<unknown>\n";
     }

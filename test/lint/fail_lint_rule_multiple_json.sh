@@ -48,7 +48,7 @@ cat << EOF > "$TMP/expected.txt"
       "id": "require_description",
       "message": "Every subschema must declare the description keyword",
       "description": "The object value was expected to define the property \"description\"",
-      "schemaLocation": "",
+      "schemaLocation": [],
       "position": [ 1, 1, 4, 1 ]
     }
   ]
