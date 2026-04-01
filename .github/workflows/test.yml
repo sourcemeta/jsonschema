@@ -62,6 +62,7 @@ jobs:
     env:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
+      WSLENV: CC:CXX
     steps:
       # See https://github.com/Vampire/setup-wsl
       - uses: Vampire/setup-wsl@v5
