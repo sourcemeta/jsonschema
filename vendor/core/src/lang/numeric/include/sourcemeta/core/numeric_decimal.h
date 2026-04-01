@@ -77,6 +77,10 @@ public:
   /// Create a signaling NaN value with an optional payload
   [[nodiscard]] static auto snan(std::uint64_t payload = 0) -> Decimal;
 
+  /// Create a decimal from a double by converting through its shortest
+  /// round-trip string representation, avoiding IEEE 754 precision artifacts
+  [[nodiscard]] static auto strict_from(double value) -> Decimal;
+
   /// Create a positive infinity value
   [[nodiscard]] static auto infinity() -> Decimal;
 

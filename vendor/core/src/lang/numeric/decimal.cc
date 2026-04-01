@@ -5,7 +5,9 @@
 
 #include <array>     // std::array
 #include <cassert>   // assert
+#include <charconv>  // std::to_chars
 #include <cmath>     // std::isfinite
+#include <cstddef>   // std::size_t
 #include <cstring>   // std::strlen
 #include <iomanip>   // std::setprecision
 #include <limits>    // std::numeric_limits
@@ -504,6 +506,15 @@ auto Decimal::negative_infinity() -> Decimal {
   Decimal result;
   result.flags_ = FLAG_INFINITE | FLAG_SIGN;
   return result;
+}
+
+auto Decimal::strict_from(const double value) -> Decimal {
+  std::array<char, 64> buffer{};
+  const auto result{
+      std::to_chars(buffer.data(), buffer.data() + buffer.size(), value)};
+  assert(result.ec == std::errc{});
+  return Decimal{std::string_view{
+      buffer.data(), static_cast<std::size_t>(result.ptr - buffer.data())}};
 }
 
 auto Decimal::to_scientific_string() const -> std::string {

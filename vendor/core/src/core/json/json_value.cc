@@ -543,8 +543,13 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
 
     const auto division{dividend_value / divisor_value};
     Real integral = 0;
-    return !std::isinf(division) && !std::isnan(division) &&
-           std::modf(division, &integral) == 0.0;
+    if (!std::isinf(division) && !std::isnan(division) &&
+        std::modf(division, &integral) == 0.0) {
+      return true;
+    }
+
+    return Decimal::strict_from(dividend_value)
+        .divisible_by(Decimal::strict_from(divisor_value));
   }
 
   if (this->is_decimal() && divisor.is_decimal()) {
@@ -557,8 +562,8 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       return this->to_decimal().divisible_by(divisor_decimal);
     }
 
-    const Decimal divisor_decimal{divisor.to_real()};
-    return this->to_decimal().divisible_by(divisor_decimal);
+    return this->to_decimal().divisible_by(
+        Decimal::strict_from(divisor.to_real()));
   }
 
   if (this->is_integer()) {
@@ -566,8 +571,8 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
     return dividend_decimal.divisible_by(divisor.to_decimal());
   }
 
-  const Decimal dividend_decimal{this->to_real()};
-  return dividend_decimal.divisible_by(divisor.to_decimal());
+  return Decimal::strict_from(this->to_real())
+      .divisible_by(divisor.to_decimal());
 }
 
 [[nodiscard]] auto
