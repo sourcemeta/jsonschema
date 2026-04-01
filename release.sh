@@ -54,8 +54,7 @@ replace_version() {
 replace_version VERSION
 replace_version README.markdown
 replace_version action.yml
-replace_version package.json
-replace_version package-lock.json
+npm version "$NEW_VERSION" --no-git-tag-version
 
 git add VERSION README.markdown action.yml package.json package-lock.json
 git commit --signoff --message "v${NEW_VERSION}"
