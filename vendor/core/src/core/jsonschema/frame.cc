@@ -352,15 +352,17 @@ auto SchemaFrame::to_json(
   root.at("locations").assign_assume_new("dynamic", JSON::make_object());
   for (const auto &location : this->locations_) {
     auto entry{JSON::make_object()};
-    entry.assign_assume_new("parent",
-                            sourcemeta::core::to_json(location.second.parent));
+    entry.assign_assume_new("parent", location.second.parent.has_value()
+                                          ? JSON{sourcemeta::core::to_string(
+                                                location.second.parent.value())}
+                                          : JSON{nullptr});
     entry.assign_assume_new("type",
                             sourcemeta::core::to_json(location.second.type));
     entry.assign_assume_new("root", this->root_.empty() ? JSON{nullptr}
                                                         : JSON{this->root_});
     entry.assign_assume_new("base", JSON{JSON::String{location.second.base}});
-    entry.assign_assume_new("pointer",
-                            sourcemeta::core::to_json(location.second.pointer));
+    entry.assign_assume_new(
+        "pointer", JSON{sourcemeta::core::to_string(location.second.pointer)});
     if (tracker.has_value()) {
       entry.assign_assume_new("position",
                               sourcemeta::core::to_json(tracker.value().get(
@@ -371,8 +373,8 @@ auto SchemaFrame::to_json(
 
     entry.assign_assume_new(
         "relativePointer",
-        sourcemeta::core::to_json(
-            this->relative_instance_location(location.second)));
+        JSON{sourcemeta::core::to_string(
+            this->relative_instance_location(location.second))});
     entry.assign_assume_new("dialect",
                             JSON{JSON::String{location.second.dialect}});
     entry.assign_assume_new(
@@ -403,8 +405,8 @@ auto SchemaFrame::to_json(
     auto entry{JSON::make_object()};
     entry.assign_assume_new("type",
                             sourcemeta::core::to_json(reference.first.first));
-    entry.assign_assume_new("origin",
-                            sourcemeta::core::to_json(reference.first.second));
+    entry.assign_assume_new(
+        "origin", JSON{sourcemeta::core::to_string(reference.first.second)});
 
     if (tracker.has_value()) {
       entry.assign_assume_new("position",

@@ -49,6 +49,8 @@ jobs:
             shell: pwsh
           - os: windows-2022
             type: wsl-2
+            cc: gcc-14
+            cxx: g++-14
             shell: wsl-bash {0}
 
     defaults:
@@ -60,13 +62,14 @@ jobs:
     env:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
+      WSLENV: CC:CXX
     steps:
       # See https://github.com/Vampire/setup-wsl
       - uses: Vampire/setup-wsl@v5
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-24.04
-          additional-packages: cmake build-essential shellcheck pipx zsh jq bindfs
+          additional-packages: cmake build-essential g++-14 shellcheck pipx zsh jq bindfs
           wsl-version: 2
 
       - name: Install dependencies (Alpine)
