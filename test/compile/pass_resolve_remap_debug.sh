@@ -41,16 +41,16 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.json"
 [
+  1,
   false,
   true,
-  [ "", "https://example.com", "https://example.com/nested" ],
   [
     [
       [
         91,
         [ "$ref" ],
         [],
-        "#/$ref",
+        "https://example.com#/$ref",
         2,
         [ 10, 1 ]
       ],
@@ -58,7 +58,7 @@ cat << 'EOF' > "$TMP/expected.json"
         44,
         [ "description" ],
         [],
-        "#/description",
+        "https://example.com#/description",
         2,
         [ 1, "Test schema" ]
       ],
@@ -66,7 +66,7 @@ cat << 'EOF' > "$TMP/expected.json"
         44,
         [ "title" ],
         [],
-        "#/title",
+        "https://example.com#/title",
         2,
         [ 1, "Test" ]
       ]
@@ -76,7 +76,7 @@ cat << 'EOF' > "$TMP/expected.json"
         44,
         [ "description" ],
         [],
-        "#/description",
+        "https://example.com/nested#/description",
         3,
         [ 1, "Test schema" ]
       ],
@@ -84,7 +84,7 @@ cat << 'EOF' > "$TMP/expected.json"
         44,
         [ "title" ],
         [],
-        "#/title",
+        "https://example.com/nested#/title",
         3,
         [ 1, "Test" ]
       ],
@@ -92,7 +92,7 @@ cat << 'EOF' > "$TMP/expected.json"
         11,
         [ "type" ],
         [],
-        "#/type",
+        "https://example.com/nested#/type",
         3,
         [ 8, 4 ]
       ]

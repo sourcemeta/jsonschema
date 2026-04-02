@@ -48,7 +48,6 @@ auto value_from_json(const sourcemeta::core::JSON &wrapper)
 
 auto instructions_from_json(
     const sourcemeta::core::JSON &instructions,
-    const sourcemeta::core::JSON &resources,
     std::vector<sourcemeta::blaze::InstructionExtra> &extra)
     -> std::optional<sourcemeta::blaze::Instructions> {
   if (!instructions.is_array()) {
@@ -86,7 +85,7 @@ auto instructions_from_json(
     // Parse children if there
     std::optional<sourcemeta::blaze::Instructions> children_result{
         instruction.array_size() == 7
-            ? instructions_from_json(instruction.at(6), resources, extra)
+            ? instructions_from_json(instruction.at(6), extra)
             : sourcemeta::blaze::Instructions{}};
 
     if (!type_result.has_value() ||
@@ -99,24 +98,11 @@ auto instructions_from_json(
     }
 
     const auto extra_index{extra.size()};
-
-    if (schema_resource_result.value() > 0 &&
-        resources.array_size() >= schema_resource_result.value() &&
-        keyword_location_result.value().starts_with('#')) {
-      extra.push_back(
-          {.relative_schema_location =
-               std::move(relative_schema_location_result).value(),
-           .keyword_location =
-               resources.at(schema_resource_result.value() - 1).to_string() +
-               std::move(keyword_location_result).value(),
-           .schema_resource = schema_resource_result.value()});
-    } else {
-      extra.push_back(
-          {.relative_schema_location =
-               std::move(relative_schema_location_result).value(),
-           .keyword_location = std::move(keyword_location_result).value(),
-           .schema_resource = std::move(schema_resource_result).value()});
-    }
+    extra.push_back(
+        {.relative_schema_location =
+             std::move(relative_schema_location_result).value(),
+         .keyword_location = std::move(keyword_location_result).value(),
+         .schema_resource = std::move(schema_resource_result).value()});
 
     // TODO: Maybe we should emplace here?
     result.push_back({std::move(type_result).value(),
@@ -137,11 +123,16 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
     return std::nullopt;
   }
 
-  const auto &dynamic{json.at(0)};
-  const auto &track{json.at(1)};
-  const auto &resources{json.at(2)};
+  const auto &version{json.at(0)};
+  if (!version.is_integer() ||
+      version.to_integer() != static_cast<std::int64_t>(JSON_VERSION)) {
+    return std::nullopt;
+  }
 
-  if (!dynamic.is_boolean() || !track.is_boolean() || !resources.is_array()) {
+  const auto &dynamic{json.at(1)};
+  const auto &track{json.at(2)};
+
+  if (!dynamic.is_boolean() || !track.is_boolean()) {
     return std::nullopt;
   }
 
@@ -154,8 +145,7 @@ auto from_json(const sourcemeta::core::JSON &json) -> std::optional<Template> {
   std::vector<Instructions> targets_result;
   targets_result.reserve(targets.size());
   for (const auto &target : targets.as_array()) {
-    auto target_result{
-        instructions_from_json(target, resources, template_extra)};
+    auto target_result{instructions_from_json(target, template_extra)};
     if (!target_result.has_value()) {
       return std::nullopt;
     }

@@ -1,10 +1,71 @@
 {
   "name": "@sourcemeta/blaze",
   "version": "0.0.1",
-  "private": true,
+  "description": "A pure JavaScript port of the evaluator from Blaze, a high-performance C++ JSON Schema validator. Zero dependencies. Supports Draft 4, Draft 6, Draft 7, 2019-09, and 2020-12 with schema-specific code generation for near-native speed",
   "type": "module",
-  "scripts": {
-    "test": "node --test test.mjs",
-    "benchmark": "node benchmark.mjs"
-  }
+  "main": "./index.mjs",
+  "module": "./index.mjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
+  "types": "./index.d.mts",
+  "license": "LGPL-3.0-or-later",
+  "homepage": "https://github.com/sourcemeta/blaze",
+  "author": {
+    "email": "hello@sourcemeta.com",
+    "name": "Sourcemeta",
+    "url": "https://www.sourcemeta.com"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "funding": "https://github.com/sponsors/sourcemeta",
+  "keywords": [
+    "jsonschema",
+    "json",
+    "schema",
+    "json-schema",
+    "validator",
+    "validation",
+    "json-schema-validator",
+    "json-schema-validation",
+    "blaze",
+    "sourcemeta",
+    "fast",
+    "performance",
+    "codegen",
+    "draft-04",
+    "draft-06",
+    "draft-07",
+    "draft4",
+    "draft6",
+    "draft7",
+    "2019-09",
+    "2020-12",
+    "ajv",
+    "ajv-alternative",
+    "$ref",
+    "validate",
+    "evaluator"
+  ],
+  "bugs": {
+    "url": "https://github.com/sourcemeta/blaze/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sourcemeta/blaze.git",
+    "directory": "ports/javascript"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.mjs",
+    "index.d.mts",
+    "README.md",
+    "LICENSE"
+  ]
 }

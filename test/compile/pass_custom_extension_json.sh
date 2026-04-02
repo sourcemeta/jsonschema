@@ -19,16 +19,16 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.json"
 [
+  1,
   false,
   true,
-  [ "", "https://example.com" ],
   [
     [
       [
         11,
         [ "type" ],
         [],
-        "#/type",
+        "https://example.com#/type",
         2,
         [ 8, 4 ]
       ]

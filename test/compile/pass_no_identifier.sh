@@ -24,18 +24,16 @@ EOF
 
 cat << EOF > "$TMP/expected.json"
 [
+  1,
   false,
   true,
-  [
-    "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json"
-  ],
   [
     [
       [
         44,
         [ "description" ],
         [],
-        "#/description",
+        "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/description",
         1,
         [ 1, "Test schema" ]
       ],
@@ -43,7 +41,7 @@ cat << EOF > "$TMP/expected.json"
         44,
         [ "title" ],
         [],
-        "#/title",
+        "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/title",
         1,
         [ 1, "Test" ]
       ],
@@ -51,7 +49,7 @@ cat << EOF > "$TMP/expected.json"
         61,
         [ "additionalProperties" ],
         [],
-        "#/additionalProperties",
+        "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
         1,
         [ 0 ],
         [
@@ -59,7 +57,7 @@ cat << EOF > "$TMP/expected.json"
             11,
             [ "type" ],
             [],
-            "#/additionalProperties/type",
+            "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties/type",
             1,
             [ 8, 4 ]
           ],
@@ -67,7 +65,7 @@ cat << EOF > "$TMP/expected.json"
             46,
             [],
             [],
-            "#/additionalProperties",
+            "file://$(realpath "$TMP")/foo/bar/baz/qux/very/long/path/foo/bar/baz/qux/schema.json#/additionalProperties",
             1,
             [ 0 ]
           ]
