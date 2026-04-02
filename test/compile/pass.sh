@@ -23,16 +23,16 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.json"
 [
+  1,
   false,
   true,
-  [ "", "https://example.com" ],
   [
     [
       [
         44,
         [ "description" ],
         [],
-        "#/description",
+        "https://example.com#/description",
         2,
         [ 1, "Test schema" ]
       ],
@@ -40,7 +40,7 @@ cat << 'EOF' > "$TMP/expected.json"
         44,
         [ "title" ],
         [],
-        "#/title",
+        "https://example.com#/title",
         2,
         [ 1, "Test" ]
       ],
@@ -48,7 +48,7 @@ cat << 'EOF' > "$TMP/expected.json"
         61,
         [ "additionalProperties" ],
         [],
-        "#/additionalProperties",
+        "https://example.com#/additionalProperties",
         2,
         [ 0 ],
         [
@@ -56,7 +56,7 @@ cat << 'EOF' > "$TMP/expected.json"
             11,
             [ "type" ],
             [],
-            "#/additionalProperties/type",
+            "https://example.com#/additionalProperties/type",
             2,
             [ 8, 4 ]
           ],
@@ -64,7 +64,7 @@ cat << 'EOF' > "$TMP/expected.json"
             46,
             [],
             [],
-            "#/additionalProperties",
+            "https://example.com#/additionalProperties",
             2,
             [ 0 ]
           ]

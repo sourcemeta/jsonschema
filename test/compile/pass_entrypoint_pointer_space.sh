@@ -26,16 +26,16 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.json"
 [
+  1,
   false,
   true,
-  [ "", "https://example.com/schema" ],
   [
     [
       [
         21,
         [ "minLength" ],
         [],
-        "#/$defs/My%20Name/minLength",
+        "https://example.com/schema#/$defs/My%20Name/minLength",
         2,
         [ 10, 0 ]
       ],
@@ -43,7 +43,7 @@ cat << 'EOF' > "$TMP/expected.json"
         11,
         [ "type" ],
         [],
-        "#/$defs/My%20Name/type",
+        "https://example.com/schema#/$defs/My%20Name/type",
         2,
         [ 8, 4 ]
       ]

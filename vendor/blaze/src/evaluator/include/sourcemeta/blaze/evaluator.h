@@ -44,6 +44,9 @@ struct Template {
 };
 
 /// @ingroup evaluator
+constexpr std::size_t JSON_VERSION{1};
+
+/// @ingroup evaluator
 /// Parse a template from JSON
 auto SOURCEMETA_BLAZE_EVALUATOR_EXPORT
 from_json(const sourcemeta::core::JSON &json) -> std::optional<Template>;
