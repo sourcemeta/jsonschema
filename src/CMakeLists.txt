@@ -1,21 +1,23 @@
-add_executable(jsonschema_cli
-  main.cc configure.h.in command.h
-  utils.h error.h exit_code.h logger.h configuration.h input.h resolver.h
-  command_fmt.cc
-  command_inspect.cc
-  command_bundle.cc
-  command_test.cc
-  command_lint.cc
-  command_metaschema.cc
-  command_validate.cc
-  command_encode.cc
-  command_decode.cc
-  command_compile.cc
-  command_canonicalize.cc
-  command_codegen.cc
-  command_install.cc)
+sourcemeta_executable(
+  PROJECT jsonschema
+  NAME cli
+  SOURCES
+    main.cc configure.h.in command.h
+    utils.h error.h exit_code.h logger.h configuration.h input.h resolver.h
+    command_fmt.cc
+    command_inspect.cc
+    command_bundle.cc
+    command_test.cc
+    command_lint.cc
+    command_metaschema.cc
+    command_validate.cc
+    command_encode.cc
+    command_decode.cc
+    command_compile.cc
+    command_canonicalize.cc
+    command_codegen.cc
+    command_install.cc)
 
-sourcemeta_add_default_options(PRIVATE jsonschema_cli)
 set_target_properties(jsonschema_cli PROPERTIES OUTPUT_NAME jsonschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::error)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::io)
