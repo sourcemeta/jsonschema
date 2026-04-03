@@ -27,7 +27,12 @@ cat << 'EOF' > "$TMP/nested.json"
 }
 EOF
 
-"$1" bundle "$TMP/schema.json" --resolve "$TMP/nested.json" > "$TMP/result.json"
+"$1" bundle "$TMP/schema.json" --resolve "$TMP/nested.json" > "$TMP/result.json" 2> "$TMP/stderr.txt"
+
+cat << EOF > "$TMP/expected_stderr.txt"
+EOF
+
+diff "$TMP/stderr.txt" "$TMP/expected_stderr.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

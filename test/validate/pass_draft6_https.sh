@@ -24,4 +24,9 @@ cat << 'EOF' > "$TMP/instance.json"
 { "foo": "bar" }
 EOF
 
-"$1" validate "$TMP/schema.json" "$TMP/instance.json"
+"$1" validate "$TMP/schema.json" "$TMP/instance.json" > "$TMP/output.txt" 2>&1
+
+cat << EOF > "$TMP/expected.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"

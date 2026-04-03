@@ -19,7 +19,12 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-"$1" compile "$TMP/schema.json" > "$TMP/template.json"
+"$1" compile "$TMP/schema.json" > "$TMP/template.json" 2> "$TMP/stderr.txt"
+
+cat << EOF > "$TMP/expected_stderr.txt"
+EOF
+
+diff "$TMP/stderr.txt" "$TMP/expected_stderr.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 [
