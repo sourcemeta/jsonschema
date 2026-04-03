@@ -75,173 +75,275 @@ enum class KnownSchema : std::uint8_t {
 static auto parse_identifier(const std::string_view identifier) -> KnownSchema {
   // JSON Schema 2020-12
   if (identifier == "https://json-schema.org/draft/2020-12/schema" ||
-      identifier == "https://json-schema.org/draft/2020-12/schema#") {
+      identifier == "https://json-schema.org/draft/2020-12/schema#" ||
+      identifier == "http://json-schema.org/draft/2020-12/schema" ||
+      identifier == "http://json-schema.org/draft/2020-12/schema#") {
     return KnownSchema::JSONSCHEMA_2020_12;
   } else if (identifier ==
                  "https://json-schema.org/draft/2020-12/hyper-schema" ||
              identifier ==
-                 "https://json-schema.org/draft/2020-12/hyper-schema#") {
+                 "https://json-schema.org/draft/2020-12/hyper-schema#" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/hyper-schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/hyper-schema#") {
     return KnownSchema::HYPERSCHEMA_2020_12;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/applicator") {
+                 "https://json-schema.org/draft/2020-12/meta/applicator" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/applicator") {
     return KnownSchema::JSONSCHEMA_2020_12_APPLICATOR;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/content") {
+                 "https://json-schema.org/draft/2020-12/meta/content" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/content") {
     return KnownSchema::JSONSCHEMA_2020_12_CONTENT;
-  } else if (identifier == "https://json-schema.org/draft/2020-12/meta/core") {
+  } else if (identifier == "https://json-schema.org/draft/2020-12/meta/core" ||
+             identifier == "http://json-schema.org/draft/2020-12/meta/core") {
     return KnownSchema::JSONSCHEMA_2020_12_CORE;
-  } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/format-annotation") {
+  } else if (
+      identifier ==
+          "https://json-schema.org/draft/2020-12/meta/format-annotation" ||
+      identifier ==
+          "http://json-schema.org/draft/2020-12/meta/format-annotation") {
     return KnownSchema::JSONSCHEMA_2020_12_FORMAT_ANNOTATION;
-  } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/format-assertion") {
+  } else if (identifier == "https://json-schema.org/draft/2020-12/meta/"
+                           "format-assertion" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/format-assertion") {
     return KnownSchema::JSONSCHEMA_2020_12_FORMAT_ASSERTION;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/hyper-schema") {
+                 "https://json-schema.org/draft/2020-12/meta/hyper-schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/hyper-schema") {
     return KnownSchema::JSONSCHEMA_2020_12_HYPER_SCHEMA;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/meta-data") {
+                 "https://json-schema.org/draft/2020-12/meta/meta-data" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/meta-data") {
     return KnownSchema::JSONSCHEMA_2020_12_META_DATA;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/unevaluated") {
+                 "https://json-schema.org/draft/2020-12/meta/unevaluated" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/unevaluated") {
     return KnownSchema::JSONSCHEMA_2020_12_UNEVALUATED;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/meta/validation") {
+                 "https://json-schema.org/draft/2020-12/meta/validation" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/meta/validation") {
     return KnownSchema::JSONSCHEMA_2020_12_VALIDATION;
-  } else if (identifier == "https://json-schema.org/draft/2020-12/links") {
+  } else if (identifier == "https://json-schema.org/draft/2020-12/links" ||
+             identifier == "http://json-schema.org/draft/2020-12/links") {
     return KnownSchema::LINKS_2020_12;
   } else if (identifier ==
-             "https://json-schema.org/draft/2020-12/output/schema") {
+                 "https://json-schema.org/draft/2020-12/output/schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2020-12/output/schema") {
     return KnownSchema::JSONSCHEMA_2020_12_OUTPUT;
 
     // JSON Schema 2019-09
   } else if (identifier == "https://json-schema.org/draft/2019-09/schema" ||
-             identifier == "https://json-schema.org/draft/2019-09/schema#") {
+             identifier == "https://json-schema.org/draft/2019-09/schema#" ||
+             identifier == "http://json-schema.org/draft/2019-09/schema" ||
+             identifier == "http://json-schema.org/draft/2019-09/schema#") {
     return KnownSchema::JSONSCHEMA_2019_09;
   } else if (identifier ==
                  "https://json-schema.org/draft/2019-09/hyper-schema" ||
              identifier ==
-                 "https://json-schema.org/draft/2019-09/hyper-schema#") {
+                 "https://json-schema.org/draft/2019-09/hyper-schema#" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/hyper-schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/hyper-schema#") {
     return KnownSchema::HYPERSCHEMA_2019_09;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/applicator") {
+                 "https://json-schema.org/draft/2019-09/meta/applicator" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/meta/applicator") {
     return KnownSchema::JSONSCHEMA_2019_09_APPLICATOR;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/content") {
+                 "https://json-schema.org/draft/2019-09/meta/content" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/meta/content") {
     return KnownSchema::JSONSCHEMA_2019_09_CONTENT;
-  } else if (identifier == "https://json-schema.org/draft/2019-09/meta/core") {
+  } else if (identifier == "https://json-schema.org/draft/2019-09/meta/core" ||
+             identifier == "http://json-schema.org/draft/2019-09/meta/core") {
     return KnownSchema::JSONSCHEMA_2019_09_CORE;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/format") {
+                 "https://json-schema.org/draft/2019-09/meta/format" ||
+             identifier == "http://json-schema.org/draft/2019-09/meta/format") {
     return KnownSchema::JSONSCHEMA_2019_09_FORMAT;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/hyper-schema") {
+                 "https://json-schema.org/draft/2019-09/meta/hyper-schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/meta/hyper-schema") {
     return KnownSchema::JSONSCHEMA_2019_09_HYPER_SCHEMA;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/meta-data") {
+                 "https://json-schema.org/draft/2019-09/meta/meta-data" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/meta/meta-data") {
     return KnownSchema::JSONSCHEMA_2019_09_META_DATA;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/meta/validation") {
+                 "https://json-schema.org/draft/2019-09/meta/validation" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/meta/validation") {
     return KnownSchema::JSONSCHEMA_2019_09_VALIDATION;
-  } else if (identifier == "https://json-schema.org/draft/2019-09/links") {
+  } else if (identifier == "https://json-schema.org/draft/2019-09/links" ||
+             identifier == "http://json-schema.org/draft/2019-09/links") {
     return KnownSchema::LINKS_2019_09;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/output/schema") {
+                 "https://json-schema.org/draft/2019-09/output/schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/output/schema") {
     return KnownSchema::JSONSCHEMA_2019_09_OUTPUT;
   } else if (identifier ==
-             "https://json-schema.org/draft/2019-09/output/hyper-schema") {
+                 "https://json-schema.org/draft/2019-09/output/hyper-schema" ||
+             identifier ==
+                 "http://json-schema.org/draft/2019-09/output/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_2019_09_OUTPUT;
 
     // JSON Schema Draft7
   } else if (identifier == "http://json-schema.org/draft-07/schema#" ||
-             identifier == "http://json-schema.org/draft-07/schema") {
+             identifier == "http://json-schema.org/draft-07/schema" ||
+             identifier == "https://json-schema.org/draft-07/schema#" ||
+             identifier == "https://json-schema.org/draft-07/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT7;
   } else if (identifier == "http://json-schema.org/draft-07/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-07/hyper-schema") {
+             identifier == "http://json-schema.org/draft-07/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-07/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-07/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT7;
   } else if (identifier == "http://json-schema.org/draft-07/links#" ||
-             identifier == "http://json-schema.org/draft-07/links") {
+             identifier == "http://json-schema.org/draft-07/links" ||
+             identifier == "https://json-schema.org/draft-07/links#" ||
+             identifier == "https://json-schema.org/draft-07/links") {
     return KnownSchema::LINKS_DRAFT7;
   } else if (identifier ==
-             "http://json-schema.org/draft-07/hyper-schema-output") {
+                 "http://json-schema.org/draft-07/hyper-schema-output" ||
+             identifier ==
+                 "https://json-schema.org/draft-07/hyper-schema-output") {
     return KnownSchema::HYPERSCHEMA_DRAFT7_OUTPUT;
 
     // JSON Schema Draft6
   } else if (identifier == "http://json-schema.org/draft-06/schema#" ||
-             identifier == "http://json-schema.org/draft-06/schema") {
+             identifier == "http://json-schema.org/draft-06/schema" ||
+             identifier == "https://json-schema.org/draft-06/schema#" ||
+             identifier == "https://json-schema.org/draft-06/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT6;
   } else if (identifier == "http://json-schema.org/draft-06/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-06/hyper-schema") {
+             identifier == "http://json-schema.org/draft-06/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-06/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-06/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT6;
   } else if (identifier == "http://json-schema.org/draft-06/links#" ||
-             identifier == "http://json-schema.org/draft-06/links") {
+             identifier == "http://json-schema.org/draft-06/links" ||
+             identifier == "https://json-schema.org/draft-06/links#" ||
+             identifier == "https://json-schema.org/draft-06/links") {
     return KnownSchema::LINKS_DRAFT6;
 
     // JSON Schema Draft4
   } else if (identifier == "http://json-schema.org/draft-04/schema#" ||
-             identifier == "http://json-schema.org/draft-04/schema") {
+             identifier == "http://json-schema.org/draft-04/schema" ||
+             identifier == "https://json-schema.org/draft-04/schema#" ||
+             identifier == "https://json-schema.org/draft-04/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT4;
   } else if (identifier == "http://json-schema.org/draft-04/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-04/hyper-schema") {
+             identifier == "http://json-schema.org/draft-04/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-04/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-04/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT4;
   } else if (identifier == "http://json-schema.org/draft-04/links#" ||
-             identifier == "http://json-schema.org/draft-04/links") {
+             identifier == "http://json-schema.org/draft-04/links" ||
+             identifier == "https://json-schema.org/draft-04/links#" ||
+             identifier == "https://json-schema.org/draft-04/links") {
     return KnownSchema::LINKS_DRAFT4;
 
     // JSON Schema Draft3
   } else if (identifier == "http://json-schema.org/draft-03/schema#" ||
-             identifier == "http://json-schema.org/draft-03/schema") {
+             identifier == "http://json-schema.org/draft-03/schema" ||
+             identifier == "https://json-schema.org/draft-03/schema#" ||
+             identifier == "https://json-schema.org/draft-03/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT3;
   } else if (identifier == "http://json-schema.org/draft-03/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-03/hyper-schema") {
+             identifier == "http://json-schema.org/draft-03/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-03/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-03/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT3;
   } else if (identifier == "http://json-schema.org/draft-03/links#" ||
-             identifier == "http://json-schema.org/draft-03/links") {
+             identifier == "http://json-schema.org/draft-03/links" ||
+             identifier == "https://json-schema.org/draft-03/links#" ||
+             identifier == "https://json-schema.org/draft-03/links") {
     return KnownSchema::LINKS_DRAFT3;
   } else if (identifier == "http://json-schema.org/draft-03/json-ref#" ||
-             identifier == "http://json-schema.org/draft-03/json-ref") {
+             identifier == "http://json-schema.org/draft-03/json-ref" ||
+             identifier == "https://json-schema.org/draft-03/json-ref#" ||
+             identifier == "https://json-schema.org/draft-03/json-ref") {
     return KnownSchema::JSON_REF_DRAFT3;
 
     // JSON Schema Draft2
   } else if (identifier == "http://json-schema.org/draft-02/schema#" ||
-             identifier == "http://json-schema.org/draft-02/schema") {
+             identifier == "http://json-schema.org/draft-02/schema" ||
+             identifier == "https://json-schema.org/draft-02/schema#" ||
+             identifier == "https://json-schema.org/draft-02/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT2;
   } else if (identifier == "http://json-schema.org/draft-02/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-02/hyper-schema") {
+             identifier == "http://json-schema.org/draft-02/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-02/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-02/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT2;
   } else if (identifier == "http://json-schema.org/draft-02/links#" ||
-             identifier == "http://json-schema.org/draft-02/links") {
+             identifier == "http://json-schema.org/draft-02/links" ||
+             identifier == "https://json-schema.org/draft-02/links#" ||
+             identifier == "https://json-schema.org/draft-02/links") {
     return KnownSchema::LINKS_DRAFT2;
   } else if (identifier == "http://json-schema.org/draft-02/json-ref#" ||
-             identifier == "http://json-schema.org/draft-02/json-ref") {
+             identifier == "http://json-schema.org/draft-02/json-ref" ||
+             identifier == "https://json-schema.org/draft-02/json-ref#" ||
+             identifier == "https://json-schema.org/draft-02/json-ref") {
     return KnownSchema::JSON_REF_DRAFT2;
 
     // JSON Schema Draft1
   } else if (identifier == "http://json-schema.org/draft-01/schema#" ||
-             identifier == "http://json-schema.org/draft-01/schema") {
+             identifier == "http://json-schema.org/draft-01/schema" ||
+             identifier == "https://json-schema.org/draft-01/schema#" ||
+             identifier == "https://json-schema.org/draft-01/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT1;
   } else if (identifier == "http://json-schema.org/draft-01/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-01/hyper-schema") {
+             identifier == "http://json-schema.org/draft-01/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-01/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-01/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT1;
   } else if (identifier == "http://json-schema.org/draft-01/links#" ||
-             identifier == "http://json-schema.org/draft-01/links") {
+             identifier == "http://json-schema.org/draft-01/links" ||
+             identifier == "https://json-schema.org/draft-01/links#" ||
+             identifier == "https://json-schema.org/draft-01/links") {
     return KnownSchema::LINKS_DRAFT1;
   } else if (identifier == "http://json-schema.org/draft-01/json-ref#" ||
-             identifier == "http://json-schema.org/draft-01/json-ref") {
+             identifier == "http://json-schema.org/draft-01/json-ref" ||
+             identifier == "https://json-schema.org/draft-01/json-ref#" ||
+             identifier == "https://json-schema.org/draft-01/json-ref") {
     return KnownSchema::JSON_REF_DRAFT1;
 
     // JSON Schema Draft0
   } else if (identifier == "http://json-schema.org/draft-00/schema#" ||
-             identifier == "http://json-schema.org/draft-00/schema") {
+             identifier == "http://json-schema.org/draft-00/schema" ||
+             identifier == "https://json-schema.org/draft-00/schema#" ||
+             identifier == "https://json-schema.org/draft-00/schema") {
     return KnownSchema::JSONSCHEMA_DRAFT0;
   } else if (identifier == "http://json-schema.org/draft-00/hyper-schema#" ||
-             identifier == "http://json-schema.org/draft-00/hyper-schema") {
+             identifier == "http://json-schema.org/draft-00/hyper-schema" ||
+             identifier == "https://json-schema.org/draft-00/hyper-schema#" ||
+             identifier == "https://json-schema.org/draft-00/hyper-schema") {
     return KnownSchema::HYPERSCHEMA_DRAFT0;
   } else if (identifier == "http://json-schema.org/draft-00/links#" ||
-             identifier == "http://json-schema.org/draft-00/links") {
+             identifier == "http://json-schema.org/draft-00/links" ||
+             identifier == "https://json-schema.org/draft-00/links#" ||
+             identifier == "https://json-schema.org/draft-00/links") {
     return KnownSchema::LINKS_DRAFT0;
   } else if (identifier == "http://json-schema.org/draft-00/json-ref#" ||
-             identifier == "http://json-schema.org/draft-00/json-ref") {
+             identifier == "http://json-schema.org/draft-00/json-ref" ||
+             identifier == "https://json-schema.org/draft-00/json-ref#" ||
+             identifier == "https://json-schema.org/draft-00/json-ref") {
     return KnownSchema::JSON_REF_DRAFT0;
 
     // OpenAPI v3.2

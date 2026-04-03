@@ -64,6 +64,9 @@ description_trailing_period
 description_trim
   Descriptions should not contain leading or trailing whitespace
 
+draft_official_dialect_with_https
+  The official dialect URI of Draft 7 and older must use "http://" instead of "https://"
+
 draft_official_dialect_without_empty_fragment
   The official dialect URI of Draft 7 and older versions must contain the empty fragment
 
@@ -147,6 +150,9 @@ minimum_real_for_integer
 
 modern_official_dialect_with_empty_fragment
   The official dialect URI of 2019-09 and newer versions must not contain the empty fragment
+
+modern_official_dialect_with_http
+  The official dialect URI of 2019-09 and later must use "https://" instead of "http://"
 
 multiple_of_default
   Setting `multipleOf` to 1 does not add any further constraint
@@ -250,7 +256,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 80
+Number of rules: 82
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

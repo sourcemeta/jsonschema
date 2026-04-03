@@ -94,13 +94,43 @@ inline auto extract_segment(const char *start, const char *end)
 
 } // namespace
 
+URITemplateRouter::URITemplateRouter(const std::string_view base_path)
+    : base_path_{base_path} {
+  assert(this->base_path_.empty() || this->base_path_.front() == '/');
+}
+
 auto URITemplateRouter::add(const std::string_view uri_template,
                             const Identifier identifier,
                             const std::span<const Argument> arguments) -> void {
   assert(identifier > 0);
 
+  // Walk base path segments to establish the trie prefix
+  Node *current = nullptr;
+  if (!this->base_path_.empty()) {
+    const char *base_position = this->base_path_.data();
+    const char *const base_end = base_position + this->base_path_.size();
+    while (base_position < base_end) {
+      while (base_position < base_end && *base_position == '/') {
+        ++base_position;
+      }
+      if (base_position >= base_end) {
+        break;
+      }
+      const char *segment_start = base_position;
+      while (base_position < base_end && *base_position != '/') {
+        ++base_position;
+      }
+      const std::string_view segment{
+          segment_start,
+          static_cast<std::size_t>(base_position - segment_start)};
+      auto &literals = current ? current->literals : this->root_.literals;
+      current = &find_or_create_literal_child(literals, segment);
+    }
+  }
+
   if (uri_template.empty()) {
-    this->root_.identifier = identifier;
+    auto &target = current ? *current : this->root_;
+    target.identifier = identifier;
     if (!arguments.empty()) {
       assert(std::ranges::none_of(this->arguments_,
                                   [&identifier](const auto &entry) {
@@ -114,7 +144,7 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     return;
   }
 
-  Node *current = nullptr;
+  Node *base_path_end = current;
   bool absorbed = false;
   const char *position = uri_template.data();
   const char *const end = position + uri_template.size();
@@ -261,9 +291,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     }
   }
 
-  if (current == nullptr && uri_template.size() == 1 &&
+  if (current == base_path_end && uri_template.size() == 1 &&
       uri_template[0] == '/') {
-    current = &find_or_create_literal_child(this->root_.literals, "");
+    auto &literals = current ? current->literals : this->root_.literals;
+    current = &find_or_create_literal_child(literals, "");
   }
 
   if (!absorbed && current != nullptr) {

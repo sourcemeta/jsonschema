@@ -31,6 +31,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/content_schema_without_media_type.h
     common/dependencies_property_tautology.h
     common/dependent_required_tautology.h
+    common/draft_official_dialect_with_https.h
     common/draft_official_dialect_without_empty_fragment.h
     common/draft_ref_siblings.h
     common/drop_allof_empty_schemas.h
@@ -52,6 +53,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME alterschema
     common/min_contains_without_contains.h
     common/minimum_real_for_integer.h
     common/modern_official_dialect_with_empty_fragment.h
+    common/modern_official_dialect_with_http.h
     common/non_applicable_additional_items.h
     common/non_applicable_enum_validation_keywords.h
     common/non_applicable_type_specific_keywords.h
