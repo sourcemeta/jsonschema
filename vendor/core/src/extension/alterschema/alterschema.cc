@@ -59,6 +59,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/content_schema_without_media_type.h"
 #include "common/dependencies_property_tautology.h"
 #include "common/dependent_required_tautology.h"
+#include "common/draft_official_dialect_with_https.h"
 #include "common/draft_official_dialect_without_empty_fragment.h"
 #include "common/draft_ref_siblings.h"
 #include "common/drop_allof_empty_schemas.h"
@@ -80,6 +81,7 @@ inline auto APPLIES_TO_POINTERS(std::vector<Pointer> &&keywords)
 #include "common/min_contains_without_contains.h"
 #include "common/minimum_real_for_integer.h"
 #include "common/modern_official_dialect_with_empty_fragment.h"
+#include "common/modern_official_dialect_with_http.h"
 #include "common/non_applicable_additional_items.h"
 #include "common/non_applicable_enum_validation_keywords.h"
 #include "common/non_applicable_type_specific_keywords.h"
@@ -149,6 +151,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
 
   bundle.add<ContentMediaTypeWithoutEncoding>();
   bundle.add<ContentSchemaWithoutMediaType>();
+  bundle.add<DraftOfficialDialectWithHttps>();
   bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
   bundle.add<NonApplicableTypeSpecificKeywords>();
   bundle.add<AnyOfRemoveFalseSchemas>();
@@ -184,6 +187,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<ConstInEnum>();
   bundle.add<NonApplicableAdditionalItems>();
   bundle.add<ModernOfficialDialectWithEmptyFragment>();
+  bundle.add<ModernOfficialDialectWithHttp>();
   bundle.add<ExclusiveMaximumNumberAndMaximum>();
   bundle.add<ExclusiveMinimumNumberAndMinimum>();
   bundle.add<DraftRefSiblings>();

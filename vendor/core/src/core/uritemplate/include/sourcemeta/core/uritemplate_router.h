@@ -68,6 +68,10 @@ public:
   /// Construct an empty router
   URITemplateRouter() = default;
 
+  /// Construct a router with a base path prefix. During matching, the base
+  /// path is stripped from incoming request paths before matching
+  explicit URITemplateRouter(std::string_view base_path);
+
   // To avoid mistakes
   URITemplateRouter(const URITemplateRouter &) = delete;
   URITemplateRouter(URITemplateRouter &&) = delete;
@@ -97,6 +101,7 @@ public:
 
 private:
   Node root_;
+  std::string_view base_path_;
   std::vector<std::pair<Identifier, std::vector<Argument>>> arguments_;
 };
 
