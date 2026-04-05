@@ -27,12 +27,29 @@ EOF
 "$1" validate "$TMP/document.json" "$TMP/instance.json" \
   --path "/components/schemas/NonExistent" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
-test "$EXIT_CODE" = "4"
+# Other input error (path not found)
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema file you provided does not represent a valid JSON Schema
+error: The JSON Pointer does not resolve to a value in the document
   at file path $(realpath "$TMP")/document.json
+  at path /components/schemas/NonExistent
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" validate "$TMP/document.json" "$TMP/instance.json" \
+  --path "/components/schemas/NonExistent" --json > "$TMP/stdout.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "6"
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "The JSON Pointer does not resolve to a value in the document",
+  "filePath": "$(realpath "$TMP")/document.json",
+  "pointer": "/components/schemas/NonExistent"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

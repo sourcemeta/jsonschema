@@ -265,27 +265,30 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  sourcemeta::core::JSON schema{
-      schema_from_stdin ? read_from_stdin().document
-                        : sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto schema = schema_from_stdin
+                    ? read_from_stdin().document
+                    : sourcemeta::core::read_yaml_or_json(schema_path);
 
   if (options.contains("path") && !options.at("path").empty()) {
-    // Invalid pointer syntax is handled by to_pointer(), consistent with
-    // --entrypoint behavior.
-    const auto path_string{std::string{options.at("path").front()}};
-    const auto pointer{sourcemeta::core::to_pointer(path_string)};
-    const auto *const result{sourcemeta::core::try_get(schema, pointer)};
-    // We intentionally reuse NotSchemaError here to align with existing CLI
-    // error semantics without introducing a new error type.
-    if (!result) {
-      throw NotSchemaError{schema_resolution_base};
+    sourcemeta::core::Pointer pointer;
+    try {
+      pointer =
+          sourcemeta::core::to_pointer(std::string{options.at("path").front()});
+    } catch (const sourcemeta::core::PointerParseError &) {
+      throw PositionalArgumentError{
+          "The JSON Pointer is not valid",
+          "jsonschema validate path/to/schema.json path/to/instance.json "
+          "--path '/components/schemas/User'"};
     }
-    // Note: extracting a sub-schema may break $ref references outside the
-    // selected subtree. This is expected behavior for --path given the current
-    // CLI design.
+
+    const auto *const result = sourcemeta::core::try_get(schema, pointer);
+    if (!result) {
+      throw PathResolutionError{schema_resolution_base,
+                                sourcemeta::core::to_string(pointer)};
+    }
+
     // `result` points into `schema`, so we must copy before reassigning to
-    // avoid a use-after-free (the copy assignment destroys schema's storage
-    // before reading from other when they alias).
+    // avoid a use-after-free.
     sourcemeta::core::JSON subschema{*result};
     schema = std::move(subschema);
   }

@@ -76,6 +76,26 @@ private:
   std::filesystem::path path_;
 };
 
+class PathResolutionError : public std::runtime_error {
+public:
+  PathResolutionError(std::filesystem::path path, std::string pointer)
+      : std::runtime_error{"The JSON Pointer does not resolve to a value in "
+                           "the document"},
+        path_{std::move(path)}, pointer_{std::move(pointer)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto pointer() const noexcept -> const std::string & {
+    return this->pointer_;
+  }
+
+private:
+  std::filesystem::path path_;
+  std::string pointer_;
+};
+
 class YAMLInputError : public std::runtime_error {
 public:
   YAMLInputError(std::string message, std::filesystem::path path)
@@ -446,6 +466,16 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) {
+                  { current.pointer() } -> std::convertible_to<std::string>;
+                }) {
+    if (is_json) {
+      error_json.assign("pointer", sourcemeta::core::JSON{exception.pointer()});
+    } else {
+      std::cerr << "  at path " << exception.pointer() << "\n";
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.location(); }) {
     if (is_json) {
       error_json.assign("location",
@@ -557,6 +587,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const LockParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const PathResolutionError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;

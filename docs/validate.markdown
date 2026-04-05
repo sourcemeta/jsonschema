@@ -11,6 +11,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
+  [--path/-P <pointer>]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -190,3 +191,24 @@ jsonschema validate path/to/my/schema.json path/to/instances/ \
 jsonschema validate path/to/my/schema.json path/to/my/instance.json \
   --entrypoint '/$defs/MyType'
 ```
+
+### Extract and validate against a sub-schema using a JSON Pointer
+
+The `--path`/`-P` option extracts a sub-schema from the input document using a
+[JSON Pointer](https://www.rfc-editor.org/rfc/rfc6901) before validation. This
+is useful for validating instances against schemas embedded in larger documents,
+such as OpenAPI specifications.
+
+```sh
+jsonschema validate path/to/openapi.json path/to/instance.json \
+  --path '/components/schemas/User'
+```
+
+The JSON Pointer must resolve to a value in the document that is a valid JSON
+Schema. If the pointer does not resolve, the CLI will report an error with the
+attempted pointer path.
+
+> [!WARNING]
+> Extracting a sub-schema with `--path` may break `$ref` references that point
+> outside the selected subtree, since only the targeted sub-schema is used for
+> validation. This option cannot be used together with `--template`/`-m`.

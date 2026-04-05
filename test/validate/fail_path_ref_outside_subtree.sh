@@ -60,4 +60,3 @@ cat << EOF > "$TMP/expected.txt"
 EOF
 
 diff "$TMP/stdout.txt" "$TMP/expected.txt"
-
