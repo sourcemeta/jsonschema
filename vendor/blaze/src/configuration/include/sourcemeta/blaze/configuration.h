@@ -54,6 +54,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::optional<sourcemeta::core::JSON::String> github;
   std::optional<sourcemeta::core::JSON::String> website;
   std::filesystem::path absolute_path;
+  bool absolute_path_explicit{false};
   std::filesystem::path base_path;
   sourcemeta::core::JSON::String base;
   std::optional<sourcemeta::core::JSON::String> default_dialect;
