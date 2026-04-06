@@ -512,6 +512,8 @@ add_jsonschema_test_unix(compile/fail_entrypoint_invalid_pointer)
 add_jsonschema_test_unix(compile/fail_entrypoint_invalid_pointer_escape)
 add_jsonschema_test_unix(compile/fail_entrypoint_invalid_uri)
 add_jsonschema_test_unix(compile/fail_entrypoint_invalid_uri_parse)
+add_jsonschema_test_unix(compile/pass_evaluate_port_js_fast)
+add_jsonschema_test_unix(compile/pass_evaluate_port_js_exhaustive)
 
 # Canonicalize
 add_jsonschema_test_unix(canonicalize/pass_input_unmodified)
