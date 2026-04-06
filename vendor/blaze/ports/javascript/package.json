@@ -56,8 +56,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sourcemeta/blaze.git",
-    "directory": "ports/javascript"
+    "url": "git+https://github.com/sourcemeta/jsonschema.git",
+    "directory": "vendor/blaze/ports/javascript"
   },
   "publishConfig": {
     "provenance": true,
