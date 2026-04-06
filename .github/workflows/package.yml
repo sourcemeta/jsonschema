@@ -220,6 +220,11 @@ jobs:
       - run: sudo npm install --global npm@11.6.4
       - run: npm --version
       - run: make npm-pack npm-publish
+      - run: |
+          VERSION="$(tr -d '\n\r' < VERSION)"
+          cd vendor/blaze/ports/javascript
+          npm version "$VERSION" --no-git-tag-version
+          npm publish
 
   publish-pypi:
     needs: publish
