@@ -19,10 +19,11 @@ to inline those references for local consumption. The `install` command solves
 this in a single step.
 
 > [!TIP]
-> The `install` command is designed to work with a JSON Schema registry. If you
-> don't have one yet, [Sourcemeta One](https://www.sourcemeta.com) is a
-> self-hosted registry that pairs directly with this CLI, including dependency
-> resolution, checksum verification, and GitOps-native deployment.
+> The `install` command works with any resolvable URI, but it pairs especially
+> well with a JSON Schema registry. If you don't have one yet, [Sourcemeta
+> One](https://www.sourcemeta.com) is a self-hosted registry built for this
+> CLI, including dependency resolution, checksum verification, and GitOps-native
+> deployment.
 
 **NOTE**: Pass `--frozen` to strictly verify dependencies against the lock file
 without modifying it. This is intended for CI/CD pipelines where
