@@ -231,6 +231,48 @@ private:
   std::string uri_;
 };
 
+class ConfigurationResolveFileNotFoundError : public std::runtime_error {
+public:
+  ConfigurationResolveFileNotFoundError(
+      std::filesystem::path configuration_path,
+      sourcemeta::core::Pointer location, std::filesystem::path resolve_path,
+      std::uint64_t line, std::uint64_t column)
+      : std::runtime_error{"The resolve target does not exist on the "
+                           "filesystem"},
+        configuration_path_{std::move(configuration_path)},
+        location_{std::move(location)}, resolve_path_{std::move(resolve_path)},
+        line_{line}, column_{column} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->configuration_path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto resolve_path() const noexcept
+      -> const std::filesystem::path & {
+    return this->resolve_path_;
+  }
+
+  [[nodiscard]] auto line() const noexcept -> std::uint64_t {
+    return this->line_;
+  }
+
+  [[nodiscard]] auto column() const noexcept -> std::uint64_t {
+    return this->column_;
+  }
+
+private:
+  std::filesystem::path configuration_path_;
+  sourcemeta::core::Pointer location_;
+  std::filesystem::path resolve_path_;
+  std::uint64_t line_;
+  std::uint64_t column_;
+};
+
 class Fail : public std::runtime_error {
 public:
   Fail(int exit_code) : std::runtime_error{"Fail"}, exit_code_{exit_code} {}
@@ -330,6 +372,20 @@ inline auto print_exception(const bool is_json, const Exception &exception)
           "keyword", sourcemeta::core::JSON{std::string{exception.keyword()}});
     } else {
       std::cerr << "  at keyword " << exception.keyword() << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.resolve_path()
+                  } -> std::convertible_to<std::filesystem::path>;
+                }) {
+    const auto &resolve_path_value{exception.resolve_path()};
+    if (is_json) {
+      error_json.assign("resolvePath",
+                        sourcemeta::core::JSON{resolve_path_value.string()});
+    } else {
+      std::cerr << "  at resolve path " << resolve_path_value.string() << "\n";
     }
   }
 
@@ -614,6 +670,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const ConfigurationResolveFileNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::ConfigurationParseError> &error) {
     const auto is_json{options.contains("json")};
