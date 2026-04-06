@@ -63,10 +63,16 @@ struct IRObjectValue : IRType {
 };
 
 /// @ingroup ir
+struct IRObjectPatternProperty : IRType {
+  std::optional<std::string> prefix;
+};
+
+/// @ingroup ir
 struct IRObject : IRType {
   // To preserve the user's ordering
   std::vector<std::pair<sourcemeta::core::JSON::String, IRObjectValue>> members;
   std::variant<bool, IRType> additional;
+  std::vector<IRObjectPatternProperty> pattern;
 };
 
 /// @ingroup ir
