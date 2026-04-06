@@ -70,7 +70,7 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
 
   const sourcemeta::core::URI new_uri{match->second};
   if (new_uri.is_relative()) {
-    return sourcemeta::core::URI::from_path(configuration.absolute_path /
+    return sourcemeta::core::URI::from_path(configuration.base_path /
                                             new_uri.to_path())
         .recompose();
   }

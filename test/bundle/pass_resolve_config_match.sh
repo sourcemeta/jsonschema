@@ -11,7 +11,7 @@ cat << 'EOF' > "$TMP/jsonschema.json"
 {
   "path": "./schemas",
   "resolve": {
-    "https://example.com/my-external-schema.json": "../dependency.json"
+    "https://example.com/my-external-schema.json": "./dependency.json"
   }
 }
 EOF
