@@ -406,6 +406,10 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     if (configuration_path.has_value()) {
       merge_configuration_ignore(configuration_path.value(), blacklist,
                                  options);
+    } else {
+      LOG_WARNING() << "Recursively processing every file in "
+                    << sourcemeta::core::weakly_canonical(current_path).string()
+                    << " as no input was provided\n";
     }
 
     const auto extensions{parse_extensions(options, configuration)};

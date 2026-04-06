@@ -24,7 +24,8 @@ EOF
 cd "$TMP"
 "$1" fmt > "$TMP/output.txt" 2>&1
 
-cat << 'EOF' > "$TMP/expected_output.txt"
+cat << EOF > "$TMP/expected_output.txt"
+warning: Recursively processing every file in $(realpath "$TMP") as no input was provided
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_output.txt"
