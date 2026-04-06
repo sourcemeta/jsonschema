@@ -24,6 +24,9 @@ local development and when running on CI/CD pipelines. For example:
 
 [**Check out the documentation to learn more**](#usage)
 
+Pairs with [Sourcemeta One](https://www.sourcemeta.com) for a complete schema
+registry workflow.
+
 ***
 
 > [!TIP]
@@ -253,6 +256,16 @@ machine capabilities. If you desire to build a portable binary, or if the
 aggressive processor-specific optimisations cause any issues (we heard of some
 `Illegal instruction` cases), then configure the project with
 `-DJSONSCHEMA_PORTABLE:BOOL=ON`.
+
+Going Further
+-------------
+
+The JSON Schema CLI handles the local development and CI/CD side of schema
+management. For teams that need to publish, discover, and govern schemas across
+an organisation, [Sourcemeta One](https://www.sourcemeta.com) is a self-hosted
+JSON Schema registry that pairs directly with this CLI. It is designed by the
+same team, requires no database, deploys as a single Docker container, and is
+free to deploy.
 
 License
 -------
