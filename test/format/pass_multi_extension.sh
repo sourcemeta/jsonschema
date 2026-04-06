@@ -23,6 +23,7 @@ cd "$TMP"
 "$1" fmt --extension .schema.json -v > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected_output.txt"
+warning: Recursively processing every file in $(realpath "$TMP") as no input was provided
 Using extension: .schema.json
 Formatting: $(realpath "$TMP")/schema_2.schema.json
 EOF

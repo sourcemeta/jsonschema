@@ -29,6 +29,7 @@ cd "$TMP"
 "$1" metaschema --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+warning: Recursively processing every file in $(realpath "$TMP") as no input was provided
 ok: $(realpath "$TMP")/schema_1.json
   matches http://json-schema.org/draft-04/schema#
 ok: $(realpath "$TMP")/schema_2.json

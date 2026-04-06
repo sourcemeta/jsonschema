@@ -34,6 +34,7 @@ cd "$TMP"
 "$BIN" validate schema.json --verbose 2> "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
+warning: Recursively processing every file in $(realpath "$TMP") as no input was provided
 ok: $(realpath "$TMP")/instance_1.json
   matches $(realpath "$TMP")/schema.json
 ok: $(realpath "$TMP")/instance_2.json
