@@ -43,7 +43,7 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     result.assign("website", sourcemeta::core::JSON{this->website.value()});
   }
 
-  if (!this->absolute_path.empty()) {
+  if (this->absolute_path_explicit) {
     result.assign("path",
                   sourcemeta::core::JSON{this->absolute_path.generic_string()});
   }

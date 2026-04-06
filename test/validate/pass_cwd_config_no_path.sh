@@ -21,12 +21,17 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-cat << 'EOF' > "$TMP/instance_1.json"
+cat << 'EOF' > "$TMP/instance.json"
 { "name": "Alice" }
 EOF
 
-cat << 'EOF' > "$TMP/instance_2.json"
-{ "name": "Bob" }
+cat << 'EOF' > "$TMP/jsonschema.json"
+{
+  "defaultDialect": "http://json-schema.org/draft-04/schema#",
+  "ignore": [
+    "./jsonschema.json"
+  ]
+}
 EOF
 
 BIN="$(realpath "$1")"
@@ -34,10 +39,12 @@ cd "$TMP"
 "$BIN" validate schema.json --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-warning: Recursively processing every file in $(realpath "$TMP") as no input was provided
-ok: $(realpath "$TMP")/instance_1.json
-  matches $(realpath "$TMP")/schema.json
-ok: $(realpath "$TMP")/instance_2.json
+warning: Recursively processing every file in $(realpath "$TMP") as the configuration file does not set an explicit path
+Ignoring path from configuration: "$(realpath "$TMP")/jsonschema.json"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
+ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 ok: $(realpath "$TMP")/schema.json
   matches $(realpath "$TMP")/schema.json

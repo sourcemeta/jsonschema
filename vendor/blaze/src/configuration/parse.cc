@@ -81,6 +81,8 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
       result.absolute_path =
           std::filesystem::weakly_canonical(base_path / path);
     }
+
+    result.absolute_path_explicit = true;
   } else {
     result.absolute_path = std::filesystem::weakly_canonical(base_path);
   }
