@@ -69,13 +69,13 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-24.04
-          additional-packages: cmake build-essential g++-14 shellcheck pipx zsh jq bindfs
+          additional-packages: cmake build-essential g++-14 shellcheck pipx zsh jq bindfs nodejs
           wsl-version: 2
 
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
         run: |
-          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates
+          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates nodejs
           apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --repository https://dl-cdn.alpinelinux.org/alpine/edge/community --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
 
       - name: Install pre-commit
