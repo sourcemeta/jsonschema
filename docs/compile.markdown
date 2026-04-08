@@ -25,6 +25,13 @@ You can pass the compiled template to the [`validate`](./validate.markdown)
 command to avoid expensive schema compilation if you need to perform validation
 multiple times with the same schema.
 
+> [!TIP]
+> The compiled template is also consumable from any JavaScript engine
+> through the [Blaze JavaScript
+> port](https://github.com/sourcemeta/blaze/tree/main/ports/javascript), a
+> pure-JavaScript evaluator for browsers and JavaScript runtimes like
+> Node.js. Compile once with this CLI and evaluate anywhere.
+
 > [!WARNING]
 > By default, schemas are compiled in exhaustive mode, which results in better
 > error messages and annotations, at the expense of speed. The `--fast`/`-f`

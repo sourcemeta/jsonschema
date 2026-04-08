@@ -46,6 +46,13 @@ for error reporting purposes. Make sure they match and that the compilation and
 evaluation were done with the same version of this tool or you might get
 non-sense results.
 
+> [!TIP]
+> Templates produced by the [`compile`](./compile.markdown) command can
+> also be evaluated from JavaScript using the [Blaze JavaScript
+> port](https://github.com/sourcemeta/blaze/tree/main/ports/javascript), a
+> pure-JavaScript evaluator for browsers and JavaScript runtimes like
+> Node.js, letting you compile with this CLI and validate anywhere.
+
 > [!WARNING]
 > This tool (and its underlying [Blaze](https://github.com/sourcemeta/blaze)
 > evaluator) does not support turning on
