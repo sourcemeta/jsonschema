@@ -30,6 +30,7 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 error: The schema file you provided does not represent a valid JSON Schema
   at file path $(realpath "$TMP")/document.json
+  at path /components/schemas/User
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -43,7 +44,8 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "The schema file you provided does not represent a valid JSON Schema",
-  "filePath": "$(realpath "$TMP")/document.json"
+  "filePath": "$(realpath "$TMP")/document.json",
+  "pointer": "/components/schemas/User"
 }
 EOF
 

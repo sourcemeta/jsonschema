@@ -38,6 +38,7 @@ cat << EOF > "$TMP/expected.txt"
 error: Could not resolve schema reference
   at identifier file://$(realpath "$TMP")/document.json#/components/schemas/Address
   at file path $(realpath "$TMP")/document.json
+  at path /components/schemas/User
   at location "/\$ref"
 EOF
 
@@ -55,6 +56,7 @@ cat << EOF > "$TMP/expected.txt"
   "error": "Could not resolve schema reference",
   "identifier": "file://$(realpath "$TMP")/document.json#/components/schemas/Address",
   "filePath": "$(realpath "$TMP")/document.json",
+  "pointer": "/components/schemas/User",
   "location": "/\$ref"
 }
 EOF

@@ -27,8 +27,8 @@ EOF
 "$1" validate "$TMP/document.json" "$TMP/instance.json" \
   --path "/components/schemas/NonExistent" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Other input error (path not found)
-test "$EXIT_CODE" = "6"
+# Invalid CLI arguments (path not found)
+test "$EXIT_CODE" = "5"
 
 cat << EOF > "$TMP/expected.txt"
 error: The JSON Pointer does not resolve to a value in the document
@@ -42,7 +42,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 "$1" validate "$TMP/document.json" "$TMP/instance.json" \
   --path "/components/schemas/NonExistent" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "6"
+test "$EXIT_CODE" = "5"
 
 cat << EOF > "$TMP/expected.txt"
 {
