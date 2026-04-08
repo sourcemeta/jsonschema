@@ -53,8 +53,7 @@ Commands:
        for error reporting purposes. Make sure they match or you will get
        non-sense results.
 
-       Use --path/-P to extract a sub-schema using a JSON Pointer
-       before validation.
+       Use --path/-P to validate against a sub-schema by JSON Pointer.
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
