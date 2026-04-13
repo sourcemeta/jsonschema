@@ -65,6 +65,16 @@ inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
   }
 }
 
+constexpr std::string_view TEST_DOCUMENT_DEFAULT_DIALECT{
+    "https://json-schema.org/draft/2020-12/schema"};
+
+inline auto looks_like_test_document(const sourcemeta::core::JSON &document)
+    -> bool {
+  return document.is_object() && !document.defines("$schema") &&
+         document.defines("target") && document.at("target").is_string() &&
+         document.defines("tests") && document.at("tests").is_array();
+}
+
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
     const std::optional<sourcemeta::blaze::Configuration> &configuration)

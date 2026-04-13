@@ -26,9 +26,6 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     const auto configuration_path{find_configuration(current_path)};
     const auto &configuration{
         read_configuration(options, configuration_path, current_path)};
-    const auto dialect{default_dialect(options, configuration)};
-    const auto &custom_resolver{
-        resolver(options, options.contains("http"), dialect, configuration)};
     const auto display_path{stdin_path()};
 
     std::string raw_stdin;
@@ -39,6 +36,13 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     }
 
     const auto &document{parsed.document};
+    const auto dialect{default_dialect(options, configuration)};
+    const auto effective_dialect =
+        dialect.empty() && looks_like_test_document(document)
+            ? TEST_DOCUMENT_DEFAULT_DIALECT
+            : dialect;
+    const auto &custom_resolver{resolver(options, options.contains("http"),
+                                         effective_dialect, configuration)};
     const auto stdin_label{display_path.string()};
 
     try {
@@ -49,7 +53,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         } else {
           auto copy = document;
           sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
-                                   custom_resolver, dialect);
+                                   custom_resolver, effective_dialect);
           sourcemeta::core::prettify(copy, expected, indentation);
         }
         expected << "\n";
@@ -69,7 +73,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
         } else {
           auto copy = document;
           sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
-                                   custom_resolver, dialect);
+                                   custom_resolver, effective_dialect);
           sourcemeta::core::prettify(copy, std::cout, indentation);
         }
         std::cout << "\n";
@@ -114,8 +118,12 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
+      const auto effective_dialect =
+          dialect.empty() && looks_like_test_document(entry.second)
+              ? TEST_DOCUMENT_DEFAULT_DIALECT
+              : dialect;
+      const auto &custom_resolver{resolver(options, options.contains("http"),
+                                           effective_dialect, configuration)};
 
       std::ostringstream expected;
       if (options.contains("keep-ordering")) {
@@ -123,7 +131,7 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       } else {
         auto copy = entry.second;
         sourcemeta::core::format(copy, sourcemeta::core::schema_walker,
-                                 custom_resolver, dialect);
+                                 custom_resolver, effective_dialect);
         sourcemeta::core::prettify(copy, expected, indentation);
       }
       expected << "\n";
