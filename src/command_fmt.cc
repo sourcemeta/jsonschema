@@ -37,10 +37,14 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
 
     const auto &document{parsed.document};
     const auto dialect{default_dialect(options, configuration)};
+    const auto is_test_document =
+        dialect.empty() && looks_like_test_document(document);
     const auto effective_dialect =
-        dialect.empty() && looks_like_test_document(document)
-            ? TEST_DOCUMENT_DEFAULT_DIALECT
-            : dialect;
+        is_test_document ? TEST_DOCUMENT_DEFAULT_DIALECT : dialect;
+    if (is_test_document) {
+      std::cerr << "Interpreting as a test file: " << display_path.string()
+                << "\n";
+    }
     const auto &custom_resolver{resolver(options, options.contains("http"),
                                          effective_dialect, configuration)};
     const auto stdin_label{display_path.string()};
@@ -118,10 +122,13 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       const auto &configuration{read_configuration(options, configuration_path,
                                                    entry.resolution_base)};
       const auto dialect{default_dialect(options, configuration)};
+      const auto is_test_document =
+          dialect.empty() && looks_like_test_document(entry.second);
       const auto effective_dialect =
-          dialect.empty() && looks_like_test_document(entry.second)
-              ? TEST_DOCUMENT_DEFAULT_DIALECT
-              : dialect;
+          is_test_document ? TEST_DOCUMENT_DEFAULT_DIALECT : dialect;
+      if (is_test_document) {
+        std::cerr << "Interpreting as a test file: " << entry.first << "\n";
+      }
       const auto &custom_resolver{resolver(options, options.contains("http"),
                                            effective_dialect, configuration)};
 

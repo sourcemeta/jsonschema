@@ -28,6 +28,7 @@ EOF
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
+Interpreting as a test file: $(realpath "$TMP")/test.json
 fail: $(realpath "$TMP")/test.json
 
 Run the \`fmt\` command without \`--check/-c\` to fix the formatting

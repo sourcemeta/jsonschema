@@ -22,7 +22,8 @@ EOF
 
 "$1" fmt "$TMP/test.json" > "$TMP/output.txt" 2>&1
 
-cat << 'EOF' > "$TMP/expected_output.txt"
+cat << EOF > "$TMP/expected_output.txt"
+Interpreting as a test file: $(realpath "$TMP")/test.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected_output.txt"
