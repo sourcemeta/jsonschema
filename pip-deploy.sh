@@ -82,7 +82,7 @@ from setuptools import setup, find_packages
 setup(
     name         = "$PKG",
     version      = "$VERSION",
-    description  = "The CLI for working with JSON Schema. Covers formatting, linting, testing, and much more for both local development and CI/CD pipelines",
+    description  = "The CLI for working with JSON Schema. Covers formatting, linting, testing, and much more for both local development and CI/CD pipelines. By a member of the JSON Schema Technical Steering Committee",
     author       = "Sourcemeta",
     author_email = "hello@sourcemeta.com",
     url          = "https://github.com/sourcemeta/jsonschema",
