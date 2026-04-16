@@ -12,7 +12,6 @@ auto lint(const sourcemeta::core::Options &options) -> void;
 auto validate(const sourcemeta::core::Options &options) -> void;
 auto metaschema(const sourcemeta::core::Options &options) -> void;
 auto compile(const sourcemeta::core::Options &options) -> void;
-auto canonicalize(const sourcemeta::core::Options &options) -> void;
 auto encode(const sourcemeta::core::Options &options) -> void;
 auto decode(const sourcemeta::core::Options &options) -> void;
 auto codegen(const sourcemeta::core::Options &options) -> void;
