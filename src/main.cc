@@ -104,13 +104,6 @@ Commands:
        Statically inspect a schema to display schema locations and
        references in a human-readable manner.
 
-   canonicalize <schema.json|.yaml>
-
-       Transform a JSON Schema into a canonical normalized form.
-       Canonicalization is a process that simplifies a schema into a
-       more verbose but semantically equivalent representation, making
-       it easier for static analysis.
-
    codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
 
        Generate code from a JSON Schema. Currently only supports
@@ -199,10 +192,6 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.option("entrypoint", {"p"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::compile(app);
-    return EXIT_SUCCESS;
-  } else if (command == "canonicalize") {
-    app.parse(argc, argv, {.skip = 1});
-    sourcemeta::jsonschema::canonicalize(app);
     return EXIT_SUCCESS;
   } else if (command == "test") {
     app.option("extension", {"e"});

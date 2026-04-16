@@ -14,7 +14,6 @@ sourcemeta_executable(
     command_encode.cc
     command_decode.cc
     command_compile.cc
-    command_canonicalize.cc
     command_codegen.cc
     command_install.cc)
 

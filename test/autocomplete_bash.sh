@@ -71,7 +71,6 @@ test_completion "jsonschema " "fmt" "Command completion includes fmt"
 test_completion "jsonschema " "lint" "Command completion includes lint"
 test_completion "jsonschema " "bundle" "Command completion includes bundle"
 test_completion "jsonschema " "inspect" "Command completion includes inspect"
-test_completion "jsonschema " "canonicalize" "Command completion includes canonicalize"
 test_completion "jsonschema " "encode" "Command completion includes encode"
 test_completion "jsonschema " "decode" "Command completion includes decode"
 test_completion "jsonschema " "codegen" "Command completion includes codegen"
@@ -93,9 +92,6 @@ test_completion "jsonschema compile --" "--minify" "Compile includes --minify"
 
 test_completion "jsonschema fmt --" "--check" "Fmt includes --check"
 test_completion "jsonschema fmt --" "--keep-ordering" "Fmt includes --keep-ordering"
-
-test_completion "jsonschema canonicalize --" "--http" "Canonicalize includes --http"
-test_completion "jsonschema canonicalize --" "--verbose" "Canonicalize includes global option --verbose"
 
 test_completion "jsonschema codegen --" "--name" "Codegen includes --name"
 test_completion "jsonschema codegen --" "--target" "Codegen includes --target"
