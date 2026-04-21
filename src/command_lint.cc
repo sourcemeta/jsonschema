@@ -1,10 +1,10 @@
-#include <sourcemeta/core/alterschema.h>
+#include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
 
+#include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/compiler.h>
-#include <sourcemeta/blaze/linter.h>
 
 #include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem::current_path
@@ -24,7 +24,7 @@
 static const sourcemeta::core::JSON::String EXCLUDE_KEYWORD{"x-lint-exclude"};
 
 template <typename Options, typename Iterator>
-static auto disable_lint_rules(sourcemeta::core::SchemaTransformer &bundle,
+static auto disable_lint_rules(sourcemeta::blaze::SchemaTransformer &bundle,
                                const Options &options, Iterator first,
                                Iterator last) -> void {
   for (auto iterator = first; iterator != last; ++iterator) {
@@ -140,7 +140,7 @@ static auto get_lint_callback(sourcemeta::core::JSON &errors_array,
   };
 }
 
-static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
+static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
                       std::unordered_set<std::string> &rule_names,
                       const std::filesystem::path &rule_path,
                       const std::string_view dialect,
@@ -166,15 +166,15 @@ static auto load_rule(sourcemeta::core::SchemaTransformer &bundle,
     bundle.add<sourcemeta::blaze::SchemaRule>(
         rule_schema, sourcemeta::core::schema_walker, custom_resolver,
         sourcemeta::blaze::default_schema_compiler, dialect);
-  } catch (const sourcemeta::blaze::LinterMissingNameError &error) {
+  } catch (const sourcemeta::blaze::SchemaRuleMissingNameError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::LinterMissingNameError>(rule_path, error);
-  } catch (const sourcemeta::blaze::LinterInvalidNameError &error) {
+        sourcemeta::blaze::SchemaRuleMissingNameError>(rule_path, error);
+  } catch (const sourcemeta::blaze::SchemaRuleInvalidNameError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::LinterInvalidNameError>(rule_path, error);
-  } catch (const sourcemeta::blaze::LinterInvalidNamePatternError &error) {
+        sourcemeta::blaze::SchemaRuleInvalidNameError>(rule_path, error);
+  } catch (const sourcemeta::blaze::SchemaRuleInvalidNamePatternError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::blaze::LinterInvalidNamePatternError>(rule_path, error);
+        sourcemeta::blaze::SchemaRuleInvalidNamePatternError>(rule_path, error);
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
     throw sourcemeta::core::FileError<
@@ -199,13 +199,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     -> void {
   const bool output_json = options.contains("json");
 
-  sourcemeta::core::SchemaTransformer bundle;
-  sourcemeta::core::add(bundle, sourcemeta::core::AlterSchemaMode::Linter);
-
-  bundle.add<sourcemeta::blaze::ValidExamples>(
-      sourcemeta::blaze::default_schema_compiler);
-  bundle.add<sourcemeta::blaze::ValidDefault>(
-      sourcemeta::blaze::default_schema_compiler);
+  sourcemeta::blaze::SchemaTransformer bundle;
+  sourcemeta::blaze::add(bundle, sourcemeta::blaze::AlterSchemaMode::Linter);
 
   std::unordered_set<std::string> rule_names;
   for (const auto &entry : bundle) {
@@ -379,7 +374,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               return EXIT_SUCCESS;
             } catch (
-                const sourcemeta::core::SchemaTransformRuleProcessedTwiceError
+                const sourcemeta::blaze::SchemaTransformRuleProcessedTwiceError
                     &error) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -388,7 +383,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw LintAutoFixError{error.what(), entry.resolution_base,
                                      error.location()};
             } catch (
-                const sourcemeta::core::SchemaBrokenReferenceError &error) {
+                const sourcemeta::blaze::SchemaBrokenReferenceError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
               }

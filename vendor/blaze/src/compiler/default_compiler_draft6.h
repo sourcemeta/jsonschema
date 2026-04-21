@@ -107,7 +107,11 @@ auto compiler_draft6_validation_type(const Context &context,
                    LoopItemsPropertiesExactlyTypeStrictHash ||
            current.back().type ==
                sourcemeta::blaze::InstructionIndex::
-                   LoopItemsPropertiesExactlyTypeStrictHash3) &&
+                   LoopItemsPropertiesExactlyTypeStrictHash3 ||
+           current.back().type ==
+               sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded ||
+           current.back().type == sourcemeta::blaze::InstructionIndex::
+                                      LoopItemsIntegerBoundedSized) &&
           current.back().relative_instance_location ==
               to_pointer(dynamic_context.base_instance_location)) {
         return {};

@@ -8,9 +8,10 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 option(BLAZE_COMPILER "Build the Blaze compiler library" ON)
 option(BLAZE_EVALUATOR "Build the Blaze evaluator library" ON)
 option(BLAZE_OUTPUT "Build the Blaze output formats library" ON)
-option(BLAZE_LINTER "Build the Blaze linter rule library" ON)
 option(BLAZE_TEST "Build the Blaze test runner library" ON)
 option(BLAZE_CONFIGURATION "Build the Blaze configuration file library" ON)
+option(BLAZE_ALTERSCHEMA "Build the Blaze alterschema rule library" ON)
+option(BLAZE_CODEGEN "Build the Blaze codegen library" ON)
 option(BLAZE_TESTS "Build the Blaze tests" OFF)
 option(BLAZE_BENCHMARK "Build the Blaze benchmarks" OFF)
 option(BLAZE_CONTRIB "Build the Blaze contrib programs" OFF)
@@ -55,16 +56,20 @@ if(BLAZE_OUTPUT)
   add_subdirectory(src/output)
 endif()
 
-if(BLAZE_LINTER)
-  add_subdirectory(src/linter)
-endif()
-
 if(BLAZE_TEST)
   add_subdirectory(src/test)
 endif()
 
 if(BLAZE_CONFIGURATION)
   add_subdirectory(src/configuration)
+endif()
+
+if(BLAZE_ALTERSCHEMA)
+  add_subdirectory(src/alterschema)
+endif()
+
+if(BLAZE_CODEGEN)
+  add_subdirectory(src/codegen)
 endif()
 
 if(BLAZE_CONTRIB)
@@ -88,6 +93,22 @@ if(PROJECT_IS_TOP_LEVEL)
     src/*.h src/*.cc
     benchmark/*.h benchmark/*.cc
     test/*.h test/*.cc)
+
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_FOUND)
+    add_custom_target(blaze_format_trace_json
+      COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/contrib/format_trace_json.py"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft4.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft6.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft7.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_2019_09.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_2020_12.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_openapi_3_1.json"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_openapi_3_2.json"
+      COMMENT "Formatting trace JSON test files"
+      VERBATIM)
+  endif()
 endif()
 
 # Testing
@@ -106,16 +127,20 @@ if(BLAZE_TESTS)
     add_subdirectory(test/output)
   endif()
 
-  if(BLAZE_LINTER)
-    add_subdirectory(test/linter)
-  endif()
-
   if(BLAZE_TEST)
     add_subdirectory(test/test)
   endif()
 
   if(BLAZE_CONFIGURATION)
     add_subdirectory(test/configuration)
+  endif()
+
+  if(BLAZE_ALTERSCHEMA)
+    add_subdirectory(test/alterschema)
+  endif()
+
+  if(BLAZE_CODEGEN)
+    add_subdirectory(test/codegen)
   endif()
 
   if(PROJECT_IS_TOP_LEVEL)

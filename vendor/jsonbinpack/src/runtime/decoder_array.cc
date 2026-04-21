@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_decoder.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint8_t, std::uint64_t
@@ -25,10 +26,10 @@ auto Decoder::FIXED_TYPED_ARRAY(const struct FIXED_TYPED_ARRAY &options)
 auto Decoder::BOUNDED_8BITS_TYPED_ARRAY(
     const struct BOUNDED_8BITS_TYPED_ARRAY &options) -> sourcemeta::core::JSON {
   assert(options.maximum >= options.minimum);
-  assert(is_byte(options.maximum - options.minimum));
+  assert(sourcemeta::core::is_byte(options.maximum - options.minimum));
   const std::uint8_t byte{this->get_byte()};
   const std::uint64_t size{byte + options.minimum};
-  assert(is_within(size, options.minimum, options.maximum));
+  assert(sourcemeta::core::is_within(size, options.minimum, options.maximum));
   return this->FIXED_TYPED_ARRAY(
       {.size = size,
        .encoding = options.encoding,

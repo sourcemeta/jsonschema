@@ -10,9 +10,12 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "string",
-  "if": { "minLength": 5 },
-  "then": { "maxLength": 10 }
+  "type": "object",
+  "properties": {
+    "foo": {
+      "not": { "type": "string" }
+    }
+  }
 }
 EOF
 
@@ -23,7 +26,7 @@ test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 error: Unsupported keyword in subschema
-  at keyword if
+  at keyword not
   at file path $(realpath "$TMP")/schema.json
 EOF
 
@@ -38,7 +41,7 @@ test "$EXIT_CODE" = "3"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "Unsupported keyword in subschema",
-  "keyword": "if",
+  "keyword": "not",
   "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF

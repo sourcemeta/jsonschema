@@ -808,6 +808,92 @@ auto properties_as_loop(const Context &context,
        }));
 }
 
+auto is_integer_type_check(const Instruction &instruction) -> bool {
+  return (instruction.type == InstructionIndex::AssertionType ||
+          instruction.type == InstructionIndex::AssertionTypeStrict) &&
+         std::get<ValueType>(instruction.value) ==
+             sourcemeta::core::JSON::Type::Integer;
+}
+
+auto has_strict_integer_type(const Instructions &children) -> bool {
+  for (const auto &child : children) {
+    if (child.type == InstructionIndex::AssertionTypeStrict &&
+        std::get<ValueType>(child.value) ==
+            sourcemeta::core::JSON::Type::Integer) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+auto is_integer_type_bounded_pattern(const Instructions &children) -> bool {
+  if (children.size() != 3) {
+    return false;
+  }
+
+  bool has_type{false};
+  bool has_min{false};
+  bool has_max{false};
+  for (const auto &child : children) {
+    if (is_integer_type_check(child)) {
+      has_type = true;
+    } else if (child.type == InstructionIndex::AssertionGreaterEqual &&
+               std::get<ValueJSON>(child.value).is_integer()) {
+      has_min = true;
+    } else if (child.type == InstructionIndex::AssertionLessEqual &&
+               std::get<ValueJSON>(child.value).is_integer()) {
+      has_max = true;
+    }
+  }
+
+  return has_type && has_min && has_max;
+}
+
+auto is_integer_type_lower_bound_pattern(const Instructions &children) -> bool {
+  if (children.size() != 2) {
+    return false;
+  }
+
+  bool has_type{false};
+  bool has_min{false};
+  for (const auto &child : children) {
+    if (is_integer_type_check(child)) {
+      has_type = true;
+    } else if (child.type == InstructionIndex::AssertionGreaterEqual &&
+               std::get<ValueJSON>(child.value).is_integer()) {
+      has_min = true;
+    }
+  }
+
+  return has_type && has_min;
+}
+
+auto extract_integer_lower_bound(const Instructions &children) -> std::int64_t {
+  for (const auto &child : children) {
+    if (child.type == InstructionIndex::AssertionGreaterEqual) {
+      return std::get<ValueJSON>(child.value).to_integer();
+    }
+  }
+
+  return 0;
+}
+
+auto extract_integer_bounds(const Instructions &children)
+    -> ValueIntegerBounds {
+  std::int64_t minimum{0};
+  std::int64_t maximum{0};
+  for (const auto &child : children) {
+    if (child.type == InstructionIndex::AssertionGreaterEqual) {
+      minimum = std::get<ValueJSON>(child.value).to_integer();
+    } else if (child.type == InstructionIndex::AssertionLessEqual) {
+      maximum = std::get<ValueJSON>(child.value).to_integer();
+    }
+  }
+
+  return {minimum, maximum};
+}
+
 auto compiler_draft4_applicator_properties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &current,
@@ -971,6 +1057,38 @@ auto compiler_draft4_applicator_properties_with_options(
     }
   }
 
+  auto attempt_object_fusion{context.mode == Mode::FastValidation &&
+                             !annotate && !track_evaluation && assume_object};
+  if (attempt_object_fusion) {
+    for (const auto &entry : schema_context.schema.as_object()) {
+      const auto &keyword{entry.first};
+      if (keyword == "type" || keyword == "required" ||
+          keyword == dynamic_context.keyword) {
+        continue;
+      }
+
+      if (keyword == "additionalProperties" && entry.second.is_boolean() &&
+          entry.second.to_boolean()) {
+        continue;
+      }
+
+      const auto &keyword_type{
+          context.walker(keyword, schema_context.vocabularies).type};
+      using enum sourcemeta::core::SchemaKeywordType;
+      if (keyword_type == Assertion || keyword_type == Annotation ||
+          keyword_type == Unknown || keyword_type == Comment ||
+          keyword_type == Other || keyword_type == LocationMembers) {
+        continue;
+      }
+
+      attempt_object_fusion = false;
+      break;
+    }
+  }
+  ValueObjectProperties fusion_entries;
+  Instructions fusion_children;
+  bool fusion_possible{attempt_object_fusion};
+
   for (auto &&[name, substeps] : properties) {
     if (annotate) {
       substeps.push_back(
@@ -1005,19 +1123,22 @@ auto compiler_draft4_applicator_properties_with_options(
                                   substeps.front()));
 
       // NOLINTBEGIN(bugprone-branch-clone)
-    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+    } else if (!fusion_possible && context.mode == Mode::FastValidation &&
+               substeps.size() == 1 &&
                substeps.front().type ==
                    InstructionIndex::AssertionPropertyTypeStrict) {
       children.push_back(
           unroll(context, substeps.front(),
                  effective_dynamic_context.base_instance_location));
-    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+    } else if (!fusion_possible && context.mode == Mode::FastValidation &&
+               substeps.size() == 1 &&
                substeps.front().type ==
                    InstructionIndex::AssertionPropertyType) {
       children.push_back(
           unroll(context, substeps.front(),
                  effective_dynamic_context.base_instance_location));
-    } else if (context.mode == Mode::FastValidation && substeps.size() == 1 &&
+    } else if (!fusion_possible && context.mode == Mode::FastValidation &&
+               substeps.size() == 1 &&
                substeps.front().type ==
                    InstructionIndex::AssertionPropertyTypeStrictAny) {
       children.push_back(
@@ -1039,6 +1160,111 @@ auto compiler_draft4_applicator_properties_with_options(
                          effective_dynamic_context.base_schema_location,
                      .base_instance_location = new_base_instance_location},
                  ValueNone{}));
+      }
+
+      if (context.mode == Mode::FastValidation && !substeps.empty()) {
+        if (is_integer_type_bounded_pattern(substeps)) {
+          auto bounds = extract_integer_bounds(substeps);
+          const auto index =
+              has_strict_integer_type(substeps)
+                  ? InstructionIndex::AssertionTypeIntegerBoundedStrict
+                  : InstructionIndex::AssertionTypeIntegerBounded;
+          auto instance_location = substeps.front().relative_instance_location;
+          substeps.clear();
+          auto fused = make(index, context, schema_context,
+                            relative_dynamic_context(), bounds);
+          fused.relative_instance_location = std::move(instance_location);
+          substeps.push_back(std::move(fused));
+        } else if (is_integer_type_lower_bound_pattern(substeps)) {
+          const auto minimum = extract_integer_lower_bound(substeps);
+          const auto index =
+              has_strict_integer_type(substeps)
+                  ? InstructionIndex::AssertionTypeIntegerLowerBoundStrict
+                  : InstructionIndex::AssertionTypeIntegerLowerBound;
+          auto instance_location = substeps.front().relative_instance_location;
+          substeps.clear();
+          auto fused =
+              make(index, context, schema_context, relative_dynamic_context(),
+                   ValueIntegerBounds{minimum, 0});
+          fused.relative_instance_location = std::move(instance_location);
+          substeps.push_back(std::move(fused));
+        } else if (substeps.size() == 2) {
+          bool has_items_bounded{false};
+          bool has_array_type{false};
+          std::size_t items_index{0};
+          std::size_t array_index{0};
+          for (std::size_t step_index = 0; step_index < 2; step_index++) {
+            if (substeps[step_index].type ==
+                InstructionIndex::LoopItemsIntegerBounded) {
+              has_items_bounded = true;
+              items_index = step_index;
+            } else if (substeps[step_index].type ==
+                       InstructionIndex::AssertionTypeArrayBounded) {
+              has_array_type = true;
+              array_index = step_index;
+            }
+          }
+
+          if (has_items_bounded && has_array_type) {
+            auto integer_bounds{
+                std::get<ValueIntegerBounds>(substeps[items_index].value)};
+            auto range{std::get<ValueRange>(substeps[array_index].value)};
+            auto instance_location =
+                substeps[items_index].relative_instance_location;
+            Value fused_value{
+                ValueIntegerBoundsWithSize{integer_bounds, std::move(range)}};
+            substeps.clear();
+            auto fused =
+                make(InstructionIndex::LoopItemsIntegerBoundedSized, context,
+                     schema_context, effective_dynamic_context, fused_value);
+            fused.relative_instance_location = std::move(instance_location);
+            substeps.push_back(std::move(fused));
+          }
+        }
+      }
+
+      if (fusion_possible && substeps.size() >= 2 &&
+          std::ranges::any_of(substeps, [](const auto &step) {
+            return step.type ==
+                   InstructionIndex::AssertionObjectPropertiesSimple;
+          })) {
+        std::erase_if(substeps, [](const auto &step) {
+          if (step.type == InstructionIndex::AssertionDefinesAllStrict ||
+              step.type == InstructionIndex::AssertionDefinesAll) {
+            return true;
+          }
+
+          if ((step.type == InstructionIndex::AssertionTypeStrict ||
+               step.type == InstructionIndex::AssertionType) &&
+              std::get<ValueType>(step.value) ==
+                  sourcemeta::core::JSON::Type::Object) {
+            return true;
+          }
+
+          return false;
+        });
+      }
+
+      if (fusion_possible && substeps.size() == 1 &&
+          substeps.front().type != InstructionIndex::ControlJump &&
+          substeps.front().type != InstructionIndex::ControlDynamicAnchorJump) {
+        const auto is_required{
+            assume_object && schema_context.schema.defines("required") &&
+            schema_context.schema.at("required").is_array() &&
+            schema_context.schema.at("required")
+                .contains(sourcemeta::core::JSON{name})};
+        auto prop{make_property(name)};
+        auto fusion_child{substeps.front()};
+        fusion_child.relative_instance_location = {};
+        auto fusion_extra{context.extra[fusion_child.extra_index]};
+        fusion_extra.relative_schema_location = {};
+        fusion_child.extra_index = context.extra.size();
+        context.extra.push_back(std::move(fusion_extra));
+
+        fusion_entries.emplace_back(prop.first, prop.second, is_required);
+        fusion_children.push_back(std::move(fusion_child));
+      } else {
+        fusion_possible = false;
       }
 
       if (!substeps.empty()) {
@@ -1071,6 +1297,39 @@ auto compiler_draft4_applicator_properties_with_options(
   }
 
   if (context.mode == Mode::FastValidation) {
+    if (fusion_possible && !fusion_entries.empty()) {
+      if (schema_context.schema.defines("required") &&
+          schema_context.schema.at("required").is_array()) {
+        for (const auto &req :
+             schema_context.schema.at("required").as_array()) {
+          if (!req.is_string()) {
+            continue;
+          }
+          const auto &req_name{req.to_string()};
+          bool already_tracked{false};
+          for (const auto &entry : fusion_entries) {
+            if (std::get<0>(entry) == req_name) {
+              already_tracked = true;
+              break;
+            }
+          }
+          if (!already_tracked) {
+            auto prop{make_property(req_name)};
+            fusion_entries.emplace_back(prop.first, prop.second, true);
+          }
+        }
+      }
+
+      if (fusion_entries.size() > 32) {
+        return children;
+      }
+
+      return {make(InstructionIndex::AssertionObjectPropertiesSimple, context,
+                   schema_context, dynamic_context,
+                   Value{std::move(fusion_entries)},
+                   std::move(fusion_children))};
+    }
+
     return children;
   } else if (children.empty()) {
     return {};
@@ -1136,7 +1395,10 @@ auto compiler_draft4_applicator_patternproperties_with_options(
     }
 
     if (context.mode == Mode::FastValidation && !track_evaluation &&
-        patterns.size() == 1 && !schema_context.schema.defines("properties") &&
+        patterns.size() == 1 &&
+        (!schema_context.schema.defines("properties") ||
+         (schema_context.schema.at("properties").is_object() &&
+          schema_context.schema.at("properties").empty())) &&
         schema_context.schema.defines("additionalProperties") &&
         schema_context.schema.at("additionalProperties").is_boolean() &&
         !schema_context.schema.at("additionalProperties").to_boolean()) {
@@ -1471,6 +1733,49 @@ auto compiler_draft4_applicator_items_array(
   }
 }
 
+auto is_number_type_check(const Instruction &instruction) -> bool {
+  if (instruction.type != InstructionIndex::AssertionTypeStrictAny) {
+    return false;
+  }
+
+  const auto &value{std::get<ValueTypes>(instruction.value)};
+  const auto numeric_count{
+      static_cast<std::size_t>(value.test(
+          std::to_underlying(sourcemeta::core::JSON::Type::Integer))) +
+      static_cast<std::size_t>(
+          value.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))) +
+      static_cast<std::size_t>(value.test(
+          std::to_underlying(sourcemeta::core::JSON::Type::Decimal)))};
+  return numeric_count >= 2 && value.count() == numeric_count;
+}
+
+auto is_integer_bounded_pattern(const Instructions &children) -> bool {
+  if (children.size() != 3) {
+    return false;
+  }
+
+  bool has_type{false};
+  bool has_min{false};
+  bool has_max{false};
+  for (const auto &child : children) {
+    if (is_number_type_check(child)) {
+      has_type = true;
+    } else if (child.type == InstructionIndex::AssertionGreaterEqual) {
+      if (!std::get<ValueJSON>(child.value).is_integer()) {
+        return false;
+      }
+      has_min = true;
+    } else if (child.type == InstructionIndex::AssertionLessEqual) {
+      if (!std::get<ValueJSON>(child.value).is_integer()) {
+        return false;
+      }
+      has_max = true;
+    }
+  }
+
+  return has_type && has_min && has_max;
+}
+
 auto compiler_draft4_applicator_items_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
@@ -1534,6 +1839,13 @@ auto compiler_draft4_applicator_items_with_options(
 
     if (children.empty()) {
       return {};
+    }
+
+    if (context.mode == Mode::FastValidation && children.size() == 3 &&
+        is_integer_bounded_pattern(children)) {
+      return {make(sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded,
+                   context, schema_context, dynamic_context,
+                   extract_integer_bounds(children))};
     }
 
     if (context.mode == Mode::FastValidation && children.size() == 1) {
@@ -1611,6 +1923,15 @@ auto compiler_draft4_applicator_additionalitems_from_cursor(
   Instructions children;
 
   if (!subchildren.empty()) {
+    if (context.mode == Mode::FastValidation && cursor == 0 && !annotate &&
+        !track_evaluation && is_integer_bounded_pattern(subchildren)) {
+      children.push_back(
+          make(sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded,
+               context, schema_context, dynamic_context,
+               extract_integer_bounds(subchildren)));
+      return children;
+    }
+
     children.push_back(make(sourcemeta::blaze::InstructionIndex::LoopItemsFrom,
                             context, schema_context, dynamic_context,
                             ValueUnsignedInteger{cursor},

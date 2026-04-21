@@ -1,9 +1,9 @@
-class IntegerBounded8Bit final : public sourcemeta::core::SchemaTransformRule {
+class IntegerBounded8Bit final : public sourcemeta::blaze::SchemaTransformRule {
 public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
   IntegerBounded8Bit()
-      : sourcemeta::core::SchemaTransformRule{"integer_bounded_8_bit", ""} {};
+      : sourcemeta::blaze::SchemaTransformRule{"integer_bounded_8_bit", ""} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -13,20 +13,20 @@ public:
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
-      -> sourcemeta::core::SchemaTransformRule::Result override {
+      -> sourcemeta::blaze::SchemaTransformRule::Result override {
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                      JSON_Schema_2020_12_Validation) &&
            schema.is_object() && schema.defines("type") &&
            schema.at("type").to_string() == "integer" &&
            schema.defines("minimum") && schema.defines("maximum") &&
-           is_byte(schema.at("maximum").to_integer() -
-                   schema.at("minimum").to_integer()) &&
+           sourcemeta::core::is_byte(schema.at("maximum").to_integer() -
+                                     schema.at("minimum").to_integer()) &&
            !schema.defines("multipleOf");
   }
 
   auto transform(sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaTransformRule::Result &) const
+                 const sourcemeta::blaze::SchemaTransformRule::Result &) const
       -> void override {
     auto minimum = schema.at("minimum");
     auto maximum = schema.at("maximum");

@@ -270,6 +270,36 @@ public:
     return nullptr;
   }
 
+  /// Try to access an object entry, scanning from a caller-provided start
+  /// offset. On hit, advances `start` past the found index
+  [[nodiscard]] inline auto try_at(const Key &key, const hash_type key_hash,
+                                   size_type &start) const
+      -> const mapped_type * {
+    assert(this->hash(key) == key_hash);
+    const auto object_size{this->size()};
+    assert(start <= object_size);
+    if (this->hasher.is_perfect(key_hash)) {
+      for (size_type count = 0; count < object_size; count++) {
+        const auto index{(start + count) % object_size};
+        if (this->data[index].hash == key_hash) {
+          start = index + 1;
+          return &this->data[index].second;
+        }
+      }
+    } else {
+      for (size_type count = 0; count < object_size; count++) {
+        const auto index{(start + count) % object_size};
+        if (this->data[index].hash == key_hash &&
+            this->data[index].first == key) {
+          start = index + 1;
+          return &this->data[index].second;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
   /// Try to emplace a property before another property
   auto try_emplace_before(const Key &key, const mapped_type &value,
                           const Key &suffix) -> hash_type {

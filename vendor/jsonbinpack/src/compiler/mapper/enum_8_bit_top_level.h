@@ -1,9 +1,9 @@
-class Enum8BitTopLevel final : public sourcemeta::core::SchemaTransformRule {
+class Enum8BitTopLevel final : public sourcemeta::blaze::SchemaTransformRule {
 public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
   Enum8BitTopLevel()
-      : sourcemeta::core::SchemaTransformRule{"enum_8_bit_top_level", ""} {};
+      : sourcemeta::blaze::SchemaTransformRule{"enum_8_bit_top_level", ""} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -13,18 +13,18 @@ public:
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
-      -> sourcemeta::core::SchemaTransformRule::Result override {
+      -> sourcemeta::blaze::SchemaTransformRule::Result override {
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                      JSON_Schema_2020_12_Validation) &&
            schema.is_object() && schema.defines("enum") &&
            schema.at("enum").is_array() && location.pointer.empty() &&
            schema.at("enum").size() > 1 &&
-           is_byte(schema.at("enum").size() - 1);
+           sourcemeta::core::is_byte(schema.at("enum").size() - 1);
   }
 
   auto transform(sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaTransformRule::Result &) const
+                 const sourcemeta::blaze::SchemaTransformRule::Result &) const
       -> void override {
     auto options = sourcemeta::core::JSON::make_object();
     options.assign("choices", schema.at("enum"));

@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include "unreachable.h"
 
@@ -17,12 +18,12 @@ auto Encoder::BYTE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                 const struct BYTE_CHOICE_INDEX &options)
     -> void {
   assert(!options.choices.empty());
-  assert(is_byte(options.choices.size()));
+  assert(sourcemeta::core::is_byte(options.choices.size()));
   const auto iterator{std::ranges::find(options.choices, document)};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
-  assert(
-      is_within(cursor, 0, static_cast<std::int64_t>(options.choices.size())));
+  assert(sourcemeta::core::is_within(
+      cursor, 0, static_cast<std::int64_t>(options.choices.size())));
   this->put_byte(static_cast<std::uint8_t>(cursor));
 }
 
@@ -36,8 +37,8 @@ auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
       })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
-  assert(is_within(cursor, static_cast<std::uint64_t>(0),
-                   options.choices.size() - 1));
+  assert(sourcemeta::core::is_within(cursor, static_cast<std::uint64_t>(0),
+                                     options.choices.size() - 1));
   this->put_varint(static_cast<std::uint64_t>(cursor));
 }
 
@@ -45,15 +46,15 @@ auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const sourcemeta::core::JSON &document,
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
   assert(options.choices.size() > 0);
-  assert(is_byte(options.choices.size()));
+  assert(sourcemeta::core::is_byte(options.choices.size()));
   const auto iterator{
       std::ranges::find_if(options.choices, [&document](auto const &choice) {
         return choice == document;
       })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
-  assert(is_within(cursor, 0,
-                   static_cast<std::int64_t>(options.choices.size()) - 1));
+  assert(sourcemeta::core::is_within(
+      cursor, 0, static_cast<std::int64_t>(options.choices.size()) - 1));
   // This encoding encodes the first option of the enum as "no data"
   if (cursor > 0) {
     this->put_byte(static_cast<std::uint8_t>(cursor - 1));
@@ -83,7 +84,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                    static_cast<std::uint8_t>(subtype << type_size));
   } else if (document.is_real() && document.is_integral()) {
     const auto value{document.as_integer()};
-    if (value >= 0 && is_byte(value)) {
+    if (value >= 0 && sourcemeta::core::is_byte(value)) {
       this->put_byte(TYPE_OTHER | SUBTYPE_POSITIVE_REAL_INTEGER_BYTE
                                       << type_size);
       this->put_byte(static_cast<std::uint8_t>(value));
@@ -97,13 +98,14 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
   } else if (document.is_integer()) {
     const std::int64_t value{document.to_integer()};
     const bool is_positive{value >= 0};
-    const std::uint64_t absolute{is_positive ? static_cast<std::uint64_t>(value)
-                                             : abs(value) - 1};
-    if (is_byte(absolute)) {
+    const std::uint64_t absolute{is_positive
+                                     ? static_cast<std::uint64_t>(value)
+                                     : sourcemeta::core::abs(value) - 1};
+    if (sourcemeta::core::is_byte(absolute)) {
       const std::uint8_t type{is_positive ? TYPE_POSITIVE_INTEGER_BYTE
                                           : TYPE_NEGATIVE_INTEGER_BYTE};
       const std::uint8_t absolute_byte{static_cast<std::uint8_t>(absolute)};
-      if (absolute < uint_max<5>) {
+      if (absolute < sourcemeta::core::uint_max<5>) {
         this->put_byte(
             type | static_cast<std::uint8_t>((absolute_byte + 1) << type_size));
       } else {
@@ -121,7 +123,7 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
     const sourcemeta::core::JSON::String &value{document.to_string()};
     const auto size{document.byte_size()};
     const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
-    if (size < uint_max<5>) {
+    if (size < sourcemeta::core::uint_max<5>) {
       const std::uint8_t type{shared.has_value() ? TYPE_SHARED_STRING
                                                  : TYPE_STRING};
       this->put_byte(
@@ -132,15 +134,18 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
         this->cache_.record(value, this->position(), Cache::Type::Standalone);
         this->put_string_utf8(value, size);
       }
-    } else if (size >= uint_max<5> &&
-               size < static_cast<std::uint64_t>(uint_max<5>) * 2 &&
+    } else if (size >= sourcemeta::core::uint_max<5> &&
+               size <
+                   static_cast<std::uint64_t>(sourcemeta::core::uint_max<5>) *
+                       2 &&
                !shared.has_value()) {
       this->put_byte(static_cast<std::uint8_t>(
-          TYPE_LONG_STRING | ((size - uint_max<5>) << type_size)));
+          TYPE_LONG_STRING |
+          ((size - sourcemeta::core::uint_max<5>) << type_size)));
       this->put_string_utf8(value, size);
     } else if (size >= 2 << (SUBTYPE_LONG_STRING_BASE_EXPONENT_7 - 1) &&
                !shared.has_value()) {
-      const std::uint8_t exponent{closest_smallest_exponent(
+      const std::uint8_t exponent{sourcemeta::core::closest_smallest_exponent(
           size, 2, SUBTYPE_LONG_STRING_BASE_EXPONENT_7,
           SUBTYPE_LONG_STRING_BASE_EXPONENT_10)};
       this->put_byte(
@@ -157,13 +162,14 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
 
       // If we got this far, the string is at least a certain length
       return FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-          document, {static_cast<std::uint64_t>(uint_max<5> * 2)});
+          document,
+          {static_cast<std::uint64_t>(sourcemeta::core::uint_max<5> * 2)});
     }
   } else if (document.is_array()) {
     const auto size{document.size()};
-    if (size >= uint_max<5>) {
+    if (size >= sourcemeta::core::uint_max<5>) {
       this->put_byte(TYPE_ARRAY);
-      this->put_varint(size - uint_max<5>);
+      this->put_varint(size - sourcemeta::core::uint_max<5>);
     } else {
       this->put_byte(
           static_cast<std::uint8_t>(TYPE_ARRAY | ((size + 1) << type_size)));
@@ -177,9 +183,9 @@ auto Encoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
                    .prefix_encodings = {}});
   } else if (document.is_object()) {
     const auto size{document.size()};
-    if (size >= uint_max<5>) {
+    if (size >= sourcemeta::core::uint_max<5>) {
       this->put_byte(TYPE_OBJECT);
-      this->put_varint(size - uint_max<5>);
+      this->put_varint(size - sourcemeta::core::uint_max<5>);
     } else {
       this->put_byte(
           static_cast<std::uint8_t>(TYPE_OBJECT | ((size + 1) << type_size)));

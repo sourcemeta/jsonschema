@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_input_stream.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include "varint.h"
 
@@ -47,7 +48,7 @@ auto InputStream::get_varint() -> std::uint64_t {
 
 auto InputStream::get_varint_zigzag() -> std::int64_t {
   const std::uint64_t value = varint_decode(this->stream);
-  return zigzag_decode(value);
+  return sourcemeta::core::zigzag_decode(value);
 }
 
 auto InputStream::has_more_data() const noexcept -> bool {

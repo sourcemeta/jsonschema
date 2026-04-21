@@ -36,13 +36,11 @@ EOF
 # Schema input error
 test "$EXIT_CODE" = "4"
 
-# After --fix elevates the allOf wrapper, the path changes
 cat << EOF > "$TMP/expected.txt"
-..
 error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
-  at identifier file://$(realpath "$TMP")/schema.json#/additionalProperties/x-this-is-invalid/\$defs/test
+  at identifier file://$(realpath "$TMP")/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/\$defs/test
   at file path $(realpath "$TMP")/schema.json
-  at location "/additionalProperties/x-this-is-invalid"
+  at location "/allOf/1/additionalProperties/x-this-is-invalid"
 
 Are you sure the reported location is a valid JSON Schema keyword in this dialect?
 EOF
@@ -57,9 +55,9 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
-  "identifier": "file://$(realpath "$TMP")/schema.json#/additionalProperties/x-this-is-invalid/\$defs/test",
+  "identifier": "file://$(realpath "$TMP")/schema.json#/allOf/1/additionalProperties/x-this-is-invalid/\$defs/test",
   "filePath": "$(realpath "$TMP")/schema.json",
-  "location": "/additionalProperties/x-this-is-invalid"
+  "location": "/allOf/1/additionalProperties/x-this-is-invalid"
 }
 EOF
 

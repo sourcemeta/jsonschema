@@ -6,7 +6,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <string> // std::string
 #include <unordered_map>
+#include <unordered_set> // std::unordered_set
 #include <vector>
 
 // TODO: Move all `FastValidation` conditional optimisations from the default
@@ -400,7 +402,59 @@ inline auto postprocess(std::vector<Instructions> &targets,
         Instructions result;
         result.reserve(current->size());
 
+        std::unordered_set<std::string> fusion_covered_properties;
+        for (const auto &instruction : *current) {
+          if (instruction.type ==
+              InstructionIndex::AssertionObjectPropertiesSimple) {
+            const auto &entries{
+                std::get<ValueObjectProperties>(instruction.value)};
+            for (const auto &entry : entries) {
+              fusion_covered_properties.insert(std::get<0>(entry));
+            }
+          }
+        }
+
         for (auto &instruction : *current) {
+          if (!fusion_covered_properties.empty()) {
+            switch (instruction.type) {
+              case InstructionIndex::AssertionDefinesAllStrict:
+              case InstructionIndex::AssertionDefinesAll: {
+                const auto &value{std::get<ValueStringSet>(instruction.value)};
+                bool all_covered{true};
+                for (const auto &property : value) {
+                  if (!fusion_covered_properties.contains(property.first)) {
+                    all_covered = false;
+                    break;
+                  }
+                }
+                if (all_covered) {
+                  changed = true;
+                  continue;
+                }
+                break;
+              }
+              case InstructionIndex::AssertionDefinesStrict:
+              case InstructionIndex::AssertionDefines: {
+                const auto &value{std::get<ValueProperty>(instruction.value)};
+                if (fusion_covered_properties.contains(value.first)) {
+                  changed = true;
+                  continue;
+                }
+                break;
+              }
+              case InstructionIndex::AssertionTypeStrict:
+              case InstructionIndex::AssertionType:
+                if (std::get<ValueType>(instruction.value) ==
+                    sourcemeta::core::JSON::Type::Object) {
+                  changed = true;
+                  continue;
+                }
+                break;
+              default:
+                break;
+            }
+          }
+
           if (transform_instruction(instruction, result, extra, targets,
                                     statistics, current_stats, tweaks,
                                     uses_dynamic_scopes))

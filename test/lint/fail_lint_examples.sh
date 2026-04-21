@@ -29,7 +29,7 @@ test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:9:21:
-  Only include instances in the \`examples\` array that validate against the schema (blaze/valid_examples)
+  Only include instances in the \`examples\` array that validate against the schema (valid_examples)
     at location "/properties/foo/examples/0"
     Invalid example instance at index 0
       The value was expected to be of type string but it was of type integer

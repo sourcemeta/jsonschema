@@ -75,8 +75,8 @@ auto Encoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
   const auto size{value.size()};
   assert(document.byte_size() == size);
   assert(options.minimum <= options.maximum);
-  assert(is_byte(options.maximum - options.minimum + 1));
-  assert(is_within(size, options.minimum, options.maximum));
+  assert(sourcemeta::core::is_byte(options.maximum - options.minimum + 1));
+  assert(sourcemeta::core::is_within(size, options.minimum, options.maximum));
   const auto shared{this->cache_.find(value, Cache::Type::Standalone)};
 
   // (1) Write 0x00 if shared, else do nothing

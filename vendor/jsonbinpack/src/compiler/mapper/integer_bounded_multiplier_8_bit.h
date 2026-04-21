@@ -1,10 +1,10 @@
 class IntegerBoundedMultiplier8Bit final
-    : public sourcemeta::core::SchemaTransformRule {
+    : public sourcemeta::blaze::SchemaTransformRule {
 public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
   IntegerBoundedMultiplier8Bit()
-      : sourcemeta::core::SchemaTransformRule{
+      : sourcemeta::blaze::SchemaTransformRule{
             "integer_bounded_multiplier_8_bit", ""} {};
 
   [[nodiscard]] auto
@@ -15,7 +15,7 @@ public:
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
-      -> sourcemeta::core::SchemaTransformRule::Result override {
+      -> sourcemeta::blaze::SchemaTransformRule::Result override {
     if (location.dialect != "https://json-schema.org/draft/2020-12/schema" ||
         !vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                    JSON_Schema_2020_12_Validation) ||
@@ -28,13 +28,13 @@ public:
       return false;
     }
 
-    return is_byte(count_multiples(schema.at("minimum").to_integer(),
-                                   schema.at("maximum").to_integer(),
-                                   schema.at("multipleOf").to_integer()));
+    return sourcemeta::core::is_byte(sourcemeta::core::count_multiples(
+        schema.at("minimum").to_integer(), schema.at("maximum").to_integer(),
+        schema.at("multipleOf").to_integer()));
   }
 
   auto transform(sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaTransformRule::Result &) const
+                 const sourcemeta::blaze::SchemaTransformRule::Result &) const
       -> void override {
     auto minimum = schema.at("minimum");
     auto maximum = schema.at("maximum");

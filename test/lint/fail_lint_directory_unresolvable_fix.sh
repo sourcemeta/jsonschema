@@ -33,18 +33,18 @@ cat << 'EOF' > "$TMP/baz.json"
 }
 EOF
 
+cd "$TMP"
 "$1" lint "$TMP" --fix --verbose > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
-test "$EXIT_CODE" = "4"
+# Lint violation
+test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 Linting: $(realpath "$TMP")/bar.json
 Linting: $(realpath "$TMP")/baz.json
-error: Could not resolve the reference to an external schema
-  at identifier https://example.com/unknown
-  at file path $(realpath "$TMP")/baz.json
-
-This is likely because you forgot to import such schema using \`--resolve/-r\`
+baz.json:5:16:
+  External references must point to schemas that can be resolved (invalid_external_ref)
+    at location "/allOf/0/\$ref"
+Linting: $(realpath "$TMP")/foo.json
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

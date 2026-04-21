@@ -1,0 +1,8 @@
+{
+  "name": "@sourcemeta/blaze",
+  "version": "0.0.1",
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

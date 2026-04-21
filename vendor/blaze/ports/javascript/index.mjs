@@ -1,10 +1,10 @@
-const JSON_VERSION = 1;
+const JSON_VERSION = 4;
 const DEPTH_LIMIT = 300;
-const ANNOTATION_EMIT = 44;
-const ANNOTATION_TO_PARENT = 45;
-const ANNOTATION_BASENAME_TO_PARENT = 46;
-const CONTROL_GROUP_START = 85;
-const CONTROL_EVALUATE_END = 89;
+const ANNOTATION_EMIT = 49;
+const ANNOTATION_TO_PARENT = 50;
+const ANNOTATION_BASENAME_TO_PARENT = 51;
+const CONTROL_GROUP_START = 92;
+const CONTROL_EVALUATE_END = 96;
 const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
 
 function buildJsonPointer(tokens, length) {
@@ -33,6 +33,7 @@ function jsonTypeOf(value) {
   switch (typeof value) {
     case 'boolean': return Type.Boolean;
     case 'number': return Number.isInteger(value) ? Type.Integer : Type.Real;
+    case 'bigint': return Type.Integer;
     case 'string': return Type.String;
     case 'object': return Array.isArray(value) ? Type.Array : Type.Object;
     default: return Type.Null;
@@ -40,7 +41,8 @@ function jsonTypeOf(value) {
 }
 
 function isIntegral(value) {
-  return typeof value === 'number' && Number.isFinite(value) && Math.floor(value) === value;
+  return typeof value === 'bigint' ||
+    (typeof value === 'number' && Number.isFinite(value) && Math.floor(value) === value);
 }
 
 function resolveInstance(instance, relativeInstanceLocation) {
@@ -150,7 +152,7 @@ function prepareInstruction(instruction) {
 function resolveJumpTargets(instructions, targets) {
   for (let index = 0; index < instructions.length; index++) {
     const instruction = instructions[index];
-    if (instruction[0] === 91) {
+    if (instruction[0] === 98) {
       const targetIndex = instruction[5];
       if (targetIndex < targets.length) {
         instruction[5] = targets[targetIndex];
@@ -185,7 +187,7 @@ function collectAnchorNames(targets, result) {
 function collectAnchorNamesFromInstructions(instructions, result) {
   for (let index = 0; index < instructions.length; index++) {
     const instruction = instructions[index];
-    if (instruction[0] === 90 && typeof instruction[5] === 'string') {
+    if (instruction[0] === 97 && typeof instruction[5] === 'string') {
       result.add(instruction[5]);
     }
     if (instruction[6]) {
@@ -250,7 +252,7 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     if (cr.length !== 0) return null;
     switch (op) {
       case 11: return '{if(_es(' + tv + ')!==' + cv + ')return false;}';
-      case 38: return 'if(' + tv + '!=null&&typeof ' + tv + "==='object'&&!Array.isArray(" + tv + ')){' + emitResolve('t', tv, cr) + 'if(t!==void 0&&_es(t)!==' + cv + ')return false;}';
+      case 42: return 'if(' + tv + '!=null&&typeof ' + tv + "==='object'&&!Array.isArray(" + tv + ')){' + emitResolve('t', tv, cr) + 'if(t!==void 0&&_es(t)!==' + cv + ')return false;}';
       default: return null;
     }
   }
@@ -286,49 +288,52 @@ function compileInstructionToCode(instruction, captures, visited, budget) {
     case 25: { var r=R('t'); return r?r+TO+'return true;var s=0;for(var k in t)s++;return s>'+value+';':null; }
     case 26: { if(typeof value==='string'||typeof value==='number'||typeof value==='boolean'||value===null){var r=R('t');return r?r+'return t==='+JSON.stringify(value)+';':null;}return fb(26); }
     case 27: return fb(27); case 28: return fb(28);
-    case 29: { var r=R('t'); return r?r+"if(typeof t!=='number')return true;return t>="+value+';':null; }
-    case 30: { var r=R('t'); return r?r+"if(typeof t!=='number')return true;return t<="+value+';':null; }
-    case 31: { var r=R('t'); return r?r+"if(typeof t!=='number')return true;return t>"+value+';':null; }
-    case 32: { var r=R('t'); return r?r+"if(typeof t!=='number')return true;return t<"+value+';':null; }
-    case 33: return fb(33); case 34: return fb(34); case 35: return fb(35);
-    case 36: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;var a=_jt(t);return a==='+value+'||('+value+'===2&&_ii(t));':null; }
-    case 37: return fb(37);
-    case 38: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return _es(t)==='+value+';':null; }
+    case 29: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t>="+v+';':null; }
+    case 30: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t<="+v+';':null; }
+    case 31: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t>"+v+';':null; }
+    case 32: { var r=R('t'),v=typeof value==='bigint'?value+'n':value; return r?r+"var tt=typeof t;if(tt!=='number'&&tt!=='bigint')return true;return t<"+v+';':null; }
+    case 33: return fb(33); case 34: return fb(34);
+    case 35: return fb(35); case 36: return fb(36); case 37: return fb(37); case 38: return fb(38);
     case 39: return fb(39);
-    case 40: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return('+value+'&(1<<_es(t)))!==0;':null; }
-    case 41: return fb(41); case 42: return fb(42); case 43: return fb(43);
-    case 44: return 'return true;'; case 45: return 'return true;'; case 46: return 'return true;'; case 47: return 'return true;';
-    case 48: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r; for(var j=0;j<children.length;j++)c+='if(!'+cc(children[j],'t')+')return true;'; return c+'return false;'; }
-    case 49: return fb(49);
-    case 50: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; if(value){var c=r+'var __r=false;';for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')__r=true;';return c+'return __r;';} var c=r;for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')return true;';return c+'return false;'; }
-    case 51: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; return r+seq(children,'t')+'return true;'; }
-    case 52: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r+'var __r=true,__m=false;';for(var j=0;j<children.length;j++){c+='if('+cc(children[j],'t')+'){if(__m){__r=false;'+(!value?'return false;':'')+ '}else __m=true;}';}return c+'return __r&&__m;'; }
-    case 53: return fb(53);
-    case 54: { var r=R('t'); if(!r)return null; var c=r+'if(_jt(t)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
-    case 55: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
-    case 56: { var r=R('t'); if(!r)return null; var c=r+'if(!Array.isArray(t)||t.length<='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
-    case 57: return fb(57); case 58: return fb(58);
-    case 59: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
-    case 60: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
-    case 61: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
-    case 62: return fb(62); case 63: return fb(63); case 64: return fb(64); case 65: return fb(65); case 66: return fb(66);
-    case 67: return fb(67); case 68: return fb(68); case 69: return fb(69); case 70: return fb(70);
-    case 71: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
+    case 40: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;var a=_jt(t);return a==='+value+'||('+value+'===2&&_ii(t));':null; }
+    case 41: return fb(41);
+    case 42: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return _es(t)==='+value+';':null; }
+    case 43: return fb(43);
+    case 44: { var r=R('t'); return r?IO+r+'if(t===void 0)return true;return('+value+'&(1<<_es(t)))!==0;':null; }
+    case 45: return fb(45); case 46: return fb(46); case 47: return fb(47);
+    case 48: return fb(48);
+    case 49: return 'return true;'; case 50: return 'return true;'; case 51: return 'return true;'; case 52: return 'return true;';
+    case 53: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r; for(var j=0;j<children.length;j++)c+='if(!'+cc(children[j],'t')+')return true;'; return c+'return false;'; }
+    case 54: return fb(54);
+    case 55: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; if(value){var c=r+'var __r=false;';for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')__r=true;';return c+'return __r;';} var c=r;for(var j=0;j<children.length;j++)c+='if('+cc(children[j],'t')+')return true;';return c+'return false;'; }
+    case 56: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return true;'; return r+seq(children,'t')+'return true;'; }
+    case 57: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return 'return false;'; var c=r+'var __r=true,__m=false;';for(var j=0;j<children.length;j++){c+='if('+cc(children[j],'t')+'){if(__m){__r=false;'+(!value?'return false;':'')+ '}else __m=true;}';}return c+'return __r&&__m;'; }
+    case 58: return fb(58);
+    case 59: { var r=R('t'); if(!r)return null; var c=r+'if(_jt(t)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 60: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 61: { var r=R('t'); if(!r)return null; var c=r+'if(!Array.isArray(t)||t.length<='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'t'); return c+'return true;'; }
+    case 62: return fb(62); case 63: return fb(63);
+    case 64: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi!==void 0){var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}}return true;'; }
+    case 65: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; var mi=captures.length; captures.push(value); var gf=''; for(var gi=0;gi<children.length;gi++){var gc=children[gi][6]; if(gc&&gc.length>0){gf+='function(i,d,_t,_v){'+lb(gc,'i')+'return true;},';}else{gf+='null,';}} return r+TO+'return true;var __cg=['+gf+'];for(var k in t){var __mi=_c['+mi+'][k];if(__mi===void 0)return false;var __cf=__cg[__mi];if(__cf&&!__cf(t,d,_t,_v))return false;}return true;'; }
+    case 66: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+TO+'return true;for(var k in t){'+lb(children,'t[k]')+'}return true;'; }
+    case 67: return fb(67); case 68: return fb(68); case 69: return fb(69); case 70: return fb(70); case 71: return fb(71);
     case 72: return fb(72); case 73: return fb(73); case 74: return fb(74); case 75: return fb(75);
-    case 76: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
-    case 77: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
-    case 78: return fb(78);
-    case 79: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){var a=_jt(t[j]);if(a!=='+value+'&&!('+value+'===2&&_ii(t[j])))return false;}return true;':null; }
-    case 80: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(_es(t[j])!=='+value+')return false;}return true;':null; }
-    case 81: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(('+value+'&(1<<_es(t[j])))===0)return false;}return true;':null; }
-    case 82: return fb(82); case 83: return fb(83); case 84: return fb(84);
-    case 85: { if(!children||children.length===0)return 'return true;'; var c=''; for(var j=0;j<children.length;j++){var r2=compileInstructionToCode(children[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(children[j]);c+='if(!_e(_c['+ci+'],i,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(i,d+1,_t,_v))return false;';}} return c+'return true;'; }
-    case 86: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 87: { var c=IO+'if(!Object.hasOwn(i,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 88: { var c='if(_jt(i)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
-    case 89: return 'return true;';
-    case 90: return fb(90);
-    case 91: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(91); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(91); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 76: { var r=R('t'); return r?r+TO+'return true;for(var k in t){if(_es(t[k])!=='+value+')return false;}return true;':null; }
+    case 77: return fb(77); case 78: return fb(78); case 79: return fb(79); case 80: return fb(80);
+    case 81: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 82: { var r=R('t'); if(!r)return null; if(!children||children.length===0)return r+'return true;'; return r+'if(!Array.isArray(t)||'+value+'>=t.length)return true;for(var j='+value+';j<t.length;j++){'+lb(children,'t[j]')+'}return true;'; }
+    case 83: return fb(83);
+    case 84: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){var a=_jt(t[j]);if(a!=='+value+'&&!('+value+'===2&&_ii(t[j])))return false;}return true;':null; }
+    case 85: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(_es(t[j])!=='+value+')return false;}return true;':null; }
+    case 86: { var r=R('t'); return r?r+'if(!Array.isArray(t))return true;for(var j=0;j<t.length;j++){if(('+value+'&(1<<_es(t[j])))===0)return false;}return true;':null; }
+    case 87: return fb(87); case 88: return fb(88); case 89: return fb(89); case 90: return fb(90); case 91: return fb(91);
+    case 92: { if(!children||children.length===0)return 'return true;'; var c=''; for(var j=0;j<children.length;j++){var r2=compileInstructionToCode(children[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(children[j]);c+='if(!_e(_c['+ci+'],i,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(i,d+1,_t,_v))return false;';}} return c+'return true;'; }
+    case 93: { var r=R('t'); if(!r)return null; var c=r+TO+'return true;if(!Object.hasOwn(t,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 94: { var c=IO+'if(!Object.hasOwn(i,'+JSON.stringify(value)+'))return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 95: { var c='if(_jt(i)!=='+value+')return true;'; if(children&&children.length>0)c+=seq(children,'i'); return c+'return true;'; }
+    case 96: return 'return true;';
+    case 97: return fb(97);
+    case 98: { if(!value)return 'return true;'; if(visited&&visited.has(instruction))return fb(98); if(!visited)visited=new Set(); visited.add(instruction); var r=R('t'); if(!r)return fb(98); var c=r; for(var j=0;j<value.length;j++){var r2=compileInstructionToCode(value[j],captures,visited,budget); if(r2===null){var ci=captures.length;captures.push(value[j]);c+='if(!_e(_c['+ci+'],t,d+1,_t,_v))return false;';}else{budget[0]-=r2.length;c+='if(!(function(i,d,_t,_v){'+r2+'})(t,d+1,_t,_v))return false;';}} return c+'return true;'; }
     default: return null;
   }
 }
@@ -366,7 +371,35 @@ function generateNativeValidator(template) {
   }
 }
 
+function sourceToBigInt(source) {
+  // Plain integer like "99999999999999999999999999999999999"
+  if (/^-?[0-9]+$/.test(source)) return BigInt(source);
+  // Exponential notation like "9.9999999999999999e+34". Parse the coefficient
+  // and exponent to reconstruct the exact integer, as `BigInt` cannot parse
+  // exponential notation directly
+  const match = source.match(/^(-?)([0-9]+)\.?([0-9]*)[eE][+]?([0-9]+)$/);
+  if (!match) return null;
+  const exponent = parseInt(match[4]) - match[3].length;
+  if (exponent < 0) return null;
+  return BigInt(match[1] + match[2] + match[3]) * (10n ** BigInt(exponent));
+}
+
+function reviver(_key, value, context) {
+  // On older engines, `JSON.parse` calls the reviver with only two arguments
+  if (context === undefined) return value;
+  if (typeof value !== 'number') return value;
+  const source = context.source;
+  // Only convert when `JSON.parse` actually truncated the value, avoiding
+  // unnecessary `BigInt` conversion for integers that are exactly
+  // representable as doubles
+  if (String(value) === source) return value;
+  const bigint = sourceToBigInt(source);
+  return bigint !== null ? bigint : value;
+}
+
 class Blaze {
+  static reviver = reviver;
+
   constructor(template) {
     if (!Array.isArray(template) || template[0] !== JSON_VERSION) {
       throw new Error(
@@ -623,7 +656,7 @@ function evaluateInstructionTracked(instruction, instance, depth, template, eval
   if (!handler) return true;
 
   const type = instruction[0];
-  if (type < 85 || type > 89) {
+  if (type < 92 || type > 96) {
     if (evaluator.trackMode) {
       evaluator.pushPath(instruction[1]);
     }
@@ -691,6 +724,7 @@ function effectiveTypeStrictReal(value) {
   switch (typeof value) {
     case 'boolean': return Type.Boolean;
     case 'number': return Number.isInteger(value) ? Type.Integer : Type.Real;
+    case 'bigint': return Type.Integer;
     case 'string': return Type.String;
     case 'object': return Array.isArray(value) ? Type.Array : Type.Object;
     default: return Type.Null;
@@ -730,6 +764,7 @@ function fastHash(value) {
   switch (typeof value) {
     case 'boolean': return value ? 1 : 0;
     case 'number': return 4 + ((value | 0) & 255);
+    case 'bigint': return 4 + Number(value & 255n);
     case 'string': return 3 + value.length;
     case 'object':
       if (Array.isArray(value)) {
@@ -782,7 +817,15 @@ function isUnique(array) {
 }
 
 function isDivisibleBy(value, divisor) {
-  if (divisor === 0) return false;
+  if (divisor === 0 || divisor === 0n) return false;
+  if (typeof value === 'bigint' && typeof divisor === 'bigint') {
+    return value % divisor === 0n;
+  }
+  if (typeof value === 'bigint') {
+    value = Number(value);
+  } else if (typeof divisor === 'bigint') {
+    divisor = Number(divisor);
+  }
   const remainder = value % divisor;
   if (remainder === 0) return true;
   return Math.abs(remainder) < 1e-9 || Math.abs(remainder - divisor) < 1e-9 ||
@@ -1231,7 +1274,8 @@ function AssertionEqualsAnyStringHash(instruction, instance, depth, template, ev
 
 function AssertionGreaterEqual(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const __result = target >= instruction[5];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
@@ -1240,7 +1284,8 @@ function AssertionGreaterEqual(instruction, instance, depth, template, evaluator
 
 function AssertionLessEqual(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const __result = target <= instruction[5];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
@@ -1249,7 +1294,8 @@ function AssertionLessEqual(instruction, instance, depth, template, evaluator) {
 
 function AssertionGreater(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const __result = target > instruction[5];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
@@ -1258,7 +1304,8 @@ function AssertionGreater(instruction, instance, depth, template, evaluator) {
 
 function AssertionLess(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const __result = target < instruction[5];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
@@ -1276,9 +1323,46 @@ function AssertionUnique(instruction, instance, depth, template, evaluator) {
 
 function AssertionDivisible(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
   const __result = isDivisibleBy(target, instruction[5]);
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerBounded(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[5];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerBoundedStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[5];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerLowerBound(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[5];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
+  return __result;
+};
+
+function AssertionTypeIntegerLowerBoundStrict(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const range = instruction[5];
+  const __result = (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -1421,6 +1505,37 @@ function AssertionArrayPrefixEvaluate(instruction, instance, depth, template, ev
     } else {
       for (let cursor = 0; cursor <= pointer; cursor++) {
         evaluator.markEvaluated(target[cursor], target, cursor);
+      }
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function AssertionObjectPropertiesSimple(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (!isObject(target)) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  const value = instruction[5];
+  const children = instruction[6];
+  for (let index = 0; index < value.length; index++) {
+    const entry = value[index];
+    const name = entry[0];
+    const required = entry[2];
+    if (!Object.hasOwn(target, name)) {
+      if (required) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
+      }
+      continue;
+    }
+    if (index < children.length) {
+      if (!evaluateInstructionFast(children[index], target[name], depth + 1, template, evaluator)) {
+        if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+        return false;
       }
     }
   }
@@ -2288,6 +2403,56 @@ function LoopItemsPropertiesExactlyTypeStrictHash(instruction, instance, depth, 
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
   return true;
 };
+
+function LoopItemsIntegerBounded(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length === 0) return true;
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  const minimum = instruction[5][0];
+  const maximum = instruction[5][1];
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if (elementType !== 'number' && elementType !== 'bigint') {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    if (element < minimum || element > maximum) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
+function LoopItemsIntegerBoundedSized(instruction, instance, depth, template, evaluator) {
+  const value = instruction[5];
+  const minimum = value[0][0];
+  const maximum = value[0][1];
+  const minimumSize = value[1][0];
+  const target = resolveInstance(instance, instruction[2]);
+  if (evaluator.callbackMode) evaluator.callbackPush(instruction);
+  if (!Array.isArray(target) || target.length < minimumSize) {
+    if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+    return false;
+  }
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if (elementType !== 'number' && elementType !== 'bigint') {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+    if (element < minimum || element > maximum) {
+      if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
+      return false;
+    }
+  }
+  if (evaluator.callbackMode) evaluator.callbackPop(instruction, true);
+  return true;
+};
+
 function LoopContains(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
   if (!Array.isArray(target)) return true;
@@ -2467,63 +2632,70 @@ const handlers = [
   AssertionLess,                              // 32
   AssertionUnique,                            // 33
   AssertionDivisible,                         // 34
-  AssertionStringType,                        // 35
-  AssertionPropertyType,                      // 36
-  AssertionPropertyTypeEvaluate,              // 37
-  AssertionPropertyTypeStrict,                // 38
-  AssertionPropertyTypeStrictEvaluate,        // 39
-  AssertionPropertyTypeStrictAny,             // 40
-  AssertionPropertyTypeStrictAnyEvaluate,     // 41
-  AssertionArrayPrefix,                       // 42
-  AssertionArrayPrefixEvaluate,               // 43
-  AnnotationEmit,                             // 44
-  AnnotationToParent,                         // 45
-  AnnotationBasenameToParent,                 // 46
-  Evaluate,                                   // 47
-  LogicalNot,                                 // 48
-  LogicalNotEvaluate,                         // 49
-  LogicalOr,                                  // 50
-  LogicalAnd,                                 // 51
-  LogicalXor,                                 // 52
-  LogicalCondition,                           // 53
-  LogicalWhenType,                            // 54
-  LogicalWhenDefines,                         // 55
-  LogicalWhenArraySizeGreater,                // 56
-  LoopPropertiesUnevaluated,                  // 57
-  LoopPropertiesUnevaluatedExcept,            // 58
-  LoopPropertiesMatch,                        // 59
-  LoopPropertiesMatchClosed,                  // 60
-  LoopProperties,                             // 61
-  LoopPropertiesEvaluate,                     // 62
-  LoopPropertiesRegex,                        // 63
-  LoopPropertiesRegexClosed,                  // 64
-  LoopPropertiesStartsWith,                   // 65
-  LoopPropertiesExcept,                       // 66
-  LoopPropertiesType,                         // 67
-  LoopPropertiesTypeEvaluate,                 // 68
-  LoopPropertiesExactlyTypeStrict,            // 69
-  LoopPropertiesExactlyTypeStrictHash,        // 70
-  LoopPropertiesTypeStrict,                   // 71
-  LoopPropertiesTypeStrictEvaluate,           // 72
-  LoopPropertiesTypeStrictAny,                // 73
-  LoopPropertiesTypeStrictAnyEvaluate,        // 74
-  LoopKeys,                                   // 75
-  LoopItems,                                  // 76
-  LoopItemsFrom,                              // 77
-  LoopItemsUnevaluated,                       // 78
-  LoopItemsType,                              // 79
-  LoopItemsTypeStrict,                        // 80
-  LoopItemsTypeStrictAny,                     // 81
-  LoopItemsPropertiesExactlyTypeStrictHash,   // 82
-  LoopItemsPropertiesExactlyTypeStrictHash,   // 83
-  LoopContains,                               // 84
-  ControlGroup,                               // 85
-  ControlGroupWhenDefines,                    // 86
-  ControlGroupWhenDefinesDirect,              // 87
-  ControlGroupWhenType,                       // 88
-  ControlEvaluate,                            // 89
-  ControlDynamicAnchorJump,                   // 90
-  ControlJump                                 // 91
+  AssertionTypeIntegerBounded,                // 35
+  AssertionTypeIntegerBoundedStrict,          // 36
+  AssertionTypeIntegerLowerBound,             // 37
+  AssertionTypeIntegerLowerBoundStrict,       // 38
+  AssertionStringType,                        // 39
+  AssertionPropertyType,                      // 40
+  AssertionPropertyTypeEvaluate,              // 41
+  AssertionPropertyTypeStrict,                // 42
+  AssertionPropertyTypeStrictEvaluate,        // 43
+  AssertionPropertyTypeStrictAny,             // 44
+  AssertionPropertyTypeStrictAnyEvaluate,     // 45
+  AssertionArrayPrefix,                       // 46
+  AssertionArrayPrefixEvaluate,               // 47
+  AssertionObjectPropertiesSimple,            // 48
+  AnnotationEmit,                             // 49
+  AnnotationToParent,                         // 50
+  AnnotationBasenameToParent,                 // 51
+  Evaluate,                                   // 52
+  LogicalNot,                                 // 53
+  LogicalNotEvaluate,                         // 54
+  LogicalOr,                                  // 55
+  LogicalAnd,                                 // 56
+  LogicalXor,                                 // 57
+  LogicalCondition,                           // 58
+  LogicalWhenType,                            // 59
+  LogicalWhenDefines,                         // 60
+  LogicalWhenArraySizeGreater,                // 61
+  LoopPropertiesUnevaluated,                  // 62
+  LoopPropertiesUnevaluatedExcept,            // 63
+  LoopPropertiesMatch,                        // 64
+  LoopPropertiesMatchClosed,                  // 65
+  LoopProperties,                             // 66
+  LoopPropertiesEvaluate,                     // 67
+  LoopPropertiesRegex,                        // 68
+  LoopPropertiesRegexClosed,                  // 69
+  LoopPropertiesStartsWith,                   // 70
+  LoopPropertiesExcept,                       // 71
+  LoopPropertiesType,                         // 72
+  LoopPropertiesTypeEvaluate,                 // 73
+  LoopPropertiesExactlyTypeStrict,            // 74
+  LoopPropertiesExactlyTypeStrictHash,        // 75
+  LoopPropertiesTypeStrict,                   // 76
+  LoopPropertiesTypeStrictEvaluate,           // 77
+  LoopPropertiesTypeStrictAny,                // 78
+  LoopPropertiesTypeStrictAnyEvaluate,        // 79
+  LoopKeys,                                   // 80
+  LoopItems,                                  // 81
+  LoopItemsFrom,                              // 82
+  LoopItemsUnevaluated,                       // 83
+  LoopItemsType,                              // 84
+  LoopItemsTypeStrict,                        // 85
+  LoopItemsTypeStrictAny,                     // 86
+  LoopItemsPropertiesExactlyTypeStrictHash,   // 87
+  LoopItemsPropertiesExactlyTypeStrictHash,   // 88
+  LoopItemsIntegerBounded,                    // 89
+  LoopItemsIntegerBoundedSized,               // 90
+  LoopContains,                               // 91
+  ControlGroup,                               // 92
+  ControlGroupWhenDefines,                    // 93
+  ControlGroupWhenDefinesDirect,              // 94
+  ControlGroupWhenType,                       // 95
+  ControlEvaluate,                            // 96
+  ControlDynamicAnchorJump,                   // 97
+  ControlJump                                 // 98
 ];
 
 function AssertionTypeArrayBounded_fast(instruction, instance, depth, template, evaluator) {
@@ -3101,25 +3273,29 @@ function AssertionObjectSizeGreater_fast(instruction, instance, depth, template,
 
 function AssertionGreaterEqual_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   return target >= instruction[5];
 }
 
 function AssertionLessEqual_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   return target <= instruction[5];
 }
 
 function AssertionGreater_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   return target > instruction[5];
 }
 
 function AssertionLess_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   return target < instruction[5];
 }
 
@@ -3131,7 +3307,8 @@ function AssertionUnique_fast(instruction, instance, depth, template, evaluator)
 
 function AssertionDivisible_fast(instruction, instance, depth, template, evaluator) {
   const target = resolveInstance(instance, instruction[2]);
-  if (typeof target !== 'number') return true;
+  const targetType = typeof target;
+  if (targetType !== 'number' && targetType !== 'bigint') return true;
   return isDivisibleBy(target, instruction[5]);
 }
 
@@ -3234,6 +3411,26 @@ function AssertionArrayPrefixEvaluate_fast(instruction, instance, depth, templat
       for (let cursor = 0; cursor <= pointer; cursor++) {
         evaluator.markEvaluated(target[cursor], target, cursor);
       }
+    }
+  }
+  return true;
+}
+
+function AssertionObjectPropertiesSimple_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!isObject(target)) return false;
+  const value = instruction[5];
+  const children = instruction[6];
+  for (let index = 0; index < value.length; index++) {
+    const entry = value[index];
+    const name = entry[0];
+    const required = entry[2];
+    if (!Object.hasOwn(target, name)) {
+      if (required) return false;
+      continue;
+    }
+    if (index < children.length) {
+      if (!evaluateInstructionFast(children[index], target[name], depth + 1, template, evaluator)) return false;
     }
   }
   return true;
@@ -3622,37 +3819,89 @@ function ControlDynamicAnchorJump_fast(instruction, instance, depth, template, e
   return false;
 }
 
+function LoopItemsIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length === 0) return true;
+  const minimum = instruction[5][0];
+  const maximum = instruction[5][1];
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if ((elementType !== 'number' && elementType !== 'bigint') || element < minimum || element > maximum) return false;
+  }
+  return true;
+}
+
+function LoopItemsIntegerBoundedSized_fast(instruction, instance, depth, template, evaluator) {
+  const value = instruction[5];
+  const minimum = value[0][0];
+  const maximum = value[0][1];
+  const minimumSize = value[1][0];
+  const target = resolveInstance(instance, instruction[2]);
+  if (!Array.isArray(target) || target.length < minimumSize) return false;
+  for (let index = 0; index < target.length; index++) {
+    const element = target[index];
+    const elementType = typeof element;
+    if ((elementType !== 'number' && elementType !== 'bigint') || element < minimum || element > maximum) return false;
+  }
+  return true;
+}
+
+function AssertionTypeIntegerBounded_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[5];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+}
+
+function AssertionTypeIntegerBoundedStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[5];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0] && target <= range[1];
+}
+
+function AssertionTypeIntegerLowerBound_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[5];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+}
+
+function AssertionTypeIntegerLowerBoundStrict_fast(instruction, instance, depth, template, evaluator) {
+  const target = resolveInstance(instance, instruction[2]);
+  const range = instruction[5];
+  return (typeof target === 'bigint' || Number.isInteger(target)) && target >= range[0];
+}
+
 const fastHandlers = handlers.slice();
 fastHandlers[15] = AssertionTypeArrayBounded_fast;
-fastHandlers[81] = LoopItemsTypeStrictAny_fast;
-fastHandlers[38] = AssertionPropertyTypeStrict_fast;
+fastHandlers[86] = LoopItemsTypeStrictAny_fast;
+fastHandlers[42] = AssertionPropertyTypeStrict_fast;
 fastHandlers[11] = AssertionTypeStrict_fast;
 fastHandlers[4] = AssertionDefinesAllStrict_fast;
 fastHandlers[26] = AssertionEqual_fast;
-fastHandlers[59] = LoopPropertiesMatch_fast;
-fastHandlers[50] = LogicalOr_fast;
-fastHandlers[91] = ControlJump_fast;
+fastHandlers[64] = LoopPropertiesMatch_fast;
+fastHandlers[55] = LogicalOr_fast;
+fastHandlers[98] = ControlJump_fast;
 fastHandlers[28] = AssertionEqualsAnyStringHash_fast;
-fastHandlers[52] = LogicalXor_fast;
+fastHandlers[57] = LogicalXor_fast;
 fastHandlers[2] = AssertionDefinesStrict_fast;
-fastHandlers[76] = LoopItems_fast;
-fastHandlers[60] = LoopPropertiesMatchClosed_fast;
+fastHandlers[81] = LoopItems_fast;
+fastHandlers[65] = LoopPropertiesMatchClosed_fast;
 fastHandlers[13] = AssertionTypeStringBounded_fast;
-fastHandlers[51] = LogicalAnd_fast;
+fastHandlers[56] = LogicalAnd_fast;
 fastHandlers[8] = AssertionPropertyDependencies_fast;
 fastHandlers[10] = AssertionTypeAny_fast;
-fastHandlers[53] = LogicalCondition_fast;
-fastHandlers[66] = LoopPropertiesExcept_fast;
+fastHandlers[58] = LogicalCondition_fast;
+fastHandlers[71] = LoopPropertiesExcept_fast;
 fastHandlers[19] = AssertionRegex_fast;
-fastHandlers[61] = LoopProperties_fast;
+fastHandlers[66] = LoopProperties_fast;
 fastHandlers[1] = AssertionDefines_fast;
-fastHandlers[54] = LogicalWhenType_fast;
-fastHandlers[55] = LogicalWhenDefines_fast;
+fastHandlers[59] = LogicalWhenType_fast;
+fastHandlers[60] = LogicalWhenDefines_fast;
 fastHandlers[0] = AssertionFail_fast;
-fastHandlers[84] = LoopContains_fast;
-fastHandlers[48] = LogicalNot_fast;
-fastHandlers[79] = LoopItemsType_fast;
-fastHandlers[80] = LoopItemsTypeStrict_fast;
+fastHandlers[91] = LoopContains_fast;
+fastHandlers[53] = LogicalNot_fast;
+fastHandlers[84] = LoopItemsType_fast;
+fastHandlers[85] = LoopItemsTypeStrict_fast;
 fastHandlers[27] = AssertionEqualsAny_fast;
 fastHandlers[3] = AssertionDefinesAll_fast;
 fastHandlers[5] = AssertionDefinesExactly_fast;
@@ -3676,39 +3925,46 @@ fastHandlers[31] = AssertionGreater_fast;
 fastHandlers[32] = AssertionLess_fast;
 fastHandlers[33] = AssertionUnique_fast;
 fastHandlers[34] = AssertionDivisible_fast;
-fastHandlers[35] = AssertionStringType_fast;
-fastHandlers[36] = AssertionPropertyType_fast;
-fastHandlers[37] = AssertionPropertyTypeEvaluate_fast;
-fastHandlers[39] = AssertionPropertyTypeStrictEvaluate_fast;
-fastHandlers[40] = AssertionPropertyTypeStrictAny_fast;
-fastHandlers[41] = AssertionPropertyTypeStrictAnyEvaluate_fast;
-fastHandlers[42] = AssertionArrayPrefix_fast;
-fastHandlers[43] = AssertionArrayPrefixEvaluate_fast;
-fastHandlers[44] = AnnotationEmit_fast;
-fastHandlers[45] = AnnotationToParent_fast;
-fastHandlers[46] = AnnotationBasenameToParent_fast;
-fastHandlers[47] = Evaluate_fast;
-fastHandlers[49] = LogicalNotEvaluate_fast;
-fastHandlers[56] = LogicalWhenArraySizeGreater_fast;
-fastHandlers[57] = LoopPropertiesUnevaluated_fast;
-fastHandlers[58] = LoopPropertiesUnevaluatedExcept_fast;
-fastHandlers[62] = LoopPropertiesEvaluate_fast;
-fastHandlers[63] = LoopPropertiesRegex_fast;
-fastHandlers[64] = LoopPropertiesRegexClosed_fast;
-fastHandlers[65] = LoopPropertiesStartsWith_fast;
-fastHandlers[67] = LoopPropertiesType_fast;
-fastHandlers[68] = LoopPropertiesTypeEvaluate_fast;
-fastHandlers[69] = LoopPropertiesExactlyTypeStrict_fast;
-fastHandlers[70] = LoopPropertiesExactlyTypeStrictHash_fast;
-fastHandlers[71] = LoopPropertiesTypeStrict_fast;
-fastHandlers[72] = LoopPropertiesTypeStrictEvaluate_fast;
-fastHandlers[73] = LoopPropertiesTypeStrictAny_fast;
-fastHandlers[74] = LoopPropertiesTypeStrictAnyEvaluate_fast;
-fastHandlers[75] = LoopKeys_fast;
-fastHandlers[77] = LoopItemsFrom_fast;
-fastHandlers[78] = LoopItemsUnevaluated_fast;
-fastHandlers[82] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
-fastHandlers[83] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
-fastHandlers[90] = ControlDynamicAnchorJump_fast;
+fastHandlers[35] = AssertionTypeIntegerBounded_fast;
+fastHandlers[36] = AssertionTypeIntegerBoundedStrict_fast;
+fastHandlers[37] = AssertionTypeIntegerLowerBound_fast;
+fastHandlers[38] = AssertionTypeIntegerLowerBoundStrict_fast;
+fastHandlers[39] = AssertionStringType_fast;
+fastHandlers[40] = AssertionPropertyType_fast;
+fastHandlers[41] = AssertionPropertyTypeEvaluate_fast;
+fastHandlers[43] = AssertionPropertyTypeStrictEvaluate_fast;
+fastHandlers[44] = AssertionPropertyTypeStrictAny_fast;
+fastHandlers[45] = AssertionPropertyTypeStrictAnyEvaluate_fast;
+fastHandlers[46] = AssertionArrayPrefix_fast;
+fastHandlers[47] = AssertionArrayPrefixEvaluate_fast;
+fastHandlers[48] = AssertionObjectPropertiesSimple_fast;
+fastHandlers[49] = AnnotationEmit_fast;
+fastHandlers[50] = AnnotationToParent_fast;
+fastHandlers[51] = AnnotationBasenameToParent_fast;
+fastHandlers[52] = Evaluate_fast;
+fastHandlers[54] = LogicalNotEvaluate_fast;
+fastHandlers[61] = LogicalWhenArraySizeGreater_fast;
+fastHandlers[62] = LoopPropertiesUnevaluated_fast;
+fastHandlers[63] = LoopPropertiesUnevaluatedExcept_fast;
+fastHandlers[67] = LoopPropertiesEvaluate_fast;
+fastHandlers[68] = LoopPropertiesRegex_fast;
+fastHandlers[69] = LoopPropertiesRegexClosed_fast;
+fastHandlers[70] = LoopPropertiesStartsWith_fast;
+fastHandlers[72] = LoopPropertiesType_fast;
+fastHandlers[73] = LoopPropertiesTypeEvaluate_fast;
+fastHandlers[74] = LoopPropertiesExactlyTypeStrict_fast;
+fastHandlers[75] = LoopPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[76] = LoopPropertiesTypeStrict_fast;
+fastHandlers[77] = LoopPropertiesTypeStrictEvaluate_fast;
+fastHandlers[78] = LoopPropertiesTypeStrictAny_fast;
+fastHandlers[79] = LoopPropertiesTypeStrictAnyEvaluate_fast;
+fastHandlers[80] = LoopKeys_fast;
+fastHandlers[82] = LoopItemsFrom_fast;
+fastHandlers[83] = LoopItemsUnevaluated_fast;
+fastHandlers[87] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[88] = LoopItemsPropertiesExactlyTypeStrictHash_fast;
+fastHandlers[89] = LoopItemsIntegerBounded_fast;
+fastHandlers[90] = LoopItemsIntegerBoundedSized_fast;
+fastHandlers[97] = ControlDynamicAnchorJump_fast;
 
 export { Blaze };
