@@ -41,6 +41,10 @@ public:
       try {
         schema_template = compile(root, walker, resolver, this->compiler_,
                                   frame, base.value().get(), Mode::Exhaustive);
+      } catch (const CompilerReferenceTargetNotSchemaError &) {
+        throw;
+      } catch (const sourcemeta::core::SchemaVocabularyError &) {
+        throw;
       } catch (...) {
         return false;
       }
@@ -81,6 +85,10 @@ public:
     try {
       schema_template = compile(subschema, walker, resolver, this->compiler_,
                                 Mode::Exhaustive, location.dialect, default_id);
+    } catch (const CompilerReferenceTargetNotSchemaError &) {
+      throw;
+    } catch (const sourcemeta::core::SchemaVocabularyError &) {
+      throw;
     } catch (...) {
       return false;
     }
