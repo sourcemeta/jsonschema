@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_output_stream.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include "varint.h"
 
@@ -32,7 +33,7 @@ auto OutputStream::put_varint(const std::uint64_t value) -> void {
 }
 
 auto OutputStream::put_varint_zigzag(const std::int64_t value) -> void {
-  varint_encode(this->stream, zigzag_encode(value));
+  varint_encode(this->stream, sourcemeta::core::zigzag_encode(value));
 }
 
 auto OutputStream::put_string_utf8(const sourcemeta::core::JSON::String &string,

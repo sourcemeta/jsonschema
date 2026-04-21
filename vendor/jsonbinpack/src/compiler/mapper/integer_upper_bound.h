@@ -1,9 +1,9 @@
-class IntegerUpperBound final : public sourcemeta::core::SchemaTransformRule {
+class IntegerUpperBound final : public sourcemeta::blaze::SchemaTransformRule {
 public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
   IntegerUpperBound()
-      : sourcemeta::core::SchemaTransformRule{"integer_upper_bound", ""} {};
+      : sourcemeta::blaze::SchemaTransformRule{"integer_upper_bound", ""} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -13,7 +13,7 @@ public:
             const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
-      -> sourcemeta::core::SchemaTransformRule::Result override {
+      -> sourcemeta::blaze::SchemaTransformRule::Result override {
     return location.dialect == "https://json-schema.org/draft/2020-12/schema" &&
            vocabularies.contains(sourcemeta::core::Vocabularies::Known::
                                      JSON_Schema_2020_12_Validation) &&
@@ -24,7 +24,7 @@ public:
   }
 
   auto transform(sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaTransformRule::Result &) const
+                 const sourcemeta::blaze::SchemaTransformRule::Result &) const
       -> void override {
     auto maximum = schema.at("maximum");
     auto options = sourcemeta::core::JSON::make_object();

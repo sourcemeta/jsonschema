@@ -56,12 +56,12 @@ auto Decoder::BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED(
     const struct BOUNDED_8BIT_PREFIX_UTF8_STRING_SHARED &options)
     -> sourcemeta::core::JSON {
   assert(options.minimum <= options.maximum);
-  assert(is_byte(options.maximum - options.minimum));
+  assert(sourcemeta::core::is_byte(options.maximum - options.minimum));
   const std::uint8_t prefix{this->get_byte()};
   const bool is_shared{prefix == 0};
   const std::uint64_t length{(is_shared ? this->get_byte() : prefix) +
                              options.minimum - 1};
-  assert(is_within(length, options.minimum, options.maximum));
+  assert(sourcemeta::core::is_within(length, options.minimum, options.maximum));
 
   if (is_shared) {
     const std::uint64_t position{this->position()};

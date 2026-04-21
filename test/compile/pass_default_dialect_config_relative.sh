@@ -28,13 +28,13 @@ cd "$TMP"
 
 cat << 'EOF' > "$TMP/expected.json"
 [
-  1,
+  4,
   false,
   true,
   [
     [
       [
-        61,
+        66,
         [ "additionalProperties" ],
         [],
         "https://example.com#/additionalProperties",
@@ -50,7 +50,7 @@ cat << 'EOF' > "$TMP/expected.json"
             [ 8, 4 ]
           ],
           [
-            46,
+            51,
             [],
             [],
             "https://example.com#/additionalProperties",

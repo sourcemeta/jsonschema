@@ -274,6 +274,21 @@ inline auto evaluate_instruction_with_property(
       [[maybe_unused]] DispatchContext<Track, Dynamic, HasCallback> &context)  \
       -> bool
 
+#define INSTRUCTION_DIRECT(name, value_type)                                   \
+  SOURCEMETA_FORCEINLINE inline auto DIRECT_##name(                            \
+      const sourcemeta::core::JSON &target, const value_type &value)           \
+      ->bool
+
+#define INSTRUCTION_DIRECT_COPY(name, value_type)                              \
+  SOURCEMETA_FORCEINLINE inline auto DIRECT_##name(                            \
+      const sourcemeta::core::JSON &target, const value_type value)            \
+      ->bool
+
+#define DIRECT(name, target, value) DIRECT_##name(target, value)
+
+// Forward declarations
+INSTRUCTION_DIRECT_COPY(LoopItemsIntegerBounded, ValueIntegerBounds);
+
 INSTRUCTION_HANDLER(AssertionFail) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionFail);
   EVALUATE_END(AssertionFail);
@@ -443,22 +458,32 @@ INSTRUCTION_HANDLER(AssertionPropertyDependencies) {
   EVALUATE_END(AssertionPropertyDependencies);
 }
 
+INSTRUCTION_DIRECT_COPY(AssertionType, ValueType) {
+  // In non-strict mode, we consider a real number that represents an
+  // integer to be an integer
+  return target.type() == value ||
+         (value == JSON::Type::Integer && target.is_integral());
+}
+
 INSTRUCTION_HANDLER(AssertionType) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionType);
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
   const auto value{assume_value_copy<ValueType>(instruction.value)};
-
   // TODO: Maybe make this instruction about integers, as it is the
   // only where where it is actually useful?
   assert(value == JSON::Type::Integer);
   SOURCEMETA_ASSUME(value == JSON::Type::Integer);
+  result = DIRECT(AssertionType, target, value);
+  EVALUATE_END(AssertionType);
+}
 
+INSTRUCTION_DIRECT(AssertionTypeAny, ValueTypes) {
   // In non-strict mode, we consider a real number that represents an
   // integer to be an integer
-  result = target.type() == value ||
-           (value == JSON::Type::Integer && target.is_integral());
-  EVALUATE_END(AssertionType);
+  return value.test(std::to_underlying(target.type())) ||
+         (value.test(std::to_underlying(JSON::Type::Integer)) &&
+          target.is_integral());
 }
 
 INSTRUCTION_HANDLER(AssertionTypeAny) {
@@ -467,18 +492,12 @@ INSTRUCTION_HANDLER(AssertionTypeAny) {
   assert(value.any());
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
-  // In non-strict mode, we consider a real number that represents an
-  // integer to be an integer
-  const auto type_index{std::to_underlying(target.type())};
-  // NOLINTNEXTLINE(bugprone-branch-clone)
-  if (value.test(type_index)) {
-    result = true;
-  } else if (value.test(std::to_underlying(JSON::Type::Integer)) &&
-             target.is_integral()) {
-    result = true;
-  }
-
+  result = DIRECT(AssertionTypeAny, target, value);
   EVALUATE_END(AssertionTypeAny);
+}
+
+INSTRUCTION_DIRECT_COPY(AssertionTypeStrict, ValueType) {
+  return effective_type_strict_real(target) == value;
 }
 
 INSTRUCTION_HANDLER(AssertionTypeStrict) {
@@ -486,8 +505,12 @@ INSTRUCTION_HANDLER(AssertionTypeStrict) {
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
   const auto value{assume_value_copy<ValueType>(instruction.value)};
-  result = effective_type_strict_real(target) == value;
+  result = DIRECT(AssertionTypeStrict, target, value);
   EVALUATE_END(AssertionTypeStrict);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeStrictAny, ValueTypes) {
+  return value.test(std::to_underlying(effective_type_strict_real(target)));
 }
 
 INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
@@ -496,9 +519,15 @@ INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
   assert(value.any());
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
-  const auto type_index{std::to_underlying(effective_type_strict_real(target))};
-  result = value.test(type_index);
+  result = DIRECT(AssertionTypeStrictAny, target, value);
   EVALUATE_END(AssertionTypeStrictAny);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeStringBounded, ValueRange) {
+  const auto &[minimum, maximum, exhaustive] = value;
+  return target.type() == JSON::Type::String &&
+         target.string_size() >= minimum &&
+         (!maximum.has_value() || target.string_size() <= maximum.value());
 }
 
 INSTRUCTION_HANDLER(AssertionTypeStringBounded) {
@@ -506,14 +535,10 @@ INSTRUCTION_HANDLER(AssertionTypeStringBounded) {
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
   const auto &value{assume_value<ValueRange>(instruction.value)};
-  const auto &[minimum, maximum, exhaustive] = value;
-  assert(!maximum.has_value() || maximum.value() >= minimum);
-  // Require early breaking
-  assert(!exhaustive);
-  SOURCEMETA_ASSUME(!exhaustive);
-  result = target.type() == JSON::Type::String &&
-           target.string_size() >= minimum &&
-           (!maximum.has_value() || target.string_size() <= maximum.value());
+  assert(!std::get<1>(value).has_value() ||
+         std::get<1>(value).value() >= std::get<0>(value));
+  assert(!std::get<2>(value));
+  result = DIRECT(AssertionTypeStringBounded, target, value);
   EVALUATE_END(AssertionTypeStringBounded);
 }
 
@@ -625,6 +650,8 @@ INSTRUCTION_HANDLER(AssertionObjectSizeGreater) {
   EVALUATE_END(AssertionObjectSizeGreater);
 }
 
+INSTRUCTION_DIRECT(AssertionEqual, ValueJSON) { return target == value; }
+
 INSTRUCTION_HANDLER(AssertionEqual) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqual);
   const auto &value{assume_value<ValueJSON>(instruction.value)};
@@ -634,10 +661,14 @@ INSTRUCTION_HANDLER(AssertionEqual) {
   } else {
     const auto &target{
         resolve_instance(instance, instruction.relative_instance_location)};
-    result = (target == value);
+    result = DIRECT(AssertionEqual, target, value);
   }
 
   EVALUATE_END(AssertionEqual);
+}
+
+INSTRUCTION_DIRECT(AssertionEqualsAny, ValueSet) {
+  return value.contains(target);
 }
 
 INSTRUCTION_HANDLER(AssertionEqualsAny) {
@@ -650,47 +681,59 @@ INSTRUCTION_HANDLER(AssertionEqualsAny) {
   } else {
     const auto &target{
         resolve_instance(instance, instruction.relative_instance_location)};
-    result = value.contains(target);
+    result = DIRECT(AssertionEqualsAny, target, value);
   }
 
   EVALUATE_END(AssertionEqualsAny);
+}
+
+INSTRUCTION_DIRECT(AssertionEqualsAnyStringHash, ValueStringHashes) {
+  if (!target.is_string()) [[unlikely]] {
+    return false;
+  }
+  const auto &target_string{target.to_string()};
+  const auto string_size{target_string.size()};
+  const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
+  const auto value_hash{hasher(target_string)};
+  if (string_size < value.second.size()) [[likely]] {
+    const auto &hint{value.second[string_size]};
+    if (hint.second != 0) [[likely]] {
+      for (std::size_t index = hint.first - 1; index < hint.second; index++) {
+        if (value.first[index].first == value_hash) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
 
 INSTRUCTION_HANDLER(AssertionEqualsAnyStringHash) {
   EVALUATE_BEGIN_NO_PRECONDITION(AssertionEqualsAnyStringHash);
   const auto &value{assume_value<ValueStringHashes>(instruction.value)};
 
-  const sourcemeta::core::JSON::String *target_string = nullptr;
   if (context.property_target) [[unlikely]] {
-    target_string = context.property_target;
-  } else {
-    const auto &target{
-        resolve_instance(instance, instruction.relative_instance_location)};
-    if (target.is_string()) [[likely]] {
-      target_string = &target.to_string();
-    } else {
-      EVALUATE_END(AssertionEqualsAnyStringHash);
-    }
-  }
-
-  const auto string_size{target_string->size()};
-  // TODO: Put this on the evaluator to re-use it everywhere
-  const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
-  const auto value_hash{hasher(*target_string)};
-  if (string_size < value.second.size()) [[likely]] {
-    const auto &hint{value.second[string_size]};
-    assert(hint.first <= hint.second);
-    SOURCEMETA_ASSUME(hint.first <= hint.second);
-    if (hint.second != 0) [[likely]] {
-      // TODO(C++23): Use std::views::enumerate when available in libc++
-      for (std::size_t index = hint.first - 1; index < hint.second; index++) {
-        assert(hasher.is_perfect(value.first[index].first));
-        if (value.first[index].first == value_hash) {
-          result = true;
-          break;
+    const sourcemeta::core::PropertyHashJSON<ValueString> hasher;
+    const auto value_hash{hasher(*context.property_target)};
+    const auto string_size{context.property_target->size()};
+    if (string_size < value.second.size()) [[likely]] {
+      const auto &hint{value.second[string_size]};
+      assert(hint.first <= hint.second);
+      SOURCEMETA_ASSUME(hint.first <= hint.second);
+      if (hint.second != 0) [[likely]] {
+        for (std::size_t index = hint.first - 1; index < hint.second; index++) {
+          assert(hasher.is_perfect(value.first[index].first));
+          if (value.first[index].first == value_hash) {
+            result = true;
+            break;
+          }
         }
       }
     }
+  } else {
+    const auto &target{
+        resolve_instance(instance, instruction.relative_instance_location)};
+    result = DIRECT(AssertionEqualsAnyStringHash, target, value);
   }
 
   EVALUATE_END(AssertionEqualsAnyStringHash);
@@ -736,6 +779,71 @@ INSTRUCTION_HANDLER(AssertionDivisible) {
   assert(value.is_number());
   result = target.divisible_by(value);
   EVALUATE_END(AssertionDivisible);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeIntegerBounded, ValueIntegerBounds) {
+  if (target.is_integer()) {
+    const auto integer{target.to_integer()};
+    return integer >= value.first && integer <= value.second;
+  }
+  if (target.is_integral()) {
+    const auto integer{target.as_integer()};
+    return integer >= value.first && integer <= value.second;
+  }
+  return false;
+}
+
+INSTRUCTION_HANDLER(AssertionTypeIntegerBounded) {
+  EVALUATE_BEGIN_NON_STRING(AssertionTypeIntegerBounded, true);
+  result = DIRECT(AssertionTypeIntegerBounded, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(AssertionTypeIntegerBounded);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeIntegerBoundedStrict, ValueIntegerBounds) {
+  if (target.is_integer()) {
+    const auto integer{target.to_integer()};
+    return integer >= value.first && integer <= value.second;
+  }
+  return false;
+}
+
+INSTRUCTION_HANDLER(AssertionTypeIntegerBoundedStrict) {
+  EVALUATE_BEGIN_NON_STRING(AssertionTypeIntegerBoundedStrict, true);
+  result = DIRECT(AssertionTypeIntegerBoundedStrict, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(AssertionTypeIntegerBoundedStrict);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeIntegerLowerBound, ValueIntegerBounds) {
+  if (target.is_integer()) {
+    return target.to_integer() >= value.first;
+  }
+  if (target.is_integral()) {
+    return target.as_integer() >= value.first;
+  }
+  return false;
+}
+
+INSTRUCTION_HANDLER(AssertionTypeIntegerLowerBound) {
+  EVALUATE_BEGIN_NON_STRING(AssertionTypeIntegerLowerBound, true);
+  result = DIRECT(AssertionTypeIntegerLowerBound, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(AssertionTypeIntegerLowerBound);
+}
+
+INSTRUCTION_DIRECT(AssertionTypeIntegerLowerBoundStrict, ValueIntegerBounds) {
+  if (target.is_integer()) {
+    return target.to_integer() >= value.first;
+  }
+  return false;
+}
+
+INSTRUCTION_HANDLER(AssertionTypeIntegerLowerBoundStrict) {
+  EVALUATE_BEGIN_NON_STRING(AssertionTypeIntegerLowerBoundStrict, true);
+  result = DIRECT(AssertionTypeIntegerLowerBoundStrict, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(AssertionTypeIntegerLowerBoundStrict);
 }
 
 INSTRUCTION_HANDLER(AssertionStringType) {
@@ -828,6 +936,102 @@ INSTRUCTION_HANDLER(AssertionPropertyTypeStrictAnyEvaluate) {
   }
 
   EVALUATE_END(AssertionPropertyTypeStrictAnyEvaluate);
+}
+
+INSTRUCTION_HANDLER(AssertionObjectPropertiesSimple) {
+  EVALUATE_BEGIN_NON_STRING(AssertionObjectPropertiesSimple, true);
+  if (!target.is_object()) {
+    EVALUATE_END(AssertionObjectPropertiesSimple);
+  }
+
+  const auto &value{assume_value<ValueObjectProperties>(instruction.value)};
+  assert(value.size() >= instruction.children.size());
+  assert(value.size() <= 32);
+  static constexpr sourcemeta::core::PropertyHashJSON<ValueString>
+      property_hasher;
+  const auto &object{target.as_object()};
+  const auto schema_size{value.size()};
+  std::uint32_t seen{0};
+  result = true;
+
+  for (const auto &instance_entry : object) {
+    const auto &instance_hash{instance_entry.hash};
+    for (std::size_t schema_index = 0; schema_index < schema_size;
+         schema_index++) {
+      const auto &schema_hash{std::get<1>(value[schema_index])};
+      if (schema_hash == instance_hash &&
+          (property_hasher.is_perfect(instance_hash) ||
+           instance_entry.first == std::get<0>(value[schema_index]))) {
+        seen |= (static_cast<std::uint32_t>(1) << schema_index);
+        if (schema_index < instruction.children.size()) {
+          const auto &child{instruction.children[schema_index]};
+          const auto &property_value{instance_entry.second};
+          bool child_ok{false};
+
+// NOLINTBEGIN(bugprone-macro-parentheses)
+#define CHILD_DIRECT(name, accessor, value_type)                               \
+  case name:                                                                   \
+    child_ok =                                                                 \
+        DIRECT(name, property_value, accessor<value_type>(child.value));       \
+    break
+
+          switch (child.type) {
+            using enum InstructionIndex;
+            CHILD_DIRECT(AssertionTypeStrict, assume_value_copy, ValueType);
+            CHILD_DIRECT(AssertionType, assume_value_copy, ValueType);
+            CHILD_DIRECT(AssertionTypeStrictAny, assume_value, ValueTypes);
+            CHILD_DIRECT(AssertionTypeAny, assume_value, ValueTypes);
+            CHILD_DIRECT(AssertionTypeStringBounded, assume_value, ValueRange);
+            CHILD_DIRECT(AssertionEqual, assume_value, ValueJSON);
+            CHILD_DIRECT(AssertionEqualsAny, assume_value, ValueSet);
+            CHILD_DIRECT(AssertionEqualsAnyStringHash, assume_value,
+                         ValueStringHashes);
+            CHILD_DIRECT(AssertionTypeIntegerBounded, assume_value_copy,
+                         ValueIntegerBounds);
+            CHILD_DIRECT(AssertionTypeIntegerBoundedStrict, assume_value_copy,
+                         ValueIntegerBounds);
+            CHILD_DIRECT(AssertionTypeIntegerLowerBound, assume_value_copy,
+                         ValueIntegerBounds);
+            CHILD_DIRECT(AssertionTypeIntegerLowerBoundStrict,
+                         assume_value_copy, ValueIntegerBounds);
+            CHILD_DIRECT(LoopItemsIntegerBounded, assume_value_copy,
+                         ValueIntegerBounds);
+            default:
+              child_ok = evaluate_instruction_without_callback(
+                  child, property_value, depth + 1, context);
+              break;
+          }
+
+// NOLINTEND(bugprone-macro-parentheses)
+#undef CHILD_DIRECT
+
+          if (!child_ok) [[unlikely]] {
+            result = false;
+            EVALUATE_END(AssertionObjectPropertiesSimple);
+          }
+        }
+
+        break;
+      }
+    }
+  }
+
+  // Check required properties that were not seen
+  const auto all_seen{schema_size == 32
+                          ? ~std::uint32_t{0}
+                          : (std::uint32_t{1} << schema_size) - 1};
+  if (seen != all_seen) [[unlikely]] {
+    for (std::size_t schema_index = 0; schema_index < schema_size;
+         schema_index++) {
+      if (std::get<2>(value[schema_index]) &&
+          !(seen & (static_cast<std::uint32_t>(1) << schema_index))) {
+        result = false;
+        EVALUATE_END(AssertionObjectPropertiesSimple);
+      }
+    }
+  }
+
+  EVALUATE_END(AssertionObjectPropertiesSimple);
 }
 
 INSTRUCTION_HANDLER(AssertionArrayPrefix) {
@@ -2207,6 +2411,89 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
   EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
 }
 
+INSTRUCTION_DIRECT_COPY(LoopItemsIntegerBounded, ValueIntegerBounds) {
+  if (!target.is_array() || target.empty()) {
+    return true;
+  }
+  for (const auto &element : target.as_array()) {
+    if (!element.is_number()) [[unlikely]] {
+      return false;
+    }
+
+    if (element.is_integer()) {
+      const auto integer{element.to_integer()};
+      if (integer < value.first || integer > value.second) [[unlikely]] {
+        return false;
+      }
+    } else if (element.is_real()) {
+      const auto real{element.to_real()};
+      if (real < static_cast<double>(value.first) ||
+          real > static_cast<double>(value.second)) [[unlikely]] {
+        return false;
+      }
+    } else {
+      const auto real{element.to_decimal().to_double()};
+      if (real < static_cast<double>(value.first) ||
+          real > static_cast<double>(value.second)) [[unlikely]] {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+INSTRUCTION_HANDLER(LoopItemsIntegerBounded) {
+  EVALUATE_BEGIN_NON_STRING(LoopItemsIntegerBounded,
+                            target.is_array() && !target.empty());
+  result = DIRECT(LoopItemsIntegerBounded, target,
+                  assume_value_copy<ValueIntegerBounds>(instruction.value));
+  EVALUATE_END(LoopItemsIntegerBounded);
+}
+
+INSTRUCTION_HANDLER(LoopItemsIntegerBoundedSized) {
+  const auto &value{
+      assume_value<ValueIntegerBoundsWithSize>(instruction.value)};
+  const auto &integer_bounds{value.first};
+  const auto minimum_size{std::get<0>(value.second)};
+  EVALUATE_BEGIN_NON_STRING(LoopItemsIntegerBoundedSized, true);
+  if (!target.is_array() || target.array_size() < minimum_size) {
+    EVALUATE_END(LoopItemsIntegerBoundedSized);
+  }
+
+  result = true;
+  for (const auto &element : target.as_array()) {
+    if (!element.is_number()) [[unlikely]] {
+      result = false;
+      break;
+    }
+
+    if (element.is_integer()) {
+      const auto integer{element.to_integer()};
+      if (integer < integer_bounds.first || integer > integer_bounds.second)
+          [[unlikely]] {
+        result = false;
+        break;
+      }
+    } else if (element.is_real()) {
+      const auto real{element.to_real()};
+      if (real < static_cast<double>(integer_bounds.first) ||
+          real > static_cast<double>(integer_bounds.second)) [[unlikely]] {
+        result = false;
+        break;
+      }
+    } else {
+      const auto real{element.to_decimal().to_double()};
+      if (real < static_cast<double>(integer_bounds.first) ||
+          real > static_cast<double>(integer_bounds.second)) [[unlikely]] {
+        result = false;
+        break;
+      }
+    }
+  }
+
+  EVALUATE_END(LoopItemsIntegerBoundedSized);
+}
+
 INSTRUCTION_HANDLER(LoopContains) {
   EVALUATE_BEGIN_NON_STRING(LoopContains, target.is_array());
   assert(!instruction.children.empty());
@@ -2277,7 +2564,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[95] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[99] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2313,6 +2600,10 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[95] = {
     AssertionLess,
     AssertionUnique,
     AssertionDivisible,
+    AssertionTypeIntegerBounded,
+    AssertionTypeIntegerBoundedStrict,
+    AssertionTypeIntegerLowerBound,
+    AssertionTypeIntegerLowerBoundStrict,
     AssertionStringType,
     AssertionPropertyType,
     AssertionPropertyTypeEvaluate,
@@ -2322,6 +2613,7 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[95] = {
     AssertionPropertyTypeStrictAnyEvaluate,
     AssertionArrayPrefix,
     AssertionArrayPrefixEvaluate,
+    AssertionObjectPropertiesSimple,
     AnnotationEmit,
     AnnotationToParent,
     AnnotationBasenameToParent,
@@ -2362,6 +2654,8 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[95] = {
     LoopItemsTypeStrictAny,
     LoopItemsPropertiesExactlyTypeStrictHash,
     LoopItemsPropertiesExactlyTypeStrictHash3,
+    LoopItemsIntegerBounded,
+    LoopItemsIntegerBoundedSized,
     LoopContains,
     ControlGroup,
     ControlGroupWhenDefines,
@@ -2386,6 +2680,24 @@ evaluate_instruction(const sourcemeta::blaze::Instruction &instruction,
 
   return handlers<Track, Dynamic, HasCallback>[std::to_underlying(
       instruction.type)](instruction, instance, depth, context);
+}
+
+template <bool Track, bool Dynamic, bool HasCallback>
+inline auto evaluate_instruction_without_callback(
+    const sourcemeta::blaze::Instruction &instruction,
+    const sourcemeta::core::JSON &instance, const std::uint64_t depth,
+    DispatchContext<Track, Dynamic, HasCallback> &context) -> bool {
+  constexpr auto DEPTH_LIMIT{300};
+  if (depth > DEPTH_LIMIT) [[unlikely]] {
+    throw EvaluationError("The evaluation path depth limit was reached "
+                          "likely due to infinite recursion");
+  }
+
+  DispatchContext<false, Dynamic, false> plain_context{
+      context.schema, context.callback, context.evaluator,
+      context.property_target};
+  return handlers<false, Dynamic, false>[std::to_underlying(instruction.type)](
+      instruction, instance, depth, plain_context);
 }
 
 template <bool Track, bool Dynamic, bool HasCallback>

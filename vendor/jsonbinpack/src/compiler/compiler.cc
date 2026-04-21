@@ -1,7 +1,8 @@
 #include <sourcemeta/jsonbinpack/compiler.h>
-#include <sourcemeta/jsonbinpack/numeric.h>
 
-#include <sourcemeta/core/alterschema.h>
+#include <sourcemeta/core/numeric.h>
+
+#include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/core/jsonpointer.h>
 
 #include "encoding.h"
@@ -9,11 +10,11 @@
 #include <cassert>     // assert
 #include <type_traits> // std::true_type
 
-static auto
-transformer_callback_noop(const sourcemeta::core::Pointer &,
-                          const std::string_view, const std::string_view,
-                          const sourcemeta::core::SchemaTransformRule::Result &,
-                          [[maybe_unused]] const bool applied) -> void {
+static auto transformer_callback_noop(
+    const sourcemeta::core::Pointer &, const std::string_view,
+    const std::string_view,
+    const sourcemeta::blaze::SchemaTransformRule::Result &,
+    [[maybe_unused]] const bool applied) -> void {
   assert(applied);
 }
 
@@ -23,9 +24,9 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                   const sourcemeta::core::SchemaWalker &walker,
                   const sourcemeta::core::SchemaResolver &resolver,
                   const std::string_view default_dialect) -> void {
-  sourcemeta::core::SchemaTransformer canonicalizer;
-  sourcemeta::core::add(canonicalizer,
-                        sourcemeta::core::AlterSchemaMode::Canonicalizer);
+  sourcemeta::blaze::SchemaTransformer canonicalizer;
+  sourcemeta::blaze::add(canonicalizer,
+                         sourcemeta::blaze::AlterSchemaMode::Canonicalizer);
   [[maybe_unused]] const auto result =
       canonicalizer.apply(schema, walker, make_resolver(resolver),
                           transformer_callback_noop, default_dialect);
@@ -63,7 +64,7 @@ auto compile(sourcemeta::core::JSON &schema,
              const std::string_view default_dialect) -> void {
   canonicalize(schema, walker, resolver, default_dialect);
 
-  sourcemeta::core::SchemaTransformer mapper;
+  sourcemeta::blaze::SchemaTransformer mapper;
 
   // Enums
   mapper.add<Enum8Bit>();

@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint64_t
@@ -12,7 +13,7 @@ auto Encoder::DOUBLE_VARINT_TUPLE(const sourcemeta::core::JSON &document,
   const auto value{document.to_real()};
   std::uint64_t point_position;
   const std::int64_t integral{
-      real_digits<std::int64_t>(value, &point_position)};
+      sourcemeta::core::real_digits<std::int64_t>(value, point_position)};
   this->put_varint_zigzag(integral);
   this->put_varint(point_position);
 }

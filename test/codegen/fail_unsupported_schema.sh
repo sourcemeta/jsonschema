@@ -20,12 +20,14 @@ EOF
 test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
-error: Unsupported schema
+error: Unsupported keyword in subschema
+  at keyword not
   at file path $(realpath "$TMP")/schema.json
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
+# JSON error
 "$1" codegen "$TMP/schema.json" --target typescript --json \
   > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Not supported
@@ -33,7 +35,8 @@ test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "Unsupported schema",
+  "error": "Unsupported keyword in subschema",
+  "keyword": "not",
   "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF

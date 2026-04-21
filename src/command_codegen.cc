@@ -1,5 +1,4 @@
-#include <sourcemeta/codegen/generator.h>
-#include <sourcemeta/codegen/ir.h>
+#include <sourcemeta/blaze/codegen.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -47,11 +46,11 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  sourcemeta::codegen::IRResult result;
+  sourcemeta::blaze::CodegenIRResult result;
   try {
-    result = sourcemeta::codegen::compile(
+    result = sourcemeta::blaze::compile(
         schema, sourcemeta::core::schema_walker, custom_resolver,
-        sourcemeta::codegen::default_compiler, dialect,
+        sourcemeta::blaze::default_compiler, dialect,
         sourcemeta::jsonschema::default_id(schema_path));
   } catch (const sourcemeta::core::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
@@ -74,29 +73,29 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
         schema_path, std::string{error.uri()}, error.what());
-  } catch (const sourcemeta::codegen::UnsupportedKeywordError &error) {
+  } catch (const sourcemeta::blaze::CodegenUnsupportedKeywordError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::codegen::UnsupportedKeywordError>(
+        sourcemeta::blaze::CodegenUnsupportedKeywordError>(
         schema_path, error.json(), error.pointer(),
         std::string{error.keyword()}, error.what());
-  } catch (const sourcemeta::codegen::UnsupportedKeywordValueError &error) {
+  } catch (
+      const sourcemeta::blaze::CodegenUnsupportedKeywordValueError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::codegen::UnsupportedKeywordValueError>(
+        sourcemeta::blaze::CodegenUnsupportedKeywordValueError>(
         schema_path, error.json(), error.pointer(),
         std::string{error.keyword()}, error.what());
-  } catch (const sourcemeta::codegen::UnexpectedSchemaError &error) {
+  } catch (const sourcemeta::blaze::CodegenUnexpectedSchemaError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::codegen::UnexpectedSchemaError>(
+        sourcemeta::blaze::CodegenUnexpectedSchemaError>(
         schema_path, error.json(), error.pointer(), error.what());
   }
 
   std::ostringstream output;
   if (options.contains("name")) {
-    sourcemeta::codegen::generate<sourcemeta::codegen::TypeScript>(
+    sourcemeta::blaze::generate<sourcemeta::blaze::TypeScript>(
         output, result, options.at("name").front());
   } else {
-    sourcemeta::codegen::generate<sourcemeta::codegen::TypeScript>(output,
-                                                                   result);
+    sourcemeta::blaze::generate<sourcemeta::blaze::TypeScript>(output, result);
   }
 
   if (options.contains("json")) {

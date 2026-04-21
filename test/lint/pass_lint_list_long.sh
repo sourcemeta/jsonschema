@@ -22,12 +22,6 @@ anyof_remove_false_schemas
 anyof_true_simplify
   An `anyOf` with a `true` or `{}` branch always succeeds
 
-blaze/valid_default
-  Only set a `default` value that validates against the schema
-
-blaze/valid_examples
-  Only include instances in the `examples` array that validate against the schema
-
 comment_trim
   Comments should not contain leading or trailing whitespace
 
@@ -70,6 +64,9 @@ description_trailing_period
 description_trim
   Descriptions should not contain leading or trailing whitespace
 
+double_negation_elimination
+  A `not` whose value is a schema containing only another `not` is equivalent to the inner value
+
 draft_official_dialect_with_https
   The official dialect URI of Draft 7 and older must use "http://" instead of "https://"
 
@@ -96,6 +93,9 @@ duplicate_examples
 
 duplicate_required_values
   Setting duplicate values in `required` is considered an anti-pattern
+
+dynamic_ref_to_static_ref
+  A dynamic reference whose destination is unambiguous can be expressed as a static reference
 
 else_empty
   Setting the `else` keyword to the empty schema does not add any further constraint
@@ -124,6 +124,12 @@ exclusive_maximum_number_and_maximum
 exclusive_minimum_number_and_minimum
   Setting both `exclusiveMinimum` and `minimum` at the same time is considered an anti-pattern. You should choose one
 
+flatten_nested_allof
+  An `allOf` branch that only contains another `allOf` can be flattened into the parent `allOf`
+
+flatten_nested_anyof
+  An `anyOf` branch that only contains another `anyOf` can be flattened into the parent `anyOf`
+
 forbid_empty_enum
   An empty `enum` validates nothing and is unsatisfiable
 
@@ -132,6 +138,9 @@ if_without_then_else
 
 ignored_metaschema
   A `$schema` declaration without a sibling identifier (or with a sibling `$ref` in Draft 7 and older dialects), is ignored
+
+incoherent_min_max_contains
+  `minContains` greater than `maxContains` makes the schema unsatisfiable
 
 invalid_external_ref
   External references must point to schemas that can be resolved
@@ -262,7 +271,13 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 84
+valid_default
+  Only set a `default` value that validates against the schema
+
+valid_examples
+  Only include instances in the `examples` array that validate against the schema
+
+Number of rules: 89
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

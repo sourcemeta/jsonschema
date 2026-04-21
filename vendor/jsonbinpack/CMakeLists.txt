@@ -8,7 +8,6 @@ both schema-driven and schema-less support."
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Options
-option(JSONBINPACK_NUMERIC "Build the JSON BinPack numeric library" ON)
 option(JSONBINPACK_RUNTIME "Build the JSON BinPack runtime" ON)
 option(JSONBINPACK_COMPILER "Build the JSON BinPack compiler" ON)
 option(JSONBINPACK_TESTS "Build the JSON BinPack tests" OFF)
@@ -18,6 +17,7 @@ option(JSONBINPACK_ADDRESS_SANITIZER "Build JSON BinPack with an address sanitiz
 option(JSONBINPACK_UNDEFINED_SANITIZER "Build JSON BinPack with an undefined behavior sanitizer" OFF)
 
 find_package(Core REQUIRED)
+find_package(Blaze REQUIRED)
 
 if(JSONBINPACK_INSTALL)
   include(GNUInstallDirs)
@@ -34,14 +34,6 @@ if(JSONBINPACK_INSTALL)
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
     COMPONENT sourcemeta_jsonbinpack_dev)
-endif()
-
-# Dependencies
-find_package(Core REQUIRED)
-
-# Numeric
-if(JSONBINPACK_NUMERIC)
-  add_subdirectory(src/numeric)
 endif()
 
 # Runtime
@@ -74,10 +66,6 @@ endif()
 # Testing
 if(JSONBINPACK_TESTS)
   enable_testing()
-
-  if(JSONBINPACK_NUMERIC)
-    add_subdirectory(test/numeric)
-  endif()
 
   if(JSONBINPACK_RUNTIME)
     add_subdirectory(test/runtime)

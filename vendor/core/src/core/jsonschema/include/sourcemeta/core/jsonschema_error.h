@@ -6,7 +6,6 @@
 #endif
 
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/uri.h>
 
 #include <exception>   // std::exception
 #include <string>      // std::string
@@ -122,31 +121,6 @@ private:
 };
 
 /// @ingroup jsonschema
-/// An error that represents a broken schema resolution event
-class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaBrokenReferenceError
-    : public SchemaReferenceError {
-  using SchemaReferenceError::SchemaReferenceError;
-};
-
-/// @ingroup jsonschema
-/// An error that represents that a schema operation cannot continue
-class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaAbortError
-    : public std::exception {
-public:
-  SchemaAbortError(const char *message) : message_{message} {}
-  SchemaAbortError(std::string message) = delete;
-  SchemaAbortError(std::string &&message) = delete;
-  SchemaAbortError(std::string_view message) = delete;
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_;
-  }
-
-private:
-  const char *message_;
-};
-
-/// @ingroup jsonschema
 /// An error that represents that the dialect of the schema could not determined
 class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaUnknownDialectError
     : public std::exception {
@@ -169,32 +143,6 @@ public:
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Could not determine the base dialect of the schema";
   }
-};
-
-/// @ingroup jsonschema
-/// An error that signifies that a transform rule was applied more than once
-class SOURCEMETA_CORE_JSONSCHEMA_EXPORT SchemaTransformRuleProcessedTwiceError
-    : public std::exception {
-public:
-  SchemaTransformRuleProcessedTwiceError(const std::string_view name,
-                                         Pointer location)
-      : name_{name}, location_{std::move(location)} {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Transformation rules must only be processed once";
-  }
-
-  [[nodiscard]] auto name() const noexcept -> std::string_view {
-    return this->name_;
-  }
-
-  [[nodiscard]] auto location() const noexcept -> const Pointer & {
-    return this->location_;
-  }
-
-private:
-  std::string name_;
-  Pointer location_;
 };
 
 /// @ingroup jsonschema

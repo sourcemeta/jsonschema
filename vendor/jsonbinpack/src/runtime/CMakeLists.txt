@@ -43,4 +43,4 @@ endif()
 target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
-  sourcemeta::jsonbinpack::numeric)
+  sourcemeta::core::numeric)

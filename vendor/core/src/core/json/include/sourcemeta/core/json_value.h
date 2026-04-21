@@ -1282,6 +1282,38 @@ public:
     return object.try_at(key, hash);
   }
 
+  /// Try to get a property, scanning from a caller-provided start offset.
+  /// On hit, advances `start` past the found index. When looking up multiple
+  /// keys in insertion order, each lookup hits on the first probe, making the
+  /// total work O(N) instead of O(N^2). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1, \"bar\": 2 }");
+  /// const auto &object{document.as_object()};
+  /// typename decltype(object)::size_type start{0};
+  ///
+  /// const auto hash_foo{object.hash("foo")};
+  /// const auto *foo{document.try_at("foo", hash_foo, start)};
+  /// assert(foo);
+  /// assert(foo->to_integer() == 1);
+  ///
+  /// const auto hash_bar{object.hash("bar")};
+  /// const auto *bar{document.try_at("bar", hash_bar, start)};
+  /// assert(bar);
+  /// assert(bar->to_integer() == 2);
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  try_at(const String &key, const typename Object::hash_type hash,
+         typename Object::size_type &start) const -> const JSON * {
+    assert(this->is_object());
+    const auto &object{this->data_object};
+    return object.try_at(key, hash, start);
+  }
+
   /// This method checks whether an input JSON object defines a specific key.
   /// For example:
   ///

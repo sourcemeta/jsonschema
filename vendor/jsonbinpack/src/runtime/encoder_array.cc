@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_encoder.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint8_t
@@ -27,8 +28,8 @@ auto Encoder::BOUNDED_8BITS_TYPED_ARRAY(
     const struct BOUNDED_8BITS_TYPED_ARRAY &options) -> void {
   assert(options.maximum >= options.minimum);
   const auto size{document.size()};
-  assert(is_within(size, options.minimum, options.maximum));
-  assert(is_byte(options.maximum - options.minimum));
+  assert(sourcemeta::core::is_within(size, options.minimum, options.maximum));
+  assert(sourcemeta::core::is_byte(options.maximum - options.minimum));
   this->put_byte(static_cast<std::uint8_t>(size - options.minimum));
   this->FIXED_TYPED_ARRAY(document,
                           {.size = size,

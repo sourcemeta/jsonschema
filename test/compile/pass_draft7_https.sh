@@ -28,13 +28,13 @@ diff "$TMP/stderr.txt" "$TMP/expected_stderr.txt"
 
 cat << 'EOF' > "$TMP/expected.json"
 [
-  1,
+  4,
   false,
   true,
   [
     [
       [
-        61,
+        66,
         [ "additionalProperties" ],
         [],
         "https://example.com#/additionalProperties",

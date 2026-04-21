@@ -1785,6 +1785,10 @@ auto handle_requires(const Vocabularies &vocabularies)
 
 auto handle_optional(const Vocabularies &vocabularies)
     -> const SchemaWalkerResult & {
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_2, make_set({JSON::Type::Object}),
+                   Assertion)
+  CHECK_VOCABULARY(Known::JSON_Schema_Draft_2_Hyper,
+                   make_set({JSON::Type::Object}), Assertion)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_1, make_set({JSON::Type::Object}),
                    Assertion)
   CHECK_VOCABULARY(Known::JSON_Schema_Draft_1_Hyper,

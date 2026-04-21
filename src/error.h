@@ -1,10 +1,10 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_ERROR_H_
 
+#include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/blaze/codegen.h>
 #include <sourcemeta/blaze/configuration.h>
-#include <sourcemeta/blaze/linter.h>
 #include <sourcemeta/blaze/test.h>
-#include <sourcemeta/codegen/ir.h>
 #include <sourcemeta/core/error.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -577,17 +577,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::blaze::LinterInvalidNameError> &error) {
+           sourcemeta::blaze::SchemaRuleInvalidNameError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::blaze::LinterInvalidNamePatternError> &error) {
+           sourcemeta::blaze::SchemaRuleInvalidNamePatternError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::blaze::LinterMissingNameError> &error) {
+           sourcemeta::blaze::SchemaRuleMissingNameError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
@@ -763,17 +763,17 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::codegen::UnsupportedKeywordError> &error) {
+           sourcemeta::blaze::CodegenUnsupportedKeywordError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::codegen::UnsupportedKeywordValueError> &error) {
+           sourcemeta::blaze::CodegenUnsupportedKeywordValueError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
   } catch (const sourcemeta::core::FileError<
-           sourcemeta::codegen::UnexpectedSchemaError> &error) {
+           sourcemeta::blaze::CodegenUnexpectedSchemaError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;

@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tag:sourcemeta.com,2026:canonical:draft2",
+  "title": "Canonical JSON Schema Draft 2",
+  "description": "Meta-schema that validates whether a given JSON Schema Draft 2 document is in canonical form",
+  "examples": [
+    {
+      "enum": [ 1, 2, 3 ]
+    },
+    {
+      "type": "string",
+      "minLength": 0
+    }
+  ],
+  "$ref": "#/$defs/schema",
+  "$defs": {
+    "metadata": {
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "default": true
+      },
+      "patternProperties": {
+        "^x-": true
+      }
+    },
+    "core": {
+      "x-lint-exclude": "simple_properties_identifiers",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        }
+      }
+    },
+    "typed": {
+      "properties": {
+        "optional": {
+          "type": "boolean"
+        },
+        "requires": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/schema"
+            }
+          ]
+        }
+      }
+    },
+    "subproperty": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/schema",
+          "required": [ "optional" ],
+          "properties": {
+            "optional": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "const": {}
+        }
+      ]
+    },
+    "schema": {
+      "anyOf": [
+        {
+          "const": {}
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            }
+          ],
+          "required": [ "enum" ],
+          "properties": {
+            "enum": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type", "minLength" ],
+          "properties": {
+            "type": {
+              "const": "string"
+            },
+            "minLength": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxLength": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pattern": {
+              "type": "string"
+            },
+            "format": {
+              "type": "string"
+            },
+            "contentEncoding": {
+              "type": "string"
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type", "divisibleBy" ],
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "divisibleBy": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minimum": {
+              "type": "number"
+            },
+            "maximum": {
+              "type": "number"
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type" ],
+          "properties": {
+            "type": {
+              "const": "number"
+            },
+            "divisibleBy": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "minimum": {
+              "type": "number"
+            },
+            "maximum": {
+              "type": "number"
+            },
+            "minimumCanEqual": {
+              "type": "boolean"
+            },
+            "maximumCanEqual": {
+              "type": "boolean"
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type", "properties", "additionalProperties" ],
+          "properties": {
+            "type": {
+              "const": "object"
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/subproperty"
+              }
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/schema"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type", "items", "minItems", "uniqueItems" ],
+          "properties": {
+            "type": {
+              "const": "array"
+            },
+            "items": {
+              "$ref": "#/$defs/schema"
+            },
+            "minItems": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxItems": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uniqueItems": {
+              "type": "boolean"
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            },
+            {
+              "$ref": "#/$defs/typed"
+            }
+          ],
+          "required": [ "type", "items", "minItems", "uniqueItems" ],
+          "properties": {
+            "type": {
+              "const": "array"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/schema"
+              }
+            },
+            "minItems": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxItems": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "uniqueItems": {
+              "type": "boolean"
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            }
+          ],
+          "required": [ "type" ],
+          "properties": {
+            "type": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/schema"
+              }
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            }
+          ],
+          "required": [ "extends" ],
+          "properties": {
+            "extends": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/schema"
+              }
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "x-lint-exclude": "simple_properties_identifiers",
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/$defs/metadata"
+            },
+            {
+              "$ref": "#/$defs/core"
+            }
+          ],
+          "required": [ "disallow" ],
+          "properties": {
+            "disallow": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    }
+  }
+}

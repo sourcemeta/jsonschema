@@ -1,5 +1,6 @@
-#include <sourcemeta/jsonbinpack/numeric.h>
 #include <sourcemeta/jsonbinpack/runtime_decoder.h>
+
+#include <sourcemeta/core/numeric.h>
 
 #include "unreachable.h"
 
@@ -12,7 +13,7 @@ namespace sourcemeta::jsonbinpack {
 auto Decoder::BYTE_CHOICE_INDEX(const struct BYTE_CHOICE_INDEX &options)
     -> sourcemeta::core::JSON {
   assert(!options.choices.empty());
-  assert(is_byte(options.choices.size()));
+  assert(sourcemeta::core::is_byte(options.choices.size()));
   const std::uint8_t index{this->get_byte()};
   assert(options.choices.size() > index);
   return options.choices[index];
@@ -30,7 +31,7 @@ auto Decoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options)
     -> sourcemeta::core::JSON {
   assert(!options.choices.empty());
-  assert(is_byte(options.choices.size()));
+  assert(sourcemeta::core::is_byte(options.choices.size()));
   if (!this->has_more_data()) {
     return options.choices.front();
   } else {
@@ -96,10 +97,12 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
             subtype > 0 ? static_cast<std::int64_t>(-subtype)
                         : static_cast<std::int64_t>(-this->get_byte() - 1)};
       case TYPE_SHARED_STRING: {
-        const auto length =
-            subtype == 0 ? this->get_varint() - 1 +
-                               static_cast<std::uint64_t>(uint_max<5>) * 2
-                         : subtype - 1;
+        const auto length = subtype == 0
+                                ? this->get_varint() - 1 +
+                                      static_cast<std::uint64_t>(
+                                          sourcemeta::core::uint_max<5>) *
+                                          2
+                                : subtype - 1;
         const std::uint64_t position{this->position()};
         const std::uint64_t current{this->rewind(this->get_varint(), position)};
         const sourcemeta::core::JSON value{this->get_string_utf8(length)};
@@ -109,15 +112,18 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       case TYPE_STRING:
         return subtype == 0
                    ? this->FLOOR_VARINT_PREFIX_UTF8_STRING_SHARED(
-                         {static_cast<std::uint64_t>(uint_max<5>) * 2})
+                         {static_cast<std::uint64_t>(
+                              sourcemeta::core::uint_max<5>) *
+                          2})
                    : sourcemeta::core::JSON{this->get_string_utf8(subtype - 1)};
       case TYPE_LONG_STRING:
         return sourcemeta::core::JSON{
-            this->get_string_utf8(subtype + uint_max<5>)};
+            this->get_string_utf8(subtype + sourcemeta::core::uint_max<5>)};
       case TYPE_ARRAY:
         return subtype == 0
                    ? this->FIXED_TYPED_ARRAY(
-                         {.size = this->get_varint() + uint_max<5>,
+                         {.size = this->get_varint() +
+                                  sourcemeta::core::uint_max<5>,
                           .encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   ANY_PACKED_TYPE_TAG_BYTE_PREFIX{}),
@@ -131,7 +137,8 @@ auto Decoder::ANY_PACKED_TYPE_TAG_BYTE_PREFIX(
       case TYPE_OBJECT:
         return subtype == 0
                    ? this->FIXED_TYPED_ARBITRARY_OBJECT(
-                         {.size = this->get_varint() + uint_max<5>,
+                         {.size = this->get_varint() +
+                                  sourcemeta::core::uint_max<5>,
                           .key_encoding = std::make_shared<Encoding>(
                               sourcemeta::jsonbinpack::
                                   PREFIX_VARINT_LENGTH_STRING_SHARED{}),

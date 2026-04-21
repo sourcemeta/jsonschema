@@ -6,6 +6,8 @@
 #include <sourcemeta/core/numeric_error.h>
 #include <sourcemeta/core/numeric_parse.h>
 #include <sourcemeta/core/numeric_uint128.h>
+#include <sourcemeta/core/numeric_util.h>
+#include <sourcemeta/core/numeric_zigzag.h>
 // NOLINTEND(misc-include-cleaner)
 
 #endif

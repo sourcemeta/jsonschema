@@ -32,28 +32,24 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   if (schema.is_object() &&
       vocabularies.contains(
           sourcemeta::core::Vocabularies::Known::JSON_Schema_2020_12_Core)) {
-    if (schema.defines("$dynamicAnchor")) {
-      const auto &anchor{schema.at("$dynamicAnchor")};
-      if (anchor.is_string()) {
-        result.emplace_back(anchor.to_string(), AnchorType::Dynamic);
-      }
+    const auto *dynamic_anchor{schema.try_at("$dynamicAnchor")};
+    if (dynamic_anchor && dynamic_anchor->is_string()) {
+      result.emplace_back(dynamic_anchor->to_string(), AnchorType::Dynamic);
     }
 
-    if (schema.defines("$anchor")) {
-      const auto &anchor{schema.at("$anchor")};
-      if (anchor.is_string()) {
-        const std::string_view anchor_view{anchor.to_string()};
-        bool found = false;
-        for (auto &entry : result) {
-          if (entry.first == anchor_view) {
-            entry.second = AnchorType::All;
-            found = true;
-            break;
-          }
+    const auto *anchor_2020{schema.try_at("$anchor")};
+    if (anchor_2020 && anchor_2020->is_string()) {
+      const std::string_view anchor_view{anchor_2020->to_string()};
+      bool found = false;
+      for (auto &entry : result) {
+        if (entry.first == anchor_view) {
+          entry.second = AnchorType::All;
+          found = true;
+          break;
         }
-        if (!found) {
-          result.emplace_back(anchor_view, AnchorType::Static);
-        }
+      }
+      if (!found) {
+        result.emplace_back(anchor_view, AnchorType::Static);
       }
     }
   }
@@ -62,36 +58,34 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   if (schema.is_object() &&
       vocabularies.contains(
           sourcemeta::core::Vocabularies::Known::JSON_Schema_2019_09_Core)) {
-    if (schema.defines("$recursiveAnchor")) {
-      const auto &anchor{schema.at("$recursiveAnchor")};
-      if (anchor.is_boolean()) {
-        if (anchor.to_boolean()) {
+    const auto *recursive_anchor{schema.try_at("$recursiveAnchor")};
+    if (recursive_anchor) {
+      if (recursive_anchor->is_boolean()) {
+        if (recursive_anchor->to_boolean()) {
           // We store a 2019-09 recursive anchor as an empty anchor
           result.emplace_back(std::string_view{}, AnchorType::Dynamic);
         }
       } else {
         std::ostringstream value;
-        sourcemeta::core::stringify(anchor, value);
+        sourcemeta::core::stringify(*recursive_anchor, value);
         throw sourcemeta::core::SchemaKeywordError(
             "$recursiveAnchor", value.str(), "Invalid recursive anchor value");
       }
     }
 
-    if (schema.defines("$anchor")) {
-      const auto &anchor{schema.at("$anchor")};
-      if (anchor.is_string()) {
-        const std::string_view anchor_view{anchor.to_string()};
-        bool found = false;
-        for (auto &entry : result) {
-          if (entry.first == anchor_view) {
-            entry.second = AnchorType::All;
-            found = true;
-            break;
-          }
+    const auto *anchor_2019{schema.try_at("$anchor")};
+    if (anchor_2019 && anchor_2019->is_string()) {
+      const std::string_view anchor_view{anchor_2019->to_string()};
+      bool found = false;
+      for (auto &entry : result) {
+        if (entry.first == anchor_view) {
+          entry.second = AnchorType::All;
+          found = true;
+          break;
         }
-        if (!found) {
-          result.emplace_back(anchor_view, AnchorType::Static);
-        }
+      }
+      if (!found) {
+        result.emplace_back(anchor_view, AnchorType::Static);
       }
     }
   }
@@ -103,9 +97,10 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
            sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_7) ||
        vocabularies.contains(
            sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_6))) {
-    if (schema.defines("$id")) {
-      assert(schema.at("$id").is_string());
-      const std::string_view id_view{schema.at("$id").to_string()};
+    const auto *id_value{schema.try_at("$id")};
+    if (id_value) {
+      assert(id_value->is_string());
+      const std::string_view id_view{id_value->to_string()};
       if (id_view.starts_with('#')) {
         // The original string is "#fragment", skip the '#'
         result.emplace_back(id_view.substr(1), AnchorType::Static);
@@ -118,9 +113,10 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
   if (schema.is_object() &&
       vocabularies.contains(
           sourcemeta::core::Vocabularies::Known::JSON_Schema_Draft_4)) {
-    if (schema.defines("id")) {
-      assert(schema.at("id").is_string());
-      const std::string_view id_view{schema.at("id").to_string()};
+    const auto *id_value{schema.try_at("id")};
+    if (id_value) {
+      assert(id_value->is_string());
+      const std::string_view id_view{id_value->to_string()};
       if (id_view.starts_with('#')) {
         // The original string is "#fragment", skip the '#'
         result.emplace_back(id_view.substr(1), AnchorType::Static);
@@ -900,17 +896,16 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           base_uris, common_pointer_weak,
           entry.id ? std::optional<std::string_view>{*entry.id}
                    : std::nullopt)};
-      if (entry.common.subschema.get().defines("$ref")) {
-        if (!entry.common.subschema.get().at("$ref").is_string()) {
+      const auto *ref_value{entry.common.subschema.get().try_at("$ref")};
+      if (ref_value) {
+        if (!ref_value->is_string()) {
           std::ostringstream value;
-          sourcemeta::core::stringify(entry.common.subschema.get().at("$ref"),
-                                      value);
+          sourcemeta::core::stringify(*ref_value, value);
           throw sourcemeta::core::SchemaKeywordError("$ref", value.str(),
                                                      "Invalid reference value");
         }
 
-        const auto &original{
-            entry.common.subschema.get().at("$ref").to_string()};
+        const auto &original{ref_value->to_string()};
         sourcemeta::core::URI ref;
         try {
           ref = sourcemeta::core::URI{original};
@@ -935,20 +930,21 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         set_base_and_fragment(it->second);
       }
 
-      if (entry.common.vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2019_09_Core) &&
-          entry.common.subschema.get().defines("$recursiveRef")) {
-        if (!entry.common.subschema.get().at("$recursiveRef").is_string()) {
+      const auto *recursive_ref_value{
+          entry.common.vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2019_09_Core)
+              ? entry.common.subschema.get().try_at("$recursiveRef")
+              : nullptr};
+      if (recursive_ref_value) {
+        if (!recursive_ref_value->is_string()) {
           std::ostringstream value;
-          sourcemeta::core::stringify(
-              entry.common.subschema.get().at("$recursiveRef"), value);
+          sourcemeta::core::stringify(*recursive_ref_value, value);
           throw sourcemeta::core::SchemaKeywordError(
               "$recursiveRef", value.str(),
               "Invalid recursive reference value");
         }
 
-        const auto &ref{
-            entry.common.subschema.get().at("$recursiveRef").to_string()};
+        const auto &ref{recursive_ref_value->to_string()};
 
         // The behavior of this keyword is defined only for the value "#".
         // Implementations MAY choose to consider other values to be errors.
@@ -980,19 +976,20 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
         set_base_and_fragment(it->second);
       }
 
-      if (entry.common.vocabularies.contains(
-              Vocabularies::Known::JSON_Schema_2020_12_Core) &&
-          entry.common.subschema.get().defines("$dynamicRef")) {
-        if (!entry.common.subschema.get().at("$dynamicRef").is_string()) {
+      const auto *dynamic_ref_value{
+          entry.common.vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2020_12_Core)
+              ? entry.common.subschema.get().try_at("$dynamicRef")
+              : nullptr};
+      if (dynamic_ref_value) {
+        if (!dynamic_ref_value->is_string()) {
           std::ostringstream value;
-          sourcemeta::core::stringify(
-              entry.common.subschema.get().at("$dynamicRef"), value);
+          sourcemeta::core::stringify(*dynamic_ref_value, value);
           throw sourcemeta::core::SchemaKeywordError(
               "$dynamicRef", value.str(), "Invalid dynamic reference value");
         }
 
-        const auto &original{
-            entry.common.subschema.get().at("$dynamicRef").to_string()};
+        const auto &original{dynamic_ref_value->to_string()};
         sourcemeta::core::URI ref;
         try {
           ref = sourcemeta::core::URI{original};

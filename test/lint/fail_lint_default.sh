@@ -29,7 +29,7 @@ test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
 schema.json:9:7:
-  Only set a \`default\` value that validates against the schema (blaze/valid_default)
+  Only set a \`default\` value that validates against the schema (valid_default)
     at location "/properties/foo/default"
     The value was expected to be of type string but it was of type integer
       at instance location ""
