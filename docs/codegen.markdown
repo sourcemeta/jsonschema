@@ -20,10 +20,76 @@ https://github.com/sourcemeta/jsonschema/issues with any problems you find.**
 
 > [!WARNING]
 > This command currently only supports JSON Schema 2020-12 and TypeScript as a
-> target language.
+> target language. We will extend support to other programming languages and
+> dialects once we make the foundations stable.
 
-The list of supported JSON Schema features is outlined at
-https://github.com/sourcemeta/codegen.
+Keyword Support
+---------------
+
+Not every JSON Schema keyword maps directly to type system constructs. This
+implementation aims to provide complete structural typing, and you are expected
+to use a JSON Schema validator at runtime to enforce remaining constraints.
+
+| Vocabulary | Keyword | TypeScript |
+|------------|---------|------------|
+| Core (2020-12) | `$schema` | Yes |
+| Core (2020-12) | `$id` | Yes |
+| Core (2020-12) | `$ref` | Yes |
+| Core (2020-12) | `$defs` | Yes |
+| Core (2020-12) | `$anchor` | Yes |
+| Core (2020-12) | `$dynamicAnchor` | Yes |
+| Core (2020-12) | `$dynamicRef` | Yes |
+| Core (2020-12) | `$vocabulary` | Ignored |
+| Core (2020-12) | `$comment` | Ignored |
+| Applicator (2020-12) | `properties` | Yes |
+| Applicator (2020-12) | `additionalProperties` | Partial (language limitations) |
+| Applicator (2020-12) | `items` | Yes |
+| Applicator (2020-12) | `prefixItems` | Yes |
+| Applicator (2020-12) | `anyOf` | Yes |
+| Applicator (2020-12) | `patternProperties` | Partial (language limitations) |
+| Applicator (2020-12) | `propertyNames` | Ignored |
+| Applicator (2020-12) | `dependentSchemas` | Pending |
+| Applicator (2020-12) | `contains` | Ignored |
+| Applicator (2020-12) | `allOf` | Yes |
+| Applicator (2020-12) | `oneOf` | Partial (language limitations) |
+| Applicator (2020-12) | `not` | Cannot support |
+| Applicator (2020-12) | `if` | Partial (language limitations) |
+| Applicator (2020-12) | `then` | Partial (language limitations) |
+| Applicator (2020-12) | `else` | Partial (language limitations) |
+| Validation (2020-12) | `type` | Yes |
+| Validation (2020-12) | `enum` | Yes |
+| Validation (2020-12) | `required` | Yes |
+| Validation (2020-12) | `const` | Yes |
+| Validation (2020-12) | `minLength` | Ignored |
+| Validation (2020-12) | `maxLength` | Ignored |
+| Validation (2020-12) | `pattern` | Ignored |
+| Validation (2020-12) | `minimum` | Ignored |
+| Validation (2020-12) | `maximum` | Ignored |
+| Validation (2020-12) | `exclusiveMinimum` | Ignored |
+| Validation (2020-12) | `exclusiveMaximum` | Ignored |
+| Validation (2020-12) | `multipleOf` | Ignored |
+| Validation (2020-12) | `minProperties` | Ignored |
+| Validation (2020-12) | `maxProperties` | Ignored |
+| Validation (2020-12) | `dependentRequired` | Pending |
+| Validation (2020-12) | `minItems` | Ignored |
+| Validation (2020-12) | `maxItems` | Ignored |
+| Validation (2020-12) | `minContains` | Ignored |
+| Validation (2020-12) | `maxContains` | Ignored |
+| Validation (2020-12) | `uniqueItems` | Ignored |
+| Unevaluated (2020-12) | `unevaluatedItems` | Pending |
+| Unevaluated (2020-12) | `unevaluatedProperties` | Pending |
+| Meta-Data (2020-12) | `title` | Ignored |
+| Meta-Data (2020-12) | `description` | Ignored |
+| Meta-Data (2020-12) | `default` | Ignored |
+| Meta-Data (2020-12) | `deprecated` | Ignored |
+| Meta-Data (2020-12) | `examples` | Ignored |
+| Meta-Data (2020-12) | `readOnly` | Ignored |
+| Meta-Data (2020-12) | `writeOnly` | Ignored |
+| Format Annotation (2020-12) | `format` | Ignored |
+| Format Assertion (2020-12) | `format` | Ignored |
+| Content (2020-12) | `contentEncoding` | Ignored |
+| Content (2020-12) | `contentMediaType` | Ignored |
+| Content (2020-12) | `contentSchema` | Ignored |
 
 Examples
 --------
