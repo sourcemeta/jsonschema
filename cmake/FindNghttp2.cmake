@@ -48,7 +48,7 @@ if(NOT Nghttp2_FOUND)
 
   add_library(nghttp2 ${NGHTTP2_SOURCES})
 
-  if(HYDRA_COMPILER_MSVC)
+  if(JSONSCHEMA_COMPILER_MSVC)
     target_compile_options(nghttp2 PRIVATE
       /W3 /wd4996 /wd4334 /MP /Zc:inline- /GS-)
     target_compile_definitions(nghttp2 PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -121,38 +121,6 @@ if(NOT Nghttp2_FOUND)
       C_VISIBILITY_INLINES_HIDDEN FALSE
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME nghttp2)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-
-    install(TARGETS nghttp2
-      EXPORT nghttp2
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT nghttp2
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/nghttp2"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/nghttp2-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/nghttp2.cmake\")\n"
-      "check_required_components(\"nghttp2\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/nghttp2-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/nghttp2"
-      COMPONENT sourcemeta_hydra_dev)
-
-    install(FILES "${NGHTTP2_PUBLIC_HEADER}"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nghttp2"
-      COMPONENT sourcemeta_hydra_dev)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/nghttp2_generated/nghttp2/nghttp2ver.h"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nghttp2"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(Nghttp2_FOUND ON)
 endif()

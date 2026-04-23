@@ -24,7 +24,7 @@ if(NOT PSL_FOUND)
 
   add_library(psl ${LIBPSL_SOURCES})
 
-  if(HYDRA_COMPILER_MSVC)
+  if(JSONSCHEMA_COMPILER_MSVC)
     target_compile_options(psl PRIVATE /W3 /wd4996 /wd4267 /wd4244 /MP)
     target_compile_definitions(psl PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
@@ -85,35 +85,6 @@ if(NOT PSL_FOUND)
       C_VISIBILITY_INLINES_HIDDEN FALSE
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME psl)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-
-    install(TARGETS psl
-      EXPORT psl
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT psl
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/psl"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/psl-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/psl.cmake\")\n"
-      "check_required_components(\"psl\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/psl-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/psl"
-      COMPONENT sourcemeta_hydra_dev)
-
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libpsl_generated/libpsl.h"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(PSL_FOUND ON)
 endif()

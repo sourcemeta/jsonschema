@@ -115,7 +115,7 @@ if(NOT CAres_FOUND)
 
   add_library(cares ${CARES_SOURCES})
 
-  if(HYDRA_COMPILER_MSVC)
+  if(JSONSCHEMA_COMPILER_MSVC)
     target_compile_options(cares PRIVATE /W3 /wd4996 /wd4013 /MP)
     set(CARES_TYPEOF_ARES_SOCKLEN_T "int")
     set(CARES_TYPEOF_ARES_SSIZE_T "SSIZE_T")
@@ -174,7 +174,7 @@ if(NOT CAres_FOUND)
       -Wno-unused-variable
       -Wno-unused-function)
 
-    if(HYDRA_COMPILER_GCC)
+    if(JSONSCHEMA_COMPILER_GCC)
       target_compile_options(cares PRIVATE -Wno-stringop-overflow -Wno-discarded-qualifiers)
     endif()
 
@@ -283,38 +283,6 @@ if(NOT CAres_FOUND)
       C_VISIBILITY_INLINES_HIDDEN FALSE
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME cares)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-
-    install(TARGETS cares
-      EXPORT cares
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT cares
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cares"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/cares-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/cares.cmake\")\n"
-      "check_required_components(\"cares\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/cares-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cares"
-      COMPONENT sourcemeta_hydra_dev)
-
-    install(FILES ${CARES_PUBLIC_HEADERS}
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cares_generated/ares_build.h"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(CAres_FOUND ON)
 endif()
