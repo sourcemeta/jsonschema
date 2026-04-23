@@ -1,5 +1,5 @@
 FROM alpine:3.21
-RUN apk add --no-cache cmake make g++ zsh bash jq perl-utils
+RUN apk add --no-cache cmake make g++ zsh bash jq perl-utils curl-dev
 WORKDIR /src
 COPY CMakeLists.txt .
 COPY cmake cmake
@@ -14,7 +14,8 @@ COPY action.yml action.yml
 COPY README.markdown README.markdown
 RUN cmake -S . -B ./build \
   -DCMAKE_BUILD_TYPE:STRING=Release \
-  -DJSONSCHEMA_TESTS:BOOL=ON
+  -DJSONSCHEMA_TESTS:BOOL=ON \
+  -DJSONSCHEMA_USE_SYSTEM_CURL:BOOL=ON
 RUN cmake --build ./build --config Release --parallel 4
 RUN cmake --install ./build --prefix ./build/dist --config Release --verbose \
   --component sourcemeta_jsonschema
