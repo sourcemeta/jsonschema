@@ -191,6 +191,9 @@ auto process_entry(
       }
     }
   } else if (subresult) {
+    if (continue_on_error && entry.multidocument && !result) {
+      sourcemeta::jsonschema::LOG_VERBOSE(options) << "\n";
+    }
     sourcemeta::jsonschema::LOG_VERBOSE(options) << "ok: " << entry.first;
     if (entry.multidocument) {
       sourcemeta::jsonschema::LOG_VERBOSE(options)
@@ -206,6 +209,9 @@ auto process_entry(
     sourcemeta::jsonschema::print_annotations(output, options, entry.positions,
                                               std::cerr);
   } else {
+    if (continue_on_error && entry.multidocument && !result) {
+      std::cerr << "\n";
+    }
     std::cerr << "fail: " << entry.first;
     if (entry.multidocument) {
       std::cerr << " (entry #" << entry.index + 1 << ")\n\n";

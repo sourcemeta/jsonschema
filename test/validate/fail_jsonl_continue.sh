@@ -39,6 +39,7 @@ error: Schema validation failure
   The value was expected to be of type object but it was of type array
     at instance location ""
     at evaluate path "/type"
+
 fail: $(realpath "$TMP")/instance.jsonl (entry #3)
 
 42
