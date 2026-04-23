@@ -402,7 +402,7 @@ if(NOT CURL_FOUND)
       -Wno-strict-overflow
       -Wno-format-nonliteral)
 
-    if(JSONSCHEMA_COMPILER_CLANG)
+    if(JSONSCHEMA_COMPILER_LLVM)
       target_compile_options(curl PRIVATE
         -Wno-implicit-int-conversion
         -Wno-documentation-deprecated-sync
