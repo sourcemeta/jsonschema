@@ -89,7 +89,9 @@ Installed      : $resolvedTmp\project\vendor\identifier.json
 
     Check-Diff $actualSchema $expectedSchema
 
-    $hash = (Get-FileHash -Path $identifierFile -Algorithm SHA256).Hash.ToLower()
+    $fileBytes = [System.IO.File]::ReadAllBytes($identifierFile)
+    $hashBytes = [System.Security.Cryptography.SHA256]::Create().ComputeHash($fileBytes)
+    $hash = -join ($hashBytes | ForEach-Object { $_.ToString("x2") })
 
     $lockFile = Join-Path $projectDir "jsonschema.lock.json"
     $actualLock = [System.IO.File]::ReadAllText($lockFile)
