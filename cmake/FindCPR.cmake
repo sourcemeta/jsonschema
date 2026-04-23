@@ -89,7 +89,7 @@ if(NOT CPR_FOUND)
     "${CPR_DIR}/cpr/unix_socket.cpp"
     "${CPR_DIR}/cpr/util.cpp")
 
-  if(HYDRA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(cpr PRIVATE /W3 /MP /EHsc /wd4996 /wd4244 /GS-)
     target_compile_definitions(cpr PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
@@ -153,38 +153,6 @@ if(NOT CPR_FOUND)
       CXX_VISIBILITY_INLINES_HIDDEN FALSE
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME cpr)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-
-    install(TARGETS cpr
-      EXPORT cpr
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT cpr
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cpr"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/cpr-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/cpr.cmake\")\n"
-      "check_required_components(\"cpr\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/cpr-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/cpr"
-      COMPONENT sourcemeta_hydra_dev)
-
-    install(DIRECTORY "${CPR_DIR}/include/cpr"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cpr_generated/cpr/cprver.h"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/cpr"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(CPR_FOUND ON)
 endif()

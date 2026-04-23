@@ -33,7 +33,7 @@ if(NOT ZLIB_FOUND)
   target_compile_definitions(zlib PUBLIC NO_FSEEKO)
   target_compile_definitions(zlib PUBLIC _LARGEFILE64_SOURCE=1)
 
-  if(HYDRA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(zlib PRIVATE /W3 /MP /wd4996)
     target_compile_definitions(zlib PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
@@ -67,7 +67,7 @@ if(NOT ZLIB_FOUND)
 
     # Disable LTO for zlib to work around GCC LTO linker plugin not
     # properly rescanning this archive for transitive dependencies
-    if(HYDRA_COMPILER_GCC)
+    if(SOURCEMETA_COMPILER_GCC)
       target_compile_options(zlib PRIVATE -fno-lto)
     endif()
   endif()
@@ -92,34 +92,6 @@ if(NOT ZLIB_FOUND)
       VISIBILITY_INLINES_HIDDEN OFF
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME zlib)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-    install(TARGETS zlib
-      EXPORT zlib
-      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-        COMPONENT sourcemeta_hydra_dev
-      PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-        COMPONENT sourcemeta_hydra_dev
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT zlib
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/zlib"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/zlib-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/zlib.cmake\")\n"
-      "check_required_components(\"zlib\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/zlib-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/zlib"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(ZLIB_FOUND ON)
 endif()

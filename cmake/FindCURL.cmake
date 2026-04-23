@@ -370,7 +370,7 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/curl_fnmatch.c"
     "${CURL_DIR}/lib/select.h")
 
-  if(HYDRA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(curl PRIVATE /W3 /MP /wd4996 /wd4273 /wd4311 /GS-)
     target_compile_definitions(curl PRIVATE _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(curl PUBLIC _SSIZE_T_DEFINED)
@@ -402,7 +402,7 @@ if(NOT CURL_FOUND)
       -Wno-strict-overflow
       -Wno-format-nonliteral)
 
-    if(HYDRA_COMPILER_CLANG)
+    if(SOURCEMETA_COMPILER_LLVM)
       target_compile_options(curl PRIVATE
         -Wno-implicit-int-conversion
         -Wno-documentation-deprecated-sync
@@ -457,7 +457,7 @@ if(NOT CURL_FOUND)
     set(CURL_OS "\"MSYS\"")
     set(CURL_CA_BUNDLE "/usr/ssl/certs/ca-bundle.crt")
     set(CURL_CA_PATH "/usr/ssl/certs")
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       set(USE_OPENSSL ON)
     else()
       set(USE_MBEDTLS ON)
@@ -480,7 +480,7 @@ if(NOT CURL_FOUND)
     target_compile_definitions(curl PRIVATE _POSIX_C_SOURCE=200809L)
     target_compile_definitions(curl PRIVATE HAVE_SYS_TIME_H)
     target_compile_definitions(curl PRIVATE HAVE_SYS_STAT_H)
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       target_link_libraries(curl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
     else()
       target_link_libraries(curl PRIVATE MbedTLS::mbedtls)
@@ -490,7 +490,7 @@ if(NOT CURL_FOUND)
     set(CURL_OS "\"Linux\"")
     set(CURL_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt")
     set(CURL_CA_PATH "/etc/ssl/certs")
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       set(USE_OPENSSL ON)
     else()
       set(USE_MBEDTLS ON)
@@ -509,7 +509,7 @@ if(NOT CURL_FOUND)
     target_compile_definitions(curl PRIVATE _POSIX_C_SOURCE=200809L)
     target_compile_definitions(curl PRIVATE HAVE_SYS_TIME_H)
     target_compile_definitions(curl PRIVATE HAVE_SYS_STAT_H)
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       target_link_libraries(curl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
     else()
       target_link_libraries(curl PRIVATE MbedTLS::mbedtls)
@@ -519,7 +519,7 @@ if(NOT CURL_FOUND)
     set(CURL_OS "\"Darwin\"")
     set(CURL_CA_BUNDLE "/etc/ssl/cert.pem")
     set(CURL_CA_PATH "/etc/ssl/certs")
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       set(USE_OPENSSL ON)
     else()
       set(USE_MBEDTLS ON)
@@ -533,7 +533,7 @@ if(NOT CURL_FOUND)
     set(HAVE_SYS_TYPES_H ON)
     set(HAVE_SYS_SOCKET_H ON)
     set(HAVE_NETINET_IN_H ON)
-    if(SOURCEMETA_HYDRA_USE_SYSTEM_OPENSSL)
+    if(JSONSCHEMA_USE_SYSTEM_OPENSSL)
       target_link_libraries(curl PRIVATE OpenSSL::SSL OpenSSL::Crypto)
     else()
       target_link_libraries(curl PRIVATE MbedTLS::mbedtls)
@@ -582,34 +582,6 @@ if(NOT CURL_FOUND)
       C_VISIBILITY_PRESET "default"
       C_VISIBILITY_INLINES_HIDDEN FALSE
       EXPORT_NAME curl)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-    install(TARGETS curl
-      EXPORT curl
-      PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/curl"
-        COMPONENT sourcemeta_hydra_dev
-      PRIVATE_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/curl"
-        COMPONENT sourcemeta_hydra_dev
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT curl
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/curl"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/curl-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/curl.cmake\")\n"
-      "check_required_components(\"curl\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/curl-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/curl"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(CURL_FOUND ON)
 endif()

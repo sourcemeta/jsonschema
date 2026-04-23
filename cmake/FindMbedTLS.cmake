@@ -122,7 +122,7 @@ if(NOT MbedTLS_FOUND)
     add_library(mbedtls ${MBEDTLS_SOURCES})
   endif()
 
-  if(HYDRA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(mbedtls PRIVATE
       /W3 /MP /wd4244 /wd4267 /wd4996 /wd4146)
     target_compile_definitions(mbedtls PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -149,7 +149,7 @@ if(NOT MbedTLS_FOUND)
       -Wno-documentation-deprecated-sync
       -Wno-strict-overflow)
 
-    if(HYDRA_COMPILER_GCC)
+    if(SOURCEMETA_COMPILER_GCC)
       target_compile_options(mbedtls PRIVATE -Wno-stringop-overflow)
     endif()
 
@@ -181,38 +181,6 @@ if(NOT MbedTLS_FOUND)
       C_VISIBILITY_INLINES_HIDDEN FALSE
       WINDOWS_EXPORT_ALL_SYMBOLS TRUE
       EXPORT_NAME mbedtls)
-
-  if(SOURCEMETA_HYDRA_INSTALL)
-    include(GNUInstallDirs)
-
-    install(TARGETS mbedtls
-      EXPORT mbedtls
-      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-        COMPONENT sourcemeta_hydra
-      LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra
-        NAMELINK_COMPONENT sourcemeta_hydra_dev
-      ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        COMPONENT sourcemeta_hydra_dev)
-    install(EXPORT mbedtls
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/mbedtls"
-      COMPONENT sourcemeta_hydra_dev)
-
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mbedtls-config.cmake
-      "include(\"\${CMAKE_CURRENT_LIST_DIR}/mbedtls.cmake\")\n"
-      "check_required_components(\"mbedtls\")\n")
-    install(FILES
-      "${CMAKE_CURRENT_BINARY_DIR}/mbedtls-config.cmake"
-      DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/mbedtls"
-      COMPONENT sourcemeta_hydra_dev)
-
-    install(DIRECTORY "${MBEDTLS_DIR}/include/mbedtls"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-    install(DIRECTORY "${MBEDTLS_DIR}/include/psa"
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-      COMPONENT sourcemeta_hydra_dev)
-  endif()
 
   set(MbedTLS_FOUND ON)
 endif()

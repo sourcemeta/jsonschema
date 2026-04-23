@@ -24,7 +24,7 @@ index d05674e..a74d1da 100644
 @@ -140,6 +140,11 @@ static CURLcode global_init(long flags, bool memoryfuncs)
      goto fail;
    }
- 
+
 +  if(Curl_win32_init(flags)) {
 +    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
 +    goto fail;
@@ -36,7 +36,7 @@ index d05674e..a74d1da 100644
 @@ -150,11 +155,6 @@ static CURLcode global_init(long flags, bool memoryfuncs)
      goto fail;
    }
- 
+
 -  if(Curl_win32_init(flags)) {
 -    DEBUGF(curl_mfprintf(stderr, "Error: win32_init failed\n"));
 -    goto fail;
@@ -45,5 +45,5 @@ index d05674e..a74d1da 100644
    if(Curl_amiga_init()) {
      DEBUGF(curl_mfprintf(stderr, "Error: Curl_amiga_init failed\n"));
      goto fail;
--- 
+--
 2.47.1

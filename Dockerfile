@@ -6,6 +6,7 @@ COPY cmake /source/cmake
 COPY src /source/src
 COPY completion /source/completion
 COPY vendor /source/vendor
+COPY DEPENDENCIES /source/DEPENDENCIES
 COPY CMakeLists.txt /source/CMakeLists.txt
 COPY VERSION /source/VERSION
 
