@@ -48,7 +48,7 @@ if(NOT Nghttp2_FOUND)
 
   add_library(nghttp2 ${NGHTTP2_SOURCES})
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(nghttp2 PRIVATE
       /W3 /wd4996 /wd4334 /MP /Zc:inline- /GS-)
     target_compile_definitions(nghttp2 PRIVATE _CRT_SECURE_NO_WARNINGS)

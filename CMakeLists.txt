@@ -13,14 +13,6 @@ option(JSONSCHEMA_PORTABLE "Build a portable JSON Schema CLI binary to increase 
 option(JSONSCHEMA_SYSTEM_HTTP "Use system HTTP dependencies instead of vendored ones" OFF)
 option(JSONSCHEMA_USE_SYSTEM_OPENSSL "Use the system OpenSSL library" OFF)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  set(JSONSCHEMA_COMPILER_LLVM ON)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(JSONSCHEMA_COMPILER_GCC ON)
-elseif(MSVC)
-  set(JSONSCHEMA_COMPILER_MSVC ON)
-endif()
-
 find_package(Core REQUIRED)
 if(NOT JSONSCHEMA_PORTABLE AND NOT MSVC)
   message(STATUS "Building an optimised but less portable binary (JSONSCHEMA_PORTABLE)")

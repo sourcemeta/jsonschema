@@ -33,7 +33,7 @@ if(NOT ZLIB_FOUND)
   target_compile_definitions(zlib PUBLIC NO_FSEEKO)
   target_compile_definitions(zlib PUBLIC _LARGEFILE64_SOURCE=1)
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(zlib PRIVATE /W3 /MP /wd4996)
     target_compile_definitions(zlib PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
@@ -67,7 +67,7 @@ if(NOT ZLIB_FOUND)
 
     # Disable LTO for zlib to work around GCC LTO linker plugin not
     # properly rescanning this archive for transitive dependencies
-    if(JSONSCHEMA_COMPILER_GCC)
+    if(SOURCEMETA_COMPILER_GCC)
       target_compile_options(zlib PRIVATE -fno-lto)
     endif()
   endif()

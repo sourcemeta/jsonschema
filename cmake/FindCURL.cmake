@@ -370,7 +370,7 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/curl_fnmatch.c"
     "${CURL_DIR}/lib/select.h")
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(curl PRIVATE /W3 /MP /wd4996 /wd4273 /wd4311 /GS-)
     target_compile_definitions(curl PRIVATE _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(curl PUBLIC _SSIZE_T_DEFINED)
@@ -402,7 +402,7 @@ if(NOT CURL_FOUND)
       -Wno-strict-overflow
       -Wno-format-nonliteral)
 
-    if(JSONSCHEMA_COMPILER_LLVM)
+    if(SOURCEMETA_COMPILER_LLVM)
       target_compile_options(curl PRIVATE
         -Wno-implicit-int-conversion
         -Wno-documentation-deprecated-sync

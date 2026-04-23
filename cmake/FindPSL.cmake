@@ -24,7 +24,7 @@ if(NOT PSL_FOUND)
 
   add_library(psl ${LIBPSL_SOURCES})
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(psl PRIVATE /W3 /wd4996 /wd4267 /wd4244 /MP)
     target_compile_definitions(psl PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()

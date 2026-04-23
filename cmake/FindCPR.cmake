@@ -89,7 +89,7 @@ if(NOT CPR_FOUND)
     "${CPR_DIR}/cpr/unix_socket.cpp"
     "${CPR_DIR}/cpr/util.cpp")
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(cpr PRIVATE /W3 /MP /EHsc /wd4996 /wd4244 /GS-)
     target_compile_definitions(cpr PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()

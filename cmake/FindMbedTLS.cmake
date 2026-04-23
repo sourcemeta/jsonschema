@@ -122,7 +122,7 @@ if(NOT MbedTLS_FOUND)
     add_library(mbedtls ${MBEDTLS_SOURCES})
   endif()
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(mbedtls PRIVATE
       /W3 /MP /wd4244 /wd4267 /wd4996 /wd4146)
     target_compile_definitions(mbedtls PRIVATE _CRT_SECURE_NO_WARNINGS)
@@ -149,7 +149,7 @@ if(NOT MbedTLS_FOUND)
       -Wno-documentation-deprecated-sync
       -Wno-strict-overflow)
 
-    if(JSONSCHEMA_COMPILER_GCC)
+    if(SOURCEMETA_COMPILER_GCC)
       target_compile_options(mbedtls PRIVATE -Wno-stringop-overflow)
     endif()
 

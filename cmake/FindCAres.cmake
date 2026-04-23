@@ -115,7 +115,7 @@ if(NOT CAres_FOUND)
 
   add_library(cares ${CARES_SOURCES})
 
-  if(JSONSCHEMA_COMPILER_MSVC)
+  if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(cares PRIVATE /W3 /wd4996 /wd4013 /MP)
     set(CARES_TYPEOF_ARES_SOCKLEN_T "int")
     set(CARES_TYPEOF_ARES_SSIZE_T "SSIZE_T")
@@ -174,7 +174,7 @@ if(NOT CAres_FOUND)
       -Wno-unused-variable
       -Wno-unused-function)
 
-    if(JSONSCHEMA_COMPILER_GCC)
+    if(SOURCEMETA_COMPILER_GCC)
       target_compile_options(cares PRIVATE -Wno-stringop-overflow -Wno-discarded-qualifiers)
     endif()
 
