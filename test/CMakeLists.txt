@@ -14,6 +14,15 @@ macro(add_jsonschema_test_unix_ci name)
   endif()
 endmacro()
 
+macro(add_jsonschema_test_windows_ci name)
+  if(JSONSCHEMA_TESTS_CI AND WIN32)
+    add_test(NAME JSONSchema.ci.${name} COMMAND
+      powershell -NoProfile -ExecutionPolicy Bypass -File
+      "${CMAKE_CURRENT_SOURCE_DIR}/ci/${name}.ps1"
+      "$<TARGET_FILE:jsonschema_cli>")
+  endif()
+endmacro()
+
 add_jsonschema_test_unix(version_consistency)
 add_jsonschema_test_unix(version_command)
 add_jsonschema_test_unix(version_option_long)
@@ -828,6 +837,13 @@ add_jsonschema_test_unix_ci(pass_validate_http)
 add_jsonschema_test_unix_ci(pass_install_http)
 add_jsonschema_test_unix_ci(pass_install_add_http)
 add_jsonschema_test_unix_ci(precommit_lint)
+
+add_jsonschema_test_windows_ci(pass_bundle_http)
+add_jsonschema_test_windows_ci(fail_bundle_http_non_200)
+add_jsonschema_test_windows_ci(fail_bundle_http_non_schema)
+add_jsonschema_test_windows_ci(fail_validate_http_non_200)
+add_jsonschema_test_windows_ci(fail_validate_http_non_schema)
+add_jsonschema_test_windows_ci(pass_validate_http)
 
 # TODO: Make this test pass on Linux. It hangs for some reason
 if(APPLE)
