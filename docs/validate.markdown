@@ -152,6 +152,11 @@ jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl
 jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl --continue
 ```
 
+Note that even with `--continue`, only the first error of each failing entry is
+reported. Continuing validation past the first error within a single entry is a
+gray area not covered by the JSON Schema specification and potentially tricky to
+implement correctly at the evaluation level.
+
 ### Validate a JSON instance enabling HTTP resolution
 
 ```sh
