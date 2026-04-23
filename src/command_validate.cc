@@ -13,6 +13,7 @@
 #include <iostream>    // std::cerr
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::as_const
 
 #include "command.h"
 #include "configuration.h"
@@ -247,6 +248,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         schema_path, std::make_error_code(std::errc::is_a_directory)};
   }
 
+  if (options.contains("path") && !options.at("path").empty() &&
+      options.contains("template") && !options.at("template").empty()) {
+    throw OptionConflictError{
+        "The --path option cannot be used with --template"};
+  }
+
   const auto schema_config_base{schema_from_stdin
                                     ? std::filesystem::current_path()
                                     : std::filesystem::path(schema_path)};
@@ -258,11 +265,40 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  const auto schema{schema_from_stdin
-                        ? read_from_stdin().document
-                        : sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto schema = schema_from_stdin
+                    ? read_from_stdin().document
+                    : sourcemeta::core::read_yaml_or_json(schema_path);
 
-  if (!sourcemeta::core::is_schema(schema)) {
+  std::string path_pointer_string;
+
+  if (options.contains("path") && !options.at("path").empty()) {
+    sourcemeta::core::Pointer pointer;
+    try {
+      pointer =
+          sourcemeta::core::to_pointer(std::string{options.at("path").front()});
+    } catch (const sourcemeta::core::PointerParseError &) {
+      throw PositionalArgumentError{
+          "The JSON Pointer is not valid",
+          "jsonschema validate path/to/schema.json path/to/instance.json "
+          "--path '/components/schemas/User'"};
+    }
+
+    path_pointer_string = sourcemeta::core::to_string(pointer);
+
+    const auto *const result = sourcemeta::core::try_get(schema, pointer);
+    if (!result) {
+      throw PathResolutionError{schema_resolution_base, path_pointer_string};
+    }
+
+    sourcemeta::core::JSON subschema{*result};
+    schema = std::move(subschema);
+
+    if (!sourcemeta::core::is_schema(schema)) {
+      throw NotSchemaError{schema_from_stdin ? stdin_path()
+                                             : schema_resolution_base,
+                           path_pointer_string};
+    }
+  } else if (!sourcemeta::core::is_schema(schema)) {
     throw NotSchemaError{schema_from_stdin ? stdin_path()
                                            : schema_resolution_base};
   }
@@ -291,9 +327,9 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const sourcemeta::core::JSON bundled{[&]() {
     try {
-      return sourcemeta::core::bundle(schema, sourcemeta::core::schema_walker,
-                                      custom_resolver, dialect,
-                                      schema_default_id);
+      return sourcemeta::core::bundle(
+          std::as_const(schema), sourcemeta::core::schema_walker,
+          custom_resolver, dialect, schema_default_id);
     } catch (const sourcemeta::core::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
           schema_resolution_base, error);
@@ -301,6 +337,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           schema_resolution_base, error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      if (!path_pointer_string.empty()) {
+        throw PathSchemaReferenceError{
+            schema_resolution_base, std::string{error.identifier()},
+            error.location(), path_pointer_string, error.what()};
+      }
+
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           schema_resolution_base, std::string{error.identifier()},
           error.location(), error.what());
@@ -399,6 +441,12 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           schema_resolution_base, error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      if (!path_pointer_string.empty()) {
+        throw PathSchemaReferenceError{
+            schema_resolution_base, std::string{error.identifier()},
+            error.location(), path_pointer_string, error.what()};
+      }
+
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           schema_resolution_base, std::string{error.identifier()},
           error.location(), error.what());

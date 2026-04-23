@@ -62,18 +62,76 @@ private:
 
 class NotSchemaError : public std::runtime_error {
 public:
-  NotSchemaError(std::filesystem::path path)
+  NotSchemaError(std::filesystem::path path, std::string pointer = {})
       : std::runtime_error{"The schema file you provided does not represent a "
                            "valid JSON "
                            "Schema"},
-        path_{std::move(path)} {}
+        path_{std::move(path)}, pointer_{std::move(pointer)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }
 
+  [[nodiscard]] auto pointer() const noexcept -> const std::string & {
+    return this->pointer_;
+  }
+
 private:
   std::filesystem::path path_;
+  std::string pointer_;
+};
+
+class PathResolutionError : public std::runtime_error {
+public:
+  PathResolutionError(std::filesystem::path path, std::string pointer)
+      : std::runtime_error{"The JSON Pointer does not resolve to a value in "
+                           "the document"},
+        path_{std::move(path)}, pointer_{std::move(pointer)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto pointer() const noexcept -> const std::string & {
+    return this->pointer_;
+  }
+
+private:
+  std::filesystem::path path_;
+  std::string pointer_;
+};
+
+class PathSchemaReferenceError : public std::runtime_error {
+public:
+  PathSchemaReferenceError(std::filesystem::path path, std::string identifier,
+                           sourcemeta::core::Pointer location,
+                           std::string pointer, std::string message)
+      : std::runtime_error{std::move(message)}, path_{std::move(path)},
+        identifier_{std::move(identifier)}, location_{std::move(location)},
+        pointer_{std::move(pointer)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->identifier_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto pointer() const noexcept -> const std::string & {
+    return this->pointer_;
+  }
+
+private:
+  std::filesystem::path path_;
+  std::string identifier_;
+  sourcemeta::core::Pointer location_;
+  std::string pointer_;
 };
 
 class YAMLInputError : public std::runtime_error {
@@ -446,6 +504,19 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) {
+                  { current.pointer() } -> std::convertible_to<std::string>;
+                }) {
+    if (!exception.pointer().empty()) {
+      if (is_json) {
+        error_json.assign("pointer",
+                          sourcemeta::core::JSON{exception.pointer()});
+      } else {
+        std::cerr << "  at path " << exception.pointer() << "\n";
+      }
+    }
+  }
+
   if constexpr (requires(const Exception &current) { current.location(); }) {
     if (is_json) {
       error_json.assign("location",
@@ -560,6 +631,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const PathResolutionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const NotSchemaError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -663,6 +738,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "Try tools like https://regex101.com to debug further\n";
     }
 
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PathSchemaReferenceError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (
       const sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>
