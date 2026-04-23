@@ -11,6 +11,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
+  [--continue/-c]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -28,6 +29,11 @@ standard format depending on whether the `--fast`/`-f` option is set.
 
 To help scripts distinguish validation errors, these are reported using exit
 code 2.
+
+> [!NOTE]
+> When validating JSONL datasets, the command stops at the first entry that
+> fails validation. Pass `--continue`/`-c` to report all failing entries
+> instead.
 
 > [!NOTE]
 > Annotations are only printed when passing the `--verbose`/`-v` or the
@@ -138,6 +144,12 @@ jsonschema validate path/to/my/schema.json \
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl
+```
+
+### Validate a JSONL dataset reporting all failures
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl --continue
 ```
 
 ### Validate a JSON instance enabling HTTP resolution

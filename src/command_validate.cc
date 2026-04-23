@@ -136,7 +136,8 @@ auto process_entry(
     const sourcemeta::jsonschema::CustomResolver &custom_resolver,
     const sourcemeta::core::SchemaFrame &frame, bool benchmark,
     std::uint64_t benchmark_loop, bool trace, bool fast_mode, bool json_output,
-    bool schema_from_stdin, const std::filesystem::path &schema_resolution_base,
+    bool continue_on_error, bool schema_from_stdin,
+    const std::filesystem::path &schema_resolution_base,
     const sourcemeta::core::Options &options, bool &result) -> bool {
   std::ostringstream error;
   sourcemeta::blaze::SimpleOutput output{entry.second};
@@ -185,7 +186,7 @@ auto process_entry(
     std::cout << "\n";
     if (!suboutput.at("valid").to_boolean()) {
       result = false;
-      if (entry.multidocument) {
+      if (entry.multidocument && !continue_on_error) {
         return false;
       }
     }
@@ -216,7 +217,7 @@ auto process_entry(
     std::cerr << error.str();
     sourcemeta::jsonschema::print(output, entry.positions, std::cerr);
     result = false;
-    if (entry.multidocument) {
+    if (entry.multidocument && !continue_on_error) {
       return false;
     }
   }
@@ -279,6 +280,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
+  const auto continue_on_error{options.contains("continue")};
 
   if (options.contains("entrypoint") && !options.at("entrypoint").empty() &&
       options.contains("template") && !options.at("template").empty()) {
@@ -467,8 +469,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     for (const auto &entry : for_each_json({}, options)) {
       if (!process_entry(entry, evaluator, schema_template, custom_resolver,
                          frame, benchmark, benchmark_loop, trace, fast_mode,
-                         json_output, schema_from_stdin, schema_resolution_base,
-                         options, result)) {
+                         json_output, continue_on_error, schema_from_stdin,
+                         schema_resolution_base, options, result)) {
         break;
       }
     }
@@ -500,7 +502,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         for (const auto &entry : for_each_json({instance_path_view}, options)) {
           if (!process_entry(entry, evaluator, schema_template, custom_resolver,
                              frame, benchmark, benchmark_loop, trace, fast_mode,
-                             json_output, schema_from_stdin,
+                             json_output, continue_on_error, schema_from_stdin,
                              schema_resolution_base, options, result)) {
             break;
           }

@@ -170,6 +170,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("benchmark", {"b"});
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
+    app.flag("continue", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.option("template", {"m"});
