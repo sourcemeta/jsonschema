@@ -26,11 +26,15 @@ parts:
     source: .
     build-packages:
       - g++-14
+      - libcurl4-openssl-dev
+    stage-packages:
+      - libcurl4t64
     build-environment:
       - CC: gcc-14
       - CXX: g++-14
     cmake-parameters:
       - -DCMAKE_BUILD_TYPE:STRING=Release
+      - -DJSONSCHEMA_USE_SYSTEM_CURL:BOOL=ON
     override-pull: |
       craftctl default
       craftctl set version="$(tr -d '\n\r' < VERSION)"
