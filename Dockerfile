@@ -20,7 +20,7 @@ RUN cmake --install /build --prefix /usr/local --config Release --verbose --comp
 
 FROM debian:trixie-slim
 RUN apt-get --yes update && apt-get install --yes --no-install-recommends \
-  libcurl4t64 && apt-get clean && rm -rf /var/lib/apt/lists/*
+  libcurl4t64 ca-certificates && apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/jsonschema /usr/local/bin/jsonschema
 WORKDIR /workspace
 ENTRYPOINT [ "/usr/local/bin/jsonschema" ]
