@@ -37,7 +37,7 @@ try {
 
     $actualNorm = ($stderr -replace "`r`n", "`n").TrimEnd()
     $expectedNorm = ($expected -replace "`r`n", "`n").TrimEnd()
-    if ($actualNorm -ne $expectedNorm) {
+    if ($actualNorm -cne $expectedNorm) {
         Write-Host "EXPECTED:"
         Write-Host $expected
         Write-Host "---"

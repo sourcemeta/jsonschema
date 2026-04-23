@@ -39,7 +39,7 @@ try {
     [System.IO.File]::WriteAllText((Join-Path $TMP "expected.txt"), "")
 
     $actualNorm = ($stderr -replace "`r`n", "`n").TrimEnd()
-    if ($actualNorm -ne "") {
+    if ($actualNorm -cne "") {
         Write-Host "EXPECTED: (empty)"
         Write-Host "ACTUAL:"
         Write-Host $stderr

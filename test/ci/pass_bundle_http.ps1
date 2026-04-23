@@ -6,7 +6,7 @@ New-Item -ItemType Directory -Path $TMP | Out-Null
 function Check-Diff($actual, $expected) {
     $actualNorm = ($actual -replace "`r`n", "`n").TrimEnd()
     $expectedNorm = ($expected -replace "`r`n", "`n").TrimEnd()
-    if ($actualNorm -ne $expectedNorm) {
+    if ($actualNorm -cne $expectedNorm) {
         Write-Host "EXPECTED:"
         Write-Host $expected
         Write-Host "---"

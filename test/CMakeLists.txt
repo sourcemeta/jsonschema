@@ -17,7 +17,7 @@ endmacro()
 macro(add_jsonschema_test_windows_ci name)
   if(JSONSCHEMA_TESTS_CI AND WIN32)
     add_test(NAME JSONSchema.ci.${name} COMMAND
-      powershell -ExecutionPolicy Bypass -File
+      powershell -NoProfile -ExecutionPolicy Bypass -File
       "${CMAKE_CURRENT_SOURCE_DIR}/ci/${name}.ps1"
       "$<TARGET_FILE:jsonschema_cli>")
   endif()

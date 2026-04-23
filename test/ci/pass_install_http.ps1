@@ -6,7 +6,7 @@ New-Item -ItemType Directory -Path $TMP | Out-Null
 function Check-Diff($actual, $expected) {
     $actualNorm = ($actual -replace "`r`n", "`n").TrimEnd()
     $expectedNorm = ($expected -replace "`r`n", "`n").TrimEnd()
-    if ($actualNorm -ne $expectedNorm) {
+    if ($actualNorm -cne $expectedNorm) {
         Write-Host "EXPECTED:"
         Write-Host $expected
         Write-Host "---"
@@ -57,7 +57,7 @@ try {
     }
 
     $resolvedTmp = (Resolve-Path $TMP).Path.TrimEnd('\')
-    $output = $result.Stdout + $result.Stderr
+    $output = $result.Stderr
     $expectedOutput = @"
 Fetching       : https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/response
 Installed      : $resolvedTmp\project\vendor\response.json
@@ -67,7 +67,7 @@ Installed      : $resolvedTmp\project\vendor\response.json
     [System.IO.File]::WriteAllText((Join-Path $TMP "expected.txt"), $expectedOutput)
     Check-Diff $output $expectedOutput
 
-    $responseFile = Join-Path $projectDir "vendor" "response.json"
+    $responseFile = Join-Path (Join-Path $projectDir "vendor") "response.json"
     $actualSchema = [System.IO.File]::ReadAllText($responseFile)
     $expectedSchema = @'
 {

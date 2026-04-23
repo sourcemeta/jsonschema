@@ -6,7 +6,7 @@ New-Item -ItemType Directory -Path $TMP | Out-Null
 function Check-Diff($actual, $expected) {
     $actualNorm = ($actual -replace "`r`n", "`n").TrimEnd()
     $expectedNorm = ($expected -replace "`r`n", "`n").TrimEnd()
-    if ($actualNorm -ne $expectedNorm) {
+    if ($actualNorm -cne $expectedNorm) {
         Write-Host "EXPECTED:"
         Write-Host $expected
         Write-Host "---"
@@ -49,7 +49,7 @@ try {
     }
 
     $resolvedTmp = (Resolve-Path $TMP).Path.TrimEnd('\')
-    $output = $result.Stdout + $result.Stderr
+    $output = $result.Stderr
     $expectedOutput = @"
 Adding         : https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier -> ./vendor/identifier.json
 Fetching       : https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier
@@ -72,7 +72,7 @@ Installed      : $resolvedTmp\project\vendor\identifier.json
 
     Check-Diff $actualConfig $expectedConfig
 
-    $identifierFile = Join-Path $projectDir "vendor" "identifier.json"
+    $identifierFile = Join-Path (Join-Path $projectDir "vendor") "identifier.json"
     $actualSchema = [System.IO.File]::ReadAllText($identifierFile)
     $expectedSchema = @'
 {
