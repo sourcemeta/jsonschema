@@ -5,15 +5,6 @@
 #define NOMINMAX
 #endif
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnewline-eof"
-#endif
-#include <cpr/cpr.h>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
@@ -23,6 +14,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include "error.h"
+#include "http.h"
 #include "input.h"
 #include "logger.h"
 #include "utils.h"
@@ -81,13 +73,15 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
-  cpr::Response response;
+  HTTPResponse response;
+
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
                          << static_cast<int>(attempt) << "/"
                          << static_cast<int>(HTTP_MAXIMUM_RETRIES)
                          << "): " << url << "\n";
-    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true});
+
+    response = http_get(url);
 
     if (response.status_code == 200) {
       break;
@@ -106,13 +100,13 @@ static inline auto http_fetch(const std::string &url,
     throw std::runtime_error(error.str());
   }
 
-  const auto content_type_iterator{response.header.find("content-type")};
-  if (content_type_iterator != response.header.end() &&
-      content_type_iterator->second.starts_with("text/yaml")) {
-    return sourcemeta::core::parse_yaml(response.text);
+  const auto content_type{response.headers.find("content-type")};
+  if (content_type != response.headers.end() &&
+      content_type->second.starts_with("text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.body);
   }
 
-  return sourcemeta::core::parse_json(response.text);
+  return sourcemeta::core::parse_json(response.body);
 }
 
 static inline auto fetch_schema(const sourcemeta::core::Options &options,

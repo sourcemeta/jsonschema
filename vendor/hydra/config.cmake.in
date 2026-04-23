@@ -38,9 +38,4 @@ if(TARGET curl AND NOT TARGET CURL::libcurl)
   add_library(CURL::libcurl ALIAS curl)
 endif()
 
-find_dependency(CPR CONFIG)
-if(TARGET cpr AND NOT TARGET CPR::cpr)
-  add_library(CPR::cpr ALIAS cpr)
-endif()
-
 check_required_components("@PROJECT_NAME@")

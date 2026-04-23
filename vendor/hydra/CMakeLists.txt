@@ -38,7 +38,6 @@ endif()
 
 find_package(PSL REQUIRED)
 find_package(CURL REQUIRED)
-find_package(CPR REQUIRED)
 
 if(SOURCEMETA_HYDRA_INSTALL)
   include(GNUInstallDirs)

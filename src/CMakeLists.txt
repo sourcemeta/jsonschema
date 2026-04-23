@@ -3,7 +3,7 @@ sourcemeta_executable(
   NAME cli
   SOURCES
     main.cc configure.h.in command.h
-    utils.h error.h exit_code.h logger.h configuration.h input.h resolver.h
+    utils.h error.h exit_code.h logger.h configuration.h input.h http.h resolver.h
     command_fmt.cc
     command_inspect.cc
     command_bundle.cc
@@ -38,7 +38,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::test)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::alterschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::codegen)
-target_link_libraries(jsonschema_cli PRIVATE CPR::cpr)
+target_link_libraries(jsonschema_cli PRIVATE CURL::libcurl)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
