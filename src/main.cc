@@ -38,6 +38,7 @@ Commands:
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
+            [--continue/-c]
 
        Validate one or more instances against the given schema.
 
