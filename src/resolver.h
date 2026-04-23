@@ -96,7 +96,11 @@ static inline auto http_fetch(const std::string &url,
 
   if (response.status_code != 200) {
     std::ostringstream error;
-    error << "HTTP " << response.status_code << "\n  at " << url;
+    if (response.error.empty()) {
+      error << "HTTP " << response.status_code << "\n  at " << url;
+    } else {
+      error << response.error << "\n  at " << url;
+    }
     throw std::runtime_error(error.str());
   }
 
