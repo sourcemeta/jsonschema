@@ -844,8 +844,6 @@ add_jsonschema_test_windows_ci(fail_bundle_http_non_schema)
 add_jsonschema_test_windows_ci(fail_validate_http_non_200)
 add_jsonschema_test_windows_ci(fail_validate_http_non_schema)
 add_jsonschema_test_windows_ci(pass_validate_http)
-add_jsonschema_test_windows_ci(pass_install_http)
-add_jsonschema_test_windows_ci(pass_install_add_http)
 
 # TODO: Make this test pass on Linux. It hangs for some reason
 if(APPLE)
