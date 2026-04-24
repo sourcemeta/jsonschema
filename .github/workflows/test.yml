@@ -100,7 +100,7 @@ jobs:
         run: |
           sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
           sudo apt-get update --yes
-          sudo apt-get install --yes g++-14 zsh bindfs
+          sudo apt-get install --yes g++-14 binutils zsh bindfs
 
       - run: cmake --version
       - name: Configure JSON Schema
