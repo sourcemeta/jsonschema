@@ -2059,6 +2059,11 @@ auto compiler_draft4_validation_enum(const Context &context,
     return {};
   }
 
+  if (schema_context.schema.at(dynamic_context.keyword).empty()) {
+    return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                 schema_context, dynamic_context, ValueNone{})};
+  }
+
   if (schema_context.schema.at(dynamic_context.keyword).size() == 1) {
     return {
         make(sourcemeta::blaze::InstructionIndex::AssertionEqual, context,

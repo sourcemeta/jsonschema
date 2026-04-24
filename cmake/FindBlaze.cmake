@@ -1,5 +1,6 @@
 if(NOT Blaze_FOUND)
   set(BLAZE_INSTALL OFF CACHE BOOL "disable installation")
+  set(BLAZE_DOCUMENTATION OFF CACHE BOOL "documentation")
   add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/blaze")
   set(Blaze_FOUND ON)
 endif()

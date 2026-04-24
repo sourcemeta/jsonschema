@@ -216,6 +216,14 @@ auto describe(const bool valid, const Instruction &step,
   const sourcemeta::core::JSON &target{get(instance, instance_location)};
 
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionFail) {
+    if (keyword == "enum") {
+      std::ostringstream message;
+      message << "The " << type_name(target.type())
+              << " value was not expected to validate against the empty "
+                 "enumeration";
+      return message.str();
+    }
+
     if (keyword == "contains") {
       return "The constraints declared for this keyword were not satisfiable";
     }

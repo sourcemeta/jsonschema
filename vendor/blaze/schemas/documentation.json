@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Blaze Documentation Format",
+  "description": "The JSON representation of a documentation table",
+  "examples": [
+    {
+      "identifier": 0,
+      "rows": [
+        {
+          "identifier": 1,
+          "path": [
+            {
+              "type": "synthetic",
+              "value": "root"
+            }
+          ],
+          "type": {
+            "kind": "primitive",
+            "name": "string"
+          }
+        }
+      ]
+    }
+  ],
+  "$ref": "#/$defs/table",
+  "$defs": {
+    "table": {
+      "type": "object",
+      "required": [ "identifier", "rows" ],
+      "properties": {
+        "identifier": {
+          "description": "A unique monotonic identifier for this table",
+          "type": "integer",
+          "minimum": 0
+        },
+        "title": {
+          "description": "The title annotation from the source schema branch",
+          "type": "string",
+          "minLength": 1
+        },
+        "dynamicAnchor": {
+          "description": "The dynamic anchor value declared by this schema",
+          "type": "string",
+          "minLength": 1
+        },
+        "rows": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/row"
+          }
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "required": [ "identifier", "path", "type" ],
+      "properties": {
+        "identifier": {
+          "description": "A unique monotonic identifier for this row",
+          "type": "integer",
+          "minimum": 0
+        },
+        "path": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/pathSegment"
+          }
+        },
+        "modifiers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [ "readOnly", "writeOnly", "deprecated" ]
+          }
+        },
+        "type": {
+          "$ref": "#/$defs/typeExpression"
+        },
+        "badges": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/badge"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "constraints": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "title": {
+          "description": "The title annotation for this property",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "The description annotation for this property",
+          "type": "string",
+          "minLength": 1
+        },
+        "default": {
+          "description": "The default value annotation for this property. Any JSON value is valid, including null"
+        },
+        "examples": {
+          "description": "Example values for this property",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "section": {
+      "type": "object",
+      "required": [ "label", "children" ],
+      "properties": {
+        "label": {
+          "anyOf": [
+            {
+              "enum": [
+                "Any of",
+                "All of",
+                "One of",
+                "Property names",
+                "Contains",
+                "Decoded content",
+                "Must NOT match",
+                "If",
+                "Then",
+                "Else"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^Array item \\d+$"
+            }
+          ]
+        },
+        "position": {
+          "description": "The JSON Pointer of the operator within the parent schema",
+          "type": "string",
+          "minLength": 1
+        },
+        "children": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/table"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "pathSegment": {
+      "type": "object",
+      "required": [ "type", "value" ],
+      "properties": {
+        "type": {
+          "enum": [ "literal", "pattern", "wildcard", "synthetic" ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "badge": {
+      "type": "object",
+      "required": [ "kind", "value" ],
+      "properties": {
+        "kind": {
+          "enum": [ "format", "encoding", "mime" ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "typeExpression": {
+      "anyOf": [
+        {
+          "type": "object",
+          "required": [ "kind" ],
+          "properties": {
+            "kind": {
+              "const": "object"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "name" ],
+          "properties": {
+            "kind": {
+              "const": "primitive"
+            },
+            "name": {
+              "enum": [ "string", "integer", "number" ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind" ],
+          "properties": {
+            "kind": {
+              "const": "array"
+            },
+            "items": {
+              "description": "The homogeneous item type. Absent when the array has no items constraint",
+              "$ref": "#/$defs/typeExpression"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "items" ],
+          "properties": {
+            "kind": {
+              "const": "tuple"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/typeExpression"
+              }
+            },
+            "additional": {
+              "description": "The open tail type. Absent when the tuple has no tail",
+              "$ref": "#/$defs/typeExpression"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "values" ],
+          "properties": {
+            "kind": {
+              "const": "enum"
+            },
+            "values": {
+              "description": "The visible enum values (first 10 by default)",
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "overflow": {
+              "description": "The remaining enum values beyond the visible portion",
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "url" ],
+          "properties": {
+            "kind": {
+              "const": "externalRef"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "identifier", "path" ],
+          "properties": {
+            "kind": {
+              "const": "recursiveRef"
+            },
+            "identifier": {
+              "description": "The identifier of the target table in the same documentation tree",
+              "type": "integer",
+              "minimum": 0
+            },
+            "path": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/pathSegment"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind", "anchor" ],
+          "properties": {
+            "kind": {
+              "const": "dynamicRef"
+            },
+            "anchor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind" ],
+          "properties": {
+            "kind": {
+              "const": "any"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "kind" ],
+          "properties": {
+            "kind": {
+              "const": "never"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

@@ -32,10 +32,10 @@ public:
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
     const auto &branch{schema.at(KEYWORD).at(0)};
-    if (branch.is_object() && branch.size() == 1) {
-      const auto &key{branch.as_object().cbegin()->first};
-      ONLY_CONTINUE_IF(key != "$ref" && key != "$dynamicRef" &&
-                       key != "$recursiveRef");
+    if (branch.is_object()) {
+      ONLY_CONTINUE_IF(!branch.defines("$ref") &&
+                       !branch.defines("$dynamicRef") &&
+                       !branch.defines("$recursiveRef"));
     }
     return true;
   }
