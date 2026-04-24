@@ -20,6 +20,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" lint "$TMP/schema.json" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
@@ -35,6 +36,7 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 "$1" lint "$TMP/schema.json" --json > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"

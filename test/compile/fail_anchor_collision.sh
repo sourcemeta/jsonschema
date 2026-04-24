@@ -20,6 +20,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" compile "$TMP/schema.json" 2> "$TMP/stderr.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"

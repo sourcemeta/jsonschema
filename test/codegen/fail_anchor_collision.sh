@@ -20,6 +20,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 "$1" codegen "$TMP/schema.json" --target typescript > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
@@ -35,6 +36,7 @@ EOF
 diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" codegen "$TMP/schema.json" --target typescript --json > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
