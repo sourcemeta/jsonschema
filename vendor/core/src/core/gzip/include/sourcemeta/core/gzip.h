@@ -14,7 +14,10 @@
 #include <sourcemeta/core/gzip_export.h>
 #endif
 
+// NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/gzip_error.h>
+#include <sourcemeta/core/gzip_streambuf.h>
+// NOLINTEND(misc-include-cleaner)
 
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint8_t

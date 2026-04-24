@@ -36,7 +36,7 @@ public:
       -> bool;
 
 private:
-  std::uint64_t line{1};
+  std::uint64_t line{0};
   std::uint64_t column{0};
   auto parse_next() -> JSON;
   std::basic_istream<JSON::Char, JSON::CharTraits> *data{};
