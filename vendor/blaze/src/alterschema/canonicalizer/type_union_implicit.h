@@ -9,12 +9,12 @@ public:
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::JSON &,
+            const sourcemeta::core::JSON &root,
             const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::core::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     using namespace sourcemeta::core;
     ONLY_CONTINUE_IF(schema.is_object() && !schema.empty());
@@ -54,6 +54,9 @@ public:
           !IS_IN_PLACE_APPLICATOR(keyword_type));
     }
 
+    ONLY_CONTINUE_IF(!this->allof_sibling_constrains_type(root, frame, location,
+                                                          walker, resolver));
+
     return true;
   }
 
@@ -70,5 +73,69 @@ public:
     types.push_back(sourcemeta::core::JSON{"number"});
 
     schema.assign("type", std::move(types));
+  }
+
+private:
+  static auto allof_sibling_constrains_type(
+      const sourcemeta::core::JSON &root,
+      const sourcemeta::core::SchemaFrame &frame,
+      const sourcemeta::core::SchemaFrame::Location &location,
+      const sourcemeta::core::SchemaWalker &walker,
+      const sourcemeta::core::SchemaResolver &resolver) -> bool {
+    using namespace sourcemeta::core;
+    auto walk_pointer{location.pointer};
+    auto walk_parent{location.parent};
+    while (walk_parent.has_value()) {
+      const auto &wp{walk_parent.value()};
+      const auto walk_relative{walk_pointer.resolve_from(wp)};
+      if (walk_relative.empty() || !walk_relative.at(0).is_property()) {
+        break;
+      }
+      const auto walk_entry{frame.traverse(frame.uri(wp).value().get())};
+      if (!walk_entry.has_value()) {
+        break;
+      }
+      const auto walk_vocabularies{
+          frame.vocabularies(walk_entry.value().get(), resolver)};
+      const auto walk_keyword_type{
+          walker(walk_relative.at(0).to_property(), walk_vocabularies).type};
+
+      if (!IS_IN_PLACE_APPLICATOR(walk_keyword_type)) {
+        break;
+      }
+
+      if (walk_keyword_type == SchemaKeywordType::ApplicatorElementsInPlace &&
+          walk_relative.size() >= 2 && walk_relative.at(1).is_index()) {
+        const auto branch_index{walk_relative.at(1).to_index()};
+        const auto &allof_parent{get(root, wp)};
+        const auto &keyword_name{walk_relative.at(0).to_property()};
+        if (allof_parent.is_object() && allof_parent.defines(keyword_name) &&
+            allof_parent.at(keyword_name).is_array()) {
+          const auto &branches{allof_parent.at(keyword_name)};
+          for (std::size_t index = 0; index < branches.size(); ++index) {
+            if (index == branch_index) {
+              continue;
+            }
+            const auto &sibling{branches.at(index)};
+            if (!sibling.is_object()) {
+              continue;
+            }
+
+            if (sibling.defines("type")) {
+              return true;
+            }
+
+            if (sibling.defines("enum") && sibling.at("enum").is_array() &&
+                !sibling.at("enum").empty()) {
+              return true;
+            }
+          }
+        }
+      }
+
+      walk_pointer = wp;
+      walk_parent = walk_entry.value().get().parent;
+    }
+    return false;
   }
 };

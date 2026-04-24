@@ -300,33 +300,40 @@ auto SchemaTransformer::apply(core::JSON &schema,
             frame.traverse(core::to_weak_pointer(entry_pointer))};
         assert(new_location.has_value());
 
-        const auto new_vocabularies{
-            frame.vocabularies(new_location.value().get(), resolver)};
-
-        if (rule->check(current, schema, new_vocabularies, walker, resolver,
-                        frame, new_location.value().get(), exclude_keyword)
-                .applies) {
-          std::ostringstream error;
-          error << "Rule condition holds after application: " << rule->name();
-          throw std::runtime_error(error.str());
-        }
-
+        // Fix broken references before re-checking the condition,
+        // as the re-check may mutate rule state that rereference needs
         bool references_fixed{false};
+        const auto resource_offset{new_location.value().get().relative_pointer};
+        const auto current_slice{entry_pointer.slice(resource_offset)};
         for (const auto &saved_reference : potentially_broken_references) {
           if (core::try_get(schema, saved_reference.target_pointer)) {
             continue;
           }
 
+          // If the origin was also relocated, resolve its new location
+          auto effective_origin{saved_reference.origin};
           if (!core::try_get(schema, saved_reference.origin.initial())) {
-            continue;
+            try {
+              const auto new_origin{rule->rereference(
+                  saved_reference.destination, saved_reference.origin,
+                  saved_reference.origin.slice(resource_offset),
+                  current_slice)};
+              effective_origin =
+                  saved_reference.origin.slice(0, resource_offset)
+                      .concat(new_origin);
+            } catch (...) {
+              continue;
+            }
+            if (!core::try_get(schema, effective_origin.initial())) {
+              continue;
+            }
           }
 
           const auto new_relative{rule->rereference(
               saved_reference.destination, saved_reference.origin,
               saved_reference.target_pointer.slice(
                   saved_reference.target_relative_pointer),
-              entry_pointer.slice(
-                  new_location.value().get().relative_pointer))};
+              current_slice)};
           const auto new_fragment{
               saved_reference.fragment ==
                       core::to_string(saved_reference.target_pointer)
@@ -337,9 +344,19 @@ auto SchemaTransformer::apply(core::JSON &schema,
 
           core::URI original{saved_reference.original};
           original.fragment(core::to_string(new_fragment));
-          core::set(schema, saved_reference.origin,
-                    core::JSON{original.recompose()});
+          core::set(schema, effective_origin, core::JSON{original.recompose()});
           references_fixed = true;
+        }
+
+        const auto new_vocabularies{
+            frame.vocabularies(new_location.value().get(), resolver)};
+
+        if (rule->check(current, schema, new_vocabularies, walker, resolver,
+                        frame, new_location.value().get(), exclude_keyword)
+                .applies) {
+          std::ostringstream error;
+          error << "Rule condition holds after application: " << rule->name();
+          throw std::runtime_error(error.str());
         }
 
         std::tuple<core::Pointer, std::string_view, core::JSON> mark{
