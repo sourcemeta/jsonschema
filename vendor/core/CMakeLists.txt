@@ -145,6 +145,12 @@ if(SOURCEMETA_CORE_JSONSCHEMA)
   add_subdirectory(src/core/jsonschema)
 endif()
 
+if(SOURCEMETA_CORE_GZIP)
+  find_package(LibDeflate REQUIRED)
+  find_package(ZLIB REQUIRED)
+  add_subdirectory(src/core/gzip)
+endif()
+
 if(SOURCEMETA_CORE_JSONL)
   add_subdirectory(src/core/jsonl)
 endif()
@@ -155,11 +161,6 @@ endif()
 
 if(SOURCEMETA_CORE_SEMVER)
   add_subdirectory(src/core/semver)
-endif()
-
-if(SOURCEMETA_CORE_GZIP)
-  find_package(LibDeflate REQUIRED)
-  add_subdirectory(src/core/gzip)
 endif()
 
 if(SOURCEMETA_CORE_HTML)
@@ -278,6 +279,10 @@ if(SOURCEMETA_CORE_TESTS)
     add_subdirectory(test/jsonschema)
   endif()
 
+  if(SOURCEMETA_CORE_GZIP)
+    add_subdirectory(test/gzip)
+  endif()
+
   if(SOURCEMETA_CORE_JSONL)
     add_subdirectory(test/jsonl)
   endif()
@@ -288,10 +293,6 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_SEMVER)
     add_subdirectory(test/semver)
-  endif()
-
-  if(SOURCEMETA_CORE_GZIP)
-    add_subdirectory(test/gzip)
   endif()
 
   if(SOURCEMETA_CORE_HTML)

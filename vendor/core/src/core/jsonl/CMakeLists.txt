@@ -8,3 +8,5 @@ endif()
 
 target_link_libraries(sourcemeta_core_jsonl PUBLIC
   sourcemeta::core::json)
+target_link_libraries(sourcemeta_core_jsonl PRIVATE
+  sourcemeta::core::gzip)

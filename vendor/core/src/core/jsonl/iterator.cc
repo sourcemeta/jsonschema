@@ -7,6 +7,7 @@
 
 #include <cassert> // assert
 #include <istream> // std::basic_istream
+#include <string>  // std::basic_string
 
 namespace sourcemeta::core {
 
@@ -19,80 +20,62 @@ struct ConstJSONLIterator::Internal {
  */
 
 auto ConstJSONLIterator::parse_next() -> JSON {
-  while (this->data && !this->data->eof()) {
-    switch (this->data->peek()) {
-      // Whitespace
-      case internal::token_jsonl_whitespace_space<JSON::Char>:
-      case internal::token_jsonl_whitespace_tabulation<JSON::Char>:
-      case internal::token_jsonl_whitespace_carriage_return<JSON::Char>:
-        this->column += 1;
-        this->data->ignore(1);
-        break;
-      case JSON::CharTraits::eof():
-        this->data = nullptr;
-        break;
-      default:
-        goto parse_start;
+  // Each line in a JSONL stream is a complete JSON value.
+  // See https://jsonlines.org
+  std::basic_string<JSON::Char, JSON::CharTraits> row;
+  while (this->data && std::getline(*this->data, row)) {
+    this->line += 1;
+    this->column = 0;
+
+    // Strip trailing carriage return for \r\n line endings
+    if (!row.empty() &&
+        row.back() ==
+            internal::token_jsonl_whitespace_carriage_return<JSON::Char>) {
+      row.pop_back();
     }
+
+    // Skip whitespace-only lines
+    bool has_content{false};
+    for (const auto character : row) {
+      if (character != internal::token_jsonl_whitespace_space<JSON::Char> &&
+          character !=
+              internal::token_jsonl_whitespace_tabulation<JSON::Char> &&
+          character !=
+              internal::token_jsonl_whitespace_carriage_return<JSON::Char>) {
+        has_content = true;
+        break;
+      }
+    }
+
+    if (!has_content) {
+      continue;
+    }
+
+    auto result{parse_json(row, this->line, this->column)};
+
+    // Verify that the remainder of the line is only whitespace
+    for (auto index{static_cast<std::size_t>(this->column)}; index < row.size();
+         ++index) {
+      if (row[index] != internal::token_jsonl_whitespace_space<JSON::Char> &&
+          row[index] !=
+              internal::token_jsonl_whitespace_tabulation<JSON::Char> &&
+          row[index] !=
+              internal::token_jsonl_whitespace_carriage_return<JSON::Char>) {
+        this->column = static_cast<std::uint64_t>(index) + 1;
+        throw JSONParseError(this->line, this->column);
+      }
+    }
+
+    return result;
   }
 
-parse_start:
-  if (this->data) {
-    assert(!this->data->eof());
-    return parse_json(*this->data, this->line, this->column);
-  } else {
-    // Just as a cheap placeholder
-    return JSON{nullptr};
-  }
+  this->data = nullptr;
+  return JSON{nullptr};
 }
 
 auto ConstJSONLIterator::operator++() -> ConstJSONLIterator & {
   assert(this->data);
-
-start:
-  switch (this->data->get()) {
-    // Separator
-    case internal::token_jsonl_line_feed<JSON::Char>:
-      this->line += 1;
-      this->column = 0;
-      goto element;
-
-    // Whitespace
-    case internal::token_jsonl_whitespace_space<JSON::Char>:
-    case internal::token_jsonl_whitespace_tabulation<JSON::Char>:
-    case internal::token_jsonl_whitespace_carriage_return<JSON::Char>:
-      this->column += 1;
-      goto start;
-
-    case JSON::CharTraits::eof():
-      goto end;
-    default:
-      this->column += 1;
-      throw JSONParseError(this->line, this->column);
-  }
-
-element:
-  switch (this->data->peek()) {
-    // Whitespace
-    case internal::token_jsonl_whitespace_space<JSON::Char>:
-    case internal::token_jsonl_whitespace_tabulation<JSON::Char>:
-    case internal::token_jsonl_whitespace_carriage_return<JSON::Char>:
-      this->column += 1;
-      this->data->ignore(1);
-      goto element;
-
-    case JSON::CharTraits::eof():
-      goto end;
-    default:
-      goto next;
-  }
-
-next:
   this->internal->current = this->parse_next();
-  return *this;
-
-end:
-  this->data = nullptr;
   return *this;
 }
 
