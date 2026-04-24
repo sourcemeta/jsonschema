@@ -132,6 +132,18 @@ auto sourcemeta::jsonschema::metaschema(
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaAnchorCollisionError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
+                                                        error);
     }
   }
 

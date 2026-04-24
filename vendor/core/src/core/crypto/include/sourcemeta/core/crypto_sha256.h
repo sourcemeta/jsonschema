@@ -6,6 +6,7 @@
 #endif
 
 #include <ostream>     // std::ostream
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
@@ -24,6 +25,19 @@ namespace sourcemeta::core {
 /// ```
 auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256(const std::string_view input,
                                           std::ostream &output) -> void;
+
+/// @ingroup crypto
+/// Hash a string using SHA-256, returning the hex digest as a string.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <iostream>
+///
+/// std::cout << sourcemeta::core::sha256("foo bar") << "\n";
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256(const std::string_view input)
+    -> std::string;
 
 } // namespace sourcemeta::core
 

@@ -12,6 +12,7 @@
 #include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
 
+#include <cstdint>          // std::uint64_t
 #include <filesystem>       // std::filesystem
 #include <functional>       // std::function
 #include <initializer_list> // std::initializer_list
@@ -20,11 +21,32 @@
 #include <string>           // std::string
 #include <system_error>     // std::errc
 #include <type_traits>      // std::is_base_of_v
+#include <utility>          // std::forward
 #include <vector>           // std::vector
 
 #include "exit_code.h"
 
 namespace sourcemeta::jsonschema {
+
+template <typename T> class PositionError : public T {
+public:
+  template <typename... Args>
+  PositionError(const std::uint64_t line, const std::uint64_t column,
+                Args &&...args)
+      : T{std::forward<Args>(args)...}, line_{line}, column_{column} {}
+
+  [[nodiscard]] auto line() const noexcept -> std::uint64_t {
+    return this->line_;
+  }
+
+  [[nodiscard]] auto column() const noexcept -> std::uint64_t {
+    return this->column_;
+  }
+
+private:
+  std::uint64_t line_;
+  std::uint64_t column_;
+};
 
 class PositionalArgumentError : public std::runtime_error {
 public:
@@ -458,6 +480,20 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
+                  { current.other() } -> std::convertible_to<
+                                            const sourcemeta::core::Pointer &>;
+                }) {
+    if (is_json) {
+      error_json.assign("otherLocation",
+                        sourcemeta::core::JSON{
+                            sourcemeta::core::to_string(exception.other())});
+    } else {
+      std::cerr << "  at other location \""
+                << sourcemeta::core::to_string(exception.other()) << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
                   current.base().recompose();
                 }) {
     if (is_json) {
@@ -740,6 +776,16 @@ inline auto try_catch(const sourcemeta::core::Options &options,
                    "valid according to its meta-schema?\n";
     }
 
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::core::SchemaAnchorCollisionError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const sourcemeta::core::FileError<
+           sourcemeta::core::SchemaAnchorCollisionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>
                &error) {

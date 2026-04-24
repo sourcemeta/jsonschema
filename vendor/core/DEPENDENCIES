@@ -18,3 +18,4 @@ pyca-cryptography https://github.com/pyca/cryptography c4935a7021af37c38e0684b05
 pcre2 https://github.com/PCRE2Project/pcre2 pcre2-10.47
 googletest https://github.com/google/googletest a7f443b80b105f940225332ed3c31f2790092f47
 googlebenchmark https://github.com/google/benchmark 378fe693a1ef51500db21b11ff05a8018c5f0e55
+libdeflate https://github.com/ebiggers/libdeflate v1.25

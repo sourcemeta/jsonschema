@@ -427,6 +427,24 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaFrameError>(entry.resolution_base,
                                                       error);
+            } catch (const sourcemeta::core::SchemaAnchorCollisionError
+                         &error) {
+              if (printed_progress) {
+                std::cerr << "\n";
+              }
+
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::SchemaAnchorCollisionError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaAnchorCollisionError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -559,6 +577,20 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaFrameError>(entry.resolution_base,
                                                       error);
+            } catch (const sourcemeta::core::SchemaAnchorCollisionError
+                         &error) {
+              const auto position{entry.positions.get(error.location())};
+              if (position.has_value()) {
+                throw PositionError<sourcemeta::core::FileError<
+                    sourcemeta::core::SchemaAnchorCollisionError>>(
+                    std::get<0>(position.value()),
+                    std::get<1>(position.value()), entry.resolution_base,
+                    error);
+              }
+
+              throw sourcemeta::core::FileError<
+                  sourcemeta::core::SchemaAnchorCollisionError>(
+                  entry.resolution_base, error);
             } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaUnknownBaseDialectError>(

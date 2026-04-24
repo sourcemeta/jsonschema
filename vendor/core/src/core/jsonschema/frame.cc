@@ -292,6 +292,12 @@ auto store(sourcemeta::core::SchemaFrame::Locations &frame,
                      .property_name = property_name,
                      .orphan = orphan}});
   if (!ignore_if_present && !inserted) {
+    if (entry_type == sourcemeta::core::SchemaFrame::LocationType::Anchor) {
+      throw sourcemeta::core::SchemaAnchorCollisionError(
+          iterator->first.second,
+          sourcemeta::core::to_pointer(pointer_from_root),
+          sourcemeta::core::to_pointer(iterator->second.pointer));
+    }
     throw_already_exists(iterator->first.second);
   }
 

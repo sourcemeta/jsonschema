@@ -220,6 +220,18 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaFrameError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
         schema_resolution_base, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    const auto position{positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
+                                                      error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<

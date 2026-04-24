@@ -88,6 +88,17 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaFrameError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           display_path, error);
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+      const auto position{parsed.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaAnchorCollisionError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            display_path, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>(display_path, error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
@@ -169,6 +180,18 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaFrameError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           entry.resolution_base, error);
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+      const auto position{entry.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaAnchorCollisionError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            entry.resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>(entry.resolution_base,
+                                                        error);
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
