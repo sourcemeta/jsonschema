@@ -27,15 +27,8 @@ if(NOT LibDeflate_FOUND)
   sourcemeta_add_default_options(PRIVATE libdeflate)
 
   # Check if the assembler supports ARM dot-product (udot) instructions.
-  # GCC 14+ assumes binutils is new enough, but some CI environments
-  # pair GCC 14 with older binutils that lack udot support
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
     include(CheckCSourceCompiles)
-    # GCC >= 14 compiles dotprod code using a per-function target
-    # attribute ("+dotprod") rather than a global -march flag.
-    # This relies on binutils >= 2.41 to handle the resulting
-    # .arch_extension directive. Test the same mechanism the code
-    # actually uses so we detect old assemblers correctly.
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
         CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
       check_c_source_compiles("
