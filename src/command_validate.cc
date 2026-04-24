@@ -265,14 +265,15 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
 
-  const auto schema{schema_from_stdin
-                        ? read_from_stdin().document
-                        : sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto parsed_schema{schema_from_stdin ? read_from_stdin()
+                                       : read_file(schema_path)};
 
-  if (!sourcemeta::core::is_schema(schema)) {
+  if (!sourcemeta::core::is_schema(parsed_schema.document)) {
     throw NotSchemaError{schema_from_stdin ? stdin_path()
                                            : schema_resolution_base};
   }
+
+  const auto &schema{parsed_schema.document};
 
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
@@ -308,6 +309,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaFrameError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           schema_resolution_base, error);
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+      const auto position{parsed_schema.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaAnchorCollisionError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            schema_resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
+                                                        error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           schema_resolution_base, std::string{error.identifier()},
@@ -351,6 +364,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaFrameError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
         schema_resolution_base, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
+                                                      error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
@@ -406,6 +431,18 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
     } catch (const sourcemeta::core::SchemaFrameError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
           schema_resolution_base, error);
+    } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+      const auto position{parsed_schema.positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::core::SchemaAnchorCollisionError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            schema_resolution_base, error);
+      }
+
+      throw sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>(schema_resolution_base,
+                                                        error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
           schema_resolution_base, std::string{error.identifier()},

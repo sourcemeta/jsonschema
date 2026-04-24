@@ -31,11 +31,13 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
       read_configuration(options, configuration_path, schema_path)};
   const auto dialect{default_dialect(options, configuration)};
 
-  const auto schema{sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto parsed_schema{read_file(schema_path)};
 
-  if (!sourcemeta::core::is_schema(schema)) {
+  if (!sourcemeta::core::is_schema(parsed_schema.document)) {
     throw NotSchemaError{schema_path};
   }
+
+  const auto &schema{parsed_schema.document};
 
   const auto fast_mode{options.contains("fast")};
   const auto &custom_resolver{
@@ -93,6 +95,17 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaFrameError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
         schema_path, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(schema_path, error);
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<

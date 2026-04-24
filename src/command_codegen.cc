@@ -36,8 +36,8 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
   }
 
   const std::filesystem::path schema_path{options.positional().front()};
-  const sourcemeta::core::JSON schema{
-      sourcemeta::core::read_yaml_or_json(schema_path)};
+  auto parsed_schema{read_file(schema_path)};
+  const auto &schema{parsed_schema.document};
 
   const auto configuration_path{find_configuration(schema_path)};
   const auto &configuration{
@@ -58,6 +58,17 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
   } catch (const sourcemeta::core::SchemaFrameError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
         schema_path, error);
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    const auto position{parsed_schema.positions.get(error.location())};
+    if (position.has_value()) {
+      throw PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          schema_path, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>(schema_path, error);
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         schema_path, error);

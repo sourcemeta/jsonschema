@@ -26,6 +26,7 @@ option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer libra
 option(SOURCEMETA_CORE_JSONL "Build the Sourcemeta Core JSONL library" ON)
 option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
 option(SOURCEMETA_CORE_SEMVER "Build the Sourcemeta Core SemVer library" ON)
+option(SOURCEMETA_CORE_GZIP "Build the Sourcemeta Core GZIP library" ON)
 option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
 option(SOURCEMETA_CORE_MARKDOWN "Build the Sourcemeta Core Markdown library" ON)
 option(SOURCEMETA_CORE_EXTENSION_EDITORSCHEMA "Build the Sourcemeta Core EditorSchema library" ON)
@@ -156,6 +157,11 @@ if(SOURCEMETA_CORE_SEMVER)
   add_subdirectory(src/core/semver)
 endif()
 
+if(SOURCEMETA_CORE_GZIP)
+  find_package(LibDeflate REQUIRED)
+  add_subdirectory(src/core/gzip)
+endif()
+
 if(SOURCEMETA_CORE_HTML)
   add_subdirectory(src/core/html)
 endif()
@@ -282,6 +288,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_SEMVER)
     add_subdirectory(test/semver)
+  endif()
+
+  if(SOURCEMETA_CORE_GZIP)
+    add_subdirectory(test/gzip)
   endif()
 
   if(SOURCEMETA_CORE_HTML)

@@ -20,7 +20,7 @@ constexpr std::array<char, 17> HEX_DIGITS{{'0', '1', '2', '3', '4', '5', '6',
 
 namespace sourcemeta::core {
 
-auto sha256(const std::string_view input, std::ostream &output) -> void {
+auto sha256(const std::string_view input) -> std::string {
   auto *context = EVP_MD_CTX_new();
   if (context == nullptr) {
     throw std::runtime_error("Could not allocate OpenSSL digest context");
@@ -41,12 +41,19 @@ auto sha256(const std::string_view input, std::ostream &output) -> void {
 
   EVP_MD_CTX_free(context);
 
-  // TODO: Use std::views::enumerate once libc++ supports it
-  // (__cpp_lib_ranges_enumerate)
+  std::string result;
+  result.reserve(64);
   for (std::uint64_t index = 0; index < 32u; ++index) {
-    output.put(HEX_DIGITS[(digest[index] >> 4u) & 0x0fu]);
-    output.put(HEX_DIGITS[digest[index] & 0x0fu]);
+    result.push_back(HEX_DIGITS[(digest[index] >> 4u) & 0x0fu]);
+    result.push_back(HEX_DIGITS[digest[index] & 0x0fu]);
   }
+
+  return result;
+}
+
+auto sha256(const std::string_view input, std::ostream &output) -> void {
+  const auto result = sha256(input);
+  output.write(result.data(), static_cast<std::streamsize>(result.size()));
 }
 
 } // namespace sourcemeta::core
@@ -163,7 +170,7 @@ inline auto sha256_process_block(const unsigned char *block,
 
 namespace sourcemeta::core {
 
-auto sha256(const std::string_view input, std::ostream &output) -> void {
+auto sha256(const std::string_view input) -> std::string {
   // Initial hash values: first 32 bits of the fractional parts of the
   // square roots of the first 8 primes (FIPS 180-4 Section 5.3.3)
   std::array<std::uint32_t, 8> state{};
@@ -218,13 +225,22 @@ auto sha256(const std::string_view input, std::ostream &output) -> void {
     sha256_process_block(final_block.data() + 64u, state);
   }
 
+  std::string result;
+  result.reserve(64);
   for (std::uint64_t state_index = 0u; state_index < 8u; ++state_index) {
     const auto value = state[state_index];
     for (std::uint64_t nibble = 0u; nibble < 8u; ++nibble) {
       const auto shift = 28u - nibble * 4u;
-      output.put(HEX_DIGITS[(value >> shift) & 0x0fu]);
+      result.push_back(HEX_DIGITS[(value >> shift) & 0x0fu]);
     }
   }
+
+  return result;
+}
+
+auto sha256(const std::string_view input, std::ostream &output) -> void {
+  const auto result = sha256(input);
+  output.write(result.data(), static_cast<std::streamsize>(result.size()));
 }
 
 } // namespace sourcemeta::core

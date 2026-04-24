@@ -1,3 +1,4 @@
+#include <sourcemeta/core/ip.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
@@ -22,9 +23,7 @@ using namespace sourcemeta::core;
 auto validate_percent_encoded_utf8(const std::string_view input,
                                    std::string_view::size_type position)
     -> std::string_view::size_type {
-  if (input[position] != URI_PERCENT) {
-    return 3;
-  }
+  assert(input[position] == URI_PERCENT);
 
   if (position + 2 >= input.size()) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
@@ -38,63 +37,7 @@ auto validate_percent_encoded_utf8(const std::string_view input,
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
-
-  const std::array<char, 2> hex{{input[position + 1], input[position + 2]}};
-  int parsed_value{};
-  std::from_chars(hex.data(), hex.data() + hex.size(), parsed_value, 16);
-  const auto value = static_cast<unsigned char>(parsed_value);
-
-  if ((value & 0x80) == 0) {
-    return 3;
-  }
-
-  if ((value & 0xC0) == 0x80) [[unlikely]] {
-    throw sourcemeta::core::URIParseError{
-        static_cast<std::uint64_t>(position + 1)};
-  }
-
-  std::string::size_type continuation_count = 0;
-  if ((value & 0xE0) == 0xC0) {
-    continuation_count = 1;
-  } else if ((value & 0xF0) == 0xE0) {
-    continuation_count = 2;
-  } else if ((value & 0xF8) == 0xF0) {
-    continuation_count = 3;
-  }
-
-  for (std::string::size_type index = 1; index <= continuation_count; ++index) {
-    const std::string::size_type next_position = position + (index * 3);
-    if (next_position + 2 >= input.size() ||
-        input[next_position] != URI_PERCENT) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
-    }
-
-    const auto cont_first =
-        static_cast<unsigned char>(input[next_position + 1]);
-    const auto cont_second =
-        static_cast<unsigned char>(input[next_position + 2]);
-
-    if (!std::isxdigit(cont_first) || !std::isxdigit(cont_second))
-        [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(next_position + 1)};
-    }
-
-    const std::array<char, 2> cont_hex{
-        {input[next_position + 1], input[next_position + 2]}};
-    int cont_parsed_value{};
-    std::from_chars(cont_hex.data(), cont_hex.data() + cont_hex.size(),
-                    cont_parsed_value, 16);
-    const auto cont_value = static_cast<unsigned char>(cont_parsed_value);
-
-    if ((cont_value & 0xC0) != 0x80) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(next_position + 1)};
-    }
-  }
-
-  return 3 * (1 + continuation_count);
+  return 3;
 }
 
 template <bool CheckOnly>
@@ -179,10 +122,11 @@ auto parse_ipv6(const std::string_view input,
 
   const auto start = position;
   position += 1;
+  const bool is_ipvfuture = position < input.size() &&
+                            (input[position] == 'v' || input[position] == 'V');
 
   // RFC 3986: IP-literal = "[" ( IPv6address / IPvFuture ) "]"
-  if (position < input.size() &&
-      (input[position] == 'v' || input[position] == 'V')) {
+  if (is_ipvfuture) {
     // IPvFuture = "v" 1*HEXDIG "." 1*( unreserved / sub-delims / ":" )
     position += 1;
 
@@ -238,10 +182,16 @@ auto parse_ipv6(const std::string_view input,
         static_cast<std::uint64_t>(start + 1)};
   }
 
+  const auto literal{input.substr(start + 1, position - start - 1)};
+  if (!is_ipvfuture && !sourcemeta::core::is_ipv6(literal)) [[unlikely]] {
+    throw sourcemeta::core::URIParseError{
+        static_cast<std::uint64_t>(start + 1)};
+  }
+
   if constexpr (CheckOnly) {
     position += 1;
   } else {
-    std::string ipv6{input.substr(start + 1, position - start - 1)};
+    std::string ipv6{literal};
     position += 1;
     return ipv6;
   }
@@ -366,7 +316,10 @@ auto parse_path(const std::string_view input,
     if (current == URI_PERCENT) {
       const auto skip = validate_percent_encoded_utf8(input, position);
       position += skip;
-    } else if (uri_is_pchar(current) || current == URI_SLASH) {
+      continue;
+    }
+
+    if (uri_is_pchar(current) || current == URI_SLASH) {
       position += 1;
     } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
@@ -405,8 +358,11 @@ auto parse_query(const std::string_view input,
     if (current == URI_PERCENT) {
       const auto skip = validate_percent_encoded_utf8(input, position);
       position += skip;
-    } else if (uri_is_pchar(current) || current == URI_SLASH ||
-               current == URI_QUESTION) {
+      continue;
+    }
+
+    if (uri_is_pchar(current) || current == URI_SLASH ||
+        current == URI_QUESTION) {
       position += 1;
     } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{
@@ -442,8 +398,11 @@ auto parse_fragment(const std::string_view input,
     if (current == URI_PERCENT) {
       const auto skip = validate_percent_encoded_utf8(input, position);
       position += skip;
-    } else if (uri_is_pchar(current) || current == URI_SLASH ||
-               current == URI_QUESTION) {
+      continue;
+    }
+
+    if (uri_is_pchar(current) || current == URI_SLASH ||
+        current == URI_QUESTION) {
       position += 1;
     } else [[unlikely]] {
       throw sourcemeta::core::URIParseError{

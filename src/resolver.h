@@ -206,6 +206,18 @@ public:
           throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
               entry.resolution_base, std::string{error.identifier()},
               error.what());
+        } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+          const auto position{entry.positions.get(error.location())};
+          if (position.has_value()) {
+            throw PositionError<sourcemeta::core::FileError<
+                sourcemeta::core::SchemaAnchorCollisionError>>(
+                std::get<0>(position.value()), std::get<1>(position.value()),
+                entry.resolution_base, error);
+          }
+
+          throw sourcemeta::core::FileError<
+              sourcemeta::core::SchemaAnchorCollisionError>(
+              entry.resolution_base, error);
         } catch (const sourcemeta::core::SchemaReferenceError &error) {
           throw sourcemeta::core::FileError<
               sourcemeta::core::SchemaReferenceError>(

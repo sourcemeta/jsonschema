@@ -1,5 +1,5 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core 3ea3a54756071232ca017b96bc15f17d8b5be370
+core https://github.com/sourcemeta/core c1ad96c0ed1eb9130e1fe7ff76501d47ce1c5d3d
 jsonbinpack https://github.com/sourcemeta/jsonbinpack 8b93f69a1270d8d05eed6bb9e106c4d6613bb257
 blaze https://github.com/sourcemeta/blaze cc001b6957983bcdd69c50db48f26ede2303e4ba
 mbedtls https://github.com/Mbed-TLS/mbedtls v3.6.6

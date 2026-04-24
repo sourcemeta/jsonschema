@@ -78,6 +78,22 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     }
     throw sourcemeta::core::FileError<
         sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+    if (!json_output) {
+      std::cout << entry.first << ":\n";
+    }
+
+    const auto position{entry.positions.get(error.location())};
+    if (position.has_value()) {
+      throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
+          sourcemeta::core::SchemaAnchorCollisionError>>(
+          std::get<0>(position.value()), std::get<1>(position.value()),
+          entry.resolution_base, error);
+    }
+
+    throw sourcemeta::core::FileError<
+        sourcemeta::core::SchemaAnchorCollisionError>{entry.resolution_base,
+                                                      error};
   } catch (...) {
     if (!json_output) {
       std::cout << entry.first << ":\n";

@@ -19,9 +19,13 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: Schema identifier already exists
+error: Schema anchor already exists
   at identifier file://$(realpath "$TMP")/schema.json
+  at line 1
+  at column 1
   at file path $(realpath "$TMP")/schema.json
+  at location ""
+  at other location ""
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -32,9 +36,13 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.json"
 {
-  "error": "Schema identifier already exists",
+  "error": "Schema anchor already exists",
   "identifier": "file://$(realpath "$TMP")/schema.json",
-  "filePath": "$(realpath "$TMP")/schema.json"
+  "line": 1,
+  "column": 1,
+  "filePath": "$(realpath "$TMP")/schema.json",
+  "location": "",
+  "otherLocation": ""
 }
 EOF
 
