@@ -480,8 +480,9 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
-                  { current.other() } -> std::convertible_to<
-                                            const sourcemeta::core::Pointer &>;
+                  {
+                    current.other()
+                  } -> std::convertible_to<const sourcemeta::core::Pointer &>;
                 }) {
     if (is_json) {
       error_json.assign("otherLocation",
