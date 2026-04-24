@@ -69,6 +69,40 @@ if(NOT LibDeflate_FOUND)
       target_compile_definitions(libdeflate PRIVATE
         LIBDEFLATE_ASSEMBLER_DOES_NOT_SUPPORT_DOTPROD)
     endif()
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
+        CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 14)
+      check_c_source_compiles("
+        #include <arm_neon.h>
+        __attribute__((target(\"+crypto,+crc,+sha3\")))
+        int test(void) {
+          uint8x16_t a = vdupq_n_u8(0);
+          uint8x16_t b = vdupq_n_u8(0);
+          uint8x16_t c = vdupq_n_u8(0);
+          a = veor3q_u8(a, b, c);
+          return (int)vgetq_lane_u8(a, 0);
+        }
+        int main(void) { return test(); }
+      " LIBDEFLATE_HAS_SHA3_ASSEMBLER)
+    else()
+      set(LIBDEFLATE_SAVED_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -march=armv8.2-a+crypto+crc+sha3")
+      check_c_source_compiles("
+        #include <arm_neon.h>
+        int main(void) {
+          uint8x16_t a = vdupq_n_u8(0);
+          uint8x16_t b = vdupq_n_u8(0);
+          uint8x16_t c = vdupq_n_u8(0);
+          a = veor3q_u8(a, b, c);
+          return 0;
+        }
+      " LIBDEFLATE_HAS_SHA3_ASSEMBLER)
+      set(CMAKE_REQUIRED_FLAGS "${LIBDEFLATE_SAVED_CMAKE_REQUIRED_FLAGS}")
+    endif()
+    if(NOT LIBDEFLATE_HAS_SHA3_ASSEMBLER)
+      target_compile_definitions(libdeflate PRIVATE
+        LIBDEFLATE_ASSEMBLER_DOES_NOT_SUPPORT_SHA3)
+    endif()
   endif()
 
   target_include_directories(libdeflate PUBLIC
