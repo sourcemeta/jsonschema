@@ -1,10 +1,11 @@
+import {
+  ANNOTATION_EMIT, ANNOTATION_TO_PARENT, ANNOTATION_BASENAME_TO_PARENT,
+  CONTROL_GROUP as CONTROL_GROUP_START,
+  CONTROL_EVALUATE as CONTROL_EVALUATE_END
+} from './opcodes.mjs';
+
 const JSON_VERSION = 4;
 const DEPTH_LIMIT = 300;
-const ANNOTATION_EMIT = 49;
-const ANNOTATION_TO_PARENT = 50;
-const ANNOTATION_BASENAME_TO_PARENT = 51;
-const CONTROL_GROUP_START = 92;
-const CONTROL_EVALUATE_END = 96;
 const URI_REGEX = /^[a-zA-Z][a-zA-Z0-9+\-.]*:[^\s]*$/;
 
 function buildJsonPointer(tokens, length) {
@@ -423,7 +424,13 @@ class Blaze {
     this._nativeValidate = generateNativeValidator(template);
   }
 
-  validate(instance, callback) {
+  validate(instance, callbackOrFormat) {
+    if (typeof callbackOrFormat === 'string') {
+      return runStandard(this, instance, callbackOrFormat);
+    }
+
+    const callback = callbackOrFormat;
+
     if (callback === undefined && this._nativeValidate) {
       return this._nativeValidate(instance, this);
     }
@@ -3967,4 +3974,178 @@ fastHandlers[89] = LoopItemsIntegerBounded_fast;
 fastHandlers[90] = LoopItemsIntegerBoundedSized_fast;
 fastHandlers[97] = ControlDynamicAnchorJump_fast;
 
+import { describe } from './describe.mjs';
+
+const STANDARD_MASK_KEYWORDS =
+  new Set([ 'anyOf', 'oneOf', 'not', 'if', 'contains' ]);
+
+function isAnnotationOpcode(opcode) {
+  return opcode >= ANNOTATION_EMIT && opcode <= ANNOTATION_BASENAME_TO_PARENT;
+}
+
+function lastEvaluatePathToken(evaluatePath) {
+  const lastSlash = evaluatePath.lastIndexOf('/');
+  if (lastSlash < 0) return '';
+  return evaluatePath.slice(lastSlash + 1);
+}
+
+function isPathPrefix(path, prefix) {
+  if (path === prefix) return true;
+  return path.startsWith(prefix) && path[prefix.length] === '/';
+}
+
+function maskKey(evaluatePath, instanceLocation) {
+  return evaluatePath + '\u0000' + instanceLocation;
+}
+
+class SimpleOutput {
+  constructor(instance) {
+    this.instance = instance;
+    this.errors = [];
+    this.mask = [];
+    this.maskedTraces = new Map();
+    this.annotations = new Map();
+  }
+
+  callback(type, valid, instruction, evaluatePath, instanceLocation, annotation) {
+    if (evaluatePath === '') return;
+
+    const opcode = instruction[0];
+    const isAnnotation = isAnnotationOpcode(opcode);
+    const keyword = lastEvaluatePathToken(evaluatePath);
+
+    if (valid && !isAnnotation) {
+      if (type === 'pre' && STANDARD_MASK_KEYWORDS.has(keyword)) {
+        this.mask.push({
+          evaluatePath, instanceLocation,
+          key: maskKey(evaluatePath, instanceLocation)
+        });
+      } else if (type === 'post' && this.mask.length > 0) {
+        const top = this.mask[this.mask.length - 1];
+        if (top.evaluatePath === evaluatePath &&
+            top.instanceLocation === instanceLocation) {
+          this.maskedTraces.delete(top.key);
+          this.mask.pop();
+        }
+      }
+      return;
+    }
+
+    if (isAnnotation) {
+      if (type !== 'post') return;
+      const annotationKey =
+        evaluatePath + '\u0000' + instanceLocation + '\u0000' + instruction[3];
+      let bucket = this.annotations.get(annotationKey);
+      if (bucket === undefined) {
+        bucket = {
+          keywordLocation: evaluatePath,
+          absoluteKeywordLocation: instruction[3],
+          instanceLocation,
+          annotation: [ annotation ]
+        };
+        this.annotations.set(annotationKey, bucket);
+      } else {
+        const last = bucket.annotation[bucket.annotation.length - 1];
+        let isSame = last === annotation;
+        if (!isSame && Array.isArray(last) && Array.isArray(annotation) &&
+            last.length === annotation.length) {
+          isSame = last.every((value, index) => value === annotation[index]);
+        }
+        if (!isSame) bucket.annotation.push(annotation);
+      }
+      return;
+    }
+
+    if (type === 'pre') {
+      if (STANDARD_MASK_KEYWORDS.has(keyword)) {
+        this.mask.push({
+          evaluatePath, instanceLocation,
+          key: maskKey(evaluatePath, instanceLocation)
+        });
+      }
+      return;
+    }
+
+    const currentKey = maskKey(evaluatePath, instanceLocation);
+    const matchIndex = this.mask.findIndex(entry => entry.key === currentKey);
+    if (matchIndex >= 0) {
+      if (!valid && keyword !== 'not' && keyword !== 'if') {
+        const buffered = this.maskedTraces.get(currentKey);
+        if (buffered !== undefined) {
+          for (const entry of buffered) this.errors.push(entry);
+          this.maskedTraces.delete(currentKey);
+        }
+      } else {
+        this.maskedTraces.delete(currentKey);
+      }
+      this.mask.splice(matchIndex, 1);
+    }
+
+    if (valid) return;
+
+    if (this.annotations.size > 0) {
+      const lastSlash = evaluatePath.lastIndexOf('/');
+      const parentPath = lastSlash <= 0 ? '' : evaluatePath.slice(0, lastSlash);
+      for (const [ key, value ] of this.annotations) {
+        if (value.instanceLocation === instanceLocation &&
+            (parentPath === '' ||
+             isPathPrefix(value.keywordLocation, parentPath))) {
+          this.annotations.delete(key);
+        }
+      }
+    }
+
+    if (keyword === 'if') return;
+
+    const entry = {
+      keywordLocation: evaluatePath,
+      absoluteKeywordLocation: instruction[3],
+      instanceLocation,
+      error: describe(valid, instruction, evaluatePath, instanceLocation,
+                      this.instance, annotation)
+    };
+
+    for (const maskEntry of this.mask) {
+      if (isPathPrefix(evaluatePath, maskEntry.evaluatePath)) {
+        let buffer = this.maskedTraces.get(maskEntry.key);
+        if (buffer === undefined) {
+          buffer = [];
+          this.maskedTraces.set(maskEntry.key, buffer);
+        }
+        buffer.push(entry);
+        return;
+      }
+    }
+
+    this.errors.push(entry);
+  }
+
+  toBasic(valid) {
+    if (valid) {
+      const result = { valid: true };
+      if (this.annotations.size > 0) {
+        result.annotations = [ ...this.annotations.values() ];
+      }
+      return result;
+    }
+    return { valid: false, errors: this.errors };
+  }
+}
+
+function runStandard(evaluator, instance, format) {
+  if (format === 'flag') {
+    return { valid: evaluator.validate(instance) };
+  }
+  if (format !== 'basic') {
+    throw new Error(`Unknown standard output format: ${format}`);
+  }
+  const collector = new SimpleOutput(instance);
+  const valid = evaluator.validate(instance,
+    (type, ok, instruction, evaluatePath, instanceLocation, annotation) =>
+      collector.callback(type, ok, instruction, evaluatePath, instanceLocation,
+                         annotation));
+  return collector.toBasic(valid);
+}
+
 export { Blaze };
+export { describe } from './describe.mjs';
