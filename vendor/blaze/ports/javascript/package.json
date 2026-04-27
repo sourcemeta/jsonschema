@@ -20,7 +20,7 @@
     "url": "https://www.sourcemeta.com"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=21.7"
   },
   "funding": "https://github.com/sponsors/sourcemeta",
   "keywords": [
@@ -66,6 +66,8 @@
   "files": [
     "index.mjs",
     "index.d.mts",
+    "opcodes.mjs",
+    "describe.mjs",
     "README.md",
     "LICENSE"
   ]
