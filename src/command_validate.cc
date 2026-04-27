@@ -538,11 +538,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                   "given a single instance"};
       }
 
-      const auto instance_path_string{instance_path.string()};
       if (instance_path_view == "-" ||
           std::filesystem::is_directory(instance_path) ||
           instance_path.extension() == ".jsonl" ||
-          instance_path_string.ends_with(".jsonl.gz") ||
+          instance_path.string().ends_with(".jsonl.gz") ||
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
         for (const auto &entry : for_each_json({instance_path_view}, options)) {
