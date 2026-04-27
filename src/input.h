@@ -285,7 +285,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
       if (canonical_string.ends_with(".jsonl.gz")) {
         LOG_VERBOSE(options) << "Interpreting input as GZIP-compressed JSONL: "
                              << canonical_string << "\n";
-        std::ifstream stream{canonical, std::ios::binary};
+        std::ifstream stream{sourcemeta::core::canonical(canonical),
+                             std::ios::binary};
         stream.exceptions(std::ifstream::badbit);
         std::size_t index{0};
         try {
