@@ -2,6 +2,7 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_INPUT_H_
 
 #include <sourcemeta/blaze/configuration.h>
+#include <sourcemeta/core/gzip.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonl.h>
@@ -280,7 +281,40 @@ handle_json_entry(const std::filesystem::path &entry_path,
                      [&canonical](const auto &prefix) {
                        return sourcemeta::core::starts_with(canonical, prefix);
                      })) {
-      if (canonical.extension() == ".jsonl") {
+      const auto canonical_string{canonical.string()};
+      if (canonical_string.ends_with(".jsonl.gz")) {
+        LOG_VERBOSE(options) << "Interpreting input as GZIP-compressed JSONL: "
+                             << canonical_string << "\n";
+        std::ifstream stream{canonical, std::ios::binary};
+        stream.exceptions(std::ifstream::badbit);
+        std::size_t index{0};
+        try {
+          for (const auto &document : sourcemeta::core::JSONL{
+                   stream, sourcemeta::core::JSONL::Mode::GZIP}) {
+            // TODO: Get real positions for JSONL
+            sourcemeta::core::PointerPositionTracker positions;
+            result.push_back({canonical.string(),
+                              canonical,
+                              document,
+                              std::move(positions),
+                              index,
+                              true,
+                              false,
+                              false,
+                              {}});
+            index += 1;
+          }
+        } catch (const sourcemeta::core::GZIPError &error) {
+          throw sourcemeta::core::FileError<sourcemeta::core::GZIPError>(
+              canonical, error.what());
+        } catch (const sourcemeta::core::JSONParseError &error) {
+          throw sourcemeta::core::JSONFileParseError(canonical, error);
+        }
+
+        if (index == 0) {
+          LOG_WARNING() << "The JSONL file is empty\n";
+        }
+      } else if (canonical.extension() == ".jsonl") {
         LOG_VERBOSE(options)
             << "Interpreting input as JSONL: " << canonical.string() << "\n";
         auto stream{sourcemeta::core::read_file(canonical)};

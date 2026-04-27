@@ -5,7 +5,7 @@ Validating
 > JSON Schema Draft 3 and older are not supported at this point in time.
 
 ```sh
-jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
+jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
   [--http/-h] [--verbose/-v] [--debug/-g]
   [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
@@ -34,6 +34,10 @@ code 2.
 > When validating JSONL datasets, the command stops at the first entry that
 > fails validation. Pass `--continue`/`-c` to report all failing entries
 > instead.
+
+> [!TIP]
+> GZIP-compressed JSONL datasets (`.jsonl.gz`) are transparently decompressed
+> during validation. No additional options are needed.
 
 > [!NOTE]
 > Annotations are only printed when passing the `--verbose`/`-v` or the
@@ -144,6 +148,12 @@ jsonschema validate path/to/my/schema.json \
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl
+```
+
+### Validate a GZIP-compressed JSONL dataset against a schema
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/dataset.jsonl.gz
 ```
 
 ### Validate a JSONL dataset reporting all failures

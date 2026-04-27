@@ -520,7 +520,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   } else {
     for (const auto &instance_path_view : instance_arguments) {
       const std::filesystem::path instance_path{instance_path_view};
-      if (trace && instance_path.extension() == ".jsonl") {
+      if (trace && (instance_path.extension() == ".jsonl" ||
+                    instance_path.string().ends_with(".jsonl.gz"))) {
         throw OptionConflictError{
             "The `--trace/-t` option is only allowed given a single instance"};
       }
@@ -537,9 +538,11 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                   "given a single instance"};
       }
 
+      const auto instance_path_string{instance_path.string()};
       if (instance_path_view == "-" ||
           std::filesystem::is_directory(instance_path) ||
           instance_path.extension() == ".jsonl" ||
+          instance_path_string.ends_with(".jsonl.gz") ||
           instance_path.extension() == ".yaml" ||
           instance_path.extension() == ".yml") {
         for (const auto &entry : for_each_json({instance_path_view}, options)) {
