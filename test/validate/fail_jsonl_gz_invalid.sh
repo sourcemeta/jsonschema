@@ -20,6 +20,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl.gz" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
@@ -29,8 +30,10 @@ EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
+# JSON error
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl.gz" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"

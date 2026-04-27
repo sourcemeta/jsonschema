@@ -24,6 +24,7 @@ EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.jsonl.gz" --continue --verbose 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Validation failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
