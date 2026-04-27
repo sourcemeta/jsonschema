@@ -6,6 +6,7 @@
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/core/error.h>
+#include <sourcemeta/core/gzip.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -890,6 +891,12 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_INVALID_CLI_ARGUMENTS;
+
+  } catch (
+      const sourcemeta::core::FileError<sourcemeta::core::GZIPError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
 
     // Standard library handlers
   } catch (const std::filesystem::filesystem_error &error) {

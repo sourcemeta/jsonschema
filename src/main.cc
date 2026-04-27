@@ -34,7 +34,7 @@ Commands:
 
        Print this command reference help.
 
-   validate <schema.json|.yaml> <instance.json|.jsonl|.yaml|directory...>
+   validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
