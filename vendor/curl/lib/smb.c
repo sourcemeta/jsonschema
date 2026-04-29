@@ -25,7 +25,7 @@
 #include "curl_setup.h"
 #include "urldata.h"
 
-#if !defined(CURL_DISABLE_SMB) && defined(USE_CURL_NTLM_CORE)
+#if defined(CURL_ENABLE_SMB) && defined(USE_CURL_NTLM_CORE)
 
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>  /* for htons() */
@@ -376,7 +376,7 @@ static void smb_easy_dtor(void *key, size_t klen, void *entry)
   struct smb_request *req = entry;
   (void)key;
   (void)klen;
-  Curl_safefree(req->path);
+  curlx_safefree(req->path);
   curlx_free(req);
 }
 
@@ -385,10 +385,10 @@ static void smb_conn_dtor(void *key, size_t klen, void *entry)
   struct smb_conn *smbc = entry;
   (void)key;
   (void)klen;
-  Curl_safefree(smbc->share);
-  Curl_safefree(smbc->domain);
-  Curl_safefree(smbc->recv_buf);
-  Curl_safefree(smbc->send_buf);
+  curlx_safefree(smbc->share);
+  curlx_safefree(smbc->domain);
+  curlx_safefree(smbc->recv_buf);
+  curlx_safefree(smbc->send_buf);
   curlx_free(smbc);
 }
 
@@ -406,7 +406,7 @@ static CURLcode smb_parse_url_path(struct Curl_easy *data,
     return result;
 
   /* Parse the path for the share */
-  Curl_safefree(smbc->share);
+  curlx_safefree(smbc->share);
   smbc->share = curlx_strdup((*path == '/' || *path == '\\')
                              ? path + 1 : path);
   curlx_free(path);
@@ -419,7 +419,7 @@ static CURLcode smb_parse_url_path(struct Curl_easy *data,
 
   /* The share must be present */
   if(!slash) {
-    Curl_safefree(smbc->share);
+    curlx_safefree(smbc->share);
     failf(data, "missing share in URL path for SMB");
     return CURLE_URL_MALFORMAT;
   }
@@ -1208,7 +1208,7 @@ static CURLcode smb_do(struct Curl_easy *data, bool *done)
 /*
  * SMB handler interface
  */
-static const struct Curl_protocol Curl_protocol_smb = {
+const struct Curl_protocol Curl_protocol_smb = {
   smb_setup_connection,                 /* setup_connection */
   smb_do,                               /* do_it */
   ZERO_NULL,                            /* done */
@@ -1223,42 +1223,9 @@ static const struct Curl_protocol Curl_protocol_smb = {
   ZERO_NULL,                            /* disconnect */
   ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* write_resp_hd */
-  ZERO_NULL,                            /* connection_check */
+  ZERO_NULL,                            /* connection_is_dead */
   ZERO_NULL,                            /* attach connection */
   ZERO_NULL,                            /* follow */
 };
 
-#endif /* CURL_DISABLE_SMB && USE_CURL_NTLM_CORE && SIZEOF_CURL_OFF_T > 4 */
-
-/*
- * SMB handler interface
- */
-const struct Curl_scheme Curl_scheme_smb = {
-  "smb",                                /* scheme */
-#if defined(CURL_DISABLE_SMB) || !defined(USE_CURL_NTLM_CORE)
-  ZERO_NULL,
-#else
-  &Curl_protocol_smb,
-#endif
-  CURLPROTO_SMB,                        /* protocol */
-  CURLPROTO_SMB,                        /* family */
-  PROTOPT_CONN_REUSE,                   /* flags */
-  PORT_SMB,                             /* defport */
-};
-
-/*
- * SMBS handler interface
- */
-const struct Curl_scheme Curl_scheme_smbs = {
-  "smbs",                               /* scheme */
-#if defined(CURL_DISABLE_SMB) || !defined(USE_CURL_NTLM_CORE) || \
-  !defined(USE_SSL)
-  ZERO_NULL,
-#else
-  &Curl_protocol_smb,
-#endif
-  CURLPROTO_SMBS,                       /* protocol */
-  CURLPROTO_SMB,                        /* family */
-  PROTOPT_SSL | PROTOPT_CONN_REUSE,     /* flags */
-  PORT_SMBS,                            /* defport */
-};
+#endif /* CURL_ENABLE_SMB && USE_CURL_NTLM_CORE && SIZEOF_CURL_OFF_T > 4 */

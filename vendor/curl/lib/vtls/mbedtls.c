@@ -265,9 +265,11 @@ static uint16_t mbed_cipher_suite_walk_str(const char **str, const char **end)
 {
   uint16_t id = Curl_cipher_suite_walk_str(str, end);
   size_t len = *end - *str;
+  static const char ecjpake_suite[] = "TLS_ECJPAKE_WITH_AES_128_CCM_8";
 
   if(!id) {
-    if(curl_strnequal("TLS_ECJPAKE_WITH_AES_128_CCM_8", *str, len))
+    if((len == sizeof(ecjpake_suite) - 1) &&
+       curl_strnequal(ecjpake_suite, *str, len))
       id = MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8;
   }
   return id;
@@ -423,7 +425,7 @@ static void mbed_extract_certinfo(struct Curl_easy *data,
     cert_count++;
 
   if(cert_count > MAX_ALLOWED_CERT_AMOUNT) {
-    infof(data, "Certificates is more than allowed (%u), skipping certinfo",
+    infof(data, "More certificates than allowed (%d), skipping certinfo",
           MAX_ALLOWED_CERT_AMOUNT);
     return;
   }
@@ -517,8 +519,8 @@ static CURLcode mbed_load_cacert(struct Curl_cfilter *cf,
       curlx_free(newblob);
     }
 #else
-    /* DER encoded certs do not need to be null terminated because it is a
-       binary format. So if we are not compiling with PEM_PARSE we can avoid
+    /* DER encoded certs do not need to be null-terminated because it is a
+       binary format. Thus, if we are not compiling with PEM_PARSE we can avoid
        the extra memory copies altogether. */
     ret = mbedtls_x509_crt_parse_der(&backend->cacert, ca_info_blob->data,
                                      ca_info_blob->len);
@@ -630,8 +632,8 @@ static CURLcode mbed_load_clicert(struct Curl_cfilter *cf,
       curlx_free(newblob);
     }
 #else
-    /* DER encoded certs do not need to be null terminated because it is a
-       binary format. So if we are not compiling with PEM_PARSE we can avoid
+    /* DER encoded certs do not need to be null-terminated because it is a
+       binary format. Thus, if we are not compiling with PEM_PARSE we can avoid
        the extra memory copies altogether. */
     ret = mbedtls_x509_crt_parse_der(&backend->clicert, ssl_cert_blob->data,
                                      ssl_cert_blob->len);
@@ -932,8 +934,8 @@ static CURLcode mbed_configure_ssl(struct Curl_cfilter *cf,
   if(mbedtls_ssl_set_hostname(&backend->ssl, connssl->peer.sni ?
                               connssl->peer.sni : connssl->peer.hostname)) {
     /* mbedtls_ssl_set_hostname() sets the name to use in CN/SAN checks and
-       the name to set in the SNI extension. So even if curl connects to a
-       host specified as an IP address, this function must be used. */
+       the name to set in the SNI extension. Thus even if curl connects to
+       a host specified as an IP address, this function must be used. */
     failf(data, "Failed to set SNI");
     return CURLE_SSL_CONNECT_ERROR;
   }
@@ -1210,7 +1212,7 @@ static CURLcode mbed_send(struct Curl_cfilter *cf, struct Curl_easy *data,
   connssl->io_need = CURL_SSL_IO_NEED_NONE;
   /* mbedTLS is picky when a mbedtls_ssl_write() was previously blocked.
    * It requires to be called with the same amount of bytes again, or it
-   * will lose bytes, e.g. reporting all was sent but they were not.
+   * loses bytes, e.g. reporting all was sent but they were not.
    * Remember the blocked length and use that when set. */
   if(backend->send_blocked) {
     DEBUGASSERT(backend->send_blocked_len <= len);
@@ -1353,15 +1355,15 @@ static void mbedtls_close(struct Curl_cfilter *cf, struct Curl_easy *data)
 
   (void)data;
   DEBUGASSERT(backend);
-  if(backend->initialized) {
-    mbedtls_pk_free(&backend->pk);
-    mbedtls_x509_crt_free(&backend->clicert);
-    mbedtls_x509_crt_free(&backend->cacert);
+  mbedtls_pk_free(&backend->pk);
+  mbedtls_x509_crt_free(&backend->clicert);
+  mbedtls_x509_crt_free(&backend->cacert);
 #ifdef MBEDTLS_X509_CRL_PARSE_C
-    mbedtls_x509_crl_free(&backend->crl);
+  mbedtls_x509_crl_free(&backend->crl);
 #endif
-    Curl_safefree(backend->ciphersuites);
-    mbedtls_ssl_config_free(&backend->config);
+  curlx_safefree(backend->ciphersuites);
+  mbedtls_ssl_config_free(&backend->config);
+  if(backend->initialized) {
     mbedtls_ssl_free(&backend->ssl);
     backend->initialized = FALSE;
   }
@@ -1511,11 +1513,9 @@ static int mbedtls_init(void)
   ret = mbedtls_ctr_drbg_seed(&rng.drbg, mbedtls_entropy_func, &rng.entropy,
                               NULL, 0);
 
-  if(ret) {
-    failf(NULL, "failed: mbedtls_ctr_drbg_seed returned -0x%x",
-          (unsigned int)-ret);
+  if(ret)
+    /* mbedtls_ctr_drbg_seed returned error */
     return 0;
-  }
 
   /* To prevent an adversary from reading your random data,
      you can enable prediction resistance.

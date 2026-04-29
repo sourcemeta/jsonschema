@@ -126,7 +126,6 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/system_win32.c"
     "${CURL_DIR}/lib/transfer.c"
     "${CURL_DIR}/lib/curl_gssapi.h"
-    "${CURL_DIR}/lib/curl_rtmp.c"
     "${CURL_DIR}/lib/select.c"
     "${CURL_DIR}/lib/curl_fnmatch.h"
     "${CURL_DIR}/lib/getinfo.h"
@@ -237,7 +236,6 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/curlx/inet_pton.h"
     "${CURL_DIR}/lib/curlx/inet_ntop.h"
     "${CURL_DIR}/lib/curlx/wait.h"
-    "${CURL_DIR}/lib/curlx/curlx.h"
     "${CURL_DIR}/lib/curlx/base64.c"
     "${CURL_DIR}/lib/curlx/version_win32.h"
     "${CURL_DIR}/lib/curlx/dynbuf.h"
@@ -365,10 +363,20 @@ if(NOT CURL_FOUND)
     "${CURL_DIR}/lib/getinfo.c"
     "${CURL_DIR}/lib/http1.h"
     "${CURL_DIR}/lib/cw-out.c"
-    "${CURL_DIR}/lib/curl_rtmp.h"
     "${CURL_DIR}/lib/curl_gssapi.c"
     "${CURL_DIR}/lib/curl_fnmatch.c"
-    "${CURL_DIR}/lib/select.h")
+    "${CURL_DIR}/lib/select.h"
+    "${CURL_DIR}/lib/cf-dns.c"
+    "${CURL_DIR}/lib/cf-dns.h"
+    "${CURL_DIR}/lib/dnscache.c"
+    "${CURL_DIR}/lib/dnscache.h"
+    "${CURL_DIR}/lib/ftp-int.h"
+    "${CURL_DIR}/lib/protocol.c"
+    "${CURL_DIR}/lib/protocol.h"
+    "${CURL_DIR}/lib/thrdpool.c"
+    "${CURL_DIR}/lib/thrdpool.h"
+    "${CURL_DIR}/lib/thrdqueue.c"
+    "${CURL_DIR}/lib/thrdqueue.h")
 
   if(SOURCEMETA_COMPILER_MSVC)
     target_compile_options(curl PRIVATE /W3 /MP /wd4996 /wd4273 /wd4311 /GS-)
@@ -452,6 +460,7 @@ if(NOT CURL_FOUND)
     target_link_libraries(curl PRIVATE ws2_32)
     target_link_libraries(curl PRIVATE Crypt32)
     target_link_libraries(curl PRIVATE Secur32)
+    target_link_libraries(curl PRIVATE Bcrypt)
     target_link_libraries(curl PRIVATE Iphlpapi)
   elseif(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
     set(CURL_OS "\"MSYS\"")
@@ -484,6 +493,7 @@ if(NOT CURL_FOUND)
     set(CURL_CA_PATH "/etc/ssl/certs")
     set(USE_MBEDTLS ON)
     set(USE_ARES ON)
+    set(USE_RESOLV_ARES ON)
     set(HAVE_POLL ON)
     set(HAVE_FCNTL_O_NONBLOCK ON)
     set(HAVE_FCNTL_H ON)
@@ -505,6 +515,7 @@ if(NOT CURL_FOUND)
     set(CURL_CA_PATH "/etc/ssl/certs")
     set(USE_MBEDTLS ON)
     set(USE_ARES ON)
+    set(USE_RESOLV_ARES ON)
     set(HAVE_POLL ON)
     set(HAVE_FCNTL_O_NONBLOCK ON)
     set(HAVE_FCNTL_H ON)

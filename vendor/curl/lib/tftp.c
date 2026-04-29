@@ -175,7 +175,7 @@ static CURLcode tftp_set_timeouts(struct tftp_conn *state)
   /* Average reposting an ACK after 5 seconds */
   state->retry_max = (int)timeout / 5;
 
-  /* But bound the total number */
+  /* Bound the total number */
   if(state->retry_max < 3)
     state->retry_max = 3;
 
@@ -300,8 +300,8 @@ static CURLcode tftp_parse_option_ack(struct tftp_conn *state,
         return CURLE_TFTP_ILLEGAL;
       }
 
-      state->blksize = (int)blksize;
-      infof(data, "blksize parsed from OACK (%d) requested (%d)",
+      state->blksize = (unsigned int)blksize;
+      infof(data, "blksize parsed from OACK (%u) requested (%u)",
             state->blksize, state->requested_blksize);
     }
     else if(checkprefix(TFTP_OPTION_TSIZE, option)) {
@@ -370,9 +370,9 @@ static CURLcode tftp_tx(struct tftp_conn *state, tftp_event_t event)
       int rblock = getrpacketblock(&state->rpacket);
 
       if(rblock != state->block &&
-         /* There is a bug in tftpd-hpa that causes it to send us an ack for
-          * 65535 when the block number wraps to 0. So when we are expecting
-          * 0, also accept 65535. See
+         /* There is a bug in tftpd-hpa that causes it to send us an ACK for
+          * 65535 when the block number wraps to 0. To handle it, when we are
+          * expecting 0, also accept 65535. See
           * https://www.syslinux.org/archives/2010-September/015612.html
           * */
          !(state->block == 0 && rblock == 65535)) {
@@ -418,7 +418,7 @@ static CURLcode tftp_tx(struct tftp_conn *state, tftp_event_t event)
       return CURLE_OK;
     }
 
-    /* TFTP considers data block size < 512 bytes as an end of session. So
+    /* TFTP considers data block size < 512 bytes as an end of session, so
      * in some cases we must wait for additional data to build full (512 bytes)
      * data block.
      * */
@@ -717,7 +717,7 @@ static CURLcode tftp_send_first(struct tftp_conn *state,
         result = tftp_option_add(state, &sbytes, sbytes, buf);
 
       /* add blksize option */
-      curl_msnprintf(buf, sizeof(buf), "%d", state->requested_blksize);
+      curl_msnprintf(buf, sizeof(buf), "%u", state->requested_blksize);
       if(result == CURLE_OK)
         result = tftp_option_add(state, &sbytes, sbytes, TFTP_OPTION_BLKSIZE);
       if(result == CURLE_OK)
@@ -883,8 +883,8 @@ static void tftp_conn_dtor(void *key, size_t klen, void *entry)
   struct tftp_conn *state = entry;
   (void)key;
   (void)klen;
-  Curl_safefree(state->rpacket.data);
-  Curl_safefree(state->spacket.data);
+  curlx_safefree(state->rpacket.data);
+  curlx_safefree(state->spacket.data);
   curlx_free(state);
 }
 
@@ -1332,7 +1332,7 @@ static CURLcode tftp_setup_connection(struct Curl_easy *data,
 /*
  * TFTP protocol handler.
  */
-static const struct Curl_protocol Curl_protocol_tftp = {
+const struct Curl_protocol Curl_protocol_tftp = {
   tftp_setup_connection,                /* setup_connection */
   tftp_do,                              /* do_it */
   tftp_done,                            /* done */
@@ -1347,25 +1347,9 @@ static const struct Curl_protocol Curl_protocol_tftp = {
   ZERO_NULL,                            /* disconnect */
   ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* write_resp_hd */
-  ZERO_NULL,                            /* connection_check */
+  ZERO_NULL,                            /* connection_is_dead */
   ZERO_NULL,                            /* attach connection */
   ZERO_NULL,                            /* follow */
 };
 
 #endif
-
-/*
- * TFTP protocol handler.
- */
-const struct Curl_scheme Curl_scheme_tftp = {
-  "tftp",                               /* scheme */
-#ifdef CURL_DISABLE_TFTP
-  ZERO_NULL,
-#else
-  &Curl_protocol_tftp,
-#endif
-  CURLPROTO_TFTP,                       /* protocol */
-  CURLPROTO_TFTP,                       /* family */
-  PROTOPT_NOTCPPROXY | PROTOPT_NOURLQUERY, /* flags */
-  PORT_TFTP,                            /* defport */
-};

@@ -253,7 +253,7 @@ static CURLMcode mev_sh_entry_update(struct Curl_multi *multi,
   DEBUGASSERT(entry->writers + entry->readers);
 
   CURL_TRC_M(data, "ev update fd=%" FMT_SOCKET_T ", action '%s%s' -> '%s%s'"
-             " (%d/%d r/w)", s,
+             " (%u/%u r/w)", s,
              (last_action & CURL_POLL_IN) ? "IN" : "",
              (last_action & CURL_POLL_OUT) ? "OUT" : "",
              (cur_action & CURL_POLL_IN) ? "IN" : "",
@@ -603,10 +603,8 @@ void Curl_multi_ev_xfer_done(struct Curl_multi *multi,
                              struct Curl_easy *data)
 {
   DEBUGASSERT(!data->conn); /* transfer should have been detached */
-  if(data != multi->admin) {
-    (void)mev_assess(multi, data, NULL);
-    Curl_meta_remove(data, CURL_META_MEV_POLLSET);
-  }
+  (void)mev_assess(multi, data, NULL);
+  Curl_meta_remove(data, CURL_META_MEV_POLLSET);
 }
 
 void Curl_multi_ev_conn_done(struct Curl_multi *multi,

@@ -220,7 +220,7 @@
 /* ================================================================ */
 
 /* Give calloc a chance to be dragging in early, so we do not redefine */
-#if defined(USE_THREADS_POSIX) && defined(HAVE_PTHREAD_H)
+#ifdef HAVE_THREADS_POSIX
 #  include <pthread.h>
 #endif
 
@@ -257,9 +257,6 @@
 #  endif
 #  ifndef CURL_DISABLE_RTSP
 #  define CURL_DISABLE_RTSP
-#  endif
-#  ifndef CURL_DISABLE_SMB
-#  define CURL_DISABLE_SMB
 #  endif
 #  ifndef CURL_DISABLE_SMTP
 #  define CURL_DISABLE_SMTP
@@ -368,16 +365,14 @@
 #endif
 
 /* based on logic in "curl/mprintf.h" */
-#if (defined(__GNUC__) || defined(__clang__) ||                         \
-  defined(__IAR_SYSTEMS_ICC__)) &&                                      \
-  defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) &&         \
+#if (defined(__GNUC__) || defined(__clang__) ||                 \
+     defined(__IAR_SYSTEMS_ICC__)) &&                           \
+  defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) && \
   !defined(CURL_NO_FMT_CHECKS)
 #if defined(__MINGW32__) && !defined(__clang__)
-#define CURL_PRINTF(fmt, arg) \
-  __attribute__((format(gnu_printf, fmt, arg)))
+#define CURL_PRINTF(fmt, arg) __attribute__((format(gnu_printf, fmt, arg)))
 #else
-#define CURL_PRINTF(fmt, arg) \
-  __attribute__((format(__printf__, fmt, arg)))
+#define CURL_PRINTF(fmt, arg) __attribute__((format(__printf__, fmt, arg)))
 #endif
 #else
 #define CURL_PRINTF(fmt, arg)
@@ -395,7 +390,7 @@
    (defined(__GNUC__) && __GNUC__ <= 14)) &&                \
   defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && \
   !defined(__ENVIRONMENT_OS_VERSION_MIN_REQUIRED__)
-#define __ENVIRONMENT_OS_VERSION_MIN_REQUIRED__             \
+#define __ENVIRONMENT_OS_VERSION_MIN_REQUIRED__ \
   __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
 #endif
 
@@ -442,7 +437,7 @@
 #    if !(defined(__NEWLIB__) || \
           (defined(__CLIB2__) && defined(__THREAD_SAFE)))
        /* disable threaded resolver with clib2 - requires newlib or clib-ts */
-#      undef USE_THREADS_POSIX
+#      undef USE_RESOLV_THREADED
 #    endif
 #  endif
 #  include <exec/types.h>
@@ -685,6 +680,16 @@
 
 #endif /* _WIN32 */
 
+/* We want to use mutex when available. */
+#if defined(HAVE_THREADS_POSIX) || defined(_WIN32)
+#define USE_MUTEX
+#endif
+
+/* threaded resolver is the only feature requiring threads. */
+#ifdef USE_RESOLV_THREADED
+#define USE_THREADS
+#endif
+
 /* ---------------------------------------------------------------- */
 /*             resolver specialty compile-time defines              */
 /*         CURLRES_* defines to use in the host*.c sources          */
@@ -702,12 +707,10 @@
 #  define CURLRES_IPV4
 #endif
 
-#if defined(USE_THREADS_POSIX) || defined(USE_THREADS_WIN32)
+#ifdef USE_RESOLV_THREADED
 #  define CURLRES_ASYNCH
-#  define CURLRES_THREADED
-#elif defined(USE_ARES)
+#elif defined(USE_RESOLV_ARES)
 #  define CURLRES_ASYNCH
-#  define CURLRES_ARES
 /* now undef the stock libc functions to avoid them being used */
 #  undef HAVE_GETADDRINFO
 #  undef HAVE_FREEADDRINFO
@@ -728,8 +731,7 @@
 #endif
 
 #if defined(USE_GNUTLS) || defined(USE_OPENSSL) || defined(USE_MBEDTLS) || \
-  defined(USE_WOLFSSL) || defined(USE_SCHANNEL) || \
-  defined(USE_RUSTLS)
+  defined(USE_WOLFSSL) || defined(USE_SCHANNEL) || defined(USE_RUSTLS)
 #define USE_SSL    /* SSL support has been enabled */
 #endif
 
@@ -745,24 +747,24 @@
 #endif
 
 /* Single point where USE_SPNEGO definition might be defined */
-#if !defined(CURL_DISABLE_NEGOTIATE_AUTH) && \
-    (defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI))
+#if !defined(CURL_DISABLE_NEGOTIATE_AUTH) &&          \
+  (defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI))
 #define USE_SPNEGO
 #endif
 
 /* Single point where USE_KERBEROS5 definition might be defined */
-#if !defined(CURL_DISABLE_KERBEROS_AUTH) && \
-    (defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI))
+#if !defined(CURL_DISABLE_KERBEROS_AUTH) &&           \
+  (defined(HAVE_GSSAPI) || defined(USE_WINDOWS_SSPI))
 #define USE_KERBEROS5
 #endif
 
 /* Single point where USE_NTLM definition might be defined */
-#ifndef CURL_DISABLE_NTLM
-#  if (defined(USE_OPENSSL) && defined(HAVE_DES_ECB_ENCRYPT)) ||        \
-  defined(USE_GNUTLS) ||                                                \
-  (defined(USE_MBEDTLS) && defined(HAVE_MBEDTLS_DES_CRYPT_ECB)) ||      \
-  defined(USE_OS400CRYPTO) || defined(USE_WIN32_CRYPTO) ||              \
-  (defined(USE_WOLFSSL) && defined(HAVE_WOLFSSL_DES_ECB_ENCRYPT))
+#ifdef CURL_ENABLE_NTLM
+#  if (defined(USE_OPENSSL) && defined(HAVE_DES_ECB_ENCRYPT)) ||   \
+  defined(USE_GNUTLS) ||                                           \
+  (defined(USE_MBEDTLS) && defined(HAVE_MBEDTLS_DES_CRYPT_ECB)) || \
+  defined(USE_OS400CRYPTO) || defined(USE_WIN32_CRYPTO) ||         \
+  (defined(USE_WOLFSSL) && defined(HAVE_WC_DES_ECBENCRYPT))
 #    define USE_CURL_NTLM_CORE
 #  endif
 #  if defined(USE_CURL_NTLM_CORE) || defined(USE_WINDOWS_SSPI)
@@ -772,6 +774,16 @@
 
 #if defined(USE_LIBSSH2) || defined(USE_LIBSSH)
 #define USE_SSH
+#endif
+
+/* GCC <4.6 does not support '#pragma GCC diagnostic push' and does not support
+   'pragma GCC diagnostic' inside functions.
+   Use CURL_HAVE_DIAG to guard the above in the curl codebase, instead of
+   defined(__GNUC__) || defined(__clang__).
+ */
+#if defined(__clang__) || (defined(__GNUC__) && \
+  ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6))))
+#define CURL_HAVE_DIAG
 #endif
 
 /*
@@ -804,8 +816,8 @@
 /* fallthrough attribute */
 
 #ifndef FALLTHROUGH
-#if (defined(__GNUC__) && __GNUC__ >= 7) || \
-    (defined(__clang__) && __clang_major__ >= 10)
+#if (defined(__GNUC__) && __GNUC__ >= 7) ||     \
+  (defined(__clang__) && __clang_major__ >= 10)
 #  define FALLTHROUGH()  __attribute__((fallthrough))
 #else
 #  define FALLTHROUGH()  do {} while(0)
@@ -1000,7 +1012,7 @@ struct timeval {
  * 'bool' stuff compatible with HP-UX headers.
  */
 #if defined(__hpux) && !defined(HAVE_BOOL_T)
-   typedef int bool;
+typedef int bool;
 #  define false 0
 #  define true 1
 #  define HAVE_BOOL_T
@@ -1013,10 +1025,10 @@ struct timeval {
  * global namespace though, so use bool_false and bool_true.
  */
 #ifndef HAVE_BOOL_T
-  typedef enum {
-    bool_false = 0,
-    bool_true  = 1
-  } bool;
+typedef enum {
+  bool_false = 0,
+  bool_true = 1
+} bool;
 
 /*
  * Use a define to let 'true' and 'false' use those enums. There
@@ -1307,14 +1319,14 @@ extern curl_strdup_callback Curl_cstrdup;
 extern curl_calloc_callback Curl_ccalloc;
 
 /*
- * Curl_safefree defined as a macro to allow MemoryTracking feature
- * to log free() calls at same location where Curl_safefree is used.
+ * curlx_safefree() defined as a macro to allow MemoryTracking feature
+ * to log free() calls at same location where curlx_safefree() is used.
  * This macro also assigns NULL to given pointer when free'd.
  */
-#define Curl_safefree(ptr) \
-  do {                     \
-    curlx_free(ptr);       \
-    (ptr) = NULL;          \
+#define curlx_safefree(ptr) \
+  do {                      \
+    curlx_free(ptr);        \
+    (ptr) = NULL;           \
   } while(0)
 
 #include <curl/curl.h> /* for CURL_EXTERN, curl_socket_t, mprintf.h */
@@ -1375,7 +1387,8 @@ CURL_EXTERN void curl_dbg_mark_sclose(curl_socket_t sockfd,
                                       int line, const char *source);
 CURL_EXTERN int curl_dbg_sclose(curl_socket_t sockfd,
                                 int line, const char *source);
-CURL_EXTERN curl_socket_t curl_dbg_accept(curl_socket_t s, void *a, void *alen,
+CURL_EXTERN curl_socket_t curl_dbg_accept(curl_socket_t s,
+                                          void *saddr, void *saddrlen,
                                           int line, const char *source);
 #ifdef HAVE_ACCEPT4
 CURL_EXTERN curl_socket_t curl_dbg_accept4(curl_socket_t s, void *saddr,
@@ -1507,9 +1520,7 @@ int getpwuid_r(uid_t uid, struct passwd *pwd, char *buf,
 #define USE_HTTP2
 #endif
 
-#if (defined(USE_NGTCP2) && defined(USE_NGHTTP3)) || \
-  (defined(USE_OPENSSL_QUIC) && defined(USE_NGHTTP3)) || \
-  defined(USE_QUICHE)
+#if (defined(USE_NGTCP2) && defined(USE_NGHTTP3)) || defined(USE_QUICHE)
 
 #ifdef CURL_WITH_MULTI_SSL
 #error "MultiSSL combined with QUIC is not supported"

@@ -31,7 +31,7 @@
 #include "transfer.h"
 #include "cw-out.h"
 #include "cw-pause.h"
-
+#include "progress.h"
 
 /**
  * OVERALL DESIGN of this client writer
@@ -211,7 +211,7 @@ static CURLcode cw_out_cb_write(struct cw_out_ctx *ctx,
   }
   else if(nwritten != blen) {
     failf(data, "Failure writing output to destination, "
-          "passed %zu returned %zd", blen, nwritten);
+          "passed %zu returned %zu", blen, nwritten);
     return CURLE_WRITE_ERROR;
   }
   *pnwritten = nwritten;
@@ -228,8 +228,8 @@ static CURLcode cw_out_ptr_flush(struct cw_out_ctx *ctx,
   curl_write_callback wcb = NULL;
   void *wcb_data;
   size_t max_write, min_write;
-  size_t wlen, nwritten;
-  CURLcode result;
+  size_t wlen, nwritten = 0;
+  CURLcode result = CURLE_OK;
 
   /* If we errored once, we do not invoke the client callback again */
   if(ctx->errored)
@@ -253,10 +253,15 @@ static CURLcode cw_out_ptr_flush(struct cw_out_ctx *ctx,
       if(!flush_all && blen < min_write)
         break;
       wlen = max_write ? CURLMIN(blen, max_write) : blen;
-      result = cw_out_cb_write(ctx, data, wcb, wcb_data, otype,
-                               buf, wlen, &nwritten);
+      if(otype == CW_OUT_BODY)
+        result = Curl_pgrs_deliver_check(data, wlen);
+      if(!result)
+        result = cw_out_cb_write(ctx, data, wcb, wcb_data, otype,
+                                 buf, wlen, &nwritten);
       if(result)
         return result;
+      if(otype == CW_OUT_BODY)
+        Curl_pgrs_deliver_inc(data, nwritten);
       *pconsumed += nwritten;
       blen -= nwritten;
       buf += nwritten;
@@ -350,8 +355,8 @@ static CURLcode cw_out_append(struct cw_out_ctx *ctx,
   }
 
   /* if we do not have a buffer, or it is of another type, make a new one.
-   * And for CW_OUT_HDS always make a new one, so we "replay" headers
-   * exactly as they came in */
+   * For CW_OUT_HDS always make a new one, so we "replay" headers exactly
+   * as they came in */
   if(!ctx->buf || (ctx->buf->type != otype) || (otype == CW_OUT_HDS)) {
     struct cw_out_buf *cwbuf = cw_out_buf_create(otype);
     if(!cwbuf)

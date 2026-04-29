@@ -265,7 +265,7 @@ void Curl_hash_destroy(struct Curl_hash *h)
   DEBUGASSERT(h->init == HASHINIT);
   if(h->table) {
     Curl_hash_clean(h);
-    Curl_safefree(h->table);
+    curlx_safefree(h->table);
   }
   DEBUGASSERT(h->size == 0);
   h->slots = 0;
@@ -359,8 +359,8 @@ void Curl_hash_start_iterate(struct Curl_hash *hash,
 #endif
 }
 
-struct Curl_hash_element *
-Curl_hash_next_element(struct Curl_hash_iterator *iter)
+struct Curl_hash_element *Curl_hash_next_element(
+  struct Curl_hash_iterator *iter)
 {
   struct Curl_hash *h;
   DEBUGASSERT(iter->init == ITERINIT);

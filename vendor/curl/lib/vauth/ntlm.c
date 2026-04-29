@@ -152,7 +152,7 @@
 /* Indicates that 128-bit encryption is supported. */
 
 #define NTLMFLAG_NEGOTIATE_KEY_EXCHANGE          (1 << 30)
-/* Indicates that the client will provide an encrypted master key in
+/* Indicates that the client provides an encrypted master key in
    the "Session Key" field of the Type 3 message. */
 
 #define NTLMFLAG_NEGOTIATE_56                    (1 << 31)
@@ -424,7 +424,7 @@ CURLcode Curl_auth_create_ntlm_type1_message(struct Curl_easy *data,
                                              const char *userp,
                                              const char *passwdp,
                                              const char *service,
-                                             const char *hostname,
+                                             const char *host,
                                              struct ntlmdata *ntlm,
                                              struct bufref *out)
 {
@@ -445,7 +445,7 @@ CURLcode Curl_auth_create_ntlm_type1_message(struct Curl_easy *data,
   size_t size;
 
   char *ntlmbuf;
-  const char *host = "";              /* empty */
+  const char *hostname = "";          /* empty */
   const char *domain = "";            /* empty */
   size_t hostlen = 0;
   size_t domlen = 0;
@@ -456,7 +456,7 @@ CURLcode Curl_auth_create_ntlm_type1_message(struct Curl_easy *data,
   (void)userp;
   (void)passwdp;
   (void)service;
-  (void)hostname;
+  (void)host;
 
   /* Clean up any former leftovers and initialise to defaults */
   Curl_auth_cleanup_ntlm(ntlm);
@@ -490,7 +490,7 @@ CURLcode Curl_auth_create_ntlm_type1_message(struct Curl_easy *data,
                           SHORTPAIR(hostlen),
                           SHORTPAIR(hostoff),
                           0, 0,
-                          host,  /* this is empty */
+                          hostname, /* this is empty */
                           domain /* this is empty */);
 
   if(!ntlmbuf)
@@ -850,7 +850,7 @@ error:
 void Curl_auth_cleanup_ntlm(struct ntlmdata *ntlm)
 {
   /* Free the target info */
-  Curl_safefree(ntlm->target_info);
+  curlx_safefree(ntlm->target_info);
 
   /* Reset any variables */
   ntlm->target_info_len = 0;

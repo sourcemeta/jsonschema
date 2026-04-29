@@ -52,6 +52,7 @@
 #include "rand.h"
 #include "multiif.h"
 #include "cfilters.h"
+#include "cf-dns.h"
 #include "cf-socket.h"
 #include "connect.h"
 #include "progress.h"
@@ -64,7 +65,6 @@
 #include "vquic/vquic.h"
 #include "vquic/vquic_int.h"
 #include "vquic/vquic-tls.h"
-#include "vtls/keylog.h"
 #include "vtls/vtls.h"
 #include "vtls/vtls_scache.h"
 #include "vquic/curl_ngtcp2.h"
@@ -183,7 +183,7 @@ static void cf_ngtcp2_setup_keep_alive(struct Curl_cfilter *cf,
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   const ngtcp2_transport_params *rp;
   /* Peer should have sent us its transport parameters. If it
-   * announces a positive `max_idle_timeout` it will close the
+   * announces a positive `max_idle_timeout` it closes the
    * connection when it does not hear from us for that time.
    *
    * Some servers use this as a keep-alive timer at a rather low
@@ -789,6 +789,7 @@ static void cb_rand(uint8_t *dest, size_t destlen,
   }
 }
 
+/* for ngtcp2 <v1.22.0 */
 static int cb_get_new_connection_id(ngtcp2_conn *tconn, ngtcp2_cid *cid,
                                     uint8_t *token, size_t cidlen,
                                     void *user_data)
@@ -808,6 +809,27 @@ static int cb_get_new_connection_id(ngtcp2_conn *tconn, ngtcp2_cid *cid,
 
   return 0;
 }
+
+#ifdef NGTCP2_CALLBACKS_V3  /* ngtcp2 v1.22.0+ */
+static int cb_get_new_connection_id2(ngtcp2_conn *tconn, ngtcp2_cid *cid,
+  struct ngtcp2_stateless_reset_token *token, size_t cidlen, void *user_data)
+{
+  CURLcode result;
+  (void)tconn;
+  (void)user_data;
+
+  result = Curl_rand(NULL, cid->data, cidlen);
+  if(result)
+    return NGTCP2_ERR_CALLBACK_FAILURE;
+  cid->datalen = cidlen;
+
+  result = Curl_rand(NULL, token->data, sizeof(token->data));
+  if(result)
+    return NGTCP2_ERR_CALLBACK_FAILURE;
+
+  return 0;
+}
+#endif
 
 static int cb_recv_rx_key(ngtcp2_conn *tconn, ngtcp2_encryption_level level,
                           void *user_data)
@@ -852,7 +874,7 @@ static ngtcp2_callbacks ng_callbacks = {
   cb_extend_max_local_streams_bidi,
   NULL, /* extend_max_local_streams_uni */
   cb_rand,
-  cb_get_new_connection_id,
+  cb_get_new_connection_id, /* for ngtcp2 <v1.22.0 */
   NULL, /* remove_connection_id */
   ngtcp2_crypto_update_key_cb, /* update_key */
   NULL, /* path_validation */
@@ -877,6 +899,12 @@ static ngtcp2_callbacks ng_callbacks = {
   NULL, /* early_data_rejected */
 #ifdef NGTCP2_CALLBACKS_V2  /* ngtcp2 v1.14.0+ */
   NULL, /* begin_path_validation */
+#endif
+#ifdef NGTCP2_CALLBACKS_V3  /* ngtcp2 v1.22.0+ */
+  NULL, /* recv_stateless_reset2 */
+  cb_get_new_connection_id2, /* get_new_connection_id2 */
+  NULL, /* dcid_status2 */
+  ngtcp2_crypto_get_path_challenge_data2_cb, /* get_path_challenge_data2 */
 #endif
 };
 
@@ -1113,7 +1141,7 @@ static int cb_h3_recv_data(nghttp3_conn *conn, int64_t stream3_id,
   if(stream->rx_offset_max < stream->rx_offset)
     stream->rx_offset_max = stream->rx_offset;
 
-  CURL_TRC_CF(data, cf, "[%" PRId64 "] DATA len=%zu, rx win=%" PRId64,
+  CURL_TRC_CF(data, cf, "[%" PRId64 "] DATA len=%zu, rx win=%" PRIu64,
               stream->id, blen, stream->rx_offset_max - stream->rx_offset);
   cf_ngtcp2_upd_rx_win(cf, data, stream);
   return 0;
@@ -1461,8 +1489,8 @@ static CURLcode cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
   result = CURLE_AGAIN;
 
 out:
-  result = Curl_1st_err(result, cf_progress_egress(cf, data, &pktx));
-  result = Curl_1st_err(result, check_and_set_expiry(cf, data, &pktx));
+  result = Curl_1st_fatal(result, cf_progress_egress(cf, data, &pktx));
+  result = Curl_1st_fatal(result, check_and_set_expiry(cf, data, &pktx));
 denied:
   CURL_TRC_CF(data, cf, "[%" PRId64 "] cf_recv(blen=%zu) -> %d, %zu",
               stream ? stream->id : -1, blen, result, *pnread);
@@ -1559,7 +1587,7 @@ static nghttp3_ssize cb_h3_read_req_body(nghttp3_conn *conn, int64_t stream_id,
   }
 
   CURL_TRC_CF(data, cf, "[%" PRId64 "] read req body -> "
-              "%d vecs%s with %zu (buffered=%zu, left=%" FMT_OFF_T ")",
+              "%d vecs%s with %zd (buffered=%zu, left=%" FMT_OFF_T ")",
               stream->id, (int)nvecs,
               *pflags == NGHTTP3_DATA_FLAG_EOF ? " EOF" : "",
               nwritten, Curl_bufq_len(&stream->sendbuf),
@@ -1788,7 +1816,7 @@ static CURLcode cf_ngtcp2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
   result = cf_progress_egress(cf, data, &pktx);
 
 out:
-  result = Curl_1st_err(result, check_and_set_expiry(cf, data, &pktx));
+  result = Curl_1st_fatal(result, check_and_set_expiry(cf, data, &pktx));
 denied:
   CURL_TRC_CF(data, cf, "[%" PRId64 "] cf_send(len=%zu) -> %d, %zu",
               stream ? stream->id : -1, len, result, *pnwritten);
@@ -2018,7 +2046,7 @@ static CURLcode cf_progress_egress(struct Curl_cfilter *cf,
    * This is called PMTUD (Path Maximum Transmission Unit Discovery).
    * Since a PMTUD might be rejected right on send, we do not want it
    * be followed by other packets of lesser size. Because those would
-   * also fail then. So, if we detect a PMTUD while buffering, we flush.
+   * also fail then. If we detect a PMTUD while buffering, we flush.
    */
   max_payload_size = ngtcp2_conn_get_max_tx_udp_payload_size(ctx->qconn);
   path_max_payload_size =
@@ -2043,7 +2071,7 @@ static CURLcode cf_progress_egress(struct Curl_cfilter *cf,
       ++pktcnt;
       if(pktcnt == 1) {
         /* first packet in buffer. This is either of a known, "good"
-         * payload size or it is a PMTUD. We will see. */
+         * payload size or it is a PMTUD. We shall see. */
         gsolen = nread;
       }
       else if(nread > gsolen ||
@@ -2216,8 +2244,8 @@ static CURLcode cf_ngtcp2_shutdown(struct Curl_cfilter *cf,
       (uint8_t *)buffer, sizeof(buffer),
       &ctx->last_error, pktx.ts);
     CURL_TRC_CF(data, cf, "start shutdown(err_type=%d, err_code=%"
-                PRIu64 ") -> %d", ctx->last_error.type,
-                ctx->last_error.error_code, (int)nwritten);
+                PRIu64 ") -> %zd", ctx->last_error.type,
+                ctx->last_error.error_code, (ssize_t)nwritten);
     /* there are cases listed in ngtcp2 documentation where this call
      * may fail. Since we are doing a connection shutdown as graceful
      * as we can, such an error is ignored here. */
@@ -2257,7 +2285,7 @@ static CURLcode cf_ngtcp2_shutdown(struct Curl_cfilter *cf,
 
   if(Curl_bufq_is_empty(&ctx->q.sendbuf)) {
     /* Sent everything off. ngtcp2 seems to have no support for graceful
-     * shutdowns. So, we are done. */
+     * shutdowns. We are done. */
     CURL_TRC_CF(data, cf, "shutdown completely sent off, done");
     *done = TRUE;
     result = CURLE_OK;
@@ -2384,7 +2412,7 @@ static int quic_gtls_handshake_cb(gnutls_session_t session, unsigned int htype,
     DEBUGASSERT(data);
     if(!data)
       return 0;
-    CURL_TRC_CF(data, cf, "SSL message: %s %s [%d]",
+    CURL_TRC_CF(data, cf, "SSL message: %s %s [%u]",
                 incoming ? "<-" : "->", gtls_hs_msg_name(htype), htype);
     switch(htype) {
     case GNUTLS_HANDSHAKE_NEW_SESSION_TICKET: {
@@ -2567,6 +2595,18 @@ static CURLcode cf_ngtcp2_on_session_reuse(struct Curl_cfilter *cf,
   return result;
 }
 
+static bool cf_ngtcp2_need_httpsrr(struct Curl_easy *data)
+{
+#ifdef USE_OPENSSL
+  return Curl_ossl_need_httpsrr(data);
+#elif defined(USE_WOLFSSL)
+  return Curl_wssl_need_httpsrr(data);
+#else
+  (void)data;
+  return FALSE;
+#endif
+}
+
 /*
  * Might be called twice for happy eyeballs.
  */
@@ -2681,8 +2721,14 @@ static CURLcode cf_ngtcp2_connect(struct Curl_cfilter *cf,
   }
 
   *done = FALSE;
-  pktx_init(&pktx, cf, data);
 
+  if(cf_ngtcp2_need_httpsrr(data) &&
+     !Curl_conn_dns_resolved_https(data, cf->sockindex)) {
+    CURL_TRC_CF(data, cf, "need HTTPS-RR, delaying connect");
+    return CURLE_OK;
+  }
+
+  pktx_init(&pktx, cf, data);
   CF_DATA_SAVE(save, cf, data);
 
   if(!ctx->qconn) {
@@ -2859,7 +2905,7 @@ static bool cf_ngtcp2_conn_is_alive(struct Curl_cfilter *cf,
     goto out;
 
   /* We do not announce a max idle timeout, but when the peer does
-   * it will close the connection when it expires. */
+   * it closes the connection when it expires. */
   rp = ngtcp2_conn_get_remote_transport_params(ctx->qconn);
   if(rp && rp->max_idle_timeout) {
     timediff_t idletime_ms =
@@ -2913,7 +2959,7 @@ struct Curl_cftype Curl_cft_http3 = {
 CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
                                struct Curl_easy *data,
                                struct connectdata *conn,
-                               const struct Curl_addrinfo *ai)
+                               struct Curl_sockaddr_ex *addr)
 {
   struct cf_ngtcp2_ctx *ctx = NULL;
   struct Curl_cfilter *cf = NULL;
@@ -2931,7 +2977,7 @@ CURLcode Curl_cf_ngtcp2_create(struct Curl_cfilter **pcf,
     goto out;
   cf->conn = conn;
 
-  result = Curl_cf_udp_create(&cf->next, data, conn, ai, TRNSPRT_QUIC);
+  result = Curl_cf_udp_create(&cf->next, data, conn, addr, TRNSPRT_QUIC);
   if(result)
     goto out;
   cf->next->conn = cf->conn;

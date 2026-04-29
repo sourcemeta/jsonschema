@@ -28,12 +28,12 @@
 #include "curl_sha512_256.h"
 
 /* The recommended order of the TLS backends:
- * 1. OpenSSL
- * 2. GnuTLS
- * 3. wolfSSL
- * 4. Schannel SSPI
- * 5. mbedTLS
- * 6. Rustls
+ * 1. USE_OPENSSL
+ * 2. USE_WOLFSSL
+ * 3. USE_GNUTLS
+ * 4. USE_MBEDTLS (TBD)
+ * 5. USE_RUSTLS (TBD)
+ * 6. USE_WIN32_CRYPTO (TBD)
  * Skip the backend if it does not support the required algorithm */
 
 #ifdef USE_OPENSSL
@@ -65,6 +65,14 @@
 #    endif
 #  endif
 #endif /* USE_OPENSSL */
+
+#if !defined(HAS_SHA512_256_IMPLEMENTATION) && defined(USE_WOLFSSL)
+#  include <wolfssl/options.h>
+#  ifndef WOLFSSL_NOSHA512_256
+#    define USE_WOLFSSL_SHA512_256          1
+#    define HAS_SHA512_256_IMPLEMENTATION   1
+#  endif
+#endif
 
 #if !defined(HAS_SHA512_256_IMPLEMENTATION) && defined(USE_GNUTLS)
 #  include <nettle/sha.h>
@@ -153,26 +161,63 @@ static CURLcode Curl_sha512_256_update(void *context,
  */
 static CURLcode Curl_sha512_256_finish(unsigned char *digest, void *context)
 {
-  CURLcode ret;
+  CURLcode result;
   Curl_sha512_256_ctx * const ctx = (Curl_sha512_256_ctx *)context;
 
 #ifdef NEED_NETBSD_SHA512_256_WORKAROUND
   /* Use a larger buffer to work around a bug in NetBSD:
      https://gnats.netbsd.org/cgi-bin/query-pr-single.pl?number=58039 */
   unsigned char tmp_digest[CURL_SHA512_256_DIGEST_SIZE * 2];
-  ret = EVP_DigestFinal_ex(*ctx,
+  result = EVP_DigestFinal_ex(*ctx,
                            tmp_digest, NULL) ? CURLE_OK : CURLE_SSL_CIPHER;
-  if(ret == CURLE_OK)
+  if(result == CURLE_OK)
     memcpy(digest, tmp_digest, CURL_SHA512_256_DIGEST_SIZE);
   explicit_memset(tmp_digest, 0, sizeof(tmp_digest));
 #else /* !NEED_NETBSD_SHA512_256_WORKAROUND */
-  ret = EVP_DigestFinal_ex(*ctx, digest, NULL) ? CURLE_OK : CURLE_SSL_CIPHER;
+  result = EVP_DigestFinal_ex(*ctx, digest, NULL) ?
+    CURLE_OK : CURLE_SSL_CIPHER;
 #endif /* NEED_NETBSD_SHA512_256_WORKAROUND */
 
   EVP_MD_CTX_destroy(*ctx);
   *ctx = NULL;
 
-  return ret;
+  return result;
+}
+
+#elif defined(USE_WOLFSSL_SHA512_256)
+#include <wolfssl/wolfcrypt/sha512.h>
+
+#define CURL_SHA512_256_DIGEST_SIZE WC_SHA512_256_DIGEST_SIZE
+#define CURL_SHA512_256_BLOCK_SIZE  WC_SHA512_256_BLOCK_SIZE
+
+typedef struct wc_Sha512 Curl_sha512_256_ctx;
+
+static CURLcode Curl_sha512_256_init(void *ctx)
+{
+  if(wc_InitSha512_256(ctx))
+    return CURLE_FAILED_INIT;
+  return CURLE_OK;
+}
+
+static CURLcode Curl_sha512_256_update(void *ctx,
+                                       const unsigned char *data,
+                                       size_t length)
+{
+  do {
+    word32 ilen = (word32)CURLMIN(length, UINT_MAX);
+    if(wc_Sha512_256Update(ctx, data, ilen))
+      return CURLE_SSL_CIPHER;
+    length -= ilen;
+    data += ilen;
+  } while(length);
+  return CURLE_OK;
+}
+
+static CURLcode Curl_sha512_256_finish(unsigned char *digest, void *ctx)
+{
+  if(wc_Sha512_256Final(ctx, digest))
+    return CURLE_SSL_CIPHER;
+  return CURLE_OK;
 }
 
 #elif defined(USE_GNUTLS_SHA512_256)
@@ -247,10 +292,7 @@ static CURLcode Curl_sha512_256_finish(unsigned char *digest, void *context)
 /* ** This implementation of SHA-512/256 hash calculation was originally ** *
  * ** written by Evgeny Grin (Karlson2k) for GNU libmicrohttpd.          ** *
  * ** The author ported the code to libcurl. The ported code is provided ** *
- * ** under curl license.                                                ** *
- * ** This is a minimal version with minimal optimizations. Performance  ** *
- * ** can be significantly improved. Big-endian store and load macros    ** *
- * ** are obvious targets for optimization.                              ** */
+ * ** under curl license.                                                ** */
 
 #ifdef __GNUC__
 #  if defined(__has_attribute) && defined(__STDC_VERSION__)
@@ -751,17 +793,17 @@ CURLcode Curl_sha512_256it(unsigned char *output, const unsigned char *input,
                            size_t input_size)
 {
   Curl_sha512_256_ctx ctx;
-  CURLcode res;
+  CURLcode result;
 
-  res = Curl_sha512_256_init(&ctx);
-  if(res != CURLE_OK)
-    return res;
+  result = Curl_sha512_256_init(&ctx);
+  if(result != CURLE_OK)
+    return result;
 
-  res = Curl_sha512_256_update(&ctx, (const void *)input, input_size);
+  result = Curl_sha512_256_update(&ctx, (const void *)input, input_size);
 
-  if(res != CURLE_OK) {
+  if(result != CURLE_OK) {
     (void)Curl_sha512_256_finish(output, &ctx);
-    return res;
+    return result;
   }
 
   return Curl_sha512_256_finish(output, &ctx);

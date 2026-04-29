@@ -27,7 +27,7 @@
 
 #if !defined(CURL_DISABLE_LDAP) && !defined(USE_OPENLDAP)
 
-#if defined(__GNUC__) && defined(__APPLE__)
+#if defined(CURL_HAVE_DIAG) && defined(__APPLE__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -115,7 +115,7 @@ struct ldap_urldesc {
 
 static curl_ldap_num_t ldap_url_parse_low(struct Curl_easy *data,
                                           const struct connectdata *conn,
-                                          LDAPURLDesc **ludp);
+                                          LDAPURLDesc **ludpp);
 static void ldap_free_urldesc_low(LDAPURLDesc *ludp);
 
 #undef ldap_free_urldesc
@@ -185,8 +185,8 @@ static ULONG ldap_win_bind_auth(LDAP *server, const char *user,
   }
 
   if(method && user && passwd) {
-    CURLcode res = Curl_create_sspi_identity(user, passwd, &cred);
-    if(!res) {
+    CURLcode result = Curl_create_sspi_identity(user, passwd, &cred);
+    if(!result) {
       rc = ldap_bind_s(server, NULL, (TCHAR *)&cred, method);
       Curl_sspi_free_identity(&cred);
     }
@@ -303,9 +303,8 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
   if(ldap_ssl)
     server = ldap_sslinit(host, (curl_ldap_num_t)ipquad.remote_port, 1);
   else
-#else
-    server = ldap_init(host, (curl_ldap_num_t)ipquad.remote_port);
 #endif
+    server = ldap_init(host, (curl_ldap_num_t)ipquad.remote_port);
   if(!server) {
     failf(data, "LDAP: cannot setup connect to %s:%u",
           conn->host.dispname, ipquad.remote_port);
@@ -388,7 +387,6 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
   }
 
 #ifdef USE_WIN32_LDAP
-  ldap_set_option(server, LDAP_OPT_PROTOCOL_VERSION, &ldap_proto);
   rc = ldap_win_bind(data, server, user, passwd);
 #else
   rc = ldap_simple_bind_s(server, user, passwd);
@@ -991,45 +989,13 @@ const struct Curl_protocol Curl_protocol_ldap = {
   ZERO_NULL,                            /* disconnect */
   ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* write_resp_hd */
-  ZERO_NULL,                            /* connection_check */
+  ZERO_NULL,                            /* connection_is_dead */
   ZERO_NULL,                            /* attach connection */
   ZERO_NULL,                            /* follow */
 };
 
-#if defined(__GNUC__) && defined(__APPLE__)
+#if defined(CURL_HAVE_DIAG) && defined(__APPLE__)
 #pragma GCC diagnostic pop
 #endif
 
 #endif /* !CURL_DISABLE_LDAP && !USE_OPENLDAP */
-
-/*
- * LDAP
- */
-const struct Curl_scheme Curl_scheme_ldap = {
-  "ldap",                               /* scheme */
-#ifdef CURL_DISABLE_LDAP
-  ZERO_NULL,
-#else
-  &Curl_protocol_ldap,
-#endif
-  CURLPROTO_LDAP,                       /* protocol */
-  CURLPROTO_LDAP,                       /* family */
-  PROTOPT_SSL_REUSE,                    /* flags */
-  PORT_LDAP,                            /* defport */
-};
-
-/*
- * LDAPS
- */
-const struct Curl_scheme Curl_scheme_ldaps = {
-  "ldaps",                              /* scheme */
-#if defined(CURL_DISABLE_LDAP) || !defined(HAVE_LDAP_SSL)
-  ZERO_NULL,
-#else
-  &Curl_protocol_ldap,
-#endif
-  CURLPROTO_LDAPS,                      /* protocol */
-  CURLPROTO_LDAP,                       /* family */
-  PROTOPT_SSL,                          /* flags */
-  PORT_LDAPS,                           /* defport */
-};

@@ -49,8 +49,8 @@
    __has_builtin() function, so override it. */
 
 /* if GCC on i386/x86_64 or if the built-in is present */
-#if (defined(__GNUC__) && !defined(__clang__)) &&     \
-    (defined(__i386__) || defined(__x86_64__))
+#if (defined(__GNUC__) && !defined(__clang__)) && \
+  (defined(__i386__) || defined(__x86_64__))
 #define HAVE_BUILTIN_IA32_PAUSE
 #elif defined(__has_builtin)  /* Keep this PP check separate from others */
 #if __has_builtin(__builtin_ia32_pause)
@@ -84,9 +84,7 @@ static CURL_INLINE void curl_simple_lock_unlock(curl_simple_lock *lock)
   atomic_store_explicit(lock, false, memory_order_release);
 }
 
-#elif defined(USE_THREADS_POSIX) && defined(HAVE_PTHREAD_H)
-
-#include <pthread.h>
+#elif defined(HAVE_THREADS_POSIX)
 
 #define curl_simple_lock           pthread_mutex_t
 #define CURL_SIMPLE_LOCK_INIT      PTHREAD_MUTEX_INITIALIZER

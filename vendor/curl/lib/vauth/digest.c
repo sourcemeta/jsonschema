@@ -255,13 +255,13 @@ static void auth_digest_get_qop_values(const char *options, int *value)
  * Parameters:
  *
  * chlgref [in]     - The challenge message.
- * nonce   [in/out] - The buffer where the nonce will be stored.
+ * nonce   [in/out] - The buffer where the nonce is stored.
  * nlen    [in]     - The length of the nonce buffer.
- * realm   [in/out] - The buffer where the realm will be stored.
+ * realm   [in/out] - The buffer where the realm is stored.
  * rlen    [in]     - The length of the realm buffer.
- * alg     [in/out] - The buffer where the algorithm will be stored.
+ * alg     [in/out] - The buffer where the algorithm is stored.
  * alen    [in]     - The length of the algorithm buffer.
- * qop     [in/out] - The buffer where the qop-options will be stored.
+ * qop     [in/out] - The buffer where the qop-options is stored.
  * qlen    [in]     - The length of the qop buffer.
  *
  * Returns CURLE_OK on success.
@@ -356,6 +356,7 @@ CURLcode Curl_auth_create_digest_md5_message(struct Curl_easy *data,
   char *spn         = NULL;
   char *qrealm;
   char *qnonce;
+  char *quserp;
 
   /* Decode the challenge message */
   CURLcode result = auth_decode_digest_md5_message(chlg,
@@ -384,7 +385,7 @@ CURLcode Curl_auth_create_digest_md5_message(struct Curl_easy *data,
   if(result)
     return result;
 
-  /* So far so good, now calculate A1 and H(A1) according to RFC 2831 */
+  /* Good so far, now calculate A1 and H(A1) according to RFC 2831 */
   ctxt = Curl_MD5_init(&Curl_DIGEST_MD5);
   if(!ctxt)
     return CURLE_OUT_OF_MEMORY;
@@ -469,20 +470,22 @@ CURLcode Curl_auth_create_digest_md5_message(struct Curl_easy *data,
   for(i = 0; i < MD5_DIGEST_LEN; i++)
     curl_msnprintf(&resp_hash_hex[2 * i], 3, "%02x", digest[i]);
 
-  /* escape double quotes and backslashes in the realm and nonce as
+  /* escape double quotes and backslashes in the username, realm and nonce as
      necessary */
   qrealm = auth_digest_string_quoted(realm);
   qnonce = auth_digest_string_quoted(nonce);
-  if(qrealm && qnonce)
+  quserp = auth_digest_string_quoted(userp);
+  if(qrealm && qnonce && quserp)
     /* Generate the response */
     response = curl_maprintf("username=\"%s\",realm=\"%s\",nonce=\"%s\","
                              "cnonce=\"%s\",nc=\"%s\",digest-uri=\"%s\","
                              "response=%s,qop=%s",
-                             userp, qrealm, qnonce,
+                             quserp, qrealm, qnonce,
                              cnonce, nonceCount, spn, resp_hash_hex, qop);
 
   curlx_free(qrealm);
   curlx_free(qnonce);
+  curlx_free(quserp);
   curlx_free(spn);
   if(!response)
     return CURLE_OUT_OF_MEMORY;
@@ -669,7 +672,7 @@ CURLcode Curl_auth_decode_digest_http_message(const char *chlg,
  * uripath [in]     - The path of the HTTP uri.
  * digest  [in/out] - The digest data struct being used and modified.
  * outptr  [in/out] - The address where a pointer to newly allocated memory
- *                    holding the result will be stored upon completion.
+ *                    holding the result is stored upon completion.
  * outlen  [out]    - The length of the output message.
  *
  * Returns CURLE_OK on success.
@@ -853,8 +856,8 @@ static CURLcode auth_create_digest_http_message(
      nonce="1053604145", uri="/64", response="c55f7f30d83d774a3d2dcacf725abaca"
 
      Digest parameters are all quoted strings. Username which is provided by
-     the user will need double quotes and backslashes within it escaped.
-     realm, nonce, and opaque will need backslashes as well as they were
+     the user needs double quotes and backslashes within it escaped.
+     realm, nonce, and opaque needs backslashes as well as they were
      de-escaped when copied from request header. cnonce is generated with
      web-safe characters. uri is already percent encoded. nc is 8 hex
      characters. algorithm and qop with standard values only contain web-safe
@@ -977,7 +980,7 @@ oom:
  * uripath [in]     - The path of the HTTP uri.
  * digest  [in/out] - The digest data struct being used and modified.
  * outptr  [in/out] - The address where a pointer to newly allocated memory
- *                    holding the result will be stored upon completion.
+ *                    holding the result is stored upon completion.
  * outlen  [out]    - The length of the output message.
  *
  * Returns CURLE_OK on success.
@@ -1028,12 +1031,12 @@ CURLcode Curl_auth_create_digest_http_message(struct Curl_easy *data,
  */
 void Curl_auth_digest_cleanup(struct digestdata *digest)
 {
-  Curl_safefree(digest->nonce);
-  Curl_safefree(digest->cnonce);
-  Curl_safefree(digest->realm);
-  Curl_safefree(digest->opaque);
-  Curl_safefree(digest->qop);
-  Curl_safefree(digest->algorithm);
+  curlx_safefree(digest->nonce);
+  curlx_safefree(digest->cnonce);
+  curlx_safefree(digest->realm);
+  curlx_safefree(digest->opaque);
+  curlx_safefree(digest->qop);
+  curlx_safefree(digest->algorithm);
 
   digest->nc = 0;
   digest->algo = ALGO_MD5; /* default algorithm */
