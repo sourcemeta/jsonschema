@@ -1266,9 +1266,9 @@ static CURLcode telnet_do(struct Curl_easy *data, bool *done)
 
 #ifdef USE_WINSOCK
   /* We want to wait for both stdin and the socket. Since
-  ** the select() function in Winsock only works on sockets
-  ** we have to use the WaitForMultipleObjects() call.
-  */
+   * the select() function in Winsock only works on sockets
+   * we have to use the WaitForMultipleObjects() call.
+   */
 
   /* First, create a sockets event object */
   event_handle = WSACreateEvent();
@@ -1569,7 +1569,7 @@ static CURLcode telnet_do(struct Curl_easy *data, bool *done)
 /*
  * TELNET protocol handler.
  */
-static const struct Curl_protocol Curl_protocol_telnet = {
+const struct Curl_protocol Curl_protocol_telnet = {
   ZERO_NULL,                            /* setup_connection */
   telnet_do,                            /* do_it */
   telnet_done,                          /* done */
@@ -1584,25 +1584,9 @@ static const struct Curl_protocol Curl_protocol_telnet = {
   ZERO_NULL,                            /* disconnect */
   ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* write_resp_hd */
-  ZERO_NULL,                            /* connection_check */
+  ZERO_NULL,                            /* connection_is_dead */
   ZERO_NULL,                            /* attach connection */
   ZERO_NULL,                            /* follow */
 };
 
 #endif /* !CURL_DISABLE_TELNET */
-
-/*
- * TELNET protocol handler.
- */
-const struct Curl_scheme Curl_scheme_telnet = {
-  "telnet",                             /* scheme */
-#ifdef CURL_DISABLE_TELNET
-  ZERO_NULL,
-#else
-  &Curl_protocol_telnet,
-#endif
-  CURLPROTO_TELNET,                     /* protocol */
-  CURLPROTO_TELNET,                     /* family */
-  PROTOPT_NONE | PROTOPT_NOURLQUERY,    /* flags */
-  PORT_TELNET,                          /* defport */
-};

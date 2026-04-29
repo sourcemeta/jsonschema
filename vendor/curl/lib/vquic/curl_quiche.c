@@ -32,6 +32,7 @@
 #include "uint-hash.h"
 #include "urldata.h"
 #include "cfilters.h"
+#include "cf-dns.h"
 #include "cf-socket.h"
 #include "curl_trc.h"
 #include "rand.h"
@@ -48,7 +49,6 @@
 #include "url.h"
 #include "bufref.h"
 #include "vtls/openssl.h"
-#include "vtls/keylog.h"
 #include "vtls/vtls.h"
 
 /* HTTP/3 error values defined in RFC 9114, ch. 8.1 */
@@ -481,7 +481,7 @@ static void cf_quiche_recv_body(struct Curl_cfilter *cf,
     return;
 
   /* Even when the transfer has already errored, we need to receive
-   * the data from quiche, as quiche will otherwise get stuck and
+   * the data from quiche, as quiche otherwise gets stuck and
    * raise events to receive over and over again. */
   cb_ctx.cf = cf;
   cb_ctx.data = data;
@@ -779,7 +779,7 @@ static CURLcode cf_flush_egress(struct Curl_cfilter *cf,
       else
         failf(data, "connection closed by server");
       /* Connection timed out, expire all transfers belonging to it
-       * as will not get any more POLL events here. */
+       * as it does not get any more POLL events here. */
       cf_quiche_expire_conn_closed(cf, data);
       return CURLE_SEND_ERROR;
     }
@@ -918,7 +918,7 @@ static CURLcode cf_quiche_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
     result = CURLE_AGAIN;
 
 out:
-  result = Curl_1st_err(result, cf_flush_egress(cf, data));
+  result = Curl_1st_fatal(result, cf_flush_egress(cf, data));
   if(*pnread > 0)
     ctx->data_recvd += *pnread;
   CURL_TRC_CF(data, cf, "[%" PRIu64 "] cf_recv(len=%zu) -> %d, %zu, total=%"
@@ -939,8 +939,8 @@ static CURLcode cf_quiche_send_body(struct Curl_cfilter *cf,
   rv = quiche_h3_send_body(ctx->h3c, ctx->qconn, stream->id,
                            (uint8_t *)CURL_UNCONST(buf), len, eos);
   if(rv == QUICHE_H3_ERR_DONE || (rv == 0 && len > 0)) {
-    /* Blocked on flow control and should HOLD sending. But when do we open
-     * again? */
+    /* Blocked on flow control and should HOLD sending.
+       When do we open again? */
     if(!quiche_conn_stream_writable(ctx->qconn, stream->id, len)) {
       CURL_TRC_CF(data, cf, "[%" PRIu64 "] send_body(len=%zu) "
                   "-> window exhausted", stream->id, len);
@@ -1051,7 +1051,7 @@ static CURLcode h3_open_stream(struct Curl_cfilter *cf,
       goto out;
     }
     else {
-      CURL_TRC_CF(data, cf, "send_request(%s) -> %" PRIu64,
+      CURL_TRC_CF(data, cf, "send_request(%s) -> %" PRId64,
                   Curl_bufref_ptr(&data->state.url), rv);
     }
     result = CURLE_SEND_ERROR;
@@ -1144,7 +1144,7 @@ static CURLcode cf_quiche_send(struct Curl_cfilter *cf, struct Curl_easy *data,
   }
 
 out:
-  result = Curl_1st_err(result, cf_flush_egress(cf, data));
+  result = Curl_1st_fatal(result, cf_flush_egress(cf, data));
 
   CURL_TRC_CF(data, cf, "[%" PRIu64 "] cf_send(len=%zu) -> %d, %zu",
               stream ? stream->id : (uint64_t)~0, len,
@@ -1152,8 +1152,8 @@ out:
   return result;
 }
 
-static bool stream_is_writeable(struct Curl_cfilter *cf,
-                                struct Curl_easy *data)
+static bool stream_is_writable(struct Curl_cfilter *cf,
+                               struct Curl_easy *data)
 {
   struct cf_quiche_ctx *ctx = cf->ctx;
   struct h3_stream_ctx *stream = H3_STREAM_CTX(ctx, data);
@@ -1181,7 +1181,7 @@ static CURLcode cf_quiche_adjust_pollset(struct Curl_cfilter *cf,
     c_exhaust = FALSE; /* Have not found any call in quiche that tells
                           us if the connection itself is blocked */
     s_exhaust = want_send && stream && stream->opened &&
-                (stream->quic_flow_blocked || !stream_is_writeable(cf, data));
+                (stream->quic_flow_blocked || !stream_is_writable(cf, data));
     want_recv = (want_recv || c_exhaust || s_exhaust);
     want_send = (!s_exhaust && want_send) ||
                  !Curl_bufq_is_empty(&ctx->q.sendbuf);
@@ -1379,6 +1379,12 @@ static CURLcode cf_quiche_connect(struct Curl_cfilter *cf,
   }
 
   *done = FALSE;
+  if(Curl_ossl_need_httpsrr(data) &&
+     !Curl_conn_dns_resolved_https(data, cf->sockindex)) {
+    CURL_TRC_CF(data, cf, "need HTTPS-RR, delaying connect");
+    return CURLE_OK;
+  }
+
   vquic_ctx_update_time(&ctx->q, Curl_pgrs_now(data));
 
   if(!ctx->qconn) {
@@ -1634,7 +1640,7 @@ struct Curl_cftype Curl_cft_http3 = {
 CURLcode Curl_cf_quiche_create(struct Curl_cfilter **pcf,
                                struct Curl_easy *data,
                                struct connectdata *conn,
-                               const struct Curl_addrinfo *ai)
+                               struct Curl_sockaddr_ex *addr)
 {
   struct cf_quiche_ctx *ctx = NULL;
   struct Curl_cfilter *cf = NULL;
@@ -1652,7 +1658,7 @@ CURLcode Curl_cf_quiche_create(struct Curl_cfilter **pcf,
     goto out;
   cf->conn = conn;
 
-  result = Curl_cf_udp_create(&cf->next, data, conn, ai, TRNSPRT_QUIC);
+  result = Curl_cf_udp_create(&cf->next, data, conn, addr, TRNSPRT_QUIC);
   if(result)
     goto out;
   cf->next->conn = cf->conn;

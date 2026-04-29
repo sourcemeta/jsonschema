@@ -347,7 +347,7 @@ static bool bad_domain(const char *domain, size_t len)
 
   cookie-octet    = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
 
-  But Firefox and Chrome as of June 2022 accept space, comma and double-quotes
+  Yet, Firefox and Chrome as of June 2022 accept space, comma and double-quotes
   fine. The prime reason for filtering out control bytes is that some HTTP
   servers return 400 for requests that contain such.
 */
@@ -423,18 +423,17 @@ static CURLcode storecookie(struct Cookie *co, struct Curl_str *cp,
 
 /* this function return errors on OOM etc, not on plain cookie format
    problems */
-static CURLcode
-parse_cookie_header(struct Curl_easy *data,
-                    struct Cookie *co,
-                    struct CookieInfo *ci,
-                    bool *okay, /* if the cookie was fine */
-                    const char *ptr,
-                    const char *domain, /* default domain */
-                    const char *path,   /* full path used when this cookie is
-                                           set, used to get default path for
-                                           the cookie unless set */
-                    bool secure)  /* TRUE if connection is over secure
-                                     origin */
+static CURLcode parse_cookie_header(
+  struct Curl_easy *data,
+  struct Cookie *co,
+  struct CookieInfo *ci,
+  bool *okay,         /* if the cookie was fine */
+  const char *ptr,
+  const char *domain, /* default domain */
+  const char *path,   /* full path used when this cookie is
+                         set, used to get default path for
+                         the cookie unless set */
+  bool secure)        /* TRUE if connection is over secure origin */
 {
   /* This line was read off an HTTP-header */
   time_t now = 0;
@@ -461,6 +460,13 @@ parse_cookie_header(struct Curl_easy *data,
         sep = TRUE; /* a '=' was used */
         if(!curlx_str_cspn(&ptr, &val, ";\r\n"))
           curlx_str_trimblanks(&val);
+
+        /* Reject cookies with a TAB inside the value */
+        if(curlx_strlen(&val) &&
+           memchr(curlx_str(&val), '\t', curlx_strlen(&val))) {
+          infof(data, "cookie contains TAB, dropping");
+          return CURLE_OK;
+        }
       }
       else
         curlx_str_init(&val);
@@ -486,13 +492,6 @@ parse_cookie_header(struct Curl_easy *data,
            ((curlx_strlen(&name) + curlx_strlen(&val)) > MAX_NAME)) {
           infof(data, "oversized cookie dropped, name/val %zu + %zu bytes",
                 curlx_strlen(&name), curlx_strlen(&val));
-          return CURLE_OK;
-        }
-
-        /* Reject cookies with a TAB inside the value */
-        if(curlx_strlen(&val) &&
-           memchr(curlx_str(&val), '\t', curlx_strlen(&val))) {
-          infof(data, "cookie contains TAB, dropping");
           return CURLE_OK;
         }
 
@@ -930,17 +929,16 @@ static bool replace_existing(struct Curl_easy *data,
  * IPv6 address.
  *
  */
-CURLcode
-Curl_cookie_add(struct Curl_easy *data,
-                struct CookieInfo *ci,
-                bool httpheader, /* TRUE if HTTP header-style line */
-                bool noexpire, /* if TRUE, skip remove_expired() */
-                const char *lineptr,   /* first character of the line */
-                const char *domain, /* default domain */
-                const char *path,   /* full path used when this cookie is set,
-                                       used to get default path for the cookie
-                                       unless set */
-                bool secure)  /* TRUE if connection is over secure origin */
+CURLcode Curl_cookie_add(
+  struct Curl_easy *data,
+  struct CookieInfo *ci,
+  bool httpheader,     /* TRUE if HTTP header-style line */
+  bool noexpire,       /* if TRUE, skip remove_expired() */
+  const char *lineptr, /* first character of the line */
+  const char *domain,  /* default domain */
+  const char *path,    /* full path used when this cookie is set, used
+                          to get default path for the cookie unless set */
+  bool secure)         /* TRUE if connection is over secure origin */
 {
   struct Cookie comem;
   struct Cookie *co;
@@ -1106,8 +1104,17 @@ static CURLcode cookie_load(struct Curl_easy *data, const char *file,
       fp = curlx_fopen(file, "rb");
       if(!fp)
         infof(data, "WARNING: failed to open cookie file \"%s\"", file);
-      else
-        handle = fp;
+      else {
+        curlx_struct_stat stat;
+        if((curlx_fstat(fileno(fp), &stat) != -1) && S_ISDIR(stat.st_mode)) {
+          curlx_fclose(fp);
+          fp = NULL;
+          infof(data, "WARNING: cookie filename points to a directory: \"%s\"",
+                file);
+        }
+        else
+          handle = fp;
+      }
     }
   }
 
@@ -1464,7 +1471,7 @@ static CURLcode cookie_output(struct Curl_easy *data,
   FILE *out = NULL;
   bool use_stdout = FALSE;
   char *tempstore = NULL;
-  CURLcode error = CURLE_OK;
+  CURLcode result = CURLE_OK;
 
   if(!ci)
     /* no cookie engine alive */
@@ -1479,8 +1486,8 @@ static CURLcode cookie_output(struct Curl_easy *data,
     use_stdout = TRUE;
   }
   else {
-    error = Curl_fopen(data, filename, &out, &tempstore);
-    if(error)
+    result = Curl_fopen(data, filename, &out, &tempstore);
+    if(result)
       goto error;
   }
 
@@ -1497,7 +1504,7 @@ static CURLcode cookie_output(struct Curl_easy *data,
 
     array = curlx_calloc(1, sizeof(struct Cookie *) * ci->numcookies);
     if(!array) {
-      error = CURLE_OUT_OF_MEMORY;
+      result = CURLE_OUT_OF_MEMORY;
       goto error;
     }
 
@@ -1517,7 +1524,7 @@ static CURLcode cookie_output(struct Curl_easy *data,
       char *format_ptr = get_netscape_format(array[i]);
       if(!format_ptr) {
         curlx_free(array);
-        error = CURLE_OUT_OF_MEMORY;
+        result = CURLE_OUT_OF_MEMORY;
         goto error;
       }
       curl_mfprintf(out, "%s\n", format_ptr);
@@ -1531,7 +1538,7 @@ static CURLcode cookie_output(struct Curl_easy *data,
     curlx_fclose(out);
     out = NULL;
     if(tempstore && curlx_rename(tempstore, filename)) {
-      error = CURLE_WRITE_ERROR;
+      result = CURLE_WRITE_ERROR;
       goto error;
     }
   }
@@ -1551,7 +1558,7 @@ error:
     unlink(tempstore);
     curlx_free(tempstore);
   }
-  return error;
+  return result;
 }
 
 static struct curl_slist *cookie_list(struct Curl_easy *data)

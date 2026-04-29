@@ -1075,7 +1075,6 @@ static CURLcode pop3_write(struct Curl_easy *data, const char *str,
 {
   /* This code could be made into a special function in the handler struct */
   CURLcode result = CURLE_OK;
-  struct SingleRequest *k = &data->req;
   struct connectdata *conn = data->conn;
   struct pop3_conn *pop3c = Curl_conn_meta_get(conn, CURL_META_POP3_CONN);
   bool strip_dot = FALSE;
@@ -1185,7 +1184,7 @@ static CURLcode pop3_write(struct Curl_easy *data, const char *str,
     message as per RFC-1939, sect. 3 */
     result = Curl_client_write(data, CLIENTWRITE_BODY, POP3_EOB, 2);
 
-    k->keepon &= ~KEEP_RECV;
+    CURL_REQ_CLEAR_RECV(data);
     pop3c->eob = 0;
 
     return result;
@@ -1230,7 +1229,7 @@ static CURLcode pop3_state_command_resp(struct Curl_easy *data,
      when there is no body to return. */
   pop3c->eob = 2;
 
-  /* But since this initial CR LF pair is not part of the actual body, we set
+  /* Since this initial CR LF pair is not part of the actual body, we set
      the strip counter here so that these bytes will not be delivered. */
   pop3c->strip = 2;
 
@@ -1480,8 +1479,8 @@ static CURLcode pop3_done(struct Curl_easy *data, CURLcode status,
   }
 
   /* Cleanup our per-request based variables */
-  Curl_safefree(pop3->id);
-  Curl_safefree(pop3->custom);
+  curlx_safefree(pop3->id);
+  curlx_safefree(pop3->custom);
 
   /* Clear the transfer mode for the next request */
   pop3->transfer = PPTRANSFER_BODY;
@@ -1628,7 +1627,7 @@ static CURLcode pop3_disconnect(struct Curl_easy *data,
   Curl_pp_disconnect(&pop3c->pp);
 
   /* Cleanup our connection based variables */
-  Curl_safefree(pop3c->apoptimestamp);
+  curlx_safefree(pop3c->apoptimestamp);
 
   return CURLE_OK;
 }
@@ -1656,8 +1655,8 @@ static void pop3_easy_dtor(void *key, size_t klen, void *entry)
   (void)klen;
   DEBUGASSERT(pop3);
   /* Cleanup our per-request based variables */
-  Curl_safefree(pop3->id);
-  Curl_safefree(pop3->custom);
+  curlx_safefree(pop3->id);
+  curlx_safefree(pop3->custom);
   curlx_free(pop3);
 }
 
@@ -1668,7 +1667,7 @@ static void pop3_conn_dtor(void *key, size_t klen, void *entry)
   (void)klen;
   DEBUGASSERT(pop3c);
   Curl_pp_disconnect(&pop3c->pp);
-  Curl_safefree(pop3c->apoptimestamp);
+  curlx_safefree(pop3c->apoptimestamp);
   curlx_free(pop3c);
 }
 
@@ -1692,7 +1691,7 @@ static CURLcode pop3_setup_connection(struct Curl_easy *data,
 /*
  * POP3 protocol.
  */
-static const struct Curl_protocol Curl_protocol_pop3 = {
+const struct Curl_protocol Curl_protocol_pop3 = {
   pop3_setup_connection,            /* setup_connection */
   pop3_do,                          /* do_it */
   pop3_done,                        /* done */
@@ -1707,43 +1706,9 @@ static const struct Curl_protocol Curl_protocol_pop3 = {
   pop3_disconnect,                  /* disconnect */
   pop3_write,                       /* write_resp */
   ZERO_NULL,                        /* write_resp_hd */
-  ZERO_NULL,                        /* connection_check */
+  ZERO_NULL,                        /* connection_is_dead */
   ZERO_NULL,                        /* attach connection */
   ZERO_NULL,                        /* follow */
 };
 
 #endif /* CURL_DISABLE_POP3 */
-
-/*
- * POP3 protocol handler.
- */
-const struct Curl_scheme Curl_scheme_pop3 = {
-  "pop3",                           /* scheme */
-#ifdef CURL_DISABLE_POP3
-  ZERO_NULL,
-#else
-  &Curl_protocol_pop3,
-#endif
-  CURLPROTO_POP3,                   /* protocol */
-  CURLPROTO_POP3,                   /* family */
-  PROTOPT_CLOSEACTION | PROTOPT_NOURLQUERY | /* flags */
-  PROTOPT_URLOPTIONS | PROTOPT_SSL_REUSE | PROTOPT_CONN_REUSE,
-  PORT_POP3,                        /* defport */
-};
-
-/*
- * POP3S protocol handler.
- */
-const struct Curl_scheme Curl_scheme_pop3s = {
-  "pop3s",                          /* scheme */
-#if defined(CURL_DISABLE_POP3) || !defined(USE_SSL)
-  ZERO_NULL,
-#else
-  &Curl_protocol_pop3,
-#endif
-  CURLPROTO_POP3S,                  /* protocol */
-  CURLPROTO_POP3,                   /* family */
-  PROTOPT_CLOSEACTION | PROTOPT_SSL | /* flags */
-  PROTOPT_NOURLQUERY | PROTOPT_URLOPTIONS | PROTOPT_CONN_REUSE,
-  PORT_POP3S,                       /* defport */
-};

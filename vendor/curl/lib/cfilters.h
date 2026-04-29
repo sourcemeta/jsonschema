@@ -199,12 +199,17 @@ typedef CURLcode Curl_cft_query(struct Curl_cfilter *cf,
  * CF_TYPE_MULTIPLEX:  provides multiplexing of easy handles
  * CF_TYPE_PROXY       provides proxying
  * CF_TYPE_HTTP        implement a version of the HTTP protocol
+ * CF_TYPE_SETUP       filter is only needed for connection setup and
+ *                     can be removed once connected
+ * CF_TYPE_HTTPSRR     filter that wants HTTPS-RR information
  */
 #define CF_TYPE_IP_CONNECT  (1 << 0)
 #define CF_TYPE_SSL         (1 << 1)
 #define CF_TYPE_MULTIPLEX   (1 << 2)
 #define CF_TYPE_PROXY       (1 << 3)
 #define CF_TYPE_HTTP        (1 << 4)
+#define CF_TYPE_SETUP       (1 << 5)
+#define CF_TYPE_HTTPSRR     (1 << 6)
 
 /* A connection filter type, e.g. specific implementation. */
 struct Curl_cftype {
@@ -345,8 +350,15 @@ bool Curl_conn_cf_needs_flush(struct Curl_cfilter *cf,
 unsigned char Curl_conn_cf_get_transport(struct Curl_cfilter *cf,
                                          struct Curl_easy *data);
 
+int Curl_socktype_for_transport(uint8_t transport);
+int Curl_protocol_for_transport(uint8_t transport);
+
 const char *Curl_conn_cf_get_alpn_negotiated(struct Curl_cfilter *cf,
                                              struct Curl_easy *data);
+
+/* The filter (or one of its sub-filters) wants HTTPS-RR information. */
+bool Curl_conn_cf_wants_httpsrr(struct Curl_cfilter *cf,
+                                struct Curl_easy *data);
 
 #define CURL_CF_SSL_DEFAULT  (-1)
 #define CURL_CF_SSL_DISABLE  0
@@ -388,12 +400,13 @@ bool Curl_conn_is_ip_connected(struct Curl_easy *data, int sockindex);
 bool Curl_conn_is_ssl(struct connectdata *conn, int sockindex);
 
 /*
- * Fill `info` with information about the TLS instance securing
- * the connection when available, otherwise e.g. when
- * Curl_conn_is_ssl() is FALSE, return FALSE.
+ * Fill `info` with information about the TLS instance securing the connection
+ * when available, otherwise e.g. when Curl_conn_is_ssl() is FALSE, return
+ * FALSE. 'query' should be CF_QUERY_SSL_INFO or CF_QUERY_SSL_CTX_INFO.
  */
 bool Curl_conn_get_ssl_info(struct Curl_easy *data,
                             struct connectdata *conn, int sockindex,
+                            int query,
                             struct curl_tlssessioninfo *info);
 
 CURLcode Curl_conn_get_ip_info(struct Curl_easy *data,
@@ -429,7 +442,7 @@ void Curl_conn_close(struct Curl_easy *data, int sockindex);
 /**
  * Shutdown the connection at `sockindex` non-blocking, using timeout
  * from `data->set.shutdowntimeout`, default DEFAULT_SHUTDOWN_TIMEOUT_MS.
- * Will return CURLE_OK and *done == FALSE if not finished.
+ * Return CURLE_OK and *done == FALSE if not finished.
  */
 CURLcode Curl_conn_shutdown(struct Curl_easy *data, int sockindex, bool *done);
 
@@ -565,10 +578,6 @@ CURLcode Curl_conn_keep_alive(struct Curl_easy *data,
                               struct connectdata *conn,
                               int sockindex);
 
-#ifdef UNITTESTS
-void Curl_cf_def_close(struct Curl_cfilter *cf, struct Curl_easy *data);
-#endif
-
 /**
  * Get the remote hostname and port that the connection is currently
  * talking to (or will talk to).
@@ -604,14 +613,14 @@ int Curl_conn_sockindex(struct Curl_easy *data, curl_socket_t sockfd);
 
 /*
  * Receive data on the connection, using FIRSTSOCKET/SECONDARYSOCKET.
- * Will return CURLE_AGAIN iff blocked on receiving.
+ * Return CURLE_AGAIN iff blocked on receiving.
  */
 CURLcode Curl_conn_recv(struct Curl_easy *data, int sockindex,
                         char *buf, size_t len, size_t *pnread);
 
 /*
  * Send data on the connection, using FIRSTSOCKET/SECONDARYSOCKET.
- * Will return CURLE_AGAIN iff blocked on sending.
+ * Return CURLE_AGAIN iff blocked on sending.
  */
 CURLcode Curl_conn_send(struct Curl_easy *data, int sockindex,
                         const void *buf, size_t len, bool eos,

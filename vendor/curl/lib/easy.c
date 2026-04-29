@@ -779,8 +779,9 @@ static CURLcode easy_perform(struct Curl_easy *data, bool events)
   if(multi->in_callback)
     return CURLE_RECURSIVE_API_CALL;
 
-  /* Copy the MAXCONNECTS option to the multi handle */
+  /* Copy relevant easy options to the multi handle */
   curl_multi_setopt(multi, CURLMOPT_MAXCONNECTS, (long)data->set.maxconnects);
+  curl_multi_setopt(multi, CURLMOPT_QUICK_EXIT, (long)data->set.quick_exit);
 
   data->multi_easy = NULL; /* pretend it does not exist */
   mresult = curl_multi_add_handle(multi, data);
@@ -814,9 +815,9 @@ static CURLcode easy_perform(struct Curl_easy *data, bool events)
  * curl_easy_perform() is the external interface that performs a blocking
  * transfer as previously setup.
  */
-CURLcode curl_easy_perform(CURL *data)
+CURLcode curl_easy_perform(CURL *curl)
 {
-  return easy_perform(data, FALSE);
+  return easy_perform(curl, FALSE);
 }
 
 #ifdef DEBUGBUILD
@@ -824,9 +825,9 @@ CURLcode curl_easy_perform(CURL *data)
  * curl_easy_perform_ev() is the external interface that performs a blocking
  * transfer using the event-based API internally.
  */
-CURLcode curl_easy_perform_ev(struct Curl_easy *data)
+CURLcode curl_easy_perform_ev(struct Curl_easy *easy)
 {
-  return easy_perform(data, TRUE);
+  return easy_perform(easy, TRUE);
 }
 #endif
 
@@ -834,9 +835,9 @@ CURLcode curl_easy_perform_ev(struct Curl_easy *data)
  * curl_easy_cleanup() is the external interface to cleaning/freeing the given
  * easy handle.
  */
-void curl_easy_cleanup(CURL *ptr)
+void curl_easy_cleanup(CURL *curl)
 {
-  struct Curl_easy *data = ptr;
+  struct Curl_easy *data = curl;
   if(GOOD_EASY_HANDLE(data)) {
     struct Curl_sigpipe_ctx sigpipe_ctx;
     sigpipe_ignore(data, &sigpipe_ctx);
@@ -850,9 +851,9 @@ void curl_easy_cleanup(CURL *ptr)
  * information from a performed transfer and similar.
  */
 #undef curl_easy_getinfo
-CURLcode curl_easy_getinfo(CURL *easy, CURLINFO info, ...)
+CURLcode curl_easy_getinfo(CURL *curl, CURLINFO info, ...)
 {
-  struct Curl_easy *data = easy;
+  struct Curl_easy *data = curl;
   va_list arg;
   void *paramp;
   CURLcode result;
@@ -938,7 +939,7 @@ static CURLcode dupset(struct Curl_easy *dst, struct Curl_easy *src)
 static void dupeasy_meta_freeentry(void *p)
 {
   (void)p;
-  /* Will always be FALSE. Cannot use a 0 assert here since compilers
+  /* Always FALSE. Cannot use a 0 assert here since compilers
    * are not in agreement if they then want a NORETURN attribute or
    * not. *sigh* */
   DEBUGASSERT(p == NULL);
@@ -949,9 +950,9 @@ static void dupeasy_meta_freeentry(void *p)
  * given input easy handle. The returned handle will be a new working handle
  * with all options set exactly as the input source handle.
  */
-CURL *curl_easy_duphandle(CURL *d)
+CURL *curl_easy_duphandle(CURL *curl)
 {
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   struct Curl_easy *outcurl = NULL;
 
   if(!GOOD_EASY_HANDLE(data))
@@ -1080,9 +1081,9 @@ fail:
  * curl_easy_reset() is an external interface that allows an app to re-
  * initialize a session handle to the default values.
  */
-void curl_easy_reset(CURL *d)
+void curl_easy_reset(CURL *curl)
 {
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   if(!GOOD_EASY_HANDLE(data))
     return;
 
@@ -1091,10 +1092,6 @@ void curl_easy_reset(CURL *d)
 
   /* clear all meta data */
   Curl_meta_reset(data);
-  /* clear any resolve data */
-  Curl_async_shutdown(data);
-  Curl_resolv_unlink(data, &data->state.dns[0]);
-  Curl_resolv_unlink(data, &data->state.dns[1]);
   /* zero out UserDefined data: */
   Curl_freeset(data);
   memset(&data->set, 0, sizeof(struct UserDefined));
@@ -1133,12 +1130,12 @@ void curl_easy_reset(CURL *d)
  * NOTE: This is one of few API functions that are allowed to be called from
  * within a callback.
  */
-CURLcode curl_easy_pause(CURL *d, int action)
+CURLcode curl_easy_pause(CURL *curl, int action)
 {
   CURLcode result = CURLE_OK;
   bool recursive = FALSE;
   bool changed = FALSE;
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   bool recv_paused, recv_paused_new;
   bool send_paused, send_paused_new;
 
@@ -1157,12 +1154,14 @@ CURLcode curl_easy_pause(CURL *d, int action)
   if((send_paused != send_paused_new) ||
      (send_paused_new != Curl_creader_is_paused(data))) {
     changed = TRUE;
-    result = Curl_1st_err(result, Curl_xfer_pause_send(data, send_paused_new));
+    result = Curl_1st_fatal(
+      result, Curl_xfer_pause_send(data, send_paused_new));
   }
 
   if(recv_paused != recv_paused_new) {
     changed = TRUE;
-    result = Curl_1st_err(result, Curl_xfer_pause_recv(data, recv_paused_new));
+    result = Curl_1st_fatal(
+      result, Curl_xfer_pause_recv(data, recv_paused_new));
   }
 
   /* If not completely pausing both directions now, run again in any case. */
@@ -1221,11 +1220,11 @@ static CURLcode easy_connection(struct Curl_easy *data,
  * curl_easy_perform() with CURLOPT_CONNECT_ONLY option.
  * Returns CURLE_OK on success, error code on error.
  */
-CURLcode curl_easy_recv(CURL *d, void *buffer, size_t buflen, size_t *n)
+CURLcode curl_easy_recv(CURL *curl, void *buffer, size_t buflen, size_t *n)
 {
   CURLcode result;
   struct connectdata *c;
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
 
   if(!GOOD_EASY_HANDLE(data))
     return CURLE_BAD_FUNCTION_ARGUMENT;
@@ -1299,11 +1298,12 @@ CURLcode Curl_senddata(struct Curl_easy *data, const void *buffer,
  * Sends data over the connected socket. Use after successful
  * curl_easy_perform() with CURLOPT_CONNECT_ONLY option.
  */
-CURLcode curl_easy_send(CURL *d, const void *buffer, size_t buflen, size_t *n)
+CURLcode curl_easy_send(CURL *curl, const void *buffer, size_t buflen,
+                        size_t *n)
 {
   size_t written = 0;
   CURLcode result;
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   if(!GOOD_EASY_HANDLE(data))
     return CURLE_BAD_FUNCTION_ARGUMENT;
   if(Curl_is_in_callback(data))
@@ -1317,9 +1317,9 @@ CURLcode curl_easy_send(CURL *d, const void *buffer, size_t buflen, size_t *n)
 /*
  * Performs connection upkeep for the given session handle.
  */
-CURLcode curl_easy_upkeep(CURL *d)
+CURLcode curl_easy_upkeep(CURL *curl)
 {
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   /* Verify that we got an easy handle we can work with. */
   if(!GOOD_EASY_HANDLE(data))
     return CURLE_BAD_FUNCTION_ARGUMENT;
@@ -1331,18 +1331,20 @@ CURLcode curl_easy_upkeep(CURL *d)
   return Curl_cpool_upkeep(data);
 }
 
-CURLcode curl_easy_ssls_import(CURL *d, const char *session_key,
+CURLcode curl_easy_ssls_import(CURL *curl, const char *session_key,
                                const unsigned char *shmac, size_t shmac_len,
                                const unsigned char *sdata, size_t sdata_len)
 {
 #if defined(USE_SSL) && defined(USE_SSLS_EXPORT)
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   if(!GOOD_EASY_HANDLE(data))
     return CURLE_BAD_FUNCTION_ARGUMENT;
+  if(Curl_is_in_callback(data) || Curl_ssl_scache_is_locked(data))
+    return CURLE_RECURSIVE_API_CALL;
   return Curl_ssl_session_import(data, session_key,
                                  shmac, shmac_len, sdata, sdata_len);
 #else
-  (void)d;
+  (void)curl;
   (void)session_key;
   (void)shmac;
   (void)shmac_len;
@@ -1352,17 +1354,19 @@ CURLcode curl_easy_ssls_import(CURL *d, const char *session_key,
 #endif
 }
 
-CURLcode curl_easy_ssls_export(CURL *d,
+CURLcode curl_easy_ssls_export(CURL *curl,
                                curl_ssls_export_cb *export_fn,
                                void *userptr)
 {
 #if defined(USE_SSL) && defined(USE_SSLS_EXPORT)
-  struct Curl_easy *data = d;
+  struct Curl_easy *data = curl;
   if(!GOOD_EASY_HANDLE(data))
     return CURLE_BAD_FUNCTION_ARGUMENT;
+  if(Curl_is_in_callback(data) || Curl_ssl_scache_is_locked(data))
+    return CURLE_RECURSIVE_API_CALL;
   return Curl_ssl_session_export(data, export_fn, userptr);
 #else
-  (void)d;
+  (void)curl;
   (void)export_fn;
   (void)userptr;
   return CURLE_NOT_BUILT_IN;

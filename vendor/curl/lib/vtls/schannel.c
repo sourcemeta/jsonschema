@@ -175,20 +175,20 @@ static CURLcode schannel_set_ssl_version_min_max(DWORD *enabled_protocols,
   for(; i <= (ssl_version_max >> 16); ++i) {
     switch(i) {
     case CURL_SSLVERSION_TLSv1_0:
-      (*enabled_protocols) |= SP_PROT_TLS1_0_CLIENT;
+      *enabled_protocols |= SP_PROT_TLS1_0_CLIENT;
       break;
     case CURL_SSLVERSION_TLSv1_1:
-      (*enabled_protocols) |= SP_PROT_TLS1_1_CLIENT;
+      *enabled_protocols |= SP_PROT_TLS1_1_CLIENT;
       break;
     case CURL_SSLVERSION_TLSv1_2:
-      (*enabled_protocols) |= SP_PROT_TLS1_2_CLIENT;
+      *enabled_protocols |= SP_PROT_TLS1_2_CLIENT;
       break;
     case CURL_SSLVERSION_TLSv1_3:
 
       /* Windows Server 2022 and newer */
       if(curlx_verify_windows_version(10, 0, 20348, PLATFORM_WINNT,
                                       VERSION_GREATER_THAN_EQUAL)) {
-        (*enabled_protocols) |= SP_PROT_TLS1_3_CLIENT;
+        *enabled_protocols |= SP_PROT_TLS1_3_CLIENT;
         break;
       }
       else { /* Windows 10 and older */
@@ -277,7 +277,7 @@ static int get_alg_id_by_name(const char *name)
   return 0; /* not found */
 }
 
-#define NUM_CIPHERS 47 /* There are 47 options listed above */
+#define NUM_CIPHERS 47 /* There are a maximum of 47 options listed above */
 
 static CURLcode set_ssl_ciphers(SCHANNEL_CRED *schannel_cred, char *ciphers,
                                 ALG_ID *algIds)
@@ -636,7 +636,7 @@ static CURLcode acquire_sspi_handle(struct Curl_cfilter *cf,
   }
   else {
     /* Pre-Windows 10 1809 or the user set a legacy algorithm list.
-       Schannel will not negotiate TLS 1.3 when SCHANNEL_CRED is used. */
+       Schannel does not negotiate TLS 1.3 when SCHANNEL_CRED is used. */
     ALG_ID algIds[NUM_CIPHERS];
     char *ciphers = conn_config->cipher_list;
     SCHANNEL_CRED schannel_cred = { 0 };
@@ -914,18 +914,18 @@ static CURLcode schannel_connect_step1(struct Curl_cfilter *cf,
     unsigned short *list_len = NULL;
     struct alpn_proto_buf proto;
 
-    /* The first four bytes will be an unsigned int indicating number
+    /* The first four bytes is an unsigned int indicating number
        of bytes of data in the rest of the buffer. */
     extension_len = (unsigned int *)(void *)(&alpn_buffer[cur]);
     cur += (int)sizeof(unsigned int);
 
-    /* The next four bytes are an indicator that this buffer will contain
+    /* The next four bytes are an indicator that this buffer contains
        ALPN data, as opposed to NPN, for example. */
     *(unsigned int *)(void *)&alpn_buffer[cur] =
       SecApplicationProtocolNegotiationExt_ALPN;
     cur += (int)sizeof(unsigned int);
 
-    /* The next two bytes will be an unsigned short indicating the number
+    /* The next two bytes is an unsigned short indicating the number
        of bytes used to list the preferred protocols. */
     list_len = (unsigned short *)(void *)(&alpn_buffer[cur]);
     cur += (int)sizeof(unsigned short);
@@ -994,7 +994,7 @@ static CURLcode schannel_connect_step1(struct Curl_cfilter *cf,
 
   if(sspi_status != SEC_I_CONTINUE_NEEDED) {
     char buffer[STRERROR_LEN];
-    Curl_safefree(backend->ctxt);
+    curlx_safefree(backend->ctxt);
     switch(sspi_status) {
     case SEC_E_INSUFFICIENT_MEMORY:
       failf(data, "schannel: initial InitializeSecurityContext failed: %s",
@@ -1330,12 +1330,12 @@ static CURLcode schannel_connect_step2(struct Curl_cfilter *cf,
     memcpy(inbuf[0].pvBuffer, backend->encdata.buffer,
            backend->encdata.offset);
 
-    /* The socket must be writeable (or a poll error occurred) before we call
+    /* The socket must be writable (or a poll error occurred) before we call
        InitializeSecurityContext to continue processing the received TLS
        records. This is because that function is not idempotent and we do not
        support partial save/resume sending replies of handshake tokens. */
     if(!SOCKET_WRITABLE(Curl_conn_cf_get_socket(cf, data), 0)) {
-      SCH_DEV(infof(data, "schannel: handshake waiting for writeable socket"));
+      SCH_DEV(infof(data, "schannel: handshake waiting for writable socket"));
       connssl->io_need = CURL_SSL_IO_NEED_SEND;
       curlx_free(inbuf[0].pvBuffer);
       return CURLE_OK;
@@ -1348,7 +1348,7 @@ static CURLcode schannel_connect_step2(struct Curl_cfilter *cf,
       &outbuf_desc, &backend->ret_flags, NULL);
 
     /* free buffer for received handshake data */
-    Curl_safefree(inbuf[0].pvBuffer);
+    curlx_safefree(inbuf[0].pvBuffer);
 
     /* check if the handshake was incomplete */
     switch(sspi_status) {
@@ -1394,7 +1394,7 @@ static CURLcode schannel_connect_step2(struct Curl_cfilter *cf,
     case SEC_I_INCOMPLETE_CREDENTIALS:
       if(!(backend->req_flags & ISC_REQ_USE_SUPPLIED_CREDS)) {
         /* If the server has requested a client certificate, attempt to
-           continue the handshake without one. This will allow connections to
+           continue the handshake without one. This allows connections to
            servers which request a client certificate but do not require
            it. */
         backend->req_flags |= ISC_REQ_USE_SUPPLIED_CREDS;
@@ -1475,7 +1475,7 @@ static CURLcode schannel_connect_step2(struct Curl_cfilter *cf,
   }
 
   /* Verify the hostname manually when certificate verification is disabled,
-     because in that case Schannel will not verify it. */
+     because in that case Schannel does not verify it. */
   if(!conn_config->verifypeer && conn_config->verifyhost)
     return Curl_verify_host(cf, data);
 
@@ -1568,7 +1568,7 @@ static void schannel_session_free(void *sessionid)
         CertCloseStore(cred->client_cert_store, 0);
         cred->client_cert_store = NULL;
       }
-      Curl_safefree(cred);
+      curlx_safefree(cred);
     }
   }
 }
@@ -1670,7 +1670,7 @@ static CURLcode schannel_connect_step3(struct Curl_cfilter *cf,
 
     traverse_cert_store(ccert_context, cert_counter_callback, &certs_count);
     if(certs_count > MAX_ALLOWED_CERT_AMOUNT) {
-      failf(data, "%d certificates is more than allowed (%u)",
+      failf(data, "%d certificates is more than allowed (%d)",
             certs_count, MAX_ALLOWED_CERT_AMOUNT);
       CertFreeCertificateContext(ccert_context);
       return CURLE_SSL_CONNECT_ERROR;
@@ -1757,7 +1757,13 @@ enum schannel_renegotiate_caller_t {
   SCH_RENEG_CALLER_IS_SEND
 };
 
-#define MAX_RENEG_BLOCK_TIME (7 * 1000) /* 7 seconds in milliseconds */
+/* The maximum time we allow for Schannel renegotiation which may in some
+   rare cases block either due to libcurl (waiting on the socket) or Windows
+   (waiting on an interactive security prompt). Note Schannel "renegotiation"
+   is not necessarily literal TLS renegotiation, but means DecryptMessage
+   returned SEC_I_RENEGOTIATE which means at least the security context needs
+   to be re-established. */
+#define MAX_RENEG_BLOCK_TIME (60 * 1000) /* 60 seconds in milliseconds */
 
 /* This function renegotiates the connection due to a server request received
    by schannel_recv. This function returns CURLE_AGAIN if the renegotiation is
@@ -1845,11 +1851,11 @@ static CURLcode schannel_recv_renegotiate(
      * occur if the user is waiting on the socket only in one direction.
      *
      * For example, if the user has called recv then they may not be waiting
-     * for a writeable socket and vice versa, so we block to avoid that.
+     * for a writable socket and vice versa, so we block to avoid that.
      *
      * In practice a wait is unlikely to occur. For caller recv if handshake
-     * data needs to be sent then we block for a writeable socket that should
-     * be writeable immediately except for OS resource constraints. For caller
+     * data needs to be sent then we block for a writable socket that should
+     * be writable immediately except for OS resource constraints. For caller
      * send if handshake data needs to be received then we block for a readable
      * socket, which could take some time, but it is more likely the user has
      * called recv since they had called it prior (only recv can start
@@ -1905,7 +1911,7 @@ static CURLcode schannel_recv_renegotiate(
       SCH_DEV(infof(data, "schannel: renegotiation wait until socket is"
                     "%s%s for up to %" FMT_TIMEDIFF_T " ms",
                     ((readfd != CURL_SOCKET_BAD) ? " readable" : ""),
-                    ((writefd != CURL_SOCKET_BAD) ? " writeable" : ""),
+                    ((writefd != CURL_SOCKET_BAD) ? " writable" : ""),
                     timeout_ms));
 
       what = Curl_socket_check(readfd, CURL_SOCKET_BAD, writefd, timeout_ms);
@@ -2028,7 +2034,7 @@ static CURLcode schannel_send(struct Curl_cfilter *cf, struct Curl_easy *data,
       sent. The unwritten encrypted bytes would be the first bytes to
       send on the next invocation.
       Here's the catch with this - if we tell the client that all the
-      bytes have been sent, will the client call this method again to
+      bytes have been sent, does the client call this method again to
       send the buffered data?  Looking at who calls this function, it
       seems the answer is NO.
     */
@@ -2082,7 +2088,7 @@ static CURLcode schannel_send(struct Curl_cfilter *cf, struct Curl_easy *data,
     result = CURLE_SEND_ERROR;
   }
 
-  Curl_safefree(ptr);
+  curlx_safefree(ptr);
 
   if(len == *pnwritten)
     /* Encrypted message including header, data and trailer entirely sent.
@@ -2550,7 +2556,7 @@ static void schannel_close(struct Curl_cfilter *cf, struct Curl_easy *data)
   if(backend->ctxt) {
     DEBUGF(infof(data, "schannel: clear security context handle"));
     Curl_pSecFn->DeleteSecurityContext(&backend->ctxt->ctxt_handle);
-    Curl_safefree(backend->ctxt);
+    curlx_safefree(backend->ctxt);
   }
 
   /* free SSPI Schannel API credential handle */
@@ -2563,7 +2569,7 @@ static void schannel_close(struct Curl_cfilter *cf, struct Curl_easy *data)
 
   /* free internal buffer for received encrypted data */
   if(backend->encdata.buffer) {
-    Curl_safefree(backend->encdata.buffer);
+    curlx_safefree(backend->encdata.buffer);
     backend->encdata.length = 0;
     backend->encdata.offset = 0;
     backend->encdata_is_incomplete = FALSE;
@@ -2571,7 +2577,7 @@ static void schannel_close(struct Curl_cfilter *cf, struct Curl_easy *data)
 
   /* free internal buffer for received decrypted data */
   if(backend->decdata.buffer) {
-    Curl_safefree(backend->decdata.buffer);
+    curlx_safefree(backend->decdata.buffer);
     backend->decdata.length = 0;
     backend->decdata.offset = 0;
   }

@@ -49,8 +49,14 @@ struct dynbuf;
 #define SSLSUPP_ISSUERCERT_BLOB (1 << 14) /* CURLOPT_ISSUERCERT_BLOB */
 
 #ifdef USE_ECH
-#include "curlx/base64.h"
-#define ECH_ENABLED(data) \
+/* CURLECH_ bits for the tls_ech option */
+#define CURLECH_DISABLE    (1 << 0)
+#define CURLECH_GREASE     (1 << 1)
+#define CURLECH_ENABLE     (1 << 2)
+#define CURLECH_HARD       (1 << 3)
+#define CURLECH_CLA_CFG    (1 << 4)
+
+#define CURLECH_ENABLED(data) \
   ((data)->set.tls_ech && !((data)->set.tls_ech & CURLECH_DISABLE))
 #endif /* USE_ECH */
 
@@ -90,8 +96,8 @@ struct ssl_peer {
   char *sni;             /* SNI version of hostname or NULL if not usable */
   char *scache_key;      /* for lookups in session cache */
   ssl_peer_type type;    /* type of the peer information */
-  int port;              /* port we are talking to */
-  int transport;         /* one of TRNSPRT_* defines */
+  uint16_t port;         /* port we are talking to */
+  uint8_t transport;     /* one of TRNSPRT_* defines */
 };
 
 CURLsslset Curl_init_sslset_nolock(curl_sslbackend id, const char *name,
@@ -134,7 +140,7 @@ bool Curl_ssl_conn_config_match(struct Curl_easy *data,
                                 bool proxy);
 
 /* Update certain connection SSL config flags after they have
- * been changed on the easy handle. Will work for `verifypeer`,
+ * been changed on the easy handle. Works for `verifypeer`,
  * `verifyhost` and `verifystatus`. */
 void Curl_ssl_conn_config_update(struct Curl_easy *data, bool for_proxy);
 
@@ -144,7 +150,7 @@ void Curl_ssl_conn_config_update(struct Curl_easy *data, bool for_proxy);
 CURLcode Curl_ssl_peer_init(struct ssl_peer *peer,
                             struct Curl_cfilter *cf,
                             const char *tls_id,
-                            int transport);
+                            uint8_t transport);
 /**
  * Free all allocated data and reset peer information.
  */

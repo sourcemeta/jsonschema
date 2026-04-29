@@ -775,7 +775,8 @@ static CURLcode imap_perform_select(struct Curl_easy *data,
   char *mailbox;
 
   /* Invalidate old information as we are switching mailboxes */
-  Curl_safefree(imapc->mailbox);
+  curlx_safefree(imapc->mailbox);
+  imapc->mb_uidvalidity_set = FALSE;
 
   /* Check we have a mailbox */
   if(!imap->mailbox) {
@@ -1024,7 +1025,6 @@ static CURLcode imap_state_capability_resp(struct Curl_easy *data,
                                            imapstate instate)
 {
   CURLcode result = CURLE_OK;
-  struct connectdata *conn = data->conn;
   const char *line = curlx_dyn_ptr(&imapc->pp.recvbuf);
 
   (void)instate;
@@ -1076,7 +1076,7 @@ static CURLcode imap_state_capability_resp(struct Curl_easy *data,
       line += wordlen;
     }
   }
-  else if(data->set.use_ssl && !Curl_conn_is_ssl(conn, FIRSTSOCKET)) {
+  else if(data->set.use_ssl && !Curl_xfer_is_secure(data)) {
     /* PREAUTH is not compatible with STARTTLS. */
     if(imapcode == IMAP_RESP_OK && imapc->tls_supported && !imapc->preauth) {
       /* Switch to TLS connection now */
@@ -1452,8 +1452,8 @@ static CURLcode imap_state_fetch_resp(struct Curl_easy *data,
       if(result)
         return result;
 
-      infof(data, "Written %zu bytes, %" FMT_OFF_TU
-            " bytes are left for transfer", chunk, size - chunk);
+      infof(data, "Written %zu bytes, %" FMT_OFF_T
+            " bytes are left for transfer", chunk, (curl_off_t)(size - chunk));
 
       /* Have we used the entire overflow or part of it?*/
       if(pp->overflow > chunk) {
@@ -1696,14 +1696,15 @@ static CURLcode imap_pollset(struct Curl_easy *data,
 
 static void imap_easy_reset(struct IMAP *imap)
 {
-  Curl_safefree(imap->mailbox);
-  Curl_safefree(imap->uid);
-  Curl_safefree(imap->mindex);
-  Curl_safefree(imap->section);
-  Curl_safefree(imap->partial);
-  Curl_safefree(imap->query);
-  Curl_safefree(imap->custom);
-  Curl_safefree(imap->custom_params);
+  curlx_safefree(imap->mailbox);
+  curlx_safefree(imap->uid);
+  curlx_safefree(imap->mindex);
+  curlx_safefree(imap->section);
+  curlx_safefree(imap->partial);
+  curlx_safefree(imap->query);
+  curlx_safefree(imap->custom);
+  curlx_safefree(imap->custom_params);
+  imap->uidvalidity_set = FALSE;
   /* Clear the transfer mode for the next request */
   imap->transfer = PPTRANSFER_BODY;
 }
@@ -2249,7 +2250,7 @@ static void imap_conn_dtor(void *key, size_t klen, void *entry)
   (void)klen;
   Curl_pp_disconnect(&imapc->pp);
   curlx_dyn_free(&imapc->dyn);
-  Curl_safefree(imapc->mailbox);
+  curlx_safefree(imapc->mailbox);
   curlx_free(imapc);
 }
 
@@ -2302,7 +2303,7 @@ static CURLcode imap_setup_connection(struct Curl_easy *data,
 /*
  * IMAP protocol.
  */
-static const struct Curl_protocol Curl_protocol_imap = {
+const struct Curl_protocol Curl_protocol_imap = {
   imap_setup_connection,            /* setup_connection */
   imap_do,                          /* do_it */
   imap_done,                        /* done */
@@ -2317,44 +2318,9 @@ static const struct Curl_protocol Curl_protocol_imap = {
   imap_disconnect,                  /* disconnect */
   ZERO_NULL,                        /* write_resp */
   ZERO_NULL,                        /* write_resp_hd */
-  ZERO_NULL,                        /* connection_check */
+  ZERO_NULL,                        /* connection_is_dead */
   ZERO_NULL,                        /* attach connection */
   ZERO_NULL,                        /* follow */
 };
 
 #endif /* CURL_DISABLE_IMAP */
-
-/*
- * IMAP protocol handler.
- */
-const struct Curl_scheme Curl_scheme_imap = {
-  "imap",                           /* scheme */
-#ifdef CURL_DISABLE_IMAP
-  ZERO_NULL,
-#else
-  &Curl_protocol_imap,
-#endif
-  CURLPROTO_IMAP,                   /* protocol */
-  CURLPROTO_IMAP,                   /* family */
-  PROTOPT_CLOSEACTION |             /* flags */
-  PROTOPT_URLOPTIONS | PROTOPT_SSL_REUSE |
-  PROTOPT_CONN_REUSE,
-  PORT_IMAP,                        /* defport */
-};
-
-/*
- * IMAPS protocol handler.
- */
-const struct Curl_scheme Curl_scheme_imaps = {
-  "imaps",                          /* scheme */
-#if defined(CURL_DISABLE_IMAP) || !defined(USE_SSL)
-  ZERO_NULL,
-#else
-  &Curl_protocol_imap,
-#endif
-  CURLPROTO_IMAPS,                  /* protocol */
-  CURLPROTO_IMAP,                   /* family */
-  PROTOPT_CLOSEACTION | PROTOPT_SSL | /* flags */
-  PROTOPT_URLOPTIONS | PROTOPT_CONN_REUSE,
-  PORT_IMAPS,                       /* defport */
-};

@@ -29,9 +29,6 @@
 extern const struct Curl_protocol Curl_protocol_sftp;
 extern const struct Curl_protocol Curl_protocol_scp;
 
-extern const struct Curl_scheme Curl_scheme_sftp;
-extern const struct Curl_scheme Curl_scheme_scp;
-
 #ifdef USE_SSH
 
 #ifdef USE_LIBSSH2
@@ -162,7 +159,7 @@ struct ssh_conn {
   int secondCreateDirs;         /* counter use by the code to see if the
                                    second attempt has been made to change
                                    to/create a directory */
-  int waitfor;                  /* KEEP_RECV/KEEP_SEND bits overriding
+  int waitfor;                  /* REQ_IO_RECV/REQ_IO_SEND bits overriding
                                    pollset given flags */
   char *slash_pos;              /* used by the SFTP_CREATE_DIRS state */
 

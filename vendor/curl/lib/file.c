@@ -84,7 +84,7 @@ struct FILEPROTO {
 
 static void file_cleanup(struct FILEPROTO *file)
 {
-  Curl_safefree(file->freepath);
+  curlx_safefree(file->freepath);
   file->path = NULL;
   if(file->fd != -1) {
     curlx_close(file->fd);
@@ -108,6 +108,8 @@ static CURLcode file_setup_connection(struct Curl_easy *data,
   (void)conn;
   /* allocate the FILE specific struct */
   filep = curlx_calloc(1, sizeof(*filep));
+  if(filep)
+    filep->fd = -1;
   if(!filep ||
      Curl_meta_set(data, CURL_META_FILE_EASY, filep, file_easy_dtor))
     return CURLE_OUT_OF_MEMORY;
@@ -191,7 +193,7 @@ static CURLcode file_connect(struct Curl_easy *data, bool *done)
     if(actual_path[i] == '/')
       actual_path[i] = '\\';
     else if(!actual_path[i]) { /* binary zero */
-      Curl_safefree(real_path);
+      curlx_safefree(real_path);
       return CURLE_URL_MALFORMAT;
     }
 
@@ -200,7 +202,7 @@ static CURLcode file_connect(struct Curl_easy *data, bool *done)
 #else
   if(memchr(real_path, 0, real_path_len)) {
     /* binary zeroes indicate foul play */
-    Curl_safefree(real_path);
+    curlx_safefree(real_path);
     return CURLE_URL_MALFORMAT;
   }
 
@@ -598,7 +600,7 @@ out:
   return result;
 }
 
-static const struct Curl_protocol Curl_protocol_file = {
+const struct Curl_protocol Curl_protocol_file = {
   file_setup_connection,                /* setup_connection */
   file_do,                              /* do_it */
   file_done,                            /* done */
@@ -613,25 +615,9 @@ static const struct Curl_protocol Curl_protocol_file = {
   file_disconnect,                      /* disconnect */
   ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* write_resp_hd */
-  ZERO_NULL,                            /* connection_check */
+  ZERO_NULL,                            /* connection_is_dead */
   ZERO_NULL,                            /* attach connection */
   ZERO_NULL,                            /* follow */
 };
 
 #endif
-
-/*
- * FILE scheme handler.
- */
-const struct Curl_scheme Curl_scheme_file = {
-  "file",                               /* scheme */
-#ifdef CURL_DISABLE_FILE
-  ZERO_NULL,
-#else
-  &Curl_protocol_file,
-#endif
-  CURLPROTO_FILE,                       /* protocol */
-  CURLPROTO_FILE,                       /* family */
-  PROTOPT_NONETWORK | PROTOPT_NOURLQUERY, /* flags */
-  0                                     /* defport */
-};
