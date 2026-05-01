@@ -39,7 +39,8 @@ auto escape_component_to_string(std::string &output, std::string_view input,
     }
 
     if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
-        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem) {
+        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem ||
+        mode == URIEscapeMode::UserInfo) {
       if (uri_is_sub_delim(character)) {
         output += character;
         continue;
@@ -62,7 +63,7 @@ auto escape_component_to_string(std::string &output, std::string_view input,
       }
     }
 
-    if (mode == URIEscapeMode::Filesystem) {
+    if (mode == URIEscapeMode::Filesystem || mode == URIEscapeMode::UserInfo) {
       if (character == URI_COLON) {
         output += character;
         continue;
@@ -125,7 +126,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
 
   if (user_info.has_value()) {
     escape_component_to_string(result, user_info.value(),
-                               URIEscapeMode::Fragment);
+                               URIEscapeMode::UserInfo);
     result += '@';
   }
 

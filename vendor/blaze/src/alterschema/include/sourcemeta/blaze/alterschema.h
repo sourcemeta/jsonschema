@@ -45,6 +45,18 @@ enum class AlterSchemaMode : std::uint8_t {
   /// are syntax sugar to other keywords, potentially decreasing human
   /// readability in favor of explicitness
   Canonicalizer,
+
+  /// Rules that upgrade a JSON Schema document up to JSON Schema Draft 6
+  UpgradeDraft6,
+
+  /// Rules that upgrade a JSON Schema document up to JSON Schema Draft 7
+  UpgradeDraft7,
+
+  /// Rules that upgrade a JSON Schema document up to JSON Schema 2019-09
+  Upgrade201909,
+
+  /// Rules that upgrade a JSON Schema document up to JSON Schema 2020-12
+  Upgrade202012,
 };
 
 /// @ingroup alterschema

@@ -32,7 +32,10 @@ enum class URIEscapeMode : std::uint8_t {
   Fragment,
   // Like SkipSubDelims but also preserves ":" for Windows filesystem paths
   // (drive letters like C:)
-  Filesystem
+  Filesystem,
+  // userinfo = *( unreserved / pct-encoded / sub-delims / ":" )
+  // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
+  UserInfo
 };
 
 inline auto uri_escape(std::istream &input, std::ostream &output,
@@ -68,7 +71,8 @@ inline auto uri_escape(std::istream &input, std::ostream &output,
     }
 
     if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
-        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem) {
+        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem ||
+        mode == URIEscapeMode::UserInfo) {
       if (uri_is_sub_delim(character)) {
         output << character;
         continue;
@@ -91,7 +95,7 @@ inline auto uri_escape(std::istream &input, std::ostream &output,
       }
     }
 
-    if (mode == URIEscapeMode::Filesystem) {
+    if (mode == URIEscapeMode::Filesystem || mode == URIEscapeMode::UserInfo) {
       if (character == URI_COLON) {
         output << character;
         continue;

@@ -196,6 +196,9 @@ orphan_definitions
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
 
+portable_anchor_names
+  Keep anchors within the safe allowed character set across JSON Schema dialects (`^[A-Za-z][A-Za-z0-9_.-]*$`)
+
 properties_default
   Setting the `properties` keyword to the empty object does not add any further constraint
 
@@ -271,7 +274,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 87
+Number of rules: 88
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
