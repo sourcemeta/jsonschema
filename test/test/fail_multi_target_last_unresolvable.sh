@@ -32,6 +32,7 @@ EOF
 
 "$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
@@ -47,6 +48,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --json > "$TMP/output.json" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.json"

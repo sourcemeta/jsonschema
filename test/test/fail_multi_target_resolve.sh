@@ -43,6 +43,7 @@ EOF
 
 "$1" test "$TMP/test.json" --resolve "$TMP/schemas" 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Test assertion failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
@@ -60,6 +61,7 @@ diff "$TMP/output.txt" "$TMP/expected.txt"
 
 "$1" test "$TMP/test.json" --resolve "$TMP/schemas" --json > "$TMP/output.json" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Test assertion failure
 test "$EXIT_CODE" = "2"
 
 CTRF_SCHEMA="$(dirname "$0")/../../vendor/ctrf/specification/schema-0.0.0.json"
