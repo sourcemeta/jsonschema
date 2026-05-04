@@ -9,15 +9,11 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/test.json"
 {
-  "target": 1,
+  "target": [],
   "tests": [
     {
       "valid": true,
       "data": {}
-    },
-    {
-      "valid": true,
-      "data": { "type": 1 }
     }
   ]
 }
@@ -25,12 +21,11 @@ EOF
 
 "$1" test "$TMP/test.json" 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Other input error
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json:
-error: The test document \`target\` property must be a URI or an array of URIs
+error: The test document \`target\` array must contain at least one URI
   at line 2
   at column 3
   at file path $(realpath "$TMP")/test.json
@@ -40,3 +35,19 @@ Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.ma
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+"$1" test "$TMP/test.json" --json > "$TMP/stdout.txt" 2>&1 \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+test "$EXIT_CODE" = "6"
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "error": "The test document \`target\` array must contain at least one URI",
+  "line": 2,
+  "column": 3,
+  "filePath": "$(realpath "$TMP")/test.json",
+  "location": "/target"
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

@@ -4,6 +4,7 @@
 
 #include <sourcemeta/core/json.h>
 
+#include <algorithm>   // std::find, std::distance
 #include <chrono>      // std::chrono
 #include <iostream>    // std::cout
 #include <sstream>     // std::ostringstream
@@ -16,7 +17,6 @@
 #include "configure.h"
 #include "error.h"
 #include "input.h"
-#include "logger.h"
 #include "resolver.h"
 #include "utils.h"
 
@@ -120,14 +120,25 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
 
     std::cout << entry.first << ":";
 
+    const auto multi_target{test_suite.targets.size() > 1};
+    sourcemeta::core::JSON::String last_target_header;
+    bool last_target_header_set{false};
+
     const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &, std::size_t index,
+        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
             std::size_t total, const sourcemeta::blaze::TestCase &test_case,
             bool actual, sourcemeta::blaze::TestTimestamp,
             sourcemeta::blaze::TestTimestamp) {
-          if (index == 1 && verbose) {
-            std::cout << "\n";
-          }
+          const auto entry_indent{multi_target ? "    " : "  "};
+
+          const auto emit_target_header{[&]() {
+            if (multi_target &&
+                (!last_target_header_set || last_target_header != target)) {
+              std::cout << "  " << target << ":\n";
+              last_target_header = target;
+              last_target_header_set = true;
+            }
+          }};
 
           const auto &description{test_case.description.empty()
                                       ? "<no description>"
@@ -135,15 +146,19 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
 
           if (test_case.valid == actual) {
             if (verbose) {
-              std::cout << "  " << index << "/" << total << " PASS "
+              if (index == 1) {
+                std::cout << "\n";
+              }
+              emit_target_header();
+              std::cout << entry_indent << index << "/" << total << " PASS "
                         << description << "\n";
             }
           } else if (!test_case.valid && actual) {
             if (!verbose) {
               std::cout << "\n";
             }
-
-            std::cout << "  " << index << "/" << total << " FAIL "
+            emit_target_header();
+            std::cout << entry_indent << index << "/" << total << " FAIL "
                       << description << "\n\n"
                       << "error: Passed but was expected to fail\n";
 
@@ -154,14 +169,19 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
             const std::string ref{"$ref"};
             sourcemeta::blaze::SimpleOutput output{test_case.data,
                                                    {std::cref(ref)}};
-            test_suite.evaluator.validate(test_suite.schema_exhaustive,
-                                          test_case.data, std::ref(output));
+            const auto target_index{static_cast<std::size_t>(
+                std::distance(test_suite.targets.cbegin(),
+                              std::find(test_suite.targets.cbegin(),
+                                        test_suite.targets.cend(), target)))};
+            test_suite.evaluator.validate(
+                test_suite.schemas_exhaustive[target_index], test_case.data,
+                std::ref(output));
 
             if (!verbose) {
               std::cout << "\n";
             }
-
-            std::cout << "  " << index << "/" << total << " FAIL "
+            emit_target_header();
+            std::cout << entry_indent << index << "/" << total << " FAIL "
                       << description << "\n\n";
             sourcemeta::jsonschema::print(output, test_case.tracker, std::cout);
 
@@ -279,8 +299,13 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
               const std::string ref{"$ref"};
               sourcemeta::blaze::SimpleOutput output{test_case.data,
                                                      {std::cref(ref)}};
-              test_suite.evaluator.validate(test_suite.schema_exhaustive,
-                                            test_case.data, std::ref(output));
+              const auto target_index{static_cast<std::size_t>(
+                  std::distance(test_suite.targets.cbegin(),
+                                std::find(test_suite.targets.cbegin(),
+                                          test_suite.targets.cend(), target)))};
+              test_suite.evaluator.validate(
+                  test_suite.schemas_exhaustive[target_index], test_case.data,
+                  std::ref(output));
               sourcemeta::jsonschema::print(output, test_case.tracker,
                                             trace_stream);
               test_object.assign("trace",

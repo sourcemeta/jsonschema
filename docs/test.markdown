@@ -38,6 +38,11 @@ as JSON files that follow a specific format:
   If the `target` is relative, it will be interpreted as a file path relative
   to the test file location.
 
+  This property may also be set to a non-empty array of URIs, in which case
+  every test case in `tests` will be run against each of the listed schemas
+  in turn. This is convenient for asserting that a single set of instances
+  is accepted (or rejected) the same way by multiple related schemas.
+
 - `tests`: An array of tests you want to run.
 
 > [!TIP]
