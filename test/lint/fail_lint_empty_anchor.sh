@@ -19,13 +19,12 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: Schema anchor already exists
-  at identifier file://$(realpath "$TMP")/schema.json
-  at line 1
-  at column 1
+error: Invalid anchor value
+  at value 
+  at keyword \$anchor
   at file path $(realpath "$TMP")/schema.json
-  at location ""
-  at other location ""
+
+Are you sure the input is a valid JSON Schema and it is valid according to its meta-schema?
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -36,13 +35,10 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.json"
 {
-  "error": "Schema anchor already exists",
-  "identifier": "file://$(realpath "$TMP")/schema.json",
-  "line": 1,
-  "column": 1,
-  "filePath": "$(realpath "$TMP")/schema.json",
-  "location": "",
-  "otherLocation": ""
+  "error": "Invalid anchor value",
+  "value": "",
+  "keyword": "\$anchor",
+  "filePath": "$(realpath "$TMP")/schema.json"
 }
 EOF
 

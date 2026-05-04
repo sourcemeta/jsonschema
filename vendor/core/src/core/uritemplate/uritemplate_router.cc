@@ -5,6 +5,7 @@
 #include <algorithm> // std::ranges::lower_bound
 #include <cassert>   // assert
 #include <limits>    // std::numeric_limits
+#include <tuple>     // std::get, std::make_tuple
 
 namespace sourcemeta::core {
 
@@ -121,7 +122,33 @@ auto URITemplateRouter::base_path() const noexcept -> std::string_view {
 }
 
 auto URITemplateRouter::size() const noexcept -> std::size_t {
-  return this->size_;
+  return this->entries_.size();
+}
+
+auto URITemplateRouter::at(const std::size_t index) const -> Identifier {
+  assert(index < this->entries_.size());
+  return std::get<0>(this->entries_[index]);
+}
+
+auto URITemplateRouter::context(const Identifier identifier) const
+    -> Identifier {
+  assert(identifier > 0);
+  const auto entry = std::ranges::find_if(
+      this->entries_, [&identifier](const auto &candidate) {
+        return std::get<0>(candidate) == identifier;
+      });
+  assert(entry != this->entries_.end());
+  return std::get<1>(*entry);
+}
+
+auto URITemplateRouter::path(const Identifier identifier) const -> std::string {
+  assert(identifier > 0);
+  const auto entry = std::ranges::find_if(
+      this->entries_, [&identifier](const auto &candidate) {
+        return std::get<0>(candidate) == identifier;
+      });
+  assert(entry != this->entries_.end());
+  return std::string{std::get<2>(*entry)};
 }
 
 auto URITemplateRouter::otherwise(const Identifier context,
@@ -178,8 +205,17 @@ auto URITemplateRouter::add(const std::string_view uri_template,
 
   if (uri_template.empty()) {
     auto &target = current ? *current : this->root_;
-    if (target.identifier == 0) {
-      this->size_ += 1;
+    const auto previous_identifier = target.identifier;
+    if (previous_identifier == 0) {
+      this->entries_.emplace_back(identifier, context, uri_template);
+    } else {
+      const auto existing = std::ranges::find_if(
+          this->entries_, [&previous_identifier](const auto &candidate) {
+            return std::get<0>(candidate) == previous_identifier;
+          });
+      if (existing != this->entries_.end()) {
+        *existing = std::make_tuple(identifier, context, uri_template);
+      }
     }
     target.identifier = identifier;
     target.context = context;
@@ -350,8 +386,17 @@ auto URITemplateRouter::add(const std::string_view uri_template,
   }
 
   if (!absorbed && current != nullptr) {
-    if (current->identifier == 0) {
-      this->size_ += 1;
+    const auto previous_identifier = current->identifier;
+    if (previous_identifier == 0) {
+      this->entries_.emplace_back(identifier, context, uri_template);
+    } else {
+      const auto existing = std::ranges::find_if(
+          this->entries_, [&previous_identifier](const auto &candidate) {
+            return std::get<0>(candidate) == previous_identifier;
+          });
+      if (existing != this->entries_.end()) {
+        *existing = std::make_tuple(identifier, context, uri_template);
+      }
     }
     current->identifier = identifier;
     current->context = context;

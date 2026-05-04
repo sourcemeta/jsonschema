@@ -13,6 +13,7 @@
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <tuple>       // std::tuple
 #include <utility>     // std::pair
 #include <variant>     // std::variant
 #include <vector>      // std::vector
@@ -116,12 +117,23 @@ public:
   /// Get the number of registered routes
   [[nodiscard]] auto size() const noexcept -> std::size_t;
 
+  /// Get the identifier of the route at the given positional index
+  [[nodiscard]] auto at(const std::size_t index) const -> Identifier;
+
+  /// Get the context identifier associated with a registered route
+  /// identifier
+  [[nodiscard]] auto context(const Identifier identifier) const -> Identifier;
+
+  /// Reconstruct and return the URI Template path string originally registered
+  /// for the given identifier
+  [[nodiscard]] auto path(const Identifier identifier) const -> std::string;
+
 private:
   Node root_;
   Node otherwise_;
   std::string base_path_;
   std::vector<std::pair<Identifier, std::vector<Argument>>> arguments_;
-  std::size_t size_{0};
+  std::vector<std::tuple<Identifier, Identifier, std::string_view>> entries_;
 };
 
 /// @ingroup uritemplate
@@ -159,6 +171,21 @@ public:
 
   /// Get the number of registered routes
   [[nodiscard]] auto size() const noexcept -> std::size_t;
+
+  /// Get the identifier of the route at the given positional index
+  [[nodiscard]] auto at(const std::size_t index) const
+      -> URITemplateRouter::Identifier;
+
+  /// Get the context identifier associated with a registered route
+  /// identifier
+  [[nodiscard]] auto
+  context(const URITemplateRouter::Identifier identifier) const
+      -> URITemplateRouter::Identifier;
+
+  /// Reconstruct and return the URI Template path string originally registered
+  /// for the given identifier
+  [[nodiscard]] auto path(const URITemplateRouter::Identifier identifier) const
+      -> std::string;
 
 private:
   std::vector<std::uint8_t> data_;

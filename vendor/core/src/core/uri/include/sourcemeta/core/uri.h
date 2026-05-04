@@ -324,6 +324,20 @@ public:
   /// ```
   [[nodiscard]] auto query() const -> std::optional<std::string_view>;
 
+  /// Set the query part of the URI. A leading `?` in the input is stripped.
+  /// Passing an empty string clears the query. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
+  /// uri.query("foo=bar");
+  /// assert(uri.query().has_value());
+  /// assert(uri.query().value() == "foo=bar");
+  /// ```
+  auto query(const std::string_view query) -> URI &;
+
   /// Recompose a URI as established by RFC 3986. For example:
   ///
   /// ```cpp
@@ -435,6 +449,20 @@ public:
   /// Applications should not render as clear text any data after the first
   /// colon. See https://tools.ietf.org/html/rfc3986#section-3.2.1
   [[nodiscard]] auto userinfo() const -> std::optional<std::string_view>;
+
+  /// Set the user information part of the URI. Passing an empty string clears
+  /// the user information. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"http://host/path"};
+  /// uri.userinfo("user");
+  /// assert(uri.userinfo().has_value());
+  /// assert(uri.userinfo().value() == "user");
+  /// ```
+  auto userinfo(const std::string_view userinfo) -> URI &;
 
   /// To support equality of URIs
   auto operator==(const URI &other) const noexcept -> bool = default;

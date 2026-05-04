@@ -7,6 +7,7 @@
 #include <limits>        // std::numeric_limits
 #include <queue>         // std::queue
 #include <string>        // std::string
+#include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
 #include <utility>       // std::pair
 #include <vector>        // std::vector
@@ -64,6 +65,101 @@ finalize_match(const URITemplateRouter::Identifier otherwise_context,
   }
 
   return {identifier, context};
+}
+
+inline auto count_base_path_segments(const std::string_view base_path) noexcept
+    -> std::uint32_t {
+  std::uint32_t count = 0;
+  std::size_t position = 0;
+  while (position < base_path.size()) {
+    while (position < base_path.size() && base_path[position] == '/') {
+      ++position;
+    }
+    if (position >= base_path.size()) {
+      break;
+    }
+    while (position < base_path.size() && base_path[position] != '/') {
+      ++position;
+    }
+    ++count;
+  }
+  return count;
+}
+
+inline auto reconstruct_path_recursive(
+    const SerializedNode *nodes, const std::uint32_t node_count,
+    const char *string_table, const std::size_t string_table_size,
+    const std::uint32_t node_index, const std::uint32_t depth,
+    const std::uint32_t base_path_depth,
+    const URITemplateRouter::Identifier target, std::string &accumulator)
+    -> bool {
+  if (node_index >= node_count) {
+    return false;
+  }
+
+  const auto &node = nodes[node_index];
+
+  if (node.string_offset > string_table_size ||
+      node.string_length > string_table_size - node.string_offset) {
+    return false;
+  }
+
+  const std::string_view value{string_table + node.string_offset,
+                               node.string_length};
+
+  if (depth > base_path_depth) {
+    switch (node.type) {
+      case URITemplateRouter::NodeType::Literal:
+        accumulator += '/';
+        accumulator.append(value.data(), value.size());
+        break;
+      case URITemplateRouter::NodeType::Variable:
+        accumulator += "/{";
+        accumulator.append(value.data(), value.size());
+        accumulator += '}';
+        break;
+      case URITemplateRouter::NodeType::Expansion:
+        accumulator += "/{+";
+        accumulator.append(value.data(), value.size());
+        accumulator += '}';
+        break;
+      default:
+        break;
+    }
+  }
+
+  if (node.identifier == target) {
+    return true;
+  }
+
+  const auto saved_length = accumulator.size();
+
+  if (node.first_literal_child != NO_CHILD &&
+      node.first_literal_child < node_count &&
+      node.literal_child_count <= node_count - node.first_literal_child) {
+    for (std::uint32_t offset = 0; offset < node.literal_child_count;
+         ++offset) {
+      if (reconstruct_path_recursive(
+              nodes, node_count, string_table, string_table_size,
+              node.first_literal_child + offset, depth + 1, base_path_depth,
+              target, accumulator)) {
+        return true;
+      }
+      accumulator.resize(saved_length);
+    }
+  }
+
+  if (node.variable_child != NO_CHILD && node.variable_child < node_count) {
+    if (reconstruct_path_recursive(nodes, node_count, string_table,
+                                   string_table_size, node.variable_child,
+                                   depth + 1, base_path_depth, target,
+                                   accumulator)) {
+      return true;
+    }
+    accumulator.resize(saved_length);
+  }
+
+  return false;
 }
 
 // Binary search for a literal child matching the given segment
@@ -713,6 +809,95 @@ auto URITemplateRouterView::size() const noexcept -> std::size_t {
   }
 
   return count;
+}
+
+auto URITemplateRouterView::at(const std::size_t index) const
+    -> URITemplateRouter::Identifier {
+  assert(this->data_.size() >= sizeof(RouterHeader));
+  const auto *header =
+      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
+  assert(header->node_count > 0 &&
+         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
+                                   sizeof(SerializedNode));
+
+  const auto *nodes = reinterpret_cast<const SerializedNode *>(
+      this->data_.data() + sizeof(RouterHeader));
+
+  std::size_t count = 0;
+  for (std::uint32_t node_index = 0; node_index < header->node_count;
+       ++node_index) {
+    if (nodes[node_index].identifier != 0) {
+      if (count == index) {
+        return nodes[node_index].identifier;
+      }
+      ++count;
+    }
+  }
+
+  assert(false);
+  return 0;
+}
+
+auto URITemplateRouterView::context(
+    const URITemplateRouter::Identifier identifier) const
+    -> URITemplateRouter::Identifier {
+  assert(identifier > 0);
+  assert(this->data_.size() >= sizeof(RouterHeader));
+  const auto *header =
+      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
+  assert(header->node_count > 0 &&
+         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
+                                   sizeof(SerializedNode));
+
+  const auto *nodes = reinterpret_cast<const SerializedNode *>(
+      this->data_.data() + sizeof(RouterHeader));
+
+  for (std::uint32_t node_index = 0; node_index < header->node_count;
+       ++node_index) {
+    if (nodes[node_index].identifier == identifier) {
+      return nodes[node_index].context;
+    }
+  }
+
+  assert(false);
+  return 0;
+}
+
+auto URITemplateRouterView::path(
+    const URITemplateRouter::Identifier identifier) const -> std::string {
+  assert(identifier > 0);
+  assert(this->data_.size() >= sizeof(RouterHeader));
+  const auto *header =
+      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
+  assert(header->node_count > 0 &&
+         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
+                                   sizeof(SerializedNode));
+  assert(header->string_table_offset >=
+             sizeof(RouterHeader) +
+                 header->node_count * sizeof(SerializedNode) &&
+         header->string_table_offset <= this->data_.size());
+  assert(header->arguments_offset >= header->string_table_offset &&
+         header->arguments_offset <= this->data_.size());
+
+  const auto *nodes = reinterpret_cast<const SerializedNode *>(
+      this->data_.data() + sizeof(RouterHeader));
+  const auto *string_table = reinterpret_cast<const char *>(
+      this->data_.data() + header->string_table_offset);
+  const auto string_table_size =
+      header->arguments_offset - header->string_table_offset;
+
+  const auto base_path_depth = count_base_path_segments(this->base_path());
+
+  std::string accumulator;
+  [[maybe_unused]] const auto found = reconstruct_path_recursive(
+      nodes, header->node_count, string_table, string_table_size, 0, 0,
+      base_path_depth, identifier, accumulator);
+
+  assert(found);
+  return accumulator;
 }
 
 } // namespace sourcemeta::core
