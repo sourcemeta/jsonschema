@@ -129,6 +129,10 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
             std::size_t total, const sourcemeta::blaze::TestCase &test_case,
             bool actual, sourcemeta::blaze::TestTimestamp,
             sourcemeta::blaze::TestTimestamp) {
+          if (verbose && index == 1) {
+            std::cout << "\n";
+          }
+
           const auto entry_indent{multi_target ? "    " : "  "};
 
           const auto emit_target_header{[&]() {
@@ -146,9 +150,6 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
 
           if (test_case.valid == actual) {
             if (verbose) {
-              if (index == 1) {
-                std::cout << "\n";
-              }
               emit_target_header();
               std::cout << entry_indent << index << "/" << total << " PASS "
                         << description << "\n";
