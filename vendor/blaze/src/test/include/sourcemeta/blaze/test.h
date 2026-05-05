@@ -90,17 +90,17 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  /// The target schema URI or file path
-  sourcemeta::core::JSON::String target;
+  /// The target schema URIs or file paths
+  std::vector<sourcemeta::core::JSON::String> targets;
   /// The list of test cases in the suite
   std::vector<TestCase> tests;
+  /// The compiled schema templates for fast validation
+  std::vector<Template> schemas_fast;
+  /// The compiled schema templates for exhaustive validation
+  std::vector<Template> schemas_exhaustive;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
-  /// The compiled schema template for fast validation
-  Template schema_fast;
-  /// The compiled schema template for exhaustive validation
-  Template schema_exhaustive;
   /// The evaluator instance used for validation
   Evaluator evaluator;
 
@@ -193,7 +193,9 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///     sourcemeta::core::schema_walker,
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
-  /// assert(suite.target == "https://json-schema.org/draft/2020-12/schema");
+  /// assert(suite.targets.size() == 1);
+  /// assert(suite.targets.front() ==
+  ///   "https://json-schema.org/draft/2020-12/schema");
   /// assert(suite.tests.size() == 2);
   /// ```
   static auto

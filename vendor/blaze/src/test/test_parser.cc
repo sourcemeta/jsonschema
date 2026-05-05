@@ -101,9 +101,11 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
   TEST_ERROR_IF(!document.defines("target"), tracker,
                 sourcemeta::core::empty_pointer,
                 "The test document must contain a `target` property");
-  TEST_ERROR_IF(!document.at("target").is_string(), tracker,
-                sourcemeta::core::Pointer{"target"},
-                "The test document `target` property must be a URI");
+  TEST_ERROR_IF(!document.at("target").is_string() &&
+                    !document.at("target").is_array(),
+                tracker, sourcemeta::core::Pointer{"target"},
+                "The test document `target` property must be a URI or an "
+                "array of URIs");
   TEST_ERROR_IF(!document.defines("tests"), tracker,
                 sourcemeta::core::empty_pointer,
                 "The test document must contain a `tests` property");
@@ -113,12 +115,33 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
 
   const auto base_path_uri{
       sourcemeta::core::URI::from_path(base_path / "test.json")};
-  sourcemeta::core::URI schema_uri{document.at("target").to_string()};
-  schema_uri.resolve_from(base_path_uri);
-  schema_uri.canonicalize();
 
   TestSuite test_suite;
-  test_suite.target = schema_uri.recompose();
+
+  if (document.at("target").is_string()) {
+    sourcemeta::core::URI schema_uri{document.at("target").to_string()};
+    schema_uri.resolve_from(base_path_uri);
+    schema_uri.canonicalize();
+    test_suite.targets.push_back(schema_uri.recompose());
+  } else {
+    TEST_ERROR_IF(document.at("target").empty(), tracker,
+                  sourcemeta::core::Pointer{"target"},
+                  "The test document `target` array must contain at least "
+                  "one URI");
+    // TODO(C++23): Use std::views::enumerate when available in libc++
+    std::size_t target_index{0};
+    for (const auto &target_entry : document.at("target").as_array()) {
+      const sourcemeta::core::Pointer target_location{"target", target_index};
+      TEST_ERROR_IF(!target_entry.is_string(), tracker, target_location,
+                    "Each entry in the test document `target` array must be "
+                    "a URI");
+      sourcemeta::core::URI schema_uri{target_entry.to_string()};
+      schema_uri.resolve_from(base_path_uri);
+      schema_uri.canonicalize();
+      test_suite.targets.push_back(schema_uri.recompose());
+      target_index += 1;
+    }
+  }
 
   // TODO(C++23): Use std::views::enumerate when available in libc++
   std::size_t index{0};
@@ -131,23 +154,28 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
     index += 1;
   }
 
-  const auto target_schema{sourcemeta::core::wrap(test_suite.target)};
+  test_suite.schemas_fast.reserve(test_suite.targets.size());
+  test_suite.schemas_exhaustive.reserve(test_suite.targets.size());
 
-  try {
-    test_suite.schema_fast =
-        compile(target_schema, walker, schema_resolver, compiler,
-                Mode::FastValidation, default_dialect, default_id, "", tweaks);
-    test_suite.schema_exhaustive =
-        compile(target_schema, walker, schema_resolver, compiler,
-                Mode::Exhaustive, default_dialect, default_id, "", tweaks);
-  } catch (const sourcemeta::core::SchemaReferenceError &error) {
-    if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
-        error.identifier() == test_suite.target) {
-      throw sourcemeta::core::SchemaResolutionError{
-          test_suite.target, "Could not resolve schema under test"};
+  for (const auto &target : test_suite.targets) {
+    const auto target_schema{sourcemeta::core::wrap(target)};
+
+    try {
+      test_suite.schemas_fast.push_back(compile(
+          target_schema, walker, schema_resolver, compiler,
+          Mode::FastValidation, default_dialect, default_id, "", tweaks));
+      test_suite.schemas_exhaustive.push_back(
+          compile(target_schema, walker, schema_resolver, compiler,
+                  Mode::Exhaustive, default_dialect, default_id, "", tweaks));
+    } catch (const sourcemeta::core::SchemaReferenceError &error) {
+      if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
+          error.identifier() == target) {
+        throw sourcemeta::core::SchemaResolutionError{
+            target, "Could not resolve schema under test"};
+      }
+
+      throw;
     }
-
-    throw;
   }
 
   return test_suite;

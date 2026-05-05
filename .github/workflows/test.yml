@@ -69,7 +69,7 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-24.04
-          additional-packages: cmake build-essential g++-14 shellcheck pipx zsh jq bindfs nodejs
+          additional-packages: cmake build-essential gcc-14 g++-14 shellcheck pipx zsh jq bindfs nodejs
           wsl-version: 2
 
       - name: Install dependencies (Alpine)
@@ -100,7 +100,7 @@ jobs:
         run: |
           sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
           sudo apt-get update --yes
-          sudo apt-get install --yes g++-14 zsh bindfs
+          sudo apt-get install --yes gcc-14 g++-14 zsh bindfs
 
       - run: cmake --version
       - name: Configure JSON Schema
