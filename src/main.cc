@@ -23,6 +23,8 @@ Global Options:
                                   if the `$schema` keyword is not set
    --json, -j                     Prefer JSON output if supported
    --http, -h                     Allow network access to resolve remote schemas
+   --header, -H <name: value>     Send a custom HTTP header on every outgoing
+                                  request. May be passed multiple times
 
 Commands:
 
@@ -245,6 +247,7 @@ auto main(int argc, char *argv[]) noexcept -> int {
   app.flag("json", {"j"});
   app.option("resolve", {"r"});
   app.option("default-dialect", {"d"});
+  app.option("header", {"H"});
 
   return sourcemeta::jsonschema::try_catch(app, [&app, argc, &argv]() {
     const std::string program{argv[0]};

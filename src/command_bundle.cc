@@ -16,11 +16,12 @@
 
 auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     -> void {
-
   if (options.positional().size() < 1) {
     throw PositionalArgumentError{"This command expects a path to a schema",
                                   "jsonschema bundle path/to/schema.json"};
   }
+
+  validate_http_headers(options);
 
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");

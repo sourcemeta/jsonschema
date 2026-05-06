@@ -31,6 +31,7 @@ _jsonschema() {
     '(--json -j)'{--json,-j}'[Prefer JSON output if supported]'
     '(--http -h)'{--http,-h}'[Enable HTTP resolution]'
     '(--debug -g)'{--debug,-g}'[Enable debug output]'
+    '*'{--header,-H}'[Send a custom HTTP header (Name: Value)]:header:'
   )
 
   _arguments -C \

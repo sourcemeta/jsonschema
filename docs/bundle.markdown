@@ -4,6 +4,7 @@ Bundling
 ```sh
 jsonschema bundle <schema.json|.yaml>
   [--http/-h] [--verbose/-v] [--debug/-g]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--without-id/-w] [--default-dialect/-d <uri>] [--json/-j]
@@ -120,6 +121,13 @@ jsonschema bundle path/to/my/schema.json \
 
 ```sh
 jsonschema bundle path/to/my/schema.json --http
+```
+
+### Bundle a JSON Schema with a custom HTTP header
+
+```sh
+jsonschema bundle path/to/my/schema.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
 
 ### Bundle a JSON Schema without identifiers and importing a single local schema

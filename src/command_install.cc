@@ -291,6 +291,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         "jsonschema install https://example.com/schema ./vendor/schema.json"};
   }
 
+  validate_http_headers(options);
+
   auto configuration_path{
       sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};
 

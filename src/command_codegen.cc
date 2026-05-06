@@ -24,6 +24,8 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
                                   "--name MyType --target typescript"};
   }
 
+  validate_http_headers(options);
+
   if (!options.contains("target")) {
     throw OptionConflictError{
         "You must pass a target using the `--target/-t` option"};

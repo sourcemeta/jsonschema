@@ -13,7 +13,7 @@ _jsonschema() {
 
   commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install version help"
 
-  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g"
+  global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H"
 
   if [ "${COMP_CWORD}" -eq 1 ]
   then
@@ -39,6 +39,9 @@ _jsonschema() {
       ;;
     --default-dialect|-d)
       COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}") )
+      return 0
+      ;;
+    --header|-H)
       return 0
       ;;
     --indentation)

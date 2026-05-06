@@ -7,6 +7,7 @@ Validating
 ```sh
 jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
   [--http/-h] [--verbose/-v] [--debug/-g]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
@@ -171,6 +172,13 @@ implement correctly at the evaluation level.
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json --http
+```
+
+### Validate a JSON instance with a custom HTTP header
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
 
 ### Validate a JSON instance importing a single local schema

@@ -63,6 +63,33 @@ test_completion() {
   fi
 }
 
+test_no_completion() {
+  local input="$1"
+  local description="$2"
+
+  read -r -a COMP_WORDS <<< "$input"
+
+  if [[ "$input" == *" " ]]; then
+    COMP_WORDS+=("")
+  fi
+
+  COMP_CWORD=$((${#COMP_WORDS[@]} - 1))
+  COMP_LINE="$input"
+  COMP_POINT=${#COMP_LINE}
+  COMPREPLY=()
+
+  _jsonschema
+
+  if [ "${#COMPREPLY[@]}" -gt 0 ]
+  then
+    echo "FAIL: $description" 1>&2
+    echo "  Input: $input" 1>&2
+    echo "  Expected: (no completions)" 1>&2
+    echo "  Got: ${COMPREPLY[*]}" 1>&2
+    return 1
+  fi
+}
+
 test_completion "jsonschema " "validate" "Command completion includes validate"
 test_completion "jsonschema " "metaschema" "Command completion includes metaschema"
 test_completion "jsonschema " "compile" "Command completion includes compile"
@@ -101,5 +128,9 @@ test_completion "jsonschema install --" "--force" "Install includes --force"
 test_completion "jsonschema install --" "--frozen" "Install includes --frozen"
 test_completion "jsonschema install --" "--verbose" "Install includes global option --verbose"
 test_completion "jsonschema install --" "--debug" "Install includes global option --debug"
+
+test_completion "jsonschema validate --" "--header" "Validate includes global option --header"
+test_no_completion "jsonschema validate --header " "After --header no completion is offered"
+test_no_completion "jsonschema validate -H " "After -H no completion is offered"
 
 echo "PASS" 1>&2

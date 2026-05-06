@@ -7,6 +7,7 @@ Metaschema
 ```sh
 jsonschema metaschema [schemas-or-directories...]
   [--http/-h] [--verbose/-v] [--debug/-g] [--extension/-e <extension>]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
   [--default-dialect/-d <uri>] [--json/-j]
@@ -111,4 +112,11 @@ jsonschema metaschema path/to/my/schema.json --trace
 
 ```sh
 jsonschema metaschema path/to/my/schema.json --json
+```
+
+### Validate the metaschema of a JSON Schema with a custom HTTP header
+
+```sh
+jsonschema metaschema path/to/my/schema.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```

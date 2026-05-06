@@ -22,6 +22,7 @@
 
 auto sourcemeta::jsonschema::metaschema(
     const sourcemeta::core::Options &options) -> void {
+  validate_http_headers(options);
   const auto trace{options.contains("trace")};
   const auto json_output{options.contains("json")};
 

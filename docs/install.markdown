@@ -3,7 +3,8 @@ Installing Dependencies
 
 ```sh
 jsonschema install [<uri> <path>]
-  [--force/-f] [--frozen/-z] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--force/-f] [--frozen/-z]
+  [--header/-H "<name>: <value>"] [--verbose/-v] [--debug/-g] [--json/-j]
 ```
 
 Many applications rely on consuming schemas authored and maintained by others.
@@ -74,6 +75,13 @@ tracked in the lock file are fetched again.
 > meta-schema during bundling regardless of processing order. We are working
 > on resolving this automatically in a future release.
 
+Use the global `--header/-H` flag to attach custom HTTP headers to outgoing
+requests. For example:
+
+```sh
+jsonschema install --header "Authorization: Bearer $REGISTRY_TOKEN"
+```
+
 Examples
 --------
 
@@ -111,4 +119,10 @@ jsonschema install --verbose
 
 ```sh
 jsonschema install --frozen
+```
+
+### Install with a custom HTTP header
+
+```sh
+jsonschema install --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
