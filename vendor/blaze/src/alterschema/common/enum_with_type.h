@@ -26,16 +26,20 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_3,
          Vocabularies::Known::JSON_Schema_Draft_2,
          Vocabularies::Known::JSON_Schema_Draft_1}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("type") &&
-                     schema.defines("enum") && schema.at("enum").is_array());
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type);
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
 
-    const auto current_types{parse_schema_type(schema.at("type"))};
+    const auto current_types{parse_schema_type(*type)};
+    ONLY_CONTINUE_IF(current_types.any());
     const bool integer_matches_integral{
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_6,
                                    Vocabularies::Known::JSON_Schema_Draft_7}) &&
         current_types.test(std::to_underlying(JSON::Type::Integer))};
     ONLY_CONTINUE_IF(std::ranges::all_of(
-        schema.at("enum").as_array(),
+        enum_value->as_array(),
         [&current_types, integer_matches_integral](const auto &item) {
           return current_types.test(std::to_underlying(item.type())) ||
                  (integer_matches_integral && item.is_integral());

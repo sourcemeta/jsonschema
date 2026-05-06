@@ -22,12 +22,17 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Validation,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.defines("const"));
+                     schema.is_object());
 
-    const auto current_types{parse_schema_type(schema.at("type"))};
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type);
+    const auto *const_value{schema.try_at("const")};
+    ONLY_CONTINUE_IF(const_value);
+
+    const auto current_types{parse_schema_type(*type)};
+    ONLY_CONTINUE_IF(current_types.any());
     ONLY_CONTINUE_IF(
-        current_types.test(std::to_underlying(schema.at("const").type())));
+        current_types.test(std::to_underlying(const_value->type())));
     return APPLIES_TO_KEYWORDS("const", "type");
   }
 
