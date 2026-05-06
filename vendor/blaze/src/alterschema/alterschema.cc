@@ -361,7 +361,9 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<FlattenNestedAllOf>();
   bundle.add<FlattenNestedAnyOf>();
-  bundle.add<Draft3TypeAny>();
+  if (mode == AlterSchemaMode::Canonicalizer) {
+    bundle.add<Draft3TypeAny>();
+  }
   bundle.add<UnsatisfiableInPlaceApplicatorType>();
   bundle.add<AllOfFalseSimplify>();
   bundle.add<AnyOfFalseSimplify>();
@@ -468,7 +470,9 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   }
 
   bundle.add<DropAllOfEmptySchemas>();
-  bundle.add<Draft3DropExtendsEmptySchemas>();
+  if (mode == AlterSchemaMode::Canonicalizer) {
+    bundle.add<Draft3DropExtendsEmptySchemas>();
+  }
   bundle.add<EmptyObjectAsTrue>();
 
   if (mode == AlterSchemaMode::Canonicalizer) {
