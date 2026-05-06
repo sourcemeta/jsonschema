@@ -17,7 +17,7 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.json"
 [
-  4,
+  5,
   false,
   true,
   [

@@ -22,7 +22,7 @@ EOF
 "$1" compile --minify "$TMP/schema.json" > "$TMP/template.json"
 
 cat << 'EOF' > "$TMP/expected.json"
-[4,false,true,[[[49,["description"],[],"https://example.com#/description",2,[1,"Test schema"]],[49,["title"],[],"https://example.com#/title",2,[1,"Test"]],[66,["additionalProperties"],[],"https://example.com#/additionalProperties",2,[0],[[11,["type"],[],"https://example.com#/additionalProperties/type",2,[8,4]],[51,[],[],"https://example.com#/additionalProperties",2,[0]]]]]],[]]
+[5,false,true,[[[50,["description"],[],"https://example.com#/description",2,[1,"Test schema"]],[50,["title"],[],"https://example.com#/title",2,[1,"Test"]],[67,["additionalProperties"],[],"https://example.com#/additionalProperties",2,[0],[[11,["type"],[],"https://example.com#/additionalProperties/type",2,[8,4]],[52,[],[],"https://example.com#/additionalProperties",2,[0]]]]]],[]]
 EOF
 
 diff "$TMP/template.json" "$TMP/expected.json"
