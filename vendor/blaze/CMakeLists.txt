@@ -104,6 +104,7 @@ if(PROJECT_IS_TOP_LEVEL)
     add_custom_target(blaze_format_trace_json
       COMMAND "${Python3_EXECUTABLE}"
         "${PROJECT_SOURCE_DIR}/contrib/format_trace_json.py"
+        "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft3.json"
         "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft4.json"
         "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft6.json"
         "${PROJECT_SOURCE_DIR}/test/evaluator/evaluator_draft7.json"

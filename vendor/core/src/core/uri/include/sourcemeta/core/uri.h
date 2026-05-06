@@ -10,15 +10,18 @@
 // NOLINTEND(misc-include-cleaner)
 
 #include <concepts>    // std::convertible_to
+#include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint32_t
 #include <filesystem>  // std::filesystem
 #include <istream>     // std::istream
+#include <iterator>    // std::forward_iterator_tag
 #include <memory>      // std::unique_ptr
 #include <optional>    // std::optional
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <type_traits> // std::is_same_v
+#include <utility>     // std::pair
 #include <vector>      // std::vector
 
 /// @defgroup uri URI
@@ -311,7 +314,109 @@ public:
   /// ```
   auto fragment(const std::string_view fragment) -> URI &;
 
-  /// Get the non-dissected query part of the URI, if any. For example:
+  /// A non-owning, zero-copy view over the RFC 3986 query
+  /// component of a URI. Provides convenience access to query
+  /// parameters formatted as `name=value` pairs separated by `&`.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::URI
+  ///   uri{"https://www.sourcemeta.com/?foo=bar"};
+  /// const auto query{uri.query()};
+  /// assert(query.has_value());
+  /// assert(query.value().raw() == "foo=bar");
+  /// ```
+  class SOURCEMETA_CORE_URI_EXPORT Query {
+  public:
+    /// Get the raw RFC 3986 query string this view was constructed
+    /// from. For example:
+    ///
+    /// ```cpp
+    /// #include <sourcemeta/core/uri.h>
+    /// #include <cassert>
+    ///
+    /// const sourcemeta::core::URI
+    ///   uri{"https://www.sourcemeta.com/?foo=bar&baz=qux"};
+    /// assert(uri.query().value().raw() == "foo=bar&baz=qux");
+    /// ```
+    [[nodiscard]] auto raw() const -> std::string_view;
+
+    /// Look up the value of a query parameter by name. Returns
+    /// `std::nullopt` if no matching parameter exists. If multiple
+    /// parameters share the given name, the value of the first one
+    /// is returned. The returned value is not percent-decoded. For
+    /// example:
+    ///
+    /// ```cpp
+    /// #include <sourcemeta/core/uri.h>
+    /// #include <cassert>
+    ///
+    /// const sourcemeta::core::URI
+    ///   uri{"https://www.sourcemeta.com/?foo=bar"};
+    /// const auto query{uri.query()};
+    /// assert(query.has_value());
+    /// assert(query.value().at("foo").value() == "bar");
+    /// ```
+    [[nodiscard]] auto at(const std::string_view name) const
+        -> std::optional<std::string_view>;
+
+    /// Forward iterator over the `(name, value)` pairs of this
+    /// query view. Names and values are returned exactly as they
+    /// appear in the raw query, without percent-decoding
+    class SOURCEMETA_CORE_URI_EXPORT const_iterator {
+    public:
+      using iterator_category = std::forward_iterator_tag;
+      using value_type = std::pair<std::string_view, std::string_view>;
+      using difference_type = std::ptrdiff_t;
+      using reference = const value_type &;
+      using pointer = const value_type *;
+
+      const_iterator() = default;
+      const_iterator(const std::string_view raw, const std::size_t pair_start);
+
+      [[nodiscard]] auto operator*() const -> reference;
+      [[nodiscard]] auto operator->() const -> pointer;
+      auto operator++() -> const_iterator &;
+      auto operator++(int) -> const_iterator;
+      [[nodiscard]] auto operator==(const const_iterator &other) const -> bool;
+      [[nodiscard]] auto operator!=(const const_iterator &other) const -> bool;
+
+    private:
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251)
+#endif
+      std::string_view raw_{};
+      std::size_t pair_start_{std::string_view::npos};
+      value_type current_{};
+#if defined(_MSC_VER)
+#pragma warning(default : 4251)
+#endif
+    };
+
+    /// Iterator to the first `(name, value)` pair
+    [[nodiscard]] auto begin() const -> const_iterator;
+
+    /// Past-the-end iterator
+    [[nodiscard]] auto end() const -> const_iterator;
+
+  private:
+    friend class URI;
+    explicit Query(const std::string_view raw);
+
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251)
+#endif
+    std::string_view raw_;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251)
+#endif
+  };
+
+  /// Get the query part of the URI as a navigable view, if any.
+  /// For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -320,9 +425,9 @@ public:
   /// const sourcemeta::core::URI
   ///   uri{"https://www.sourcemeta.com/?foo=bar"};
   /// assert(uri.query().has_value());
-  /// assert(uri.query().value() == "foo=bar");
+  /// assert(uri.query().value().raw() == "foo=bar");
   /// ```
-  [[nodiscard]] auto query() const -> std::optional<std::string_view>;
+  [[nodiscard]] auto query() const -> std::optional<Query>;
 
   /// Set the query part of the URI. A leading `?` in the input is stripped.
   /// Passing an empty string clears the query. For example:
@@ -334,7 +439,7 @@ public:
   /// sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
   /// uri.query("foo=bar");
   /// assert(uri.query().has_value());
-  /// assert(uri.query().value() == "foo=bar");
+  /// assert(uri.query().value().raw() == "foo=bar");
   /// ```
   auto query(const std::string_view query) -> URI &;
 

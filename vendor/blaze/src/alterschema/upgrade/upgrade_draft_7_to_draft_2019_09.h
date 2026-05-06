@@ -18,7 +18,10 @@ public:
         vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_7) &&
         schema.is_object());
 
-    ONLY_CONTINUE_IF(has_pending_pattern(schema));
+    ONLY_CONTINUE_IF(subschema_at_dialect(schema, location, DRAFT_7_URL) ||
+                     has_actionable_id_fragment(schema) ||
+                     has_actionable_dependencies(schema) ||
+                     has_actionable_ref_siblings(schema));
 
     for (const auto &entry : frame.locations()) {
       if (entry.second.type !=
@@ -321,8 +324,7 @@ private:
       return false;
     }
 
-    if (subschema.defines("$schema") && subschema.at("$schema").is_string() &&
-        subschema.at("$schema").to_string() == DRAFT_7_URL) {
+    if (current_dialect_or_override(subschema) == DRAFT_7_URL) {
       return true;
     }
 

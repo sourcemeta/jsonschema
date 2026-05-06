@@ -1,0 +1,26 @@
+From 95fec2442e66b3de6651972e5f7d4635ca6f7ff9 Mon Sep 17 00:00:00 2001
+From: Juan Cruz Viotti <jv@jviotti.com>
+Date: Tue, 5 May 2026 09:15:10 -0400
+Subject: [PATCH] Do not use `definitions` sibling to `$ref` in `ref.json` for
+ Draft 3
+
+I'm extending Blaze to support Draft 3. As per the spec (applies to all drafts up to 7), a `$ref` overrides any sibling keyword. This seems to be the only case in the test suite where we do this.
+---
+ tests/draft3/ref.json | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/tests/draft3/ref.json b/tests/draft3/ref.json
+index 609eaa46..6686c78e 100644
+--- a/tests/draft3/ref.json
++++ b/tests/draft3/ref.json
+@@ -127,7 +127,9 @@
+                 "b": {"$ref": "#/definitions/a"},
+                 "c": {"$ref": "#/definitions/b"}
+             },
+-            "$ref": "#/definitions/c"
++            "extends": {
++                "$ref": "#/definitions/c"
++            }
+         },
+         "tests": [
+             {

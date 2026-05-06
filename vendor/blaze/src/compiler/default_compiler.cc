@@ -2,6 +2,7 @@
 
 #include "default_compiler_2019_09.h"
 #include "default_compiler_2020_12.h"
+#include "default_compiler_draft3.h"
 #include "default_compiler_draft4.h"
 #include "default_compiler_draft6.h"
 #include "default_compiler_draft7.h"
@@ -41,6 +42,8 @@ auto sourcemeta::blaze::default_schema_compiler(
                              Known::JSON_Schema_Draft_6_Hyper,
                              Known::JSON_Schema_Draft_4,
                              Known::JSON_Schema_Draft_4_Hyper,
+                             Known::JSON_Schema_Draft_3,
+                             Known::JSON_Schema_Draft_3_Hyper,
                              Known::OpenAPI_3_1_Base,
                              Known::OpenAPI_3_2_Base};
 
@@ -138,9 +141,9 @@ auto sourcemeta::blaze::default_schema_compiler(
 
   // As per compatibility optional test
   COMPILE(Known::JSON_Schema_2020_12_Applicator, "dependencies",
-          compiler_draft4_applicator_dependencies);
+          compiler_draft3_applicator_dependencies);
 
-  COMPILE(Known::JSON_Schema_2020_12_Core, "$ref", compiler_draft4_core_ref);
+  COMPILE(Known::JSON_Schema_2020_12_Core, "$ref", compiler_draft3_core_ref);
 
   COMPILE(Known::JSON_Schema_2020_12_Applicator, "allOf",
           compiler_draft4_applicator_allof);
@@ -152,13 +155,13 @@ auto sourcemeta::blaze::default_schema_compiler(
           compiler_draft4_applicator_not);
 
   COMPILE(Known::JSON_Schema_2020_12_Validation, "enum",
-          compiler_draft4_validation_enum);
+          compiler_draft3_validation_enum);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "uniqueItems",
-          compiler_draft4_validation_uniqueitems);
+          compiler_draft3_validation_uniqueitems);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "maxItems",
-          compiler_draft4_validation_maxitems);
+          compiler_draft3_validation_maxitems);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "minItems",
-          compiler_draft4_validation_minitems);
+          compiler_draft3_validation_minitems);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "required",
           compiler_draft4_validation_required);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "maxProperties",
@@ -166,17 +169,17 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE(Known::JSON_Schema_2020_12_Validation, "minProperties",
           compiler_draft4_validation_minproperties);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "maximum",
-          compiler_draft4_validation_maximum);
+          compiler_draft3_validation_maximum);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "minimum",
-          compiler_draft4_validation_minimum);
+          compiler_draft3_validation_minimum);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "multipleOf",
-          compiler_draft4_validation_multipleof);
+          compiler_draft3_validation_divisibleby);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "maxLength",
-          compiler_draft4_validation_maxlength);
+          compiler_draft3_validation_maxlength);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "minLength",
-          compiler_draft4_validation_minlength);
+          compiler_draft3_validation_minlength);
   COMPILE(Known::JSON_Schema_2020_12_Validation, "pattern",
-          compiler_draft4_validation_pattern);
+          compiler_draft3_validation_pattern);
 
   // ********************************************
   // 2019-09
@@ -239,9 +242,9 @@ auto sourcemeta::blaze::default_schema_compiler(
 
   // As per compatibility optional test
   COMPILE(Known::JSON_Schema_2019_09_Applicator, "dependencies",
-          compiler_draft4_applicator_dependencies);
+          compiler_draft3_applicator_dependencies);
 
-  COMPILE(Known::JSON_Schema_2019_09_Core, "$ref", compiler_draft4_core_ref);
+  COMPILE(Known::JSON_Schema_2019_09_Core, "$ref", compiler_draft3_core_ref);
 
   COMPILE(Known::JSON_Schema_2019_09_Applicator, "allOf",
           compiler_draft4_applicator_allof);
@@ -253,13 +256,13 @@ auto sourcemeta::blaze::default_schema_compiler(
           compiler_draft4_applicator_not);
 
   COMPILE(Known::JSON_Schema_2019_09_Validation, "enum",
-          compiler_draft4_validation_enum);
+          compiler_draft3_validation_enum);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "uniqueItems",
-          compiler_draft4_validation_uniqueitems);
+          compiler_draft3_validation_uniqueitems);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "maxItems",
-          compiler_draft4_validation_maxitems);
+          compiler_draft3_validation_maxitems);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "minItems",
-          compiler_draft4_validation_minitems);
+          compiler_draft3_validation_minitems);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "required",
           compiler_draft4_validation_required);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "maxProperties",
@@ -267,24 +270,24 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE(Known::JSON_Schema_2019_09_Validation, "minProperties",
           compiler_draft4_validation_minproperties);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "maximum",
-          compiler_draft4_validation_maximum);
+          compiler_draft3_validation_maximum);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "minimum",
-          compiler_draft4_validation_minimum);
+          compiler_draft3_validation_minimum);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "multipleOf",
-          compiler_draft4_validation_multipleof);
+          compiler_draft3_validation_divisibleby);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "maxLength",
-          compiler_draft4_validation_maxlength);
+          compiler_draft3_validation_maxlength);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "minLength",
-          compiler_draft4_validation_minlength);
+          compiler_draft3_validation_minlength);
   COMPILE(Known::JSON_Schema_2019_09_Validation, "pattern",
-          compiler_draft4_validation_pattern);
+          compiler_draft3_validation_pattern);
 
   // ********************************************
   // DRAFT 7
   // ********************************************
 
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "$ref", compiler_draft4_core_ref);
+              "$ref", compiler_draft3_core_ref);
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_7, "$ref");
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_7_Hyper, "$ref");
 
@@ -322,18 +325,18 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "not", compiler_draft4_applicator_not);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "enum", compiler_draft4_validation_enum);
+              "enum", compiler_draft3_validation_enum);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "items", compiler_draft4_applicator_items);
+              "items", compiler_draft3_applicator_items);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "additionalItems", compiler_draft4_applicator_additionalitems);
+              "additionalItems", compiler_draft3_applicator_additionalitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "uniqueItems", compiler_draft4_validation_uniqueitems);
+              "uniqueItems", compiler_draft3_validation_uniqueitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "maxItems", compiler_draft4_validation_maxitems);
+              "maxItems", compiler_draft3_validation_maxitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "minItems", compiler_draft4_validation_minitems);
+              "minItems", compiler_draft3_validation_minitems);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "required", compiler_draft4_validation_required);
@@ -342,36 +345,36 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "minProperties", compiler_draft4_validation_minproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "properties", compiler_draft4_applicator_properties);
+              "properties", compiler_draft3_applicator_properties);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "patternProperties",
-              compiler_draft4_applicator_patternproperties);
+              compiler_draft3_applicator_patternproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "additionalProperties",
-              compiler_draft4_applicator_additionalproperties);
+              compiler_draft3_applicator_additionalproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "dependencies", compiler_draft4_applicator_dependencies);
+              "dependencies", compiler_draft3_applicator_dependencies);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "maximum", compiler_draft4_validation_maximum);
+              "maximum", compiler_draft3_validation_maximum);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "minimum", compiler_draft4_validation_minimum);
+              "minimum", compiler_draft3_validation_minimum);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "multipleOf", compiler_draft4_validation_multipleof);
+              "multipleOf", compiler_draft3_validation_divisibleby);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "maxLength", compiler_draft4_validation_maxlength);
+              "maxLength", compiler_draft3_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "minLength", compiler_draft4_validation_minlength);
+              "minLength", compiler_draft3_validation_minlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
-              "pattern", compiler_draft4_validation_pattern);
+              "pattern", compiler_draft3_validation_pattern);
 
   // ********************************************
   // DRAFT 6
   // ********************************************
 
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "$ref", compiler_draft4_core_ref);
+              "$ref", compiler_draft3_core_ref);
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_6, "$ref");
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_6_Hyper, "$ref");
 
@@ -406,18 +409,18 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "not", compiler_draft4_applicator_not);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "enum", compiler_draft4_validation_enum);
+              "enum", compiler_draft3_validation_enum);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "items", compiler_draft4_applicator_items);
+              "items", compiler_draft3_applicator_items);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "additionalItems", compiler_draft4_applicator_additionalitems);
+              "additionalItems", compiler_draft3_applicator_additionalitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "uniqueItems", compiler_draft4_validation_uniqueitems);
+              "uniqueItems", compiler_draft3_validation_uniqueitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "maxItems", compiler_draft4_validation_maxitems);
+              "maxItems", compiler_draft3_validation_maxitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "minItems", compiler_draft4_validation_minitems);
+              "minItems", compiler_draft3_validation_minitems);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "required", compiler_draft4_validation_required);
@@ -426,36 +429,36 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "minProperties", compiler_draft4_validation_minproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "properties", compiler_draft4_applicator_properties);
+              "properties", compiler_draft3_applicator_properties);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "patternProperties",
-              compiler_draft4_applicator_patternproperties);
+              compiler_draft3_applicator_patternproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "additionalProperties",
-              compiler_draft4_applicator_additionalproperties);
+              compiler_draft3_applicator_additionalproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "dependencies", compiler_draft4_applicator_dependencies);
+              "dependencies", compiler_draft3_applicator_dependencies);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "maximum", compiler_draft4_validation_maximum);
+              "maximum", compiler_draft3_validation_maximum);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "minimum", compiler_draft4_validation_minimum);
+              "minimum", compiler_draft3_validation_minimum);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "multipleOf", compiler_draft4_validation_multipleof);
+              "multipleOf", compiler_draft3_validation_divisibleby);
 
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "maxLength", compiler_draft4_validation_maxlength);
+              "maxLength", compiler_draft3_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "minLength", compiler_draft4_validation_minlength);
+              "minLength", compiler_draft3_validation_minlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
-              "pattern", compiler_draft4_validation_pattern);
+              "pattern", compiler_draft3_validation_pattern);
 
   // ********************************************
   // DRAFT 4
   // ********************************************
 
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "$ref", compiler_draft4_core_ref);
+              "$ref", compiler_draft3_core_ref);
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_4, "$ref");
   STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_4_Hyper, "$ref");
 
@@ -469,25 +472,25 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "not", compiler_draft4_applicator_not);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "properties", compiler_draft4_applicator_properties);
+              "properties", compiler_draft3_applicator_properties);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "patternProperties",
-              compiler_draft4_applicator_patternproperties);
+              compiler_draft3_applicator_patternproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "additionalProperties",
-              compiler_draft4_applicator_additionalproperties);
+              compiler_draft3_applicator_additionalproperties);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "items", compiler_draft4_applicator_items);
+              "items", compiler_draft3_applicator_items);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "additionalItems", compiler_draft4_applicator_additionalitems);
+              "additionalItems", compiler_draft3_applicator_additionalitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "dependencies", compiler_draft4_applicator_dependencies);
+              "dependencies", compiler_draft3_applicator_dependencies);
 
   // Any
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "type", compiler_draft4_validation_type);
+              "type", compiler_draft3_validation_type);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "enum", compiler_draft4_validation_enum);
+              "enum", compiler_draft3_validation_enum);
 
   // Object
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
@@ -499,27 +502,86 @@ auto sourcemeta::blaze::default_schema_compiler(
 
   // Array
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "uniqueItems", compiler_draft4_validation_uniqueitems);
+              "uniqueItems", compiler_draft3_validation_uniqueitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "maxItems", compiler_draft4_validation_maxitems);
+              "maxItems", compiler_draft3_validation_maxitems);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "minItems", compiler_draft4_validation_minitems);
+              "minItems", compiler_draft3_validation_minitems);
 
   // String
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "pattern", compiler_draft4_validation_pattern);
+              "pattern", compiler_draft3_validation_pattern);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "maxLength", compiler_draft4_validation_maxlength);
+              "maxLength", compiler_draft3_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "minLength", compiler_draft4_validation_minlength);
+              "minLength", compiler_draft3_validation_minlength);
 
   // Number
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "maximum", compiler_draft4_validation_maximum);
+              "maximum", compiler_draft3_validation_maximum);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "minimum", compiler_draft4_validation_minimum);
+              "minimum", compiler_draft3_validation_minimum);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
-              "multipleOf", compiler_draft4_validation_multipleof);
+              "multipleOf", compiler_draft3_validation_divisibleby);
+
+  // ********************************************
+  // DRAFT 3
+  // ********************************************
+
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "$ref", compiler_draft3_core_ref);
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_3, "$ref");
+  STOP_IF_SIBLING_KEYWORD(Known::JSON_Schema_Draft_3_Hyper, "$ref");
+
+  // Applicators
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "extends", compiler_draft3_applicator_extends);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "properties", compiler_draft3_applicator_properties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "patternProperties",
+              compiler_draft3_applicator_patternproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "additionalProperties",
+              compiler_draft3_applicator_additionalproperties);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "items", compiler_draft3_applicator_items);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "additionalItems", compiler_draft3_applicator_additionalitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "dependencies", compiler_draft3_applicator_dependencies);
+
+  // Any
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "type", compiler_draft3_validation_type);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "disallow", compiler_draft3_validation_disallow);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "enum", compiler_draft3_validation_enum);
+
+  // Array
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "uniqueItems", compiler_draft3_validation_uniqueitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "maxItems", compiler_draft3_validation_maxitems);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "minItems", compiler_draft3_validation_minitems);
+
+  // String
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "pattern", compiler_draft3_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "maxLength", compiler_draft3_validation_maxlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "minLength", compiler_draft3_validation_minlength);
+
+  // Number
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "maximum", compiler_draft3_validation_maximum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "minimum", compiler_draft3_validation_minimum);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "divisibleBy", compiler_draft3_validation_divisibleby);
 
   // ********************************************
   // OpenAPI

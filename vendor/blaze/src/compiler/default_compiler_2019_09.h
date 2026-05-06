@@ -202,7 +202,7 @@ auto compiler_2019_09_applicator_additionalproperties(
     const DynamicContext &dynamic_context, const Instructions &)
 
     -> Instructions {
-  return compiler_draft4_applicator_additionalproperties_with_options(
+  return compiler_draft3_applicator_additionalproperties_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
       requires_evaluation(context, schema_context));
@@ -220,12 +220,12 @@ auto compiler_2019_09_applicator_items(const Context &context,
       })};
 
   if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
-    return compiler_draft4_applicator_items_with_options(
+    return compiler_draft3_applicator_items_with_options(
         context, schema_context, dynamic_context,
         context.mode == Mode::Exhaustive, track);
   }
 
-  return compiler_draft4_applicator_items_with_options(
+  return compiler_draft3_applicator_items_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
       track && !schema_context.schema.defines("unevaluatedItems"));
@@ -242,7 +242,7 @@ auto compiler_2019_09_applicator_additionalitems(
         return dependency.first.ends_with("unevaluatedItems");
       })};
 
-  return compiler_draft4_applicator_additionalitems_with_options(
+  return compiler_draft3_applicator_additionalitems_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
       track && !schema_context.schema.defines("unevaluatedItems"));
@@ -419,7 +419,7 @@ auto compiler_2019_09_core_recursiveref(const Context &context,
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
           {sourcemeta::core::SchemaReferenceType::Dynamic, entry.pointer})) {
-    return compiler_draft4_core_ref(context, schema_context, dynamic_context,
+    return compiler_draft3_core_ref(context, schema_context, dynamic_context,
                                     current);
   }
 
@@ -431,7 +431,7 @@ auto compiler_2019_09_applicator_properties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &current)
     -> Instructions {
-  return compiler_draft4_applicator_properties_with_options(
+  return compiler_draft3_applicator_properties_with_options(
       context, schema_context, dynamic_context, current,
       context.mode == Mode::Exhaustive,
       requires_evaluation(context, schema_context));
@@ -441,7 +441,7 @@ auto compiler_2019_09_applicator_patternproperties(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
-  return compiler_draft4_applicator_patternproperties_with_options(
+  return compiler_draft3_applicator_patternproperties_with_options(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive,
       requires_evaluation(context, schema_context));

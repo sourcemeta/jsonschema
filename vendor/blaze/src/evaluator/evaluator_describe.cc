@@ -99,6 +99,27 @@ auto describe_type_check(const bool valid,
   }
 }
 
+auto describe_not_type_check(const bool valid,
+                             const sourcemeta::core::JSON::Type current,
+                             const sourcemeta::core::JSON::Type expected,
+                             std::ostringstream &message) -> void {
+  message << "The value was expected to NOT be of type ";
+  message << type_name(expected);
+  if (!valid) {
+    message << " but it was of type ";
+    if (current == sourcemeta::core::JSON::Type::Decimal &&
+        expected == sourcemeta::core::JSON::Type::Integer) {
+      message << "integer";
+    } else if ((current == sourcemeta::core::JSON::Type::Integer &&
+                expected == sourcemeta::core::JSON::Type::Real) ||
+               current == sourcemeta::core::JSON::Type::Decimal) {
+      message << "number";
+    } else {
+      message << type_name(current);
+    }
+  }
+}
+
 auto describe_types_check(const bool valid,
                           const sourcemeta::core::JSON::Type current,
                           const ValueTypes expected,
@@ -169,6 +190,84 @@ auto describe_types_check(const bool valid,
       has_integer && !has_real) {
     message << "integer";
   } else if ((valid && current == sourcemeta::core::JSON::Type::Integer &&
+              has_real) ||
+             current == sourcemeta::core::JSON::Type::Decimal) {
+    message << "number";
+  } else {
+    message << type_name(current);
+  }
+}
+
+auto describe_not_types_check(const bool valid,
+                              const sourcemeta::core::JSON::Type current,
+                              const ValueTypes expected,
+                              std::ostringstream &message) -> void {
+  ValueTypes types{expected};
+  const auto has_real{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Real))};
+  const auto has_integer{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+  const auto has_decimal{
+      types.test(std::to_underlying(sourcemeta::core::JSON::Type::Decimal))};
+
+  if (has_real && has_integer) {
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
+  }
+  if (has_real && has_decimal) {
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
+  }
+  if (has_integer && has_decimal) {
+    types.reset(std::to_underlying(sourcemeta::core::JSON::Type::Decimal));
+  }
+
+  const auto popcount{types.count()};
+
+  if (popcount == 1) {
+    std::uint8_t type_index{0};
+    for (std::uint8_t bit{0}; bit < 8; bit++) {
+      if (types.test(bit)) {
+        type_index = bit;
+        break;
+      }
+    }
+    describe_not_type_check(
+        valid, current, static_cast<sourcemeta::core::JSON::Type>(type_index),
+        message);
+    return;
+  }
+
+  message << "The value was expected to NOT be of type ";
+  bool first{true};
+  std::uint8_t last_bit{255};
+  for (std::uint8_t bit{0}; bit < 8; bit++) {
+    if (types.test(bit)) {
+      last_bit = bit;
+    }
+  }
+
+  for (std::uint8_t bit{0}; bit < 8; bit++) {
+    if (types.test(bit)) {
+      if (!first) {
+        message << ", ";
+      }
+      if (bit == last_bit) {
+        message << "or ";
+      }
+      message << type_name(static_cast<sourcemeta::core::JSON::Type>(bit));
+      first = false;
+    }
+  }
+
+  if (valid) {
+    message << " and it was of type ";
+  } else {
+    message << " but it was of type ";
+  }
+
+  if (!valid && current == sourcemeta::core::JSON::Type::Decimal &&
+      has_integer && !has_real) {
+    message << "integer";
+  } else if ((!valid && current == sourcemeta::core::JSON::Type::Integer &&
               has_real) ||
              current == sourcemeta::core::JSON::Type::Decimal) {
     message << "number";
@@ -266,7 +365,7 @@ auto describe(const bool valid, const Instruction &step,
   }
 
   if (step.type == sourcemeta::blaze::InstructionIndex::LogicalAnd) {
-    if (keyword == "allOf") {
+    if (keyword == "allOf" || keyword == "extends") {
       assert(!step.children.empty());
       std::ostringstream message;
       message << "The " << type_name(target.type())
@@ -1330,6 +1429,14 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
     describe_types_check(valid, target.type(),
                          instruction_value<ValueTypes>(step), message);
+    return message.str();
+  }
+
+  if (step.type ==
+      sourcemeta::blaze::InstructionIndex::AssertionNotTypeStrictAny) {
+    std::ostringstream message;
+    describe_not_types_check(valid, target.type(),
+                             instruction_value<ValueTypes>(step), message);
     return message.str();
   }
 

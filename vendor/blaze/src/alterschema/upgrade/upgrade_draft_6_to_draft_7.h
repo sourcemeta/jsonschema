@@ -16,9 +16,7 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_6) &&
-        schema.is_object() && schema.defines("$schema") &&
-        schema.at("$schema").is_string() &&
-        schema.at("$schema").to_string() == DRAFT_6_URL);
+        subschema_at_dialect(schema, location, DRAFT_6_URL));
 
     for (const auto &entry : frame.locations()) {
       if (entry.second.type !=
@@ -50,8 +48,13 @@ public:
 
   auto transform(sourcemeta::core::JSON &schema, const Result &) const
       -> void override {
-    schema.assign("$schema", sourcemeta::core::JSON{DRAFT_7_URL});
-    drop_dialect_overrides(schema, true);
+    if (schema.defines("$schema") && schema.at("$schema").is_string() &&
+        schema.at("$schema").to_string() == DRAFT_6_URL) {
+      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_7_URL});
+      drop_dialect_overrides(schema, true);
+    } else {
+      mark_dialect_override(schema, DRAFT_7_URL);
+    }
   }
 
 private:

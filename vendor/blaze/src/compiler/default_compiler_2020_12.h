@@ -21,7 +21,7 @@ auto compiler_2020_12_applicator_prefixitems(
         return dependency.first.ends_with("unevaluatedItems");
       })};
 
-  return compiler_draft4_applicator_items_array(
+  return compiler_draft3_applicator_items_array(
       context, schema_context, dynamic_context,
       context.mode == Mode::Exhaustive, track);
 }
@@ -42,7 +42,7 @@ auto compiler_2020_12_applicator_items(const Context &context,
         return dependency.first.ends_with("unevaluatedItems");
       })};
 
-  return compiler_draft4_applicator_additionalitems_from_cursor(
+  return compiler_draft3_applicator_additionalitems_from_cursor(
       context, schema_context, dynamic_context, cursor,
       context.mode == Mode::Exhaustive,
       track && !schema_context.schema.defines("unevaluatedItems"));
@@ -74,7 +74,7 @@ auto compiler_2020_12_core_dynamicref(const Context &context,
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
           {sourcemeta::core::SchemaReferenceType::Dynamic, entry.pointer})) {
-    return compiler_draft4_core_ref(context, schema_context, dynamic_context,
+    return compiler_draft3_core_ref(context, schema_context, dynamic_context,
                                     current);
   }
 
