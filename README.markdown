@@ -47,17 +47,17 @@ Version support
 
 We aim to fully support _every_ version of JSON Schema and combinations between them.
 
-| Dialect             | Support                                                          |
-|---------------------|------------------------------------------------------------------|
-| JSON Schema 2020-12 | **Full**                                                         |
-| JSON Schema 2019-09 | **Full**                                                         |
-| JSON Schema Draft 7 | **Full**                                                         |
-| JSON Schema Draft 6 | **Full**                                                         |
-| JSON Schema Draft 4 | **Full**                                                         |
-| JSON Schema Draft 3 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
-| JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
-| JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
-| JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
+| Dialect             | Support                                                                             |
+|---------------------|-------------------------------------------------------------------------------------|
+| JSON Schema 2020-12 | **Full**                                                                            |
+| JSON Schema 2019-09 | **Full**                                                                            |
+| JSON Schema Draft 7 | **Full**                                                                            |
+| JSON Schema Draft 6 | **Full**                                                                            |
+| JSON Schema Draft 4 | **Full**                                                                            |
+| JSON Schema Draft 3 | Partial (except `upgrade`, `codegen`, and `lint`)                                   |
+| JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |
+| JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |
+| JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |
 
 What our users are saying
 -------------------------

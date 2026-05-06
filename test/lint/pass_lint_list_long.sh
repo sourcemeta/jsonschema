@@ -67,6 +67,12 @@ description_trim
 double_negation_elimination
   A `not` whose value is a schema containing only another `not` is equivalent to the inner value
 
+draft3_drop_extends_empty_schemas
+  
+
+draft3_type_any
+  
+
 draft_official_dialect_with_https
   The official dialect URI of Draft 7 and older must use "http://" instead of "https://"
 
@@ -280,7 +286,7 @@ valid_default
 valid_examples
   Only include instances in the `examples` array that validate against the schema
 
-Number of rules: 90
+Number of rules: 92
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
