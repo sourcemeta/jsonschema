@@ -30,6 +30,7 @@ public:
         schema.at("enum").is_array() && !schema.at("enum").empty());
 
     const auto declared_types{parse_schema_type(schema.at("type"))};
+    ONLY_CONTINUE_IF(declared_types.any());
     const bool integer_matches_integral{
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_Draft_6,

@@ -29,6 +29,7 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_1,
          Vocabularies::Known::JSON_Schema_Draft_0}));
     const auto parent_types{parse_schema_type(schema.at("type"))};
+    ONLY_CONTINUE_IF(parent_types.any());
 
     std::vector<Pointer> locations;
 
@@ -45,23 +46,31 @@ public:
         const auto &branches{entry.second};
         for (std::size_t index = 0; index < branches.size(); ++index) {
           const auto &branch{branches.at(index)};
-          if (!branch.is_object() || !branch.defines("type")) {
+          if (!branch.is_object()) {
+            continue;
+          }
+          const auto *branch_type{branch.try_at("type")};
+          if (!branch_type) {
             continue;
           }
 
-          const auto branch_types{parse_schema_type(branch.at("type"))};
-          if ((parent_types & branch_types).none()) {
+          const auto branch_types{parse_schema_type(*branch_type)};
+          if (branch_types.any() && (parent_types & branch_types).none()) {
             locations.push_back(Pointer{keyword, index});
           }
         }
       } else if (keyword_type ==
                  SchemaKeywordType::ApplicatorValueInPlaceMaybe) {
-        if (!entry.second.is_object() || !entry.second.defines("type")) {
+        if (!entry.second.is_object()) {
+          continue;
+        }
+        const auto *branch_type{entry.second.try_at("type")};
+        if (!branch_type) {
           continue;
         }
 
-        const auto branch_types{parse_schema_type(entry.second.at("type"))};
-        if ((parent_types & branch_types).none()) {
+        const auto branch_types{parse_schema_type(*branch_type)};
+        if (branch_types.any() && (parent_types & branch_types).none()) {
           locations.push_back(Pointer{keyword});
         }
       }

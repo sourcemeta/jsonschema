@@ -60,7 +60,15 @@ public:
         })};
 
     if (ancestor.has_value()) {
-      this->inherited_type_ = get(root, ancestor.value().get()).at("type");
+      const auto &ancestor_type{get(root, ancestor.value().get()).at("type")};
+      if (ancestor_type.is_array()) {
+        for (const auto &element : ancestor_type.as_array()) {
+          if (!element.is_string()) {
+            return false;
+          }
+        }
+      }
+      this->inherited_type_ = ancestor_type;
       return true;
     }
 
