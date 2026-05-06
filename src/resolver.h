@@ -78,9 +78,8 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
   return match->second;
 }
 
-static inline auto parse_http_header(const std::string_view input,
-                                     std::string &name, std::string &value)
-    -> void {
+static inline auto parse_http_header(const std::string_view input)
+    -> std::pair<std::string, std::string> {
   const auto colon{input.find(':')};
   if (colon == std::string_view::npos) {
     throw PositionalArgumentError{
@@ -108,8 +107,7 @@ static inline auto parse_http_header(const std::string_view input,
     raw_value.remove_prefix(1);
   }
 
-  name.assign(raw_name);
-  value.assign(raw_value);
+  return {std::string{raw_name}, std::string{raw_value}};
 }
 
 static inline auto
@@ -119,9 +117,7 @@ collect_http_headers(const sourcemeta::core::Options &options) -> cpr::Header {
     return headers;
   }
   for (const auto &raw : options.at("header")) {
-    std::string name;
-    std::string value;
-    parse_http_header(raw, name, value);
+    auto [name, value]{parse_http_header(raw)};
     headers[std::move(name)] = std::move(value);
   }
   return headers;

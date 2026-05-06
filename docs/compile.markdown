@@ -6,6 +6,7 @@ Compiling
 
 ```sh
 jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] [--debug/-g]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
   [--minify/-m] [--json/-j] [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
@@ -66,4 +67,11 @@ jsonschema compile path/to/my/schema.json --include MY_SCHEMA > my_schema.h
 
 ```sh
 jsonschema compile path/to/my/schema.json --entrypoint '/$defs/MyType' > template.json
+```
+
+### Compile a JSON Schema with a custom HTTP header
+
+```sh
+jsonschema compile path/to/my/schema.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```

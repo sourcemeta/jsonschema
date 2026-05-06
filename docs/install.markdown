@@ -76,7 +76,7 @@ tracked in the lock file are fetched again.
 > on resolving this automatically in a future release.
 
 Use the global `--header/-H` flag to attach custom HTTP headers to outgoing
-requests. The flag may be passed multiple times.
+requests. For example:
 
 ```sh
 jsonschema install --header "Authorization: Bearer $REGISTRY_TOKEN"

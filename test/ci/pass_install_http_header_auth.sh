@@ -47,8 +47,10 @@ EOF
 
 cd "$TMP/project"
 
-EXIT_CODE_NO_AUTH=0
-"$1" install > "$TMP/output_no_auth.txt" 2>&1 || EXIT_CODE_NO_AUTH=$?
+"$1" install \
+  > "$TMP/output_no_auth.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected_no_auth.txt"
 Fetching       : http://localhost:${PORT}/schema
@@ -57,9 +59,6 @@ error: Failed to fetch schema
 EOF
 
 diff "$TMP/output_no_auth.txt" "$TMP/expected_no_auth.txt"
-
-# Other input error
-test "$EXIT_CODE_NO_AUTH" = "6"
 
 rm -f "$TMP/project/jsonschema.lock.json"
 

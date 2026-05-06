@@ -7,6 +7,7 @@ Testing
 ```sh
 jsonschema test [schemas-or-directories...]
   [--http/-h] [--verbose/-v] [--debug/-g]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--default-dialect/-d <uri>] [--json/-j]
@@ -161,6 +162,13 @@ jsonschema test --extension .test.json
 
 ```sh
 jsonschema test path/to/test.json --http
+```
+
+### Run a single test definition with a custom HTTP header
+
+```sh
+jsonschema test path/to/test.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
 
 ### Run a single test definition importing a single local schema

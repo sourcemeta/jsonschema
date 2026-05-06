@@ -4,6 +4,7 @@ Linting
 ```sh
 jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--format/-m] [--keep-ordering/-k] [--json/-j] [--verbose/-v] [--debug/-g]
+  [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
@@ -246,4 +247,11 @@ jsonschema lint --rule path/to/my/rule.json path/to/my/schema.json
 
 ```sh
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
+```
+
+### Lint a JSON Schema with a custom HTTP header
+
+```sh
+jsonschema lint path/to/my/schema.json \
+  --http --header "Authorization: Bearer $REGISTRY_TOKEN"
 ```
