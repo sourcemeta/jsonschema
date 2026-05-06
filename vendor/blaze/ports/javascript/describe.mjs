@@ -4,7 +4,8 @@ import {
   ASSERTION_DEFINES_EXACTLY, ASSERTION_DEFINES_EXACTLY_STRICT,
   ASSERTION_DEFINES_EXACTLY_STRICT_HASH3, ASSERTION_PROPERTY_DEPENDENCIES,
   ASSERTION_TYPE, ASSERTION_TYPE_ANY, ASSERTION_TYPE_STRICT,
-  ASSERTION_TYPE_STRICT_ANY, ASSERTION_TYPE_STRING_BOUNDED,
+  ASSERTION_TYPE_STRICT_ANY, ASSERTION_NOT_TYPE_STRICT_ANY,
+  ASSERTION_TYPE_STRING_BOUNDED,
   ASSERTION_TYPE_STRING_UPPER, ASSERTION_TYPE_ARRAY_BOUNDED,
   ASSERTION_TYPE_ARRAY_UPPER, ASSERTION_TYPE_OBJECT_BOUNDED,
   ASSERTION_TYPE_OBJECT_UPPER, ASSERTION_REGEX,
@@ -49,6 +50,7 @@ import {
 const TYPE_INTEGER = 2;
 const TYPE_REAL = 3;
 const TYPE_OBJECT = 6;
+const TYPE_DECIMAL = 7;
 
 const TYPE_NAMES = [ 'null', 'boolean', 'integer', 'number',
                      'string', 'array', 'object', 'number' ];
@@ -214,6 +216,22 @@ function describeTypeCheck(valid, currentType, expectedType) {
   return message;
 }
 
+function describeNotTypeCheck(valid, currentType, expectedType) {
+  let message = 'The value was expected to NOT be of type ' + typeName(expectedType);
+  if (!valid) {
+    message += ' but it was of type ';
+    if (currentType === TYPE_DECIMAL && expectedType === TYPE_INTEGER) {
+      message += 'integer';
+    } else if ((currentType === TYPE_INTEGER && expectedType === TYPE_REAL) ||
+               currentType === TYPE_DECIMAL) {
+      message += 'number';
+    } else {
+      message += typeName(currentType);
+    }
+  }
+  return message;
+}
+
 function describeTypesCheck(valid, currentType, bitmask) {
   let types = normalizeTypes(bitmask);
   const hasReal = (bitmask & (1 << TYPE_REAL)) !== 0;
@@ -256,6 +274,57 @@ function describeTypesCheck(valid, currentType, bitmask) {
   if (valid && currentType === TYPE_INTEGER && hasReal) {
     message += 'number';
   } else if ((valid && currentType === TYPE_INTEGER && hasReal) ||
+             currentType === TYPE_REAL) {
+    message += 'number';
+  } else {
+    message += typeName(currentType);
+  }
+
+  return message;
+}
+
+function describeNotTypesCheck(valid, currentType, bitmask) {
+  let types = normalizeTypes(bitmask);
+  const hasReal = (bitmask & (1 << TYPE_REAL)) !== 0;
+  const hasInteger = (bitmask & (1 << TYPE_INTEGER)) !== 0;
+
+  let popcount = 0;
+  for (let bit = 0; bit < 8; bit++) {
+    if ((types & (1 << bit)) !== 0) popcount++;
+  }
+
+  if (popcount === 1) {
+    let typeIndex = 0;
+    for (let bit = 0; bit < 8; bit++) {
+      if ((types & (1 << bit)) !== 0) { typeIndex = bit; break; }
+    }
+    return describeNotTypeCheck(valid, currentType, typeIndex);
+  }
+
+  let message = 'The value was expected to NOT be of type ';
+  let first = true;
+  let lastBit = 0;
+  for (let bit = 0; bit < 8; bit++) {
+    if ((types & (1 << bit)) !== 0) lastBit = bit;
+  }
+  for (let bit = 0; bit < 8; bit++) {
+    if ((types & (1 << bit)) !== 0) {
+      if (!first) message += ', ';
+      if (bit === lastBit) message += 'or ';
+      message += typeName(bit);
+      first = false;
+    }
+  }
+
+  if (valid) {
+    message += ' and it was of type ';
+  } else {
+    message += ' but it was of type ';
+  }
+
+  if (!valid && currentType === TYPE_INTEGER && hasReal) {
+    message += 'number';
+  } else if ((!valid && currentType === TYPE_INTEGER && hasReal) ||
              currentType === TYPE_REAL) {
     message += 'number';
   } else {
@@ -357,7 +426,7 @@ export function describe(valid, instruction, evaluatePath,
   }
 
   if (opcode === LOGICAL_AND) {
-    if (keyword === 'allOf') {
+    if (keyword === 'allOf' || keyword === 'extends') {
       const childCount = children ? children.length : 0;
       let message = 'The ' + typeName(targetType) +
         ' value was expected to validate against the ';
@@ -914,6 +983,10 @@ export function describe(valid, instruction, evaluatePath,
 
   if (opcode === ASSERTION_TYPE_STRICT_ANY) {
     return describeTypesCheck(valid, targetType, value);
+  }
+
+  if (opcode === ASSERTION_NOT_TYPE_STRICT_ANY) {
+    return describeNotTypesCheck(valid, targetType, value);
   }
 
   if (opcode === ASSERTION_TYPE_STRING_BOUNDED) {

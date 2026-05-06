@@ -154,6 +154,10 @@ auto handle_definitions(const Vocabularies &vocabularies)
                                      LocationMembers, "$ref")
   CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_4_Hyper, {},
                                      LocationMembers, "$ref")
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3, {},
+                                     LocationMembers, "$ref")
+  CHECK_VOCABULARY_WITH_DEPENDENCIES(Known::JSON_Schema_Draft_3_Hyper, {},
+                                     LocationMembers, "$ref")
   return UNKNOWN_RESULT;
 }
 

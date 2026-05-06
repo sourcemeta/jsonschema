@@ -28,7 +28,11 @@ public:
 
     const bool other_branch = has_pending_draft_4_pattern(schema);
 
-    ONLY_CONTINUE_IF(sanitization_branch || other_branch);
+    const bool root_via_default_dialect =
+        location.pointer.empty() && !schema.defines("$schema");
+
+    ONLY_CONTINUE_IF(sanitization_branch || other_branch ||
+                     root_via_default_dialect);
 
     if (!sanitization_branch && other_branch &&
         enclosing_resource_has_pending_sanitization(location, root, frame)) {

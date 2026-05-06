@@ -523,6 +523,20 @@ INSTRUCTION_HANDLER(AssertionTypeStrictAny) {
   EVALUATE_END(AssertionTypeStrictAny);
 }
 
+INSTRUCTION_DIRECT(AssertionNotTypeStrictAny, ValueTypes) {
+  return !value.test(std::to_underlying(effective_type_strict_real(target)));
+}
+
+INSTRUCTION_HANDLER(AssertionNotTypeStrictAny) {
+  EVALUATE_BEGIN_NO_PRECONDITION(AssertionNotTypeStrictAny);
+  const auto value{assume_value_copy<ValueTypes>(instruction.value)};
+  assert(value.any());
+  const auto &target{
+      resolve_instance(instance, instruction.relative_instance_location)};
+  result = DIRECT(AssertionNotTypeStrictAny, target, value);
+  EVALUATE_END(AssertionNotTypeStrictAny);
+}
+
 INSTRUCTION_DIRECT(AssertionTypeStringBounded, ValueRange) {
   const auto &[minimum, maximum, exhaustive] = value;
   return target.type() == JSON::Type::String &&
@@ -2564,7 +2578,7 @@ using DispatchHandler = bool (*)(
 template <bool Track, bool Dynamic, bool HasCallback>
 // Must have same order as InstructionIndex
 // NOLINTNEXTLINE(modernize-avoid-c-arrays)
-static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[99] = {
+static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[100] = {
     AssertionFail,
     AssertionDefines,
     AssertionDefinesStrict,
@@ -2578,6 +2592,7 @@ static constexpr DispatchHandler<Track, Dynamic, HasCallback> handlers[99] = {
     AssertionTypeAny,
     AssertionTypeStrict,
     AssertionTypeStrictAny,
+    AssertionNotTypeStrictAny,
     AssertionTypeStringBounded,
     AssertionTypeStringUpper,
     AssertionTypeArrayBounded,

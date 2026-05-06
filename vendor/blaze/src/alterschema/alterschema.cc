@@ -268,6 +268,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "upgrade/prefix_promoted_draft_6_keywords.h"
 #include "upgrade/prefix_promoted_draft_7_keywords.h"
 #include "upgrade/upgrade_2019_09_to_2020_12.h"
+#include "upgrade/upgrade_dialect_override_cleanup.h"
 #include "upgrade/upgrade_draft_4_to_draft_6.h"
 #include "upgrade/upgrade_draft_6_to_draft_7.h"
 #include "upgrade/upgrade_draft_7_to_draft_2019_09.h"
@@ -307,6 +308,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
       bundle.add<PrefixPromoted202012Keywords>();
       bundle.add<Upgrade201909To202012>();
     }
+
+    bundle.add<UpgradeDialectOverrideCleanup>();
 
     return;
   }

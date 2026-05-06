@@ -72,10 +72,6 @@ auto URI::fragment() const -> std::optional<std::string_view> {
   return this->fragment_;
 }
 
-auto URI::query() const -> std::optional<std::string_view> {
-  return this->query_;
-}
-
 auto URI::userinfo() const -> std::optional<std::string_view> {
   return this->userinfo_;
 }

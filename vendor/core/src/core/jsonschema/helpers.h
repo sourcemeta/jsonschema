@@ -48,9 +48,9 @@ inline auto definitions_keyword(const SchemaBaseDialect base_dialect)
     case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
     case SchemaBaseDialect::JSON_Schema_Draft_4:
     case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
-      return "definitions";
     case SchemaBaseDialect::JSON_Schema_Draft_3:
     case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
+      return "definitions";
     case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
     case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
     case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:

@@ -164,7 +164,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   const auto result_query{this->query()};
   if (result_query.has_value()) {
     result += '?';
-    escape_component_to_string(result, result_query.value(),
+    escape_component_to_string(result, result_query.value().raw(),
                                URIEscapeMode::Fragment);
   }
 

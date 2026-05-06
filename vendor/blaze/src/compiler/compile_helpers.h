@@ -355,6 +355,54 @@ is_circular(const sourcemeta::core::SchemaFrame &frame,
   return false;
 }
 
+// The set of property names that this schema declares as required at this
+// level
+inline auto required_properties(const SchemaContext &schema_context)
+    -> ValueStringSet {
+  using Known = sourcemeta::core::Vocabularies::Known;
+  const auto imports_validation_vocabulary{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      schema_context.vocabularies.contains(
+          Known::JSON_Schema_2019_09_Validation) ||
+      schema_context.vocabularies.contains(
+          Known::JSON_Schema_2020_12_Validation)};
+
+  ValueStringSet result;
+
+  if (imports_validation_vocabulary && schema_context.schema.is_object() &&
+      schema_context.schema.defines("required") &&
+      schema_context.schema.at("required").is_array()) {
+    for (const auto &entry : schema_context.schema.at("required").as_array()) {
+      if (entry.is_string()) {
+        result.insert(entry.to_string());
+      }
+    }
+
+    return result;
+  }
+
+  const auto imports_draft3_vocabulary{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+
+  if (imports_draft3_vocabulary && schema_context.schema.is_object() &&
+      schema_context.schema.defines("properties") &&
+      schema_context.schema.at("properties").is_object()) {
+    for (const auto &entry :
+         schema_context.schema.at("properties").as_object()) {
+      if (entry.second.is_object() && entry.second.defines("required") &&
+          entry.second.at("required").is_boolean() &&
+          entry.second.at("required").to_boolean()) {
+        result.insert(entry.first);
+      }
+    }
+  }
+
+  return result;
+}
+
 } // namespace sourcemeta::blaze
 
 #endif

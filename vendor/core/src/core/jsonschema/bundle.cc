@@ -454,10 +454,14 @@ auto bundle(JSON &schema, const SchemaWalker &walker,
   if (ref_overrides_adjacent_keywords(schema_base_dialect.value()) &&
       schema.is_object() && schema.defines("$ref")) {
     if (schema.size() == 1) {
+      const auto is_draft3{schema_base_dialect.value() ==
+                               SchemaBaseDialect::JSON_Schema_Draft_3 ||
+                           schema_base_dialect.value() ==
+                               SchemaBaseDialect::JSON_Schema_Draft_3_Hyper};
       auto branches{JSON::make_array()};
       branches.push_back(schema);
       schema.at("$ref").into(std::move(branches));
-      schema.rename("$ref", "allOf");
+      schema.rename("$ref", is_draft3 ? "extends" : "allOf");
     } else {
       throw SchemaError(
           "Cannot bundle a JSON Schema Draft 7 or older with a top-level "
