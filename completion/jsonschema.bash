@@ -41,6 +41,9 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}") )
       return 0
       ;;
+    --header|-H)
+      return 0
+      ;;
     --indentation)
       COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
       return 0

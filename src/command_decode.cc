@@ -37,6 +37,8 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
         "jsonschema decode path/to/output.binpack path/to/document.json"};
   }
 
+  validate_http_headers(options);
+
   // TODO: Take a real schema as argument
   auto schema{sourcemeta::core::parse_json(R"JSON({
     "$schema": "https://json-schema.org/draft/2020-12/schema"

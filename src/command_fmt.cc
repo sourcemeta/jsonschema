@@ -16,6 +16,7 @@
 
 auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
     -> void {
+  validate_http_headers(options);
   const bool output_json{options.contains("json")};
   bool result{true};
   std::vector<std::string> failed_files;

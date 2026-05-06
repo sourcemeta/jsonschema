@@ -157,6 +157,8 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
                                   "jsonschema inspect path/to/schema.json"};
   }
 
+  validate_http_headers(options);
+
   const std::filesystem::path schema_path{options.positional().front()};
   const bool schema_from_stdin = (schema_path == "-");
 

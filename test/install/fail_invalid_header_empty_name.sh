@@ -17,7 +17,7 @@ test "$EXIT_CODE" = "5"
 cat << 'EOF' > "$TMP/expected.txt"
 error: HTTP header names cannot be empty
 
-For example: jsonschema install --header "Authorization: Bearer ${TOKEN}"
+For example: --header "Authorization: Bearer ${TOKEN}"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

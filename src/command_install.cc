@@ -273,12 +273,6 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const auto is_frozen{options.contains("frozen")};
   auto events_array{sourcemeta::core::JSON::make_array()};
 
-  if (options.contains("header")) {
-    for (const auto &raw : options.at("header")) {
-      parse_http_header(raw);
-    }
-  }
-
   const auto &positional_arguments{options.positional()};
   if (positional_arguments.size() != 0 && positional_arguments.size() != 2) {
     throw PositionalArgumentError{
@@ -296,6 +290,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         "Do not use --frozen when adding a new dependency",
         "jsonschema install https://example.com/schema ./vendor/schema.json"};
   }
+
+  validate_http_headers(options);
 
   auto configuration_path{
       sourcemeta::blaze::Configuration::find(std::filesystem::current_path())};

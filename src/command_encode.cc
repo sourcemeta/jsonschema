@@ -27,6 +27,8 @@ auto sourcemeta::jsonschema::encode(const sourcemeta::core::Options &options)
         "jsonschema encode path/to/document.json path/to/output.binpack"};
   }
 
+  validate_http_headers(options);
+
   // TODO: Take a real schema as argument
   auto schema{sourcemeta::core::parse_json(R"JSON({
     "$schema": "https://json-schema.org/draft/2020-12/schema"

@@ -78,36 +78,63 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
   return match->second;
 }
 
+static constexpr std::string_view HTTP_HEADER_EXAMPLE{
+    "--header \"Authorization: Bearer ${TOKEN}\""};
+
 static inline auto parse_http_header(const std::string_view input)
     -> std::pair<std::string, std::string> {
   const auto colon{input.find(':')};
   if (colon == std::string_view::npos) {
     throw PositionalArgumentError{
         "HTTP headers must be in the form `Name: Value`",
-        "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+        std::string{HTTP_HEADER_EXAMPLE}};
   }
 
   const auto raw_name{input.substr(0, colon)};
   if (raw_name.empty()) {
-    throw PositionalArgumentError{
-        "HTTP header names cannot be empty",
-        "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+    throw PositionalArgumentError{"HTTP header names cannot be empty",
+                                  std::string{HTTP_HEADER_EXAMPLE}};
   }
 
   for (const auto character : raw_name) {
     if (character == ' ' || character == '\t') {
       throw PositionalArgumentError{
           "HTTP header names cannot contain whitespace",
-          "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+          std::string{HTTP_HEADER_EXAMPLE}};
+    }
+    if (static_cast<unsigned char>(character) < 0x20 ||
+        static_cast<unsigned char>(character) == 0x7F) {
+      throw PositionalArgumentError{
+          "HTTP header names cannot contain control characters",
+          std::string{HTTP_HEADER_EXAMPLE}};
     }
   }
 
   auto raw_value{input.substr(colon + 1)};
-  if (!raw_value.empty() && raw_value.front() == ' ') {
+  while (!raw_value.empty() &&
+         (raw_value.front() == ' ' || raw_value.front() == '\t')) {
     raw_value.remove_prefix(1);
   }
 
+  for (const auto character : raw_value) {
+    if (character == '\r' || character == '\n' || character == '\0') {
+      throw PositionalArgumentError{
+          "HTTP header values cannot contain control characters",
+          std::string{HTTP_HEADER_EXAMPLE}};
+    }
+  }
+
   return {std::string{raw_name}, std::string{raw_value}};
+}
+
+static inline auto
+validate_http_headers(const sourcemeta::core::Options &options) -> void {
+  if (!options.contains("header")) {
+    return;
+  }
+  for (const auto &raw : options.at("header")) {
+    parse_http_header(raw);
+  }
 }
 
 static inline auto

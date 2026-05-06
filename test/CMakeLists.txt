@@ -312,6 +312,7 @@ add_jsonschema_test_unix(validate/pass_stdin_resolve)
 add_jsonschema_test_unix(validate/pass_stdin_yaml)
 add_jsonschema_test_unix(validate/fail_stdin_trace_multi_instance)
 add_jsonschema_test_unix(validate/fail_trace_benchmark)
+add_jsonschema_test_unix(validate/fail_invalid_header)
 
 # Metaschema
 add_jsonschema_test_unix(metaschema/pass_trace)
@@ -361,6 +362,7 @@ add_jsonschema_test_unix(metaschema/fail_stdin_metaschema)
 add_jsonschema_test_unix(metaschema/fail_stdin_not_schema)
 add_jsonschema_test_unix(metaschema/fail_stdin_duplicate)
 add_jsonschema_test_unix(metaschema/fail_stdin_invalid_json)
+add_jsonschema_test_unix(metaschema/fail_invalid_header)
 
 # Test
 add_jsonschema_test_unix(test/fail_resolve_directory_non_schema)
@@ -452,6 +454,7 @@ add_jsonschema_test_unix(test/pass_stdin_verbose)
 add_jsonschema_test_unix(test/fail_stdin_invalid_json)
 add_jsonschema_test_unix(test/fail_stdin_not_object)
 add_jsonschema_test_unix(test/fail_stdin_test_failure)
+add_jsonschema_test_unix(test/fail_invalid_header)
 
 # Bundle
 add_jsonschema_test_unix(bundle/pass_into_resolve_directory)
@@ -499,6 +502,7 @@ add_jsonschema_test_unix(bundle/pass_resolve_deduplicate_embedded)
 add_jsonschema_test_unix(bundle/pass_stdin)
 add_jsonschema_test_unix(bundle/fail_stdin_not_schema)
 add_jsonschema_test_unix(bundle/fail_stdin_invalid_json)
+add_jsonschema_test_unix(bundle/fail_invalid_header)
 
 # Inspect
 add_jsonschema_test_unix(inspect/pass)
@@ -574,6 +578,7 @@ add_jsonschema_test_unix(compile/fail_entrypoint_invalid_uri)
 add_jsonschema_test_unix(compile/fail_entrypoint_invalid_uri_parse)
 add_jsonschema_test_unix(compile/pass_evaluate_port_js_fast)
 add_jsonschema_test_unix(compile/pass_evaluate_port_js_exhaustive)
+add_jsonschema_test_unix(compile/fail_invalid_header)
 
 # Codegen
 add_jsonschema_test_unix(codegen/pass_typescript)
@@ -769,6 +774,7 @@ add_jsonschema_test_unix(lint/pass_stdin_fix_format)
 add_jsonschema_test_unix(lint/fail_stdin_lint)
 add_jsonschema_test_unix(lint/fail_stdin_duplicate)
 add_jsonschema_test_unix(lint/fail_stdin_invalid_json)
+add_jsonschema_test_unix(lint/fail_invalid_header)
 
 # Install
 add_jsonschema_test_unix(install/fail_no_configuration)
@@ -822,6 +828,8 @@ add_jsonschema_test_unix(install/fail_add_duplicate_path)
 add_jsonschema_test_unix(install/fail_invalid_header_no_colon)
 add_jsonschema_test_unix(install/fail_invalid_header_empty_name)
 add_jsonschema_test_unix(install/fail_invalid_header_whitespace_in_name)
+add_jsonschema_test_unix(install/fail_invalid_header_control_in_name)
+add_jsonschema_test_unix(install/fail_invalid_header_control_in_value)
 add_jsonschema_test_unix(install/pass_header_does_not_break_file_uri)
 add_jsonschema_test_unix(install/pass_lock_file_with_path)
 

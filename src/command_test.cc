@@ -377,6 +377,7 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 
 auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     -> void {
+  validate_http_headers(options);
   if (options.contains("json")) {
     report_as_ctrf(options);
   } else {

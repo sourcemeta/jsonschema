@@ -242,6 +242,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "jsonschema validate path/to/schema.json path/to/instance.json"};
   }
 
+  validate_http_headers(options);
+
   const auto &schema_path{options.positional().at(0)};
   const bool schema_from_stdin = (schema_path == "-");
 

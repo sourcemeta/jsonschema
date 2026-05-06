@@ -197,6 +197,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
 
 auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     -> void {
+  validate_http_headers(options);
   const bool output_json = options.contains("json");
 
   sourcemeta::blaze::SchemaTransformer bundle;
