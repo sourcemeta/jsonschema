@@ -47,17 +47,17 @@ Version support
 
 We aim to fully support _every_ version of JSON Schema and combinations between them.
 
-| Dialect             | Support                                               |
-|---------------------|-------------------------------------------------------|
-| JSON Schema 2020-12 | **Full**                                              |
-| JSON Schema 2019-09 | **Full**                                              |
-| JSON Schema Draft 7 | **Full**                                              |
-| JSON Schema Draft 6 | **Full**                                              |
-| JSON Schema Draft 4 | **Full**                                              |
-| JSON Schema Draft 3 | Partial (except `validate`, `test`, and `metaschema`) |
-| JSON Schema Draft 2 | Partial (except `validate`, `test`, and `metaschema`) |
-| JSON Schema Draft 1 | Partial (except `validate`, `test`, and `metaschema`) |
-| JSON Schema Draft 0 | Partial (except `validate`, `test`, and `metaschema`) |
+| Dialect             | Support                                                          |
+|---------------------|------------------------------------------------------------------|
+| JSON Schema 2020-12 | **Full**                                                         |
+| JSON Schema 2019-09 | **Full**                                                         |
+| JSON Schema Draft 7 | **Full**                                                         |
+| JSON Schema Draft 6 | **Full**                                                         |
+| JSON Schema Draft 4 | **Full**                                                         |
+| JSON Schema Draft 3 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
+| JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
+| JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
+| JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, and `upgrade`) |
 
 What our users are saying
 -------------------------
@@ -92,6 +92,7 @@ documentation:
 - [`jsonschema fmt`](./docs/format.markdown)
 - [`jsonschema lint`](./docs/lint.markdown)
 - [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
+- [`jsonschema upgrade`](./docs/upgrade.markdown) (for upgrading schemas to a newer JSON Schema dialect)
 - [`jsonschema inspect`](./docs/inspect.markdown) (for debugging references)
 - [`jsonschema codegen`](./docs/codegen.markdown) (for generating code from schemas)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)

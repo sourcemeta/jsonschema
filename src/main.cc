@@ -96,6 +96,13 @@ Commands:
        Use --list/-l to print a summary of all enabled rules.
        Use --rule/-a to add a custom lint rule defined as a JSON Schema.
 
+   upgrade <schema.json|.yaml>
+           [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+
+       Upgrade the given schema to a newer JSON Schema dialect.
+       Defaults to the latest dialect (2020-12). Schemas that declare a
+       custom meta-schema cannot be upgraded by this command.
+
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
 
@@ -222,6 +229,11 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("frozen", {"z"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::install(app);
+    return EXIT_SUCCESS;
+  } else if (command == "upgrade") {
+    app.option("to", {"t"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::println("JSON Schema CLI - v{}",

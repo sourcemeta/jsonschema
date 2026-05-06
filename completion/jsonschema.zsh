@@ -19,6 +19,7 @@ _jsonschema() {
     'decode:Decode JSON using JSON BinPack'
     'codegen:Generate code from a JSON Schema'
     'install:Fetch and install external schema dependencies'
+    'upgrade:Upgrade a schema to a newer JSON Schema dialect'
     'version:Print version information'
     'help:Print help information'
   )
@@ -144,6 +145,12 @@ _jsonschema() {
             '(--frozen -z)'{--frozen,-z}'[Strictly verify against the lock file]' \
             '1:schema URI:' \
             '2:destination path:_files'
+          ;;
+        upgrade)
+          _arguments \
+            ${global_options[@]} \
+            '(--to -t)'{--to,-t}'[Target JSON Schema dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12)' \
+            '1:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         version|help)
           ;;

@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install version help"
+  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H"
 
@@ -65,8 +65,21 @@ _jsonschema() {
       COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
       return 0
       ;;
-    --target|-t)
+    --target)
       COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
+      return 0
+      ;;
+    --to)
+      COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      return 0
+      ;;
+    -t)
+      if [ "${command}" = "upgrade" ]
+      then
+        COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
+      fi
       return 0
       ;;
   esac
@@ -175,6 +188,15 @@ _jsonschema() {
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
       else
         COMPREPLY=( $(compgen -f -d -- "${current}") )
+      fi
+      ;;
+    upgrade)
+      local options="--to -t"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       fi
       ;;
     version|help)

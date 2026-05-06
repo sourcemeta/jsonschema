@@ -187,6 +187,64 @@ private:
   sourcemeta::core::Pointer location_;
 };
 
+class CustomMetaschemaUpgradeError : public std::runtime_error {
+public:
+  CustomMetaschemaUpgradeError(std::filesystem::path path,
+                               sourcemeta::core::Pointer location,
+                               std::string dialect)
+      : std::runtime_error{"Cannot upgrade a schema that uses a custom "
+                           "meta-schema"},
+        path_{std::move(path)}, location_{std::move(location)},
+        dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
+class UnsupportedDialectUpgradeError : public std::runtime_error {
+public:
+  UnsupportedDialectUpgradeError(std::filesystem::path path,
+                                 sourcemeta::core::Pointer location,
+                                 std::string dialect)
+      : std::runtime_error{"Upgrading schemas from this dialect is not "
+                           "supported yet"},
+        path_{std::move(path)}, location_{std::move(location)},
+        dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->location_;
+  }
+
+  [[nodiscard]] auto uri() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
+  sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
 class UnknownCommandError : public std::runtime_error {
 public:
   UnknownCommandError(std::string command)
@@ -606,6 +664,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const PositionError<UnsupportedDialectUpgradeError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
+  } catch (const UnsupportedDialectUpgradeError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
   } catch (const InvalidLintRuleError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -652,6 +718,30 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     }
 
     return EXIT_UNEXPECTED_ERROR;
+  } catch (const PositionError<CustomMetaschemaUpgradeError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "Schemas that declare a custom meta-schema cannot be "
+                   "upgraded in place\n";
+      std::cerr << "by this command. Please upgrade the meta-schema and the "
+                   "schema manually.\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const CustomMetaschemaUpgradeError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\n";
+      std::cerr << "Schemas that declare a custom meta-schema cannot be "
+                   "upgraded in place\n";
+      std::cerr << "by this command. Please upgrade the meta-schema and the "
+                   "schema manually.\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>
                &error) {
     const auto is_json{options.contains("json")};
