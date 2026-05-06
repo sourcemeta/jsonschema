@@ -78,16 +78,66 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
   return match->second;
 }
 
+static inline auto parse_http_header(const std::string_view input,
+                                     std::string &name, std::string &value)
+    -> void {
+  const auto colon{input.find(':')};
+  if (colon == std::string_view::npos) {
+    throw PositionalArgumentError{
+        "HTTP headers must be in the form `Name: Value`",
+        "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+  }
+
+  const auto raw_name{input.substr(0, colon)};
+  if (raw_name.empty()) {
+    throw PositionalArgumentError{
+        "HTTP header names cannot be empty",
+        "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+  }
+
+  for (const auto character : raw_name) {
+    if (character == ' ' || character == '\t') {
+      throw PositionalArgumentError{
+          "HTTP header names cannot contain whitespace",
+          "jsonschema install --header \"Authorization: Bearer ${TOKEN}\""};
+    }
+  }
+
+  auto raw_value{input.substr(colon + 1)};
+  if (!raw_value.empty() && raw_value.front() == ' ') {
+    raw_value.remove_prefix(1);
+  }
+
+  name.assign(raw_name);
+  value.assign(raw_value);
+}
+
+static inline auto
+collect_http_headers(const sourcemeta::core::Options &options) -> cpr::Header {
+  cpr::Header headers;
+  if (!options.contains("header")) {
+    return headers;
+  }
+  for (const auto &raw : options.at("header")) {
+    std::string name;
+    std::string value;
+    parse_http_header(raw, name, value);
+    headers[std::move(name)] = std::move(value);
+  }
+  return headers;
+}
+
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
+  const auto headers{collect_http_headers(options)};
   cpr::Response response;
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
                          << static_cast<int>(attempt) << "/"
                          << static_cast<int>(HTTP_MAXIMUM_RETRIES)
                          << "): " << url << "\n";
-    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true});
+    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true}, headers);
 
     if (response.status_code == 200) {
       break;

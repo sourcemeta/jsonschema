@@ -273,6 +273,14 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   const auto is_frozen{options.contains("frozen")};
   auto events_array{sourcemeta::core::JSON::make_array()};
 
+  if (options.contains("header")) {
+    for (const auto &raw : options.at("header")) {
+      std::string header_name;
+      std::string header_value;
+      parse_http_header(raw, header_name, header_value);
+    }
+  }
+
   const auto &positional_arguments{options.positional()};
   if (positional_arguments.size() != 0 && positional_arguments.size() != 2) {
     throw PositionalArgumentError{
