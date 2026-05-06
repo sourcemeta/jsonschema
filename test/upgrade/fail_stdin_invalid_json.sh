@@ -22,7 +22,7 @@ EOF
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
-echo '{ "foo" 1 }' | "$1" upgrade - --json > "$TMP/stdout.txt" \
+echo '{ "foo" 1 }' | "$1" upgrade - --json > "$TMP/stdout.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
 test "$EXIT_CODE" = "6"

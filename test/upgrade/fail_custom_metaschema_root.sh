@@ -44,7 +44,7 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
 # JSON error
 "$1" upgrade --resolve "$TMP/metaschema.json" --json "$TMP/schema.json" \
-  > "$TMP/stdout.txt" && EXIT_CODE="$?" || EXIT_CODE="$?"
+  > "$TMP/stdout.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
 test "$EXIT_CODE" = "4"
 
