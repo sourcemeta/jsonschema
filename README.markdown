@@ -54,7 +54,7 @@ We aim to fully support _every_ version of JSON Schema and combinations between 
 | JSON Schema Draft 7 | **Full**                                                                            |
 | JSON Schema Draft 6 | **Full**                                                                            |
 | JSON Schema Draft 4 | **Full**                                                                            |
-| JSON Schema Draft 3 | Partial (except `upgrade`, `codegen`, and `lint`)                                   |
+| JSON Schema Draft 3 | Partial (except `codegen` and `lint`)                                               |
 | JSON Schema Draft 2 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |
 | JSON Schema Draft 1 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |
 | JSON Schema Draft 0 | Partial (except `validate`, `test`, `metaschema`, `upgrade`, `codegen`, and `lint`) |

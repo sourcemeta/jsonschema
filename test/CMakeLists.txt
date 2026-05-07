@@ -870,6 +870,11 @@ add_jsonschema_test_unix(install/pass_frozen_resolve_mapping)
 
 # Upgrade
 add_jsonschema_test_unix(upgrade/pass_default_target)
+add_jsonschema_test_unix(upgrade/pass_draft3_to_draft4)
+add_jsonschema_test_unix(upgrade/pass_draft3_to_draft6)
+add_jsonschema_test_unix(upgrade/pass_draft3_to_draft7)
+add_jsonschema_test_unix(upgrade/pass_draft3_to_2019_09)
+add_jsonschema_test_unix(upgrade/pass_draft3_to_2020_12)
 add_jsonschema_test_unix(upgrade/pass_draft4_to_draft6)
 add_jsonschema_test_unix(upgrade/pass_draft4_to_draft7)
 add_jsonschema_test_unix(upgrade/pass_draft4_to_2019_09)
@@ -897,7 +902,7 @@ add_jsonschema_test_unix(upgrade/fail_no_schema)
 add_jsonschema_test_unix(upgrade/fail_stdin_invalid_json)
 add_jsonschema_test_unix(upgrade/fail_invalid_path)
 add_jsonschema_test_unix(upgrade/fail_schema_invalid_json)
-add_jsonschema_test_unix(upgrade/fail_draft3)
+add_jsonschema_test_unix(upgrade/fail_draft2)
 
 # Encode
 add_jsonschema_test_unix(encode/pass_schema_less)
