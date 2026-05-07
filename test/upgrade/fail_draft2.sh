@@ -9,7 +9,7 @@ trap clean EXIT
 
 cat << 'EOF' > "$TMP/schema.json"
 {
-  "$schema": "http://json-schema.org/draft-03/schema#",
+  "$schema": "http://json-schema.org/draft-02/schema#",
   "id": "https://example.com",
   "type": "string"
 }
@@ -26,7 +26,7 @@ error: Upgrading schemas from this dialect is not supported yet
   at column 1
   at file path $(realpath "$TMP")/schema.json
   at location ""
-  at uri http://json-schema.org/draft-03/schema#
+  at uri http://json-schema.org/draft-02/schema#
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -44,7 +44,7 @@ cat << EOF > "$TMP/expected_json.txt"
   "column": 1,
   "filePath": "$(realpath "$TMP")/schema.json",
   "location": "",
-  "uri": "http://json-schema.org/draft-03/schema#"
+  "uri": "http://json-schema.org/draft-02/schema#"
 }
 EOF
 

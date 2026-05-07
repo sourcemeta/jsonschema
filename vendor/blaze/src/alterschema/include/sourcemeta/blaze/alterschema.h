@@ -46,6 +46,9 @@ enum class AlterSchemaMode : std::uint8_t {
   /// readability in favor of explicitness
   Canonicalizer,
 
+  /// Rules that upgrade a JSON Schema document up to JSON Schema Draft 4
+  UpgradeDraft4,
+
   /// Rules that upgrade a JSON Schema document up to JSON Schema Draft 6
   UpgradeDraft6,
 

@@ -38,7 +38,7 @@ _jsonschema() {
       return 0
       ;;
     --default-dialect|-d)
-      COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema" -- "${current}") )
+      COMPREPLY=( $(compgen -W "https://json-schema.org/draft/2020-12/schema https://json-schema.org/draft/2019-09/schema https://json-schema.org/draft-07/schema https://json-schema.org/draft-06/schema https://json-schema.org/draft-04/schema https://json-schema.org/draft-03/schema" -- "${current}") )
       return 0
       ;;
     --header|-H)

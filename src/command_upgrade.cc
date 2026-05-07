@@ -28,7 +28,7 @@ namespace {
 auto parse_target_dialect(const std::string_view value)
     -> std::optional<sourcemeta::blaze::AlterSchemaMode> {
   if (value == "draft4") {
-    return std::nullopt;
+    return sourcemeta::blaze::AlterSchemaMode::UpgradeDraft4;
   } else if (value == "draft6") {
     return sourcemeta::blaze::AlterSchemaMode::UpgradeDraft6;
   } else if (value == "draft7") {
@@ -148,6 +148,8 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
       case sourcemeta::core::SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
       case sourcemeta::core::SchemaBaseDialect::JSON_Schema_Draft_4:
       case sourcemeta::core::SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
+      case sourcemeta::core::SchemaBaseDialect::JSON_Schema_Draft_3:
+      case sourcemeta::core::SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
         continue;
       default:
         break;

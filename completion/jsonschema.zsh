@@ -173,6 +173,7 @@ _jsonschema_dialects() {
     'https://json-schema.org/draft-07/schema:Draft 07'
     'https://json-schema.org/draft-06/schema:Draft 06'
     'https://json-schema.org/draft-04/schema:Draft 04'
+    'https://json-schema.org/draft-03/schema:Draft 03'
   )
   _describe -t dialects 'JSON Schema dialect' dialects
 }

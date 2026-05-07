@@ -15,20 +15,19 @@ specifications into account, including re-writing references that point at
 locations whose path has changed. By default, schemas are upgraded to the
 latest supported dialect, and the result is printed to standard output.
 
-For example, consider the following Draft 4 schema:
+For example, consider the following Draft 3 schema:
 
 ```json
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$schema": "http://json-schema.org/draft-03/schema#",
   "id": "https://example.com",
   "type": "object",
   "properties": {
-    "name": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1, "required": true },
     "born": { "$ref": "#/definitions/year" }
   },
-  "required": [ "name" ],
   "definitions": {
-    "year": { "type": "integer", "minimum": 1900 }
+    "year": { "type": "integer", "minimum": 1900, "divisibleBy": 1 }
   }
 }
 ```
@@ -59,7 +58,8 @@ The result will be something like this:
   "$defs": {
     "year": {
       "type": "integer",
-      "minimum": 1900
+      "minimum": 1900,
+      "multipleOf": 1
     }
   }
 }

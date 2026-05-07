@@ -267,10 +267,12 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "upgrade/helpers.h"
 #include "upgrade/prefix_promoted_2020_12_keywords.h"
 #include "upgrade/prefix_promoted_draft_2019_09_keywords.h"
+#include "upgrade/prefix_promoted_draft_4_keywords.h"
 #include "upgrade/prefix_promoted_draft_6_keywords.h"
 #include "upgrade/prefix_promoted_draft_7_keywords.h"
 #include "upgrade/upgrade_2019_09_to_2020_12.h"
 #include "upgrade/upgrade_dialect_override_cleanup.h"
+#include "upgrade/upgrade_draft_3_to_draft_4.h"
 #include "upgrade/upgrade_draft_4_to_draft_6.h"
 #include "upgrade/upgrade_draft_6_to_draft_7.h"
 #include "upgrade/upgrade_draft_7_to_draft_2019_09.h"
@@ -281,15 +283,24 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 namespace sourcemeta::blaze {
 
 auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
-  if (mode == AlterSchemaMode::UpgradeDraft6 ||
+  if (mode == AlterSchemaMode::UpgradeDraft4 ||
+      mode == AlterSchemaMode::UpgradeDraft6 ||
       mode == AlterSchemaMode::UpgradeDraft7 ||
       mode == AlterSchemaMode::Upgrade201909 ||
       mode == AlterSchemaMode::Upgrade202012) {
     bundle.add<DraftOfficialDialectWithHttps>();
     bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
-    bundle.add<PrefixPromotedDraft6Keywords>();
-    bundle.add<UpgradeDraft4ToDraft6>();
-    bundle.add<EmptyObjectAsTrue>();
+    bundle.add<PrefixPromotedDraft4Keywords>();
+    bundle.add<UpgradeDraft3ToDraft4>();
+
+    if (mode == AlterSchemaMode::UpgradeDraft6 ||
+        mode == AlterSchemaMode::UpgradeDraft7 ||
+        mode == AlterSchemaMode::Upgrade201909 ||
+        mode == AlterSchemaMode::Upgrade202012) {
+      bundle.add<PrefixPromotedDraft6Keywords>();
+      bundle.add<UpgradeDraft4ToDraft6>();
+      bundle.add<EmptyObjectAsTrue>();
+    }
 
     if (mode == AlterSchemaMode::UpgradeDraft7 ||
         mode == AlterSchemaMode::Upgrade201909 ||
