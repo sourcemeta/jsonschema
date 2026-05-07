@@ -17,9 +17,11 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2019_09_Meta_Data,
              Vocabularies::Known::JSON_Schema_2020_12_Meta_Data}) &&
-        schema.is_object() && schema.defines("deprecated") &&
-        schema.at("deprecated").is_boolean() &&
-        !schema.at("deprecated").to_boolean());
+        schema.is_object());
+
+    const auto *deprecated{schema.try_at("deprecated")};
+    ONLY_CONTINUE_IF(deprecated && deprecated->is_boolean() &&
+                     !deprecated->to_boolean());
     return true;
   }
 

@@ -19,10 +19,12 @@ public:
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
          Vocabularies::Known::JSON_Schema_2019_09_Applicator}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("allOf") &&
-                     schema.at("allOf").is_array());
+    ONLY_CONTINUE_IF(schema.is_object());
 
-    const auto &all_of{schema.at("allOf")};
+    const auto *all_of_value{schema.try_at("allOf")};
+    ONLY_CONTINUE_IF(all_of_value && all_of_value->is_array());
+
+    const auto &all_of{*all_of_value};
 
     // Don't do anything if there is more than one branch and ALL branches
     // define `$ref` (a common multiple composition pattern)

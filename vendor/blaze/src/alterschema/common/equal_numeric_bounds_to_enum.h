@@ -23,25 +23,29 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_2,
                                    Vocabularies::Known::JSON_Schema_Draft_1,
                                    Vocabularies::Known::JSON_Schema_Draft_0}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        (schema.at("type").to_string() == "integer" ||
-         schema.at("type").to_string() == "number") &&
-        schema.defines("minimum") && schema.at("minimum").is_number() &&
-        schema.defines("maximum") && schema.at("maximum").is_number() &&
-        schema.at("minimum") == schema.at("maximum") &&
-        !(schema.defines("exclusiveMinimum") &&
-          schema.at("exclusiveMinimum").is_boolean() &&
-          schema.at("exclusiveMinimum").to_boolean()) &&
-        !(schema.defines("exclusiveMaximum") &&
-          schema.at("exclusiveMaximum").is_boolean() &&
-          schema.at("exclusiveMaximum").to_boolean()) &&
-        !(schema.defines("minimumCanEqual") &&
-          schema.at("minimumCanEqual").is_boolean() &&
-          !schema.at("minimumCanEqual").to_boolean()) &&
-        !(schema.defines("maximumCanEqual") &&
-          schema.at("maximumCanEqual").is_boolean() &&
-          !schema.at("maximumCanEqual").to_boolean()));
+        schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(
+        type && type->is_string() &&
+        (type->to_string() == "integer" || type->to_string() == "number"));
+    const auto *minimum{schema.try_at("minimum")};
+    ONLY_CONTINUE_IF(minimum && minimum->is_number());
+    const auto *maximum{schema.try_at("maximum")};
+    ONLY_CONTINUE_IF(maximum && maximum->is_number() && *minimum == *maximum);
+
+    const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
+    ONLY_CONTINUE_IF(!(exclusive_minimum && exclusive_minimum->is_boolean() &&
+                       exclusive_minimum->to_boolean()));
+    const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
+    ONLY_CONTINUE_IF(!(exclusive_maximum && exclusive_maximum->is_boolean() &&
+                       exclusive_maximum->to_boolean()));
+    const auto *minimum_can_equal{schema.try_at("minimumCanEqual")};
+    ONLY_CONTINUE_IF(!(minimum_can_equal && minimum_can_equal->is_boolean() &&
+                       !minimum_can_equal->to_boolean()));
+    const auto *maximum_can_equal{schema.try_at("maximumCanEqual")};
+    ONLY_CONTINUE_IF(!(maximum_can_equal && maximum_can_equal->is_boolean() &&
+                       !maximum_can_equal->to_boolean()));
     return APPLIES_TO_KEYWORDS("minimum", "maximum");
   }
 

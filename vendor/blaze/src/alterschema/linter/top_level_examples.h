@@ -24,11 +24,11 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_7,
          Vocabularies::Known::JSON_Schema_Draft_6}));
     ONLY_CONTINUE_IF(schema.is_object());
-    if (schema.defines("examples") && schema.at("examples").is_array() &&
-        schema.at("examples").empty()) {
+    const auto *examples{schema.try_at("examples")};
+    if (examples && examples->is_array() && examples->empty()) {
       return APPLIES_TO_KEYWORDS("examples");
     } else {
-      return !schema.defines("examples");
+      return !examples;
     }
   }
 };

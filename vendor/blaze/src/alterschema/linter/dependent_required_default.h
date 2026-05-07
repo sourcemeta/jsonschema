@@ -21,9 +21,11 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,
              Vocabularies::Known::JSON_Schema_2019_09_Validation}) &&
-        schema.is_object() && schema.defines("dependentRequired") &&
-        schema.at("dependentRequired").is_object() &&
-        schema.at("dependentRequired").empty());
+        schema.is_object());
+
+    const auto *dependent_required{schema.try_at("dependentRequired")};
+    ONLY_CONTINUE_IF(dependent_required && dependent_required->is_object() &&
+                     dependent_required->empty());
     return APPLIES_TO_KEYWORDS("dependentRequired");
   }
 

@@ -22,10 +22,12 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Validation,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("minimum") &&
-                     schema.defines("exclusiveMinimum") &&
-                     schema.at("minimum").is_number() &&
-                     schema.at("exclusiveMinimum").is_number());
+                     schema.is_object());
+
+    const auto *minimum{schema.try_at("minimum")};
+    ONLY_CONTINUE_IF(minimum && minimum->is_number());
+    const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
+    ONLY_CONTINUE_IF(exclusive_minimum && exclusive_minimum->is_number());
     return APPLIES_TO_KEYWORDS("exclusiveMinimum", "minimum");
   }
 

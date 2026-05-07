@@ -23,9 +23,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("required") &&
-                     schema.at("required").is_array() &&
-                     !schema.at("required").unique());
+                     schema.is_object());
+
+    const auto *required{schema.try_at("required")};
+    ONLY_CONTINUE_IF(required && required->is_array() && !required->unique());
     // TODO: Highlight which specific entries in `required` are duplicated
     return APPLIES_TO_KEYWORDS("required");
   }

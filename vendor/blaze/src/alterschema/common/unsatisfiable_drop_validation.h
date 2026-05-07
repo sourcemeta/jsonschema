@@ -21,9 +21,11 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("not") &&
-                     schema.at("not").is_boolean() &&
-                     schema.at("not").to_boolean());
+                     schema.is_object());
+
+    const auto *not_value{schema.try_at("not")};
+    ONLY_CONTINUE_IF(not_value && not_value->is_boolean() &&
+                     not_value->to_boolean());
 
     std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {

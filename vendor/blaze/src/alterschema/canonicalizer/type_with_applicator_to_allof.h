@@ -34,8 +34,8 @@ public:
              Vocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
         schema.defines("if")};
     this->has_if_then_else_ = has_if;
-    const bool has_type{schema.defines("type") &&
-                        schema.at("type").is_string()};
+    const auto *type_value{schema.try_at("type")};
+    const bool has_type{type_value && type_value->is_string()};
     const bool has_enum{schema.defines("enum")};
     const bool is_modern{
         vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) ||

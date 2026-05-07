@@ -26,8 +26,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_array());
+                     schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_array());
 
     this->keyword_instances_.clear();
 

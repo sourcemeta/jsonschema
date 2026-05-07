@@ -23,9 +23,10 @@ public:
         location.base_dialect == SchemaBaseDialect::JSON_Schema_2020_12_Hyper ||
         location.base_dialect == SchemaBaseDialect::JSON_Schema_2019_09 ||
         location.base_dialect == SchemaBaseDialect::JSON_Schema_2019_09_Hyper);
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
-                     schema.at("$schema").is_string());
-    const auto &dialect{schema.at("$schema").to_string()};
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *schema_keyword{schema.try_at("$schema")};
+    ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
+    const auto &dialect{schema_keyword->to_string()};
     ONLY_CONTINUE_IF(dialect.starts_with("http://json-schema.org/"));
     ONLY_CONTINUE_IF(
         dialect == "http://json-schema.org/draft/2020-12/schema" ||

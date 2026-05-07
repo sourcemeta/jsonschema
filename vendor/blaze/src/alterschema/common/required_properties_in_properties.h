@@ -31,15 +31,19 @@ public:
               Vocabularies::Known::JSON_Schema_Draft_6,
               Vocabularies::Known::JSON_Schema_Draft_4,
               Vocabularies::Known::JSON_Schema_Draft_3})) &&
-        schema.is_object() && schema.defines("required") &&
-        schema.at("required").is_array() && !schema.at("required").empty() &&
-        (!schema.defines("additionalProperties") ||
-         (schema.at("additionalProperties").is_boolean() &&
-          schema.at("additionalProperties").to_boolean())));
+        schema.is_object());
+
+    const auto *required{schema.try_at("required")};
+    ONLY_CONTINUE_IF(required && required->is_array() && !required->empty());
+
+    const auto *additional_properties{schema.try_at("additionalProperties")};
+    ONLY_CONTINUE_IF(!additional_properties ||
+                     (additional_properties->is_boolean() &&
+                      additional_properties->to_boolean()));
 
     std::vector<Pointer> locations;
     std::size_t index{0};
-    for (const auto &property : schema.at("required").as_array()) {
+    for (const auto &property : required->as_array()) {
       if (property.is_string() &&
           !this->defined_in_properties_sibling(schema, property.to_string()) &&
           !WALK_UP_IN_PLACE_APPLICATORS(
@@ -74,8 +78,8 @@ private:
   defined_in_properties_sibling(const JSON &schema,
                                 const JSON::String &property) const -> bool {
     assert(schema.is_object());
-    return schema.defines("properties") &&
-           schema.at("properties").is_object() &&
-           schema.at("properties").defines(property);
+    const auto *properties{schema.try_at("properties")};
+    return properties && properties->is_object() &&
+           properties->defines(property);
   };
 };

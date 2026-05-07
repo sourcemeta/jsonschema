@@ -191,6 +191,9 @@ auto parse_decimal_string(const char *input, std::size_t length)
   std::int64_t exponent_suffix_64 = 0;
   bool has_exponent_marker =
       cursor > input && (*(cursor - 1) == 'e' || *(cursor - 1) == 'E');
+  if (decimal_offset < 0 && !has_exponent_marker) {
+    result.flags |= FLAG_INTEGER_LITERAL;
+  }
   if (cursor < end) {
     bool is_exponent_negative = false;
     if (*cursor == '-') {
@@ -433,12 +436,13 @@ Decimal::Decimal(const std::int64_t value) {
     auto absolute_value = static_cast<std::uint64_t>(-(value + 1)) + 1;
     this->coefficient_ = static_cast<std::int64_t>(absolute_value % BASE);
     this->coefficient_high_ = absolute_value / BASE;
-    this->flags_ = FLAG_BIG | FLAG_SIGN;
+    this->flags_ = FLAG_BIG | FLAG_SIGN | FLAG_INTEGER_LITERAL;
   } else if (value < 0) {
     this->coefficient_ = -value;
-    this->flags_ = FLAG_SIGN;
+    this->flags_ = FLAG_SIGN | FLAG_INTEGER_LITERAL;
   } else {
     this->coefficient_ = value;
+    this->flags_ = FLAG_INTEGER_LITERAL;
   }
 }
 
@@ -446,17 +450,23 @@ Decimal::Decimal(const std::uint64_t value) {
   if (value > static_cast<std::uint64_t>(COMPACT_MAX)) {
     this->coefficient_ = static_cast<std::int64_t>(value % BASE);
     this->coefficient_high_ = value / BASE;
-    this->flags_ = FLAG_BIG;
+    this->flags_ = FLAG_BIG | FLAG_INTEGER_LITERAL;
   } else {
     this->coefficient_ = static_cast<std::int64_t>(value);
+    this->flags_ = FLAG_INTEGER_LITERAL;
   }
 }
 
-Decimal::Decimal(const float value)
-    : Decimal{floating_point_to_string(value)} {}
+Decimal::Decimal(const float value) : Decimal{floating_point_to_string(value)} {
+  this->flags_ =
+      static_cast<std::uint8_t>(this->flags_ & ~FLAG_INTEGER_LITERAL);
+}
 
 Decimal::Decimal(const double value)
-    : Decimal{floating_point_to_string(value)} {}
+    : Decimal{floating_point_to_string(value)} {
+  this->flags_ =
+      static_cast<std::uint8_t>(this->flags_ & ~FLAG_INTEGER_LITERAL);
+}
 
 Decimal::Decimal(const char *const value) {
   auto parsed = parse_decimal_string(value, std::strlen(value));
@@ -513,8 +523,11 @@ auto Decimal::strict_from(const double value) -> Decimal {
   const auto result{
       std::to_chars(buffer.data(), buffer.data() + buffer.size(), value)};
   assert(result.ec == std::errc{});
-  return Decimal{std::string_view{
+  Decimal output{std::string_view{
       buffer.data(), static_cast<std::size_t>(result.ptr - buffer.data())}};
+  output.flags_ =
+      static_cast<std::uint8_t>(output.flags_ & ~FLAG_INTEGER_LITERAL);
+  return output;
 }
 
 auto Decimal::to_scientific_string() const -> std::string {
@@ -734,25 +747,25 @@ auto Decimal::is_double() const -> bool {
 }
 
 auto Decimal::is_int32() const -> bool {
-  assert(this->is_integer());
+  assert(this->is_integral());
   return *this >= Decimal{std::numeric_limits<std::int32_t>::min()} &&
          *this <= Decimal{std::numeric_limits<std::int32_t>::max()};
 }
 
 auto Decimal::is_int64() const -> bool {
-  assert(this->is_integer());
+  assert(this->is_integral());
   return *this >= Decimal{std::numeric_limits<std::int64_t>::min()} &&
          *this <= Decimal{std::numeric_limits<std::int64_t>::max()};
 }
 
 auto Decimal::is_uint32() const -> bool {
-  assert(this->is_integer());
+  assert(this->is_integral());
   return *this >= Decimal{0} &&
          *this <= Decimal{std::numeric_limits<std::uint32_t>::max()};
 }
 
 auto Decimal::is_uint64() const -> bool {
-  assert(this->is_integer());
+  assert(this->is_integral());
   return *this >= Decimal{0} &&
          *this <= Decimal{std::numeric_limits<std::uint64_t>::max()};
 }

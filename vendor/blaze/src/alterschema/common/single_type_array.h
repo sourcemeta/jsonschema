@@ -26,10 +26,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_2,
                           Vocabularies::Known::JSON_Schema_Draft_1,
                           Vocabularies::Known::JSON_Schema_Draft_0}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_array() &&
-                     schema.at("type").size() == 1 &&
-                     schema.at("type").front().is_string());
+                     schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_array() && type->size() == 1 &&
+                     type->front().is_string());
     return APPLIES_TO_KEYWORDS("type");
   }
 

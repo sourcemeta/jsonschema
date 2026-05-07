@@ -21,14 +21,13 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
         schema.is_object());
 
-    const bool has_extends{schema.defines("extends") &&
-                           schema.at("extends").is_array()};
-    const bool has_disallow{schema.defines("disallow") &&
-                            schema.at("disallow").is_array()};
-    const bool has_type_array{schema.defines("type") &&
-                              schema.at("type").is_array()};
-    const bool has_type{schema.defines("type") &&
-                        schema.at("type").is_string()};
+    const auto *extends_value{schema.try_at("extends")};
+    const bool has_extends{extends_value && extends_value->is_array()};
+    const auto *disallow_value{schema.try_at("disallow")};
+    const bool has_disallow{disallow_value && disallow_value->is_array()};
+    const auto *type_value{schema.try_at("type")};
+    const bool has_type_array{type_value && type_value->is_array()};
+    const bool has_type{type_value && type_value->is_string()};
     const bool has_enum{schema.defines("enum")};
     const unsigned int applicator_count{(has_extends ? 1U : 0U) +
                                         (has_disallow ? 1U : 0U) +

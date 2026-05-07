@@ -16,9 +16,11 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(Vocabularies::Known::JSON_Schema_2019_09_Core) &&
-        schema.is_object() && schema.defines("$recursiveAnchor") &&
-        schema.at("$recursiveAnchor").is_boolean() &&
-        !schema.at("$recursiveAnchor").to_boolean());
+        schema.is_object());
+
+    const auto *recursive_anchor{schema.try_at("$recursiveAnchor")};
+    ONLY_CONTINUE_IF(recursive_anchor && recursive_anchor->is_boolean() &&
+                     !recursive_anchor->to_boolean());
     return true;
   }
 

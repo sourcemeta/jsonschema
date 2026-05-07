@@ -22,10 +22,12 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Validation,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("maximum") &&
-                     schema.defines("exclusiveMaximum") &&
-                     schema.at("maximum").is_number() &&
-                     schema.at("exclusiveMaximum").is_number());
+                     schema.is_object());
+
+    const auto *maximum{schema.try_at("maximum")};
+    ONLY_CONTINUE_IF(maximum && maximum->is_number());
+    const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
+    ONLY_CONTINUE_IF(exclusive_maximum && exclusive_maximum->is_number());
     return APPLIES_TO_KEYWORDS("exclusiveMaximum", "maximum");
   }
 

@@ -13,8 +13,10 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$ref") &&
-                     schema.at("$ref").is_string() && schema.size() == 1);
+    ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
+
+    const auto *ref{schema.try_at("$ref")};
+    ONLY_CONTINUE_IF(ref && ref->is_string());
 
     if (!location.parent.has_value()) {
       return false;
@@ -26,17 +28,16 @@ public:
                        relative.at(0).to_property() == "allOf" &&
                        relative.size() >= 2 && relative.at(1).is_index());
       const auto &parent_schema{sourcemeta::core::get(root, parent_pointer)};
-      ONLY_CONTINUE_IF(parent_schema.is_object() &&
-                       parent_schema.defines("allOf") &&
-                       parent_schema.at("allOf").is_array());
+      ONLY_CONTINUE_IF(parent_schema.is_object());
+      const auto *parent_all_of{parent_schema.try_at("allOf")};
+      ONLY_CONTINUE_IF(parent_all_of && parent_all_of->is_array());
       const auto current_index{relative.at(1).to_index()};
       bool has_typed_sibling{false};
-      for (std::size_t index = 0; index < parent_schema.at("allOf").size();
-           ++index) {
+      for (std::size_t index = 0; index < parent_all_of->size(); ++index) {
         if (index == current_index) {
           continue;
         }
-        const auto &sibling{parent_schema.at("allOf").at(index)};
+        const auto &sibling{parent_all_of->at(index)};
         if (sibling.is_object() &&
             (sibling.defines("type") || sibling.defines("enum"))) {
           has_typed_sibling = true;
@@ -53,7 +54,7 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_6,
          Vocabularies::Known::JSON_Schema_Draft_4}));
 
-    const auto target{frame.traverse(schema.at("$ref").to_string())};
+    const auto target{frame.traverse(ref->to_string())};
     ONLY_CONTINUE_IF(target.has_value());
     const auto &target_pointer{target->get().pointer};
 

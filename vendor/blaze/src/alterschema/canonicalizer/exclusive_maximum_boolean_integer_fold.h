@@ -17,13 +17,16 @@ public:
     ONLY_CONTINUE_IF(
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_3,
                                    Vocabularies::Known::JSON_Schema_Draft_4}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "integer" &&
-        schema.defines("exclusiveMaximum") &&
-        schema.at("exclusiveMaximum").is_boolean() &&
-        schema.at("exclusiveMaximum").to_boolean() &&
-        schema.defines("maximum") && schema.at("maximum").is_number());
+        schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
+    const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
+    ONLY_CONTINUE_IF(exclusive_maximum && exclusive_maximum->is_boolean() &&
+                     exclusive_maximum->to_boolean());
+    const auto *maximum{schema.try_at("maximum")};
+    ONLY_CONTINUE_IF(maximum && maximum->is_number());
     return true;
   }
 

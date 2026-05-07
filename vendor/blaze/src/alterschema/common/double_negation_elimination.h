@@ -24,12 +24,14 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_object() &&
-                     schema.at(KEYWORD).size() == 1 &&
-                     schema.at(KEYWORD).defines(KEYWORD) &&
-                     !(schema.at(KEYWORD).at(KEYWORD).is_boolean() &&
-                       !schema.at(KEYWORD).at(KEYWORD).to_boolean()));
+                     schema.is_object());
+
+    const auto *outer_not{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(outer_not && outer_not->is_object() &&
+                     outer_not->size() == 1);
+    const auto *inner_not{outer_not->try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(inner_not &&
+                     !(inner_not->is_boolean() && !inner_not->to_boolean()));
     ONLY_CONTINUE_IF(
         !(vocabularies.contains_any(
               {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,

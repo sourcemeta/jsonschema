@@ -16,11 +16,13 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_3) &&
-        schema.is_object() && schema.defines("dependencies") &&
-        schema.at("dependencies").is_object());
+        schema.is_object());
 
-    ONLY_CONTINUE_IF(std::ranges::any_of(
-        schema.at("dependencies").as_object(), [](const auto &entry) {
+    const auto *dependencies{schema.try_at("dependencies")};
+    ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
+
+    ONLY_CONTINUE_IF(
+        std::ranges::any_of(dependencies->as_object(), [](const auto &entry) {
           return is_schema(entry.second) || entry.second.is_array() ||
                  entry.second.is_string();
         }));

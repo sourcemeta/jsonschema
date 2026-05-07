@@ -115,13 +115,20 @@ public:
   [[nodiscard]] auto is_zero() const -> bool;
 
   /// Check if the decimal number represents an integer value, which includes a
-  /// number like `3.0`
+  /// number like `3.0`. This is a value-level check: returns `true` whenever
+  /// the number mathematically equals an integer, regardless of how it was
+  /// originally written.
   [[nodiscard]] auto is_integral() const -> bool;
 
-  /// Check if the decimal number represents an integer value _without_ a
-  /// decimal component in its original representation.
+  /// Check if the decimal number originated as an integer literal. Returns
+  /// `true` iff the value was constructed from an integer-typed constructor or
+  /// from a string source consisting of an optional sign followed by one or
+  /// more digits, with no fractional part and no exponent part. Returns
+  /// `false` for values constructed from floating-point primitives, from
+  /// strings with a fractional or exponent part, or as the result of
+  /// arithmetic operations.
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto is_integer() const -> bool {
-    return this->is_integral() && this->exponent_ >= 0;
+    return (this->flags_ & FLAG_INTEGER_LITERAL) != 0;
   }
 
   /// Check if the decimal number is finite
@@ -282,6 +289,7 @@ private:
   static constexpr std::uint8_t FLAG_NAN = 0x02;
   static constexpr std::uint8_t FLAG_SNAN = 0x04;
   static constexpr std::uint8_t FLAG_INFINITE = 0x08;
+  static constexpr std::uint8_t FLAG_INTEGER_LITERAL = 0x40;
 
   std::int64_t coefficient_{0};
   std::uint64_t coefficient_high_{0};

@@ -24,10 +24,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4,
                           Vocabularies::Known::JSON_Schema_Draft_3}) &&
-                     schema.is_object() &&
-                     schema.defines("patternProperties") &&
-                     schema.at("patternProperties").is_object() &&
-                     schema.at("patternProperties").empty());
+                     schema.is_object());
+
+    const auto *pattern_properties{schema.try_at("patternProperties")};
+    ONLY_CONTINUE_IF(pattern_properties && pattern_properties->is_object() &&
+                     pattern_properties->empty());
     return APPLIES_TO_KEYWORDS("patternProperties");
   }
 

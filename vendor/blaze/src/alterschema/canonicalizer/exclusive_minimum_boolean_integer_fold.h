@@ -17,13 +17,16 @@ public:
     ONLY_CONTINUE_IF(
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_3,
                                    Vocabularies::Known::JSON_Schema_Draft_4}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "integer" &&
-        schema.defines("exclusiveMinimum") &&
-        schema.at("exclusiveMinimum").is_boolean() &&
-        schema.at("exclusiveMinimum").to_boolean() &&
-        schema.defines("minimum") && schema.at("minimum").is_number());
+        schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
+    const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
+    ONLY_CONTINUE_IF(exclusive_minimum && exclusive_minimum->is_boolean() &&
+                     exclusive_minimum->to_boolean());
+    const auto *minimum{schema.try_at("minimum")};
+    ONLY_CONTINUE_IF(minimum && minimum->is_number());
     return true;
   }
 

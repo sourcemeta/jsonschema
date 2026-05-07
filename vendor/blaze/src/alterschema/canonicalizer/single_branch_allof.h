@@ -20,9 +20,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_array() &&
-                     schema.at(KEYWORD).size() == 1);
+                     schema.is_object());
+
+    const auto *all_of{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(all_of && all_of->is_array() && all_of->size() == 1);
     ONLY_CONTINUE_IF(
         !(vocabularies.contains_any(
               {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,
@@ -31,7 +32,7 @@ public:
            schema.defines("unevaluatedItems"))));
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
-    const auto &branch{schema.at(KEYWORD).at(0)};
+    const auto &branch{all_of->at(0)};
     if (branch.is_object()) {
       ONLY_CONTINUE_IF(!branch.defines("$ref") &&
                        !branch.defines("$dynamicRef") &&

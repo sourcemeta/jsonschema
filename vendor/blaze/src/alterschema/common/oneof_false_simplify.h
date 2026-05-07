@@ -22,11 +22,12 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     !schema.defines("not") && schema.at(KEYWORD).is_array() &&
-                     schema.at(KEYWORD).size() == 1);
+                     schema.is_object() && !schema.defines("not"));
 
-    const auto &entry{schema.at(KEYWORD).front()};
+    const auto *one_of{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(one_of && one_of->is_array() && one_of->size() == 1);
+
+    const auto &entry{one_of->front()};
     ONLY_CONTINUE_IF(entry.is_boolean() && !entry.to_boolean());
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));

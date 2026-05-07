@@ -17,17 +17,19 @@ public:
     ONLY_CONTINUE_IF(
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_3,
                                    Vocabularies::Known::JSON_Schema_Draft_4}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        (schema.at("type").to_string() == "integer" ||
-         schema.at("type").to_string() == "number"));
+        schema.is_object());
 
-    this->has_exclusive_min_ = schema.defines("exclusiveMinimum") &&
-                               schema.at("exclusiveMinimum").is_boolean() &&
-                               !schema.at("exclusiveMinimum").to_boolean();
-    this->has_exclusive_max_ = schema.defines("exclusiveMaximum") &&
-                               schema.at("exclusiveMaximum").is_boolean() &&
-                               !schema.at("exclusiveMaximum").to_boolean();
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(
+        type && type->is_string() &&
+        (type->to_string() == "integer" || type->to_string() == "number"));
+
+    const auto *exclusive_min{schema.try_at("exclusiveMinimum")};
+    this->has_exclusive_min_ = exclusive_min && exclusive_min->is_boolean() &&
+                               !exclusive_min->to_boolean();
+    const auto *exclusive_max{schema.try_at("exclusiveMaximum")};
+    this->has_exclusive_max_ = exclusive_max && exclusive_max->is_boolean() &&
+                               !exclusive_max->to_boolean();
 
     ONLY_CONTINUE_IF(this->has_exclusive_min_ || this->has_exclusive_max_);
     return true;

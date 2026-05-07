@@ -25,9 +25,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_3,
                           Vocabularies::Known::JSON_Schema_Draft_2,
                           Vocabularies::Known::JSON_Schema_Draft_1}) &&
-                     schema.is_object() && schema.defines("enum") &&
-                     schema.at("enum").is_array() &&
-                     !schema.at("enum").unique());
+                     schema.is_object());
+
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array() &&
+                     !enum_value->unique());
     // TODO: Highlight which specific entries in `enum` are duplicated
     return APPLIES_TO_KEYWORDS("enum");
   }

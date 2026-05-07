@@ -28,9 +28,10 @@ public:
          vocabularies.contains_any(
              {Vocabularies::Known::JSON_Schema_Draft_7,
               Vocabularies::Known::JSON_Schema_Draft_6})) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "array" && !schema.defines("items"));
+        schema.is_object() && !schema.defines("items"));
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() && type->to_string() == "array");
     ONLY_CONTINUE_IF(
         !(schema.defines("unevaluatedItems") &&
           vocabularies.contains_any(

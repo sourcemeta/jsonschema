@@ -28,11 +28,11 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_2,
          Vocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
-    if (schema.defines("title") && schema.at("title").is_string() &&
-        schema.at("title").empty()) {
+    const auto *title{schema.try_at("title")};
+    if (title && title->is_string() && title->empty()) {
       return APPLIES_TO_KEYWORDS("title");
     } else {
-      return !schema.defines("title");
+      return !title;
     }
   }
 };

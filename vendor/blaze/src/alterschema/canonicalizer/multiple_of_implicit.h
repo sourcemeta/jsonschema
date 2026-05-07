@@ -21,11 +21,12 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_string() &&
-                     // Applying this to numbers would be a semantic problem
-                     schema.at("type").to_string() == "integer" &&
-                     !schema.defines("multipleOf"));
+                     schema.is_object() && !schema.defines("multipleOf"));
+
+    const auto *type{schema.try_at("type")};
+    // Applying this to numbers would be a semantic problem
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
     return true;
   }
 

@@ -27,10 +27,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_2,
                           Vocabularies::Known::JSON_Schema_Draft_1,
                           Vocabularies::Known::JSON_Schema_Draft_0}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_string() &&
-                     schema.at("type").to_string() == "null" &&
-                     !schema.defines("enum") && !schema.defines("const"));
+                     schema.is_object() && !schema.defines("enum") &&
+                     !schema.defines("const"));
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() && type->to_string() == "null");
     return APPLIES_TO_KEYWORDS("type");
   }
 

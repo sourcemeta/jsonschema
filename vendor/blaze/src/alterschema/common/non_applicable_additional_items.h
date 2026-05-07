@@ -30,9 +30,10 @@ public:
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
 
-    if (schema.defines("items") && is_schema(schema.at("items"))) {
+    const auto *items{schema.try_at("items")};
+    if (items && is_schema(*items)) {
       return APPLIES_TO_KEYWORDS(KEYWORD, "items");
-    } else if (!schema.defines("items")) {
+    } else if (!items) {
       return APPLIES_TO_KEYWORDS(KEYWORD);
     } else {
       return false;

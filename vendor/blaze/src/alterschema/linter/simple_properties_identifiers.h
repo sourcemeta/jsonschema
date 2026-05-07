@@ -30,9 +30,10 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
          Vocabularies::Known::JSON_Schema_Draft_1,
          Vocabularies::Known::JSON_Schema_Draft_1_Hyper}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("properties") &&
-                     schema.at("properties").is_object() &&
-                     !schema.at("properties").empty());
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *properties{schema.try_at("properties")};
+    ONLY_CONTINUE_IF(properties && properties->is_object() &&
+                     !properties->empty());
 
     if (vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Core,
@@ -55,7 +56,7 @@ public:
     }
 
     std::vector<Pointer> offenders;
-    for (const auto &entry : schema.at("properties").as_object()) {
+    for (const auto &entry : properties->as_object()) {
       static const Regex IDENTIFIER_PATTERN{
           to_regex("^[A-Za-z_][A-Za-z0-9_]*$").value()};
       if (!matches(IDENTIFIER_PATTERN, entry.first)) {

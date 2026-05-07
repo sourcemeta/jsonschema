@@ -22,11 +22,13 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,
              Vocabularies::Known::JSON_Schema_2019_09_Validation}) &&
-        schema.is_object() && schema.defines("maxContains") &&
-        schema.at("maxContains").is_integer() && schema.defines("maxItems") &&
-        schema.at("maxItems").is_integer() &&
-        schema.at("maxContains").to_integer() >
-            schema.at("maxItems").to_integer());
+        schema.is_object());
+
+    const auto *max_contains{schema.try_at("maxContains")};
+    ONLY_CONTINUE_IF(max_contains && max_contains->is_integer());
+    const auto *max_items{schema.try_at("maxItems")};
+    ONLY_CONTINUE_IF(max_items && max_items->is_integer() &&
+                     max_contains->to_integer() > max_items->to_integer());
     return APPLIES_TO_KEYWORDS("maxContains", "maxItems");
   }
 

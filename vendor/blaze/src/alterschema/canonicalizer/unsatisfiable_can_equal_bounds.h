@@ -16,20 +16,25 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_2) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        (schema.at("type").to_string() == "number" ||
-         schema.at("type").to_string() == "integer") &&
-        schema.defines("minimum") && schema.at("minimum").is_number() &&
-        schema.defines("maximum") && schema.at("maximum").is_number() &&
-        schema.at("minimum") == schema.at("maximum"));
+        schema.is_object());
 
-    const bool min_exclusive{schema.defines("minimumCanEqual") &&
-                             schema.at("minimumCanEqual").is_boolean() &&
-                             !schema.at("minimumCanEqual").to_boolean()};
-    const bool max_exclusive{schema.defines("maximumCanEqual") &&
-                             schema.at("maximumCanEqual").is_boolean() &&
-                             !schema.at("maximumCanEqual").to_boolean()};
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(
+        type && type->is_string() &&
+        (type->to_string() == "number" || type->to_string() == "integer"));
+    const auto *minimum{schema.try_at("minimum")};
+    ONLY_CONTINUE_IF(minimum && minimum->is_number());
+    const auto *maximum{schema.try_at("maximum")};
+    ONLY_CONTINUE_IF(maximum && maximum->is_number() && *minimum == *maximum);
+
+    const auto *minimum_can_equal{schema.try_at("minimumCanEqual")};
+    const bool min_exclusive{minimum_can_equal &&
+                             minimum_can_equal->is_boolean() &&
+                             !minimum_can_equal->to_boolean()};
+    const auto *maximum_can_equal{schema.try_at("maximumCanEqual")};
+    const bool max_exclusive{maximum_can_equal &&
+                             maximum_can_equal->is_boolean() &&
+                             !maximum_can_equal->to_boolean()};
     ONLY_CONTINUE_IF(min_exclusive || max_exclusive);
     return true;
   }

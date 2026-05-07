@@ -24,9 +24,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_array() &&
-                     schema.at(KEYWORD).size() > 1);
+                     schema.is_object());
+
+    const auto *oneof_value{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(oneof_value && oneof_value->is_array() &&
+                     oneof_value->size() > 1);
 
     const auto has_validation_vocabulary{vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
@@ -44,27 +46,30 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_7,
          Vocabularies::Known::JSON_Schema_Draft_6})};
 
-    const auto &oneof{schema.at(KEYWORD)};
     std::vector<JSON::TypeSet> type_sets;
-    type_sets.reserve(oneof.size());
+    type_sets.reserve(oneof_value->size());
 
-    for (const auto &branch : oneof.as_array()) {
+    for (const auto &branch : oneof_value->as_array()) {
       ONLY_CONTINUE_IF(branch.is_object());
 
-      const auto has_type{branch.defines("type")};
-      const auto has_const{has_const_vocabulary && branch.defines("const")};
-      const auto has_enum{has_validation_vocabulary && branch.defines("enum") &&
-                          branch.at("enum").is_array()};
+      const auto *type_value{branch.try_at("type")};
+      const auto *const_value{has_const_vocabulary ? branch.try_at("const")
+                                                   : nullptr};
+      const auto *enum_value{has_validation_vocabulary ? branch.try_at("enum")
+                                                       : nullptr};
+      const auto has_enum{enum_value && enum_value->is_array()};
 
-      if (has_type) {
-        type_sets.push_back(parse_schema_type(branch.at("type")));
-      } else if (has_const && !has_enum) {
-        JSON::TypeSet branch_types;
-        branch_types.set(std::to_underlying(branch.at("const").type()));
+      if (type_value) {
+        const auto branch_types{parse_schema_type(*type_value)};
+        ONLY_CONTINUE_IF(branch_types.any());
         type_sets.push_back(branch_types);
-      } else if (has_enum && !has_const) {
+      } else if (const_value && !has_enum) {
         JSON::TypeSet branch_types;
-        for (const auto &item : branch.at("enum").as_array()) {
+        branch_types.set(std::to_underlying(const_value->type()));
+        type_sets.push_back(branch_types);
+      } else if (has_enum && !const_value) {
+        JSON::TypeSet branch_types;
+        for (const auto &item : enum_value->as_array()) {
           branch_types.set(std::to_underlying(item.type()));
         }
         type_sets.push_back(branch_types);

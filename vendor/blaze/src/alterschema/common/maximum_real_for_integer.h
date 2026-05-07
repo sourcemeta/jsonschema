@@ -26,13 +26,14 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_3,
                           Vocabularies::Known::JSON_Schema_Draft_2,
                           Vocabularies::Known::JSON_Schema_Draft_1}) &&
-                     schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_string() &&
-                     schema.at("type").to_string() == "integer" &&
-                     schema.defines("maximum") &&
-                     (schema.at("maximum").is_real() ||
-                      (schema.at("maximum").is_decimal() &&
-                       !schema.at("maximum").to_decimal().is_integer())));
+                     schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
+    const auto *maximum{schema.try_at("maximum")};
+    ONLY_CONTINUE_IF(maximum && maximum->is_number() &&
+                     !maximum->is_integral());
     return APPLIES_TO_KEYWORDS("maximum");
   }
 

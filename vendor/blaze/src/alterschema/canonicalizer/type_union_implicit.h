@@ -109,14 +109,15 @@ private:
         const auto branch_index{walk_relative.at(1).to_index()};
         const auto &allof_parent{get(root, wp)};
         const auto &keyword_name{walk_relative.at(0).to_property()};
-        if (allof_parent.is_object() && allof_parent.defines(keyword_name) &&
-            allof_parent.at(keyword_name).is_array()) {
-          const auto &branches{allof_parent.at(keyword_name)};
-          for (std::size_t index = 0; index < branches.size(); ++index) {
+        const auto *branches{allof_parent.is_object()
+                                 ? allof_parent.try_at(keyword_name)
+                                 : nullptr};
+        if (branches && branches->is_array()) {
+          for (std::size_t index = 0; index < branches->size(); ++index) {
             if (index == branch_index) {
               continue;
             }
-            const auto &sibling{branches.at(index)};
+            const auto &sibling{branches->at(index)};
             if (!sibling.is_object()) {
               continue;
             }
@@ -125,8 +126,9 @@ private:
               return true;
             }
 
-            if (sibling.defines("enum") && sibling.at("enum").is_array() &&
-                !sibling.at("enum").empty()) {
+            const auto *sibling_enum{sibling.try_at("enum")};
+            if (sibling_enum && sibling_enum->is_array() &&
+                !sibling_enum->empty()) {
               return true;
             }
           }

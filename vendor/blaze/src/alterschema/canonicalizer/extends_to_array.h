@@ -18,8 +18,10 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_1,
                                    Vocabularies::Known::JSON_Schema_Draft_2,
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("extends") &&
-        !schema.at("extends").is_array());
+        schema.is_object());
+
+    const auto *extends{schema.try_at("extends")};
+    ONLY_CONTINUE_IF(extends && !extends->is_array());
     return true;
   }
 

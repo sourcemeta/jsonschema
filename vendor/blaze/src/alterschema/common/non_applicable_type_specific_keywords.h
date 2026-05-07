@@ -18,6 +18,7 @@ public:
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
 
+    const auto *type_value{schema.try_at("type")};
     auto current_types{vocabularies.contains_any(
                            {Vocabularies::Known::JSON_Schema_2020_12_Validation,
                             Vocabularies::Known::JSON_Schema_2019_09_Validation,
@@ -31,8 +32,8 @@ public:
                             Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
                             Vocabularies::Known::JSON_Schema_Draft_0,
                             Vocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
-                               schema.defines("type")
-                           ? parse_schema_type(schema.at("type"))
+                               type_value
+                           ? parse_schema_type(*type_value)
                            : sourcemeta::core::JSON::TypeSet{}};
 
     if (vocabularies.contains_any(
@@ -43,10 +44,12 @@ public:
              Vocabularies::Known::JSON_Schema_Draft_4,
              Vocabularies::Known::JSON_Schema_Draft_3,
              Vocabularies::Known::JSON_Schema_Draft_2,
-             Vocabularies::Known::JSON_Schema_Draft_1}) &&
-        schema.defines("enum") && schema.at("enum").is_array()) {
-      for (const auto &entry : schema.at("enum").as_array()) {
-        current_types.set(std::to_underlying(entry.type()));
+             Vocabularies::Known::JSON_Schema_Draft_1})) {
+      const auto *enum_value{schema.try_at("enum")};
+      if (enum_value && enum_value->is_array()) {
+        for (const auto &entry : enum_value->as_array()) {
+          current_types.set(std::to_underlying(entry.type()));
+        }
       }
     }
 
@@ -54,9 +57,11 @@ public:
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,
              Vocabularies::Known::JSON_Schema_2019_09_Validation,
              Vocabularies::Known::JSON_Schema_Draft_7,
-             Vocabularies::Known::JSON_Schema_Draft_6}) &&
-        schema.defines("const")) {
-      current_types.set(std::to_underlying(schema.at("const").type()));
+             Vocabularies::Known::JSON_Schema_Draft_6})) {
+      const auto *const_value{schema.try_at("const")};
+      if (const_value) {
+        current_types.set(std::to_underlying(const_value->type()));
+      }
     }
 
     // This means that the schema has no explicit type constraints,

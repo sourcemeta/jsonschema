@@ -18,9 +18,10 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2019_09_Applicator,
              Vocabularies::Known::JSON_Schema_2020_12_Applicator}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "array");
+        schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() && type->to_string() == "array");
 
     if (schema.defines("contains")) {
       ONLY_CONTINUE_IF(!schema.defines("minContains"));

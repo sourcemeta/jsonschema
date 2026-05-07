@@ -18,10 +18,12 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_1,
                                    Vocabularies::Known::JSON_Schema_Draft_2,
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_array());
+        schema.is_object());
 
-    for (const auto &element : schema.at("type").as_array()) {
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_array());
+
+    for (const auto &element : type->as_array()) {
       if (element.is_string()) {
         return true;
       }

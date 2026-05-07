@@ -18,12 +18,14 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2019_09_Validation,
              Vocabularies::Known::JSON_Schema_2020_12_Validation}) &&
-        schema.is_object() && schema.defines("dependentRequired") &&
-        schema.at("dependentRequired").is_object() &&
-        !schema.at("dependentRequired").empty());
+        schema.is_object());
+
+    const auto *dependent_required{schema.try_at("dependentRequired")};
+    ONLY_CONTINUE_IF(dependent_required && dependent_required->is_object() &&
+                     !dependent_required->empty());
 
     ONLY_CONTINUE_IF(std::ranges::any_of(
-        schema.at("dependentRequired").as_object(),
+        dependent_required->as_object(),
         [](const auto &entry) { return entry.second.is_array(); }));
     return true;
   }

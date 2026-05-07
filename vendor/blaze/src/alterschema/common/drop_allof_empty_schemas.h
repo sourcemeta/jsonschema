@@ -18,11 +18,10 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_7,
          Vocabularies::Known::JSON_Schema_Draft_6,
          Vocabularies::Known::JSON_Schema_Draft_4}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("allOf") &&
-                     schema.at("allOf").is_array() &&
-                     !schema.at("allOf").empty());
-    ONLY_CONTINUE_IF(
-        std::ranges::any_of(schema.at("allOf").as_array(), is_empty_schema));
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *all_of{schema.try_at("allOf")};
+    ONLY_CONTINUE_IF(all_of && all_of->is_array() && !all_of->empty());
+    ONLY_CONTINUE_IF(std::ranges::any_of(all_of->as_array(), is_empty_schema));
     return APPLIES_TO_KEYWORDS("allOf");
   }
 
