@@ -22,9 +22,11 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && !schema.defines("not") &&
-                     schema.defines("enum") && schema.at("enum").is_array() &&
-                     schema.at("enum").empty());
+                     schema.is_object() && !schema.defines("not"));
+
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array() &&
+                     enum_value->empty());
     ONLY_CONTINUE_IF(!frame.has_references_through(location.pointer));
     return APPLIES_TO_KEYWORDS("enum");
   }

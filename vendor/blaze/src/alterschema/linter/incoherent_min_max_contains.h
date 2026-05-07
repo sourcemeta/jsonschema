@@ -21,13 +21,13 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,
              Vocabularies::Known::JSON_Schema_2019_09_Validation}) &&
-        schema.is_object() && schema.defines("contains") &&
-        schema.defines("minContains") &&
-        schema.at("minContains").is_integer() &&
-        schema.defines("maxContains") &&
-        schema.at("maxContains").is_integer() &&
-        schema.at("minContains").to_integer() >
-            schema.at("maxContains").to_integer());
+        schema.is_object() && schema.defines("contains"));
+
+    const auto *min_contains{schema.try_at("minContains")};
+    ONLY_CONTINUE_IF(min_contains && min_contains->is_integer());
+    const auto *max_contains{schema.try_at("maxContains")};
+    ONLY_CONTINUE_IF(max_contains && max_contains->is_integer() &&
+                     min_contains->to_integer() > max_contains->to_integer());
     return APPLIES_TO_KEYWORDS("minContains", "maxContains");
   }
 };

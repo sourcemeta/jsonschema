@@ -22,16 +22,19 @@ public:
         vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2020_12_Validation,
              Vocabularies::Known::JSON_Schema_2019_09_Validation}) &&
-        schema.is_object() && schema.defines("dependentRequired") &&
-        schema.at("dependentRequired").is_object() &&
-        schema.defines("required") && schema.at("required").is_array());
-    ONLY_CONTINUE_IF(std::any_of(
-        schema.at("required").as_array().cbegin(),
-        schema.at("required").as_array().cend(),
-        [&schema](const auto &element) {
-          return element.is_string() &&
-                 schema.at("dependentRequired").defines(element.to_string());
-        }));
+        schema.is_object());
+
+    const auto *dependent_required{schema.try_at("dependentRequired")};
+    ONLY_CONTINUE_IF(dependent_required && dependent_required->is_object());
+    const auto *required{schema.try_at("required")};
+    ONLY_CONTINUE_IF(required && required->is_array());
+
+    ONLY_CONTINUE_IF(
+        std::any_of(required->as_array().cbegin(), required->as_array().cend(),
+                    [dependent_required](const auto &element) {
+                      return element.is_string() &&
+                             dependent_required->defines(element.to_string());
+                    }));
     return APPLIES_TO_KEYWORDS("dependentRequired", "required");
   }
 

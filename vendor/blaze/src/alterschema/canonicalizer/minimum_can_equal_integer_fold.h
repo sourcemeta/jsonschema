@@ -18,13 +18,16 @@ public:
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_0,
                                    Vocabularies::Known::JSON_Schema_Draft_1,
                                    Vocabularies::Known::JSON_Schema_Draft_2}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "integer" &&
-        schema.defines("minimumCanEqual") &&
-        schema.at("minimumCanEqual").is_boolean() &&
-        !schema.at("minimumCanEqual").to_boolean() &&
-        schema.defines("minimum") && schema.at("minimum").is_number());
+        schema.is_object());
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
+    const auto *minimum_can_equal{schema.try_at("minimumCanEqual")};
+    ONLY_CONTINUE_IF(minimum_can_equal && minimum_can_equal->is_boolean() &&
+                     !minimum_can_equal->to_boolean());
+    const auto *minimum{schema.try_at("minimum")};
+    ONLY_CONTINUE_IF(minimum && minimum->is_number());
     return true;
   }
 

@@ -98,40 +98,44 @@ public:
         const auto branch_index{walk_relative.at(1).to_index()};
         const auto &allof_parent{get(root, wp)};
         const auto &keyword_name{walk_relative.at(0).to_property()};
-        if (allof_parent.is_object() && allof_parent.defines(keyword_name)) {
-          const auto &branches{allof_parent.at(keyword_name)};
-          if (branches.is_array()) {
-            for (std::size_t index = 0; index < branches.size(); ++index) {
-              if (index == branch_index) {
-                continue;
-              }
-              const auto &sibling{branches.at(index)};
-              if (sibling.is_object() && sibling.defines("type") &&
-                  sibling.at("type").is_string()) {
-                this->inherited_type_ = sibling.at("type");
+        const auto *branches{allof_parent.is_object()
+                                 ? allof_parent.try_at(keyword_name)
+                                 : nullptr};
+        if (branches && branches->is_array()) {
+          for (std::size_t index = 0; index < branches->size(); ++index) {
+            if (index == branch_index) {
+              continue;
+            }
+            const auto &sibling{branches->at(index)};
+            if (!sibling.is_object()) {
+              continue;
+            }
+            const auto *sibling_type{sibling.try_at("type")};
+            if (sibling_type && sibling_type->is_string()) {
+              this->inherited_type_ = *sibling_type;
+              return true;
+            }
+            const auto *sibling_enum{sibling.try_at("enum")};
+            if (sibling_enum && sibling_enum->is_array() &&
+                !sibling_enum->empty()) {
+              const auto inferred{infer_type_from_enum(*sibling_enum)};
+              if (!inferred.empty()) {
+                this->inherited_type_ = JSON{inferred};
                 return true;
               }
-              if (sibling.is_object() && sibling.defines("enum") &&
-                  sibling.at("enum").is_array() &&
-                  !sibling.at("enum").empty()) {
-                const auto inferred{infer_type_from_enum(sibling.at("enum"))};
-                if (!inferred.empty()) {
-                  this->inherited_type_ = JSON{inferred};
+            }
+            const auto *sibling_ref{sibling.try_at("$ref")};
+            if (sibling_ref && sibling_ref->is_string()) {
+              const auto ref_target{frame.traverse(sibling_ref->to_string())};
+              if (ref_target.has_value()) {
+                const auto &ref_schema{
+                    get(root, ref_target.value().get().pointer)};
+                const auto *ref_type{ref_schema.is_object()
+                                         ? ref_schema.try_at("type")
+                                         : nullptr};
+                if (ref_type && ref_type->is_string()) {
+                  this->inherited_type_ = *ref_type;
                   return true;
-                }
-              }
-              if (sibling.is_object() && sibling.defines("$ref") &&
-                  sibling.at("$ref").is_string()) {
-                const auto ref_target{
-                    frame.traverse(sibling.at("$ref").to_string())};
-                if (ref_target.has_value()) {
-                  const auto &ref_schema{
-                      get(root, ref_target.value().get().pointer)};
-                  if (ref_schema.is_object() && ref_schema.defines("type") &&
-                      ref_schema.at("type").is_string()) {
-                    this->inherited_type_ = ref_schema.at("type");
-                    return true;
-                  }
                 }
               }
             }

@@ -25,8 +25,10 @@ public:
              Vocabularies::Known::JSON_Schema_Draft_7,
              Vocabularies::Known::JSON_Schema_2019_09_Validation,
              Vocabularies::Known::JSON_Schema_2020_12_Validation}) &&
-        schema.is_object() && schema.defines("enum") &&
-        schema.at("enum").is_array() && !schema.defines("type"));
+        schema.is_object() && !schema.defines("type"));
+
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
 
     this->keywords_.clear();
     this->wrap_keywords_.clear();

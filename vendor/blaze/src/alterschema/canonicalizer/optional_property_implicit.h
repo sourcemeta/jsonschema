@@ -18,12 +18,15 @@ public:
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_0,
                                    Vocabularies::Known::JSON_Schema_Draft_1,
                                    Vocabularies::Known::JSON_Schema_Draft_2}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "object" &&
-        schema.defines("properties") && schema.at("properties").is_object());
+        schema.is_object());
 
-    for (const auto &entry : schema.at("properties").as_object()) {
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "object");
+    const auto *properties{schema.try_at("properties")};
+    ONLY_CONTINUE_IF(properties && properties->is_object());
+
+    for (const auto &entry : properties->as_object()) {
       if (entry.second.is_object() && !entry.second.empty() &&
           !entry.second.defines("optional")) {
         return true;

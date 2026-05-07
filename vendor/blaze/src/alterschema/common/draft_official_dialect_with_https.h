@@ -30,9 +30,10 @@ public:
         location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_2_Hyper ||
         location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_1_Hyper ||
         location.base_dialect == SchemaBaseDialect::JSON_Schema_Draft_0_Hyper);
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
-                     schema.at("$schema").is_string());
-    const auto &dialect{schema.at("$schema").to_string()};
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *schema_keyword{schema.try_at("$schema")};
+    ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
+    const auto &dialect{schema_keyword->to_string()};
     ONLY_CONTINUE_IF(dialect.starts_with("https://json-schema.org/"));
     ONLY_CONTINUE_IF(
         dialect == "https://json-schema.org/draft-07/schema" ||

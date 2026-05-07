@@ -21,9 +21,11 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Validation,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && !schema.defines("const") &&
-                     schema.defines("enum") && schema.at("enum").is_array() &&
-                     schema.at("enum").size() == 1);
+                     schema.is_object() && !schema.defines("const"));
+
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array() &&
+                     enum_value->size() == 1);
     return APPLIES_TO_KEYWORDS("enum");
   }
 

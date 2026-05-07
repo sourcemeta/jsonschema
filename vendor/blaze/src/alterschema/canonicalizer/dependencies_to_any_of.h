@@ -17,11 +17,13 @@ public:
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_4,
                                    Vocabularies::Known::JSON_Schema_Draft_6,
                                    Vocabularies::Known::JSON_Schema_Draft_7}) &&
-        schema.is_object() && schema.defines("dependencies") &&
-        schema.at("dependencies").is_object());
+        schema.is_object());
 
-    ONLY_CONTINUE_IF(std::ranges::any_of(
-        schema.at("dependencies").as_object(), [](const auto &entry) {
+    const auto *dependencies{schema.try_at("dependencies")};
+    ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
+
+    ONLY_CONTINUE_IF(
+        std::ranges::any_of(dependencies->as_object(), [](const auto &entry) {
           return is_schema(entry.second) || entry.second.is_array();
         }));
     return true;

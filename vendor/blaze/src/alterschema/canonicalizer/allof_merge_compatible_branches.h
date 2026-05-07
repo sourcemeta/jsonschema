@@ -21,14 +21,15 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_array() &&
-                     schema.at(KEYWORD).size() >= 2);
+                     schema.is_object());
+
+    const auto *all_of{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(all_of && all_of->is_array() && all_of->size() >= 2);
 
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
 
-    const auto &branches{schema.at(KEYWORD)};
+    const auto &branches{*all_of};
 
     for (std::size_t index_a = 0; index_a < branches.size(); ++index_a) {
       const auto &branch_a{branches.at(index_a)};

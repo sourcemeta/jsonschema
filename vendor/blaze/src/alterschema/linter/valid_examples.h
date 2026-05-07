@@ -23,8 +23,10 @@ public:
                                    Known::JSON_Schema_2019_09_Meta_Data,
                                    Known::JSON_Schema_Draft_7,
                                    Known::JSON_Schema_Draft_6}) &&
-        schema.is_object() && schema.defines("examples") &&
-        schema.at("examples").is_array() && !schema.at("examples").empty());
+        schema.is_object());
+
+    const auto *examples{schema.try_at("examples")};
+    ONLY_CONTINUE_IF(examples && examples->is_array() && !examples->empty());
 
     if (vocabularies.contains_any({Known::JSON_Schema_Draft_7,
                                    Known::JSON_Schema_Draft_6,
@@ -50,7 +52,7 @@ public:
         return false;
       }
 
-      for (const auto &example : schema.at("examples").as_array()) {
+      for (const auto &example : examples->as_array()) {
         SimpleOutput output{example};
         Evaluator evaluator;
         const auto result{

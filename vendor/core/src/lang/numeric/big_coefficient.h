@@ -19,6 +19,7 @@ constexpr std::uint8_t FLAG_SNAN = 0x04;
 constexpr std::uint8_t FLAG_INFINITE = 0x08;
 constexpr std::uint8_t FLAG_BIG = 0x10;
 constexpr std::uint8_t FLAG_HEAP = 0x20;
+constexpr std::uint8_t FLAG_INTEGER_LITERAL = 0x40;
 
 constexpr std::uint8_t SPECIAL_MASK =
     FLAG_NAN | FLAG_SNAN | FLAG_INFINITE | FLAG_BIG;

@@ -25,9 +25,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("allOf") &&
-                     schema.at("allOf").is_array() &&
-                     !schema.at("allOf").unique());
+                     schema.is_object());
+
+    const auto *all_of{schema.try_at("allOf")};
+    ONLY_CONTINUE_IF(all_of && all_of->is_array() && !all_of->unique());
     // TODO: Highlight which specific entries in `allOf` are duplicated
     return APPLIES_TO_KEYWORDS("allOf");
   }

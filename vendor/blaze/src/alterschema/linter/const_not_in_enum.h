@@ -22,9 +22,13 @@ public:
                           Vocabularies::Known::JSON_Schema_2019_09_Validation,
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6}) &&
-                     schema.is_object() && schema.defines("const") &&
-                     schema.defines("enum") && schema.at("enum").is_array() &&
-                     !schema.at("enum").contains(schema.at("const")));
+                     schema.is_object());
+
+    const auto *const_value{schema.try_at("const")};
+    ONLY_CONTINUE_IF(const_value);
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array() &&
+                     !enum_value->contains(*const_value));
     return APPLIES_TO_KEYWORDS("const", "enum");
   }
 };

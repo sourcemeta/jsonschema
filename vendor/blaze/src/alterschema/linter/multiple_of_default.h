@@ -22,14 +22,15 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines("multipleOf") &&
-                     ((schema.at("multipleOf").is_integer() &&
-                       schema.at("multipleOf").to_integer() == 1) ||
-                      (schema.at("multipleOf").is_real() &&
-                       schema.at("multipleOf").to_real() == 1.0) ||
-                      (schema.at("multipleOf").is_decimal() &&
-                       schema.at("multipleOf").to_decimal() ==
-                           sourcemeta::core::Decimal{1})));
+                     schema.is_object());
+
+    const auto *multiple_of{schema.try_at("multipleOf")};
+    ONLY_CONTINUE_IF(
+        multiple_of &&
+        ((multiple_of->is_integer() && multiple_of->to_integer() == 1) ||
+         (multiple_of->is_real() && multiple_of->to_real() == 1.0) ||
+         (multiple_of->is_decimal() &&
+          multiple_of->to_decimal() == sourcemeta::core::Decimal{1})));
     return APPLIES_TO_KEYWORDS("multipleOf");
   }
 

@@ -16,10 +16,11 @@ public:
     ONLY_CONTINUE_IF(
         vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_2,
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("type") &&
-        schema.at("type").is_string() &&
-        schema.at("type").to_string() == "integer" &&
-        !schema.defines("divisibleBy"));
+        schema.is_object() && !schema.defines("divisibleBy"));
+
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
     return true;
   }
 

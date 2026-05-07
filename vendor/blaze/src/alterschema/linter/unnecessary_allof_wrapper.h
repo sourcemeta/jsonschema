@@ -21,9 +21,11 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_7,
          Vocabularies::Known::JSON_Schema_Draft_6,
          Vocabularies::Known::JSON_Schema_Draft_4}));
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_array() &&
-                     !schema.at(KEYWORD).empty());
+    ONLY_CONTINUE_IF(schema.is_object());
+
+    const auto *all_of_value{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(all_of_value && all_of_value->is_array() &&
+                     !all_of_value->empty());
 
     std::unordered_set<std::string_view> dependency_blocked;
     for (const auto &entry : schema.as_object()) {
@@ -41,18 +43,19 @@ public:
       }
     }
 
+    const auto *parent_type_value{schema.try_at("type")};
     const JSON::TypeSet parent_types{
-        schema.defines("type") &&
+        parent_type_value &&
                 vocabularies.contains_any(
                     {Vocabularies::Known::JSON_Schema_2020_12_Validation,
                      Vocabularies::Known::JSON_Schema_2019_09_Validation,
                      Vocabularies::Known::JSON_Schema_Draft_7,
                      Vocabularies::Known::JSON_Schema_Draft_6,
                      Vocabularies::Known::JSON_Schema_Draft_4})
-            ? parse_schema_type(schema.at("type"))
+            ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
-    const auto &all_of{schema.at(KEYWORD)};
+    const auto &all_of{*all_of_value};
     std::vector<Pointer> locations;
     std::unordered_set<std::string_view> elevated;
 

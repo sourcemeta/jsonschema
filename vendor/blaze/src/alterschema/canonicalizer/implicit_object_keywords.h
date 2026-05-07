@@ -14,10 +14,12 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("type") &&
-                     schema.at("type").is_string());
+    ONLY_CONTINUE_IF(schema.is_object());
 
-    const auto &type_value{schema.at("type").to_string()};
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string());
+
+    const auto &type_value{type->to_string()};
     this->reset();
 
     if (type_value == "object") {

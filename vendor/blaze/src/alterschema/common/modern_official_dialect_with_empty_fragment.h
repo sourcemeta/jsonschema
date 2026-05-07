@@ -17,9 +17,10 @@ public:
                                const sourcemeta::core::SchemaWalker &,
                                const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(schema.is_object() && schema.defines("$schema") &&
-                     schema.at("$schema").is_string());
-    const auto &dialect{schema.at("$schema").to_string()};
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *schema_keyword{schema.try_at("$schema")};
+    ONLY_CONTINUE_IF(schema_keyword && schema_keyword->is_string());
+    const auto &dialect{schema_keyword->to_string()};
     ONLY_CONTINUE_IF(
         dialect == "https://json-schema.org/draft/2019-09/schema#" ||
         dialect == "https://json-schema.org/draft/2019-09/hyper-schema#" ||

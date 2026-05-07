@@ -20,9 +20,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object() && schema.defines(KEYWORD) &&
-                     schema.at(KEYWORD).is_array() &&
-                     schema.at(KEYWORD).size() == 1);
+                     schema.is_object());
+
+    const auto *one_of{schema.try_at(KEYWORD)};
+    ONLY_CONTINUE_IF(one_of && one_of->is_array() && one_of->size() == 1);
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));
     this->has_unevaluated_ =

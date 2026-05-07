@@ -23,19 +23,20 @@ public:
                                    Vocabularies::Known::JSON_Schema_Draft_6,
                                    Vocabularies::Known::JSON_Schema_Draft_4,
                                    Vocabularies::Known::JSON_Schema_Draft_3}) &&
-        schema.is_object() && schema.defines("dependencies") &&
-        schema.at("dependencies").is_object() && schema.defines("required") &&
-        schema.at("required").is_array());
+        schema.is_object());
+
+    const auto *dependencies{schema.try_at("dependencies")};
+    ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
+    const auto *required{schema.try_at("required")};
+    ONLY_CONTINUE_IF(required && required->is_array());
+
     ONLY_CONTINUE_IF(std::ranges::any_of(
-        schema.at("required").as_array(), [&schema](const auto &element) {
-          return element.is_string() &&
-                 schema.at("dependencies").defines(element.to_string()) &&
-                 (schema.at("dependencies")
-                      .at(element.to_string())
-                      .is_array() ||
-                  schema.at("dependencies")
-                      .at(element.to_string())
-                      .is_string());
+        required->as_array(), [dependencies](const auto &element) {
+          if (!element.is_string()) {
+            return false;
+          }
+          const auto *dependent{dependencies->try_at(element.to_string())};
+          return dependent && (dependent->is_array() || dependent->is_string());
         }));
     return APPLIES_TO_KEYWORDS("dependencies", "required");
   }
