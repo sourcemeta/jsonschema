@@ -13,17 +13,18 @@ public:
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
             const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
+            const sourcemeta::core::SchemaFrame &frame,
+            const sourcemeta::core::SchemaFrame::Location &location,
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
+    static const JSON::String KEYWORD{"disallow"};
     ONLY_CONTINUE_IF(vocabularies.contains_any(
                          {Vocabularies::Known::JSON_Schema_Draft_3,
                           Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
                      schema.is_object());
 
-    const auto *disallow{schema.try_at("disallow")};
+    const auto *disallow{schema.try_at(KEYWORD)};
     ONLY_CONTINUE_IF(disallow && disallow->is_array() && !disallow->empty());
 
     const auto *parent_type{schema.try_at("type")};
@@ -52,12 +53,16 @@ public:
         continue;
       }
 
-      locations.push_back(Pointer{"disallow", index});
+      locations.push_back(Pointer{KEYWORD, index});
       narrowed_types.insert(entry_types.cbegin(), entry_types.cend());
     }
 
     ONLY_CONTINUE_IF(!locations.empty());
     ONLY_CONTINUE_IF(narrowed_types.size() < parent_type_names.size());
+
+    auto keyword_pointer{location.pointer};
+    keyword_pointer.push_back(std::cref(KEYWORD));
+    ONLY_CONTINUE_IF(!frame.has_references_through(keyword_pointer));
 
     return APPLIES_TO_POINTERS(std::move(locations));
   }
