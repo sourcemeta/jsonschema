@@ -17,13 +17,14 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_4,
-                                   Vocabularies::Known::JSON_Schema_Draft_3,
-                                   Vocabularies::Known::JSON_Schema_Draft_2,
-                                   Vocabularies::Known::JSON_Schema_Draft_1,
-                                   Vocabularies::Known::JSON_Schema_Draft_0}) &&
-        schema.is_object());
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_Draft_4,
+                          Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
+                          Vocabularies::Known::JSON_Schema_Draft_2,
+                          Vocabularies::Known::JSON_Schema_Draft_1,
+                          Vocabularies::Known::JSON_Schema_Draft_0}) &&
+                     schema.is_object());
 
     const auto *type{schema.try_at("type")};
     ONLY_CONTINUE_IF(

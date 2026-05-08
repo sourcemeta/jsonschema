@@ -25,7 +25,8 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_7,
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4,
-                          Vocabularies::Known::JSON_Schema_Draft_3}) &&
+                          Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
                      schema.is_object() && schema.defines(KEYWORD));
     ONLY_CONTINUE_IF(!frame.has_references_through(
         location.pointer, WeakPointer::Token{std::cref(KEYWORD)}));

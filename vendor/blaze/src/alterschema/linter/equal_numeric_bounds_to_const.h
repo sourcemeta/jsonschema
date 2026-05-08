@@ -33,6 +33,14 @@ public:
     ONLY_CONTINUE_IF(minimum && minimum->is_number());
     const auto *maximum{schema.try_at("maximum")};
     ONLY_CONTINUE_IF(maximum && maximum->is_number() && *minimum == *maximum);
+
+    const auto *exclusive_minimum{schema.try_at("exclusiveMinimum")};
+    ONLY_CONTINUE_IF(!(exclusive_minimum && exclusive_minimum->is_number() &&
+                       *exclusive_minimum >= *minimum));
+    const auto *exclusive_maximum{schema.try_at("exclusiveMaximum")};
+    ONLY_CONTINUE_IF(!(exclusive_maximum && exclusive_maximum->is_number() &&
+                       *exclusive_maximum <= *maximum));
+
     return APPLIES_TO_KEYWORDS("minimum", "maximum");
   }
 

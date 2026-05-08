@@ -22,6 +22,7 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_6,
                           Vocabularies::Known::JSON_Schema_Draft_4,
                           Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
                           Vocabularies::Known::JSON_Schema_Draft_2,
                           Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
                           Vocabularies::Known::JSON_Schema_Draft_1,

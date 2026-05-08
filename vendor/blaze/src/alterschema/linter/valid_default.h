@@ -24,12 +24,13 @@ public:
             {Known::JSON_Schema_2020_12_Meta_Data,
              Known::JSON_Schema_2019_09_Meta_Data, Known::JSON_Schema_Draft_7,
              Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_4,
-             Known::JSON_Schema_Draft_3}) &&
+             Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper}) &&
         schema.is_object() && schema.defines("default"));
 
     if (vocabularies.contains_any(
             {Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_6,
-             Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_3})) {
+             Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_3,
+             Known::JSON_Schema_Draft_3_Hyper})) {
       ONLY_CONTINUE_IF(!schema.defines("$ref"));
     }
 

@@ -16,9 +16,10 @@ public:
             const sourcemeta::core::SchemaWalker &,
             const sourcemeta::core::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
-    ONLY_CONTINUE_IF(
-        vocabularies.contains(Vocabularies::Known::JSON_Schema_Draft_3) &&
-        schema.is_object());
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+                         {Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
+                     schema.is_object());
 
     const auto *extends{schema.try_at("extends")};
     ONLY_CONTINUE_IF(extends);
