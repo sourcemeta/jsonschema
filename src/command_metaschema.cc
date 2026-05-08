@@ -128,8 +128,8 @@ auto sourcemeta::jsonschema::metaschema(
                                                    error);
     } catch (const sourcemeta::core::SchemaVocabularyError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::core::SchemaVocabularyError>(
-          entry.resolution_base, std::string{error.uri()}, error.what());
+          sourcemeta::core::SchemaVocabularyError>(entry.resolution_base,
+                                                   error.uri(), error.what());
     } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
       throw sourcemeta::core::FileError<
           sourcemeta::core::SchemaUnknownDialectError>(entry.resolution_base);

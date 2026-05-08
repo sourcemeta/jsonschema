@@ -11,7 +11,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     canonicalizer/dependent_required_to_any_of.h
     canonicalizer/dependent_schemas_to_any_of.h
     canonicalizer/deprecated_false_drop.h
-    canonicalizer/draft3_drop_extends_empty_schemas.h
     canonicalizer/draft3_type_any.h
     canonicalizer/disallow_to_array_of_schemas.h
     canonicalizer/divisible_by_implicit.h
@@ -22,7 +21,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     canonicalizer/empty_dependent_schemas_drop.h
     canonicalizer/enum_drop_redundant_validation.h
     canonicalizer/enum_filter_by_type.h
-    canonicalizer/exclusive_bounds_false_drop.h
     canonicalizer/exclusive_maximum_boolean_integer_fold.h
     canonicalizer/exclusive_maximum_integer_to_maximum.h
     canonicalizer/exclusive_minimum_boolean_integer_fold.h
@@ -74,14 +72,17 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     common/content_schema_without_media_type.h
     common/dependencies_property_tautology.h
     common/dependent_required_tautology.h
+    common/disallow_narrows_type.h
     common/double_negation_elimination.h
     common/draft_official_dialect_with_https.h
     common/draft_official_dialect_without_empty_fragment.h
     common/draft_ref_siblings.h
     common/drop_allof_empty_schemas.h
+    common/drop_extends_empty_schemas.h
     common/duplicate_allof_branches.h
     common/flatten_nested_allof.h
     common/flatten_nested_anyof.h
+    common/flatten_nested_extends.h
     common/duplicate_anyof_branches.h
     common/dynamic_ref_to_static_ref.h
     common/duplicate_enum_values.h
@@ -90,6 +91,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     common/else_without_if.h
     common/enum_with_type.h
     common/equal_numeric_bounds_to_enum.h
+    common/exclusive_bounds_false_drop.h
     common/exclusive_maximum_number_and_maximum.h
     common/exclusive_minimum_number_and_minimum.h
     common/if_without_then_else.h
@@ -101,6 +103,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     common/modern_official_dialect_with_empty_fragment.h
     common/modern_official_dialect_with_http.h
     common/non_applicable_additional_items.h
+    common/non_applicable_disallow_types.h
     common/non_applicable_enum_validation_keywords.h
     common/non_applicable_type_specific_keywords.h
     common/not_false.h
@@ -113,6 +116,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     common/unknown_local_ref.h
     common/unsatisfiable_drop_validation.h
     common/unnecessary_allof_ref_wrapper_draft.h
+    common/unnecessary_extends_ref_wrapper.h
     common/unsatisfiable_in_place_applicator_type.h
 
     # Linter
@@ -124,6 +128,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     linter/dependent_required_default.h
     linter/description_trailing_period.h
     linter/description_trim.h
+    linter/disallow_default.h
+    linter/divisible_by_default.h
     linter/duplicate_examples.h
     linter/else_empty.h
     linter/enum_to_const.h
@@ -151,6 +157,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     linter/unevaluated_properties_default.h
     linter/unnecessary_allof_ref_wrapper_modern.h
     linter/unnecessary_allof_wrapper.h
+    linter/unnecessary_extends_wrapper.h
     linter/unsatisfiable_max_contains.h
     linter/unsatisfiable_min_properties.h
     linter/valid_default.h

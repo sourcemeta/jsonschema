@@ -72,8 +72,8 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 ///
 /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input)
-    -> JSON;
+auto parse_json(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON;
 
 /// @ingroup json
 ///
@@ -112,8 +112,9 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 /// assert(document.is_array());
 /// ```
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-                std::uint64_t &line, std::uint64_t &column) -> JSON;
+auto parse_json(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    std::uint64_t &line, std::uint64_t &column) -> JSON;
 
 /// @ingroup json
 ///
@@ -157,8 +158,9 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 ///
 /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-                JSON &output, const JSON::ParseCallback &callback) -> void;
+auto parse_json(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    JSON &output, const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup json
 ///
@@ -182,9 +184,10 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 /// that references passed through the parse callback (such as object property
 /// names) remain valid after parsing completes.
 SOURCEMETA_CORE_JSON_EXPORT
-auto parse_json(const std::basic_string<JSON::Char, JSON::CharTraits> &input,
-                std::uint64_t &line, std::uint64_t &column, JSON &output,
-                const JSON::ParseCallback &callback) -> void;
+auto parse_json(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
+    std::uint64_t &line, std::uint64_t &column, JSON &output,
+    const JSON::ParseCallback &callback) -> void;
 
 /// @ingroup json
 ///

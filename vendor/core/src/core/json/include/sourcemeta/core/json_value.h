@@ -16,6 +16,7 @@
 #include <bitset>           // std::bitset
 #include <cassert>          // assert
 #include <cmath>            // std::modf, std::trunc, std::isinf, std::isnan
+#include <concepts>         // std::same_as
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t, std::uint8_t
 #include <functional>       // std::less, std::reference_wrapper, std::function
@@ -25,7 +26,7 @@
 #include <sstream>          // std::basic_istringstream
 #include <string>           // std::basic_string, std::char_traits
 #include <string_view>      // std::basic_string_view
-#include <type_traits>      // std::is_same_v
+#include <type_traits>      // std::is_same_v, std::remove_cvref_t
 #include <utility>          // std::pair
 
 namespace sourcemeta::core {
@@ -874,6 +875,17 @@ public:
     return object.at(key, object.hash(key));
   }
 
+  /// This method retrieves an object element by string view key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto at(T key) const
+      -> const JSON & {
+    assert(this->is_object());
+    assert(this->defines(key));
+    const auto &object{this->data_object};
+    return object.at(key, object.hash(key));
+  }
+
   /// This method retrieves an object element given a pre-calculated property
   /// hash.
   ///
@@ -891,6 +903,17 @@ public:
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   at(const String &key, const typename Object::hash_type hash) const
       -> const JSON & {
+    assert(this->is_object());
+    assert(this->defines(key));
+    return this->data_object.at(key, hash);
+  }
+
+  /// This method retrieves an object element by string view key given a
+  /// pre-calculated property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  at(T key, const typename Object::hash_type hash) const -> const JSON & {
     assert(this->is_object());
     assert(this->defines(key));
     return this->data_object.at(key, hash);
@@ -916,6 +939,16 @@ public:
     return object.at(key, object.hash(key));
   }
 
+  /// This method retrieves an object element by string view key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto at(T key) -> JSON & {
+    assert(this->is_object());
+    assert(this->defines(key));
+    auto &object{this->data_object};
+    return object.at(key, object.hash(key));
+  }
+
   /// This method retrieves an object element given a pre-calculated property
   /// hash.
   ///
@@ -932,6 +965,17 @@ public:
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   at(const String &key, const typename Object::hash_type hash) -> JSON & {
+    assert(this->is_object());
+    assert(this->defines(key));
+    return this->data_object.at(key, hash);
+  }
+
+  /// This method retrieves an object element by string view key given a
+  /// pre-calculated property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  at(T key, const typename Object::hash_type hash) -> JSON & {
     assert(this->is_object());
     assert(this->defines(key));
     return this->data_object.at(key, hash);
@@ -1259,6 +1303,16 @@ public:
     return object.try_at(key, object.hash(key));
   }
 
+  /// This method tries to retrieve an object element by string view key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto try_at(T key) const
+      -> const JSON * {
+    assert(this->is_object());
+    const auto &object{this->data_object};
+    return object.try_at(key, object.hash(key));
+  }
+
   /// This method checks, given a pre-calculated hash, whether an input JSON
   /// object defines a specific key and returns the value if it does. For
   /// example:
@@ -1277,6 +1331,17 @@ public:
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   try_at(const String &key, const typename Object::hash_type hash) const
       -> const JSON * {
+    assert(this->is_object());
+    const auto &object{this->data_object};
+    return object.try_at(key, hash);
+  }
+
+  /// This method tries to retrieve an object element by string view key given a
+  /// pre-calculated property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  try_at(T key, const typename Object::hash_type hash) const -> const JSON * {
     assert(this->is_object());
     const auto &object{this->data_object};
     return object.try_at(key, hash);
@@ -1314,6 +1379,18 @@ public:
     return object.try_at(key, hash, start);
   }
 
+  /// This method tries to retrieve an object element by string view key,
+  /// scanning from a caller-provided start offset
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  try_at(T key, const typename Object::hash_type hash,
+         typename Object::size_type &start) const -> const JSON * {
+    assert(this->is_object());
+    const auto &object{this->data_object};
+    return object.try_at(key, hash, start);
+  }
+
   /// This method checks whether an input JSON object defines a specific key.
   /// For example:
   ///
@@ -1328,6 +1405,17 @@ public:
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   defines(const String &key) const -> bool {
+    assert(this->is_object());
+    const auto &object{this->data_object};
+    return object.defines(key, object.hash(key));
+  }
+
+  /// This method checks whether an input JSON object defines a specific
+  /// string view key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto defines(T key) const
+      -> bool {
     assert(this->is_object());
     const auto &object{this->data_object};
     return object.defines(key, object.hash(key));
@@ -1350,6 +1438,16 @@ public:
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   defines(const String &key, const typename Object::hash_type hash) const
       -> bool {
+    assert(this->is_object());
+    return this->data_object.defines(key, hash);
+  }
+
+  /// This method checks whether an input JSON object defines a specific
+  /// string view key given a pre-calculated property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  defines(T key, const typename Object::hash_type hash) const -> bool {
     assert(this->is_object());
     return this->data_object.defines(key, hash);
   }
@@ -1565,6 +1663,15 @@ public:
   /// ```
   auto assign(const String &key, const JSON &value) -> void;
 
+  /// This method sets or updates an object key by string view. The key is
+  /// copied into a stored string exactly once.
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  auto assign(T key, const JSON &value) -> void {
+    assert(this->is_object());
+    this->data_object.emplace(String{key}, value);
+  }
+
   /// This method sets or updates an object key. For example, an object can be
   /// updated to contain a new `bar` boolean member as follows:
   ///
@@ -1579,6 +1686,15 @@ public:
   /// assert(document.defines("bar"));
   /// ```
   auto assign(const String &key, JSON &&value) -> void;
+
+  /// This method sets or updates an object key by string view. The key is
+  /// copied into a stored string exactly once.
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  auto assign(T key, JSON &&value) -> void {
+    assert(this->is_object());
+    this->data_object.emplace(String{key}, std::move(value));
+  }
 
   /// This method sets or updates an object key. However, it will try to insert
   /// the key _before_ the given one if possible.
@@ -1618,6 +1734,17 @@ public:
   /// ```
   auto assign_if_missing(const String &key, const JSON &value) -> void;
 
+  /// This method sets an object key by string view if it is not already
+  /// defined.
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  auto assign_if_missing(T key, const JSON &value) -> void {
+    assert(this->is_object());
+    if (!this->defines(key)) {
+      this->assign(key, value);
+    }
+  }
+
   /// This method sets an object key if it is not already defined. For example:
   ///
   /// ```cpp
@@ -1636,6 +1763,17 @@ public:
   /// assert(document.at("bar").is_integer());
   /// ```
   auto assign_if_missing(const String &key, JSON &&value) -> void;
+
+  /// This method sets an object key by string view if it is not already
+  /// defined.
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  auto assign_if_missing(T key, JSON &&value) -> void {
+    assert(this->is_object());
+    if (!this->defines(key)) {
+      this->assign(key, std::move(value));
+    }
+  }
 
   /// This method sets an object key, assuming the key does not already exist.
   /// If the key already exists, behavior is undefined. This variant is faster
@@ -1686,6 +1824,14 @@ public:
   /// assert(!document.defines("foo"));
   /// ```
   auto erase(const String &key) -> typename Object::size_type;
+
+  /// This method deletes an object key by string view.
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  auto erase(T key) -> typename Object::size_type {
+    assert(this->is_object());
+    return this->data_object.erase(key);
+  }
 
   /// This method deletes a set of object keys. For example:
   ///

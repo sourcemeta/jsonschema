@@ -20,16 +20,33 @@ public:
                          {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
                           Vocabularies::Known::JSON_Schema_2019_09_Applicator,
                           Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6}) &&
+                          Vocabularies::Known::JSON_Schema_Draft_6,
+                          Vocabularies::Known::JSON_Schema_Draft_3,
+                          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}) &&
                      schema.is_object());
 
-    const auto *not_value{schema.try_at("not")};
-    ONLY_CONTINUE_IF(not_value && not_value->is_boolean() &&
-                     not_value->to_boolean());
+    const bool is_draft_3{vocabularies.contains_any(
+        {Vocabularies::Known::JSON_Schema_Draft_3,
+         Vocabularies::Known::JSON_Schema_Draft_3_Hyper})};
+
+    std::string_view trigger_keyword;
+    if (is_draft_3) {
+      const auto *disallow_value{schema.try_at("disallow")};
+      if (disallow_value && is_disallow_tautology(*disallow_value)) {
+        trigger_keyword = "disallow";
+      }
+    } else {
+      const auto *not_value{schema.try_at("not")};
+      if (not_value && sourcemeta::core::is_empty_schema(*not_value)) {
+        trigger_keyword = "not";
+      }
+    }
+
+    ONLY_CONTINUE_IF(!trigger_keyword.empty());
 
     std::vector<Pointer> positions;
     for (const auto &entry : schema.as_object()) {
-      if (entry.first == "not") {
+      if (entry.first == trigger_keyword) {
         continue;
       }
 
@@ -57,6 +74,25 @@ public:
   }
 
 private:
+  static auto is_disallow_tautology(const sourcemeta::core::JSON &value)
+      -> bool {
+    if (value.is_string()) {
+      return value.to_string() == "any";
+    }
+    if (sourcemeta::core::is_empty_schema(value)) {
+      return true;
+    }
+    if (value.is_array()) {
+      return std::ranges::any_of(value.as_array(), [](const auto &entry) {
+        if (entry.is_string()) {
+          return entry.to_string() == "any";
+        }
+        return sourcemeta::core::is_empty_schema(entry);
+      });
+    }
+    return false;
+  }
+
   static auto is_removable_keyword_type(const SchemaKeywordType type) -> bool {
     switch (type) {
       case SchemaKeywordType::Assertion:

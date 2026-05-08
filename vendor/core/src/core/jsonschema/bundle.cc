@@ -92,7 +92,7 @@ auto dependencies_internal(const sourcemeta::core::JSON &schema,
     callback(origin, pointer, identifier, remote.value());
     found.emplace_back(std::move(remote).value(),
                        sourcemeta::core::JSON::String{identifier});
-    visited.emplace(std::string{identifier});
+    visited.emplace(identifier);
   });
 
   for (const auto &entry : found) {

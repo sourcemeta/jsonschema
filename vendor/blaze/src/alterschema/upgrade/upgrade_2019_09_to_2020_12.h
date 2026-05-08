@@ -75,8 +75,7 @@ public:
         schema.at("$recursiveAnchor").is_boolean()) {
       if (schema.at("$recursiveAnchor").to_boolean()) {
         schema.rename("$recursiveAnchor", "$dynamicAnchor");
-        schema.at("$dynamicAnchor")
-            .into(sourcemeta::core::JSON{std::string{"meta"}});
+        schema.at("$dynamicAnchor").into(sourcemeta::core::JSON{"meta"});
       } else {
         schema.erase("$recursiveAnchor");
       }
@@ -85,8 +84,7 @@ public:
     if (schema.defines("$recursiveRef")) {
       schema.rename("$recursiveRef", "$dynamicRef");
       if (this->resource_has_recursive_anchor_) {
-        schema.at("$dynamicRef")
-            .into(sourcemeta::core::JSON{std::string{"#meta"}});
+        schema.at("$dynamicRef").into(sourcemeta::core::JSON{"#meta"});
       }
     }
 
@@ -160,8 +158,7 @@ public:
 
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_2019_09_URL) {
-      schema.assign("$schema",
-                    sourcemeta::core::JSON{std::string{DRAFT_2020_12_URL}});
+      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_2020_12_URL});
       drop_dialect_overrides(schema, true);
     } else {
       mark_dialect_override(schema, DRAFT_2020_12_URL);

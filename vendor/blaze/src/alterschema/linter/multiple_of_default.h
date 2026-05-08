@@ -24,6 +24,10 @@ public:
                           Vocabularies::Known::JSON_Schema_Draft_4}) &&
                      schema.is_object());
 
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type && type->is_string() &&
+                     type->to_string() == "integer");
+
     const auto *multiple_of{schema.try_at("multipleOf")};
     ONLY_CONTINUE_IF(
         multiple_of &&

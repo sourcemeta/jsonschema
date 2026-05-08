@@ -200,7 +200,7 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
 
   sourcemeta::core::URI uri;
   try {
-    uri = sourcemeta::core::URI{std::string{identifier}};
+    uri = sourcemeta::core::URI{identifier};
   } catch (const sourcemeta::core::URIParseError &) {
     return std::nullopt;
   }
@@ -277,8 +277,7 @@ public:
                                                     error);
         } catch (const sourcemeta::core::SchemaFrameError &error) {
           throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
-              entry.resolution_base, std::string{error.identifier()},
-              error.what());
+              entry.resolution_base, error.identifier(), error.what());
         } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
           const auto position{entry.positions.get(error.location())};
           if (position.has_value()) {
@@ -294,8 +293,8 @@ public:
         } catch (const sourcemeta::core::SchemaReferenceError &error) {
           throw sourcemeta::core::FileError<
               sourcemeta::core::SchemaReferenceError>(
-              entry.resolution_base, std::string{error.identifier()},
-              error.location(), error.what());
+              entry.resolution_base, error.identifier(), error.location(),
+              error.what());
         } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
           throw sourcemeta::core::FileError<
               sourcemeta::core::SchemaUnknownBaseDialectError>(
@@ -312,8 +311,7 @@ public:
         } catch (const sourcemeta::core::SchemaResolutionError &error) {
           throw sourcemeta::core::FileError<
               sourcemeta::core::SchemaResolutionError>(
-              entry.resolution_base, std::string{error.identifier()},
-              error.what());
+              entry.resolution_base, error.identifier(), error.what());
         } catch (const sourcemeta::core::SchemaError &error) {
           throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
               entry.resolution_base, error.what());

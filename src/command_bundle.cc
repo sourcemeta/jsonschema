@@ -98,7 +98,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
                                                       error);
   } catch (const sourcemeta::core::SchemaReferenceError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-        schema_display_path, std::string{error.identifier()}, error.location(),
+        schema_display_path, error.identifier(), error.location(),
         error.what());
   } catch (
       const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {

@@ -60,8 +60,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
       std::string entrypoint_uri;
       try {
-        entrypoint_uri = resolve_entrypoint(
-            frame, std::string{options.at("entrypoint").front()});
+        entrypoint_uri =
+            resolve_entrypoint(frame, options.at("entrypoint").front());
       } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
         throw sourcemeta::core::FileError<
             sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_path, error);
@@ -124,7 +124,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
         sourcemeta::core::SchemaUnknownDialectError>(schema_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        schema_path, std::string{error.uri()}, error.what());
+        schema_path, error.uri(), error.what());
   } catch (const sourcemeta::core::SchemaError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
         schema_path, error.what());

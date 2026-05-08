@@ -71,7 +71,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
       std::cout << entry.first << ":\n";
     }
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
-        entry.resolution_base, std::string{error.uri()}, error.what()};
+        entry.resolution_base, error.uri(), error.what()};
   } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
@@ -351,8 +351,8 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 
   auto tool{sourcemeta::core::JSON::make_object()};
   tool.assign("name", sourcemeta::core::JSON{"jsonschema"});
-  tool.assign("version", sourcemeta::core::JSON{std::string{
-                             sourcemeta::jsonschema::PROJECT_VERSION}});
+  tool.assign("version",
+              sourcemeta::core::JSON{sourcemeta::jsonschema::PROJECT_VERSION});
 
   auto results{sourcemeta::core::JSON::make_object()};
   results.assign("tool", std::move(tool));

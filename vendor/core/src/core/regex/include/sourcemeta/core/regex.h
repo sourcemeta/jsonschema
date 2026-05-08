@@ -5,12 +5,13 @@
 #include <sourcemeta/core/regex_export.h>
 #endif
 
-#include <cstdint>  // std::uint8_t, std::uint64_t
-#include <memory>   // std::shared_ptr
-#include <optional> // std::optional
-#include <string>   // std::string
-#include <utility>  // std::pair
-#include <variant>  // std::variant
+#include <cstdint>     // std::uint8_t, std::uint64_t
+#include <memory>      // std::shared_ptr
+#include <optional>    // std::optional
+#include <string>      // std::string
+#include <string_view> // std::string_view
+#include <utility>     // std::pair
+#include <variant>     // std::variant
 
 /// @defgroup regex Regex
 /// @brief An opinionated and permissive ECMA 262 + RFC 9485 (best effort) regex
@@ -84,7 +85,7 @@ enum class RegexIndex : std::uint8_t {
 /// assert(regex.has_value());
 /// ```
 SOURCEMETA_CORE_REGEX_EXPORT
-auto to_regex(const std::string &pattern) -> std::optional<Regex>;
+auto to_regex(const std::string_view pattern) -> std::optional<Regex>;
 
 /// @ingroup regex
 ///
@@ -100,7 +101,7 @@ auto to_regex(const std::string &pattern) -> std::optional<Regex>;
 /// assert(sourcemeta::core::matches(regex.value(), "foo bar"));
 /// ```
 SOURCEMETA_CORE_REGEX_EXPORT
-auto matches(const Regex &regex, const std::string &value) -> bool;
+auto matches(const Regex &regex, const std::string_view value) -> bool;
 
 /// @ingroup regex
 ///
@@ -115,8 +116,8 @@ auto matches(const Regex &regex, const std::string &value) -> bool;
 /// assert(sourcemeta::core::matches_if_valid("^foo", "foo bar"));
 /// ```
 SOURCEMETA_CORE_REGEX_EXPORT
-auto matches_if_valid(const std::string &pattern, const std::string &value)
-    -> bool;
+auto matches_if_valid(const std::string_view pattern,
+                      const std::string_view value) -> bool;
 
 } // namespace sourcemeta::core
 

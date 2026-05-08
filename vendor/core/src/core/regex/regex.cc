@@ -9,12 +9,13 @@
 #include <cstdint>      // std::uint64_t
 #include <regex>        // std::regex, std::smatch, std::regex_match
 #include <string>       // std::string
+#include <string_view>  // std::string_view
 #include <system_error> // std::errc
 #include <utility>      // std::unreachable
 
 namespace sourcemeta::core {
 
-auto to_regex(const std::string &pattern) -> std::optional<Regex> {
+auto to_regex(const std::string_view pattern) -> std::optional<Regex> {
   if (pattern == ".*" || pattern == "^.*$" || pattern == "^(.*)$" ||
       pattern == "(.*)" || pattern == "[\\s\\S]*" || pattern == "^[\\s\\S]*$") {
     return RegexTypeNoop{};
@@ -27,15 +28,19 @@ auto to_regex(const std::string &pattern) -> std::optional<Regex> {
     return RegexTypeNonEmpty{};
   }
 
+  const char *const pattern_data{pattern.empty() ? "" : pattern.data()};
+
   const std::regex PREFIX_REGEX{R"(^\^([a-zA-Z0-9-_/@]+)(\.\*)?)"};
-  std::smatch matches_prefix;
-  if (std::regex_match(pattern, matches_prefix, PREFIX_REGEX)) {
+  std::cmatch matches_prefix;
+  if (std::regex_match(pattern_data, pattern_data + pattern.size(),
+                       matches_prefix, PREFIX_REGEX)) {
     return RegexTypePrefix{matches_prefix[1].str()};
   }
 
   const std::regex RANGE_REGEX{R"(^\^\.\{(\d+),(\d+)\}\$$)"};
-  std::smatch matches_range;
-  if (std::regex_match(pattern, matches_range, RANGE_REGEX)) {
+  std::cmatch matches_range;
+  if (std::regex_match(pattern_data, pattern_data + pattern.size(),
+                       matches_range, RANGE_REGEX)) {
     const auto minimum_string = matches_range[1].str();
     const auto maximum_string = matches_range[2].str();
     std::uint64_t minimum{};
@@ -54,7 +59,7 @@ auto to_regex(const std::string &pattern) -> std::optional<Regex> {
     return RegexTypeRange{minimum, maximum};
   }
 
-  const auto pcre2_pattern{preprocess_regex(pattern)};
+  const auto pcre2_pattern{preprocess_regex(std::string{pattern})};
   if (!pcre2_pattern.has_value()) {
     return std::nullopt;
   }
@@ -77,7 +82,7 @@ auto to_regex(const std::string &pattern) -> std::optional<Regex> {
   return std::nullopt;
 }
 
-auto matches(const Regex &regex, const std::string &value) -> bool {
+auto matches(const Regex &regex, const std::string_view value) -> bool {
   switch (static_cast<RegexIndex>(regex.index())) {
     case RegexIndex::Prefix:
       return value.starts_with(*std::get_if<RegexTypePrefix>(&regex));
@@ -93,7 +98,7 @@ auto matches(const Regex &regex, const std::string &value) -> bool {
       thread_local pcre2_match_data *match_data{
           pcre2_match_data_create(1, nullptr)};
       const int match_result{pcre2_match(
-          pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(value.c_str()),
+          pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(value.data()),
           value.size(), 0, PCRE2_NO_UTF_CHECK, match_data, nullptr)};
       return match_result >= 0;
     }
@@ -104,8 +109,8 @@ auto matches(const Regex &regex, const std::string &value) -> bool {
   std::unreachable();
 }
 
-auto matches_if_valid(const std::string &pattern, const std::string &value)
-    -> bool {
+auto matches_if_valid(const std::string_view pattern,
+                      const std::string_view value) -> bool {
   const auto regex{to_regex(pattern)};
   return regex.has_value() && matches(regex.value(), value);
 }

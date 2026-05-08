@@ -64,6 +64,15 @@ description_trailing_period
 description_trim
   Descriptions should not contain leading or trailing whitespace
 
+disallow_default
+  Setting the `disallow` keyword to the empty array does not add any further constraint
+
+disallow_narrows_type
+  When `disallow` excludes types that are also in the parent `type`, those types can be removed from `type` and the corresponding `disallow` entries dropped
+
+divisible_by_default
+  Setting `divisibleBy` to 1 does not add any further constraint
+
 double_negation_elimination
   A `not` whose value is a schema containing only another `not` is equivalent to the inner value
 
@@ -78,6 +87,9 @@ draft_ref_siblings
 
 drop_allof_empty_schemas
   Empty schemas in `allOf` are redundant and can be removed
+
+drop_extends_empty_schemas
+  Empty schemas in `extends` are redundant and can be removed
 
 duplicate_allof_branches
   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
@@ -118,6 +130,9 @@ equal_numeric_bounds_to_const
 equal_numeric_bounds_to_enum
   Setting `minimum` and `maximum` to the same number only leaves one possible value
 
+exclusive_bounds_false_drop
+  Setting `exclusiveMinimum` or `exclusiveMaximum` to `false` adds no constraint
+
 exclusive_maximum_number_and_maximum
   Setting both `exclusiveMaximum` and `maximum` at the same time is considered an anti-pattern. You should choose one
 
@@ -129,6 +144,9 @@ flatten_nested_allof
 
 flatten_nested_anyof
   An `anyOf` branch that only contains another `anyOf` can be flattened into the parent `anyOf`
+
+flatten_nested_extends
+  An `extends` branch that only contains another `extends` can be flattened into the parent `extends`
 
 forbid_empty_enum
   An empty `enum` validates nothing and is unsatisfiable
@@ -174,6 +192,9 @@ multiple_of_default
 
 non_applicable_additional_items
   The `additionalItems` keyword is ignored when the `items` keyword is either not present or set to a schema
+
+non_applicable_disallow_types
+  `disallow` entries whose type cannot overlap with the parent `type` can never match and can be dropped
 
 non_applicable_enum_validation_keywords
   Setting validation keywords that do not apply to any item in `enum` is considered an anti-pattern
@@ -262,6 +283,12 @@ unnecessary_allof_ref_wrapper_modern
 unnecessary_allof_wrapper
   Keywords inside `allOf` that do not conflict with the parent schema can be elevated
 
+unnecessary_extends_ref_wrapper
+  Wrapping `$ref` in `extends` is only necessary if there are other sibling keywords
+
+unnecessary_extends_wrapper
+  Keywords inside `extends` that do not conflict with the parent schema can be elevated
+
 unsatisfiable_drop_validation
   Do not place assertions or applicators next to an unsatisfiable negation
 
@@ -274,7 +301,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 88
+Number of rules: 97
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

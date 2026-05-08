@@ -61,7 +61,7 @@ auto traverse(V &document, typename PointerT::const_iterator begin,
         std::array<char, 20> buffer{};
         const auto [end_pointer, error_code] = std::to_chars(
             buffer.data(), buffer.data() + buffer.size(), iterator->to_index());
-        current = &current->at(std::string{buffer.data(), end_pointer});
+        current = &current->at(std::string_view{buffer.data(), end_pointer});
       } else {
         current = &current->at(iterator->to_index());
       }
@@ -91,7 +91,7 @@ auto traverse_all(V &document, const PointerT &pointer) -> V & {
         std::array<char, 20> buffer{};
         const auto [end_pointer, error_code] = std::to_chars(
             buffer.data(), buffer.data() + buffer.size(), token.to_index());
-        current = &current->at(std::string{buffer.data(), end_pointer});
+        current = &current->at(std::string_view{buffer.data(), end_pointer});
       } else {
         current = &current->at(token.to_index());
       }
@@ -131,7 +131,7 @@ auto try_traverse(const sourcemeta::core::JSON &document,
           std::array<char, 20> buffer{};
           const auto [end_pointer, error_code] = std::to_chars(
               buffer.data(), buffer.data() + buffer.size(), index);
-          current = &current->at(std::string{buffer.data(), end_pointer});
+          current = &current->at(std::string_view{buffer.data(), end_pointer});
         } else {
           current = &current->at(index);
         }
@@ -237,7 +237,7 @@ auto set(JSON &document, const Pointer &pointer, const JSON &value) -> void {
       std::array<char, 20> buffer{};
       const auto [end_pointer, error_code] = std::to_chars(
           buffer.data(), buffer.data() + buffer.size(), last.to_index());
-      current.at(std::string{buffer.data(), end_pointer}).into(value);
+      current.at(std::string_view{buffer.data(), end_pointer}).into(value);
     } else {
       current.at(last.to_index()).into(value);
     }
@@ -291,7 +291,7 @@ auto remove_pointer(JSON &document, const PointerT &pointer) -> bool {
       const auto [end_pointer, error_code] = std::to_chars(
           buffer.data(), buffer.data() + buffer.size(), last.to_index());
       const auto current_size{current.size()};
-      return current.erase(std::string{buffer.data(), end_pointer}) <
+      return current.erase(std::string_view{buffer.data(), end_pointer}) <
              current_size;
     } else {
       const auto index{last.to_index()};
@@ -323,12 +323,13 @@ auto to_pointer(const JSON &document) -> Pointer {
   return parse_pointer<false>(stream);
 }
 
-auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
-                                        std::allocator<JSON::Char>> &input)
+auto to_pointer(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
     -> Pointer {
   std::basic_istringstream<JSON::Char, JSON::CharTraits,
                            std::allocator<JSON::Char>>
-      stream{input};
+      stream{std::basic_string<JSON::Char, JSON::CharTraits,
+                               std::allocator<JSON::Char>>{input}};
   return parse_pointer<false>(stream);
 }
 

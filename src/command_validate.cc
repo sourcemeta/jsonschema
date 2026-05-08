@@ -325,8 +325,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                                         error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_resolution_base, std::string{error.identifier()},
-          error.location(), error.what());
+          schema_resolution_base, error.identifier(), error.location(),
+          error.what());
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
@@ -401,8 +401,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   std::string entrypoint_uri{frame.root()};
   if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
     try {
-      entrypoint_uri = resolve_entrypoint(
-          frame, std::string{options.at("entrypoint").front()});
+      entrypoint_uri =
+          resolve_entrypoint(frame, options.at("entrypoint").front());
     } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::CompilerInvalidEntryPoint>(schema_resolution_base,
@@ -447,8 +447,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
                                                         error);
     } catch (const sourcemeta::core::SchemaReferenceError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaReferenceError>(
-          schema_resolution_base, std::string{error.identifier()},
-          error.location(), error.what());
+          schema_resolution_base, error.identifier(), error.location(),
+          error.what());
     } catch (const sourcemeta::core::SchemaRelativeMetaschemaResolutionError
                  &error) {
       throw sourcemeta::core::FileError<
@@ -467,8 +467,8 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
           sourcemeta::core::SchemaUnknownDialectError>(schema_resolution_base);
     } catch (const sourcemeta::core::SchemaVocabularyError &error) {
       throw sourcemeta::core::FileError<
-          sourcemeta::core::SchemaVocabularyError>(
-          schema_resolution_base, std::string{error.uri()}, error.what());
+          sourcemeta::core::SchemaVocabularyError>(schema_resolution_base,
+                                                   error.uri(), error.what());
     } catch (const sourcemeta::core::SchemaError &error) {
       throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
           schema_resolution_base, error.what());

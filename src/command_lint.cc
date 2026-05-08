@@ -28,7 +28,7 @@ static auto disable_lint_rules(sourcemeta::blaze::SchemaTransformer &bundle,
                                const Options &options, Iterator first,
                                Iterator last) -> void {
   for (auto iterator = first; iterator != last; ++iterator) {
-    if (bundle.remove(std::string{*iterator})) {
+    if (bundle.remove(*iterator)) {
       sourcemeta::jsonschema::LOG_VERBOSE(options)
           << "Disabling rule: " << *iterator << "\n";
     } else {
@@ -188,7 +188,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
         sourcemeta::core::SchemaUnknownDialectError>(rule_path);
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        rule_path, std::string{error.uri()}, error.what());
+        rule_path, error.uri(), error.what());
   } catch (const sourcemeta::core::SchemaResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
         rule_path, error);
@@ -288,7 +288,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     }
 
     for (const auto &name : blacklist) {
-      bundle.remove(std::string{name});
+      bundle.remove(name);
     }
   } else if (options.contains("exclude")) {
     disable_lint_rules(bundle, options, options.at("exclude").cbegin(),
@@ -469,8 +469,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, std::string{error.uri()},
-                  error.what());
+                  entry.resolution_base, error.uri(), error.what());
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               if (printed_progress) {
                 std::cerr << "\n";
@@ -603,8 +602,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
             } catch (const sourcemeta::core::SchemaVocabularyError &error) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaVocabularyError>(
-                  entry.resolution_base, std::string{error.uri()},
-                  error.what());
+                  entry.resolution_base, error.uri(), error.what());
             } catch (const sourcemeta::core::SchemaResolutionError &error) {
               throw sourcemeta::core::FileError<
                   sourcemeta::core::SchemaResolutionError>(

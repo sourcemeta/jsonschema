@@ -449,8 +449,7 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                   } -> std::convertible_to<std::string_view>;
                 }) {
     if (is_json) {
-      error_json.assign(
-          "keyword", sourcemeta::core::JSON{std::string{exception.keyword()}});
+      error_json.assign("keyword", sourcemeta::core::JSON{exception.keyword()});
     } else {
       std::cerr << "  at keyword " << exception.keyword() << "\n";
     }
@@ -596,8 +595,7 @@ inline auto print_exception(const bool is_json, const Exception &exception)
                   { current.option() } -> std::convertible_to<std::string_view>;
                 }) {
     if (is_json) {
-      error_json.assign(
-          "option", sourcemeta::core::JSON{std::string{exception.option()}});
+      error_json.assign("option", sourcemeta::core::JSON{exception.option()});
     } else {
       std::cerr << "  at option " << exception.option() << "\n";
     }

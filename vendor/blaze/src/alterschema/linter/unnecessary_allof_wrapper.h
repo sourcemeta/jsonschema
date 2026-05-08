@@ -108,12 +108,12 @@ public:
           continue;
         }
 
-        if (std::ranges::any_of(
-                metadata.dependencies, [&](const auto &dependency) {
-                  return !entry.defines(std::string{dependency}) &&
-                         (schema.defines(std::string{dependency}) ||
-                          elevated.contains(dependency));
-                })) {
+        if (std::ranges::any_of(metadata.dependencies,
+                                [&](const auto &dependency) {
+                                  return !entry.defines(dependency) &&
+                                         (schema.defines(dependency) ||
+                                          elevated.contains(dependency));
+                                })) {
           continue;
         }
 
@@ -126,7 +126,7 @@ public:
               (keyword == "unevaluatedProperties" ||
                keyword == "unevaluatedItems"))) {
           for (const auto &dependency : metadata.dependencies) {
-            if (!entry.defines(std::string{dependency})) {
+            if (!entry.defines(dependency)) {
               dependency_blocked.emplace(dependency);
             }
           }

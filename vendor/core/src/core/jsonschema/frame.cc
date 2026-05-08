@@ -565,8 +565,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           root_id = URI::canonicalize(maybe_id);
         } catch (const URIParseError &) {
           throw SchemaKeywordError(
-              sourcemeta::core::id_keyword(root_base_dialect.value()),
-              std::string{maybe_id}, "The identifier is not a valid URI");
+              sourcemeta::core::id_keyword(root_base_dialect.value()), maybe_id,
+              "The identifier is not a valid URI");
         }
 
         this->root_ = root_id.value();
@@ -622,9 +622,8 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
                                                      entry.base_dialect.value(),
                                                      default_id_for_entry)};
       std::optional<JSON::String> id{
-          !maybe_id.empty()
-              ? std::make_optional<JSON::String>(std::string{maybe_id})
-              : std::nullopt};
+          !maybe_id.empty() ? std::make_optional<JSON::String>(maybe_id)
+                            : std::nullopt};
 
       // Store information
       subschemas.emplace(entry.pointer,
@@ -738,7 +737,7 @@ auto SchemaFrame::analyse(const JSON &root, const SchemaWalker &walker,
           try {
             metaschema = sourcemeta::core::URI{maybe_metaschema};
           } catch (const URIParseError &) {
-            throw SchemaKeywordError("$schema", std::string{maybe_metaschema},
+            throw SchemaKeywordError("$schema", maybe_metaschema,
                                      "The dialect is not a valid URI");
           }
 

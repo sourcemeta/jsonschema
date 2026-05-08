@@ -230,8 +230,7 @@ private:
     if (uri.is_fragment_only()) {
       if (plain_name) {
         schema.rename("$id", "$anchor");
-        schema.at("$anchor").into(
-            sourcemeta::core::JSON{std::string{fragment_value}});
+        schema.at("$anchor").into(sourcemeta::core::JSON{fragment_value});
       } else if (fragment_value.empty()) {
         schema.erase("$id");
       }
@@ -249,8 +248,7 @@ private:
 
     schema.assign("$id", sourcemeta::core::JSON{without_fragment.value()});
     if (plain_name) {
-      schema.assign("$anchor",
-                    sourcemeta::core::JSON{std::string{fragment_value}});
+      schema.assign("$anchor", sourcemeta::core::JSON{fragment_value});
     }
   }
 
@@ -311,8 +309,7 @@ private:
   static auto bump_schema(sourcemeta::core::JSON &schema) -> bool {
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_7_URL) {
-      schema.assign("$schema",
-                    sourcemeta::core::JSON{std::string{DRAFT_2019_09_URL}});
+      schema.assign("$schema", sourcemeta::core::JSON{DRAFT_2019_09_URL});
       return true;
     }
     return false;
@@ -366,7 +363,7 @@ private:
 
     if (descendant_dialect == DRAFT_4_URL) {
       for (const auto &keyword : PROMOTED_DRAFT_6_KEYWORDS) {
-        if (subschema.defines(std::string{keyword})) {
+        if (subschema.defines(keyword)) {
           return true;
         }
       }
@@ -374,7 +371,7 @@ private:
 
     if (descendant_dialect == DRAFT_6_URL) {
       for (const auto &keyword : PROMOTED_DRAFT_7_KEYWORDS) {
-        if (subschema.defines(std::string{keyword})) {
+        if (subschema.defines(keyword)) {
           return true;
         }
       }
@@ -382,7 +379,7 @@ private:
 
     if (descendant_dialect == DRAFT_7_URL) {
       for (const auto &keyword : PROMOTED_2019_09_KEYWORDS) {
-        if (subschema.defines(std::string{keyword})) {
+        if (subschema.defines(keyword)) {
           return true;
         }
       }

@@ -545,7 +545,7 @@ private:
                 "document start line"};
           }
           if (anchor_name.has_value() && anchor_line == current_token.line) {
-            JSON key_value{std::string{current_token.value}};
+            JSON key_value{current_token.value};
             this->recording_anchor_ = false;
             this->anchors_.insert_or_assign(
                 std::string{anchor_name.value()},
@@ -688,7 +688,7 @@ private:
     if (tag.has_value()) {
       const auto &tag_value{tag.value()};
       if (tag_value == "!" || tag_value == "tag:yaml.org,2002:str") {
-        return JSON{std::string{value}};
+        return JSON{value};
       }
       if (tag_value == "tag:yaml.org,2002:null") {
         return JSON{nullptr};
@@ -705,11 +705,11 @@ private:
       if (tag_value == "tag:yaml.org,2002:float") {
         return this->parse_float(value);
       }
-      return JSON{std::string{value}};
+      return JSON{value};
     }
 
     if (style != ScalarStyle::Plain) {
-      return JSON{std::string{value}};
+      return JSON{value};
     }
 
     if (value.empty()) {
@@ -732,14 +732,14 @@ private:
         value == "+.inf" || value == "+.Inf" || value == "+.INF" ||
         value == "-.inf" || value == "-.Inf" || value == "-.INF" ||
         value == ".nan" || value == ".NaN" || value == ".NAN") {
-      return JSON{std::string{value}};
+      return JSON{value};
     }
 
     if (this->looks_like_number(value)) {
       return this->parse_number(value);
     }
 
-    return JSON{std::string{value}};
+    return JSON{value};
   }
 
   [[nodiscard]] auto looks_like_number(const std::string_view value) const
@@ -819,7 +819,7 @@ private:
     }
 
     if (has_exp) {
-      return JSON{Decimal{std::string{value}}};
+      return JSON{Decimal{value}};
     }
 
     if (has_dot) {
@@ -831,8 +831,7 @@ private:
 
   auto parse_integer(const std::string_view value) -> JSON {
     const auto result{to_int64_t(std::string{value})};
-    return result.has_value() ? JSON{result.value()}
-                              : JSON{Decimal{std::string{value}}};
+    return result.has_value() ? JSON{result.value()} : JSON{Decimal{value}};
   }
 
   auto parse_base_integer(const std::string_view value, const int base)
@@ -843,7 +842,7 @@ private:
     if (result.has_value()) {
       return JSON{negative ? -result.value() : result.value()};
     }
-    return JSON{std::string{value}};
+    return JSON{value};
   }
 
   auto parse_float(const std::string_view value) -> JSON {
@@ -860,12 +859,12 @@ private:
 
     constexpr std::size_t double_precision_limit{15};
     if (significant_digits > double_precision_limit) {
-      return JSON{Decimal{std::string{value}}};
+      return JSON{Decimal{value}};
     }
 
     const auto result{to_double(std::string{value})};
     if (!result.has_value()) {
-      return JSON{Decimal{std::string{value}}};
+      return JSON{Decimal{value}};
     }
 
     const auto as_integer{static_cast<std::int64_t>(result.value())};
@@ -1292,7 +1291,7 @@ private:
 
         auto next{this->next_token()};
         if (!next.has_value() || next->type != TokenType::BlockMappingValue) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           if (!next.has_value()) {
             break;
           }
@@ -1308,7 +1307,7 @@ private:
         if (!next.has_value() || next->type == TokenType::StreamEnd ||
             next->type == TokenType::DocumentEnd ||
             next->type == TokenType::DocumentStart) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           if (!next.has_value()) {
             break;
           }
@@ -1322,7 +1321,7 @@ private:
             token = next.value();
             continue;
           }
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           token = next.value();
           continue;
         }
@@ -1333,7 +1332,7 @@ private:
             throw YAMLDuplicateKeyError{key, next->line, next->column};
           }
           seen_keys.insert(key);
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           auto next_after_key{this->next_token()};
           assert(next_after_key.has_value());
           token = next_after_key.value();
@@ -1343,7 +1342,7 @@ private:
         auto value{this->parse_value(next.value(), JSON::ParseContext::Property,
                                      0, key, current_key_line,
                                      current_key_column)};
-        result.assign(std::string{key}, std::move(value));
+        result.assign(key, std::move(value));
 
         auto after{this->next_token()};
         if (!after.has_value()) {
@@ -1469,12 +1468,12 @@ private:
         this->record_inline_comment_for_key(key, next->line != key_line);
         auto value{this->parse_value(next.value(), JSON::ParseContext::Property,
                                      0, key, key_line, key_column)};
-        result.assign(std::string{key}, std::move(value));
+        result.assign(key, std::move(value));
         this->record_inline_comment_for_key(key);
         next = this->next_token();
       } else if (next.has_value() && next->type == TokenType::Scalar) {
         this->record_inline_comment_for_key(key);
-        result.assign(std::string{key}, JSON{nullptr});
+        result.assign(key, JSON{nullptr});
       } else {
         this->invoke_callback(JSON::ParsePhase::Pre, JSON::Type::Null, key_line,
                               key_column, JSON::ParseContext::Property, 0, key);
@@ -1483,7 +1482,7 @@ private:
         this->invoke_callback(JSON::ParsePhase::Post, JSON::Type::Null,
                               key_line, null_post_column,
                               JSON::ParseContext::Root, 0, empty_property_);
-        result.assign(std::string{key}, JSON{nullptr});
+        result.assign(key, JSON{nullptr});
       }
     } else if (next->type == TokenType::MappingStart ||
                next->type == TokenType::SequenceStart ||
@@ -1499,11 +1498,11 @@ private:
       this->record_inline_comment_for_key(key, next->line != key_line);
       auto value{this->parse_value(next.value(), JSON::ParseContext::Property,
                                    0, key, key_line, key_column)};
-      result.assign(std::string{key}, std::move(value));
+      result.assign(key, std::move(value));
       next = this->next_token();
       this->record_inline_comment_for_key(key);
     } else {
-      result.assign(std::string{key}, JSON{nullptr});
+      result.assign(key, JSON{nullptr});
     }
 
     while (next.has_value() &&
@@ -1544,7 +1543,7 @@ private:
 
         auto colon{this->next_token()};
         if (!colon.has_value() || colon->type != TokenType::BlockMappingValue) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           if (colon.has_value()) {
             this->pending_tokens_.push_back(colon.value());
           }
@@ -1556,7 +1555,7 @@ private:
         if (!next.has_value() || next->type == TokenType::StreamEnd ||
             next->type == TokenType::DocumentEnd ||
             next->type == TokenType::DocumentStart) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           if (next.has_value()) {
             this->pending_tokens_.push_back(next.value());
           }
@@ -1564,7 +1563,7 @@ private:
         }
         if (next->type == TokenType::BlockMappingValue ||
             next->type == TokenType::BlockMappingKey) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
         } else {
           this->record_inline_comment_for_key(key, next->line != key_line);
           this->lexer_->set_block_indent(
@@ -1572,7 +1571,7 @@ private:
           auto value{this->parse_value(next.value(),
                                        JSON::ParseContext::Property, 0, key,
                                        key_line, key_column)};
-          result.assign(std::string{key}, std::move(value));
+          result.assign(key, std::move(value));
           next = this->next_token();
         }
         continue;
@@ -1614,7 +1613,7 @@ private:
 
         auto colon{this->next_token()};
         if (!colon.has_value() || colon->type != TokenType::BlockMappingValue) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           if (colon.has_value()) {
             this->pending_tokens_.push_back(colon.value());
           }
@@ -1629,21 +1628,21 @@ private:
             auto value{this->parse_value(next.value(),
                                          JSON::ParseContext::Property, 0, key,
                                          key_line, key_column)};
-            result.assign(std::string{key}, std::move(value));
+            result.assign(key, std::move(value));
             next = this->next_token();
           } else {
-            result.assign(std::string{key}, JSON{nullptr});
+            result.assign(key, JSON{nullptr});
           }
         } else if (next->type == TokenType::StreamEnd ||
                    next->type == TokenType::DocumentEnd ||
                    next->type == TokenType::DocumentStart) {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
           break;
         } else {
           auto value{this->parse_value(next.value(),
                                        JSON::ParseContext::Property, 0, key,
                                        key_line, key_column)};
-          result.assign(std::string{key}, std::move(value));
+          result.assign(key, std::move(value));
           next = this->next_token();
         }
         continue;
@@ -1692,24 +1691,24 @@ private:
           auto value{this->parse_value(next.value(),
                                        JSON::ParseContext::Property, 0, key,
                                        key_line, key_column)};
-          result.assign(std::string{key}, std::move(value));
+          result.assign(key, std::move(value));
           next = this->next_token();
         } else if (next.has_value()) {
           this->record_inline_comment_for_key(key);
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
         } else {
-          result.assign(std::string{key}, JSON{nullptr});
+          result.assign(key, JSON{nullptr});
         }
       } else if (next->type == TokenType::StreamEnd ||
                  next->type == TokenType::DocumentEnd ||
                  next->type == TokenType::DocumentStart) {
-        result.assign(std::string{key}, JSON{nullptr});
+        result.assign(key, JSON{nullptr});
         break;
       } else {
         this->record_inline_comment_for_key(key, next->line != key_line);
         auto value{this->parse_value(next.value(), JSON::ParseContext::Property,
                                      0, key, key_line, key_column)};
-        result.assign(std::string{key}, std::move(value));
+        result.assign(key, std::move(value));
         next = this->next_token();
       }
     }
