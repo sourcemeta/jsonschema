@@ -400,8 +400,8 @@ auto to_pointer(const JSON &document) -> Pointer;
 /// assert(pointer.size() == 3);
 /// ```
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
-auto to_pointer(const std::basic_string<JSON::Char, JSON::CharTraits,
-                                        std::allocator<JSON::Char>> &input)
+auto to_pointer(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
     -> Pointer;
 
 /// @ingroup jsonpointer

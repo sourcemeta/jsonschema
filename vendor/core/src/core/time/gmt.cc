@@ -1,10 +1,12 @@
 #include <sourcemeta/core/time.h>
 
-#include <cassert>   // assert
-#include <ctime>     // std::time_t, std::tm, std::gmtime, std::mktime, timegm
-#include <iomanip>   // std::put_time, std::get_time
-#include <sstream>   // std::ostringstream, std::istringstream
-#include <stdexcept> // std::invalid_argument, std::runtime_error
+#include <cassert>     // assert
+#include <ctime>       // std::time_t, std::tm, std::gmtime, std::mktime, timegm
+#include <iomanip>     // std::put_time, std::get_time
+#include <sstream>     // std::ostringstream, std::istringstream
+#include <stdexcept>   // std::invalid_argument, std::runtime_error
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 #if defined(_MSC_VER)
 #include <errno.h>
@@ -35,9 +37,9 @@ auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string {
   return stream.str();
 }
 
-auto from_gmt(const std::string &time)
+auto from_gmt(const std::string_view time)
     -> std::chrono::system_clock::time_point {
-  std::istringstream stream{time};
+  std::istringstream stream{std::string{time}};
   std::tm parts = {};
   stream >> std::get_time(&parts, FORMAT_GMT);
   if (stream.fail()) {

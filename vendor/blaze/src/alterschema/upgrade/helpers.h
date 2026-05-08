@@ -3,8 +3,7 @@ static const std::string DIALECT_OVERRIDE_KEYWORD{
 
 static auto mark_dialect_override(sourcemeta::core::JSON &schema,
                                   const std::string_view dialect) -> void {
-  schema.assign(DIALECT_OVERRIDE_KEYWORD,
-                sourcemeta::core::JSON{std::string{dialect}});
+  schema.assign(DIALECT_OVERRIDE_KEYWORD, sourcemeta::core::JSON{dialect});
 }
 
 static auto current_dialect_or_override(const sourcemeta::core::JSON &schema)

@@ -199,7 +199,7 @@ auto sourcemeta::core::identify(const JSON &schema,
 auto sourcemeta::core::anonymize(JSON &schema,
                                  const SchemaBaseDialect base_dialect) -> void {
   if (schema.is_object()) {
-    schema.erase(std::string{sourcemeta::core::id_keyword(base_dialect)});
+    schema.erase(sourcemeta::core::id_keyword(base_dialect));
   }
 }
 
@@ -220,7 +220,7 @@ auto sourcemeta::core::reidentify(JSON &schema, std::string_view new_identifier,
     -> void {
   assert(is_schema(schema));
   assert(schema.is_object());
-  schema.assign(std::string{sourcemeta::core::id_keyword(base_dialect)},
+  schema.assign(sourcemeta::core::id_keyword(base_dialect),
                 JSON{new_identifier});
 
   // If we reidentify, and the identifier is still not retrievable, then
@@ -325,19 +325,17 @@ base_dialect_with_visited(const sourcemeta::core::JSON &schema,
       effective_dialect_uri = sourcemeta::core::URI{effective_dialect};
     } catch (const sourcemeta::core::URIParseError &) {
       throw sourcemeta::core::SchemaKeywordError(
-          "$schema", std::string{effective_dialect},
-          "The dialect is not a valid URI");
+          "$schema", effective_dialect, "The dialect is not a valid URI");
     }
 
     // Relative meta-schema references are invalid according to the
     // JSON Schema specifications. They must be absolute ones
     if (effective_dialect_uri.is_relative()) {
       throw sourcemeta::core::SchemaRelativeMetaschemaResolutionError(
-          std::string{effective_dialect});
+          effective_dialect);
     } else {
       throw sourcemeta::core::SchemaResolutionError(
-          std::string{effective_dialect},
-          "Could not resolve the metaschema of the schema");
+          effective_dialect, "Could not resolve the metaschema of the schema");
     }
   }
 
@@ -624,7 +622,7 @@ auto sourcemeta::core::vocabularies(const SchemaResolver &resolver,
       resolver(dialect)};
   if (!maybe_schema_dialect.has_value()) {
     throw sourcemeta::core::SchemaResolutionError(
-        std::string{dialect}, "Could not resolve the metaschema of the schema");
+        dialect, "Could not resolve the metaschema of the schema");
   }
   const sourcemeta::core::JSON &schema_dialect{maybe_schema_dialect.value()};
   // At this point we are sure that the dialect is vocabulary aware and the

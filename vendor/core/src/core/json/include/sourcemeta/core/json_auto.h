@@ -29,6 +29,13 @@ struct json_auto_is_basic_string<std::basic_string<CharT, Traits, Alloc>>
     : std::true_type {};
 
 /// @ingroup json
+template <typename T>
+struct json_auto_is_basic_string_view : std::false_type {};
+template <typename CharT, typename Traits>
+struct json_auto_is_basic_string_view<std::basic_string_view<CharT, Traits>>
+    : std::true_type {};
+
+/// @ingroup json
 template <typename T> struct json_auto_is_bitset : std::false_type {};
 template <std::size_t N>
 struct json_auto_is_bitset<std::bitset<N>> : std::true_type {};
@@ -69,7 +76,8 @@ concept json_auto_list_like =
       { type.cend() } -> std::same_as<typename T::const_iterator>;
     } && json_auto_supports_auto<T> && !json_auto_has_mapped_type<T> &&
     !json_auto_has_method_from<T> && !json_auto_has_method_to<T> &&
-    !json_auto_is_basic_string<T>::value;
+    !json_auto_is_basic_string<T>::value &&
+    !json_auto_is_basic_string_view<T>::value;
 
 /// @ingroup json
 template <typename T>

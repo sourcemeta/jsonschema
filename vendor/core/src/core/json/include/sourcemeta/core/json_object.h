@@ -3,9 +3,12 @@
 
 #include <algorithm>        // std::sort
 #include <cassert>          // assert
+#include <concepts>         // std::same_as
 #include <cstddef>          // std::size_t
 #include <initializer_list> // std::initializer_list
 #include <iterator>         // std::advance
+#include <string_view>      // std::basic_string_view
+#include <type_traits>      // std::remove_cvref_t
 #include <utility>          // std::pair, std::move, std::unreachable
 #include <vector>           // std::vector
 
@@ -20,6 +23,8 @@ public:
   using mapped_type = Value;
   using hash_type = typename Hash::hash_type;
   using pair_value_type = std::pair<key_type, mapped_type>;
+  using KeyView = std::basic_string_view<typename Key::value_type,
+                                         typename Key::traits_type>;
 
   JSONObject(std::initializer_list<pair_value_type> entries) : data{} {
     this->data.reserve(entries.size());
@@ -119,9 +124,23 @@ public:
     return this->data.cend();
   }
 
+  // GCC does not optimise well across implicit type conversions such as
+  // std::string to std::string_view, so we provide separate overloads with
+  // duplicated logic instead of unifying on a single parameter type. The
+  // `KeyView`-accepting overloads are constrained to actual `std::string_view`
+  // arguments only, so callers passing a string literal continue to bind to
+  // the `Key`-accepting overload as before.
+
   /// Compute a hash for a key
   [[nodiscard]] inline auto hash(const Key &key) const noexcept -> hash_type {
     return this->hasher(key);
+  }
+
+  /// Compute a hash for a key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto hash(T key) const noexcept -> hash_type {
+    return this->hasher(key.data(), key.size());
   }
 
   /// Compute a hash from raw data
@@ -134,7 +153,35 @@ public:
   /// Attempt to find an entry by key
   [[nodiscard]] inline auto find(const Key &key) const -> const_iterator {
     const auto key_hash{this->hash(key)};
-    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (size_type index = 0; index < this->size(); index++) {
+        if (this->data[index].hash == key_hash) {
+          auto iterator{this->cbegin()};
+          std::advance(iterator, index);
+          return iterator;
+        }
+      }
+    } else {
+      for (size_type index = 0; index < this->size(); index++) {
+        if (this->data[index].hash == key_hash &&
+            this->data[index].first == key) {
+          auto iterator{this->cbegin()};
+          std::advance(iterator, index);
+          return iterator;
+        }
+      }
+    }
+
+    return this->cend();
+  }
+
+  /// Attempt to find an entry by key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto find(T key) const -> const_iterator {
+    const auto key_hash{this->hash(key)};
 
     // Move the perfect hash condition out of the loop for extra performance
     if (this->hasher.is_perfect(key_hash)) {
@@ -162,6 +209,30 @@ public:
   /// Check if an entry with the given key exists
   [[nodiscard]] inline auto defines(const Key &key, const hash_type hash) const
       -> bool {
+    assert(this->hash(key) == hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(hash)) {
+      for (const auto &entry : *this) {
+        if (entry.hash == hash) {
+          return true;
+        }
+      }
+    } else {
+      for (const auto &entry : *this) {
+        if (entry.hash == hash && entry.first == key) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Check if an entry with the given key exists
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto defines(T key, const hash_type hash) const -> bool {
     assert(this->hash(key) == hash);
 
     // Move the perfect hash condition out of the loop for extra performance
@@ -224,7 +295,56 @@ public:
   }
 
   /// Access an object entry by its key name
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto at(T key, const hash_type key_hash) const
+      -> const mapped_type & {
+    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (const auto &entry : *this) {
+        if (entry.hash == key_hash) {
+          return entry.second;
+        }
+      }
+    } else {
+      for (const auto &entry : *this) {
+        if (entry.hash == key_hash && entry.first == key) {
+          return entry.second;
+        }
+      }
+    }
+
+    std::unreachable();
+  }
+
+  /// Access an object entry by its key name
   inline auto at(const Key &key, const hash_type key_hash) -> mapped_type & {
+    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash) {
+          return entry.second;
+        }
+      }
+    } else {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first == key) {
+          return entry.second;
+        }
+      }
+    }
+
+    std::unreachable();
+  }
+
+  /// Access an object entry by its key name
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  inline auto at(T key, const hash_type key_hash) -> mapped_type & {
     assert(this->hash(key) == key_hash);
 
     // Move the perfect hash condition out of the loop for extra performance
@@ -270,9 +390,67 @@ public:
     return nullptr;
   }
 
+  /// Try to access an object entry by its underlying positional index
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto try_at(T key, const hash_type key_hash) const
+      -> const mapped_type * {
+    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (size_type index = 0; index < this->size(); index++) {
+        if (this->data[index].hash == key_hash) {
+          return &this->data[index].second;
+        }
+      }
+    } else {
+      for (size_type index = 0; index < this->size(); index++) {
+        if (this->data[index].hash == key_hash &&
+            this->data[index].first == key) {
+          return &this->data[index].second;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
   /// Try to access an object entry, scanning from a caller-provided start
   /// offset. On hit, advances `start` past the found index
   [[nodiscard]] inline auto try_at(const Key &key, const hash_type key_hash,
+                                   size_type &start) const
+      -> const mapped_type * {
+    assert(this->hash(key) == key_hash);
+    const auto object_size{this->size()};
+    assert(start <= object_size);
+    if (this->hasher.is_perfect(key_hash)) {
+      for (size_type count = 0; count < object_size; count++) {
+        const auto index{(start + count) % object_size};
+        if (this->data[index].hash == key_hash) {
+          start = index + 1;
+          return &this->data[index].second;
+        }
+      }
+    } else {
+      for (size_type count = 0; count < object_size; count++) {
+        const auto index{(start + count) % object_size};
+        if (this->data[index].hash == key_hash &&
+            this->data[index].first == key) {
+          start = index + 1;
+          return &this->data[index].second;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
+  /// Try to access an object entry, scanning from a caller-provided start
+  /// offset. On hit, advances `start` past the found index
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto try_at(T key, const hash_type key_hash,
                                    size_type &start) const
       -> const mapped_type * {
     assert(this->hash(key) == key_hash);
@@ -468,7 +646,41 @@ public:
   }
 
   /// Erase an object property
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  auto erase(T key, const hash_type key_hash) -> size_type {
+    const auto current_size{this->size()};
+
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash) {
+          this->data.erase(iterator);
+          return current_size - 1;
+        }
+      }
+    } else {
+      for (auto iterator = this->data.begin(); iterator != this->data.end();
+           ++iterator) {
+        if (iterator->hash == key_hash && iterator->first == key) {
+          this->data.erase(iterator);
+          return current_size - 1;
+        }
+      }
+    }
+
+    return current_size;
+  }
+
+  /// Erase an object property
   inline auto erase(const Key &key) -> size_type {
+    return this->erase(key, this->hash(key));
+  }
+
+  /// Erase an object property
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  inline auto erase(T key) -> size_type {
     return this->erase(key, this->hash(key));
   }
 

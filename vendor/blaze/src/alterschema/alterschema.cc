@@ -119,7 +119,6 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/deprecated_false_drop.h"
 #include "canonicalizer/disallow_to_array_of_schemas.h"
 #include "canonicalizer/divisible_by_implicit.h"
-#include "canonicalizer/draft3_drop_extends_empty_schemas.h"
 #include "canonicalizer/draft3_type_any.h"
 #include "canonicalizer/empty_definitions_drop.h"
 #include "canonicalizer/empty_defs_drop.h"
@@ -128,7 +127,6 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/empty_dependent_schemas_drop.h"
 #include "canonicalizer/enum_drop_redundant_validation.h"
 #include "canonicalizer/enum_filter_by_type.h"
-#include "canonicalizer/exclusive_bounds_false_drop.h"
 #include "canonicalizer/exclusive_maximum_boolean_integer_fold.h"
 #include "canonicalizer/exclusive_maximum_integer_to_maximum.h"
 #include "canonicalizer/exclusive_minimum_boolean_integer_fold.h"
@@ -180,11 +178,13 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "common/content_schema_without_media_type.h"
 #include "common/dependencies_property_tautology.h"
 #include "common/dependent_required_tautology.h"
+#include "common/disallow_narrows_type.h"
 #include "common/double_negation_elimination.h"
 #include "common/draft_official_dialect_with_https.h"
 #include "common/draft_official_dialect_without_empty_fragment.h"
 #include "common/draft_ref_siblings.h"
 #include "common/drop_allof_empty_schemas.h"
+#include "common/drop_extends_empty_schemas.h"
 #include "common/duplicate_allof_branches.h"
 #include "common/duplicate_anyof_branches.h"
 #include "common/duplicate_enum_values.h"
@@ -194,10 +194,12 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "common/empty_object_as_true.h"
 #include "common/enum_with_type.h"
 #include "common/equal_numeric_bounds_to_enum.h"
+#include "common/exclusive_bounds_false_drop.h"
 #include "common/exclusive_maximum_number_and_maximum.h"
 #include "common/exclusive_minimum_number_and_minimum.h"
 #include "common/flatten_nested_allof.h"
 #include "common/flatten_nested_anyof.h"
+#include "common/flatten_nested_extends.h"
 #include "common/if_without_then_else.h"
 #include "common/ignored_metaschema.h"
 #include "common/max_contains_without_contains.h"
@@ -207,6 +209,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "common/modern_official_dialect_with_empty_fragment.h"
 #include "common/modern_official_dialect_with_http.h"
 #include "common/non_applicable_additional_items.h"
+#include "common/non_applicable_disallow_types.h"
 #include "common/non_applicable_enum_validation_keywords.h"
 #include "common/non_applicable_type_specific_keywords.h"
 #include "common/not_false.h"
@@ -219,12 +222,14 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "common/unknown_keywords_prefix.h"
 #include "common/unknown_local_ref.h"
 #include "common/unnecessary_allof_ref_wrapper_draft.h"
+#include "common/unnecessary_extends_ref_wrapper.h"
 #include "common/unsatisfiable_drop_validation.h"
 #include "common/unsatisfiable_in_place_applicator_type.h"
 #include "linter/else_empty.h"
 #include "linter/then_empty.h"
 #include "linter/unnecessary_allof_ref_wrapper_modern.h"
 #include "linter/unnecessary_allof_wrapper.h"
+#include "linter/unnecessary_extends_wrapper.h"
 
 // Linter
 #include "linter/comment_trim.h"
@@ -235,6 +240,8 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "linter/dependent_required_default.h"
 #include "linter/description_trailing_period.h"
 #include "linter/description_trim.h"
+#include "linter/disallow_default.h"
+#include "linter/divisible_by_default.h"
 #include "linter/duplicate_examples.h"
 #include "linter/enum_to_const.h"
 #include "linter/equal_numeric_bounds_to_const.h"
@@ -330,7 +337,6 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   if (mode == AlterSchemaMode::Canonicalizer) {
     bundle.add<ExclusiveMinimumBooleanIntegerFold>();
     bundle.add<ExclusiveMaximumBooleanIntegerFold>();
-    bundle.add<ExclusiveBoundsFalseDrop>();
     bundle.add<UnsatisfiableExclusiveEqualBounds>();
     bundle.add<MinimumCanEqualIntegerFold>();
     bundle.add<MaximumCanEqualIntegerFold>();
@@ -366,11 +372,14 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<DraftOfficialDialectWithHttps>();
   bundle.add<DraftOfficialDialectWithoutEmptyFragment>();
   bundle.add<NonApplicableTypeSpecificKeywords>();
+  bundle.add<NonApplicableDisallowTypes>();
+  bundle.add<DisallowNarrowsType>();
   bundle.add<AnyOfRemoveFalseSchemas>();
   bundle.add<AnyOfTrueSimplify>();
   bundle.add<DuplicateAllOfBranches>();
   bundle.add<DuplicateAnyOfBranches>();
   bundle.add<FlattenNestedAllOf>();
+  bundle.add<FlattenNestedExtends>();
   bundle.add<FlattenNestedAnyOf>();
   if (mode == AlterSchemaMode::Canonicalizer) {
     bundle.add<Draft3TypeAny>();
@@ -410,6 +419,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<ModernOfficialDialectWithHttp>();
   bundle.add<ExclusiveMaximumNumberAndMaximum>();
   bundle.add<ExclusiveMinimumNumberAndMinimum>();
+  bundle.add<ExclusiveBoundsFalseDrop>();
   bundle.add<DraftRefSiblings>();
   bundle.add<DynamicRefToStaticRef>();
   bundle.add<UnknownKeywordsPrefix>();
@@ -442,6 +452,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<DependentRequiredDefault>();
     bundle.add<ItemsArrayDefault>();
     bundle.add<ItemsSchemaDefault>();
+    bundle.add<DisallowDefault>();
+    bundle.add<DivisibleByDefault>();
     bundle.add<MultipleOfDefault>();
     bundle.add<PatternPropertiesDefault>();
     bundle.add<PropertiesDefault>();
@@ -475,15 +487,15 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<UnnecessaryAllOfRefWrapperModern>();
   }
   bundle.add<UnnecessaryAllOfRefWrapperDraft>();
+  bundle.add<UnnecessaryExtendsRefWrapper>();
 
   if (mode != AlterSchemaMode::Canonicalizer) {
     bundle.add<UnnecessaryAllOfWrapper>();
+    bundle.add<UnnecessaryExtendsWrapper>();
   }
 
   bundle.add<DropAllOfEmptySchemas>();
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<Draft3DropExtendsEmptySchemas>();
-  }
+  bundle.add<DropExtendsEmptySchemas>();
   bundle.add<EmptyObjectAsTrue>();
 
   if (mode == AlterSchemaMode::Canonicalizer) {

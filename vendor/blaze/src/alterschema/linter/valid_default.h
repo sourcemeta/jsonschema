@@ -18,17 +18,18 @@ public:
       -> SchemaTransformRule::Result override {
     using Known = Vocabularies::Known;
     // Technically, the `default` keyword goes back to Draft 1, but Blaze
-    // only supports Draft 4 and later
+    // only supports Draft 3 and later
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
             {Known::JSON_Schema_2020_12_Meta_Data,
              Known::JSON_Schema_2019_09_Meta_Data, Known::JSON_Schema_Draft_7,
-             Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_4}) &&
+             Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_4,
+             Known::JSON_Schema_Draft_3}) &&
         schema.is_object() && schema.defines("default"));
 
-    if (vocabularies.contains_any({Known::JSON_Schema_Draft_7,
-                                   Known::JSON_Schema_Draft_6,
-                                   Known::JSON_Schema_Draft_4})) {
+    if (vocabularies.contains_any(
+            {Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_6,
+             Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_3})) {
       ONLY_CONTINUE_IF(!schema.defines("$ref"));
     }
 

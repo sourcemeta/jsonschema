@@ -19,7 +19,7 @@ public:
         schema.is_object());
 
     for (const auto &keyword : KEYWORDS) {
-      if (schema.defines(std::string{keyword})) {
+      if (schema.defines(keyword)) {
         return true;
       }
     }

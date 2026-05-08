@@ -82,7 +82,7 @@ private:
     }
 
     for (const auto &keyword : PROMOTED_KEYWORDS) {
-      if (subschema.defines(std::string{keyword})) {
+      if (subschema.defines(keyword)) {
         return true;
       }
     }

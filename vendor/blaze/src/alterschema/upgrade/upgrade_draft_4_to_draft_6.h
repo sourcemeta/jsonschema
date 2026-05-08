@@ -165,7 +165,7 @@ private:
     }
 
     for (const auto &keyword : PROMOTED_KEYWORDS) {
-      if (subschema.defines(std::string{keyword})) {
+      if (subschema.defines(keyword)) {
         return true;
       }
     }
@@ -285,20 +285,18 @@ private:
 
     for (const std::string_view object_keyword :
          {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(std::string{object_keyword}) &&
-          subschema.at(std::string{object_keyword}).is_object()) {
-        for (const auto &entry :
-             subschema.at(std::string{object_keyword}).as_object()) {
+      if (subschema.defines(object_keyword) &&
+          subschema.at(object_keyword).is_object()) {
+        for (const auto &entry : subschema.at(object_keyword).as_object()) {
           collect_resource_anchors(entry.second, false, result);
         }
       }
     }
 
     for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(std::string{array_keyword}) &&
-          subschema.at(std::string{array_keyword}).is_array()) {
-        for (const auto &item :
-             subschema.at(std::string{array_keyword}).as_array()) {
+      if (subschema.defines(array_keyword) &&
+          subschema.at(array_keyword).is_array()) {
+        for (const auto &item : subschema.at(array_keyword).as_array()) {
           collect_resource_anchors(item, false, result);
         }
       }
@@ -306,9 +304,8 @@ private:
 
     for (const std::string_view single_keyword :
          {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(std::string{single_keyword})) {
-        collect_resource_anchors(subschema.at(std::string{single_keyword}),
-                                 false, result);
+      if (subschema.defines(single_keyword)) {
+        collect_resource_anchors(subschema.at(single_keyword), false, result);
       }
     }
 
@@ -343,20 +340,18 @@ private:
 
     for (const std::string_view object_keyword :
          {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(std::string{object_keyword}) &&
-          subschema.at(std::string{object_keyword}).is_object()) {
-        for (const auto &entry :
-             subschema.at(std::string{object_keyword}).as_object()) {
+      if (subschema.defines(object_keyword) &&
+          subschema.at(object_keyword).is_object()) {
+        for (const auto &entry : subschema.at(object_keyword).as_object()) {
           collect_invalid_anchors(entry.second, false, result);
         }
       }
     }
 
     for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(std::string{array_keyword}) &&
-          subschema.at(std::string{array_keyword}).is_array()) {
-        for (const auto &item :
-             subschema.at(std::string{array_keyword}).as_array()) {
+      if (subschema.defines(array_keyword) &&
+          subschema.at(array_keyword).is_array()) {
+        for (const auto &item : subschema.at(array_keyword).as_array()) {
           collect_invalid_anchors(item, false, result);
         }
       }
@@ -364,9 +359,8 @@ private:
 
     for (const std::string_view single_keyword :
          {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(std::string{single_keyword})) {
-        collect_invalid_anchors(subschema.at(std::string{single_keyword}),
-                                false, result);
+      if (subschema.defines(single_keyword)) {
+        collect_invalid_anchors(subschema.at(single_keyword), false, result);
       }
     }
 
@@ -419,10 +413,9 @@ private:
 
     for (const std::string_view object_keyword :
          {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(std::string{object_keyword}) &&
-          subschema.at(std::string{object_keyword}).is_object()) {
-        for (const auto &entry :
-             subschema.at(std::string{object_keyword}).as_object()) {
+      if (subschema.defines(object_keyword) &&
+          subschema.at(object_keyword).is_object()) {
+        for (const auto &entry : subschema.at(object_keyword).as_object()) {
           if (resource_has_descendant_with_pending_pattern(entry.second,
                                                            false)) {
             return true;
@@ -432,10 +425,9 @@ private:
     }
 
     for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(std::string{array_keyword}) &&
-          subschema.at(std::string{array_keyword}).is_array()) {
-        for (const auto &item :
-             subschema.at(std::string{array_keyword}).as_array()) {
+      if (subschema.defines(array_keyword) &&
+          subschema.at(array_keyword).is_array()) {
+        for (const auto &item : subschema.at(array_keyword).as_array()) {
           if (resource_has_descendant_with_pending_pattern(item, false)) {
             return true;
           }
@@ -445,9 +437,9 @@ private:
 
     for (const std::string_view single_keyword :
          {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(std::string{single_keyword})) {
+      if (subschema.defines(single_keyword)) {
         if (resource_has_descendant_with_pending_pattern(
-                subschema.at(std::string{single_keyword}), false)) {
+                subschema.at(single_keyword), false)) {
           return true;
         }
       }
@@ -527,26 +519,24 @@ private:
 
     for (const std::string_view object_keyword :
          {"definitions", "properties", "patternProperties", "dependencies"}) {
-      if (subschema.defines(std::string{object_keyword}) &&
-          subschema.at(std::string{object_keyword}).is_object()) {
+      if (subschema.defines(object_keyword) &&
+          subschema.at(object_keyword).is_object()) {
         std::vector<std::string> keys;
-        keys.reserve(subschema.at(std::string{object_keyword}).size());
-        for (const auto &entry :
-             subschema.at(std::string{object_keyword}).as_object()) {
+        keys.reserve(subschema.at(object_keyword).size());
+        for (const auto &entry : subschema.at(object_keyword).as_object()) {
           keys.push_back(entry.first);
         }
         for (const auto &key : keys) {
-          apply_anchor_renames_in_resource(
-              subschema.at(std::string{object_keyword}).at(key), false, renames,
-              resource_base);
+          apply_anchor_renames_in_resource(subschema.at(object_keyword).at(key),
+                                           false, renames, resource_base);
         }
       }
     }
 
     for (const std::string_view array_keyword : {"allOf", "anyOf", "oneOf"}) {
-      if (subschema.defines(std::string{array_keyword}) &&
-          subschema.at(std::string{array_keyword}).is_array()) {
-        auto &array_value{subschema.at(std::string{array_keyword})};
+      if (subschema.defines(array_keyword) &&
+          subschema.at(array_keyword).is_array()) {
+        auto &array_value{subschema.at(array_keyword)};
         for (std::size_t index{0}; index < array_value.size(); ++index) {
           apply_anchor_renames_in_resource(array_value.at(index), false,
                                            renames, resource_base);
@@ -556,10 +546,9 @@ private:
 
     for (const std::string_view single_keyword :
          {"additionalProperties", "additionalItems", "not"}) {
-      if (subschema.defines(std::string{single_keyword})) {
-        apply_anchor_renames_in_resource(
-            subschema.at(std::string{single_keyword}), false, renames,
-            resource_base);
+      if (subschema.defines(single_keyword)) {
+        apply_anchor_renames_in_resource(subschema.at(single_keyword), false,
+                                         renames, resource_base);
       }
     }
 

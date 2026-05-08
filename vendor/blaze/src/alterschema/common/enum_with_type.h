@@ -24,6 +24,7 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_6,
          Vocabularies::Known::JSON_Schema_Draft_4,
          Vocabularies::Known::JSON_Schema_Draft_3,
+         Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
          Vocabularies::Known::JSON_Schema_Draft_2,
          Vocabularies::Known::JSON_Schema_Draft_1}));
     ONLY_CONTINUE_IF(schema.is_object());
@@ -31,6 +32,40 @@ public:
     ONLY_CONTINUE_IF(type);
     const auto *enum_value{schema.try_at("enum")};
     ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
+
+    if (vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_Draft_3,
+             Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+      if (type->is_string() && type->to_string() == "any") {
+        return APPLIES_TO_KEYWORDS("enum", "type");
+      }
+
+      if (type->is_array()) {
+        bool has_tautology{false};
+        bool has_unknown_subschema{false};
+        for (const auto &entry : type->as_array()) {
+          if (entry.is_string() && entry.to_string() == "any") {
+            has_tautology = true;
+            break;
+          }
+          if (entry.is_object()) {
+            if (entry.empty()) {
+              has_tautology = true;
+              break;
+            }
+            has_unknown_subschema = true;
+          }
+        }
+
+        if (has_tautology) {
+          return APPLIES_TO_KEYWORDS("enum", "type");
+        }
+
+        if (has_unknown_subschema) {
+          return false;
+        }
+      }
+    }
 
     const auto current_types{parse_schema_type(*type)};
     ONLY_CONTINUE_IF(current_types.any());

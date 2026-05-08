@@ -3,7 +3,10 @@ public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
   ExclusiveBoundsFalseDrop()
-      : SchemaTransformRule{"exclusive_bounds_false_drop", ""} {};
+      : SchemaTransformRule{
+            "exclusive_bounds_false_drop",
+            "Setting `exclusiveMinimum` or `exclusiveMaximum` to `false` "
+            "adds no constraint"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -24,28 +27,25 @@ public:
         type && type->is_string() &&
         (type->to_string() == "integer" || type->to_string() == "number"));
 
+    std::vector<Pointer> locations;
     const auto *exclusive_min{schema.try_at("exclusiveMinimum")};
-    this->has_exclusive_min_ = exclusive_min && exclusive_min->is_boolean() &&
-                               !exclusive_min->to_boolean();
+    if (exclusive_min && exclusive_min->is_boolean() &&
+        !exclusive_min->to_boolean()) {
+      locations.push_back(Pointer{"exclusiveMinimum"});
+    }
     const auto *exclusive_max{schema.try_at("exclusiveMaximum")};
-    this->has_exclusive_max_ = exclusive_max && exclusive_max->is_boolean() &&
-                               !exclusive_max->to_boolean();
-
-    ONLY_CONTINUE_IF(this->has_exclusive_min_ || this->has_exclusive_max_);
-    return true;
-  }
-
-  auto transform(JSON &schema, const Result &) const -> void override {
-    if (this->has_exclusive_min_) {
-      schema.erase("exclusiveMinimum");
+    if (exclusive_max && exclusive_max->is_boolean() &&
+        !exclusive_max->to_boolean()) {
+      locations.push_back(Pointer{"exclusiveMaximum"});
     }
 
-    if (this->has_exclusive_max_) {
-      schema.erase("exclusiveMaximum");
-    }
+    ONLY_CONTINUE_IF(!locations.empty());
+    return APPLIES_TO_POINTERS(std::move(locations));
   }
 
-private:
-  mutable bool has_exclusive_min_{false};
-  mutable bool has_exclusive_max_{false};
+  auto transform(JSON &schema, const Result &result) const -> void override {
+    for (const auto &location : result.locations) {
+      schema.erase(location.at(0).to_property());
+    }
+  }
 };

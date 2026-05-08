@@ -78,7 +78,8 @@ auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string;
 ///
 /// On Windows, you might need to use `_mkgmtime` instead of `timegm`.
 SOURCEMETA_CORE_TIME_EXPORT
-auto from_gmt(const std::string &time) -> std::chrono::system_clock::time_point;
+auto from_gmt(const std::string_view time)
+    -> std::chrono::system_clock::time_point;
 
 /// @ingroup time
 /// Check whether the given string is a valid date-time value per RFC 3339

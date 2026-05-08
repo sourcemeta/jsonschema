@@ -1,9 +1,11 @@
-class Draft3DropExtendsEmptySchemas final : public SchemaTransformRule {
+class DropExtendsEmptySchemas final : public SchemaTransformRule {
 public:
   using mutates = std::true_type;
   using reframe_after_transform = std::true_type;
-  Draft3DropExtendsEmptySchemas()
-      : SchemaTransformRule{"draft3_drop_extends_empty_schemas", ""} {};
+  DropExtendsEmptySchemas()
+      : SchemaTransformRule{
+            "drop_extends_empty_schemas",
+            "Empty schemas in `extends` are redundant and can be removed"} {};
 
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
@@ -22,26 +24,31 @@ public:
     ONLY_CONTINUE_IF(extends);
 
     if (sourcemeta::core::is_empty_schema(*extends)) {
-      return true;
+      return APPLIES_TO_POINTERS({Pointer{"extends"}});
     }
 
     if (extends->is_array() && !extends->empty()) {
-      return std::ranges::any_of(extends->as_array(),
-                                 sourcemeta::core::is_empty_schema);
+      std::vector<Pointer> locations;
+      for (std::size_t index = 0; index < extends->size(); ++index) {
+        if (sourcemeta::core::is_empty_schema(extends->at(index))) {
+          locations.push_back(Pointer{"extends", index});
+        }
+      }
+      ONLY_CONTINUE_IF(!locations.empty());
+      return APPLIES_TO_POINTERS(std::move(locations));
     }
 
     return false;
   }
 
-  auto transform(JSON &schema, const Result &) const -> void override {
-    const auto &extends{schema.at("extends")};
-    if (sourcemeta::core::is_empty_schema(extends)) {
+  auto transform(JSON &schema, const Result &result) const -> void override {
+    if (result.locations.size() == 1 && result.locations.at(0).size() == 1) {
       schema.erase("extends");
       return;
     }
 
     auto new_extends{JSON::make_array()};
-    for (const auto &entry : extends.as_array()) {
+    for (const auto &entry : schema.at("extends").as_array()) {
       if (!sourcemeta::core::is_empty_schema(entry)) {
         new_extends.push_back(entry);
       }
