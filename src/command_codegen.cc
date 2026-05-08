@@ -85,7 +85,7 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
         schema_path, error.what());
   } catch (const sourcemeta::core::SchemaVocabularyError &error) {
     throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
-        schema_path, std::string{error.uri()}, error.what());
+        schema_path, error.uri(), error.what());
   } catch (const sourcemeta::blaze::CodegenUnsupportedKeywordError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CodegenUnsupportedKeywordError>(

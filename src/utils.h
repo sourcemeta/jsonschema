@@ -37,28 +37,29 @@ inline auto default_id(const InputJSON &entry) -> std::string {
 }
 
 inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
-                               const std::string &entrypoint) -> std::string {
+                               const std::string_view entrypoint)
+    -> std::string {
   if (entrypoint.empty()) {
     return std::string{frame.root()};
   }
 
   if (entrypoint.front() == '/' &&
       (entrypoint.size() < 2 || entrypoint[1] != '/')) {
-    sourcemeta::core::URI result{std::string{frame.root()}};
+    sourcemeta::core::URI result{frame.root()};
     result.fragment(entrypoint);
     return result.recompose();
   }
 
   if (entrypoint.front() == '#') {
     const std::string pointer_string{entrypoint.substr(1)};
-    sourcemeta::core::URI result{std::string{frame.root()}};
+    sourcemeta::core::URI result{frame.root()};
     result.fragment(pointer_string);
     return result.recompose();
   }
 
   try {
     const sourcemeta::core::URI uri{entrypoint};
-    return entrypoint;
+    return std::string{entrypoint};
   } catch (const sourcemeta::core::URIParseError &) {
     throw sourcemeta::blaze::CompilerInvalidEntryPoint{
         entrypoint, "The given entry point is not a valid URI or JSON Pointer"};

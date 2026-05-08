@@ -48,7 +48,7 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
   }
 
   throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
-      configuration_path, std::string{uri}, "Could not resolve schema");
+      configuration_path, uri, "Could not resolve schema");
 }
 
 auto dependency_resolve(const sourcemeta::core::Options &options,
@@ -113,9 +113,8 @@ auto emit_json(sourcemeta::core::JSON &events_array,
                const std::string_view type, const std::string_view key,
                const std::string_view value) -> void {
   auto json_event{sourcemeta::core::JSON::make_object()};
-  json_event.assign("type", sourcemeta::core::JSON{std::string{type}});
-  json_event.assign(std::string{key},
-                    sourcemeta::core::JSON{std::string{value}});
+  json_event.assign("type", sourcemeta::core::JSON{type});
+  json_event.assign(key, sourcemeta::core::JSON{value});
   events_array.push_back(std::move(json_event));
 }
 
@@ -172,8 +171,7 @@ auto make_on_event(const sourcemeta::core::Options &options,
         if (is_json) {
           auto json_event{sourcemeta::core::JSON::make_object()};
           json_event.assign("type", sourcemeta::core::JSON{"installed"});
-          json_event.assign("uri",
-                            sourcemeta::core::JSON{std::string{event.uri}});
+          json_event.assign("uri", sourcemeta::core::JSON{event.uri});
           json_event.assign("path",
                             sourcemeta::core::JSON{event.path.string()});
           events_array.push_back(std::move(json_event));
@@ -246,15 +244,13 @@ auto make_on_event(const sourcemeta::core::Options &options,
         if (is_json) {
           auto json_event{sourcemeta::core::JSON::make_object()};
           json_event.assign("type", sourcemeta::core::JSON{"error"});
-          json_event.assign("uri",
-                            sourcemeta::core::JSON{std::string{event.uri}});
-          json_event.assign("message",
-                            sourcemeta::core::JSON{std::string{event.details}});
+          json_event.assign("uri", sourcemeta::core::JSON{event.uri});
+          json_event.assign("message", sourcemeta::core::JSON{event.details});
           events_array.push_back(std::move(json_event));
         } else {
           sourcemeta::jsonschema::try_catch(options, [&]() -> int {
-            throw sourcemeta::jsonschema::InstallError{
-                std::string{event.details}, std::string{event.uri}};
+            throw sourcemeta::jsonschema::InstallError{event.details,
+                                                       event.uri};
           });
         }
 
