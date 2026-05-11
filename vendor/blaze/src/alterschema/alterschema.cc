@@ -265,6 +265,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "linter/top_level_title.h"
 #include "linter/unevaluated_items_default.h"
 #include "linter/unevaluated_properties_default.h"
+#include "linter/unknown_format_prefix.h"
 #include "linter/unsatisfiable_max_contains.h"
 #include "linter/unsatisfiable_min_properties.h"
 #include "linter/valid_default.h"
@@ -479,6 +480,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<SimplePropertiesIdentifiers>();
     bundle.add<PortableAnchorNames>();
     bundle.add<InvalidExternalRef>();
+    bundle.add<UnknownFormatPrefix>();
     bundle.add<ValidDefault>();
     bundle.add<ValidExamples>();
   }

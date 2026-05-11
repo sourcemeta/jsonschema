@@ -61,6 +61,7 @@ public:
     rewrite_divisible_by(schema);
     rewrite_required_property_booleans(schema);
     rewrite_dependencies_string_form(schema);
+    rewrite_format(schema);
 
     if (schema.defines("$schema") && schema.at("$schema").is_string() &&
         schema.at("$schema").to_string() == DRAFT_3_URL) {
@@ -141,7 +142,25 @@ private:
       }
     }
 
+    if (has_renamable_draft_3_format(subschema)) {
+      return true;
+    }
+
     return false;
+  }
+
+  static auto
+  has_renamable_draft_3_format(const sourcemeta::core::JSON &subschema)
+      -> bool {
+    if (!subschema.is_object()) {
+      return false;
+    }
+    const auto *format_value{subschema.try_at("format")};
+    if (format_value == nullptr || !format_value->is_string()) {
+      return false;
+    }
+    const auto &name{format_value->to_string()};
+    return name == "host-name" || name == "ip-address";
   }
 
   static auto rewrite_type_any(sourcemeta::core::JSON &schema) -> void {
@@ -377,6 +396,22 @@ private:
       auto array{sourcemeta::core::JSON::make_array()};
       array.push_back(sourcemeta::core::JSON{value});
       dependencies.assign(key, std::move(array));
+    }
+  }
+
+  static auto rewrite_format(sourcemeta::core::JSON &schema) -> void {
+    if (!schema.defines("format")) {
+      return;
+    }
+    auto &format_value{schema.at("format")};
+    if (!format_value.is_string()) {
+      return;
+    }
+    const auto &name{format_value.to_string()};
+    if (name == "host-name") {
+      schema.assign("format", sourcemeta::core::JSON{"hostname"});
+    } else if (name == "ip-address") {
+      schema.assign("format", sourcemeta::core::JSON{"ipv4"});
     }
   }
 
