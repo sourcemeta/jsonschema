@@ -268,6 +268,9 @@ unevaluated_items_default
 unevaluated_properties_default
   Setting the `unevaluatedProperties` keyword to the true schema does not add any further constraint
 
+unknown_format_prefix
+  For interoperability purposes, the JSON Schema specification advises against the use of `format` values that are not explicitly defined by the specification
+
 unknown_keywords_prefix
   Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix
 
@@ -307,7 +310,7 @@ valid_default
 valid_examples
   Only include instances in the `examples` array that validate against the schema
 
-Number of rules: 99
+Number of rules: 100
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
