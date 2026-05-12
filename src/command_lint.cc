@@ -1,4 +1,5 @@
 #include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonschema.h>
@@ -8,9 +9,9 @@
 
 #include <cstdlib>    // EXIT_SUCCESS
 #include <filesystem> // std::filesystem::current_path
-#include <fstream>    // std::ofstream, std::ifstream
 #include <iostream>   // std::cerr, std::cout
 #include <numeric>    // std::accumulate
+#include <ostream>    // std::ostream
 #include <sstream>    // std::ostringstream
 
 #include "command.h"
@@ -513,18 +514,20 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
           sourcemeta::core::prettify(copy, expected, indentation);
           expected << "\n";
 
-          std::ifstream current_stream{entry.resolution_base};
-          std::ostringstream current;
-          current << current_stream.rdbuf();
+          const auto current{
+              sourcemeta::core::read_file_to_string(entry.resolution_base)};
 
-          if (current.str() != expected.str()) {
-            std::ofstream output{entry.resolution_base};
-            output << expected.str();
+          if (current != expected.str()) {
+            sourcemeta::core::atomic_write_file(entry.resolution_base,
+                                                expected.str());
           }
         } else if (copy != entry.second) {
-          std::ofstream output{entry.resolution_base};
-          sourcemeta::core::prettify(copy, output, indentation);
-          output << "\n";
+          sourcemeta::core::atomic_write_file(
+              entry.resolution_base,
+              [&copy, &indentation](std::ostream &stream) -> void {
+                sourcemeta::core::prettify(copy, stream, indentation);
+                stream << "\n";
+              });
         }
       } else {
         throw Fail{wrapper_result};

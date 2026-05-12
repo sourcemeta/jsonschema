@@ -1,9 +1,11 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/uritemplate.h>
 
+#include <algorithm>     // std::ranges::sort
 #include <array>         // std::array
 #include <cassert>       // assert
 #include <cstring>       // std::memcmp, std::memcpy
-#include <fstream>       // std::ofstream, std::ifstream
+#include <fstream>       // std::ofstream
 #include <limits>        // std::numeric_limits
 #include <queue>         // std::queue
 #include <string>        // std::string
@@ -17,7 +19,7 @@ namespace sourcemeta::core {
 namespace {
 
 constexpr std::uint32_t ROUTER_MAGIC = 0x52544552; // "RTER"
-constexpr std::uint32_t ROUTER_VERSION = 5;
+constexpr std::uint32_t ROUTER_VERSION = 6;
 constexpr std::uint32_t NO_CHILD = std::numeric_limits<std::uint32_t>::max();
 
 // Type tags for argument value serialization
@@ -31,15 +33,29 @@ struct RouterHeader {
   std::uint32_t node_count;
   std::uint32_t string_table_offset;
   std::uint32_t arguments_offset;
+  std::uint32_t operations_offset;
   std::uint32_t base_path_offset;
   std::uint32_t base_path_length;
   std::uint32_t otherwise_context;
+  std::uint32_t padding;
 };
 
 struct ArgumentEntryHeader {
   std::uint16_t identifier;
   std::uint32_t blob_offset;
   std::uint32_t blob_length;
+};
+
+constexpr std::size_t OPERATION_ENTRY_SIZE =
+    sizeof(std::uint32_t) + sizeof(std::uint32_t) +
+    sizeof(URITemplateRouter::Identifier) +
+    sizeof(URITemplateRouter::Identifier);
+
+struct OperationEntry {
+  std::uint32_t string_offset;
+  std::uint32_t string_length;
+  URITemplateRouter::Identifier identifier;
+  URITemplateRouter::Identifier context;
 };
 
 struct alignas(8) SerializedNode {
@@ -65,101 +81,6 @@ finalize_match(const URITemplateRouter::Identifier otherwise_context,
   }
 
   return {identifier, context};
-}
-
-inline auto count_base_path_segments(const std::string_view base_path) noexcept
-    -> std::uint32_t {
-  std::uint32_t count = 0;
-  std::size_t position = 0;
-  while (position < base_path.size()) {
-    while (position < base_path.size() && base_path[position] == '/') {
-      ++position;
-    }
-    if (position >= base_path.size()) {
-      break;
-    }
-    while (position < base_path.size() && base_path[position] != '/') {
-      ++position;
-    }
-    ++count;
-  }
-  return count;
-}
-
-inline auto reconstruct_path_recursive(
-    const SerializedNode *nodes, const std::uint32_t node_count,
-    const char *string_table, const std::size_t string_table_size,
-    const std::uint32_t node_index, const std::uint32_t depth,
-    const std::uint32_t base_path_depth,
-    const URITemplateRouter::Identifier target, std::string &accumulator)
-    -> bool {
-  if (node_index >= node_count) {
-    return false;
-  }
-
-  const auto &node = nodes[node_index];
-
-  if (node.string_offset > string_table_size ||
-      node.string_length > string_table_size - node.string_offset) {
-    return false;
-  }
-
-  const std::string_view value{string_table + node.string_offset,
-                               node.string_length};
-
-  if (depth > base_path_depth) {
-    switch (node.type) {
-      case URITemplateRouter::NodeType::Literal:
-        accumulator += '/';
-        accumulator.append(value.data(), value.size());
-        break;
-      case URITemplateRouter::NodeType::Variable:
-        accumulator += "/{";
-        accumulator.append(value.data(), value.size());
-        accumulator += '}';
-        break;
-      case URITemplateRouter::NodeType::Expansion:
-        accumulator += "/{+";
-        accumulator.append(value.data(), value.size());
-        accumulator += '}';
-        break;
-      default:
-        break;
-    }
-  }
-
-  if (node.identifier == target) {
-    return true;
-  }
-
-  const auto saved_length = accumulator.size();
-
-  if (node.first_literal_child != NO_CHILD &&
-      node.first_literal_child < node_count &&
-      node.literal_child_count <= node_count - node.first_literal_child) {
-    for (std::uint32_t offset = 0; offset < node.literal_child_count;
-         ++offset) {
-      if (reconstruct_path_recursive(
-              nodes, node_count, string_table, string_table_size,
-              node.first_literal_child + offset, depth + 1, base_path_depth,
-              target, accumulator)) {
-        return true;
-      }
-      accumulator.resize(saved_length);
-    }
-  }
-
-  if (node.variable_child != NO_CHILD && node.variable_child < node_count) {
-    if (reconstruct_path_recursive(nodes, node_count, string_table,
-                                   string_table_size, node.variable_child,
-                                   depth + 1, base_path_depth, target,
-                                   accumulator)) {
-      return true;
-    }
-    accumulator.resize(saved_length);
-  }
-
-  return false;
 }
 
 // Binary search for a literal child matching the given segment
@@ -352,6 +273,28 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
     argument_entries.push_back(entry);
   }
 
+  std::vector<OperationEntry> operation_entries;
+  operation_entries.reserve(router.operations_.size());
+  for (const auto &[operation_id, route] : router.operations_) {
+    OperationEntry entry{};
+    entry.string_offset = static_cast<std::uint32_t>(string_table.size());
+    entry.string_length = static_cast<std::uint32_t>(operation_id.size());
+    entry.identifier = route.first;
+    entry.context = route.second;
+    string_table.append(operation_id.data(), operation_id.size());
+    operation_entries.push_back(entry);
+  }
+
+  std::ranges::sort(
+      operation_entries, {}, [&string_table](const OperationEntry &entry) {
+        return std::string_view{string_table.data() + entry.string_offset,
+                                entry.string_length};
+      });
+
+  assert(operation_entries.size() <= std::numeric_limits<std::uint16_t>::max());
+  const auto operation_count =
+      static_cast<std::uint16_t>(operation_entries.size());
+
   // Append the base path to the string table
   const auto base_path_string_offset =
       static_cast<std::uint32_t>(string_table.size());
@@ -366,6 +309,11 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
       sizeof(RouterHeader) + nodes.size() * sizeof(SerializedNode));
   header.arguments_offset = static_cast<std::uint32_t>(
       header.string_table_offset + string_table.size());
+  header.operations_offset = static_cast<std::uint32_t>(
+      header.arguments_offset + sizeof(std::uint16_t) +
+      argument_entries.size() * (sizeof(std::uint16_t) + sizeof(std::uint32_t) +
+                                 sizeof(std::uint32_t)) +
+      argument_blob.size());
   header.base_path_offset = base_path_string_offset;
   header.base_path_length = static_cast<std::uint32_t>(base_path_value.size());
   header.otherwise_context = router.otherwise_.context;
@@ -398,6 +346,19 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
                static_cast<std::streamsize>(argument_blob.size()));
   }
 
+  file.write(reinterpret_cast<const char *>(&operation_count),
+             sizeof(operation_count));
+  for (const auto &entry : operation_entries) {
+    file.write(reinterpret_cast<const char *>(&entry.string_offset),
+               sizeof(entry.string_offset));
+    file.write(reinterpret_cast<const char *>(&entry.string_length),
+               sizeof(entry.string_length));
+    file.write(reinterpret_cast<const char *>(&entry.identifier),
+               sizeof(entry.identifier));
+    file.write(reinterpret_cast<const char *>(&entry.context),
+               sizeof(entry.context));
+  }
+
   if (!file) {
     throw URITemplateRouterSaveError{path,
                                      "Failed to write router data to file"};
@@ -405,41 +366,30 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
 }
 
 URITemplateRouterView::URITemplateRouterView(
-    const std::filesystem::path &path) {
-  std::ifstream file(path, std::ios::binary | std::ios::ate);
-  if (!file) {
-    throw URITemplateRouterReadError{path};
-  }
-
-  const auto position = file.tellg();
-  if (position < 0) {
-    throw URITemplateRouterReadError{path};
-  }
-
-  const auto size = static_cast<std::size_t>(position);
-  file.seekg(0, std::ios::beg);
-  this->data_.resize(size);
-  file.read(reinterpret_cast<char *>(this->data_.data()),
-            static_cast<std::streamsize>(size));
-  if (!file) {
-    throw URITemplateRouterReadError{path};
-  }
+    const std::filesystem::path &path) try
+    : owner_{std::make_unique<FileView>(path)} {
+  this->data_ =
+      this->owner_->size() > 0 ? this->owner_->as<std::uint8_t>(0) : nullptr;
+  this->size_ = this->owner_->size();
+} catch (const FileViewError &) {
+  throw URITemplateRouterReadError{path};
 }
 
 URITemplateRouterView::URITemplateRouterView(const std::uint8_t *data,
                                              const std::size_t size)
-    : data_{data, data + size} {}
+    : data_{data}, size_{size} {}
+
+URITemplateRouterView::~URITemplateRouterView() = default;
 
 auto URITemplateRouterView::match(
     const std::string_view path,
     const URITemplateRouter::Callback &callback) const
     -> std::pair<URITemplateRouter::Identifier, URITemplateRouter::Identifier> {
-  if (this->data_.size() < sizeof(RouterHeader)) {
+  if (this->size_ < sizeof(RouterHeader)) {
     return {};
   }
 
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
   if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
     return {};
   }
@@ -448,28 +398,28 @@ auto URITemplateRouterView::match(
       static_cast<URITemplateRouter::Identifier>(header->otherwise_context);
 
   if (header->node_count == 0 ||
-      header->node_count > (this->data_.size() - sizeof(RouterHeader)) /
-                               sizeof(SerializedNode)) {
+      header->node_count >
+          (this->size_ - sizeof(RouterHeader)) / sizeof(SerializedNode)) {
     return finalize_match(otherwise_context, 0, 0);
   }
 
   const auto *nodes = reinterpret_cast<const SerializedNode *>(
-      this->data_.data() + sizeof(RouterHeader));
+      this->data_ + sizeof(RouterHeader));
   const auto nodes_size =
       static_cast<std::size_t>(header->node_count) * sizeof(SerializedNode);
   const auto expected_string_table_offset = sizeof(RouterHeader) + nodes_size;
   if (header->string_table_offset < expected_string_table_offset ||
-      header->string_table_offset > this->data_.size()) {
+      header->string_table_offset > this->size_) {
     return finalize_match(otherwise_context, 0, 0);
   }
 
   if (header->arguments_offset < header->string_table_offset ||
-      header->arguments_offset > this->data_.size()) {
+      header->arguments_offset > this->size_) {
     return finalize_match(otherwise_context, 0, 0);
   }
 
-  const auto *string_table = reinterpret_cast<const char *>(
-      this->data_.data() + header->string_table_offset);
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
   const auto string_table_size =
       header->arguments_offset - header->string_table_offset;
 
@@ -605,19 +555,18 @@ auto URITemplateRouterView::match(
 auto URITemplateRouterView::arguments(
     const URITemplateRouter::Identifier identifier,
     const URITemplateRouter::ArgumentCallback &callback) const -> void {
-  if (this->data_.size() < sizeof(RouterHeader)) {
+  if (this->size_ < sizeof(RouterHeader)) {
     return;
   }
 
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
   if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
     return;
   }
 
   const auto arguments_start =
       static_cast<std::size_t>(header->arguments_offset);
-  const auto data_size = this->data_.size();
+  const auto data_size = this->size_;
   if (arguments_start >= data_size) {
     return;
   }
@@ -628,8 +577,7 @@ auto URITemplateRouterView::arguments(
   }
 
   std::uint16_t entry_count = 0;
-  std::memcpy(&entry_count, this->data_.data() + arguments_start,
-              sizeof(entry_count));
+  std::memcpy(&entry_count, this->data_ + arguments_start, sizeof(entry_count));
   if (entry_count == 0) {
     return;
   }
@@ -648,7 +596,7 @@ auto URITemplateRouterView::arguments(
     const auto entry_offset = entries_offset + index * ENTRY_SIZE;
 
     std::uint16_t entry_identifier = 0;
-    std::memcpy(&entry_identifier, this->data_.data() + entry_offset,
+    std::memcpy(&entry_identifier, this->data_ + entry_offset,
                 sizeof(entry_identifier));
     if (entry_identifier != identifier) {
       continue;
@@ -657,10 +605,10 @@ auto URITemplateRouterView::arguments(
     std::uint32_t blob_offset = 0;
     std::uint32_t blob_length = 0;
     std::memcpy(&blob_offset,
-                this->data_.data() + entry_offset + sizeof(std::uint16_t),
+                this->data_ + entry_offset + sizeof(std::uint16_t),
                 sizeof(blob_offset));
     std::memcpy(&blob_length,
-                this->data_.data() + entry_offset + sizeof(std::uint16_t) +
+                this->data_ + entry_offset + sizeof(std::uint16_t) +
                     sizeof(std::uint32_t),
                 sizeof(blob_length));
 
@@ -672,8 +620,7 @@ auto URITemplateRouterView::arguments(
     }
 
     std::uint16_t arg_count = 0;
-    std::memcpy(&arg_count, this->data_.data() + blob_abs_offset,
-                sizeof(arg_count));
+    std::memcpy(&arg_count, this->data_ + blob_abs_offset, sizeof(arg_count));
     auto cursor = blob_abs_offset + sizeof(arg_count);
     const auto blob_end = blob_abs_offset + blob_length;
 
@@ -683,15 +630,14 @@ auto URITemplateRouterView::arguments(
       }
 
       std::uint16_t key_length = 0;
-      std::memcpy(&key_length, this->data_.data() + cursor, sizeof(key_length));
+      std::memcpy(&key_length, this->data_ + cursor, sizeof(key_length));
       cursor += sizeof(key_length);
       if (key_length > blob_end - cursor) {
         return;
       }
 
       const std::string_view name{
-          reinterpret_cast<const char *>(this->data_.data() + cursor),
-          key_length};
+          reinterpret_cast<const char *>(this->data_ + cursor), key_length};
       cursor += key_length;
 
       if (cursor + sizeof(std::uint8_t) + sizeof(std::uint16_t) > blob_end) {
@@ -701,8 +647,7 @@ auto URITemplateRouterView::arguments(
       const auto type_tag = this->data_[cursor];
       cursor += sizeof(std::uint8_t);
       std::uint16_t value_length = 0;
-      std::memcpy(&value_length, this->data_.data() + cursor,
-                  sizeof(value_length));
+      std::memcpy(&value_length, this->data_ + cursor, sizeof(value_length));
       cursor += sizeof(value_length);
       if (value_length > blob_end - cursor) {
         return;
@@ -711,7 +656,7 @@ auto URITemplateRouterView::arguments(
       switch (type_tag) {
         case ARGUMENT_TYPE_STRING: {
           const std::string_view string_value{
-              reinterpret_cast<const char *>(this->data_.data() + cursor),
+              reinterpret_cast<const char *>(this->data_ + cursor),
               value_length};
           callback(name, string_value);
           break;
@@ -723,7 +668,7 @@ auto URITemplateRouterView::arguments(
           }
 
           std::int64_t integer_value = 0;
-          std::memcpy(&integer_value, this->data_.data() + cursor, 8);
+          std::memcpy(&integer_value, this->data_ + cursor, 8);
           callback(name, integer_value);
           break;
         }
@@ -749,12 +694,11 @@ auto URITemplateRouterView::arguments(
 }
 
 auto URITemplateRouterView::base_path() const noexcept -> std::string_view {
-  if (this->data_.size() < sizeof(RouterHeader)) {
+  if (this->size_ < sizeof(RouterHeader)) {
     return {};
   }
 
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
   if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
     return {};
   }
@@ -763,14 +707,14 @@ auto URITemplateRouterView::base_path() const noexcept -> std::string_view {
     return {};
   }
 
-  if (header->string_table_offset > this->data_.size() ||
+  if (header->string_table_offset > this->size_ ||
       header->arguments_offset < header->string_table_offset ||
-      header->arguments_offset > this->data_.size()) {
+      header->arguments_offset > this->size_) {
     return {};
   }
 
-  const auto *string_table = reinterpret_cast<const char *>(
-      this->data_.data() + header->string_table_offset);
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
   const auto string_table_size =
       header->arguments_offset - header->string_table_offset;
   if (header->base_path_offset > string_table_size ||
@@ -782,24 +726,23 @@ auto URITemplateRouterView::base_path() const noexcept -> std::string_view {
 }
 
 auto URITemplateRouterView::size() const noexcept -> std::size_t {
-  if (this->data_.size() < sizeof(RouterHeader)) {
+  if (this->size_ < sizeof(RouterHeader)) {
     return 0;
   }
 
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
   if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
     return 0;
   }
 
   if (header->node_count == 0 ||
-      header->node_count > (this->data_.size() - sizeof(RouterHeader)) /
-                               sizeof(SerializedNode)) {
+      header->node_count >
+          (this->size_ - sizeof(RouterHeader)) / sizeof(SerializedNode)) {
     return 0;
   }
 
   const auto *nodes = reinterpret_cast<const SerializedNode *>(
-      this->data_.data() + sizeof(RouterHeader));
+      this->data_ + sizeof(RouterHeader));
 
   std::size_t count = 0;
   for (std::uint32_t index = 0; index < header->node_count; ++index) {
@@ -811,93 +754,101 @@ auto URITemplateRouterView::size() const noexcept -> std::size_t {
   return count;
 }
 
-auto URITemplateRouterView::at(const std::size_t index) const
-    -> URITemplateRouter::Identifier {
-  assert(this->data_.size() >= sizeof(RouterHeader));
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
-  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
-  assert(header->node_count > 0 &&
-         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
-                                   sizeof(SerializedNode));
+auto URITemplateRouterView::operation(const std::string_view operation_id) const
+    -> std::pair<URITemplateRouter::Identifier, URITemplateRouter::Identifier> {
+  constexpr std::pair<URITemplateRouter::Identifier,
+                      URITemplateRouter::Identifier>
+      miss{URITemplateRouter::Identifier{0}, URITemplateRouter::Identifier{0}};
 
-  const auto *nodes = reinterpret_cast<const SerializedNode *>(
-      this->data_.data() + sizeof(RouterHeader));
-
-  std::size_t count = 0;
-  for (std::uint32_t node_index = 0; node_index < header->node_count;
-       ++node_index) {
-    if (nodes[node_index].identifier != 0) {
-      if (count == index) {
-        return nodes[node_index].identifier;
-      }
-      ++count;
-    }
+  if (this->size_ < sizeof(RouterHeader)) {
+    return miss;
   }
 
-  assert(false);
-  return 0;
-}
-
-auto URITemplateRouterView::context(
-    const URITemplateRouter::Identifier identifier) const
-    -> URITemplateRouter::Identifier {
-  assert(identifier > 0);
-  assert(this->data_.size() >= sizeof(RouterHeader));
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
-  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
-  assert(header->node_count > 0 &&
-         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
-                                   sizeof(SerializedNode));
-
-  const auto *nodes = reinterpret_cast<const SerializedNode *>(
-      this->data_.data() + sizeof(RouterHeader));
-
-  for (std::uint32_t node_index = 0; node_index < header->node_count;
-       ++node_index) {
-    if (nodes[node_index].identifier == identifier) {
-      return nodes[node_index].context;
-    }
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return miss;
   }
 
-  assert(false);
-  return 0;
-}
+  const auto operations_start =
+      static_cast<std::size_t>(header->operations_offset);
+  if (operations_start > this->size_ ||
+      this->size_ - operations_start < sizeof(std::uint16_t)) {
+    return miss;
+  }
 
-auto URITemplateRouterView::path(
-    const URITemplateRouter::Identifier identifier) const -> std::string {
-  assert(identifier > 0);
-  assert(this->data_.size() >= sizeof(RouterHeader));
-  const auto *header =
-      reinterpret_cast<const RouterHeader *>(this->data_.data());
-  assert(header->magic == ROUTER_MAGIC && header->version == ROUTER_VERSION);
-  assert(header->node_count > 0 &&
-         header->node_count <= (this->data_.size() - sizeof(RouterHeader)) /
-                                   sizeof(SerializedNode));
-  assert(header->string_table_offset >=
-             sizeof(RouterHeader) +
-                 header->node_count * sizeof(SerializedNode) &&
-         header->string_table_offset <= this->data_.size());
-  assert(header->arguments_offset >= header->string_table_offset &&
-         header->arguments_offset <= this->data_.size());
+  std::uint16_t entry_count = 0;
+  std::memcpy(&entry_count, this->data_ + operations_start,
+              sizeof(entry_count));
+  if (entry_count == 0) {
+    return miss;
+  }
 
-  const auto *nodes = reinterpret_cast<const SerializedNode *>(
-      this->data_.data() + sizeof(RouterHeader));
-  const auto *string_table = reinterpret_cast<const char *>(
-      this->data_.data() + header->string_table_offset);
+  const auto entries_offset = operations_start + sizeof(entry_count);
+  const auto entries_size =
+      static_cast<std::size_t>(entry_count) * OPERATION_ENTRY_SIZE;
+  if (entries_size > this->size_ - entries_offset) {
+    return miss;
+  }
+
+  if (header->string_table_offset > this->size_ ||
+      header->arguments_offset < header->string_table_offset ||
+      header->arguments_offset > this->size_) {
+    return miss;
+  }
+
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
   const auto string_table_size =
       header->arguments_offset - header->string_table_offset;
 
-  const auto base_path_depth = count_base_path_segments(this->base_path());
+  std::uint32_t low = 0;
+  std::uint32_t high = entry_count;
+  while (low < high) {
+    const auto middle = low + (high - low) / 2;
+    const auto entry_offset =
+        entries_offset +
+        static_cast<std::size_t>(middle) * OPERATION_ENTRY_SIZE;
 
-  std::string accumulator;
-  [[maybe_unused]] const auto found = reconstruct_path_recursive(
-      nodes, header->node_count, string_table, string_table_size, 0, 0,
-      base_path_depth, identifier, accumulator);
+    OperationEntry entry{};
+    std::memcpy(&entry.string_offset, this->data_ + entry_offset,
+                sizeof(entry.string_offset));
+    std::memcpy(&entry.string_length,
+                this->data_ + entry_offset + sizeof(entry.string_offset),
+                sizeof(entry.string_length));
+    std::memcpy(&entry.identifier,
+                this->data_ + entry_offset + sizeof(entry.string_offset) +
+                    sizeof(entry.string_length),
+                sizeof(entry.identifier));
+    std::memcpy(&entry.context,
+                this->data_ + entry_offset + sizeof(entry.string_offset) +
+                    sizeof(entry.string_length) + sizeof(entry.identifier),
+                sizeof(entry.context));
 
-  assert(found);
-  return accumulator;
+    if (entry.string_offset > string_table_size ||
+        entry.string_length > string_table_size - entry.string_offset) {
+      return miss;
+    }
+
+    const auto min_length = operation_id.size() < entry.string_length
+                                ? operation_id.size()
+                                : entry.string_length;
+    const auto content_comparison = std::memcmp(
+        operation_id.data(), string_table + entry.string_offset, min_length);
+    const auto comparison = content_comparison != 0
+                                ? content_comparison
+                                : static_cast<int>(operation_id.size()) -
+                                      static_cast<int>(entry.string_length);
+
+    if (comparison < 0) {
+      high = middle;
+    } else if (comparison > 0) {
+      low = middle + 1;
+    } else {
+      return {entry.identifier, entry.context};
+    }
+  }
+
+  return miss;
 }
 
 } // namespace sourcemeta::core

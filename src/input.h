@@ -127,7 +127,7 @@ merge_configuration_ignore(const std::filesystem::path &configuration_path,
                            const sourcemeta::core::Options &options) -> void {
   try {
     const auto configuration{sourcemeta::blaze::Configuration::read_json(
-        configuration_path, configuration_reader)};
+        configuration_path, sourcemeta::core::read_file_to_string<>)};
     for (const auto &ignore_path : configuration.ignore) {
       LOG_VERBOSE(options) << "Ignoring path from configuration: "
                            << ignore_path << "\n";
@@ -200,9 +200,7 @@ inline auto read_file(const std::filesystem::path &path) -> ParsedJSON {
 
 // Read stdin into a buffer and try JSON first, then YAML
 inline auto read_from_stdin(std::string *raw_input = nullptr) -> ParsedJSON {
-  std::ostringstream buffer;
-  buffer << std::cin.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{sourcemeta::core::read_stdin()};
   if (raw_input != nullptr) {
     *raw_input = input;
   }

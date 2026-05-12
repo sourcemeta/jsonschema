@@ -6,15 +6,20 @@
 #endif
 
 // NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/io_atomic.h>
+#include <sourcemeta/core/io_binary.h>
 #include <sourcemeta/core/io_error.h>
 #include <sourcemeta/core/io_fileview.h>
 #include <sourcemeta/core/io_temporary.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <cassert>    // assert
-#include <filesystem> // std::filesystem
-#include <fstream>    // std::basic_ifstream
-#include <string>     // std::char_traits
+#include <filesystem>   // std::filesystem
+#include <fstream>      // std::basic_ifstream
+#include <iostream>     // std::cin
+#include <istream>      // std::basic_istream
+#include <sstream>      // std::basic_ostringstream
+#include <string>       // std::basic_string, std::char_traits, std::string
+#include <system_error> // std::error_code
 
 /// @defgroup io I/O
 /// @brief A growing collection of I/O utilities
@@ -88,17 +93,110 @@ template <typename CharT = char, typename Traits = std::char_traits<CharT>>
 auto read_file(const std::filesystem::path &path)
     -> std::basic_ifstream<CharT, Traits> {
   if (std::filesystem::is_directory(path)) {
-    throw std::filesystem::filesystem_error(
-        "Cannot open a directory as a file", path,
-        std::make_error_code(std::errc::is_a_directory));
+    throw IOIsADirectoryError{path};
   }
 
-  std::ifstream stream{sourcemeta::core::canonical(path)};
+  const auto canonical_path{sourcemeta::core::canonical(path)};
+  std::ifstream stream{canonical_path};
+  if (!stream.is_open()) {
+    throw IOFilePermissionError{canonical_path};
+  }
+
   stream.exceptions(std::ifstream::badbit);
-  assert(!stream.fail());
-  assert(stream.is_open());
   return stream;
 }
+
+/// @ingroup io
+///
+/// Drain an input stream into a string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <sstream>
+/// #include <cassert>
+///
+/// std::istringstream stream{"hello"};
+/// const auto contents{sourcemeta::core::read_to_string(stream)};
+/// assert(contents == "hello");
+/// ```
+template <typename CharT = char, typename Traits = std::char_traits<CharT>>
+auto read_to_string(std::basic_istream<CharT, Traits> &stream)
+    -> std::basic_string<CharT, Traits> {
+  const auto start{stream.tellg()};
+  if (start != static_cast<std::streampos>(-1)) {
+    stream.seekg(0, std::ios::end);
+    const auto end{stream.tellg()};
+    stream.seekg(start);
+    if (end > start) {
+      std::basic_string<CharT, Traits> result;
+      result.resize(static_cast<std::size_t>(end - start));
+      stream.read(result.data(), static_cast<std::streamsize>(result.size()));
+      // Text-mode reads may return fewer characters than the byte count
+      // (i.e. CRLF collapses to LF on Windows), so trim to actual.
+      result.resize(static_cast<std::size_t>(stream.gcount()));
+      return result;
+    }
+  }
+
+  std::basic_ostringstream<CharT, Traits> buffer;
+  buffer << stream.rdbuf();
+  return buffer.str();
+}
+
+/// @ingroup io
+///
+/// Read an entire file into a string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// const auto contents{sourcemeta::core::read_file_to_string("/tmp/foo.json")};
+/// assert(!contents.empty());
+/// ```
+template <typename CharT = char, typename Traits = std::char_traits<CharT>>
+auto read_file_to_string(const std::filesystem::path &path)
+    -> std::basic_string<CharT, Traits> {
+  if (std::filesystem::is_directory(path)) {
+    throw IOIsADirectoryError{path};
+  }
+
+  const auto canonical_path{sourcemeta::core::canonical(path)};
+  std::basic_ifstream<CharT, Traits> stream{canonical_path};
+  if (!stream.is_open()) {
+    throw IOFilePermissionError{canonical_path};
+  }
+
+  stream.exceptions(std::basic_ifstream<CharT, Traits>::badbit);
+
+  // `file_size` only works on regular files, so when it cannot determine a
+  // size (FIFOs from process substitution, sockets, pipes, or any other
+  // stat failure) fall back to a streaming read on the already-open stream.
+  std::error_code file_size_error;
+  const auto size{std::filesystem::file_size(canonical_path, file_size_error)};
+  if (file_size_error) {
+    return read_to_string<CharT, Traits>(stream);
+  }
+
+  std::basic_string<CharT, Traits> result;
+  result.resize(static_cast<std::size_t>(size));
+  stream.read(result.data(), static_cast<std::streamsize>(result.size()));
+  // Text-mode reads may return fewer characters than the byte count
+  // (i.e. CRLF collapses to LF on Windows), so trim to actual.
+  result.resize(static_cast<std::size_t>(stream.gcount()));
+  return result;
+}
+
+/// @ingroup io
+///
+/// Drain `std::cin` fully into a string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+///
+/// const auto input{sourcemeta::core::read_stdin()};
+/// ```
+inline auto read_stdin() -> std::string { return read_to_string(std::cin); }
 
 /// @ingroup io
 ///
@@ -115,24 +213,6 @@ auto read_file(const std::filesystem::path &path)
 SOURCEMETA_CORE_IO_EXPORT
 auto hardlink_directory(const std::filesystem::path &source,
                         const std::filesystem::path &destination) -> void;
-
-/// @ingroup io
-///
-/// Atomically swap two directories. Both directories must reside on the same
-/// filesystem and the original path must not be a bare filename (it must have
-/// a parent component). After the call, the original path holds the contents
-/// of the replacement and the replacement path holds the former contents of
-/// the original. If the original does not exist, the replacement is simply
-/// renamed into place and the replacement path will no longer exist.
-///
-/// ```cpp
-/// #include <sourcemeta/core/io.h>
-///
-/// sourcemeta::core::atomic_directory_swap("/output", "/staging");
-/// ```
-SOURCEMETA_CORE_IO_EXPORT
-auto atomic_directory_swap(const std::filesystem::path &original,
-                           const std::filesystem::path &replacement) -> void;
 
 /// @ingroup io
 ///

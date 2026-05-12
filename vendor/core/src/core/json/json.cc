@@ -8,15 +8,12 @@
 #include "parser.h"
 #include "stringify.h"
 
-#include <cassert>      // assert
-#include <cstdint>      // std::uint64_t
-#include <filesystem>   // std::filesystem
-#include <fstream>      // std::ifstream
-#include <istream>      // std::basic_istream
-#include <ostream>      // std::basic_ostream
-#include <sstream>      // std::basic_ostringstream
-#include <system_error> // std::make_error_code, std::errc
-#include <vector>       // std::vector
+#include <cassert>    // assert
+#include <cstdint>    // std::uint64_t
+#include <filesystem> // std::filesystem
+#include <istream>    // std::basic_istream
+#include <ostream>    // std::basic_ostream
+#include <vector>     // std::vector
 
 namespace sourcemeta::core {
 
@@ -57,9 +54,7 @@ static auto internal_parse_json(const char *&cursor, const char *end,
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 std::uint64_t &line, std::uint64_t &column) -> JSON {
   const auto start_position{stream.tellg()};
-  std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   auto result{internal_parse_json(cursor, end, line, column, true)};
@@ -83,9 +78,7 @@ auto parse_json(
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> JSON {
   const auto start_position{stream.tellg()};
-  std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   std::uint64_t line{1};
@@ -109,9 +102,8 @@ auto parse_json(
 }
 
 auto read_json(const std::filesystem::path &path) -> JSON {
-  auto stream{read_file<JSON::Char, JSON::CharTraits>(path)};
   try {
-    return parse_json(stream);
+    return parse_json(read_file_to_string(path));
   } catch (const JSONParseError &error) {
     // For producing better error messages
     throw JSONFileParseError(path, error);
@@ -123,9 +115,7 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 std::uint64_t &line, std::uint64_t &column, JSON &output,
                 const JSON::ParseCallback &callback) -> void {
   const auto start_position{stream.tellg()};
-  std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   internal_parse_json(cursor, end, line, column, callback, true, output);
@@ -149,9 +139,7 @@ auto parse_json(
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 JSON &output, const JSON::ParseCallback &callback) -> void {
   const auto start_position{stream.tellg()};
-  std::basic_ostringstream<JSON::Char, JSON::CharTraits> buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
   const char *cursor{input.data()};
   const char *end{input.data() + input.size()};
   std::uint64_t line{1};
@@ -176,9 +164,8 @@ auto parse_json(
 
 auto read_json(const std::filesystem::path &path, JSON &output,
                const JSON::ParseCallback &callback) -> void {
-  auto stream{read_file<JSON::Char, JSON::CharTraits>(path)};
   try {
-    parse_json(stream, output, callback);
+    parse_json(read_file_to_string(path), output, callback);
   } catch (const JSONParseError &error) {
     // For producing better error messages
     throw JSONFileParseError(path, error);

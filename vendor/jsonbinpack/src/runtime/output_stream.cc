@@ -2,38 +2,31 @@
 
 #include <sourcemeta/core/numeric.h>
 
-#include "varint.h"
-
 #include <cassert> // assert
-#include <ios>     // std::ios_base
+#include <cstdint> // std::uint8_t, std::uint64_t, std::int64_t
 
 namespace sourcemeta::jsonbinpack {
 
-OutputStream::OutputStream(Stream &output) : stream{output} {
-  this->stream.exceptions(std::ios_base::badbit | std::ios_base::failbit |
-                          std::ios_base::eofbit);
-}
-
-auto OutputStream::position() const noexcept -> std::uint64_t {
-  return static_cast<std::uint64_t>(this->stream.tellp());
-}
-
-auto OutputStream::put_byte(const std::uint8_t byte) -> void {
-  this->stream.put(static_cast<sourcemeta::core::JSON::Char>(byte));
-}
-
-auto OutputStream::put_bytes(const std::uint16_t bytes) -> void {
-  this->stream.write(
-      reinterpret_cast<const sourcemeta::core::JSON::Char *>(&bytes),
-      sizeof bytes);
-}
+OutputStream::OutputStream(Stream &output)
+    : sourcemeta::core::BinaryWriter{output} {}
 
 auto OutputStream::put_varint(const std::uint64_t value) -> void {
-  varint_encode(this->stream, value);
+  constexpr std::uint8_t LEAST_SIGNIFICANT_BITS{0b01111111};
+  constexpr std::uint8_t MOST_SIGNIFICANT_BIT{0b10000000};
+  constexpr std::uint8_t SHIFT{7};
+  std::uint64_t accumulator = value;
+
+  while (accumulator > LEAST_SIGNIFICANT_BITS) {
+    this->put_byte(static_cast<std::uint8_t>(
+        (accumulator & LEAST_SIGNIFICANT_BITS) | MOST_SIGNIFICANT_BIT));
+    accumulator >>= SHIFT;
+  }
+
+  this->put_byte(static_cast<std::uint8_t>(accumulator));
 }
 
 auto OutputStream::put_varint_zigzag(const std::int64_t value) -> void {
-  varint_encode(this->stream, sourcemeta::core::zigzag_encode(value));
+  this->put_varint(sourcemeta::core::zigzag_encode(value));
 }
 
 auto OutputStream::put_string_utf8(const sourcemeta::core::JSON::String &string,

@@ -5,18 +5,21 @@
 #include <sourcemeta/core/uritemplate_export.h>
 #endif
 
+#include <sourcemeta/core/io.h>
+
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint16_t, std::uint32_t, std::uint8_t, std::int64_t
-#include <filesystem>  // std::filesystem::path
-#include <functional>  // std::function
-#include <memory>      // std::unique_ptr
-#include <span>        // std::span
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <tuple>       // std::tuple
-#include <utility>     // std::pair
-#include <variant>     // std::variant
-#include <vector>      // std::vector
+#include <filesystem>    // std::filesystem::path
+#include <functional>    // std::function
+#include <memory>        // std::unique_ptr
+#include <span>          // std::span
+#include <string>        // std::string
+#include <string_view>   // std::string_view
+#include <tuple>         // std::tuple
+#include <unordered_map> // std::unordered_map
+#include <utility>       // std::pair
+#include <variant>       // std::variant
+#include <vector>        // std::vector
 
 namespace sourcemeta::core {
 
@@ -84,8 +87,11 @@ public:
   auto operator=(URITemplateRouter &&) -> URITemplateRouter & = delete;
 
   /// Add a route to the router. Make sure the string lifetime survives the
-  /// router
-  auto add(const std::string_view uri_template, const Identifier identifier,
+  /// router. The operation identifier must match the regular expression
+  /// `^[a-zA-Z][a-zA-Z0-9_-]{0,63}$` and must be unique across all routes
+  /// registered on this router
+  auto add(const std::string_view uri_template,
+           const std::string_view operation_id, const Identifier identifier,
            const Identifier context = 0,
            const std::span<const Argument> arguments = {}) -> void;
 
@@ -128,12 +134,20 @@ public:
   /// for the given identifier
   [[nodiscard]] auto path(const Identifier identifier) const -> std::string;
 
+  /// Resolve an operation identifier to its registered route. Returns
+  /// `(identifier, context)` on hit and `(0, 0)` if no route is registered
+  /// under the given operation identifier
+  [[nodiscard]] auto operation(const std::string_view operation_id) const
+      -> std::pair<Identifier, Identifier>;
+
 private:
   Node root_;
   Node otherwise_;
   std::string base_path_;
   std::vector<std::pair<Identifier, std::vector<Argument>>> arguments_;
   std::vector<std::tuple<Identifier, Identifier, std::string_view>> entries_;
+  std::unordered_map<std::string_view, std::pair<Identifier, Identifier>>
+      operations_;
 };
 
 /// @ingroup uritemplate
@@ -145,7 +159,12 @@ public:
                    const std::filesystem::path &path) -> void;
 
   URITemplateRouterView(const std::filesystem::path &path);
+
+  /// Construct a view over an externally-owned buffer. The buffer must
+  /// outlive the view
   URITemplateRouterView(const std::uint8_t *data, std::size_t size);
+
+  ~URITemplateRouterView();
 
   // To avoid mistakes
   URITemplateRouterView(const URITemplateRouterView &) = delete;
@@ -172,23 +191,17 @@ public:
   /// Get the number of registered routes
   [[nodiscard]] auto size() const noexcept -> std::size_t;
 
-  /// Get the identifier of the route at the given positional index
-  [[nodiscard]] auto at(const std::size_t index) const
-      -> URITemplateRouter::Identifier;
-
-  /// Get the context identifier associated with a registered route
-  /// identifier
-  [[nodiscard]] auto
-  context(const URITemplateRouter::Identifier identifier) const
-      -> URITemplateRouter::Identifier;
-
-  /// Reconstruct and return the URI Template path string originally registered
-  /// for the given identifier
-  [[nodiscard]] auto path(const URITemplateRouter::Identifier identifier) const
-      -> std::string;
+  /// Resolve an operation identifier to its registered route. Returns
+  /// `(identifier, context)` on hit and `(0, 0)` if no route is registered
+  /// under the given operation identifier
+  [[nodiscard]] auto operation(const std::string_view operation_id) const
+      -> std::pair<URITemplateRouter::Identifier,
+                   URITemplateRouter::Identifier>;
 
 private:
-  std::vector<std::uint8_t> data_;
+  const std::uint8_t *data_{nullptr};
+  std::size_t size_{0};
+  std::unique_ptr<FileView> owner_;
 };
 
 #if defined(_MSC_VER)

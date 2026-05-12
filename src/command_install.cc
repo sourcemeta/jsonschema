@@ -1,12 +1,13 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
 #include <cassert>    // assert
 #include <cstdint>    // std::uint8_t
 #include <filesystem> // std::filesystem
-#include <fstream>    // std::ofstream
 #include <iostream>   // std::cerr, std::cout
 #include <optional>   // std::optional
+#include <ostream>    // std::ostream
 #include <string>     // std::string
 #include <utility>    // std::move, std::to_underlying
 
@@ -26,17 +27,13 @@ auto padded_label(const std::string_view label) -> std::string {
   return result;
 }
 
-// TODO: Elevate this to Core's IO module
-auto atomic_write(const std::filesystem::path &path,
-                  const sourcemeta::core::JSON &document) -> void {
-  auto temporary_path{path};
-  temporary_path += ".tmp";
-  std::ofstream stream{temporary_path};
-  stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-  sourcemeta::core::prettify(document, stream);
-  stream << "\n";
-  stream.close();
-  std::filesystem::rename(temporary_path, path);
+auto atomic_write_json(const std::filesystem::path &path,
+                       const sourcemeta::core::JSON &document) -> void {
+  sourcemeta::core::atomic_write_file(
+      path, [&document](std::ostream &stream) -> void {
+        sourcemeta::core::prettify(document, stream);
+        stream << "\n";
+      });
 }
 
 auto dependency_fetch(const sourcemeta::core::Options &options,
@@ -301,7 +298,8 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
     if (has_existing_config) {
       try {
         add_configuration = sourcemeta::blaze::Configuration::read_json(
-            configuration_path.value(), configuration_reader);
+            configuration_path.value(),
+            sourcemeta::core::read_file_to_string<>);
       } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
         throw sourcemeta::core::FileError<
             sourcemeta::blaze::ConfigurationParseError>(
@@ -338,7 +336,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
             : sourcemeta::core::JSON::make_object()};
     config_json.assign("dependencies",
                        add_configuration.to_json().at("dependencies"));
-    atomic_write(configuration_path.value(), config_json);
+    atomic_write_json(configuration_path.value(), config_json);
 
     auto relative_target{std::filesystem::relative(
                              absolute_target, add_configuration.absolute_path)
@@ -366,7 +364,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   sourcemeta::blaze::Configuration configuration;
   try {
     configuration = sourcemeta::blaze::Configuration::read_json(
-        configuration_path.value(), configuration_reader);
+        configuration_path.value(), sourcemeta::core::read_file_to_string<>);
   } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::ConfigurationParseError>(
@@ -421,7 +419,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       [](const std::filesystem::path &path,
          const sourcemeta::core::JSON &document) -> void {
         std::filesystem::create_directories(path.parent_path());
-        atomic_write(path, document);
+        atomic_write_json(path, document);
       }};
 
   const sourcemeta::blaze::Configuration::FetchCallback fetcher{
@@ -442,14 +440,16 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
       is_frozen ? OrphanedBehavior::Error : OrphanedBehavior::Delete)};
 
   if (is_frozen) {
-    configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
+    configuration.fetch(lock, fetcher, resolver,
+                        sourcemeta::core::read_file_to_string<>, writer,
                         on_event);
   } else {
     const auto fetch_mode{
         options.contains("force")
             ? sourcemeta::blaze::Configuration::FetchMode::All
             : sourcemeta::blaze::Configuration::FetchMode::Missing};
-    configuration.fetch(lock, fetcher, resolver, configuration_reader, writer,
+    configuration.fetch(lock, fetcher, resolver,
+                        sourcemeta::core::read_file_to_string<>, writer,
                         on_event, fetch_mode);
   }
 
@@ -462,6 +462,6 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
   }
 
   if (!is_frozen) {
-    atomic_write(lock_path, lock.to_json(configuration.base_path));
+    atomic_write_json(lock_path, lock.to_json(configuration.base_path));
   }
 }

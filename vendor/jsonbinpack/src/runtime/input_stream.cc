@@ -2,25 +2,14 @@
 
 #include <sourcemeta/core/numeric.h>
 
-#include "varint.h"
-
 #include <cassert> // assert
-#include <ios>     // std::ios_base
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint8_t, std::uint64_t, std::int64_t
 
 namespace sourcemeta::jsonbinpack {
 
-InputStream::InputStream(Stream &input) : stream{input} {
-  this->stream.exceptions(std::ios_base::badbit | std::ios_base::failbit |
-                          std::ios_base::eofbit);
-}
-
-auto InputStream::position() const noexcept -> std::uint64_t {
-  return static_cast<std::uint64_t>(this->stream.tellg());
-}
-
-auto InputStream::seek(const std::uint64_t offset) -> void {
-  this->stream.seekg(static_cast<std::streamoff>(offset));
-}
+InputStream::InputStream(Stream &input)
+    : sourcemeta::core::BinaryReader{input} {}
 
 auto InputStream::rewind(const std::uint64_t relative_offset,
                          const std::uint64_t position) -> std::uint64_t {
@@ -32,33 +21,33 @@ auto InputStream::rewind(const std::uint64_t relative_offset,
   return current;
 }
 
-auto InputStream::get_byte() -> std::uint8_t {
-  return static_cast<std::uint8_t>(this->stream.get());
-}
-
-auto InputStream::get_word() -> std::uint16_t {
-  std::uint16_t word;
-  this->stream.read(reinterpret_cast<char *>(&word), sizeof word);
-  return word;
-}
-
 auto InputStream::get_varint() -> std::uint64_t {
-  return varint_decode(this->stream);
+  constexpr std::uint8_t LEAST_SIGNIFICANT_BITS{0b01111111};
+  constexpr std::uint8_t MOST_SIGNIFICANT_BIT{0b10000000};
+  constexpr std::uint8_t SHIFT{7};
+  std::uint64_t result{0};
+  std::size_t cursor{0};
+  while (true) {
+    const std::uint8_t byte{this->get_byte()};
+    const std::uint64_t value{
+        static_cast<std::uint64_t>(byte & LEAST_SIGNIFICANT_BITS)};
+#ifndef NDEBUG
+    const std::uint64_t current = result;
+#endif
+    result += static_cast<std::uint64_t>(value << SHIFT * cursor);
+    // Try to catch potential overflows from the above addition
+    assert(result >= current);
+    cursor += 1;
+    if ((byte & MOST_SIGNIFICANT_BIT) == 0) {
+      break;
+    }
+  }
+
+  return result;
 }
 
 auto InputStream::get_varint_zigzag() -> std::int64_t {
-  const std::uint64_t value = varint_decode(this->stream);
-  return sourcemeta::core::zigzag_decode(value);
-}
-
-auto InputStream::has_more_data() const noexcept -> bool {
-  // A way to check if the stream is empty without using `.peek()`,
-  // which throws given we set exceptions on the EOF bit.
-  // However, `in_avail()` works on characters and will return zero
-  // if all that's remaining is 0x00 (null), so we need to handle
-  // that case separately.
-  return this->stream.rdbuf()->in_avail() > 0 ||
-         this->stream.rdbuf()->sgetc() == '\0';
+  return sourcemeta::core::zigzag_decode(this->get_varint());
 }
 
 auto InputStream::get_string_utf8(const std::uint64_t length)

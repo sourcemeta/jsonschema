@@ -6,16 +6,12 @@
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/yaml.h>
 
-#include <sstream> // std::ostringstream
-
 namespace sourcemeta::core {
 
 auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> JSON {
   const auto start_pos{stream.tellg()};
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
 
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, nullptr};
@@ -35,10 +31,7 @@ auto parse_yaml(const JSON::String &input) -> JSON {
 }
 
 auto read_yaml(const std::filesystem::path &path) -> JSON {
-  auto stream{read_file(path)};
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_file_to_string(path)};
 
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, nullptr};
@@ -52,9 +45,7 @@ auto read_yaml(const std::filesystem::path &path) -> JSON {
 auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 JSON &output, const JSON::ParseCallback &callback) -> void {
   const auto start_pos{stream.tellg()};
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_to_string(stream)};
 
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, &callback};
@@ -74,10 +65,7 @@ auto parse_yaml(const JSON::String &input, JSON &output,
 
 auto read_yaml(const std::filesystem::path &path, JSON &output,
                const JSON::ParseCallback &callback) -> void {
-  auto stream{read_file(path)};
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  const auto input{buffer.str()};
+  const auto input{read_file_to_string(path)};
 
   yaml::Lexer lexer{input};
   yaml::Parser parser{&lexer, &callback};
