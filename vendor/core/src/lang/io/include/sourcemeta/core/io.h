@@ -13,12 +13,13 @@
 #include <sourcemeta/core/io_temporary.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <filesystem> // std::filesystem
-#include <fstream>    // std::basic_ifstream
-#include <iostream>   // std::cin
-#include <istream>    // std::basic_istream
-#include <sstream>    // std::basic_ostringstream
-#include <string>     // std::basic_string, std::char_traits, std::string
+#include <filesystem>   // std::filesystem
+#include <fstream>      // std::basic_ifstream
+#include <iostream>     // std::cin
+#include <istream>      // std::basic_istream
+#include <sstream>      // std::basic_ostringstream
+#include <string>       // std::basic_string, std::char_traits, std::string
+#include <system_error> // std::error_code
 
 /// @defgroup io I/O
 /// @brief A growing collection of I/O utilities
@@ -168,9 +169,17 @@ auto read_file_to_string(const std::filesystem::path &path)
 
   stream.exceptions(std::basic_ifstream<CharT, Traits>::badbit);
 
+  // `file_size` only works on regular files, so when it cannot determine a
+  // size (FIFOs from process substitution, sockets, pipes, or any other
+  // stat failure) fall back to a streaming read on the already-open stream.
+  std::error_code file_size_error;
+  const auto size{std::filesystem::file_size(canonical_path, file_size_error)};
+  if (file_size_error) {
+    return read_to_string<CharT, Traits>(stream);
+  }
+
   std::basic_string<CharT, Traits> result;
-  result.resize(
-      static_cast<std::size_t>(std::filesystem::file_size(canonical_path)));
+  result.resize(static_cast<std::size_t>(size));
   stream.read(result.data(), static_cast<std::streamsize>(result.size()));
   // Text-mode reads may return fewer characters than the byte count
   // (i.e. CRLF collapses to LF on Windows), so trim to actual.
