@@ -1,15 +1,12 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/uri.h>
 
-#include <sstream> // std::ostringstream
-#include <tuple>   // std::tie
-#include <utility> // std::move
+#include <tuple> // std::tie
 
 namespace sourcemeta::core {
 
 URI::URI(std::istream &input) {
-  std::ostringstream output;
-  output << input.rdbuf();
-  this->parse(output.str());
+  this->parse(sourcemeta::core::read_to_string(input));
 }
 
 auto URI::from_fragment(const std::string_view fragment) -> URI {

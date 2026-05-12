@@ -251,9 +251,7 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
   check_no_duplicate_stdin(options.positional());
 
   if (!schema_from_stdin && std::filesystem::is_directory(schema_path)) {
-    throw std::filesystem::filesystem_error{
-        "The input was supposed to be a file but it is a directory",
-        schema_path, std::make_error_code(std::errc::is_a_directory)};
+    throw sourcemeta::core::IOIsADirectoryError{schema_path};
   }
 
   const auto schema_config_base{schema_from_stdin

@@ -20,8 +20,7 @@
 #include <iostream>         // std::cout, std::cerr
 #include <stdexcept>        // std::runtime_error
 #include <string>           // std::string
-#include <system_error>     // std::errc
-#include <type_traits>      // std::is_base_of_v
+#include <type_traits>      // std::is_base_of_v, std::is_same_v
 #include <utility>          // std::forward
 #include <vector>           // std::vector
 
@@ -392,31 +391,31 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     -> void {
   auto error_json{sourcemeta::core::JSON::make_object()};
 
-  if constexpr (std::is_base_of_v<std::filesystem::filesystem_error,
-                                  Exception>) {
-    if (exception.code() == std::errc::no_such_file_or_directory) {
-      if (is_json) {
-        error_json.assign("error",
-                          sourcemeta::core::JSON{exception.code().message()});
-      } else {
-        std::cerr << "error: " << exception.code().message() << "\n";
-      }
-    } else if (exception.code() == std::errc::is_a_directory) {
-      if (is_json) {
-        error_json.assign(
-            "error",
-            sourcemeta::core::JSON{
-                "The input was supposed to be a file but it is a directory"});
-      } else {
-        std::cerr << "error: The input was supposed to be a file but it is a "
-                     "directory\n";
-      }
+  if constexpr (std::is_same_v<Exception,
+                               sourcemeta::core::IOFileNotFoundError>) {
+    if (is_json) {
+      error_json.assign("error",
+                        sourcemeta::core::JSON{"No such file or directory"});
     } else {
-      if (is_json) {
-        error_json.assign("error", sourcemeta::core::JSON{exception.what()});
-      } else {
-        std::cerr << "error: " << exception.what() << "\n";
-      }
+      std::cerr << "error: No such file or directory\n";
+    }
+  } else if constexpr (std::is_same_v<Exception,
+                                      sourcemeta::core::IOIsADirectoryError>) {
+    if (is_json) {
+      error_json.assign(
+          "error",
+          sourcemeta::core::JSON{
+              "The input was supposed to be a file but it is a directory"});
+    } else {
+      std::cerr << "error: The input was supposed to be a file but it is a "
+                   "directory\n";
+    }
+  } else if constexpr (std::is_base_of_v<std::filesystem::filesystem_error,
+                                         Exception>) {
+    if (is_json) {
+      error_json.assign("error", sourcemeta::core::JSON{exception.what()});
+    } else {
+      std::cerr << "error: " << exception.what() << "\n";
     }
   } else {
     if (is_json) {
@@ -987,6 +986,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
 
     // Standard library handlers
+  } catch (const sourcemeta::core::IOFileNotFoundError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::IOIsADirectoryError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::IOFilePermissionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::IONotADirectoryError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::IOFileAlreadyExistsError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const std::filesystem::filesystem_error &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

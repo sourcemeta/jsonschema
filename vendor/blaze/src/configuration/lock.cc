@@ -1,6 +1,7 @@
 #include <sourcemeta/blaze/configuration.h>
 
 #include <sourcemeta/core/crypto.h>
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
@@ -127,7 +128,7 @@ auto Configuration::Lock::from_json(const sourcemeta::core::JSON &value,
       } else {
         try {
           entry.path =
-              std::filesystem::weakly_canonical(lock_base_path / entry_path);
+              sourcemeta::core::weakly_canonical(lock_base_path / entry_path);
         } catch (const std::filesystem::filesystem_error &) {
           throw ConfigurationParseError(
               "The lock file dependency entry path could not be resolved",

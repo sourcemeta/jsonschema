@@ -19,17 +19,7 @@
 #include <map>        // std::map
 #include <memory>     // std::shared_ptr, std::make_shared
 #include <optional>   // std::optional
-#include <sstream>    // std::ostringstream
 #include <string>     // std::string
-
-namespace {
-auto configuration_reader(const std::filesystem::path &path) -> std::string {
-  auto stream{sourcemeta::core::read_file(path)};
-  std::ostringstream buffer;
-  buffer << stream.rdbuf();
-  return buffer.str();
-}
-} // namespace
 
 namespace sourcemeta::jsonschema {
 
@@ -64,12 +54,11 @@ inline auto read_configuration(
     sourcemeta::core::PointerPositionTracker positions;
     auto property_storage = std::make_shared<std::deque<std::string>>();
     try {
-      auto stream{sourcemeta::core::read_file(configuration_path.value())};
-      std::ostringstream buffer;
-      buffer << stream.rdbuf();
+      const auto contents{
+          sourcemeta::core::read_file_to_string(configuration_path.value())};
       sourcemeta::core::JSON config_json{nullptr};
       sourcemeta::core::parse_json(
-          buffer.str(), config_json,
+          contents, config_json,
           [&positions, &property_storage](
               const sourcemeta::core::JSON::ParsePhase phase,
               const sourcemeta::core::JSON::Type type, const std::uint64_t line,

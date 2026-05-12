@@ -103,6 +103,51 @@ private:
 };
 
 /// @ingroup uritemplate
+/// An error that represents an operation identifier that does not match the
+/// permitted format
+class SOURCEMETA_CORE_URITEMPLATE_EXPORT
+    URITemplateRouterInvalidOperationIdError : public std::exception {
+public:
+  URITemplateRouterInvalidOperationIdError(const std::string_view operation_id)
+      : operation_id_{operation_id} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "Invalid operation identifier";
+  }
+
+  /// Get the offending operation identifier
+  [[nodiscard]] auto operation_id() const noexcept -> const std::string & {
+    return this->operation_id_;
+  }
+
+private:
+  std::string operation_id_;
+};
+
+/// @ingroup uritemplate
+/// An error that represents an operation identifier that conflicts with a
+/// previously registered route
+class SOURCEMETA_CORE_URITEMPLATE_EXPORT
+    URITemplateRouterDuplicateOperationIdError : public std::exception {
+public:
+  URITemplateRouterDuplicateOperationIdError(
+      const std::string_view operation_id)
+      : operation_id_{operation_id} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "Duplicate operation identifier";
+  }
+
+  /// Get the conflicting operation identifier
+  [[nodiscard]] auto operation_id() const noexcept -> const std::string & {
+    return this->operation_id_;
+  }
+
+private:
+  std::string operation_id_;
+};
+
+/// @ingroup uritemplate
 /// An error that represents a failure to save the router to disk
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterSaveError
     : public std::exception {

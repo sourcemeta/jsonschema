@@ -9,7 +9,7 @@ if(NOT JSONBINPACK_COMPONENTS)
 endif()
 
 include(CMakeFindDependencyMacro)
-find_dependency(Core COMPONENTS numeric regex uri json jsonpointer jsonschema)
+find_dependency(Core COMPONENTS numeric regex uri json jsonpointer jsonschema io)
 find_dependency(Blaze COMPONENTS alterschema)
 
 foreach(component ${JSONBINPACK_COMPONENTS})

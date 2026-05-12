@@ -1,5 +1,6 @@
 #include <sourcemeta/blaze/configuration.h>
 
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/uri.h>
 
@@ -76,15 +77,15 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
   if (value.defines("path")) {
     const std::filesystem::path path{value.at("path").to_string()};
     if (path.is_absolute()) {
-      result.absolute_path = std::filesystem::weakly_canonical(path);
+      result.absolute_path = sourcemeta::core::weakly_canonical(path);
     } else {
       result.absolute_path =
-          std::filesystem::weakly_canonical(base_path / path);
+          sourcemeta::core::weakly_canonical(base_path / path);
     }
 
     result.absolute_path_explicit = true;
   } else {
-    result.absolute_path = std::filesystem::weakly_canonical(base_path);
+    result.absolute_path = sourcemeta::core::weakly_canonical(base_path);
   }
 
   assert(result.absolute_path.is_absolute());
@@ -171,8 +172,8 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
       const std::filesystem::path dependency_path{pair.second.to_string()};
       const auto absolute_dependency_path =
           dependency_path.is_absolute()
-              ? std::filesystem::weakly_canonical(dependency_path)
-              : std::filesystem::weakly_canonical(base_path / dependency_path);
+              ? sourcemeta::core::weakly_canonical(dependency_path)
+              : sourcemeta::core::weakly_canonical(base_path / dependency_path);
       try {
         result.add_dependency(sourcemeta::core::URI{pair.first},
                               absolute_dependency_path);
@@ -205,8 +206,8 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
         const std::filesystem::path path{element.to_string()};
         result.lint.rules.push_back(
             path.is_absolute()
-                ? std::filesystem::weakly_canonical(path)
-                : std::filesystem::weakly_canonical(base_path / path));
+                ? sourcemeta::core::weakly_canonical(path)
+                : sourcemeta::core::weakly_canonical(base_path / path));
         index += 1;
       }
     }
@@ -226,8 +227,8 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
       const std::filesystem::path path{element.to_string()};
       result.ignore.push_back(
           path.is_absolute()
-              ? std::filesystem::weakly_canonical(path)
-              : std::filesystem::weakly_canonical(base_path / path));
+              ? sourcemeta::core::weakly_canonical(path)
+              : sourcemeta::core::weakly_canonical(base_path / path));
       index += 1;
     }
   }

@@ -10,7 +10,6 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT jsonbinpack NAME runtime
   SOURCES
     input_stream.cc
     output_stream.cc
-    varint.h
     unreachable.h
     cache.cc
 
@@ -44,3 +43,5 @@ target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
   sourcemeta::core::numeric)
+target_link_libraries(sourcemeta_jsonbinpack_runtime PUBLIC
+  sourcemeta::core::io)

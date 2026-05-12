@@ -1,7 +1,7 @@
+#include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonschema.h>
 
-#include <fstream>  // std::ofstream
 #include <iostream> // std::cerr, std::cout
 #include <sstream>  // std::ostringstream
 #include <utility>  // std::move
@@ -155,12 +155,11 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
       }
       expected << "\n";
 
-      std::ifstream current_stream{entry.resolution_base};
-      std::ostringstream current;
-      current << current_stream.rdbuf();
+      const auto current{
+          sourcemeta::core::read_file_to_string(entry.resolution_base)};
 
       if (options.contains("check")) {
-        if (current.str() == expected.str()) {
+        if (current == expected.str()) {
           LOG_VERBOSE(options) << "ok: " << entry.first << "\n";
         } else if (output_json) {
           failed_files.push_back(entry.first);
@@ -170,9 +169,9 @@ auto sourcemeta::jsonschema::fmt(const sourcemeta::core::Options &options)
           result = false;
         }
       } else {
-        if (current.str() != expected.str()) {
-          std::ofstream output{entry.resolution_base};
-          output << expected.str();
+        if (current != expected.str()) {
+          sourcemeta::core::atomic_write_file(entry.resolution_base,
+                                              expected.str());
         }
       }
     } catch (const sourcemeta::core::SchemaKeywordError &error) {

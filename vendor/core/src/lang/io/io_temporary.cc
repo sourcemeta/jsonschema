@@ -1,9 +1,10 @@
+#include <sourcemeta/core/io_error.h>
 #include <sourcemeta/core/io_temporary.h>
 
-#include <cassert>    // assert
-#include <filesystem> // std::filesystem
-#include <string>     // std::string
-#include <system_error> // std::error_code, std::generic_category, std::make_error_code
+#include <cassert>      // assert
+#include <filesystem>   // std::filesystem
+#include <string>       // std::string
+#include <system_error> // std::error_code, std::generic_category
 
 #if defined(_WIN32)
 #include <io.h> // _mktemp_s
@@ -21,9 +22,7 @@ TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
   assert(!prefix.contains('\\'));
   if (std::filesystem::exists(parent) &&
       !std::filesystem::is_directory(parent)) {
-    throw std::filesystem::filesystem_error{
-        "parent path exists but is not a directory", parent,
-        std::make_error_code(std::errc::not_a_directory)};
+    throw IONotADirectoryError{parent};
   }
 
   std::filesystem::create_directories(parent);
@@ -38,9 +37,7 @@ TemporaryDirectory::TemporaryDirectory(const std::filesystem::path &parent,
   }
 
   if (!std::filesystem::create_directory(name)) {
-    throw std::filesystem::filesystem_error{
-        "failed to create temporary directory", parent,
-        std::make_error_code(std::errc::file_exists)};
+    throw IOFileAlreadyExistsError{std::filesystem::path{name}};
   }
 #else
   if (mkdtemp(name.data()) == nullptr) {

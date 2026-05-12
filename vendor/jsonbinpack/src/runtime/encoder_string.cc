@@ -115,7 +115,7 @@ auto Encoder::RFC3339_DATE_INTEGER_TRIPLET(
   assert(month >= 1 && month <= 12);
   assert(day >= 1 && day <= 31);
 
-  this->put_bytes(year);
+  this->put_word(year);
   this->put_byte(month);
   this->put_byte(day);
 }
