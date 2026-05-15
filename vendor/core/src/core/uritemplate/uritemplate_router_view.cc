@@ -19,7 +19,7 @@ namespace sourcemeta::core {
 namespace {
 
 constexpr std::uint32_t ROUTER_MAGIC = 0x52544552; // "RTER"
-constexpr std::uint32_t ROUTER_VERSION = 6;
+constexpr std::uint32_t ROUTER_VERSION = 8;
 constexpr std::uint32_t NO_CHILD = std::numeric_limits<std::uint32_t>::max();
 
 // Type tags for argument value serialization
@@ -37,6 +37,8 @@ struct RouterHeader {
   std::uint32_t base_path_offset;
   std::uint32_t base_path_length;
   std::uint32_t otherwise_context;
+  std::uint32_t base_url_offset;
+  std::uint32_t base_url_length;
   std::uint32_t padding;
 };
 
@@ -81,6 +83,12 @@ finalize_match(const URITemplateRouter::Identifier otherwise_context,
   }
 
   return {identifier, context};
+}
+
+inline auto is_expansion_type(const URITemplateRouter::NodeType type) noexcept
+    -> bool {
+  return type == URITemplateRouter::NodeType::Expansion ||
+         type == URITemplateRouter::NodeType::OptionalExpansion;
 }
 
 // Binary search for a literal child matching the given segment
@@ -301,6 +309,11 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
   const auto base_path_value = router.base_path();
   string_table.append(base_path_value.data(), base_path_value.size());
 
+  const auto base_url_string_offset =
+      static_cast<std::uint32_t>(string_table.size());
+  const auto base_url_value = router.base_url();
+  string_table.append(base_url_value.data(), base_url_value.size());
+
   RouterHeader header{};
   header.magic = ROUTER_MAGIC;
   header.version = ROUTER_VERSION;
@@ -317,6 +330,8 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
   header.base_path_offset = base_path_string_offset;
   header.base_path_length = static_cast<std::uint32_t>(base_path_value.size());
   header.otherwise_context = router.otherwise_.context;
+  header.base_url_offset = base_url_string_offset;
+  header.base_url_length = static_cast<std::uint32_t>(base_url_value.size());
 
   std::ofstream file(path, std::ios::binary);
   if (!file) {
@@ -518,8 +533,9 @@ auto URITemplateRouterView::match(
         return finalize_match(otherwise_context, 0, 0);
       }
 
-      // Check if this is an expansion (catch-all)
-      if (variable_node.type == URITemplateRouter::NodeType::Expansion) {
+      // Both Expansion and OptionalExpansion consume the rest of the path
+      // verbatim
+      if (is_expansion_type(variable_node.type)) {
         const auto remaining_length =
             static_cast<std::uint32_t>(path_end - segment_start);
         callback(static_cast<URITemplateRouter::Index>(variable_index),
@@ -548,8 +564,27 @@ auto URITemplateRouterView::match(
     return finalize_match(otherwise_context, 0, 0);
   }
 
-  return finalize_match(otherwise_context, nodes[current_node].identifier,
-                        nodes[current_node].context);
+  const auto &final_node = nodes[current_node];
+  if (final_node.identifier == 0 && final_node.variable_child != NO_CHILD &&
+      final_node.variable_child < header->node_count) {
+    const auto &variable_node = nodes[final_node.variable_child];
+    if (variable_node.type == URITemplateRouter::NodeType::OptionalExpansion) {
+      if (variable_node.string_offset > string_table_size ||
+          variable_node.string_length >
+              string_table_size - variable_node.string_offset) {
+        return finalize_match(otherwise_context, 0, 0);
+      }
+      callback(static_cast<URITemplateRouter::Index>(variable_index),
+               {string_table + variable_node.string_offset,
+                variable_node.string_length},
+               std::string_view{});
+      return finalize_match(otherwise_context, variable_node.identifier,
+                            variable_node.context);
+    }
+  }
+
+  return finalize_match(otherwise_context, final_node.identifier,
+                        final_node.context);
 }
 
 auto URITemplateRouterView::arguments(
@@ -723,6 +758,38 @@ auto URITemplateRouterView::base_path() const noexcept -> std::string_view {
   }
 
   return {string_table + header->base_path_offset, header->base_path_length};
+}
+
+auto URITemplateRouterView::base_url() const noexcept -> std::string_view {
+  if (this->size_ < sizeof(RouterHeader)) {
+    return {};
+  }
+
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return {};
+  }
+
+  if (header->base_url_length == 0) {
+    return {};
+  }
+
+  if (header->string_table_offset > this->size_ ||
+      header->arguments_offset < header->string_table_offset ||
+      header->arguments_offset > this->size_) {
+    return {};
+  }
+
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
+  const auto string_table_size =
+      header->arguments_offset - header->string_table_offset;
+  if (header->base_url_offset > string_table_size ||
+      header->base_url_length > string_table_size - header->base_url_offset) {
+    return {};
+  }
+
+  return {string_table + header->base_url_offset, header->base_url_length};
 }
 
 auto URITemplateRouterView::size() const noexcept -> std::size_t {

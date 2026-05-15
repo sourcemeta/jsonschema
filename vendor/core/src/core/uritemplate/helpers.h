@@ -177,9 +177,10 @@ inline auto parse_varname(const std::string_view input, std::size_t position)
   return position;
 }
 
+template <bool CheckOnly>
 inline auto
 parse_variable_list(const std::string_view input, std::size_t position,
-                    std::vector<URITemplateVariableSpecification> &variables)
+                    std::vector<URITemplateVariableSpecification> *variables)
     -> std::size_t {
   while (true) {
     const auto start = position;
@@ -189,9 +190,9 @@ parse_variable_list(const std::string_view input, std::size_t position,
       throw URITemplateParseError(position + 1);
     }
 
-    const auto name = input.substr(start, position - start);
-    std::uint16_t length = 0;
-    bool explode = false;
+    [[maybe_unused]] const auto name = input.substr(start, position - start);
+    [[maybe_unused]] std::uint16_t length = 0;
+    [[maybe_unused]] bool explode = false;
 
     if (position >= input.size()) {
       throw URITemplateParseError(1);
@@ -225,14 +226,20 @@ parse_variable_list(const std::string_view input, std::size_t position,
         throw URITemplateParseError(prefix_start + 1);
       }
 
-      length = value;
+      if constexpr (!CheckOnly) {
+        length = value;
+      }
     } else if (input[position] == '*') {
-      explode = true;
+      if constexpr (!CheckOnly) {
+        explode = true;
+      }
       position++;
     }
 
-    variables.push_back(URITemplateVariableSpecification{
-        .name = name, .length = length, .explode = explode});
+    if constexpr (!CheckOnly) {
+      variables->push_back(URITemplateVariableSpecification{
+          .name = name, .length = length, .explode = explode});
+    }
 
     if (position >= input.size()) {
       throw URITemplateParseError(1);
@@ -250,8 +257,10 @@ parse_variable_list(const std::string_view input, std::size_t position,
   return position;
 }
 
-template <typename T>
-auto parse_expression(const std::string_view input) -> URITemplateParseResult {
+template <typename T, bool CheckOnly>
+auto parse_expression(const std::string_view input)
+    -> std::conditional_t<CheckOnly, std::optional<std::size_t>,
+                          URITemplateParseResult> {
   if constexpr (std::is_same_v<T, URITemplateTokenLiteral>) {
     if (input.empty() || input[0] == '{') {
       return std::nullopt;
@@ -272,9 +281,13 @@ auto parse_expression(const std::string_view input) -> URITemplateParseResult {
       position++;
     }
 
-    return std::make_pair(
-        URITemplateToken{URITemplateTokenLiteral{input.substr(0, position)}},
-        position);
+    if constexpr (CheckOnly) {
+      return position;
+    } else {
+      return std::make_pair(
+          URITemplateToken{URITemplateTokenLiteral{input.substr(0, position)}},
+          position);
+    }
   } else {
     if (input.empty() || input[0] != '{') {
       return std::nullopt;
@@ -297,10 +310,17 @@ auto parse_expression(const std::string_view input) -> URITemplateParseResult {
       var_start = 1;
     }
 
-    std::vector<URITemplateVariableSpecification> variables;
-    const auto end_position = parse_variable_list(input, var_start, variables);
-    return std::make_pair(URITemplateToken{T{std::move(variables)}},
-                          end_position + 1);
+    if constexpr (CheckOnly) {
+      const auto end_position =
+          parse_variable_list<true>(input, var_start, nullptr);
+      return end_position + 1;
+    } else {
+      std::vector<URITemplateVariableSpecification> variables;
+      const auto end_position =
+          parse_variable_list<false>(input, var_start, &variables);
+      return std::make_pair(URITemplateToken{T{std::move(variables)}},
+                            end_position + 1);
+    }
   }
 }
 
