@@ -30,8 +30,18 @@ namespace sourcemeta::core {
 
 /// @ingroup uritemplate
 /// A URI Template path router. Keep in mind that the URI Template specification
-/// DOES NOT define expansion. So this is an opinionated non-standard adaptation
-/// of URI Template for path routing purposes
+/// DOES NOT define matching, only expansion. So this is an opinionated
+/// non-standard adaptation of URI Template for path routing purposes. The
+/// supported operators are:
+///
+/// - `{var}` for a single path segment (RFC 6570 Level 1 simple expansion)
+/// - `{+var}` for greedy capture to the end of the path, requiring at least
+///   one trailing segment (RFC 6570 Level 2 reserved expansion)
+/// - `{/var*}` for optional greedy capture to the end of the path, where
+///   zero trailing segments are also allowed (RFC 6570 Level 3 path-segment
+///   operator with Level 4 explode modifier). Must be the last component of
+///   the template. The captured value is empty when no trailing segments
+///   are present
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouter {
   friend class URITemplateRouterView;
 
@@ -56,7 +66,8 @@ public:
     Root = 0,
     Literal = 1,
     Variable = 2,
-    Expansion = 3
+    Expansion = 3,
+    OptionalExpansion = 4
   };
 
   /// A node in the router trie
@@ -77,8 +88,11 @@ public:
   URITemplateRouter() = default;
 
   /// Construct a router with a base path prefix. During matching, the base
-  /// path is stripped from incoming request paths before matching
-  explicit URITemplateRouter(std::string_view base_path);
+  /// path is stripped from incoming request paths before matching. An optional
+  /// base URL can be associated with the router as opaque metadata, never used
+  /// for matching
+  explicit URITemplateRouter(std::string_view base_path,
+                             std::string_view base_url = {});
 
   // To avoid mistakes
   URITemplateRouter(const URITemplateRouter &) = delete;
@@ -120,6 +134,9 @@ public:
   /// Access the base path prefix
   [[nodiscard]] auto base_path() const noexcept -> std::string_view;
 
+  /// Access the base URL associated with the router
+  [[nodiscard]] auto base_url() const noexcept -> std::string_view;
+
   /// Get the number of registered routes
   [[nodiscard]] auto size() const noexcept -> std::size_t;
 
@@ -144,6 +161,7 @@ private:
   Node root_;
   Node otherwise_;
   std::string base_path_;
+  std::string base_url_;
   std::vector<std::pair<Identifier, std::vector<Argument>>> arguments_;
   std::vector<std::tuple<Identifier, Identifier, std::string_view>> entries_;
   std::unordered_map<std::string_view, std::pair<Identifier, Identifier>>
@@ -187,6 +205,9 @@ public:
 
   /// Access the base path prefix
   [[nodiscard]] auto base_path() const noexcept -> std::string_view;
+
+  /// Access the base URL associated with the router
+  [[nodiscard]] auto base_url() const noexcept -> std::string_view;
 
   /// Get the number of registered routes
   [[nodiscard]] auto size() const noexcept -> std::size_t;

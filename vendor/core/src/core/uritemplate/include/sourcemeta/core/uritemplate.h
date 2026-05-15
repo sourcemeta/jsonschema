@@ -58,6 +58,21 @@ public:
   /// ```
   URITemplate(const std::string_view source);
 
+  /// Check whether the given string is a valid RFC 6570 URI Template
+  /// without building the parsed representation. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uritemplate.h>
+  ///
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URITemplate::is_uritemplate(
+  ///     "http://example.com/~{username}/"));
+  /// assert(!sourcemeta::core::URITemplate::is_uritemplate("{var"));
+  /// ```
+  [[nodiscard]] static auto is_uritemplate(std::string_view input) noexcept
+      -> bool;
+
   /// Get the number of tokens in the template
   [[nodiscard]] auto size() const noexcept -> std::uint64_t;
 

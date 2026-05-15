@@ -135,6 +135,27 @@ auto find_adjacent_dependencies(
   }
 }
 
+auto register_under_all_bases(SchemaUnevaluatedEntries &result,
+                              const SchemaFrame &frame,
+                              const SchemaFrame::Location &location,
+                              const JSON::String &keyword,
+                              const SchemaUnevaluatedEntry &value) -> void {
+  result.emplace(frame.uri(location, make_weak_pointer(keyword)), value);
+  for (const auto &alternate : frame.locations()) {
+    if (alternate.second.pointer != location.pointer ||
+        alternate.second.base == location.base) {
+      continue;
+    }
+    if (alternate.second.type != SchemaFrame::LocationType::Subschema &&
+        alternate.second.type != SchemaFrame::LocationType::Resource &&
+        alternate.second.type != SchemaFrame::LocationType::Anchor) {
+      continue;
+    }
+    result.emplace(frame.uri(alternate.second, make_weak_pointer(keyword)),
+                   value);
+  }
+}
+
 } // namespace
 
 namespace sourcemeta::blaze {
@@ -172,6 +193,9 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
     const auto subschema_vocabularies{
         frame.vocabularies(entry.second, resolver)};
 
+    // The same pointer may be reachable through alternate identifiers whose
+    // dynamic anchors carry a different base, so we register the entry under
+    // each of them
     if (has_unevaluated_properties) {
       if ((subschema_vocabularies.contains(
                Known::JSON_Schema_2020_12_Unevaluated) &&
@@ -185,9 +209,8 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
             {"properties", "patternProperties", "additionalProperties",
              "unevaluatedProperties"},
             entry.second, entry.second, true, unevaluated);
-        result.emplace(
-            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_PROPERTIES)),
-            std::move(unevaluated));
+        register_under_all_bases(result, frame, entry.second,
+                                 UNEVALUATED_PROPERTIES, unevaluated);
       }
     }
 
@@ -201,18 +224,16 @@ auto unevaluated(const JSON &schema, const SchemaFrame &frame,
             "unevaluatedItems", schema, frame, walker, resolver,
             {"prefixItems", "items", "contains", "unevaluatedItems"},
             entry.second, entry.second, true, unevaluated);
-        result.emplace(
-            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_ITEMS)),
-            std::move(unevaluated));
+        register_under_all_bases(result, frame, entry.second, UNEVALUATED_ITEMS,
+                                 unevaluated);
       } else if (subschema_vocabularies.contains(
                      Known::JSON_Schema_2019_09_Applicator)) {
         find_adjacent_dependencies(
             "unevaluatedItems", schema, frame, walker, resolver,
             {"items", "additionalItems", "unevaluatedItems"}, entry.second,
             entry.second, true, unevaluated);
-        result.emplace(
-            frame.uri(entry.second, make_weak_pointer(UNEVALUATED_ITEMS)),
-            std::move(unevaluated));
+        register_under_all_bases(result, frame, entry.second, UNEVALUATED_ITEMS,
+                                 unevaluated);
       }
     }
   }

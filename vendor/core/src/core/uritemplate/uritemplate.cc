@@ -8,23 +8,28 @@
 
 namespace sourcemeta::core {
 
-template <typename T>
+template <typename T, bool CheckOnly>
 static auto try_parse(std::string_view &remaining, std::size_t &offset,
-                      std::vector<URITemplateToken> &tokens) -> bool {
-  if (auto result = parse_expression<T>(remaining)) {
-    tokens.emplace_back(std::move(result->first));
-    remaining.remove_prefix(result->second);
-    offset += result->second;
+                      std::vector<URITemplateToken> *tokens) -> bool {
+  if (auto result = parse_expression<T, CheckOnly>(remaining)) {
+    if constexpr (CheckOnly) {
+      remaining.remove_prefix(*result);
+      offset += *result;
+    } else {
+      tokens->emplace_back(std::move(result->first));
+      remaining.remove_prefix(result->second);
+      offset += result->second;
+    }
     return true;
   }
 
   return false;
 }
 
-template <typename... Ts>
+template <bool CheckOnly, typename... Ts>
 static auto try_parse_any(std::string_view &remaining, std::size_t &offset,
-                          std::vector<URITemplateToken> &tokens) -> bool {
-  return (try_parse<Ts>(remaining, offset, tokens) || ...);
+                          std::vector<URITemplateToken> *tokens) -> bool {
+  return (try_parse<Ts, CheckOnly>(remaining, offset, tokens) || ...);
 }
 
 URITemplate::URITemplate(const std::string_view source) {
@@ -33,7 +38,7 @@ URITemplate::URITemplate(const std::string_view source) {
 
   while (!remaining.empty()) {
     try {
-      if (!try_parse_any<URITemplateTokenReservedExpansion,
+      if (!try_parse_any<false, URITemplateTokenReservedExpansion,
                          URITemplateTokenFragmentExpansion,
                          URITemplateTokenLabelExpansion,
                          URITemplateTokenPathExpansion,
@@ -41,12 +46,36 @@ URITemplate::URITemplate(const std::string_view source) {
                          URITemplateTokenQueryExpansion,
                          URITemplateTokenQueryContinuationExpansion,
                          URITemplateTokenVariable, URITemplateTokenLiteral>(
-              remaining, offset, this->tokens_)) {
+              remaining, offset, &this->tokens_)) {
         break;
       }
     } catch (URITemplateParseError &error) {
       throw URITemplateParseError(offset + error.column());
     }
+  }
+}
+
+auto URITemplate::is_uritemplate(const std::string_view input) noexcept
+    -> bool {
+  try {
+    std::string_view remaining{input};
+    std::size_t offset = 0;
+    while (!remaining.empty()) {
+      if (!try_parse_any<true, URITemplateTokenReservedExpansion,
+                         URITemplateTokenFragmentExpansion,
+                         URITemplateTokenLabelExpansion,
+                         URITemplateTokenPathExpansion,
+                         URITemplateTokenPathParameterExpansion,
+                         URITemplateTokenQueryExpansion,
+                         URITemplateTokenQueryContinuationExpansion,
+                         URITemplateTokenVariable, URITemplateTokenLiteral>(
+              remaining, offset, nullptr)) {
+        return false;
+      }
+    }
+    return true;
+  } catch (...) {
+    return false;
   }
 }
 

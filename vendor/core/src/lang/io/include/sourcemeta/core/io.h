@@ -13,12 +13,17 @@
 #include <sourcemeta/core/io_temporary.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <cstddef>      // std::byte
 #include <filesystem>   // std::filesystem
 #include <fstream>      // std::basic_ifstream
+#include <functional>   // std::function
 #include <iostream>     // std::cin
 #include <istream>      // std::basic_istream
+#include <ostream>      // std::ostream
+#include <span>         // std::span
 #include <sstream>      // std::basic_ostringstream
 #include <string>       // std::basic_string, std::char_traits, std::string
+#include <string_view>  // std::string_view
 #include <system_error> // std::error_code
 
 /// @defgroup io I/O
@@ -213,6 +218,53 @@ inline auto read_stdin() -> std::string { return read_to_string(std::cin); }
 SOURCEMETA_CORE_IO_EXPORT
 auto hardlink_directory(const std::filesystem::path &source,
                         const std::filesystem::path &destination) -> void;
+
+/// @ingroup io
+///
+/// Non-atomically write `contents` to `path`. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+///
+/// sourcemeta::core::write_file("/tmp/foo.json", "{\"a\":1}");
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto write_file(const std::filesystem::path &path,
+                const std::string_view contents) -> void;
+
+/// @ingroup io
+///
+/// Non-atomically write a byte span to `path`. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <array>
+///
+/// constexpr std::array<std::byte, 3> bytes{
+///     std::byte{0x41}, std::byte{0x42}, std::byte{0x43}};
+/// sourcemeta::core::write_file("/tmp/foo.bin", std::span{bytes});
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto write_file(const std::filesystem::path &path,
+                const std::span<const std::byte> contents) -> void;
+
+/// @ingroup io
+///
+/// Callback variant of `write_file`. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <sourcemeta/core/json.h>
+///
+/// sourcemeta::core::write_file("/tmp/foo.json",
+///     [&](std::ostream &stream) {
+///       sourcemeta::core::prettify(document, stream);
+///       stream << "\n";
+///     });
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto write_file(const std::filesystem::path &path,
+                const std::function<void(std::ostream &)> &writer) -> void;
 
 /// @ingroup io
 ///
