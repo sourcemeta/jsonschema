@@ -13,6 +13,7 @@ foreach(PLATFORM
   linux-x86_64
   linux-arm64
   linux-x86_64-musl
+  linux-arm64-musl
   windows-x86_64)
   if(PLATFORM MATCHES "windows")
     set(OUTPUT_BINARY "${RELEASES_DIR}/jsonschema-${PLATFORM}.exe")
