@@ -38,6 +38,15 @@ jobs:
             cc: gcc
             cxx: g++
             shell: sh
+          - os: ubuntu-22.04-arm
+            type: container
+            artifact: alpine-arm
+            container:
+              image: alpine:3.21
+              options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
+            cc: gcc
+            cxx: g++
+            shell: sh
           - os: macos-15-intel
             type: native
             artifact: macos-x64

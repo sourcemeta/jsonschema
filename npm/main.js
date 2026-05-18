@@ -22,7 +22,7 @@ function isMusl() {
 }
 
 function getExecutableName() {
-  if (PLATFORM === 'linux' && ARCH === 'x86_64' && isMusl()) {
+  if (PLATFORM === 'linux' && (ARCH === 'x86_64' || ARCH === 'arm64') && isMusl()) {
     return `jsonschema-${PLATFORM}-${ARCH}-musl`;
   }
 
