@@ -38,6 +38,15 @@ jobs:
             cc: gcc
             cxx: g++
             shell: sh
+          - os: ubuntu-22.04-arm
+            type: container
+            artifact: alpine-arm
+            container:
+              image: alpine:3.21
+              options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
+            cc: gcc
+            cxx: g++
+            shell: sh
           - os: macos-15-intel
             type: native
             artifact: macos-x64
@@ -69,6 +78,12 @@ jobs:
       CC: ${{ matrix.platform.cc }}
       CXX: ${{ matrix.platform.cxx }}
     steps:
+      # See https://github.com/laverdet/alpine-arm64
+      # Required for JavaScript-based actions to work inside Alpine containers
+      # on ARM64 runners
+      - uses: laverdet/alpine-arm64@v1
+        if: matrix.platform.type == 'container' && runner.arch == 'ARM64'
+
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
         run: |

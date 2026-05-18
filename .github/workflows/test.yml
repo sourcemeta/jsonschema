@@ -34,6 +34,14 @@ jobs:
             cc: gcc
             cxx: g++
             shell: sh
+          - os: ubuntu-22.04-arm
+            type: container
+            container:
+              image: alpine:3.21
+              options: --device /dev/fuse --cap-add SYS_ADMIN --security-opt apparmor:unconfined
+            cc: gcc
+            cxx: g++
+            shell: sh
           - os: macos-15-intel
             type: native
             cc: clang
@@ -64,6 +72,12 @@ jobs:
       CXX: ${{ matrix.platform.cxx }}
       WSLENV: CC:CXX
     steps:
+      # See https://github.com/laverdet/alpine-arm64
+      # Required for JavaScript-based actions to work inside Alpine containers
+      # on ARM64 runners
+      - uses: laverdet/alpine-arm64@v1
+        if: matrix.platform.type == 'container' && runner.arch == 'ARM64'
+
       # See https://github.com/Vampire/setup-wsl
       - uses: Vampire/setup-wsl@v5
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
