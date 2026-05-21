@@ -1,6 +1,6 @@
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/yaml.h>
 
@@ -35,7 +35,7 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
 
   auto parsed_schema{read_file(schema_path)};
 
-  if (!sourcemeta::core::is_schema(parsed_schema.document)) {
+  if (!sourcemeta::blaze::is_schema(parsed_schema.document)) {
     throw NotSchemaError{schema_path};
   }
 
@@ -49,13 +49,13 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   sourcemeta::blaze::Template schema_template;
   try {
     if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
-      const sourcemeta::core::JSON bundled{sourcemeta::core::bundle(
-          schema, sourcemeta::core::schema_walker, custom_resolver, dialect,
+      const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
+          schema, sourcemeta::blaze::schema_walker, custom_resolver, dialect,
           schema_default_id)};
 
-      sourcemeta::core::SchemaFrame frame{
-          sourcemeta::core::SchemaFrame::Mode::References};
-      frame.analyse(bundled, sourcemeta::core::schema_walker, custom_resolver,
+      sourcemeta::blaze::SchemaFrame frame{
+          sourcemeta::blaze::SchemaFrame::Mode::References};
+      frame.analyse(bundled, sourcemeta::blaze::schema_walker, custom_resolver,
                     dialect, schema_default_id);
 
       std::string entrypoint_uri;
@@ -68,13 +68,13 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
       }
 
       schema_template = sourcemeta::blaze::compile(
-          bundled, sourcemeta::core::schema_walker, custom_resolver,
+          bundled, sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler, frame, entrypoint_uri,
           fast_mode ? sourcemeta::blaze::Mode::FastValidation
                     : sourcemeta::blaze::Mode::Exhaustive);
     } else {
       schema_template = sourcemeta::blaze::compile(
-          schema, sourcemeta::core::schema_walker, custom_resolver,
+          schema, sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler,
           fast_mode ? sourcemeta::blaze::Mode::FastValidation
                     : sourcemeta::blaze::Mode::Exhaustive,
@@ -91,42 +91,42 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>(schema_path,
                                                                   error);
-  } catch (const sourcemeta::core::SchemaKeywordError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaKeywordError>(
+  } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         schema_path, error);
-  } catch (const sourcemeta::core::SchemaFrameError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaFrameError>(
+  } catch (const sourcemeta::blaze::SchemaFrameError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaFrameError>(
         schema_path, error);
-  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+  } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
     const auto position{parsed_schema.positions.get(error.location())};
     if (position.has_value()) {
       throw PositionError<sourcemeta::core::FileError<
-          sourcemeta::core::SchemaAnchorCollisionError>>(
+          sourcemeta::blaze::SchemaAnchorCollisionError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
           schema_path, error);
     }
 
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaAnchorCollisionError>(schema_path, error);
+        sourcemeta::blaze::SchemaAnchorCollisionError>(schema_path, error);
   } catch (
-      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+      const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>(schema_path,
-                                                                   error);
-  } catch (const sourcemeta::core::SchemaResolutionError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
+        sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>(schema_path,
+                                                                    error);
+  } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>(
         schema_path, error);
-  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+  } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownBaseDialectError>(schema_path);
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+        sourcemeta::blaze::SchemaUnknownBaseDialectError>(schema_path);
+  } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>(schema_path);
-  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>(
+        sourcemeta::blaze::SchemaUnknownDialectError>(schema_path);
+  } catch (const sourcemeta::blaze::SchemaVocabularyError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaVocabularyError>(
         schema_path, error.uri(), error.what());
-  } catch (const sourcemeta::core::SchemaError &error) {
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaError>(
+  } catch (const sourcemeta::blaze::SchemaError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaError>(
         schema_path, error.what());
   }
 

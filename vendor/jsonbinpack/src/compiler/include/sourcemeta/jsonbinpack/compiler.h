@@ -14,8 +14,8 @@
 /// #include <sourcemeta/jsonbinpack/compiler.h>
 /// ```
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <string_view> // std::string_view
 
@@ -29,7 +29,7 @@ namespace sourcemeta::jsonbinpack {
 /// ```cpp
 /// #include <sourcemeta/binpack/compiler.h>
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
+/// #include <sourcemeta/blaze/foundation.h>
 ///
 /// #include <iostream>
 ///
@@ -39,16 +39,16 @@ namespace sourcemeta::jsonbinpack {
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::compile(
-///     schema, sourcemeta::core::schema_walker,
-///     sourcemeta::core::schema_resolver);
+///     schema, sourcemeta::blaze::schema_walker,
+///     sourcemeta::blaze::schema_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_JSONBINPACK_COMPILER_EXPORT
 auto compile(sourcemeta::core::JSON &schema,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              std::string_view default_dialect = "") -> void;
 
 /// @ingroup compiler
@@ -61,7 +61,7 @@ auto compile(sourcemeta::core::JSON &schema,
 /// ```cpp
 /// #include <sourcemeta/binpack/compiler.h>
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
+/// #include <sourcemeta/blaze/foundation.h>
 ///
 /// #include <iostream>
 ///
@@ -71,16 +71,16 @@ auto compile(sourcemeta::core::JSON &schema,
 /// })JSON")};
 ///
 /// sourcemeta::jsonbinpack::canonicalize(
-///     schema, sourcemeta::core::schema_walker,
-///     sourcemeta::core::schema_resolver);
+///     schema, sourcemeta::blaze::schema_walker,
+///     sourcemeta::blaze::schema_resolver);
 ///
 /// sourcemeta::core::prettify(schema, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_JSONBINPACK_COMPILER_EXPORT
 auto canonicalize(sourcemeta::core::JSON &schema,
-                  const sourcemeta::core::SchemaWalker &walker,
-                  const sourcemeta::core::SchemaResolver &resolver,
+                  const sourcemeta::blaze::SchemaWalker &walker,
+                  const sourcemeta::blaze::SchemaResolver &resolver,
                   std::string_view default_dialect = "") -> void;
 
 } // namespace sourcemeta::jsonbinpack

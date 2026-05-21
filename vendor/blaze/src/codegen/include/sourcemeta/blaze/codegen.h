@@ -10,9 +10,9 @@
 #include <sourcemeta/blaze/codegen_typescript.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
@@ -126,32 +126,32 @@ using CodegenIRResult = std::vector<CodegenIREntity>;
 
 /// @ingroup codegen
 using CodegenCompiler = std::function<CodegenIREntity(
-    const sourcemeta::core::JSON &, const sourcemeta::core::SchemaFrame &,
-    const sourcemeta::core::SchemaFrame::Location &,
-    const sourcemeta::core::SchemaResolver &, const sourcemeta::core::JSON &)>;
+    const sourcemeta::core::JSON &, const sourcemeta::blaze::SchemaFrame &,
+    const sourcemeta::blaze::SchemaFrame::Location &,
+    const sourcemeta::blaze::SchemaResolver &, const sourcemeta::core::JSON &)>;
 
 /// @ingroup codegen
 SOURCEMETA_BLAZE_CODEGEN_EXPORT
 auto default_compiler(const sourcemeta::core::JSON &schema,
-                      const sourcemeta::core::SchemaFrame &frame,
-                      const sourcemeta::core::SchemaFrame::Location &location,
-                      const sourcemeta::core::SchemaResolver &resolver,
+                      const sourcemeta::blaze::SchemaFrame &frame,
+                      const sourcemeta::blaze::SchemaFrame::Location &location,
+                      const sourcemeta::blaze::SchemaResolver &resolver,
                       const sourcemeta::core::JSON &subschema)
     -> CodegenIREntity;
 
 /// @ingroup codegen
 SOURCEMETA_BLAZE_CODEGEN_EXPORT
 auto compile(const sourcemeta::core::JSON &schema,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const CodegenCompiler &compiler,
              const std::string_view default_dialect = "",
              const std::string_view default_id = "") -> CodegenIRResult;
 
 /// @ingroup codegen
 SOURCEMETA_BLAZE_CODEGEN_EXPORT
-auto symbol(const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location)
+auto symbol(const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location)
     -> std::vector<std::string>;
 
 /// @ingroup codegen

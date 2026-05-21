@@ -1,5 +1,5 @@
 #include <sourcemeta/blaze/alterschema.h>
-#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>     // std::erase_if
@@ -39,12 +39,12 @@ auto calculate_health_percentage(const std::size_t subschemas,
 
 auto check_rules(
     const sourcemeta::core::JSON &schema,
-    const sourcemeta::core::SchemaFrame &frame,
+    const sourcemeta::blaze::SchemaFrame &frame,
     const std::vector<std::tuple<
         std::unique_ptr<sourcemeta::blaze::SchemaTransformRule>, bool, bool>>
         &rules,
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::blaze::SchemaWalker &walker,
+    const sourcemeta::blaze::SchemaResolver &resolver,
     const sourcemeta::blaze::SchemaTransformer::Callback &callback,
     const sourcemeta::core::JSON::String &exclude_keyword,
     const bool non_mutating_only) -> std::pair<bool, std::uint8_t> {
@@ -57,9 +57,9 @@ auto check_rules(
 
   for (const auto &entry : frame.locations()) {
     if (entry.second.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Resource &&
+            sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
         entry.second.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Subschema) {
+            sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
       continue;
     }
 
@@ -101,13 +101,13 @@ auto check_rules(
           calculate_health_percentage(subschema_count, subschema_failures)};
 }
 
-auto analyse_frame(sourcemeta::core::SchemaFrame &frame,
+auto analyse_frame(sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::core::JSON &schema,
-                   const sourcemeta::core::SchemaWalker &walker,
-                   const sourcemeta::core::SchemaResolver &resolver,
+                   const sourcemeta::blaze::SchemaWalker &walker,
+                   const sourcemeta::blaze::SchemaResolver &resolver,
                    const std::string_view default_dialect,
                    const std::string_view default_id) -> void {
-  if (!sourcemeta::core::identify(schema, resolver, default_dialect).empty()) {
+  if (!sourcemeta::blaze::identify(schema, resolver, default_dialect).empty()) {
     frame.analyse(schema, walker, resolver, default_dialect);
   } else {
     frame.analyse(schema, walker, resolver, default_dialect, default_id);
@@ -151,11 +151,11 @@ auto SchemaTransformRule::rereference(const std::string_view reference,
 
 auto SchemaTransformRule::check(const core::JSON &schema,
                                 const core::JSON &root,
-                                const core::Vocabularies &vocabularies,
-                                const core::SchemaWalker &walker,
-                                const core::SchemaResolver &resolver,
-                                const core::SchemaFrame &frame,
-                                const core::SchemaFrame::Location &location,
+                                const blaze::Vocabularies &vocabularies,
+                                const blaze::SchemaWalker &walker,
+                                const blaze::SchemaResolver &resolver,
+                                const blaze::SchemaFrame &frame,
+                                const blaze::SchemaFrame::Location &location,
                                 const core::JSON::String &exclude_keyword) const
     -> SchemaTransformRule::Result {
   auto result{this->condition(schema, root, vocabularies, frame, location,
@@ -176,22 +176,22 @@ auto SchemaTransformRule::check(const core::JSON &schema,
 }
 
 auto SchemaTransformer::check(const core::JSON &schema,
-                              const core::SchemaWalker &walker,
-                              const core::SchemaResolver &resolver,
+                              const blaze::SchemaWalker &walker,
+                              const blaze::SchemaResolver &resolver,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
                               std::string_view default_id,
                               const core::JSON::String &exclude_keyword) const
     -> std::pair<bool, std::uint8_t> {
-  core::SchemaFrame frame{core::SchemaFrame::Mode::References};
+  blaze::SchemaFrame frame{blaze::SchemaFrame::Mode::References};
   analyse_frame(frame, schema, walker, resolver, default_dialect, default_id);
   return check_rules(schema, frame, this->rules, walker, resolver, callback,
                      exclude_keyword, false);
 }
 
 auto SchemaTransformer::apply(core::JSON &schema,
-                              const core::SchemaWalker &walker,
-                              const core::SchemaResolver &resolver,
+                              const blaze::SchemaWalker &walker,
+                              const blaze::SchemaResolver &resolver,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
                               std::string_view default_id,
@@ -202,7 +202,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
                      ProcessedRuleHasher>
       processed_rules;
 
-  core::SchemaFrame frame{core::SchemaFrame::Mode::References};
+  blaze::SchemaFrame frame{blaze::SchemaFrame::Mode::References};
 
   struct PotentiallyBrokenReference {
     core::Pointer origin;
@@ -229,8 +229,8 @@ auto SchemaTransformer::apply(core::JSON &schema,
     bool applied{false};
 
     for (const auto &entry : frame.locations()) {
-      if (entry.second.type != core::SchemaFrame::LocationType::Resource &&
-          entry.second.type != core::SchemaFrame::LocationType::Subschema) {
+      if (entry.second.type != blaze::SchemaFrame::LocationType::Resource &&
+          entry.second.type != blaze::SchemaFrame::LocationType::Subschema) {
         continue;
       }
 

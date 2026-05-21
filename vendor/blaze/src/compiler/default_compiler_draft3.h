@@ -287,10 +287,10 @@ auto compiler_draft3_core_ref(const Context &context,
                               const DynamicContext &dynamic_context,
                               const Instructions &) -> Instructions {
   const auto &entry{static_frame_entry(context, schema_context)};
-  const auto type{sourcemeta::core::SchemaReferenceType::Static};
+  const auto type{sourcemeta::blaze::SchemaReferenceType::Static};
   const auto reference{context.frame.reference(type, entry.pointer)};
   if (!reference.has_value()) [[unlikely]] {
-    throw sourcemeta::core::SchemaReferenceError(
+    throw sourcemeta::blaze::SchemaReferenceError(
         schema_context.schema.at(dynamic_context.keyword).to_string(),
         to_pointer(schema_context.relative_pointer),
         "Could not resolve schema reference");
@@ -316,7 +316,7 @@ auto properties_as_loop(const Context &context,
     return false;
   }
 
-  using Known = sourcemeta::core::Vocabularies::Known;
+  using Known = sourcemeta::blaze::Vocabularies::Known;
   const auto size{properties.size()};
   const auto imports_validation_vocabulary =
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
@@ -349,14 +349,14 @@ auto properties_as_loop(const Context &context,
           context.frame.references(),
           [&context, &current_entry](const auto &reference) {
             if (!context.frame.locations().contains(
-                    {sourcemeta::core::SchemaReferenceType::Static,
+                    {sourcemeta::blaze::SchemaReferenceType::Static,
                      reference.second.destination})) {
               return false;
             }
 
             const auto &target{
                 context.frame.locations()
-                    .at({sourcemeta::core::SchemaReferenceType::Static,
+                    .at({sourcemeta::blaze::SchemaReferenceType::Static,
                          reference.second.destination})
                     .pointer};
             return is_inside_disjunctor(reference.first.second) &&
@@ -696,7 +696,7 @@ auto compiler_draft3_applicator_properties_with_options(
 
       const auto &keyword_type{
           context.walker(keyword, schema_context.vocabularies).type};
-      using enum sourcemeta::core::SchemaKeywordType;
+      using enum sourcemeta::blaze::SchemaKeywordType;
       if (keyword_type == Assertion || keyword_type == Annotation ||
           keyword_type == Unknown || keyword_type == Comment ||
           keyword_type == Other || keyword_type == LocationMembers) {
@@ -953,7 +953,7 @@ auto compiler_draft3_applicator_properties(
   auto property_instructions{compiler_draft3_applicator_properties_with_options(
       context, schema_context, dynamic_context, current, false, false)};
 
-  using Known = sourcemeta::core::Vocabularies::Known;
+  using Known = sourcemeta::blaze::Vocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -1872,7 +1872,7 @@ auto compiler_draft3_validation_type(const Context &context,
                                      const Instructions &) -> Instructions {
   const auto &value{schema_context.schema.at(dynamic_context.keyword)};
 
-  using Known = sourcemeta::core::Vocabularies::Known;
+  using Known = sourcemeta::blaze::Vocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -2372,7 +2372,7 @@ auto compiler_draft3_applicator_dependencies(
     return {};
   }
 
-  using Known = sourcemeta::core::Vocabularies::Known;
+  using Known = sourcemeta::blaze::Vocabularies::Known;
   const auto is_draft3{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
@@ -2437,6 +2437,136 @@ auto compiler_draft3_validation_divisibleby(
                schema_context, dynamic_context,
                sourcemeta::core::JSON{
                    schema_context.schema.at(dynamic_context.keyword)})};
+}
+
+auto compiler_draft3_validation_format(const Context &context,
+                                       const SchemaContext &schema_context,
+                                       const DynamicContext &dynamic_context,
+                                       const Instructions &) -> Instructions {
+  using Known = sourcemeta::blaze::Vocabularies::Known;
+  static constexpr auto unsupported_dialect_message{
+      "The format assertion tweak not supported in this dialect"};
+
+  if (schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Format) ||
+      schema_context.vocabularies.contains(
+          Known::JSON_Schema_2020_12_Format_Annotation)) {
+    if (context.tweaks.format_assertion) {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          unsupported_dialect_message);
+    }
+
+    if (context.mode == Mode::FastValidation) {
+      return {};
+    }
+
+    Instructions children{
+        make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+             schema_context, dynamic_context,
+             sourcemeta::core::JSON{
+                 schema_context.schema.at(dynamic_context.keyword)})};
+
+    return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+                 context, schema_context, relative_dynamic_context(),
+                 ValueType::String, std::move(children))};
+  }
+
+  if (!context.tweaks.format_assertion) {
+    return {};
+  }
+
+  const auto &format{schema_context.schema.at(dynamic_context.keyword)};
+  if (!format.is_string()) {
+    return {};
+  }
+
+  const auto &name{format.to_string()};
+  ValueStringType type;
+
+  const auto is_draft3{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_3_Hyper)};
+  const auto is_draft4{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4_Hyper)};
+  const auto is_draft6{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6_Hyper)};
+
+  if (is_draft4 || is_draft6) {
+    if (name == "date-time") {
+      type = ValueStringType::DateTime;
+    } else if (name == "email") {
+      type = ValueStringType::Email;
+    } else if (name == "hostname") {
+      type = ValueStringType::Hostname;
+    } else if (name == "ipv4") {
+      type = ValueStringType::IPv4;
+    } else if (name == "ipv6") {
+      type = ValueStringType::IPv6;
+    } else if (name == "uri") {
+      type = ValueStringType::URI;
+    } else if (is_draft6 && name == "uri-reference") {
+      type = ValueStringType::URIReference;
+    } else if (is_draft6 && name == "uri-template") {
+      type = ValueStringType::URITemplate;
+    } else if (is_draft6 && name == "json-pointer") {
+      type = ValueStringType::JSONPointer;
+    } else {
+      return {};
+    }
+  } else if (is_draft3) {
+    if (name == "date-time") {
+      type = ValueStringType::DateTime;
+    } else if (name == "email") {
+      type = ValueStringType::Email;
+    } else if (name == "host-name") {
+      type = ValueStringType::Hostname;
+    } else if (name == "ip-address") {
+      type = ValueStringType::IPv4;
+    } else if (name == "ipv6") {
+      type = ValueStringType::IPv6;
+    } else if (name == "uri") {
+      type = ValueStringType::URI;
+    } else if (name == "date") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"date\" format is not supported in assertion mode yet");
+    } else if (name == "time") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"time\" format is not supported in assertion mode yet");
+    } else if (name == "utc-millisec") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"utc-millisec\" format is not supported in assertion mode yet");
+    } else if (name == "regex") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"regex\" format is not supported in assertion mode yet");
+    } else if (name == "color") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"color\" format is not supported in assertion mode yet");
+    } else if (name == "style") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"style\" format is not supported in assertion mode yet");
+    } else if (name == "phone") {
+      throw sourcemeta::blaze::CompilerError(
+          schema_context.base, to_pointer(schema_context.relative_pointer),
+          "The \"phone\" format is not supported in assertion mode yet");
+    } else {
+      return {};
+    }
+  } else {
+    throw sourcemeta::blaze::CompilerError(
+        schema_context.base, to_pointer(schema_context.relative_pointer),
+        unsupported_dialect_message);
+  }
+
+  return {make(sourcemeta::blaze::InstructionIndex::AssertionStringType,
+               context, schema_context, dynamic_context, type)};
 }
 
 } // namespace internal

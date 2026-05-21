@@ -28,7 +28,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
-        {sourcemeta::core::SchemaReferenceType::Static, destination}));
+        {sourcemeta::blaze::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_THEN,
         .base_schema_location = dynamic_context.base_schema_location,
@@ -56,7 +56,7 @@ auto compiler_draft7_applicator_if(const Context &context,
                schema_context.base)
             .recompose()};
     assert(context.frame.locations().contains(
-        {sourcemeta::core::SchemaReferenceType::Static, destination}));
+        {sourcemeta::blaze::SchemaReferenceType::Static, destination}));
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_ELSE,
         .base_schema_location = dynamic_context.base_schema_location,

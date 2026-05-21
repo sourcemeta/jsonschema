@@ -157,6 +157,11 @@ public:
   [[nodiscard]] auto operation(const std::string_view operation_id) const
       -> std::pair<Identifier, Identifier>;
 
+  /// Get the operation identifier associated with a registered route
+  /// identifier
+  [[nodiscard]] auto operation_id(const Identifier identifier) const
+      -> std::string_view;
+
 private:
   Node root_;
   Node otherwise_;
@@ -218,6 +223,27 @@ public:
   [[nodiscard]] auto operation(const std::string_view operation_id) const
       -> std::pair<URITemplateRouter::Identifier,
                    URITemplateRouter::Identifier>;
+
+  /// Get the identifier of the route at the given positional index
+  [[nodiscard]] auto at(const std::size_t index) const
+      -> URITemplateRouter::Identifier;
+
+  /// Get the context identifier associated with a registered route
+  /// identifier
+  [[nodiscard]] auto
+  context(const URITemplateRouter::Identifier identifier) const
+      -> URITemplateRouter::Identifier;
+
+  /// Reconstruct and return the URI Template path string originally registered
+  /// for the given identifier
+  [[nodiscard]] auto path(const URITemplateRouter::Identifier identifier) const
+      -> std::string;
+
+  /// Get the operation identifier associated with a registered route
+  /// identifier
+  [[nodiscard]] auto
+  operation_id(const URITemplateRouter::Identifier identifier) const
+      -> std::string_view;
 
 private:
   const std::uint8_t *data_{nullptr};

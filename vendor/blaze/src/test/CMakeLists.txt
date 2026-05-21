@@ -18,7 +18,7 @@ target_link_libraries(sourcemeta_blaze_test PUBLIC
 target_link_libraries(sourcemeta_blaze_test PUBLIC
   sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_blaze_test PUBLIC
-  sourcemeta::core::jsonschema)
+  sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_blaze_test PUBLIC
   sourcemeta::blaze::compiler)
 target_link_libraries(sourcemeta_blaze_test PUBLIC

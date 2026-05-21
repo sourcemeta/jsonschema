@@ -25,6 +25,9 @@ anyof_true_simplify
 comment_trim
   Comments should not contain leading or trailing whitespace
 
+conflicting_readonly_writeonly
+  The `readOnly` and `writeOnly` keywords are mutually exclusive
+
 const_in_enum
   If the `const` and `enum` keyword overlap, then `enum` is redundant and can be removed
 
@@ -304,7 +307,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 98
+Number of rules: 99
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

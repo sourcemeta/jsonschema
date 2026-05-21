@@ -1,8 +1,8 @@
 #include <sourcemeta/blaze/configuration.h>
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::uint8_t
@@ -82,7 +82,7 @@ auto fetch_and_write(
     const std::string &dependency_uri,
     const std::filesystem::path &dependency_path,
     const sourcemeta::blaze::Configuration::FetchCallback &fetcher,
-    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::blaze::SchemaResolver &resolver,
     const sourcemeta::blaze::Configuration::WriteCallback &writer,
     const sourcemeta::blaze::Configuration::FetchEvent::Callback &callback,
     const std::optional<sourcemeta::core::JSON::String> &default_dialect,
@@ -116,8 +116,8 @@ auto fetch_and_write(
 
   try {
     const std::string default_dialect_value{default_dialect.value_or("")};
-    sourcemeta::core::bundle(out_schema, sourcemeta::core::schema_walker,
-                             resolver, default_dialect_value, dependency_uri);
+    sourcemeta::blaze::bundle(out_schema, sourcemeta::blaze::schema_walker,
+                              resolver, default_dialect_value, dependency_uri);
   } catch (...) {
     emit_event(callback, FetchEvent::Type::Error, dependency_uri,
                dependency_path, index, total, "Failed to bundle schema",
@@ -157,7 +157,7 @@ auto fetch_and_write(
 namespace sourcemeta::blaze {
 
 auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
-                          const sourcemeta::core::SchemaResolver &resolver,
+                          const sourcemeta::blaze::SchemaResolver &resolver,
                           const ReadCallback &reader,
                           const WriteCallback &writer,
                           const FetchEvent::Callback &callback,
@@ -241,7 +241,7 @@ auto Configuration::fetch(Lock &lock, const FetchCallback &fetcher,
 }
 
 auto Configuration::fetch(const Lock &lock, const FetchCallback &fetcher,
-                          const sourcemeta::core::SchemaResolver &resolver,
+                          const sourcemeta::blaze::SchemaResolver &resolver,
                           const ReadCallback &reader,
                           const WriteCallback &writer,
                           const FetchEvent::Callback &callback,

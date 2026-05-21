@@ -8,11 +8,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(
@@ -66,14 +66,14 @@ public:
           continue;
         }
         const auto keyword_type{walker(entry.first, vocabularies).type};
-        if (keyword_type != sourcemeta::core::SchemaKeywordType::Unknown &&
-            keyword_type != sourcemeta::core::SchemaKeywordType::Annotation &&
-            keyword_type != sourcemeta::core::SchemaKeywordType::Comment) {
+        if (keyword_type != sourcemeta::blaze::SchemaKeywordType::Unknown &&
+            keyword_type != sourcemeta::blaze::SchemaKeywordType::Annotation &&
+            keyword_type != sourcemeta::blaze::SchemaKeywordType::Comment) {
           modern_ref_needs_wrapping = true;
-          if (keyword_type != sourcemeta::core::SchemaKeywordType::Reference &&
-              keyword_type != sourcemeta::core::SchemaKeywordType::Other &&
+          if (keyword_type != sourcemeta::blaze::SchemaKeywordType::Reference &&
+              keyword_type != sourcemeta::blaze::SchemaKeywordType::Other &&
               keyword_type !=
-                  sourcemeta::core::SchemaKeywordType::LocationMembers) {
+                  sourcemeta::blaze::SchemaKeywordType::LocationMembers) {
             this->ref_annotations_only_ = false;
           }
         }

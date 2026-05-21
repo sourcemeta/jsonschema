@@ -641,6 +641,37 @@ public:
   [[nodiscard]] static auto is_uri_reference(std::string_view input) noexcept
       -> bool;
 
+  /// Strip a URI path prefix and return the remaining suffix. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const auto result{
+  ///   sourcemeta::core::URI::strip_path_prefix("/foo/bar/baz", "/foo")};
+  /// assert(result.has_value());
+  /// assert(result.value() == "bar/baz");
+  /// ```
+  [[nodiscard]] static auto strip_path_prefix(std::string_view path,
+                                              std::string_view prefix)
+      -> std::optional<std::string>;
+
+  /// Replace a URI path prefix with a new prefix. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const auto result{sourcemeta::core::URI::rebase_path(
+  ///   "/foo/bar/baz", "/foo", "https://example.com")};
+  /// assert(result.has_value());
+  /// assert(result.value() == "https://example.com/bar/baz");
+  /// ```
+  [[nodiscard]] static auto rebase_path(std::string_view path,
+                                        std::string_view old_prefix,
+                                        std::string_view new_prefix)
+      -> std::optional<std::string>;
+
 private:
   auto parse(std::string_view input) -> void;
 

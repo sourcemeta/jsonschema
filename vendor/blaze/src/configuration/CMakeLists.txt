@@ -10,4 +10,4 @@ target_link_libraries(sourcemeta_blaze_configuration PUBLIC sourcemeta::core::js
 target_link_libraries(sourcemeta_blaze_configuration PRIVATE sourcemeta::core::uri)
 target_link_libraries(sourcemeta_blaze_configuration PRIVATE sourcemeta::core::io)
 target_link_libraries(sourcemeta_blaze_configuration PRIVATE sourcemeta::core::crypto)
-target_link_libraries(sourcemeta_blaze_configuration PRIVATE sourcemeta::core::jsonschema)
+target_link_libraries(sourcemeta_blaze_configuration PRIVATE sourcemeta::blaze::foundation)

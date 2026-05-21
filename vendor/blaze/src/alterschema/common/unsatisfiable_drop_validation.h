@@ -10,11 +10,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
                          {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
@@ -37,7 +37,7 @@ public:
       }
     } else {
       const auto *not_value{schema.try_at("not")};
-      if (not_value && sourcemeta::core::is_empty_schema(*not_value)) {
+      if (not_value && sourcemeta::blaze::is_empty_schema(*not_value)) {
         trigger_keyword = "not";
       }
     }
@@ -79,7 +79,7 @@ private:
     if (value.is_string()) {
       return value.to_string() == "any";
     }
-    if (sourcemeta::core::is_empty_schema(value)) {
+    if (sourcemeta::blaze::is_empty_schema(value)) {
       return true;
     }
     if (value.is_array()) {
@@ -87,7 +87,7 @@ private:
         if (entry.is_string()) {
           return entry.to_string() == "any";
         }
-        return sourcemeta::core::is_empty_schema(entry);
+        return sourcemeta::blaze::is_empty_schema(entry);
       });
     }
     return false;

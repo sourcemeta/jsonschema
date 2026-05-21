@@ -23,7 +23,7 @@ static auto current_dialect_or_override(const sourcemeta::core::JSON &schema)
 
 static auto
 subschema_at_dialect(const sourcemeta::core::JSON &schema,
-                     const sourcemeta::core::SchemaFrame::Location &location,
+                     const sourcemeta::blaze::SchemaFrame::Location &location,
                      const std::string_view dialect) -> bool {
   const auto current{current_dialect_or_override(schema)};
   if (!current.empty()) {

@@ -120,7 +120,17 @@ using ValueNamedIndexes = sourcemeta::core::JSONObject<
 
 /// @ingroup evaluator
 /// Represents a compiler step string logical type
-enum class ValueStringType : std::uint8_t { URI };
+enum class ValueStringType : std::uint8_t {
+  URI,
+  URIReference,
+  URITemplate,
+  Email,
+  IPv4,
+  IPv6,
+  Hostname,
+  DateTime,
+  JSONPointer
+};
 
 /// @ingroup evaluator
 /// Represents an compiler step that maps strings to strings

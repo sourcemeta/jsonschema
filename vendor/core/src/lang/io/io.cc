@@ -68,6 +68,22 @@ private:
   bool committed_{false};
 };
 
+auto normalize(const std::filesystem::path &canonical_path)
+    -> std::filesystem::path {
+  auto normalized{canonical_path.lexically_normal()};
+
+  // `lexically_normal` can leave a trailing separator behind (for example,
+  // `/foo/bar/.` becomes `/foo/bar/` and `/foo/bar/..` becomes `/foo/`).
+  // Strip it so the canonical form of a directory matches its non-trailing
+  // counterpart, while preserving the root path itself.
+  if (!normalized.empty() && !normalized.has_filename() &&
+      normalized != normalized.root_path()) {
+    normalized = normalized.parent_path();
+  }
+
+  return normalized;
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -93,15 +109,19 @@ auto canonical(const std::filesystem::path &path) -> std::filesystem::path {
 
 auto weakly_canonical(const std::filesystem::path &path)
     -> std::filesystem::path {
+  if (path.empty()) {
+    return path;
+  }
+
   // On Linux, FIFO files (like /dev/fd/XX due to process substitution)
   // cannot be made canonical
   // See https://github.com/sourcemeta/jsonschema/issues/252
   if (std::filesystem::is_fifo(path)) {
-    return path;
+    return normalize(path);
   }
 
   try {
-    return std::filesystem::weakly_canonical(path);
+    return normalize(std::filesystem::weakly_canonical(path));
   } catch (const std::filesystem::filesystem_error &error) {
     if (error.code() == std::errc::no_such_file_or_directory) {
       throw IOFileNotFoundError{path};
@@ -111,13 +131,17 @@ auto weakly_canonical(const std::filesystem::path &path)
   }
 }
 
-auto starts_with(const std::filesystem::path &path,
-                 const std::filesystem::path &prefix) -> bool {
-  auto path_iterator = path.begin();
-  auto prefix_iterator = prefix.begin();
+auto is_under_path(const std::filesystem::path &path,
+                   const std::filesystem::path &prefix) -> bool {
+  const auto canonical_path{sourcemeta::core::weakly_canonical(path)};
+  const auto canonical_prefix{sourcemeta::core::weakly_canonical(prefix)};
 
-  while (prefix_iterator != prefix.end()) {
-    if (path_iterator == path.end() || *path_iterator != *prefix_iterator) {
+  auto path_iterator{canonical_path.begin()};
+  auto prefix_iterator{canonical_prefix.begin()};
+
+  while (prefix_iterator != canonical_prefix.end()) {
+    if (path_iterator == canonical_path.end() ||
+        *path_iterator != *prefix_iterator) {
       return false;
     }
 
@@ -128,12 +152,40 @@ auto starts_with(const std::filesystem::path &path,
   return true;
 }
 
+auto strip_path_prefix(const std::filesystem::path &path,
+                       const std::filesystem::path &prefix)
+    -> std::filesystem::path {
+  const auto canonical_path{sourcemeta::core::weakly_canonical(path)};
+  const auto canonical_prefix{sourcemeta::core::weakly_canonical(prefix)};
+
+  auto path_iterator{canonical_path.begin()};
+  auto prefix_iterator{canonical_prefix.begin()};
+
+  while (prefix_iterator != canonical_prefix.end()) {
+    if (path_iterator == canonical_path.end() ||
+        *path_iterator != *prefix_iterator) {
+      return path;
+    }
+
+    ++path_iterator;
+    ++prefix_iterator;
+  }
+
+  std::filesystem::path result;
+  while (path_iterator != canonical_path.end()) {
+    result /= *path_iterator;
+    ++path_iterator;
+  }
+
+  return result;
+}
+
 auto hardlink_directory(const std::filesystem::path &source,
                         const std::filesystem::path &destination) -> void {
   assert(std::filesystem::is_directory(source));
   assert(!std::filesystem::exists(destination) ||
          std::filesystem::is_directory(destination));
-  assert(!starts_with(destination, source));
+  assert(!is_under_path(destination, source));
   std::filesystem::create_directories(destination);
   for (const auto &entry :
        std::filesystem::recursive_directory_iterator{source}) {

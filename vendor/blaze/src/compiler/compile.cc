@@ -1,7 +1,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
-#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include <algorithm> // std::move, std::sort, std::unique
 #include <cassert>   // assert
@@ -43,7 +43,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   }
 
   Instructions steps;
-  for (const auto &entry : sourcemeta::core::SchemaKeywordIterator{
+  for (const auto &entry : sourcemeta::blaze::SchemaKeywordIterator{
            schema_context.schema, context.walker, context.resolver,
            default_dialect}) {
     assert(entry.pointer.back().is_property());
@@ -64,7 +64,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
              steps)) {
       // Just a sanity check to ensure every keyword location is indeed valid
       assert(context.frame.locations().contains(
-          {sourcemeta::core::SchemaReferenceType::Static,
+          {sourcemeta::blaze::SchemaReferenceType::Static,
            context.extra[step.extra_index].keyword_location}));
       steps.push_back(std::move(step));
     }
@@ -75,7 +75,7 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
 
 // TODO: Somehow move this logic up to `SchemaFrame`
 auto schema_frame_populate_target_types(
-    const sourcemeta::core::SchemaFrame &frame,
+    const sourcemeta::blaze::SchemaFrame &frame,
     std::unordered_map<std::string_view, std::pair<bool, bool>> &target_types)
     -> void {
   for (const auto &reference : frame.references()) {
@@ -152,10 +152,10 @@ auto schema_frame_populate_target_types(
 namespace sourcemeta::blaze {
 
 auto compile(const sourcemeta::core::JSON &schema,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const Compiler &compiler,
-             const sourcemeta::core::SchemaFrame &frame,
+             const sourcemeta::blaze::SchemaFrame &frame,
              const std::string_view entrypoint, const Mode mode,
              const std::optional<Tweaks> &tweaks) -> Template {
   assert(is_schema(schema));
@@ -169,7 +169,7 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   const auto &entrypoint_location{maybe_entrypoint_location->get()};
   if (entrypoint_location.type ==
-      sourcemeta::core::SchemaFrame::LocationType::Pointer) [[unlikely]] {
+      sourcemeta::blaze::SchemaFrame::LocationType::Pointer) [[unlikely]] {
     throw CompilerInvalidEntryPoint{
         entrypoint, "The given entry point URI is not a valid subschema"};
   }
@@ -181,7 +181,7 @@ auto compile(const sourcemeta::core::JSON &schema,
   std::vector<std::string> resources;
   for (const auto &entry : frame.locations()) {
     if (entry.second.type ==
-        sourcemeta::core::SchemaFrame::LocationType::Resource) {
+        sourcemeta::blaze::SchemaFrame::LocationType::Resource) {
       resources.push_back(entry.first.second);
     }
   }
@@ -203,7 +203,7 @@ auto compile(const sourcemeta::core::JSON &schema,
     // Check whether dynamic referencing takes places in this schema. If not,
     // we can avoid the overhead of keeping track of dynamics scopes, etc
     if (reference.first.first ==
-        sourcemeta::core::SchemaReferenceType::Dynamic) {
+        sourcemeta::blaze::SchemaReferenceType::Dynamic) {
       uses_dynamic_scopes = true;
       break;
     }
@@ -216,13 +216,13 @@ auto compile(const sourcemeta::core::JSON &schema,
   std::unordered_map<std::string_view, std::pair<bool, bool>> target_types;
   schema_frame_populate_target_types(frame, target_types);
 
-  std::map<
-      std::tuple<sourcemeta::core::SchemaReferenceType, std::string_view, bool>,
-      std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
+  std::map<std::tuple<sourcemeta::blaze::SchemaReferenceType, std::string_view,
+                      bool>,
+           std::pair<std::size_t, const sourcemeta::core::WeakPointer *>>
       targets_map;
   targets_map.emplace(
-      std::make_tuple(sourcemeta::core::SchemaReferenceType::Static, entrypoint,
-                      false),
+      std::make_tuple(sourcemeta::blaze::SchemaReferenceType::Static,
+                      entrypoint, false),
       std::make_pair(0, nullptr));
 
   for (const auto &reference : frame.references()) {
@@ -236,7 +236,7 @@ auto compile(const sourcemeta::core::JSON &schema,
     auto reference_origin{frame.traverse(reference.first.second)};
     assert(reference_origin.has_value());
     while (reference_origin->get().type ==
-               sourcemeta::core::SchemaFrame::LocationType::Pointer &&
+               sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
            reference_origin->get().parent.has_value()) {
       reference_origin = frame.traverse(reference_origin->get().parent.value());
       assert(reference_origin.has_value());
@@ -244,7 +244,7 @@ auto compile(const sourcemeta::core::JSON &schema,
 
     // Skip unreachable targets
     if (reference_origin->get().type !=
-            sourcemeta::core::SchemaFrame::LocationType::Pointer &&
+            sourcemeta::blaze::SchemaFrame::LocationType::Pointer &&
         !frame.is_reachable(entrypoint_location, reference_origin->get(),
                             walker, resolver)) {
       continue;
@@ -274,8 +274,8 @@ auto compile(const sourcemeta::core::JSON &schema,
   // but could be used as override targets during dynamic resolution
   for (const auto &entry : frame.locations()) {
     if (entry.second.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Anchor ||
-        entry.first.first != sourcemeta::core::SchemaReferenceType::Dynamic) {
+            sourcemeta::blaze::SchemaFrame::LocationType::Anchor ||
+        entry.first.first != sourcemeta::blaze::SchemaReferenceType::Dynamic) {
       continue;
     }
 
@@ -321,8 +321,9 @@ auto compile(const sourcemeta::core::JSON &schema,
     for (const auto &entry : context.frame.locations()) {
       // We are only trying to find dynamic anchors
       if (entry.second.type !=
-              sourcemeta::core::SchemaFrame::LocationType::Anchor ||
-          entry.first.first != sourcemeta::core::SchemaReferenceType::Dynamic) {
+              sourcemeta::blaze::SchemaFrame::LocationType::Anchor ||
+          entry.first.first !=
+              sourcemeta::blaze::SchemaReferenceType::Dynamic) {
         continue;
       }
 
@@ -342,7 +343,7 @@ auto compile(const sourcemeta::core::JSON &schema,
 
       // Find the index in targets for this dynamic anchor
       const auto key{
-          std::make_tuple(sourcemeta::core::SchemaReferenceType::Dynamic,
+          std::make_tuple(sourcemeta::blaze::SchemaReferenceType::Dynamic,
                           std::string_view{entry.first.second}, false)};
       assert(context.targets.contains(key));
       const auto index{context.targets.at(key).first};
@@ -366,9 +367,9 @@ auto compile(const sourcemeta::core::JSON &schema,
     assert(location.has_value());
     const auto &entry{location->get()};
 
-    if (entry.type != sourcemeta::core::SchemaFrame::LocationType::Subschema &&
-        entry.type != sourcemeta::core::SchemaFrame::LocationType::Resource &&
-        entry.type != sourcemeta::core::SchemaFrame::LocationType::Anchor)
+    if (entry.type != sourcemeta::blaze::SchemaFrame::LocationType::Subschema &&
+        entry.type != sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
+        entry.type != sourcemeta::blaze::SchemaFrame::LocationType::Anchor)
         [[unlikely]] {
       assert(reference_pointer != nullptr);
       const auto parent_size{entry.parent ? entry.parent->size() : 0};
@@ -379,7 +380,7 @@ auto compile(const sourcemeta::core::JSON &schema,
     }
 
     auto subschema{sourcemeta::core::get(context.root, entry.pointer)};
-    auto nested_vocabularies{sourcemeta::core::vocabularies(
+    auto nested_vocabularies{sourcemeta::blaze::vocabularies(
         subschema, context.resolver, entry.dialect)};
     const auto nested_relative_pointer{
         entry.pointer.slice(entry.relative_pointer)};
@@ -427,8 +428,8 @@ auto compile(const sourcemeta::core::JSON &schema,
 }
 
 auto compile(const sourcemeta::core::JSON &schema,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const Compiler &compiler, const Mode mode,
              const std::string_view default_dialect,
              const std::string_view default_id,
@@ -438,11 +439,11 @@ auto compile(const sourcemeta::core::JSON &schema,
 
   // Make sure the input schema is bundled, otherwise we won't be able to
   // resolve remote references here
-  const sourcemeta::core::JSON result{sourcemeta::core::bundle(
+  const sourcemeta::core::JSON result{sourcemeta::blaze::bundle(
       schema, walker, resolver, default_dialect, default_id)};
 
-  sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References};
+  sourcemeta::blaze::SchemaFrame frame{
+      sourcemeta::blaze::SchemaFrame::Mode::References};
   frame.analyse(result, walker, resolver, default_dialect, default_id);
   return compile(result, walker, resolver, compiler, frame,
                  entrypoint.empty() ? frame.root() : entrypoint, mode, tweaks);
@@ -464,15 +465,15 @@ auto compile(const Context &context, const SchemaContext &schema_context,
 
   // Otherwise the recursion attempt is non-sense
   if (!context.frame.locations().contains(
-          {sourcemeta::core::SchemaReferenceType::Static, destination}))
+          {sourcemeta::blaze::SchemaReferenceType::Static, destination}))
       [[unlikely]] {
-    throw sourcemeta::core::SchemaReferenceError(
+    throw sourcemeta::blaze::SchemaReferenceError(
         destination, to_pointer(schema_context.relative_pointer),
         "The target of the reference does not exist in the schema");
   }
 
   const auto &entry{context.frame.locations().at(
-      {sourcemeta::core::SchemaReferenceType::Static, destination})};
+      {sourcemeta::blaze::SchemaReferenceType::Static, destination})};
   const auto &new_schema{get(context.root, entry.pointer)};
   assert(is_schema(new_schema));
 

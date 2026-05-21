@@ -9,7 +9,7 @@ endif()
 target_link_libraries(sourcemeta_blaze_documentation PUBLIC
   sourcemeta::core::json)
 target_link_libraries(sourcemeta_blaze_documentation PUBLIC
-  sourcemeta::core::jsonschema)
+  sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_blaze_documentation PRIVATE
   sourcemeta::blaze::alterschema)
 target_link_libraries(sourcemeta_blaze_documentation PRIVATE

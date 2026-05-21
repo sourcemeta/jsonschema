@@ -2,10 +2,24 @@
 
 #include "escaping.h"
 
-#include <algorithm>  // std::ranges::replace
-#include <filesystem> // std::filesystem
-#include <iterator>   // std::advance, std::next
-#include <string>     // std::string
+#include <algorithm>   // std::ranges::equal, std::ranges::replace
+#include <cctype>      // std::tolower
+#include <filesystem>  // std::filesystem
+#include <iterator>    // std::advance, std::next
+#include <string>      // std::string
+#include <string_view> // std::string_view
+
+namespace {
+
+auto is_localhost_host(const std::string_view host) -> bool {
+  constexpr std::string_view localhost{"localhost"};
+  return std::ranges::equal(
+      host, localhost, [](const char left, const char right) {
+        return std::tolower(static_cast<unsigned char>(left)) == right;
+      });
+}
+
+} // namespace
 
 namespace sourcemeta::core {
 
@@ -15,6 +29,26 @@ auto URI::to_path() const -> std::filesystem::path {
   // For non-file URIs, just return the path as-is
   if (!this->is_file()) {
     return path;
+  }
+
+  // RFC 8089: a non-empty, non-localhost host on a file URI denotes a UNC
+  // server. The "localhost" host is equivalent to no host
+  const auto host_value = this->host();
+  const auto is_unc = host_value.has_value() && !host_value->empty() &&
+                      !is_localhost_host(host_value.value());
+  if (is_unc) {
+    if (!path.empty() && path.front() == '/') {
+      path.erase(0, 1);
+    }
+    std::ranges::replace(path, '/', '\\');
+    uri_unescape_all_inplace(path);
+    std::string unc{"\\\\"};
+    unc.append(host_value.value());
+    if (!path.empty()) {
+      unc.push_back('\\');
+      unc.append(path);
+    }
+    return unc;
   }
 
   // Check for Windows absolute path (e.g., /C:/)

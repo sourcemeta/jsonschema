@@ -10,10 +10,10 @@
 namespace {
 
 auto is_validation_subschema(
-    const sourcemeta::core::SchemaFrame &frame,
-    const sourcemeta::core::SchemaFrame::Location &location,
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver) -> bool {
+    const sourcemeta::blaze::SchemaFrame &frame,
+    const sourcemeta::blaze::SchemaFrame::Location &location,
+    const sourcemeta::blaze::SchemaWalker &walker,
+    const sourcemeta::blaze::SchemaResolver &resolver) -> bool {
   if (!location.parent.has_value()) {
     return false;
   }
@@ -36,7 +36,7 @@ auto is_validation_subschema(
   const auto vocabularies{
       frame.vocabularies(parent_location.value().get(), resolver)};
   const auto &walker_result{walker(keyword_token.to_property(), vocabularies)};
-  using Type = sourcemeta::core::SchemaKeywordType;
+  using Type = sourcemeta::blaze::SchemaKeywordType;
   if (walker_result.type == Type::ApplicatorValueTraverseAnyPropertyKey ||
       walker_result.type == Type::ApplicatorValueTraverseAnyItem) {
     return true;
@@ -51,8 +51,8 @@ auto is_validation_subschema(
 namespace sourcemeta::blaze {
 
 auto compile(const sourcemeta::core::JSON &input,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const CodegenCompiler &compiler,
              const std::string_view default_dialect,
              const std::string_view default_id) -> CodegenIRResult {
@@ -60,8 +60,8 @@ auto compile(const sourcemeta::core::JSON &input,
   // (1) Bundle the schema to resolve external references
   // --------------------------------------------------------------------------
 
-  auto schema{sourcemeta::core::bundle(input, walker, resolver, default_dialect,
-                                       default_id)};
+  auto schema{sourcemeta::blaze::bundle(input, walker, resolver,
+                                        default_dialect, default_id)};
 
   // --------------------------------------------------------------------------
   // (2) Canonicalize the schema for easier analysis
@@ -81,8 +81,8 @@ auto compile(const sourcemeta::core::JSON &input,
   // (3) Frame the resulting schema with instance location information
   // --------------------------------------------------------------------------
 
-  sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References};
+  sourcemeta::blaze::SchemaFrame frame{
+      sourcemeta::blaze::SchemaFrame::Mode::References};
   frame.analyse(schema, walker, resolver, default_dialect, default_id);
 
   // --------------------------------------------------------------------------
@@ -96,9 +96,9 @@ auto compile(const sourcemeta::core::JSON &input,
   CodegenIRResult result;
   for (const auto &[key, location] : frame.locations()) {
     if (location.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Resource &&
+            sourcemeta::blaze::SchemaFrame::LocationType::Resource &&
         location.type !=
-            sourcemeta::core::SchemaFrame::LocationType::Subschema) {
+            sourcemeta::blaze::SchemaFrame::LocationType::Subschema) {
       continue;
     }
 

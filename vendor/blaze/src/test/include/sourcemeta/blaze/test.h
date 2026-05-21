@@ -10,9 +10,9 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <chrono>     // std::chrono::steady_clock
 #include <cstddef>    // std::size_t
@@ -120,7 +120,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// #include <sourcemeta/core/json.h>
   /// #include <sourcemeta/core/jsonpointer.h>
-  /// #include <sourcemeta/core/jsonschema.h>
+  /// #include <sourcemeta/blaze/foundation.h>
   ///
   /// #include <iostream>
   ///
@@ -143,8 +143,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),
-  ///     sourcemeta::core::schema_resolver,
-  ///     sourcemeta::core::schema_walker,
+  ///     sourcemeta::blaze::schema_resolver,
+  ///     sourcemeta::blaze::schema_walker,
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
   /// const auto result{suite.run(
@@ -171,7 +171,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// #include <sourcemeta/core/json.h>
   /// #include <sourcemeta/core/jsonpointer.h>
-  /// #include <sourcemeta/core/jsonschema.h>
+  /// #include <sourcemeta/blaze/foundation.h>
   ///
   /// #include <cassert>
   ///
@@ -189,8 +189,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   ///
   /// const auto suite{sourcemeta::blaze::TestSuite::parse(
   ///     document, tracker, std::filesystem::current_path(),
-  ///     sourcemeta::core::schema_resolver,
-  ///     sourcemeta::core::schema_walker,
+  ///     sourcemeta::blaze::schema_resolver,
+  ///     sourcemeta::blaze::schema_walker,
   ///     sourcemeta::blaze::default_schema_compiler)};
   ///
   /// assert(suite.targets.size() == 1);
@@ -202,8 +202,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   parse(const sourcemeta::core::JSON &document,
         const sourcemeta::core::PointerPositionTracker &tracker,
         const std::filesystem::path &base_path,
-        const sourcemeta::core::SchemaResolver &schema_resolver,
-        const sourcemeta::core::SchemaWalker &walker, const Compiler &compiler,
+        const sourcemeta::blaze::SchemaResolver &schema_resolver,
+        const sourcemeta::blaze::SchemaWalker &walker, const Compiler &compiler,
         std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> TestSuite;
 };

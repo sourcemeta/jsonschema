@@ -1,4 +1,4 @@
-#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/options.h>
 
 #include <cstdlib>     // EXIT_SUCCESS

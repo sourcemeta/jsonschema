@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/alterschema_export.h>
 #endif
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <cassert>     // assert
 #include <concepts>    // std::derived_from, std::same_as
@@ -90,11 +90,11 @@ public:
   [[nodiscard]] auto
   check(const sourcemeta::core::JSON &schema,
         const sourcemeta::core::JSON &root,
-        const sourcemeta::core::Vocabularies &vocabularies,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
-        const sourcemeta::core::SchemaFrame &frame,
-        const sourcemeta::core::SchemaFrame::Location &location,
+        const sourcemeta::blaze::Vocabularies &vocabularies,
+        const sourcemeta::blaze::SchemaWalker &walker,
+        const sourcemeta::blaze::SchemaResolver &resolver,
+        const sourcemeta::blaze::SchemaFrame &frame,
+        const sourcemeta::blaze::SchemaFrame::Location &location,
         const sourcemeta::core::JSON::String &exclude_keyword) const -> Result;
 
   /// A method to optionally fix any reference location that was affected by the
@@ -109,11 +109,11 @@ public:
   /// The rule condition
   [[nodiscard]] virtual auto condition(
       const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &root,
-      const sourcemeta::core::Vocabularies &vocabularies,
-      const sourcemeta::core::SchemaFrame &frame,
-      const sourcemeta::core::SchemaFrame::Location &location,
-      const sourcemeta::core::SchemaWalker &walker,
-      const sourcemeta::core::SchemaResolver &resolver) const -> Result = 0;
+      const sourcemeta::blaze::Vocabularies &vocabularies,
+      const sourcemeta::blaze::SchemaFrame &frame,
+      const sourcemeta::blaze::SchemaFrame::Location &location,
+      const sourcemeta::blaze::SchemaWalker &walker,
+      const sourcemeta::blaze::SchemaResolver &resolver) const -> Result = 0;
 
   /// The rule transformation. If this virtual method is not overriden,
   /// then the rule is considered to not mutate the schema
@@ -177,8 +177,8 @@ public:
   /// Apply the bundle of rules to a schema
   [[nodiscard]] auto
   apply(sourcemeta::core::JSON &schema,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
+        const sourcemeta::blaze::SchemaWalker &walker,
+        const sourcemeta::blaze::SchemaResolver &resolver,
         const Callback &callback, std::string_view default_dialect = "",
         std::string_view default_id = "",
         const sourcemeta::core::JSON::String &exclude_keyword = "") const
@@ -187,8 +187,8 @@ public:
   /// Report back the rules from the bundle that need to be applied to a schema
   [[nodiscard]] auto
   check(const sourcemeta::core::JSON &schema,
-        const sourcemeta::core::SchemaWalker &walker,
-        const sourcemeta::core::SchemaResolver &resolver,
+        const sourcemeta::blaze::SchemaWalker &walker,
+        const sourcemeta::blaze::SchemaResolver &resolver,
         const Callback &callback, std::string_view default_dialect = "",
         std::string_view default_id = "",
         const sourcemeta::core::JSON::String &exclude_keyword = "") const

@@ -186,6 +186,21 @@ auto URITemplateRouter::operation(const std::string_view operation_id) const
   return iterator->second;
 }
 
+auto URITemplateRouter::operation_id(const Identifier identifier) const
+    -> std::string_view {
+  if (identifier == 0) {
+    return {};
+  }
+  const auto entry =
+      std::ranges::find_if(this->operations_, [&identifier](const auto &item) {
+        return item.second.first == identifier;
+      });
+  if (entry == this->operations_.end()) {
+    return {};
+  }
+  return entry->first;
+}
+
 auto URITemplateRouter::otherwise(const Identifier context,
                                   const std::span<const Argument> arguments)
     -> void {

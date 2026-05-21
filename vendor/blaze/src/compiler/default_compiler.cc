@@ -20,8 +20,8 @@ auto sourcemeta::blaze::default_schema_compiler(
     -> sourcemeta::blaze::Instructions {
   assert(!dynamic_context.keyword.empty());
 
-  using Known = sourcemeta::core::Vocabularies::Known;
-  static std::unordered_set<sourcemeta::core::Vocabularies::URI>
+  using Known = sourcemeta::blaze::Vocabularies::Known;
+  static std::unordered_set<sourcemeta::blaze::Vocabularies::URI>
       SUPPORTED_VOCABULARIES{Known::JSON_Schema_2020_12_Core,
                              Known::JSON_Schema_2020_12_Applicator,
                              Known::JSON_Schema_2020_12_Unevaluated,
@@ -112,7 +112,7 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE(Known::JSON_Schema_2020_12_Content, "contentSchema",
           compiler_2019_09_content_contentschema);
   COMPILE(Known::JSON_Schema_2020_12_Format_Annotation, "format",
-          compiler_2019_09_format_format);
+          compiler_draft3_validation_format);
 
   // Same as Draft 7
 
@@ -214,7 +214,7 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE(Known::JSON_Schema_2019_09_Content, "contentSchema",
           compiler_2019_09_content_contentschema);
   COMPILE(Known::JSON_Schema_2019_09_Format, "format",
-          compiler_2019_09_format_format);
+          compiler_draft3_validation_format);
 
   // Same as Draft 7
 
@@ -368,6 +368,8 @@ auto sourcemeta::blaze::default_schema_compiler(
               "minLength", compiler_draft3_validation_minlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
               "pattern", compiler_draft3_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_7, Known::JSON_Schema_Draft_7_Hyper,
+              "format", compiler_draft3_validation_format);
 
   // ********************************************
   // DRAFT 6
@@ -452,6 +454,8 @@ auto sourcemeta::blaze::default_schema_compiler(
               "minLength", compiler_draft3_validation_minlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
               "pattern", compiler_draft3_validation_pattern);
+  COMPILE_ANY(Known::JSON_Schema_Draft_6, Known::JSON_Schema_Draft_6_Hyper,
+              "format", compiler_draft3_validation_format);
 
   // ********************************************
   // DRAFT 4
@@ -515,6 +519,8 @@ auto sourcemeta::blaze::default_schema_compiler(
               "maxLength", compiler_draft3_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
               "minLength", compiler_draft3_validation_minlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
+              "format", compiler_draft3_validation_format);
 
   // Number
   COMPILE_ANY(Known::JSON_Schema_Draft_4, Known::JSON_Schema_Draft_4_Hyper,
@@ -574,6 +580,8 @@ auto sourcemeta::blaze::default_schema_compiler(
               "maxLength", compiler_draft3_validation_maxlength);
   COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
               "minLength", compiler_draft3_validation_minlength);
+  COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,
+              "format", compiler_draft3_validation_format);
 
   // Number
   COMPILE_ANY(Known::JSON_Schema_Draft_3, Known::JSON_Schema_Draft_3_Hyper,

@@ -17,5 +17,15 @@ target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::regex)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::jsonpointer)
-target_link_libraries(sourcemeta_blaze_evaluator PRIVATE
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::uri)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::uritemplate)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::email)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::ip)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::dns)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::time)

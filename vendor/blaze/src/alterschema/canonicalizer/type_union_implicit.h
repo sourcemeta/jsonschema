@@ -10,11 +10,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     using namespace sourcemeta::core;
     ONLY_CONTINUE_IF(schema.is_object() && !schema.empty());
@@ -78,10 +78,10 @@ public:
 private:
   static auto allof_sibling_constrains_type(
       const sourcemeta::core::JSON &root,
-      const sourcemeta::core::SchemaFrame &frame,
-      const sourcemeta::core::SchemaFrame::Location &location,
-      const sourcemeta::core::SchemaWalker &walker,
-      const sourcemeta::core::SchemaResolver &resolver) -> bool {
+      const sourcemeta::blaze::SchemaFrame &frame,
+      const sourcemeta::blaze::SchemaFrame::Location &location,
+      const sourcemeta::blaze::SchemaWalker &walker,
+      const sourcemeta::blaze::SchemaResolver &resolver) -> bool {
     using namespace sourcemeta::core;
     auto walk_pointer{location.pointer};
     auto walk_parent{location.parent};

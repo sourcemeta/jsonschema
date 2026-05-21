@@ -25,6 +25,6 @@ target_link_libraries(sourcemeta_blaze_compiler PUBLIC
 target_link_libraries(sourcemeta_blaze_compiler PRIVATE
   sourcemeta::core::uri)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
-  sourcemeta::core::jsonschema)
+  sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::blaze::evaluator)

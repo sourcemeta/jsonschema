@@ -2,10 +2,10 @@
 #define SOURCEMETA_JSONSCHEMA_CLI_UTILS_H_
 
 #include <sourcemeta/blaze/configuration.h>
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/uri.h>
 
@@ -36,7 +36,7 @@ inline auto default_id(const InputJSON &entry) -> std::string {
   return default_id(entry.resolution_base);
 }
 
-inline auto resolve_entrypoint(const sourcemeta::core::SchemaFrame &frame,
+inline auto resolve_entrypoint(const sourcemeta::blaze::SchemaFrame &frame,
                                const std::string_view entrypoint)
     -> std::string {
   if (entrypoint.empty()) {

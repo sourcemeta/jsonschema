@@ -5,7 +5,6 @@ if(NOT Core_FOUND)
     set(SOURCEMETA_CORE_INSTALL OFF CACHE BOOL "disable installation")
   endif()
 
-  set(SOURCEMETA_CORE_TIME OFF CACHE BOOL "disable")
   set(SOURCEMETA_CORE_UUID OFF CACHE BOOL "disable")
   set(SOURCEMETA_CORE_GZIP OFF CACHE BOOL "disable")
   set(SOURCEMETA_CORE_MD5  OFF CACHE BOOL "disable")

@@ -3,6 +3,12 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <sourcemeta/core/dns.h>
+#include <sourcemeta/core/email.h>
+#include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/time.h>
+#include <sourcemeta/core/uritemplate.h>
+
 // TODO(C++23): Replace SOURCEMETA_ASSUME with [[assume]] when available
 // across all compilers (Clang 19, GCC 13)
 #if defined(__clang__)
@@ -866,6 +872,30 @@ INSTRUCTION_HANDLER(AssertionStringType) {
   switch (value) {
     case ValueStringType::URI:
       result = URI::is_uri(target);
+      break;
+    case ValueStringType::URIReference:
+      result = URI::is_uri_reference(target);
+      break;
+    case ValueStringType::URITemplate:
+      result = URITemplate::is_uritemplate(target);
+      break;
+    case ValueStringType::Email:
+      result = is_email(target);
+      break;
+    case ValueStringType::IPv4:
+      result = is_ipv4(target);
+      break;
+    case ValueStringType::IPv6:
+      result = is_ipv6(target);
+      break;
+    case ValueStringType::Hostname:
+      result = is_hostname(target);
+      break;
+    case ValueStringType::DateTime:
+      result = is_rfc3339_datetime(target);
+      break;
+    case ValueStringType::JSONPointer:
+      result = is_pointer(target);
       break;
     default:
       std::unreachable();

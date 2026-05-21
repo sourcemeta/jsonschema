@@ -25,6 +25,9 @@ anyof_true_simplify
 comment_trim
   Comments should not contain leading or trailing whitespace
 
+conflicting_readonly_writeonly
+  The `readOnly` and `writeOnly` keywords are mutually exclusive
+
 const_in_enum
   If the `const` and `enum` keyword overlap, then `enum` is redundant and can be removed
 
@@ -310,7 +313,7 @@ valid_default
 valid_examples
   Only include instances in the `examples` array that validate against the schema
 
-Number of rules: 100
+Number of rules: 101
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

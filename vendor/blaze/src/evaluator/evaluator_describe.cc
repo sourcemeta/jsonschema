@@ -2017,6 +2017,30 @@ auto describe(const bool valid, const Instruction &step,
       case ValueStringType::URI:
         message << " URI";
         break;
+      case ValueStringType::URIReference:
+        message << " URI reference";
+        break;
+      case ValueStringType::URITemplate:
+        message << " URI template";
+        break;
+      case ValueStringType::Email:
+        message << " email address";
+        break;
+      case ValueStringType::IPv4:
+        message << " IPv4 address";
+        break;
+      case ValueStringType::IPv6:
+        message << " IPv6 address";
+        break;
+      case ValueStringType::Hostname:
+        message << " hostname";
+        break;
+      case ValueStringType::DateTime:
+        message << " RFC 3339 date-time";
+        break;
+      case ValueStringType::JSONPointer:
+        message << " JSON Pointer";
+        break;
       default:
         return unknown();
     }

@@ -63,8 +63,8 @@ static auto extract_title(const sourcemeta::core::JSON &schema) -> std::string {
 }
 
 SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
-                       const sourcemeta::core::SchemaWalker &walker,
-                       const sourcemeta::core::SchemaResolver &resolver,
+                       const sourcemeta::blaze::SchemaWalker &walker,
+                       const sourcemeta::blaze::SchemaResolver &resolver,
                        const Compiler &compiler,
                        const std::string_view default_dialect,
                        const std::optional<Tweaks> &tweaks)
@@ -74,11 +74,11 @@ SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
 
 auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
                            const sourcemeta::core::JSON &,
-                           const sourcemeta::core::Vocabularies &,
-                           const sourcemeta::core::SchemaFrame &,
-                           const sourcemeta::core::SchemaFrame::Location &,
-                           const sourcemeta::core::SchemaWalker &,
-                           const sourcemeta::core::SchemaResolver &) const
+                           const sourcemeta::blaze::Vocabularies &,
+                           const sourcemeta::blaze::SchemaFrame &,
+                           const sourcemeta::blaze::SchemaFrame::Location &,
+                           const sourcemeta::blaze::SchemaWalker &,
+                           const sourcemeta::blaze::SchemaResolver &) const
     -> SchemaTransformRule::Result {
   SimpleOutput output{schema};
   Evaluator evaluator;

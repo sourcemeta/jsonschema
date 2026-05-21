@@ -89,8 +89,8 @@ auto TestCase::parse(
 auto TestSuite::parse(const sourcemeta::core::JSON &document,
                       const sourcemeta::core::PointerPositionTracker &tracker,
                       const std::filesystem::path &base_path,
-                      const sourcemeta::core::SchemaResolver &schema_resolver,
-                      const sourcemeta::core::SchemaWalker &walker,
+                      const sourcemeta::blaze::SchemaResolver &schema_resolver,
+                      const sourcemeta::blaze::SchemaWalker &walker,
                       const Compiler &compiler,
                       const std::string_view default_dialect,
                       const std::string_view default_id,
@@ -158,7 +158,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
   test_suite.schemas_exhaustive.reserve(test_suite.targets.size());
 
   for (const auto &target : test_suite.targets) {
-    const auto target_schema{sourcemeta::core::wrap(target)};
+    const auto target_schema{sourcemeta::blaze::wrap(target)};
 
     try {
       test_suite.schemas_fast.push_back(compile(
@@ -167,10 +167,10 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
       test_suite.schemas_exhaustive.push_back(
           compile(target_schema, walker, schema_resolver, compiler,
                   Mode::Exhaustive, default_dialect, default_id, "", tweaks));
-    } catch (const sourcemeta::core::SchemaReferenceError &error) {
+    } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
       if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
           error.identifier() == target) {
-        throw sourcemeta::core::SchemaResolutionError{
+        throw sourcemeta::blaze::SchemaResolutionError{
             target, "Could not resolve schema under test"};
       }
 

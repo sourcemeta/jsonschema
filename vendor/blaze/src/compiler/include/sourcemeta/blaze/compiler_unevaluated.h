@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/compiler_export.h>
 #endif
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <map> // std::map
 #include <set> // std::set
@@ -40,9 +40,9 @@ using SchemaUnevaluatedEntries =
 /// ```
 auto SOURCEMETA_BLAZE_COMPILER_EXPORT
 unevaluated(const sourcemeta::core::JSON &schema,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver)
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &resolver)
     -> SchemaUnevaluatedEntries;
 
 } // namespace sourcemeta::blaze
