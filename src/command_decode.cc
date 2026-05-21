@@ -1,6 +1,6 @@
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/jsonbinpack/compiler.h>
 #include <sourcemeta/jsonbinpack/runtime.h>
@@ -51,7 +51,7 @@ auto sourcemeta::jsonschema::decode(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
 
-  sourcemeta::jsonbinpack::compile(schema, sourcemeta::core::schema_walker,
+  sourcemeta::jsonbinpack::compile(schema, sourcemeta::blaze::schema_walker,
                                    custom_resolver);
   const auto encoding{sourcemeta::jsonbinpack::load(schema)};
 

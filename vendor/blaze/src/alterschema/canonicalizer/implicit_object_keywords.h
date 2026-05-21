@@ -8,11 +8,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
-            const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &,
+            const sourcemeta::blaze::SchemaFrame::Location &,
+            const sourcemeta::blaze::SchemaWalker &,
+            const sourcemeta::blaze::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
 
@@ -94,7 +94,7 @@ private:
   }
 
   auto check_object(const sourcemeta::core::JSON &schema,
-                    const sourcemeta::core::Vocabularies &vocabularies) const
+                    const sourcemeta::blaze::Vocabularies &vocabularies) const
       -> void {
     this->add_pattern_properties_ =
         !schema.defines("patternProperties") &&
@@ -164,7 +164,7 @@ private:
   }
 
   auto check_array(const sourcemeta::core::JSON &schema,
-                   const sourcemeta::core::Vocabularies &vocabularies) const
+                   const sourcemeta::blaze::Vocabularies &vocabularies) const
       -> void {
     if (!vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_Draft_0,

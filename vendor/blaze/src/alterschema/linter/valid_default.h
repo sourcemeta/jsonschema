@@ -10,11 +10,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &root,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     using Known = Vocabularies::Known;
     // Technically, the `default` keyword goes back to Draft 1, but Blaze
@@ -45,7 +45,7 @@ public:
                                   frame, base.value().get(), Mode::Exhaustive);
       } catch (const CompilerReferenceTargetNotSchemaError &) {
         throw;
-      } catch (const sourcemeta::core::SchemaVocabularyError &) {
+      } catch (const sourcemeta::blaze::SchemaVocabularyError &) {
         throw;
       } catch (...) {
         return false;
@@ -75,21 +75,21 @@ public:
     const auto &root_base_dialect{
         frame.traverse(frame.root()).value_or(location).get().base_dialect};
     std::string_view default_id{location.base};
-    if (!sourcemeta::core::identify(root, root_base_dialect).empty() ||
+    if (!sourcemeta::blaze::identify(root, root_base_dialect).empty() ||
         default_id.empty()) {
       default_id = "";
     }
 
     sourcemeta::core::WeakPointer base;
     const auto subschema{
-        sourcemeta::core::wrap(root, frame, location, resolver, base)};
+        sourcemeta::blaze::wrap(root, frame, location, resolver, base)};
     Template schema_template;
     try {
       schema_template = compile(subschema, walker, resolver, this->compiler_,
                                 Mode::Exhaustive, location.dialect, default_id);
     } catch (const CompilerReferenceTargetNotSchemaError &) {
       throw;
-    } catch (const sourcemeta::core::SchemaVocabularyError &) {
+    } catch (const sourcemeta::blaze::SchemaVocabularyError &) {
       throw;
     } catch (...) {
       return false;

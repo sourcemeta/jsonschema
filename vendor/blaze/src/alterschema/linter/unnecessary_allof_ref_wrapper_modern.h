@@ -10,11 +10,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &,
-            const sourcemeta::core::SchemaFrame::Location &,
-            const sourcemeta::core::SchemaWalker &,
-            const sourcemeta::core::SchemaResolver &) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &,
+            const sourcemeta::blaze::SchemaFrame::Location &,
+            const sourcemeta::blaze::SchemaWalker &,
+            const sourcemeta::blaze::SchemaResolver &) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_2020_12_Applicator,
@@ -63,7 +63,7 @@ public:
       }
     }
 
-    schema.at("allOf").erase_if(sourcemeta::core::is_empty_schema);
+    schema.at("allOf").erase_if(sourcemeta::blaze::is_empty_schema);
 
     if (schema.at("allOf").empty()) {
       schema.erase("allOf");

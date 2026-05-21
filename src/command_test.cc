@@ -23,13 +23,13 @@
 namespace {
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
-                      const sourcemeta::core::SchemaResolver &schema_resolver,
+                      const sourcemeta::blaze::SchemaResolver &schema_resolver,
                       const std::string_view dialect, const bool json_output)
     -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
         entry.second, entry.positions, entry.resolution_base.parent_path(),
-        schema_resolver, sourcemeta::core::schema_walker,
+        schema_resolver, sourcemeta::blaze::schema_walker,
         sourcemeta::blaze::default_schema_compiler, dialect);
   } catch (const sourcemeta::blaze::TestParseError &error) {
     if (!json_output) {
@@ -47,38 +47,39 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
         entry.resolution_base, error};
   } catch (
-      const sourcemeta::core::SchemaRelativeMetaschemaResolutionError &error) {
+      const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaRelativeMetaschemaResolutionError>{
+        sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>{
         entry.resolution_base, error};
-  } catch (const sourcemeta::core::SchemaResolutionError &error) {
+  } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>{
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>{
         entry.resolution_base, error};
-  } catch (const sourcemeta::core::SchemaUnknownBaseDialectError &) {
+  } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownBaseDialectError>{entry.resolution_base};
-  } catch (const sourcemeta::core::SchemaVocabularyError &error) {
+        sourcemeta::blaze::SchemaUnknownBaseDialectError>{
+        entry.resolution_base};
+  } catch (const sourcemeta::blaze::SchemaVocabularyError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
-    throw sourcemeta::core::FileError<sourcemeta::core::SchemaVocabularyError>{
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaVocabularyError>{
         entry.resolution_base, error.uri(), error.what()};
-  } catch (const sourcemeta::core::SchemaUnknownDialectError &) {
+  } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaUnknownDialectError>{entry.resolution_base};
-  } catch (const sourcemeta::core::SchemaAnchorCollisionError &error) {
+        sourcemeta::blaze::SchemaUnknownDialectError>{entry.resolution_base};
+  } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
     }
@@ -86,14 +87,14 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     const auto position{entry.positions.get(error.location())};
     if (position.has_value()) {
       throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
-          sourcemeta::core::SchemaAnchorCollisionError>>(
+          sourcemeta::blaze::SchemaAnchorCollisionError>>(
           std::get<0>(position.value()), std::get<1>(position.value()),
           entry.resolution_base, error);
     }
 
     throw sourcemeta::core::FileError<
-        sourcemeta::core::SchemaAnchorCollisionError>{entry.resolution_base,
-                                                      error};
+        sourcemeta::blaze::SchemaAnchorCollisionError>{entry.resolution_base,
+                                                       error};
   } catch (...) {
     if (!json_output) {
       std::cout << entry.first << ":\n";

@@ -5,9 +5,9 @@
 #include <sourcemeta/blaze/output_export.h>
 #endif
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <sourcemeta/blaze/evaluator.h>
 
@@ -29,7 +29,7 @@ namespace sourcemeta::blaze {
 /// #include <sourcemeta/blaze/output.h>
 ///
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
+/// #include <sourcemeta/blaze/foundation.h>
 ///
 /// #include <cassert>
 /// #include <functional>
@@ -42,15 +42,15 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// const auto schema_template{sourcemeta::blaze::compile(
-///     schema, sourcemeta::core::schema_walker,
-///     sourcemeta::core::schema_resolver,
-///     sourcemeta::core::default_schema_compiler)};
+///     schema, sourcemeta::blaze::schema_walker,
+///     sourcemeta::blaze::schema_resolver,
+///     sourcemeta::blaze::default_schema_compiler)};
 ///
 /// const sourcemeta::core::JSON instance{5};
 ///
 /// sourcemeta::blaze::TraceOutput output{
-///     sourcemeta::core::schema_walker,
-///     sourcemeta::core::schema_resolver,
+///     sourcemeta::blaze::schema_walker,
+///     sourcemeta::blaze::schema_resolver,
 ///     [](const sourcemeta::blaze::TraceOutput::Entry &entry) {
 ///       std::cerr << entry.name << "\n";
 ///     }};
@@ -71,7 +71,7 @@ public:
     const sourcemeta::core::WeakPointer &evaluate_path;
     const std::string_view keyword_location;
     const sourcemeta::core::JSON &annotation;
-    const std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>
+    const std::pair<bool, std::optional<sourcemeta::blaze::Vocabularies::URI>>
         &vocabulary;
     // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
@@ -80,11 +80,11 @@ public:
   using Callback = std::function<void(const Entry &)>;
 
   TraceOutput(
-      sourcemeta::core::SchemaWalker walker,
-      sourcemeta::core::SchemaResolver resolver, Callback callback,
+      sourcemeta::blaze::SchemaWalker walker,
+      sourcemeta::blaze::SchemaResolver resolver, Callback callback,
       sourcemeta::core::WeakPointer base = sourcemeta::core::empty_weak_pointer,
       const std::optional<
-          std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame =
+          std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>> &frame =
           std::nullopt);
 
   // Prevent accidental copies
@@ -105,15 +105,15 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
-  const sourcemeta::core::SchemaWalker walker_;
-  const sourcemeta::core::SchemaResolver resolver_;
+  const sourcemeta::blaze::SchemaWalker walker_;
+  const sourcemeta::blaze::SchemaResolver resolver_;
   const sourcemeta::core::WeakPointer base_;
   const std::optional<
-      std::reference_wrapper<const sourcemeta::core::SchemaFrame>>
+      std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>>
       frame_;
   Callback callback_;
   std::vector<
-      std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>>>
+      std::pair<bool, std::optional<sourcemeta::blaze::Vocabularies::URI>>>
       vocabulary_stack_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)

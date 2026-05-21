@@ -22,7 +22,7 @@ namespace sourcemeta::blaze {
 #pragma warning(disable : 4251 4275)
 #endif
 
-/// @ingroup jsonschema
+/// @ingroup foundation
 /// An error that represents a schema compilation failure event
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerError : public std::exception {
 public:
@@ -58,7 +58,7 @@ private:
   const char *message_;
 };
 
-/// @ingroup jsonschema
+/// @ingroup foundation
 /// An error that represents an invalid regular expression during compilation
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInvalidRegexError
     : public std::exception {
@@ -91,7 +91,7 @@ private:
   std::string regex_;
 };
 
-/// @ingroup jsonschema
+/// @ingroup foundation
 /// An error that represents a reference target that is not a valid schema
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerReferenceTargetNotSchemaError
     : public std::exception {
@@ -120,7 +120,7 @@ private:
   sourcemeta::core::Pointer schema_location_;
 };
 
-/// @ingroup jsonschema
+/// @ingroup foundation
 /// An error that represents an invalid compilation entrypoint
 class SOURCEMETA_BLAZE_COMPILER_EXPORT CompilerInvalidEntryPoint
     : public std::exception {

@@ -21,8 +21,8 @@ static auto transformer_callback_noop(
 namespace sourcemeta::jsonbinpack {
 
 auto canonicalize(sourcemeta::core::JSON &schema,
-                  const sourcemeta::core::SchemaWalker &walker,
-                  const sourcemeta::core::SchemaResolver &resolver,
+                  const sourcemeta::blaze::SchemaWalker &walker,
+                  const sourcemeta::blaze::SchemaResolver &resolver,
                   const std::string_view default_dialect) -> void {
   sourcemeta::blaze::SchemaTransformer canonicalizer;
   sourcemeta::blaze::add(canonicalizer,
@@ -59,8 +59,8 @@ auto make_encoding(sourcemeta::core::JSON &document,
 #include "mapper/number_arbitrary.h"
 
 auto compile(sourcemeta::core::JSON &schema,
-             const sourcemeta::core::SchemaWalker &walker,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaWalker &walker,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const std::string_view default_dialect) -> void {
   canonicalize(schema, walker, resolver, default_dialect);
 
@@ -93,7 +93,7 @@ auto compile(sourcemeta::core::JSON &schema,
   assert(mapper_result.first);
 
   // The "any" encoding is always the last resort
-  const auto dialect{sourcemeta::core::dialect(schema)};
+  const auto dialect{sourcemeta::blaze::dialect(schema)};
   if (dialect.empty() || dialect != ENCODING_V1) {
     make_encoding(schema, "ANY_PACKED_TYPE_TAG_BYTE_PREFIX",
                   sourcemeta::core::JSON::make_object());

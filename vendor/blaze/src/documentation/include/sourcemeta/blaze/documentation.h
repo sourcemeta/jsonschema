@@ -14,8 +14,8 @@
 #include <sourcemeta/blaze/documentation_export.h>
 #endif
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <string> // std::string
 
@@ -29,7 +29,7 @@ namespace sourcemeta::blaze {
 /// #include <sourcemeta/blaze/documentation.h>
 ///
 /// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/core/jsonschema.h>
+/// #include <sourcemeta/blaze/foundation.h>
 ///
 /// const sourcemeta::core::JSON schema =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -38,13 +38,13 @@ namespace sourcemeta::blaze {
 /// })JSON");
 ///
 /// const auto documentation{sourcemeta::blaze::to_documentation(
-///     schema, sourcemeta::core::schema_walker,
-///     sourcemeta::core::schema_resolver)};
+///     schema, sourcemeta::blaze::schema_walker,
+///     sourcemeta::blaze::schema_resolver)};
 /// ```
 [[nodiscard]] SOURCEMETA_BLAZE_DOCUMENTATION_EXPORT auto
 to_documentation(const sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaWalker &walker,
-                 const sourcemeta::core::SchemaResolver &resolver)
+                 const sourcemeta::blaze::SchemaWalker &walker,
+                 const sourcemeta::blaze::SchemaResolver &resolver)
     -> sourcemeta::core::JSON;
 
 /// @ingroup documentation

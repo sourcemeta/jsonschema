@@ -1,6 +1,6 @@
 #include <sourcemeta/blaze/output_simple.h>
 
-#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include <algorithm> // std::any_of, std::sort
 #include <cassert>   // assert

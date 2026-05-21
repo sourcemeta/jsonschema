@@ -1,111 +1,77 @@
 #ifndef SOURCEMETA_CORE_URI_NORMALIZE_H_
 #define SOURCEMETA_CORE_URI_NORMALIZE_H_
 
-#include <string> // std::string
+#include <cstddef>     // std::size_t
+#include <string>      // std::string
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
-// Normalize a URI path by removing "." and ".." segments
-// Updates the path in-place according to RFC 3986 path segment normalization
-// Handles:
-// - Removal of "." segments
-// - Resolution of ".." segments with proper backtracking
-// - Preservation of leading ".." for relative paths
-// - Preservation of trailing slashes
-// - Preservation of empty segments (consecutive slashes)
+// Remove "." and ".." segments from a URI path per RFC 3986 Section 5.2.4
+// (Remove Dot Segments). For absolute paths this matches the specification
+// verbatim. For relative paths, leading "../" blocks are preserved as an
+// extension because the spec algorithm assumes a path that has already been
+// merged with an absolute base; applied to a stand-alone relative path it
+// would discard semantic intent that is needed at later resolution time.
 inline auto normalize_path(std::string &path) -> void {
-  if (path.empty() || path == "/") {
-    return;
-  }
+  const std::string buffer{std::move(path)};
+  std::string_view input{buffer};
+  std::string output;
+  output.reserve(buffer.size());
+  const bool is_absolute{!input.empty() && input.front() == '/'};
 
-  std::string canonical_path;
-  const auto had_leading_slash = path.starts_with("/");
-  const auto had_trailing_slash = path.ends_with('/') && path != "/";
-  bool last_segment_was_dot_or_dotdot{false};
-  canonical_path.reserve(path.size());
-  if (had_leading_slash) {
-    canonical_path = "/";
-  }
-
-  std::string::size_type minimum_position = had_leading_slash ? 1 : 0;
-  std::string::size_type read_position = had_leading_slash ? 1 : 0;
-  std::string::size_type segment_start = read_position;
-
-  if (!had_leading_slash && read_position < path.size() &&
-      path[read_position] == '.') {
-    if (read_position + 1 < path.size() && path[read_position + 1] == '/') {
-      read_position += 2;
-      segment_start = read_position;
-    }
-  }
-
-  while (read_position <= path.size()) {
-    if (read_position == path.size() || path[read_position] == '/') {
-      const auto segment_length = read_position - segment_start;
-      if (segment_length == 0 && read_position == path.size() &&
-          had_trailing_slash) {
-        break;
-      }
-
-      if (segment_length == 2 && path[segment_start] == '.' &&
-          path[segment_start + 1] == '.') {
-        last_segment_was_dot_or_dotdot = true;
-        if (canonical_path.size() > minimum_position) {
-          if (!canonical_path.empty() && canonical_path.back() == '/' &&
-              (canonical_path.size() < 2 ||
-               canonical_path[canonical_path.size() - 2] != '/')) {
-            canonical_path.pop_back();
-          }
-
-          while (canonical_path.size() > minimum_position &&
-                 canonical_path.back() != '/') {
-            canonical_path.pop_back();
-          }
-
-          if (!canonical_path.empty() && canonical_path.back() == '/' &&
-              canonical_path.size() > minimum_position) {
-            canonical_path.pop_back();
-          }
-        } else {
-          if (!had_leading_slash) {
-            if (canonical_path.size() > 0) {
-              canonical_path += '/';
-            }
-
-            canonical_path.append("..");
-            minimum_position = canonical_path.size();
-          }
-        }
-      } else if (segment_length == 1 && path[segment_start] == '.') {
-        last_segment_was_dot_or_dotdot = true;
-      } else if (segment_length == 0) {
-        last_segment_was_dot_or_dotdot = false;
-        if (canonical_path.size() >= minimum_position) {
-          canonical_path += '/';
+  while (!input.empty()) {
+    if (input.starts_with("../")) {
+      output.append("../");
+      input.remove_prefix(3);
+    } else if (input.starts_with("./") || input.starts_with("/./")) {
+      input.remove_prefix(2);
+    } else if (input == "/.") {
+      output.push_back('/');
+      break;
+    } else if (input.starts_with("/../")) {
+      input.remove_prefix(3);
+      const auto last_slash{output.rfind('/')};
+      if (last_slash == std::string::npos) {
+        output.clear();
+        if (!is_absolute && !input.empty() && input.front() == '/') {
+          input.remove_prefix(1);
         }
       } else {
-        last_segment_was_dot_or_dotdot = false;
-        if (canonical_path.size() > 0 &&
-            (canonical_path.size() > minimum_position || !had_leading_slash)) {
-          canonical_path += '/';
-        }
-        canonical_path.append(path, segment_start, segment_length);
+        output.resize(last_slash);
       }
-
-      ++read_position;
-      segment_start = read_position;
+    } else if (input == "/..") {
+      const auto last_slash{output.rfind('/')};
+      if (last_slash == std::string::npos) {
+        output.clear();
+        if (is_absolute) {
+          output.push_back('/');
+        }
+      } else {
+        output.resize(last_slash);
+        output.push_back('/');
+      }
+      break;
+    } else if (input == ".") {
+      break;
+    } else if (input == "..") {
+      if (!is_absolute) {
+        output.append("../");
+      }
+      break;
     } else {
-      ++read_position;
+      const std::size_t next_slash{input.starts_with('/') ? input.find('/', 1)
+                                                          : input.find('/')};
+      if (next_slash == std::string_view::npos) {
+        output.append(input);
+        break;
+      }
+      output.append(input.substr(0, next_slash));
+      input.remove_prefix(next_slash);
     }
   }
 
-  if ((had_trailing_slash || last_segment_was_dot_or_dotdot) &&
-      !canonical_path.empty() && canonical_path != "/" &&
-      !canonical_path.ends_with('/')) {
-    canonical_path += '/';
-  }
-
-  path = std::move(canonical_path);
+  path = std::move(output);
 }
 
 } // namespace sourcemeta::core

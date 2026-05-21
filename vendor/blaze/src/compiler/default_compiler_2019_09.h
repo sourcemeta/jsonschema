@@ -269,7 +269,7 @@ auto compiler_2019_09_applicator_unevaluateditems(
     const auto &keyword{dependency.back().to_property()};
     const auto &subschema{sourcemeta::core::get(context.root, dependency)};
     // NOLINTBEGIN(bugprone-branch-clone)
-    if (keyword == "items" && sourcemeta::core::is_schema(subschema)) {
+    if (keyword == "items" && sourcemeta::blaze::is_schema(subschema)) {
       return {};
     } else if (keyword == "additionalItems" || keyword == "unevaluatedItems") {
       return {};
@@ -418,7 +418,7 @@ auto compiler_2019_09_core_recursiveref(const Context &context,
   const auto &entry{static_frame_entry(context, schema_context)};
   // In this case, just behave as a normal static reference
   if (!context.frame.references().contains(
-          {sourcemeta::core::SchemaReferenceType::Dynamic, entry.pointer})) {
+          {sourcemeta::blaze::SchemaReferenceType::Dynamic, entry.pointer})) {
     return compiler_draft3_core_ref(context, schema_context, dynamic_context,
                                     current);
   }
@@ -495,25 +495,6 @@ auto compiler_2019_09_content_contentschema(
 
   // The `contentSchema` keyword does nothing without `contentMediaType`
   if (!schema_context.schema.defines("contentMediaType")) {
-    return {};
-  }
-
-  Instructions children{
-      make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
-           schema_context, dynamic_context,
-           sourcemeta::core::JSON{
-               schema_context.schema.at(dynamic_context.keyword)})};
-
-  return {make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
-               context, schema_context, relative_dynamic_context(),
-               ValueType::String, std::move(children))};
-}
-
-auto compiler_2019_09_format_format(const Context &context,
-                                    const SchemaContext &schema_context,
-                                    const DynamicContext &dynamic_context,
-                                    const Instructions &) -> Instructions {
-  if (context.mode == Mode::FastValidation) {
     return {};
   }
 

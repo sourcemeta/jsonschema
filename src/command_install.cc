@@ -1,6 +1,6 @@
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <cassert>    // assert
 #include <cstdint>    // std::uint8_t
@@ -44,7 +44,7 @@ auto dependency_fetch(const sourcemeta::core::Options &options,
     return std::move(result.value());
   }
 
-  throw sourcemeta::core::FileError<sourcemeta::core::SchemaResolutionError>(
+  throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>(
       configuration_path, uri, "Could not resolve schema");
 }
 
@@ -428,7 +428,7 @@ auto sourcemeta::jsonschema::install(const sourcemeta::core::Options &options)
         return dependency_fetch(options, configuration_path.value(), uri);
       }};
 
-  const sourcemeta::core::SchemaResolver resolver{
+  const sourcemeta::blaze::SchemaResolver resolver{
       [&options, &configuration](std::string_view identifier)
           -> std::optional<sourcemeta::core::JSON> {
         return dependency_resolve(options, configuration, identifier);

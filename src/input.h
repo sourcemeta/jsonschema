@@ -258,8 +258,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
                       }) &&
           std::none_of(blacklist.cbegin(), blacklist.cend(),
                        [&canonical](const auto &prefix) {
-                         return sourcemeta::core::starts_with(canonical,
-                                                              prefix);
+                         return sourcemeta::core::is_under_path(canonical,
+                                                                prefix);
                        })) {
         if (std::filesystem::is_empty(canonical)) {
           continue;
@@ -277,7 +277,8 @@ handle_json_entry(const std::filesystem::path &entry_path,
     const auto canonical{sourcemeta::core::weakly_canonical(entry_path)};
     if (std::none_of(blacklist.cbegin(), blacklist.cend(),
                      [&canonical](const auto &prefix) {
-                       return sourcemeta::core::starts_with(canonical, prefix);
+                       return sourcemeta::core::is_under_path(canonical,
+                                                              prefix);
                      })) {
       const auto canonical_string{canonical.string()};
       if (canonical_string.ends_with(".jsonl.gz")) {

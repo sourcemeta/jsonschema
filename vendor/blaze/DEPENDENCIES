@@ -1,3 +1,14 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core 9d2f9fe6b6e27a2710abdf79fb7b7b420fe8b484
+core https://github.com/sourcemeta/core 31404273bf927fc26457a1052b27b56519c0329c
 jsonschema-test-suite https://github.com/json-schema-org/JSON-Schema-Test-Suite c7257e92580678a086f0b9243a1903ed88bd27f7
+jsonschema-2020-12 https://github.com/json-schema-org/json-schema-spec 769daad75a9553562333a8937a187741cb708c72
+jsonschema-2019-09 https://github.com/json-schema-org/json-schema-spec 41014ea723120ce70b314d72f863c6929d9f3cfd
+jsonschema-draft7 https://github.com/json-schema-org/json-schema-spec 567f768506aaa33a38e552c85bf0586029ef1b32
+jsonschema-draft6 https://github.com/json-schema-org/json-schema-spec 59ed5f6fc6f6386e23ca51d7f31d7fe9cf696713
+jsonschema-draft4 https://github.com/json-schema-org/json-schema-spec 955d185db846cfca84269d9d711b10f4f3353d38
+jsonschema-draft3 https://github.com/json-schema-org/json-schema-spec 89912ad69fe15e006e8336a59e93bf7a1e46fa54
+jsonschema-draft2 https://github.com/json-schema-org/json-schema-spec 707f65070d09fe5baa1315bce4d31a66ff124171
+jsonschema-draft1 https://github.com/json-schema-org/json-schema-spec 2072feec9fc7a7ff0b2bb5b02c2d6742c554cc4a
+jsonschema-draft0 https://github.com/json-schema-org/json-schema-spec 7ea575aef8d5c0183acbe6ff65b4c98ee9c236ec
+openapi https://github.com/OAI/OpenAPI-Specification 74906beddddab9e555337031b2a8d8e9338c4972
+referencing-suite https://github.com/python-jsonschema/referencing-suite 61c4cc202b1e96ed5adcaf4842a595f68d659212

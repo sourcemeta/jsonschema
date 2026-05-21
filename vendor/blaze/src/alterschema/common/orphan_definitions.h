@@ -11,11 +11,11 @@ public:
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &schema,
             const sourcemeta::core::JSON &,
-            const sourcemeta::core::Vocabularies &vocabularies,
-            const sourcemeta::core::SchemaFrame &frame,
-            const sourcemeta::core::SchemaFrame::Location &location,
-            const sourcemeta::core::SchemaWalker &walker,
-            const sourcemeta::core::SchemaResolver &resolver) const
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &frame,
+            const sourcemeta::blaze::SchemaFrame::Location &location,
+            const sourcemeta::blaze::SchemaWalker &walker,
+            const sourcemeta::blaze::SchemaResolver &resolver) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     const bool has_modern_core{
@@ -65,14 +65,14 @@ public:
 
 private:
   static auto
-  subtree_has_dynamic_anchor(const sourcemeta::core::SchemaFrame &frame,
+  subtree_has_dynamic_anchor(const sourcemeta::blaze::SchemaFrame &frame,
                              const WeakPointer &entry_pointer) -> bool {
     for (const auto &[key, location] : frame.locations()) {
-      if (key.first != sourcemeta::core::SchemaReferenceType::Dynamic) {
+      if (key.first != sourcemeta::blaze::SchemaReferenceType::Dynamic) {
         continue;
       }
       if (location.type !=
-          sourcemeta::core::SchemaFrame::LocationType::Anchor) {
+          sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
         continue;
       }
       if (location.pointer.starts_with(entry_pointer)) {
@@ -83,10 +83,10 @@ private:
   }
 
   static auto has_reachable_reference_through(
-      const sourcemeta::core::SchemaFrame &frame,
-      const sourcemeta::core::SchemaFrame::Location &base,
-      const sourcemeta::core::SchemaWalker &walker,
-      const sourcemeta::core::SchemaResolver &resolver,
+      const sourcemeta::blaze::SchemaFrame &frame,
+      const sourcemeta::blaze::SchemaFrame::Location &base,
+      const sourcemeta::blaze::SchemaWalker &walker,
+      const sourcemeta::blaze::SchemaResolver &resolver,
       const WeakPointer &pointer) -> bool {
     for (const auto &reference : frame.references()) {
       const auto destination{frame.traverse(reference.second.destination)};
@@ -105,7 +105,7 @@ private:
 
       const auto source_location{frame.traverse(
           source_pointer.initial(),
-          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
+          sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
       if (source_location.has_value() &&
           frame.is_reachable(base, source_location->get(), walker, resolver)) {
         return true;
@@ -116,10 +116,10 @@ private:
   }
 
   static auto
-  collect_orphans(const sourcemeta::core::SchemaFrame &frame,
-                  const sourcemeta::core::SchemaFrame::Location &base,
-                  const sourcemeta::core::SchemaWalker &walker,
-                  const sourcemeta::core::SchemaResolver &resolver,
+  collect_orphans(const sourcemeta::blaze::SchemaFrame &frame,
+                  const sourcemeta::blaze::SchemaFrame::Location &base,
+                  const sourcemeta::blaze::SchemaWalker &walker,
+                  const sourcemeta::blaze::SchemaResolver &resolver,
                   const WeakPointer &prefix, const JSON &schema,
                   const JSON::String &container, const bool has_container,
                   std::vector<Pointer> &orphans) -> void {
@@ -133,7 +133,7 @@ private:
       const auto absolute_entry_pointer{prefix.concat(entry_pointer)};
       const auto entry_location{frame.traverse(
           absolute_entry_pointer,
-          sourcemeta::core::SchemaFrame::LocationType::Subschema)};
+          sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
       if (entry_location.has_value() &&
           !frame.is_reachable(base, entry_location->get(), walker, resolver) &&
           !has_reachable_reference_through(frame, base, walker, resolver,

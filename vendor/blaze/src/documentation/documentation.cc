@@ -2,8 +2,8 @@
 
 #include <sourcemeta/blaze/alterschema.h>
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 
 #include <cassert> // assert
 #include <cstdint> // std::int64_t
@@ -18,15 +18,15 @@ namespace sourcemeta::blaze {
 namespace {
 
 auto resolve_destination(const sourcemeta::core::JSON::String &raw_ref,
-                         const sourcemeta::core::SchemaFrame &frame)
-    -> std::optional<
-        std::reference_wrapper<const sourcemeta::core::SchemaFrame::Location>> {
+                         const sourcemeta::blaze::SchemaFrame &frame)
+    -> std::optional<std::reference_wrapper<
+        const sourcemeta::blaze::SchemaFrame::Location>> {
   auto result{frame.traverse(raw_ref)};
   if (result.has_value()) {
     return result;
   }
   for (const auto &[key, entry] : frame.references()) {
-    if (key.first == sourcemeta::core::SchemaReferenceType::Static &&
+    if (key.first == sourcemeta::blaze::SchemaReferenceType::Static &&
         entry.original == raw_ref) {
       return frame.traverse(entry.destination);
     }
@@ -42,7 +42,7 @@ using VisitedSchemas = std::map<const sourcemeta::core::JSON *, VisitedEntry>;
 using RefChain = std::set<const sourcemeta::core::JSON *>;
 
 auto type_expression_of(const sourcemeta::core::JSON &schema,
-                        const sourcemeta::core::SchemaFrame &frame,
+                        const sourcemeta::blaze::SchemaFrame &frame,
                         const sourcemeta::core::JSON &root,
                         const VisitedSchemas &visited, RefChain &ref_chain)
     -> sourcemeta::core::JSON {
@@ -192,7 +192,7 @@ auto type_expression_of(const sourcemeta::core::JSON &schema,
 }
 
 auto type_expression_of(const sourcemeta::core::JSON &schema,
-                        const sourcemeta::core::SchemaFrame &frame,
+                        const sourcemeta::blaze::SchemaFrame &frame,
                         const sourcemeta::core::JSON &root,
                         const VisitedSchemas &visited)
     -> sourcemeta::core::JSON {
@@ -524,7 +524,7 @@ auto make_section(const std::string &label, sourcemeta::core::JSON tables)
 }
 
 auto walk_schema(const sourcemeta::core::JSON &schema, bool include_root,
-                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                  std::size_t &next_identifier) -> sourcemeta::core::JSON;
 
@@ -534,7 +534,7 @@ auto walk_branching_subschema(const std::string &label,
                               const std::string &synthetic_name,
                               const sourcemeta::core::JSON &inner_schema,
                               sourcemeta::core::JSON &doc_children,
-                              const sourcemeta::core::SchemaFrame &frame,
+                              const sourcemeta::blaze::SchemaFrame &frame,
                               const sourcemeta::core::JSON &root,
                               VisitedSchemas &visited,
                               std::size_t &next_identifier,
@@ -543,19 +543,19 @@ auto walk_branching_subschema(const std::string &label,
 auto walk_branches(const std::string &keyword, const std::string &label,
                    const sourcemeta::core::JSON &schema,
                    sourcemeta::core::JSON &children,
-                   const sourcemeta::core::SchemaFrame &frame,
+                   const sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                    std::size_t &next_identifier) -> void;
 
 auto walk_all_of(const sourcemeta::core::JSON &schema,
                  sourcemeta::core::JSON &rows, sourcemeta::core::JSON &children,
-                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                  std::size_t &next_identifier) -> void;
 
 auto walk_if_then_else(const sourcemeta::core::JSON &schema,
                        sourcemeta::core::JSON &children,
-                       const sourcemeta::core::SchemaFrame &frame,
+                       const sourcemeta::blaze::SchemaFrame &frame,
                        const sourcemeta::core::JSON &root,
                        VisitedSchemas &visited, std::size_t &next_identifier)
     -> void;
@@ -564,7 +564,7 @@ auto walk_wildcard_keyword(const sourcemeta::core::JSON &schema,
                            const std::string &keyword,
                            const sourcemeta::core::JSON &base_path,
                            sourcemeta::core::JSON &rows,
-                           const sourcemeta::core::SchemaFrame &frame,
+                           const sourcemeta::blaze::SchemaFrame &frame,
                            const sourcemeta::core::JSON &root,
                            VisitedSchemas &visited,
                            std::size_t &next_identifier) -> void;
@@ -572,13 +572,13 @@ auto walk_wildcard_keyword(const sourcemeta::core::JSON &schema,
 auto walk_pattern_properties(const sourcemeta::core::JSON &schema,
                              const sourcemeta::core::JSON &base_path,
                              sourcemeta::core::JSON &rows,
-                             const sourcemeta::core::SchemaFrame &frame,
+                             const sourcemeta::blaze::SchemaFrame &frame,
                              const sourcemeta::core::JSON &root,
                              VisitedSchemas &visited,
                              std::size_t &next_identifier) -> void;
 
 auto resolve_ref(const sourcemeta::core::JSON &schema,
-                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::core::JSON &root,
                  const VisitedSchemas &visited)
     -> const sourcemeta::core::JSON & {
@@ -600,7 +600,7 @@ auto resolve_ref(const sourcemeta::core::JSON &schema,
 
 auto emit_row(const sourcemeta::core::JSON &schema, sourcemeta::core::JSON path,
               sourcemeta::core::JSON &rows,
-              const sourcemeta::core::SchemaFrame &frame,
+              const sourcemeta::blaze::SchemaFrame &frame,
               const sourcemeta::core::JSON &root, VisitedSchemas &visited,
               std::size_t &next_identifier,
               const bool expand_applicators = true) -> void {
@@ -681,7 +681,7 @@ auto emit_row(const sourcemeta::core::JSON &schema, sourcemeta::core::JSON path,
 auto walk_properties(const sourcemeta::core::JSON &schema,
                      const sourcemeta::core::JSON &base_path,
                      sourcemeta::core::JSON &rows,
-                     const sourcemeta::core::SchemaFrame &frame,
+                     const sourcemeta::blaze::SchemaFrame &frame,
                      const sourcemeta::core::JSON &root,
                      VisitedSchemas &visited, std::size_t &next_identifier)
     -> void {
@@ -843,7 +843,7 @@ auto walk_wildcard_keyword(const sourcemeta::core::JSON &schema,
                            const std::string &keyword,
                            const sourcemeta::core::JSON &base_path,
                            sourcemeta::core::JSON &rows,
-                           const sourcemeta::core::SchemaFrame &frame,
+                           const sourcemeta::blaze::SchemaFrame &frame,
                            const sourcemeta::core::JSON &root,
                            VisitedSchemas &visited,
                            std::size_t &next_identifier) -> void {
@@ -933,7 +933,7 @@ auto walk_wildcard_keyword(const sourcemeta::core::JSON &schema,
 auto walk_pattern_properties(const sourcemeta::core::JSON &schema,
                              const sourcemeta::core::JSON &base_path,
                              sourcemeta::core::JSON &rows,
-                             const sourcemeta::core::SchemaFrame &frame,
+                             const sourcemeta::blaze::SchemaFrame &frame,
                              const sourcemeta::core::JSON &root,
                              VisitedSchemas &visited,
                              std::size_t &next_identifier) -> void {
@@ -992,7 +992,7 @@ auto walk_prefix_items(const sourcemeta::core::JSON &schema,
                        const sourcemeta::core::JSON &base_path,
                        sourcemeta::core::JSON &rows,
                        sourcemeta::core::JSON &children,
-                       const sourcemeta::core::SchemaFrame &frame,
+                       const sourcemeta::blaze::SchemaFrame &frame,
                        const sourcemeta::core::JSON &root,
                        VisitedSchemas &visited, std::size_t &next_identifier)
     -> void {
@@ -1095,7 +1095,7 @@ auto walk_prefix_items(const sourcemeta::core::JSON &schema,
 auto walk_branches(const std::string &keyword, const std::string &label,
                    const sourcemeta::core::JSON &schema,
                    sourcemeta::core::JSON &children,
-                   const sourcemeta::core::SchemaFrame &frame,
+                   const sourcemeta::blaze::SchemaFrame &frame,
                    const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                    std::size_t &next_identifier) -> void {
   if (!schema.is_object() || !schema.defines(keyword) ||
@@ -1131,7 +1131,7 @@ auto has_recursive_ref_in_rows(const sourcemeta::core::JSON &rows) -> bool {
 
 auto walk_all_of(const sourcemeta::core::JSON &schema,
                  sourcemeta::core::JSON &rows, sourcemeta::core::JSON &children,
-                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                  std::size_t &next_identifier) -> void {
   if (!schema.is_object() || !schema.defines("allOf") ||
@@ -1234,7 +1234,7 @@ auto walk_all_of(const sourcemeta::core::JSON &schema,
 
 auto walk_if_then_else(const sourcemeta::core::JSON &schema,
                        sourcemeta::core::JSON &children,
-                       const sourcemeta::core::SchemaFrame &frame,
+                       const sourcemeta::blaze::SchemaFrame &frame,
                        const sourcemeta::core::JSON &root,
                        VisitedSchemas &visited, std::size_t &next_identifier)
     -> void {
@@ -1269,7 +1269,7 @@ auto walk_branching_subschema(const std::string &label,
                               const std::string &synthetic_name,
                               const sourcemeta::core::JSON &inner_schema,
                               sourcemeta::core::JSON &doc_children,
-                              const sourcemeta::core::SchemaFrame &frame,
+                              const sourcemeta::blaze::SchemaFrame &frame,
                               const sourcemeta::core::JSON &root,
                               VisitedSchemas &visited,
                               std::size_t &next_identifier,
@@ -1303,7 +1303,7 @@ auto walk_branching_subschema(const std::string &label,
 }
 
 auto walk_schema(const sourcemeta::core::JSON &schema, const bool include_root,
-                 const sourcemeta::core::SchemaFrame &frame,
+                 const sourcemeta::blaze::SchemaFrame &frame,
                  const sourcemeta::core::JSON &root, VisitedSchemas &visited,
                  std::size_t &next_identifier) -> sourcemeta::core::JSON {
   if (schema.is_object() && schema.defines("$ref") &&
@@ -1534,8 +1534,8 @@ auto walk_schema(const sourcemeta::core::JSON &schema, const bool include_root,
 } // namespace
 
 auto to_documentation(const sourcemeta::core::JSON &schema,
-                      const sourcemeta::core::SchemaWalker &walker,
-                      const sourcemeta::core::SchemaResolver &resolver)
+                      const sourcemeta::blaze::SchemaWalker &walker,
+                      const sourcemeta::blaze::SchemaResolver &resolver)
     -> sourcemeta::core::JSON {
   sourcemeta::blaze::SchemaTransformer canonicalizer;
   sourcemeta::blaze::add(canonicalizer,
@@ -1547,8 +1547,8 @@ auto to_documentation(const sourcemeta::core::JSON &schema,
          [[maybe_unused]] const auto applied) { assert(applied); })};
   assert(canonicalized.first);
 
-  sourcemeta::core::SchemaFrame frame{
-      sourcemeta::core::SchemaFrame::Mode::References};
+  sourcemeta::blaze::SchemaFrame frame{
+      sourcemeta::blaze::SchemaFrame::Mode::References};
   frame.analyse(canonical, walker, resolver);
 
   VisitedSchemas visited;

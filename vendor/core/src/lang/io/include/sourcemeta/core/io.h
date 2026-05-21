@@ -70,18 +70,35 @@ auto weakly_canonical(const std::filesystem::path &path)
 
 /// @ingroup io
 ///
-/// Check if a file path starts with another path. This function assumes the
-/// paths are canonicalised. For example:
+/// Check whether a path lies under another path, comparing component by
+/// component after weak canonicalisation. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/io.h>
 /// #include <cassert>
 ///
-/// assert(sourcemeta::core::starts_with("/foo/bar", "/foo"));
+/// assert(sourcemeta::core::is_under_path("/foo/bar/baz", "/foo"));
 /// ```
 SOURCEMETA_CORE_IO_EXPORT
-auto starts_with(const std::filesystem::path &path,
-                 const std::filesystem::path &prefix) -> bool;
+auto is_under_path(const std::filesystem::path &path,
+                   const std::filesystem::path &prefix) -> bool;
+
+/// @ingroup io
+///
+/// Return the portion of a path that follows a given prefix, or the path
+/// unchanged if it does not lie under the prefix. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::strip_path_prefix("/foo/bar/baz", "/foo") ==
+/// "bar/baz");
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto strip_path_prefix(const std::filesystem::path &path,
+                       const std::filesystem::path &prefix)
+    -> std::filesystem::path;
 
 /// @ingroup io
 ///

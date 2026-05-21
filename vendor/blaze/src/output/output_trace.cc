@@ -1,18 +1,18 @@
 #include <sourcemeta/blaze/output_trace.h>
 
-#include <sourcemeta/core/jsonschema.h>
+#include <sourcemeta/blaze/foundation.h>
 
 #include <utility> // std::move, std::to_underlying
 #include <variant> // std::visit
 
 static auto try_vocabulary(
     const std::optional<
-        std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame,
+        std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>> &frame,
     const sourcemeta::core::WeakPointer &evaluate_path,
-    const sourcemeta::core::SchemaWalker &walker,
-    const sourcemeta::core::SchemaResolver &resolver,
+    const sourcemeta::blaze::SchemaWalker &walker,
+    const sourcemeta::blaze::SchemaResolver &resolver,
     const std::string &keyword_location)
-    -> std::pair<bool, std::optional<sourcemeta::core::Vocabularies::URI>> {
+    -> std::pair<bool, std::optional<sourcemeta::blaze::Vocabularies::URI>> {
   if (!frame.has_value() || evaluate_path.empty() ||
       !evaluate_path.back().is_property()) {
     return {false, std::nullopt};
@@ -32,11 +32,11 @@ static auto try_vocabulary(
 namespace sourcemeta::blaze {
 
 TraceOutput::TraceOutput(
-    sourcemeta::core::SchemaWalker walker,
-    sourcemeta::core::SchemaResolver resolver, Callback callback,
+    sourcemeta::blaze::SchemaWalker walker,
+    sourcemeta::blaze::SchemaResolver resolver, Callback callback,
     sourcemeta::core::WeakPointer base,
     const std::optional<
-        std::reference_wrapper<const sourcemeta::core::SchemaFrame>> &frame)
+        std::reference_wrapper<const sourcemeta::blaze::SchemaFrame>> &frame)
     : walker_{std::move(walker)}, resolver_{std::move(resolver)},
       base_{std::move(base)}, frame_{frame}, callback_{std::move(callback)} {}
 

@@ -177,10 +177,10 @@ unsigned_integer_property(const sourcemeta::core::JSON &document,
 
 inline auto static_frame_entry(const Context &context,
                                const SchemaContext &schema_context)
-    -> const sourcemeta::core::SchemaFrame::Location & {
+    -> const sourcemeta::blaze::SchemaFrame::Location & {
   const auto current{
       to_uri(schema_context.relative_pointer, schema_context.base).recompose()};
-  const auto type{sourcemeta::core::SchemaReferenceType::Static};
+  const auto type{sourcemeta::blaze::SchemaReferenceType::Static};
   assert(context.frame.locations().contains({type, current}));
   return context.frame.locations().at({type, current});
 }
@@ -189,7 +189,7 @@ inline auto walk_subschemas(const Context &context,
                             const SchemaContext &schema_context,
                             const DynamicContext &dynamic_context) -> auto {
   const auto &entry{static_frame_entry(context, schema_context)};
-  return sourcemeta::core::SchemaIterator{
+  return sourcemeta::blaze::SchemaIterator{
       schema_context.schema.at(dynamic_context.keyword), context.walker,
       context.resolver, entry.dialect};
 }
@@ -223,7 +223,7 @@ inline auto find_adjacent(const Context &context,
   // Attempt to statically follow references
   static const std::string ref_keyword{"$ref"};
   if (schema_context.schema.defines("$ref")) {
-    const auto reference_type{sourcemeta::core::SchemaReferenceType::Static};
+    const auto reference_type{sourcemeta::blaze::SchemaReferenceType::Static};
     const auto destination_uri{
         to_uri(schema_context.relative_pointer.initial().concat(
                    make_weak_pointer(ref_keyword)),
@@ -255,16 +255,17 @@ inline auto find_adjacent(const Context &context,
 
   for (const auto &possible_keyword_uri : possible_keyword_uris) {
     if (!context.frame.locations().contains(
-            {sourcemeta::core::SchemaReferenceType::Static,
+            {sourcemeta::blaze::SchemaReferenceType::Static,
              possible_keyword_uri})) {
       continue;
     }
 
     const auto &frame_entry{context.frame.locations().at(
-        {sourcemeta::core::SchemaReferenceType::Static, possible_keyword_uri})};
+        {sourcemeta::blaze::SchemaReferenceType::Static,
+         possible_keyword_uri})};
     const auto &subschema{
         sourcemeta::core::get(context.root, frame_entry.pointer)};
-    const auto &subschema_vocabularies{sourcemeta::core::vocabularies(
+    const auto &subschema_vocabularies{sourcemeta::blaze::vocabularies(
         subschema, context.resolver, frame_entry.dialect)};
 
     if (std::ranges::any_of(vocabularies,
@@ -322,9 +323,9 @@ inline auto requires_evaluation(const Context &context,
 // TODO: Elevate to Core and test
 
 inline auto
-is_circular(const sourcemeta::core::SchemaFrame &frame,
+is_circular(const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::core::WeakPointer &reference_origin,
-            const sourcemeta::core::SchemaFrame::ReferencesEntry &reference,
+            const sourcemeta::blaze::SchemaFrame::ReferencesEntry &reference,
             std::unordered_set<std::string> &visited) -> bool {
   if (visited.contains(reference.destination)) {
     return false;
@@ -344,7 +345,7 @@ is_circular(const sourcemeta::core::SchemaFrame &frame,
 
   for (const auto &ref_entry : frame.references()) {
     if (ref_entry.first.first ==
-            sourcemeta::core::SchemaReferenceType::Static &&
+            sourcemeta::blaze::SchemaReferenceType::Static &&
         ref_entry.first.second.starts_with(destination_pointer)) {
       if (is_circular(frame, reference_origin, ref_entry.second, visited)) {
         return true;
@@ -359,7 +360,7 @@ is_circular(const sourcemeta::core::SchemaFrame &frame,
 // level
 inline auto required_properties(const SchemaContext &schema_context)
     -> ValueStringSet {
-  using Known = sourcemeta::core::Vocabularies::Known;
+  using Known = sourcemeta::blaze::Vocabularies::Known;
   const auto imports_validation_vocabulary{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_4) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||

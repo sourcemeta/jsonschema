@@ -18,8 +18,8 @@
 #include <sourcemeta/blaze/configuration_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/jsonschema.h>
 #include <sourcemeta/core/uri.h>
 
 #include <cstddef>       // std::size_t
@@ -179,7 +179,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
 
   /// Fetch dependencies, modifying the lock in-place
   auto fetch(Lock &lock, const FetchCallback &fetcher,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const ReadCallback &reader, const WriteCallback &writer,
              const FetchEvent::Callback &on_event, FetchMode mode,
              // TODO: Make this work for real
@@ -187,7 +187,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
 
   /// Fetch dependencies without modifying the lock file (frozen mode)
   auto fetch(const Lock &lock, const FetchCallback &fetcher,
-             const sourcemeta::core::SchemaResolver &resolver,
+             const sourcemeta::blaze::SchemaResolver &resolver,
              const ReadCallback &reader, const WriteCallback &writer,
              const FetchEvent::Callback &on_event, bool dry_run = false,
              // TODO: Make this work for real

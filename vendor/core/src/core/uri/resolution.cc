@@ -1,74 +1,17 @@
 #include <sourcemeta/core/uri.h>
 
+#include "normalize.h"
+
 #include <cassert>  // assert
 #include <optional> // std::optional
 #include <string>   // std::string
 
 namespace {
 
-// RFC 3986 Section 5.2.4: Remove Dot Segments
-// This algorithm removes the special "." and ".." segments from a path
 auto remove_dot_segments(const std::string &path) -> std::string {
-  std::string input = path;
-  std::string output;
-
-  while (!input.empty()) {
-    // A: If the input buffer begins with a prefix of "../" or "./"
-    if (input.starts_with("../")) {
-      input = input.substr(3);
-    } else if (input.starts_with("./")) {
-      input = input.substr(2);
-    }
-    // B: If the input buffer begins with a prefix of "/./" or "/."
-    else if (input.starts_with("/./")) {
-      input = "/" + input.substr(3);
-    } else if (input == "/.") {
-      input = "/";
-    }
-    // C: If the input buffer begins with a prefix of "/../" or "/.."
-    else if (input.starts_with("/../")) {
-      input = "/" + input.substr(4);
-      // Remove the last segment from output
-      const auto last_slash = output.rfind('/');
-      if (last_slash != std::string::npos) {
-        output = output.substr(0, last_slash);
-      } else {
-        output.clear();
-      }
-    } else if (input == "/..") {
-      input = "/";
-      // Remove the last segment from output
-      const auto last_slash = output.rfind('/');
-      if (last_slash != std::string::npos) {
-        output = output.substr(0, last_slash);
-      } else {
-        output.clear();
-      }
-    }
-    // D: If the input buffer consists only of "." or ".."
-    else if (input == "." || input == "..") {
-      input.clear();
-    }
-    // E: Move the first path segment to the end of output
-    else {
-      std::string::size_type next_slash;
-      if (input.starts_with('/')) {
-        next_slash = input.find('/', 1);
-      } else {
-        next_slash = input.find('/');
-      }
-
-      if (next_slash == std::string::npos) {
-        output += input;
-        input.clear();
-      } else {
-        output += input.substr(0, next_slash);
-        input = input.substr(next_slash);
-      }
-    }
-  }
-
-  return output;
+  std::string result{path};
+  sourcemeta::core::normalize_path(result);
+  return result;
 }
 
 // Merge paths according to RFC 3986 Section 5.2.3

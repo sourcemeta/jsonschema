@@ -19,7 +19,7 @@ namespace sourcemeta::core {
 namespace {
 
 constexpr std::uint32_t ROUTER_MAGIC = 0x52544552; // "RTER"
-constexpr std::uint32_t ROUTER_VERSION = 8;
+constexpr std::uint32_t ROUTER_VERSION = 9;
 constexpr std::uint32_t NO_CHILD = std::numeric_limits<std::uint32_t>::max();
 
 // Type tags for argument value serialization
@@ -39,7 +39,7 @@ struct RouterHeader {
   std::uint32_t otherwise_context;
   std::uint32_t base_url_offset;
   std::uint32_t base_url_length;
-  std::uint32_t padding;
+  std::uint32_t paths_offset;
 };
 
 struct ArgumentEntryHeader {
@@ -58,6 +58,18 @@ struct OperationEntry {
   std::uint32_t string_length;
   URITemplateRouter::Identifier identifier;
   URITemplateRouter::Identifier context;
+};
+
+constexpr std::size_t PATH_ENTRY_SIZE = sizeof(URITemplateRouter::Identifier) +
+                                        sizeof(URITemplateRouter::Identifier) +
+                                        sizeof(std::uint32_t) +
+                                        sizeof(std::uint32_t);
+
+struct PathEntry {
+  URITemplateRouter::Identifier identifier;
+  URITemplateRouter::Identifier context;
+  std::uint32_t string_offset;
+  std::uint32_t string_length;
 };
 
 struct alignas(8) SerializedNode {
@@ -89,6 +101,22 @@ inline auto is_expansion_type(const URITemplateRouter::NodeType type) noexcept
     -> bool {
   return type == URITemplateRouter::NodeType::Expansion ||
          type == URITemplateRouter::NodeType::OptionalExpansion;
+}
+
+inline auto read_path_entry(const std::uint8_t *data, const std::size_t offset)
+    -> PathEntry {
+  PathEntry entry{};
+  std::memcpy(&entry.identifier, data + offset, sizeof(entry.identifier));
+  std::memcpy(&entry.context, data + offset + sizeof(entry.identifier),
+              sizeof(entry.context));
+  std::memcpy(&entry.string_offset,
+              data + offset + sizeof(entry.identifier) + sizeof(entry.context),
+              sizeof(entry.string_offset));
+  std::memcpy(&entry.string_length,
+              data + offset + sizeof(entry.identifier) + sizeof(entry.context) +
+                  sizeof(entry.string_offset),
+              sizeof(entry.string_length));
+  return entry;
 }
 
 // Binary search for a literal child matching the given segment
@@ -303,6 +331,22 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
   const auto operation_count =
       static_cast<std::uint16_t>(operation_entries.size());
 
+  std::vector<PathEntry> path_entries;
+  path_entries.reserve(router.entries_.size());
+  for (const auto &[entry_identifier, entry_context, entry_path] :
+       router.entries_) {
+    PathEntry entry{};
+    entry.identifier = entry_identifier;
+    entry.context = entry_context;
+    entry.string_offset = static_cast<std::uint32_t>(string_table.size());
+    entry.string_length = static_cast<std::uint32_t>(entry_path.size());
+    string_table.append(entry_path.data(), entry_path.size());
+    path_entries.push_back(entry);
+  }
+
+  assert(path_entries.size() <= std::numeric_limits<std::uint16_t>::max());
+  const auto path_count = static_cast<std::uint16_t>(path_entries.size());
+
   // Append the base path to the string table
   const auto base_path_string_offset =
       static_cast<std::uint32_t>(string_table.size());
@@ -332,6 +376,9 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
   header.otherwise_context = router.otherwise_.context;
   header.base_url_offset = base_url_string_offset;
   header.base_url_length = static_cast<std::uint32_t>(base_url_value.size());
+  header.paths_offset = static_cast<std::uint32_t>(
+      header.operations_offset + sizeof(std::uint16_t) +
+      operation_entries.size() * OPERATION_ENTRY_SIZE);
 
   std::ofstream file(path, std::ios::binary);
   if (!file) {
@@ -372,6 +419,18 @@ auto URITemplateRouterView::save(const URITemplateRouter &router,
                sizeof(entry.identifier));
     file.write(reinterpret_cast<const char *>(&entry.context),
                sizeof(entry.context));
+  }
+
+  file.write(reinterpret_cast<const char *>(&path_count), sizeof(path_count));
+  for (const auto &entry : path_entries) {
+    file.write(reinterpret_cast<const char *>(&entry.identifier),
+               sizeof(entry.identifier));
+    file.write(reinterpret_cast<const char *>(&entry.context),
+               sizeof(entry.context));
+    file.write(reinterpret_cast<const char *>(&entry.string_offset),
+               sizeof(entry.string_offset));
+    file.write(reinterpret_cast<const char *>(&entry.string_length),
+               sizeof(entry.string_length));
   }
 
   if (!file) {
@@ -916,6 +975,211 @@ auto URITemplateRouterView::operation(const std::string_view operation_id) const
   }
 
   return miss;
+}
+
+auto URITemplateRouterView::at(const std::size_t index) const
+    -> URITemplateRouter::Identifier {
+  if (this->size_ < sizeof(RouterHeader)) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto paths_start = static_cast<std::size_t>(header->paths_offset);
+  if (paths_start > this->size_ ||
+      this->size_ - paths_start < sizeof(std::uint16_t)) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  std::uint16_t path_count = 0;
+  std::memcpy(&path_count, this->data_ + paths_start, sizeof(path_count));
+  if (index >= path_count) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto entries_offset = paths_start + sizeof(path_count);
+  const auto entries_size =
+      static_cast<std::size_t>(path_count) * PATH_ENTRY_SIZE;
+  if (entries_size > this->size_ - entries_offset) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto entry_offset = entries_offset + index * PATH_ENTRY_SIZE;
+  const auto entry = read_path_entry(this->data_, entry_offset);
+  return entry.identifier;
+}
+
+auto URITemplateRouterView::context(
+    const URITemplateRouter::Identifier identifier) const
+    -> URITemplateRouter::Identifier {
+  if (identifier == 0 || this->size_ < sizeof(RouterHeader)) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  const auto paths_start = static_cast<std::size_t>(header->paths_offset);
+  if (paths_start > this->size_ ||
+      this->size_ - paths_start < sizeof(std::uint16_t)) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  std::uint16_t path_count = 0;
+  std::memcpy(&path_count, this->data_ + paths_start, sizeof(path_count));
+
+  const auto entries_offset = paths_start + sizeof(path_count);
+  const auto entries_size =
+      static_cast<std::size_t>(path_count) * PATH_ENTRY_SIZE;
+  if (entries_size > this->size_ - entries_offset) {
+    return URITemplateRouter::Identifier{0};
+  }
+
+  for (std::uint16_t index = 0; index < path_count; ++index) {
+    const auto entry_offset = entries_offset + index * PATH_ENTRY_SIZE;
+    const auto entry = read_path_entry(this->data_, entry_offset);
+    if (entry.identifier == identifier) {
+      return entry.context;
+    }
+  }
+
+  return URITemplateRouter::Identifier{0};
+}
+
+auto URITemplateRouterView::path(
+    const URITemplateRouter::Identifier identifier) const -> std::string {
+  if (identifier == 0 || this->size_ < sizeof(RouterHeader)) {
+    return {};
+  }
+
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return {};
+  }
+
+  const auto paths_start = static_cast<std::size_t>(header->paths_offset);
+  if (paths_start > this->size_ ||
+      this->size_ - paths_start < sizeof(std::uint16_t)) {
+    return {};
+  }
+
+  if (header->string_table_offset > this->size_ ||
+      header->arguments_offset < header->string_table_offset ||
+      header->arguments_offset > this->size_) {
+    return {};
+  }
+
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
+  const auto string_table_size =
+      header->arguments_offset - header->string_table_offset;
+
+  std::uint16_t path_count = 0;
+  std::memcpy(&path_count, this->data_ + paths_start, sizeof(path_count));
+
+  const auto entries_offset = paths_start + sizeof(path_count);
+  const auto entries_size =
+      static_cast<std::size_t>(path_count) * PATH_ENTRY_SIZE;
+  if (entries_size > this->size_ - entries_offset) {
+    return {};
+  }
+
+  for (std::uint16_t index = 0; index < path_count; ++index) {
+    const auto entry_offset = entries_offset + index * PATH_ENTRY_SIZE;
+    const auto entry = read_path_entry(this->data_, entry_offset);
+    if (entry.identifier == identifier) {
+      if (entry.string_offset > string_table_size ||
+          entry.string_length > string_table_size - entry.string_offset) {
+        return {};
+      }
+      return std::string{string_table + entry.string_offset,
+                         entry.string_length};
+    }
+  }
+
+  return {};
+}
+
+auto URITemplateRouterView::operation_id(
+    const URITemplateRouter::Identifier identifier) const -> std::string_view {
+  if (identifier == 0) {
+    return {};
+  }
+
+  if (this->size_ < sizeof(RouterHeader)) {
+    return {};
+  }
+
+  const auto *header = reinterpret_cast<const RouterHeader *>(this->data_);
+  if (header->magic != ROUTER_MAGIC || header->version != ROUTER_VERSION) {
+    return {};
+  }
+
+  const auto operations_start =
+      static_cast<std::size_t>(header->operations_offset);
+  if (operations_start > this->size_ ||
+      this->size_ - operations_start < sizeof(std::uint16_t)) {
+    return {};
+  }
+
+  std::uint16_t entry_count = 0;
+  std::memcpy(&entry_count, this->data_ + operations_start,
+              sizeof(entry_count));
+  if (entry_count == 0) {
+    return {};
+  }
+
+  const auto entries_offset = operations_start + sizeof(entry_count);
+  const auto entries_size =
+      static_cast<std::size_t>(entry_count) * OPERATION_ENTRY_SIZE;
+  if (entries_size > this->size_ - entries_offset) {
+    return {};
+  }
+
+  if (header->string_table_offset > this->size_ ||
+      header->arguments_offset < header->string_table_offset ||
+      header->arguments_offset > this->size_) {
+    return {};
+  }
+
+  const auto *string_table =
+      reinterpret_cast<const char *>(this->data_ + header->string_table_offset);
+  const auto string_table_size =
+      header->arguments_offset - header->string_table_offset;
+
+  for (std::uint16_t index = 0; index < entry_count; ++index) {
+    const auto entry_offset =
+        entries_offset + static_cast<std::size_t>(index) * OPERATION_ENTRY_SIZE;
+
+    OperationEntry entry{};
+    std::memcpy(&entry.string_offset, this->data_ + entry_offset,
+                sizeof(entry.string_offset));
+    std::memcpy(&entry.string_length,
+                this->data_ + entry_offset + sizeof(entry.string_offset),
+                sizeof(entry.string_length));
+    std::memcpy(&entry.identifier,
+                this->data_ + entry_offset + sizeof(entry.string_offset) +
+                    sizeof(entry.string_length),
+                sizeof(entry.identifier));
+
+    if (entry.identifier != identifier) {
+      continue;
+    }
+
+    if (entry.string_offset > string_table_size ||
+        entry.string_length > string_table_size - entry.string_offset) {
+      return {};
+    }
+
+    return {string_table + entry.string_offset, entry.string_length};
+  }
+
+  return {};
 }
 
 } // namespace sourcemeta::core
