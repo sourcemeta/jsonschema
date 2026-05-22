@@ -1,6 +1,7 @@
+#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/configuration.h>
-
 #include <sourcemeta/blaze/foundation.h>
+
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
 

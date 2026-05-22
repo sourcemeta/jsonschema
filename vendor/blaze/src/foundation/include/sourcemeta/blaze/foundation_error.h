@@ -218,62 +218,6 @@ private:
   const char *message_;
 };
 
-/// @ingroup foundation
-/// An error that represents a schema frame error
-class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaFrameError
-    : public std::exception {
-public:
-  SchemaFrameError(const std::string_view identifier, const char *message)
-      : identifier_{identifier}, message_{message} {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return this->message_;
-  }
-
-  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
-    return this->identifier_;
-  }
-
-private:
-  std::string identifier_;
-  const char *message_;
-};
-
-/// @ingroup foundation
-/// An error that represents a schema anchor collision error
-class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaAnchorCollisionError
-    : public std::exception {
-public:
-  SchemaAnchorCollisionError(const std::string_view identifier,
-                             sourcemeta::core::Pointer location,
-                             sourcemeta::core::Pointer other)
-      : identifier_{identifier}, location_(std::move(location)),
-        other_(std::move(other)) {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Schema anchor already exists";
-  }
-
-  [[nodiscard]] auto identifier() const noexcept -> std::string_view {
-    return this->identifier_;
-  }
-
-  [[nodiscard]] auto location() const noexcept
-      -> const sourcemeta::core::Pointer & {
-    return this->location_;
-  }
-
-  [[nodiscard]] auto other() const noexcept
-      -> const sourcemeta::core::Pointer & {
-    return this->other_;
-  }
-
-private:
-  std::string identifier_;
-  sourcemeta::core::Pointer location_;
-  sourcemeta::core::Pointer other_;
-};
-
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

@@ -1,4 +1,5 @@
 #include <sourcemeta/blaze/codegen.h>
+#include <sourcemeta/blaze/frame.h>
 
 #include <sourcemeta/core/uri.h>
 

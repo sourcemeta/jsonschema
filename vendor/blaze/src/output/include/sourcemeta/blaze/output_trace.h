@@ -5,11 +5,12 @@
 #include <sourcemeta/blaze/output_export.h>
 #endif
 
+#include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
+
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
-
-#include <sourcemeta/blaze/evaluator.h>
 
 #include <cstdint>     // std::uint8_t
 #include <functional>  // std::function, std::reference_wrapper

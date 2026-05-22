@@ -1,3 +1,13 @@
+# Applies the shared compiler defaults to <target> at <visibility>.
+#
+# Flag categories handled here:
+#   - Diagnostics (-W...): always on, every config
+#   - Language semantics (-fwrapv, -fstrict-aliasing, -fno-rtti on GCC): always on
+#   - Optimization-related (loop unrolling, vectorization, fast-math relaxations):
+#     gated to non-Debug configs because they have no effect at -O0 but still
+#     cost Clang/GCC pipeline time
+#
+# Do not add optimization-only flags here without a generator-expression gate
 function(sourcemeta_add_default_options visibility target)
   if(SOURCEMETA_COMPILER_MSVC)
     # See https://learn.microsoft.com/en-us/cpp/build/reference/compiler-options-listed-by-category
@@ -40,22 +50,28 @@ function(sourcemeta_add_default_options visibility target)
       $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-Wnon-virtual-dtor>
       $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-Woverloaded-virtual>
       $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-Winvalid-offsetof>
-      -funroll-loops
+      # Semantics, not optimization: keep on for every config
       -fstrict-aliasing
-      -ftree-vectorize
-
-      # To improve how much GCC/Clang will vectorize
+      # Assume that signed arithmetic overflow of addition, subtraction and
+      # multiplication wraps around using twos-complement representation
+      # See https://users.cs.utah.edu/~regehr/papers/overflow12.pdf
+      # See https://www.postgresql.org/message-id/1689.1134422394@sss.pgh.pa.us
+      -fwrapv
+      # Fast-math relaxations relax IEEE conformance (errno after math.h,
+      # signed-zero handling, reassociation), so they affect observable
+      # behavior and must apply to every config to keep Debug and Release
+      # semantics aligned
       -fno-math-errno
       -fno-trapping-math
       -fno-signed-zeros
       -freciprocal-math
       -fassociative-math
 
-      # Assume that signed arithmetic overflow of addition, subtraction and
-      # multiplication wraps around using twos-complement representation
-      # See https://users.cs.utah.edu/~regehr/papers/overflow12.pdf
-      # See https://www.postgresql.org/message-id/1689.1134422394@sss.pgh.pa.us
-      -fwrapv)
+      # Optimization-only: emitted only when not building Debug. At -O0 these
+      # run analyses that never reach codegen, costing build time for no
+      # behavioral effect
+      $<$<NOT:$<CONFIG:Debug>>:-funroll-loops>
+      $<$<NOT:$<CONFIG:Debug>>:-ftree-vectorize>)
   endif()
 
   if(SOURCEMETA_COMPILER_LLVM)
@@ -81,9 +97,9 @@ function(sourcemeta_add_default_options visibility target)
       -Wrange-loop-analysis
 
       # Enable loop vectorization for performance reasons
-      -fvectorize
+      $<$<NOT:$<CONFIG:Debug>>:-fvectorize>
       # Enable vectorization of straight-line code for performance
-      -fslp-vectorize)
+      $<$<NOT:$<CONFIG:Debug>>:-fslp-vectorize>)
   elseif(SOURCEMETA_COMPILER_GCC)
     target_compile_options("${target}" ${visibility}
       # Newer versions of GCC (i.e. 14) seem to print a lot of false-positives here

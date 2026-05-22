@@ -27,4 +27,8 @@ target_link_libraries(sourcemeta_blaze_compiler PRIVATE
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_blaze_compiler PUBLIC
+  sourcemeta::blaze::frame)
+target_link_libraries(sourcemeta_blaze_compiler PRIVATE
+  sourcemeta::blaze::bundle)
+target_link_libraries(sourcemeta_blaze_compiler PUBLIC
   sourcemeta::blaze::evaluator)

@@ -4,6 +4,7 @@
 #include <sourcemeta/blaze/codegen.h>
 
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/uri.h>
 

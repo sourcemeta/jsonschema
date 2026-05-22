@@ -75,6 +75,9 @@ ref_overrides_adjacent_keywords(const SchemaBaseDialect base_dialect) -> bool {
     case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
     case SchemaBaseDialect::JSON_Schema_Draft_3:
     case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
+    case SchemaBaseDialect::JSON_Schema_Draft_2_Hyper:
+    case SchemaBaseDialect::JSON_Schema_Draft_1_Hyper:
+    case SchemaBaseDialect::JSON_Schema_Draft_0_Hyper:
       return true;
     default:
       return false;

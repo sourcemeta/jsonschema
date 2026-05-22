@@ -1,4 +1,5 @@
 #include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/blaze/format.h>
 #include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>

@@ -1,7 +1,8 @@
+#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
-
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
 
 #include <algorithm> // std::move, std::sort, std::unique
 #include <cassert>   // assert

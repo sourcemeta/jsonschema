@@ -11,6 +11,8 @@ target_link_libraries(sourcemeta_blaze_documentation PUBLIC
 target_link_libraries(sourcemeta_blaze_documentation PUBLIC
   sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_blaze_documentation PRIVATE
+  sourcemeta::blaze::frame)
+target_link_libraries(sourcemeta_blaze_documentation PRIVATE
   sourcemeta::blaze::alterschema)
 target_link_libraries(sourcemeta_blaze_documentation PRIVATE
   sourcemeta::core::html)
