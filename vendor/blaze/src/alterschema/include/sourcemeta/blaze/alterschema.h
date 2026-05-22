@@ -19,6 +19,7 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
 
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional, std::nullopt
@@ -126,6 +127,46 @@ private:
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif
+
+/// @ingroup alterschema
+///
+/// Wrap a schema to only access one of its subschemas. This is useful if you
+/// want to perform validation on only a specific part of the schema without
+/// having to reinvent the wheel. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/blaze/alterschema.h>
+/// #include <sourcemeta/blaze/foundation.h>
+/// #include <iostream>
+///
+/// const sourcemeta::core::JSON document =
+///     sourcemeta::core::parse_json(R"JSON({
+///   "$schema": "https://json-schema.org/draft/2020-12/schema",
+///   "items": { "type": "string" }
+/// })JSON");
+///
+/// sourcemeta::blaze::SchemaFrame frame{
+///     sourcemeta::blaze::SchemaFrame::Mode::References};
+/// frame.analyse(document, sourcemeta::blaze::schema_walker,
+///               sourcemeta::blaze::schema_resolver);
+///
+/// const auto location{frame.traverse(
+///     sourcemeta::core::WeakPointer{"items"},
+///     sourcemeta::blaze::SchemaFrame::LocationType::Subschema)};
+///
+/// sourcemeta::core::WeakPointer base;
+/// const sourcemeta::core::JSON result =
+///   sourcemeta::blaze::wrap(document, frame, location.value().get(),
+///     sourcemeta::blaze::schema_resolver, base);
+///
+/// sourcemeta::core::prettify(result, std::cerr);
+/// std::cerr << "\n";
+/// ```
+SOURCEMETA_BLAZE_ALTERSCHEMA_EXPORT
+auto wrap(const sourcemeta::core::JSON &schema, const SchemaFrame &frame,
+          const SchemaFrame::Location &location, const SchemaResolver &resolver,
+          sourcemeta::core::WeakPointer &base) -> sourcemeta::core::JSON;
 
 } // namespace sourcemeta::blaze
 

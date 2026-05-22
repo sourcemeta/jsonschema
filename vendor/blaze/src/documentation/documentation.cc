@@ -3,6 +3,7 @@
 #include <sourcemeta/blaze/alterschema.h>
 
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/json.h>
 
 #include <cassert> // assert

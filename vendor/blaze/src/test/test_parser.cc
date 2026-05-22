@@ -10,6 +10,18 @@
 #include <utility>     // std::move
 
 namespace {
+inline auto wrap_identifier(const std::string_view identifier)
+    -> sourcemeta::core::JSON {
+  auto result{sourcemeta::core::JSON::make_object()};
+  // JSON Schema 2020-12 is the first dialect that truly supports cross-dialect
+  // references In practice, others do, but we can play it safe here
+  result.assign_assume_new(
+      "$schema",
+      sourcemeta::core::JSON{"https://json-schema.org/draft/2020-12/schema"});
+  result.assign_assume_new("$ref", sourcemeta::core::JSON{identifier});
+  return result;
+}
+
 inline auto TEST_ERROR_IF(
     bool condition, const sourcemeta::core::PointerPositionTracker &tracker,
     const sourcemeta::core::Pointer &pointer, const char *message) -> void {
@@ -158,7 +170,7 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
   test_suite.schemas_exhaustive.reserve(test_suite.targets.size());
 
   for (const auto &target : test_suite.targets) {
-    const auto target_schema{sourcemeta::blaze::wrap(target)};
+    const auto target_schema{wrap_identifier(target)};
 
     try {
       test_suite.schemas_fast.push_back(compile(

@@ -1,5 +1,6 @@
 #include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/foundation.h>
+#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/core/uri.h>
 
 #include <algorithm>     // std::erase_if

@@ -1,5 +1,7 @@
 #include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/blaze/bundle.h>
 #include <sourcemeta/blaze/codegen.h>
+#include <sourcemeta/blaze/frame.h>
 
 #include <algorithm>     // std::ranges::sort
 #include <cassert>       // assert

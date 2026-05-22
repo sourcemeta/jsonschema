@@ -1,3 +1,4 @@
+#include <sourcemeta/blaze/frame.h>
 #include <sourcemeta/blaze/output_trace.h>
 
 #include <sourcemeta/blaze/foundation.h>
