@@ -74,6 +74,18 @@ function(sourcemeta_add_default_options visibility target)
       # behavioral effect
       $<$<NOT:$<CONFIG:Debug>>:-funroll-loops>
       $<$<NOT:$<CONFIG:Debug>>:-ftree-vectorize>)
+
+    # Hardware-assisted control-flow protection. The compiler emits these as
+    # HINT-space instructions that are NOPs on CPUs without the feature, so
+    # binaries remain compatible with older hardware
+    if(SOURCEMETA_OS_LINUX)
+      if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        target_compile_options("${target}" ${visibility} -fcf-protection=full)
+      elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64"
+          OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        target_compile_options("${target}" ${visibility} -mbranch-protection=standard)
+      endif()
+    endif()
   endif()
 
   if(SOURCEMETA_COMPILER_LLVM)

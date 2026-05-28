@@ -23,9 +23,9 @@
 namespace {
 
 constexpr std::size_t TOTAL_CODEPOINTS{0x110000};
-constexpr std::size_t PAGE_SHIFT{10};
-constexpr std::size_t PAGE_SIZE{1 << PAGE_SHIFT};
-constexpr std::size_t NUM_PAGES{TOTAL_CODEPOINTS / PAGE_SIZE};
+constexpr std::size_t TABLE_PAGE_SHIFT{10};
+constexpr std::size_t TABLE_PAGE_SIZE{1 << TABLE_PAGE_SHIFT};
+constexpr std::size_t NUM_PAGES{TOTAL_CODEPOINTS / TABLE_PAGE_SIZE};
 
 struct PropertyEntry {
   std::uint32_t first;
@@ -123,21 +123,23 @@ auto build_pages(const std::vector<PropertyEntry> &entries) -> TwoStageTable {
   TwoStageTable table;
   table.stage1.reserve(NUM_PAGES);
   for (std::size_t page_index{0}; page_index < NUM_PAGES; page_index += 1) {
-    const auto page_start{page_index * PAGE_SIZE};
+    const auto page_start{page_index * TABLE_PAGE_SIZE};
     const std::string page_key{
-        reinterpret_cast<const char *>(values.data() + page_start), PAGE_SIZE};
+        reinterpret_cast<const char *>(values.data() + page_start),
+        TABLE_PAGE_SIZE};
     const auto existing{page_to_id.find(page_key)};
     if (existing != page_to_id.end()) {
       table.stage1.push_back(existing->second);
       continue;
     }
     const auto new_id{
-        static_cast<std::uint16_t>(table.stage2.size() / PAGE_SIZE)};
+        static_cast<std::uint16_t>(table.stage2.size() / TABLE_PAGE_SIZE)};
     page_to_id.emplace(page_key, new_id);
     table.stage2.insert(
         table.stage2.end(),
         values.begin() + static_cast<std::ptrdiff_t>(page_start),
-        values.begin() + static_cast<std::ptrdiff_t>(page_start + PAGE_SIZE));
+        values.begin() +
+            static_cast<std::ptrdiff_t>(page_start + TABLE_PAGE_SIZE));
     table.stage1.push_back(new_id);
   }
   return table;
