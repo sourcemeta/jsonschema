@@ -6,237 +6,265 @@
 namespace sourcemeta::core {
 
 /// @ingroup unicode
+/// Each entry maps a `JoiningType` enum name to its UCD short alias.
+#define SOURCEMETA_CORE_JOINING_TYPE_LIST(X)                                   \
+  X(NonJoining, "U")                                                           \
+  X(Transparent, "T")                                                          \
+  X(LeftJoining, "L")                                                          \
+  X(RightJoining, "R")                                                         \
+  X(DualJoining, "D")                                                          \
+  X(JoinCausing, "C")
+
+/// @ingroup unicode
 /// The joining type of a Unicode codepoint per UAX #44. See
 /// https://www.unicode.org/reports/tr44/ for the property's definition.
 enum class JoiningType : std::uint8_t {
-  NonJoining = 0,
-  Transparent = 1,
-  LeftJoining = 2,
-  RightJoining = 3,
-  DualJoining = 4,
-  JoinCausing = 5,
+#define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
+  SOURCEMETA_CORE_JOINING_TYPE_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
 };
+
+/// @ingroup unicode
+/// Each entry maps a `BidiClass` enum name to its UCD short alias.
+#define SOURCEMETA_CORE_BIDI_CLASS_LIST(X)                                     \
+  X(LeftToRight, "L")                                                          \
+  X(RightToLeft, "R")                                                          \
+  X(ArabicLetter, "AL")                                                        \
+  X(EuropeanNumber, "EN")                                                      \
+  X(EuropeanSeparator, "ES")                                                   \
+  X(EuropeanTerminator, "ET")                                                  \
+  X(ArabicNumber, "AN")                                                        \
+  X(CommonSeparator, "CS")                                                     \
+  X(NonspacingMark, "NSM")                                                     \
+  X(BoundaryNeutral, "BN")                                                     \
+  X(ParagraphSeparator, "B")                                                   \
+  X(SegmentSeparator, "S")                                                     \
+  X(WhiteSpace, "WS")                                                          \
+  X(OtherNeutral, "ON")                                                        \
+  X(LeftToRightEmbedding, "LRE")                                               \
+  X(LeftToRightOverride, "LRO")                                                \
+  X(RightToLeftEmbedding, "RLE")                                               \
+  X(RightToLeftOverride, "RLO")                                                \
+  X(PopDirectionalFormat, "PDF")                                               \
+  X(LeftToRightIsolate, "LRI")                                                 \
+  X(RightToLeftIsolate, "RLI")                                                 \
+  X(FirstStrongIsolate, "FSI")                                                 \
+  X(PopDirectionalIsolate, "PDI")
 
 /// @ingroup unicode
 /// The bidirectional class of a Unicode codepoint per UAX #44. See
 /// https://www.unicode.org/reports/tr44/ for the property's definition.
 enum class BidiClass : std::uint8_t {
-  LeftToRight = 0,
-  RightToLeft = 1,
-  ArabicLetter = 2,
-  EuropeanNumber = 3,
-  EuropeanSeparator = 4,
-  EuropeanTerminator = 5,
-  ArabicNumber = 6,
-  CommonSeparator = 7,
-  NonspacingMark = 8,
-  BoundaryNeutral = 9,
-  ParagraphSeparator = 10,
-  SegmentSeparator = 11,
-  WhiteSpace = 12,
-  OtherNeutral = 13,
-  LeftToRightEmbedding = 14,
-  LeftToRightOverride = 15,
-  RightToLeftEmbedding = 16,
-  RightToLeftOverride = 17,
-  PopDirectionalFormat = 18,
-  LeftToRightIsolate = 19,
-  RightToLeftIsolate = 20,
-  FirstStrongIsolate = 21,
-  PopDirectionalIsolate = 22,
+#define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
+  SOURCEMETA_CORE_BIDI_CLASS_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
 };
+
+/// @ingroup unicode
+/// Each entry maps a `UnicodeScript` enum name to its UCD long alias.
+/// Per UAX #24 §1.4, `Katakana_Or_Hiragana` only appears in the
+/// `Script_Extensions` property and never in the `Script` property itself.
+#define SOURCEMETA_CORE_UNICODE_SCRIPT_LIST(X)                                 \
+  X(Adlam, "Adlam")                                                            \
+  X(Ahom, "Ahom")                                                              \
+  X(AnatolianHieroglyphs, "Anatolian_Hieroglyphs")                             \
+  X(Arabic, "Arabic")                                                          \
+  X(Armenian, "Armenian")                                                      \
+  X(Avestan, "Avestan")                                                        \
+  X(Balinese, "Balinese")                                                      \
+  X(Bamum, "Bamum")                                                            \
+  X(BassaVah, "Bassa_Vah")                                                     \
+  X(Batak, "Batak")                                                            \
+  X(Bengali, "Bengali")                                                        \
+  X(BeriaErfe, "Beria_Erfe")                                                   \
+  X(Bhaiksuki, "Bhaiksuki")                                                    \
+  X(Bopomofo, "Bopomofo")                                                      \
+  X(Brahmi, "Brahmi")                                                          \
+  X(Braille, "Braille")                                                        \
+  X(Buginese, "Buginese")                                                      \
+  X(Buhid, "Buhid")                                                            \
+  X(CanadianAboriginal, "Canadian_Aboriginal")                                 \
+  X(Carian, "Carian")                                                          \
+  X(CaucasianAlbanian, "Caucasian_Albanian")                                   \
+  X(Chakma, "Chakma")                                                          \
+  X(Cham, "Cham")                                                              \
+  X(Cherokee, "Cherokee")                                                      \
+  X(Chorasmian, "Chorasmian")                                                  \
+  X(Common, "Common")                                                          \
+  X(Coptic, "Coptic")                                                          \
+  X(Cuneiform, "Cuneiform")                                                    \
+  X(Cypriot, "Cypriot")                                                        \
+  X(CyproMinoan, "Cypro_Minoan")                                               \
+  X(Cyrillic, "Cyrillic")                                                      \
+  X(Deseret, "Deseret")                                                        \
+  X(Devanagari, "Devanagari")                                                  \
+  X(DivesAkuru, "Dives_Akuru")                                                 \
+  X(Dogra, "Dogra")                                                            \
+  X(Duployan, "Duployan")                                                      \
+  X(EgyptianHieroglyphs, "Egyptian_Hieroglyphs")                               \
+  X(Elbasan, "Elbasan")                                                        \
+  X(Elymaic, "Elymaic")                                                        \
+  X(Ethiopic, "Ethiopic")                                                      \
+  X(Garay, "Garay")                                                            \
+  X(Georgian, "Georgian")                                                      \
+  X(Glagolitic, "Glagolitic")                                                  \
+  X(Gothic, "Gothic")                                                          \
+  X(Grantha, "Grantha")                                                        \
+  X(Greek, "Greek")                                                            \
+  X(Gujarati, "Gujarati")                                                      \
+  X(GunjalaGondi, "Gunjala_Gondi")                                             \
+  X(Gurmukhi, "Gurmukhi")                                                      \
+  X(GurungKhema, "Gurung_Khema")                                               \
+  X(Han, "Han")                                                                \
+  X(Hangul, "Hangul")                                                          \
+  X(HanifiRohingya, "Hanifi_Rohingya")                                         \
+  X(Hanunoo, "Hanunoo")                                                        \
+  X(Hatran, "Hatran")                                                          \
+  X(Hebrew, "Hebrew")                                                          \
+  X(Hiragana, "Hiragana")                                                      \
+  X(ImperialAramaic, "Imperial_Aramaic")                                       \
+  X(Inherited, "Inherited")                                                    \
+  X(InscriptionalPahlavi, "Inscriptional_Pahlavi")                             \
+  X(InscriptionalParthian, "Inscriptional_Parthian")                           \
+  X(Javanese, "Javanese")                                                      \
+  X(Kaithi, "Kaithi")                                                          \
+  X(Kannada, "Kannada")                                                        \
+  X(Katakana, "Katakana")                                                      \
+  X(Kawi, "Kawi")                                                              \
+  X(KayahLi, "Kayah_Li")                                                       \
+  X(Kharoshthi, "Kharoshthi")                                                  \
+  X(KhitanSmallScript, "Khitan_Small_Script")                                  \
+  X(Khmer, "Khmer")                                                            \
+  X(Khojki, "Khojki")                                                          \
+  X(Khudawadi, "Khudawadi")                                                    \
+  X(KiratRai, "Kirat_Rai")                                                     \
+  X(Lao, "Lao")                                                                \
+  X(Latin, "Latin")                                                            \
+  X(Lepcha, "Lepcha")                                                          \
+  X(Limbu, "Limbu")                                                            \
+  X(LinearA, "Linear_A")                                                       \
+  X(LinearB, "Linear_B")                                                       \
+  X(Lisu, "Lisu")                                                              \
+  X(Lycian, "Lycian")                                                          \
+  X(Lydian, "Lydian")                                                          \
+  X(Mahajani, "Mahajani")                                                      \
+  X(Makasar, "Makasar")                                                        \
+  X(Malayalam, "Malayalam")                                                    \
+  X(Mandaic, "Mandaic")                                                        \
+  X(Manichaean, "Manichaean")                                                  \
+  X(Marchen, "Marchen")                                                        \
+  X(MasaramGondi, "Masaram_Gondi")                                             \
+  X(Medefaidrin, "Medefaidrin")                                                \
+  X(MeeteiMayek, "Meetei_Mayek")                                               \
+  X(MendeKikakui, "Mende_Kikakui")                                             \
+  X(MeroiticCursive, "Meroitic_Cursive")                                       \
+  X(MeroiticHieroglyphs, "Meroitic_Hieroglyphs")                               \
+  X(Miao, "Miao")                                                              \
+  X(Modi, "Modi")                                                              \
+  X(Mongolian, "Mongolian")                                                    \
+  X(Mro, "Mro")                                                                \
+  X(Multani, "Multani")                                                        \
+  X(Myanmar, "Myanmar")                                                        \
+  X(Nabataean, "Nabataean")                                                    \
+  X(NagMundari, "Nag_Mundari")                                                 \
+  X(Nandinagari, "Nandinagari")                                                \
+  X(NewTaiLue, "New_Tai_Lue")                                                  \
+  X(Newa, "Newa")                                                              \
+  X(Nko, "Nko")                                                                \
+  X(Nushu, "Nushu")                                                            \
+  X(NyiakengPuachueHmong, "Nyiakeng_Puachue_Hmong")                            \
+  X(Ogham, "Ogham")                                                            \
+  X(OlChiki, "Ol_Chiki")                                                       \
+  X(OlOnal, "Ol_Onal")                                                         \
+  X(OldHungarian, "Old_Hungarian")                                             \
+  X(OldItalic, "Old_Italic")                                                   \
+  X(OldNorthArabian, "Old_North_Arabian")                                      \
+  X(OldPermic, "Old_Permic")                                                   \
+  X(OldPersian, "Old_Persian")                                                 \
+  X(OldSogdian, "Old_Sogdian")                                                 \
+  X(OldSouthArabian, "Old_South_Arabian")                                      \
+  X(OldTurkic, "Old_Turkic")                                                   \
+  X(OldUyghur, "Old_Uyghur")                                                   \
+  X(Oriya, "Oriya")                                                            \
+  X(Osage, "Osage")                                                            \
+  X(Osmanya, "Osmanya")                                                        \
+  X(PahawhHmong, "Pahawh_Hmong")                                               \
+  X(Palmyrene, "Palmyrene")                                                    \
+  X(PauCinHau, "Pau_Cin_Hau")                                                  \
+  X(PhagsPa, "Phags_Pa")                                                       \
+  X(Phoenician, "Phoenician")                                                  \
+  X(PsalterPahlavi, "Psalter_Pahlavi")                                         \
+  X(Rejang, "Rejang")                                                          \
+  X(Runic, "Runic")                                                            \
+  X(Samaritan, "Samaritan")                                                    \
+  X(Saurashtra, "Saurashtra")                                                  \
+  X(Sharada, "Sharada")                                                        \
+  X(Shavian, "Shavian")                                                        \
+  X(Siddham, "Siddham")                                                        \
+  X(Sidetic, "Sidetic")                                                        \
+  X(SignWriting, "SignWriting")                                                \
+  X(Sinhala, "Sinhala")                                                        \
+  X(Sogdian, "Sogdian")                                                        \
+  X(SoraSompeng, "Sora_Sompeng")                                               \
+  X(Soyombo, "Soyombo")                                                        \
+  X(Sundanese, "Sundanese")                                                    \
+  X(Sunuwar, "Sunuwar")                                                        \
+  X(SylotiNagri, "Syloti_Nagri")                                               \
+  X(Syriac, "Syriac")                                                          \
+  X(Tagalog, "Tagalog")                                                        \
+  X(Tagbanwa, "Tagbanwa")                                                      \
+  X(TaiLe, "Tai_Le")                                                           \
+  X(TaiTham, "Tai_Tham")                                                       \
+  X(TaiViet, "Tai_Viet")                                                       \
+  X(TaiYo, "Tai_Yo")                                                           \
+  X(Takri, "Takri")                                                            \
+  X(Tamil, "Tamil")                                                            \
+  X(Tangsa, "Tangsa")                                                          \
+  X(Tangut, "Tangut")                                                          \
+  X(Telugu, "Telugu")                                                          \
+  X(Thaana, "Thaana")                                                          \
+  X(Thai, "Thai")                                                              \
+  X(Tibetan, "Tibetan")                                                        \
+  X(Tifinagh, "Tifinagh")                                                      \
+  X(Tirhuta, "Tirhuta")                                                        \
+  X(Todhri, "Todhri")                                                          \
+  X(TolongSiki, "Tolong_Siki")                                                 \
+  X(Toto, "Toto")                                                              \
+  X(TuluTigalari, "Tulu_Tigalari")                                             \
+  X(Ugaritic, "Ugaritic")                                                      \
+  X(Unknown, "Unknown")                                                        \
+  X(Vai, "Vai")                                                                \
+  X(Vithkuqi, "Vithkuqi")                                                      \
+  X(Wancho, "Wancho")                                                          \
+  X(WarangCiti, "Warang_Citi")                                                 \
+  X(Yezidi, "Yezidi")                                                          \
+  X(Yi, "Yi")                                                                  \
+  X(ZanabazarSquare, "Zanabazar_Square")                                       \
+  X(KatakanaOrHiragana, "Katakana_Or_Hiragana")
 
 /// @ingroup unicode
 /// The script of a Unicode codepoint per UAX #24. See
 /// https://www.unicode.org/reports/tr24/ for the property's definition.
 enum class UnicodeScript : std::uint8_t {
-  Adlam = 0,
-  Ahom = 1,
-  AnatolianHieroglyphs = 2,
-  Arabic = 3,
-  Armenian = 4,
-  Avestan = 5,
-  Balinese = 6,
-  Bamum = 7,
-  BassaVah = 8,
-  Batak = 9,
-  Bengali = 10,
-  BeriaErfe = 11,
-  Bhaiksuki = 12,
-  Bopomofo = 13,
-  Brahmi = 14,
-  Braille = 15,
-  Buginese = 16,
-  Buhid = 17,
-  CanadianAboriginal = 18,
-  Carian = 19,
-  CaucasianAlbanian = 20,
-  Chakma = 21,
-  Cham = 22,
-  Cherokee = 23,
-  Chorasmian = 24,
-  Common = 25,
-  Coptic = 26,
-  Cuneiform = 27,
-  Cypriot = 28,
-  CyproMinoan = 29,
-  Cyrillic = 30,
-  Deseret = 31,
-  Devanagari = 32,
-  DivesAkuru = 33,
-  Dogra = 34,
-  Duployan = 35,
-  EgyptianHieroglyphs = 36,
-  Elbasan = 37,
-  Elymaic = 38,
-  Ethiopic = 39,
-  Garay = 40,
-  Georgian = 41,
-  Glagolitic = 42,
-  Gothic = 43,
-  Grantha = 44,
-  Greek = 45,
-  Gujarati = 46,
-  GunjalaGondi = 47,
-  Gurmukhi = 48,
-  GurungKhema = 49,
-  Han = 50,
-  Hangul = 51,
-  HanifiRohingya = 52,
-  Hanunoo = 53,
-  Hatran = 54,
-  Hebrew = 55,
-  Hiragana = 56,
-  ImperialAramaic = 57,
-  Inherited = 58,
-  InscriptionalPahlavi = 59,
-  InscriptionalParthian = 60,
-  Javanese = 61,
-  Kaithi = 62,
-  Kannada = 63,
-  Katakana = 64,
-  Kawi = 65,
-  KayahLi = 66,
-  Kharoshthi = 67,
-  KhitanSmallScript = 68,
-  Khmer = 69,
-  Khojki = 70,
-  Khudawadi = 71,
-  KiratRai = 72,
-  Lao = 73,
-  Latin = 74,
-  Lepcha = 75,
-  Limbu = 76,
-  LinearA = 77,
-  LinearB = 78,
-  Lisu = 79,
-  Lycian = 80,
-  Lydian = 81,
-  Mahajani = 82,
-  Makasar = 83,
-  Malayalam = 84,
-  Mandaic = 85,
-  Manichaean = 86,
-  Marchen = 87,
-  MasaramGondi = 88,
-  Medefaidrin = 89,
-  MeeteiMayek = 90,
-  MendeKikakui = 91,
-  MeroiticCursive = 92,
-  MeroiticHieroglyphs = 93,
-  Miao = 94,
-  Modi = 95,
-  Mongolian = 96,
-  Mro = 97,
-  Multani = 98,
-  Myanmar = 99,
-  Nabataean = 100,
-  NagMundari = 101,
-  Nandinagari = 102,
-  NewTaiLue = 103,
-  Newa = 104,
-  Nko = 105,
-  Nushu = 106,
-  NyiakengPuachueHmong = 107,
-  Ogham = 108,
-  OlChiki = 109,
-  OlOnal = 110,
-  OldHungarian = 111,
-  OldItalic = 112,
-  OldNorthArabian = 113,
-  OldPermic = 114,
-  OldPersian = 115,
-  OldSogdian = 116,
-  OldSouthArabian = 117,
-  OldTurkic = 118,
-  OldUyghur = 119,
-  Oriya = 120,
-  Osage = 121,
-  Osmanya = 122,
-  PahawhHmong = 123,
-  Palmyrene = 124,
-  PauCinHau = 125,
-  PhagsPa = 126,
-  Phoenician = 127,
-  PsalterPahlavi = 128,
-  Rejang = 129,
-  Runic = 130,
-  Samaritan = 131,
-  Saurashtra = 132,
-  Sharada = 133,
-  Shavian = 134,
-  Siddham = 135,
-  Sidetic = 136,
-  SignWriting = 137,
-  Sinhala = 138,
-  Sogdian = 139,
-  SoraSompeng = 140,
-  Soyombo = 141,
-  Sundanese = 142,
-  Sunuwar = 143,
-  SylotiNagri = 144,
-  Syriac = 145,
-  Tagalog = 146,
-  Tagbanwa = 147,
-  TaiLe = 148,
-  TaiTham = 149,
-  TaiViet = 150,
-  TaiYo = 151,
-  Takri = 152,
-  Tamil = 153,
-  Tangsa = 154,
-  Tangut = 155,
-  Telugu = 156,
-  Thaana = 157,
-  Thai = 158,
-  Tibetan = 159,
-  Tifinagh = 160,
-  Tirhuta = 161,
-  Todhri = 162,
-  TolongSiki = 163,
-  Toto = 164,
-  TuluTigalari = 165,
-  Ugaritic = 166,
-  Unknown = 167,
-  Vai = 168,
-  Vithkuqi = 169,
-  Wancho = 170,
-  WarangCiti = 171,
-  Yezidi = 172,
-  Yi = 173,
-  ZanabazarSquare = 174,
-  // Per UAX #24 §1.4, the value Katakana_Or_Hiragana only appears in the
-  // Script_Extensions property and never in the Script property itself.
-  KatakanaOrHiragana = 175,
+#define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
+  SOURCEMETA_CORE_UNICODE_SCRIPT_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
 };
+
+/// @ingroup unicode
+/// Each entry maps an `NFCQuickCheck` enum name to its UCD short alias.
+#define SOURCEMETA_CORE_NFC_QUICK_CHECK_LIST(X)                                \
+  X(Yes, "Y")                                                                  \
+  X(No, "N")                                                                   \
+  X(Maybe, "M")
 
 /// @ingroup unicode
 /// The NFC quick-check result for a Unicode codepoint per UAX #15.
 /// See https://www.unicode.org/reports/tr15/ for the property's definition.
 enum class NFCQuickCheck : std::uint8_t {
-  Yes = 0,
-  No = 1,
-  Maybe = 2,
+#define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
+  SOURCEMETA_CORE_NFC_QUICK_CHECK_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
+#undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
 };
 
 } // namespace sourcemeta::core

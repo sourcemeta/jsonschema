@@ -6,8 +6,11 @@
 #endif
 
 #include <cstddef>     // std::size_t
+#include <optional>    // std::optional
+#include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::pair
 
 /// @defgroup text Text
 /// @brief A collection of general-purpose text manipulation utilities
@@ -70,6 +73,135 @@ auto to_lowercase(const char character) noexcept -> char;
 SOURCEMETA_CORE_TEXT_EXPORT
 auto truncate(std::string &input, const std::size_t maximum_length,
               const std::string_view marker) -> void;
+
+/// @ingroup text
+///
+/// Return `input` with leading and trailing ASCII whitespace removed. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::trim("  hello  ") == "hello");
+/// assert(sourcemeta::core::trim("\t\nfoo\r\n") == "foo");
+/// assert(sourcemeta::core::trim("   ").empty());
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto trim(const std::string_view input) noexcept -> std::string_view;
+
+/// @ingroup text
+///
+/// Return the prefix of `input` up to (but excluding) the first occurrence
+/// of `marker`, or the full input when `marker` is absent. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::take_until("foo # bar", '#') == "foo ");
+/// assert(sourcemeta::core::take_until("no marker", '#') == "no marker");
+/// assert(sourcemeta::core::take_until("#leading", '#').empty());
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto take_until(const std::string_view input, const char marker) noexcept
+    -> std::string_view;
+
+/// @ingroup text
+///
+/// Split `input` at the first occurrence of `delimiter`, returning the
+/// parts before and after it. Return `std::nullopt` when the delimiter is
+/// absent. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto parts{sourcemeta::core::split_once("key=value", '=')};
+/// assert(parts.has_value());
+/// assert(parts->first == "key");
+/// assert(parts->second == "value");
+/// assert(!sourcemeta::core::split_once("no separator", '=').has_value());
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto split_once(const std::string_view input, const char delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>>;
+
+/// @ingroup text
+///
+/// Split `input` at the first occurrence of `delimiter`, returning the
+/// parts before and after it. Return `std::nullopt` when the delimiter is
+/// absent or empty. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto parts{sourcemeta::core::split_once("1..5", "..")};
+/// assert(parts.has_value());
+/// assert(parts->first == "1");
+/// assert(parts->second == "5");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto split_once(const std::string_view input,
+                const std::string_view delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>>;
+
+/// @ingroup text
+///
+/// Iterate the parts of `input` separated by `delimiter`, invoking
+/// `callback` with each part. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <iostream>
+///
+/// sourcemeta::core::split("alpha;beta;gamma", ';',
+///     [](const std::string_view part) {
+///       std::cout << part << '\n';
+///     });
+/// ```
+template <typename Callback>
+auto split(const std::string_view input, const char delimiter,
+           Callback callback) -> void {
+  std::string_view rest{input};
+  while (true) {
+    const auto next{sourcemeta::core::split_once(rest, delimiter)};
+    if (!next.has_value()) {
+      callback(rest);
+      return;
+    }
+    callback(next->first);
+    rest = next->second;
+  }
+}
+
+/// @ingroup text
+///
+/// Stream each item of `items` to `stream`, separated by `separator`. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <array>
+/// #include <iostream>
+///
+/// constexpr std::array<int, 3> values{1, 2, 3};
+/// sourcemeta::core::join_to(std::cout, values, ", ");
+/// // prints: 1, 2, 3
+/// ```
+template <typename Range>
+auto join_to(std::ostream &stream, const Range &items,
+             const std::string_view separator) -> void {
+  bool first{true};
+  for (const auto &item : items) {
+    if (!first) {
+      stream << separator;
+    }
+    stream << item;
+    first = false;
+  }
+}
 
 /// @ingroup text
 ///

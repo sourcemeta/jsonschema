@@ -2,7 +2,18 @@
 
 #include <cctype>      // std::isalpha, std::toupper
 #include <cstddef>     // std::size_t
+#include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
+#include <utility>     // std::pair
+
+namespace {
+
+auto is_ascii_whitespace(const char character) noexcept -> bool {
+  return character == ' ' || character == '\t' || character == '\n' ||
+         character == '\v' || character == '\f' || character == '\r';
+}
+
+} // namespace
 
 namespace sourcemeta::core {
 
@@ -54,6 +65,58 @@ auto truncate(std::string &input, const std::size_t maximum_length,
   }
   input.resize(boundary);
   input.append(marker);
+}
+
+auto trim(const std::string_view input) noexcept -> std::string_view {
+  std::string_view result{input};
+  while (!result.empty() && is_ascii_whitespace(result.front())) {
+    result.remove_prefix(1);
+  }
+  while (!result.empty() && is_ascii_whitespace(result.back())) {
+    result.remove_suffix(1);
+  }
+  return result;
+}
+
+auto take_until(const std::string_view input, const char marker) noexcept
+    -> std::string_view {
+  const auto position{input.find(marker)};
+  if (position == std::string_view::npos) {
+    return input;
+  }
+  std::string_view result{input};
+  result.remove_suffix(input.size() - position);
+  return result;
+}
+
+auto split_once(const std::string_view input, const char delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>> {
+  const auto position{input.find(delimiter)};
+  if (position == std::string_view::npos) {
+    return std::nullopt;
+  }
+  std::string_view before{input};
+  before.remove_suffix(input.size() - position);
+  std::string_view after{input};
+  after.remove_prefix(position + 1);
+  return std::pair{before, after};
+}
+
+auto split_once(const std::string_view input,
+                const std::string_view delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>> {
+  if (delimiter.empty()) {
+    return std::nullopt;
+  }
+  const auto position{input.find(delimiter)};
+  if (position == std::string_view::npos) {
+    return std::nullopt;
+  }
+  std::string_view before{input};
+  before.remove_suffix(input.size() - position);
+  std::string_view after{input};
+  after.remove_prefix(position + delimiter.size());
+  return std::pair{before, after};
 }
 
 auto remove_suffix_ignore_case(const std::string_view input,

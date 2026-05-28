@@ -561,6 +561,10 @@ inline auto expand_set_ops(const std::string &content, std::bitset<128> &result)
 
     result =
         op_char == '-' ? (result & ~operand_chars) : (result & operand_chars);
+    if (next == std::string::npos) {
+      break;
+    }
+
     position = next;
   }
 

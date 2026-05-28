@@ -17,7 +17,9 @@ function(sourcemeta_add_default_options visibility target)
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/W4>
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/WL>
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP>
-      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/sdl>)
+      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/sdl>
+      # See https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-control-flow-guard
+      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/guard:cf>)
   elseif(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
     target_compile_options("${target}" ${visibility}
       -Wall
@@ -107,7 +109,17 @@ function(sourcemeta_add_default_options visibility target)
       # GCC seems to print a lot of false-positives here
       -Wno-free-nonheap-object
       # Disables runtime type information
-      $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-rtti>)
+      $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-rtti>
+      # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+      -fstack-clash-protection)
+
+    # _GLIBCXX_ASSERTIONS is libstdc++ (GNU) specific, not honored by libc++
+    # (which the LLVM toolchain on Apple ships). Restrict to non-Apple GCC
+    # to avoid emitting a Debug-only definition that does nothing on macOS
+    if(NOT APPLE)
+      target_compile_definitions("${target}" ${visibility}
+        $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS>)
+    endif()
   endif()
 endfunction()
 

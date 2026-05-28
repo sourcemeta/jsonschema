@@ -1,15 +1,21 @@
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
+# Codegen
 set(SOURCEMETA_CORE_UNICODE_UCD_DIR
   "${core_SOURCE_DIR}/vendor/unicodetools/unicodetools/data/ucd/dev")
-
 set(SOURCEMETA_CORE_UNICODE_DATA_HEADER
   "${CMAKE_CURRENT_BINARY_DIR}/unicode_data.h")
-
+sourcemeta_executable(NAMESPACE sourcemeta PROJECT core NAME unicode_codegen
+  OUTPUT SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET
+  SOURCES codegen.cc include/sourcemeta/core/unicode_ucd.h)
+target_link_libraries("${SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET}" PRIVATE
+  sourcemeta::core::io
+  sourcemeta::core::options
+  sourcemeta::core::numeric
+  sourcemeta::core::text)
+target_include_directories("${SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET}" PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/include")
 add_custom_command(
   OUTPUT "${SOURCEMETA_CORE_UNICODE_DATA_HEADER}"
-  COMMAND "${Python3_EXECUTABLE}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/codegen.py"
+  COMMAND "${SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET}"
     "${SOURCEMETA_CORE_UNICODE_DATA_HEADER}"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/PropertyValueAliases.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/extracted/DerivedCombiningClass.txt"
@@ -21,7 +27,7 @@ add_custom_command(
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/UnicodeData.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/CompositionExclusions.txt"
   DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/codegen.py"
+    "${SOURCEMETA_CORE_UNICODE_CODEGEN_TARGET}"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/PropertyValueAliases.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/extracted/DerivedCombiningClass.txt"
     "${SOURCEMETA_CORE_UNICODE_UCD_DIR}/extracted/DerivedJoiningType.txt"
