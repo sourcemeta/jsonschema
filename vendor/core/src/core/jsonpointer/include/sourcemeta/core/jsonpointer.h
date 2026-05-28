@@ -438,6 +438,26 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto is_pointer(std::string_view input) noexcept -> bool;
 
 /// @ingroup jsonpointer
+/// Check if the given string is a valid Relative JSON Pointer per
+/// draft-handrews-relative-json-pointer-01 without constructing a pointer
+/// object. The grammar is a non-negative integer prefix (no leading zeros,
+/// no sign) followed by either a "#" or an RFC 6901 JSON Pointer suffix.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_relative_pointer("0/foo/bar"));
+/// assert(sourcemeta::core::is_relative_pointer("0#"));
+/// assert(sourcemeta::core::is_relative_pointer("120/foo"));
+/// assert(!sourcemeta::core::is_relative_pointer("/foo/bar"));
+/// assert(!sourcemeta::core::is_relative_pointer("01/a"));
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto is_relative_pointer(std::string_view input) noexcept -> bool;
+
+/// @ingroup jsonpointer
 /// Convert a JSON Pointer into a JSON WeakPointer. For example:
 ///
 /// ```cpp

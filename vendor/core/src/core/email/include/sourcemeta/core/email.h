@@ -8,7 +8,7 @@
 #include <string_view> // std::string_view
 
 /// @defgroup email Email
-/// @brief E-mail address validation per RFC 5321.
+/// @brief E-mail address validation per RFC 5321 and RFC 6531.
 ///
 /// This functionality is included as follows:
 ///
@@ -35,6 +35,26 @@ namespace sourcemeta::core {
 /// ```
 SOURCEMETA_CORE_EMAIL_EXPORT
 auto is_email(const std::string_view value) -> bool;
+
+/// @ingroup email
+/// Check whether the given string is a valid internationalized `Mailbox`
+/// per RFC 6531 Section 3.3 (extended Mailbox address syntax). Beyond the
+/// ASCII grammar accepted by `is_email`, the local-part atoms, quoted
+/// content, and domain labels may also contain valid UTF-8 non-ASCII byte
+/// sequences (RFC 6532 Section 3.1). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/email.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_idn_email(
+///     "\xec\x8b\xa4\xeb\xa1\x80@\xec\x8b\xa4\xeb\xa1\x80.\xed\x85\x8c\xec\x8a\xa4\xed\x8a\xb8"));
+/// assert(sourcemeta::core::is_idn_email("joe.bloggs@example.com"));
+/// assert(!sourcemeta::core::is_idn_email("2962"));
+/// ```
+SOURCEMETA_CORE_EMAIL_EXPORT
+auto is_idn_email(const std::string_view value) -> bool;
 
 } // namespace sourcemeta::core
 

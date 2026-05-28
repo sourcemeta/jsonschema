@@ -119,6 +119,22 @@ SOURCEMETA_CORE_REGEX_EXPORT
 auto matches_if_valid(const std::string_view pattern,
                       const std::string_view value) -> bool;
 
+/// @ingroup regex
+///
+/// Check whether the given string is a valid ECMA-262 regular expression. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/regex.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_regex_ecma("([abc])+\\s+$"));
+/// assert(!sourcemeta::core::is_regex_ecma("^(abc]"));
+/// assert(!sourcemeta::core::is_regex_ecma("\\a"));
+/// ```
+SOURCEMETA_CORE_REGEX_EXPORT
+auto is_regex_ecma(const std::string_view pattern) -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

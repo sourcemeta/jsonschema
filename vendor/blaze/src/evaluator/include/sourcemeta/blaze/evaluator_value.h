@@ -125,11 +125,19 @@ enum class ValueStringType : std::uint8_t {
   URIReference,
   URITemplate,
   Email,
+  IDNEmail,
   IPv4,
   IPv6,
   Hostname,
+  IDNHostname,
   DateTime,
-  JSONPointer
+  Date,
+  Time,
+  Duration,
+  JSONPointer,
+  RelativeJSONPointer,
+  UUID,
+  Regex
 };
 
 /// @ingroup evaluator

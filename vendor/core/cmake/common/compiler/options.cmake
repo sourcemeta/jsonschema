@@ -17,7 +17,9 @@ function(sourcemeta_add_default_options visibility target)
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/W4>
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/WL>
       $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP>
-      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/sdl>)
+      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/sdl>
+      # See https://learn.microsoft.com/en-us/cpp/build/reference/guard-enable-control-flow-guard
+      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/guard:cf>)
   elseif(SOURCEMETA_COMPILER_LLVM OR SOURCEMETA_COMPILER_GCC)
     target_compile_options("${target}" ${visibility}
       -Wall
@@ -72,6 +74,18 @@ function(sourcemeta_add_default_options visibility target)
       # behavioral effect
       $<$<NOT:$<CONFIG:Debug>>:-funroll-loops>
       $<$<NOT:$<CONFIG:Debug>>:-ftree-vectorize>)
+
+    # Hardware-assisted control-flow protection. The compiler emits these as
+    # HINT-space instructions that are NOPs on CPUs without the feature, so
+    # binaries remain compatible with older hardware
+    if(SOURCEMETA_OS_LINUX)
+      if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+        target_compile_options("${target}" ${visibility} -fcf-protection=full)
+      elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64"
+          OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        target_compile_options("${target}" ${visibility} -mbranch-protection=standard)
+      endif()
+    endif()
   endif()
 
   if(SOURCEMETA_COMPILER_LLVM)
@@ -107,7 +121,17 @@ function(sourcemeta_add_default_options visibility target)
       # GCC seems to print a lot of false-positives here
       -Wno-free-nonheap-object
       # Disables runtime type information
-      $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-rtti>)
+      $<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:OBJCXX>>:-fno-rtti>
+      # See https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+      -fstack-clash-protection)
+
+    # _GLIBCXX_ASSERTIONS is libstdc++ (GNU) specific, not honored by libc++
+    # (which the LLVM toolchain on Apple ships). Restrict to non-Apple GCC
+    # to avoid emitting a Debug-only definition that does nothing on macOS
+    if(NOT APPLE)
+      target_compile_definitions("${target}" ${visibility}
+        $<$<CONFIG:Debug>:_GLIBCXX_ASSERTIONS>)
+    endif()
   endif()
 endfunction()
 

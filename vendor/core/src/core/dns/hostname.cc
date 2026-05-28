@@ -1,5 +1,7 @@
 #include <sourcemeta/core/dns.h>
 
+#include <string_view> // std::string_view
+
 namespace sourcemeta::core {
 
 // RFC 952 §B: let-dig = ALPHA / DIGIT
@@ -8,11 +10,6 @@ static constexpr auto is_let_dig(const char character) -> bool {
   return (character >= 'A' && character <= 'Z') ||
          (character >= 'a' && character <= 'z') ||
          (character >= '0' && character <= '9');
-}
-
-// RFC 952 §B: let-dig-hyp = ALPHA / DIGIT / "-"
-static constexpr auto is_let_dig_hyp(const char character) -> bool {
-  return is_let_dig(character) || character == '-';
 }
 
 auto is_hostname(const std::string_view value) -> bool {
@@ -27,42 +24,45 @@ auto is_hostname(const std::string_view value) -> bool {
   }
 
   std::string_view::size_type position{0};
-
   while (position < value.size()) {
     const auto label_start{position};
-
-    // RFC 1123 §2.1: first character is letter or digit
-    if (!is_let_dig(value[position])) {
-      return false;
-    }
-    position += 1;
+    bool last_was_hyphen{false};
+    bool label_has_content{false};
 
     while (position < value.size() && value[position] != '.') {
-      // RFC 952 §B: interior characters are let-dig-hyp
-      if (!is_let_dig_hyp(value[position])) {
-        return false;
+      const auto character{value[position]};
+      if (character == '-') {
+        // RFC 1123 §2.1: first character must be let-dig, never hyphen
+        if (!label_has_content) {
+          return false;
+        }
+        last_was_hyphen = true;
+        position += 1;
+        label_has_content = true;
+        continue;
       }
-      position += 1;
+
+      if (is_let_dig(character)) {
+        last_was_hyphen = false;
+        position += 1;
+        label_has_content = true;
+        continue;
+      }
+
+      return false;
     }
 
+    // RFC 1035 §2.3.4: per-label cap is 63 octets
     const auto label_length{position - label_start};
-
-    // RFC 1123 §2.1: MUST handle host names of up to 63 characters (per label)
-    if (label_length > 63) {
+    if (label_length == 0 || label_length > 63 || last_was_hyphen) {
       return false;
     }
 
-    // RFC 952 §B + ASSUMPTIONS: last character must not be a minus sign
-    if (value[position - 1] == '-') {
-      return false;
-    }
-
-    // If we stopped on a dot, there must be another label following it
     if (position < value.size()) {
       // value[position] == '.'
       position += 1;
-      // Trailing dot: JSON Schema test suite requires rejection (TS d7+ #15)
-      if (position >= value.size()) {
+      if (position == value.size()) {
+        // Trailing dot is not part of the host name grammar
         return false;
       }
     }

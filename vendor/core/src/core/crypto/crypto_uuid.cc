@@ -4,6 +4,16 @@
 #include <cstddef>     // std::size_t
 #include <string_view> // std::string_view
 
+namespace {
+
+constexpr auto is_hex_digit(const char character) -> bool {
+  return (character >= '0' && character <= '9') ||
+         (character >= 'a' && character <= 'f') ||
+         (character >= 'A' && character <= 'F');
+}
+
+} // namespace
+
 #ifdef SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL
 #include <openssl/rand.h> // RAND_bytes
 #include <stdexcept>      // std::runtime_error
@@ -76,6 +86,29 @@ auto uuidv4() -> std::string {
   }
 
   return result;
+}
+
+auto is_uuid_like(const std::string_view value) -> bool {
+  // Layout: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (exactly 36 chars)
+  if (value.size() != 36) {
+    return false;
+  }
+
+  if (value[8] != '-' || value[13] != '-' || value[18] != '-' ||
+      value[23] != '-') {
+    return false;
+  }
+
+  for (std::string_view::size_type position{0}; position < 36; ++position) {
+    if (position == 8 || position == 13 || position == 18 || position == 23) {
+      continue;
+    }
+    if (!is_hex_digit(value[position])) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 } // namespace sourcemeta::core

@@ -1,7 +1,7 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core 8018e9d85ef6fc0fd9ccd11c2ae438789214b00a
-jsonbinpack https://github.com/sourcemeta/jsonbinpack 01757b74d99ec82a0c8ae6bd038e67c41390db6b
-blaze https://github.com/sourcemeta/blaze bc1f434acafd38803f58a941a756a6f788e556e2
+core https://github.com/sourcemeta/core ed4b82bd917e75041962358c5e9461ea5b2aa37e
+jsonbinpack https://github.com/sourcemeta/jsonbinpack 40293a182cabf15678ca0b59cddaf108e7862787
+blaze https://github.com/sourcemeta/blaze 9c1bae4dc45b9f04585c4520021bc8298cda2f51
 mbedtls https://github.com/Mbed-TLS/mbedtls v3.6.6
 curl https://github.com/curl/curl curl-8_20_0
 nghttp2 https://github.com/nghttp2/nghttp2 v1.67.1

@@ -6,6 +6,7 @@
 #include <cmath>            // std::isinf, std::isnan, std::modf
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t
+#include <exception>        // std::terminate
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
 #include <memory>           // std::construct_at
@@ -109,31 +110,120 @@ JSON::JSON(Decimal &&value) : current_type{Type::Decimal} {
   this->data_decimal = new Decimal{std::move(value)};
 }
 
-JSON::JSON(const JSON &other) : current_type{other.current_type} {
+JSON::JSON(const JSON &other) {
+  // Fast path for non-container sources avoids the work-list allocation that
+  // would otherwise dominate the cost of copying a scalar value
   switch (other.current_type) {
+    case Type::Null:
+      return;
     case Type::Boolean:
       this->data_boolean = other.data_boolean;
-      break;
+      this->current_type = Type::Boolean;
+      return;
     case Type::Integer:
       this->data_integer = other.data_integer;
-      break;
+      this->current_type = Type::Integer;
+      return;
     case Type::Real:
       this->data_real = other.data_real;
-      break;
+      this->current_type = Type::Real;
+      return;
     case Type::String:
       std::construct_at(&this->data_string, other.data_string);
-      break;
-    case Type::Array:
-      std::construct_at(&this->data_array, other.data_array);
-      break;
-    case Type::Object:
-      std::construct_at(&this->data_object, other.data_object);
-      break;
+      this->current_type = Type::String;
+      return;
     case Type::Decimal:
       this->data_decimal = new Decimal{*other.data_decimal};
+      this->current_type = Type::Decimal;
+      return;
+    case Type::Array:
+    case Type::Object:
       break;
-    default:
-      break;
+  }
+
+  // Build the container copy iteratively to avoid unbounded recursion on
+  // deeply nested values, which would otherwise overflow the call stack. Each
+  // task copies a single source-destination pair shallowly and queues
+  // children for containers. Pre-filling destination containers with Null
+  // placeholders gives stable addresses to queue child tasks against.
+  // current_type is set only after the matching union member is fully
+  // constructed, so a throw from the catch handler can safely destroy
+  // whatever state is present
+  struct CopyTask {
+    const JSON *source;
+    JSON *destination;
+  };
+  std::vector<CopyTask> tasks;
+  tasks.reserve(16);
+  tasks.push_back({&other, this});
+
+  try {
+    while (!tasks.empty()) {
+      const auto task{tasks.back()};
+      tasks.pop_back();
+      const JSON &source{*task.source};
+      JSON &destination{*task.destination};
+      switch (source.current_type) {
+        case Type::Null:
+          break;
+        case Type::Boolean:
+          destination.data_boolean = source.data_boolean;
+          destination.current_type = Type::Boolean;
+          break;
+        case Type::Integer:
+          destination.data_integer = source.data_integer;
+          destination.current_type = Type::Integer;
+          break;
+        case Type::Real:
+          destination.data_real = source.data_real;
+          destination.current_type = Type::Real;
+          break;
+        case Type::String:
+          std::construct_at(&destination.data_string, source.data_string);
+          destination.current_type = Type::String;
+          break;
+        case Type::Decimal:
+          destination.data_decimal = new Decimal{*source.data_decimal};
+          destination.current_type = Type::Decimal;
+          break;
+        case Type::Array: {
+          std::construct_at(&destination.data_array, Array{});
+          destination.current_type = Type::Array;
+          const auto &source_data{source.data_array.data};
+          auto &destination_data{destination.data_array.data};
+          destination_data.reserve(source_data.size());
+          for (std::size_t index = 0; index < source_data.size(); ++index) {
+            destination_data.emplace_back(nullptr);
+          }
+          for (std::size_t index = 0; index < source_data.size(); ++index) {
+            tasks.push_back({&source_data[index], &destination_data[index]});
+          }
+          break;
+        }
+        case Type::Object: {
+          std::construct_at(&destination.data_object, Object{});
+          destination.current_type = Type::Object;
+          const auto &source_data{source.data_object.data};
+          auto &destination_data{destination.data_object.data};
+          destination_data.reserve(source_data.size());
+          for (const auto &entry : source_data) {
+            destination_data.emplace_back(entry.first, JSON{nullptr},
+                                          entry.hash);
+          }
+          for (std::size_t index = 0; index < source_data.size(); ++index) {
+            tasks.push_back(
+                {&source_data[index].second, &destination_data[index].second});
+          }
+          break;
+        }
+      }
+    }
+  } catch (...) {
+    // Tear down the partially-built tree before unwinding. *this's lifetime
+    // never began, so ~JSON would not have run otherwise. The vector dtor
+    // dispatches to each child's iterative ~JSON for any depth of subtree
+    this->maybe_destruct_union();
+    throw;
   }
 }
 
@@ -170,74 +260,130 @@ JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
 }
 
 auto JSON::operator=(const JSON &other) -> JSON & {
-  this->maybe_destruct_union();
-  this->current_type = other.current_type;
+  if (this == &other) {
+    return *this;
+  }
+
+  // Fast path for scalar sources: destroy this iteratively (safe for any
+  // depth) then assign the scalar directly. Avoids the copy-then-move dance
+  // that the container path needs for strong exception safety
   switch (other.current_type) {
+    case Type::Null:
+      this->~JSON();
+      this->current_type = Type::Null;
+      return *this;
     case Type::Boolean:
+      this->~JSON();
       this->data_boolean = other.data_boolean;
-      break;
+      this->current_type = Type::Boolean;
+      return *this;
     case Type::Integer:
+      this->~JSON();
       this->data_integer = other.data_integer;
-      break;
+      this->current_type = Type::Integer;
+      return *this;
     case Type::Real:
+      this->~JSON();
       this->data_real = other.data_real;
-      break;
+      this->current_type = Type::Real;
+      return *this;
     case Type::String:
+      this->~JSON();
       std::construct_at(&this->data_string, other.data_string);
-      break;
-    case Type::Array:
-      std::construct_at(&this->data_array, other.data_array);
-      break;
-    case Type::Object:
-      std::construct_at(&this->data_object, other.data_object);
-      break;
+      this->current_type = Type::String;
+      return *this;
     case Type::Decimal:
+      this->~JSON();
       this->data_decimal = new Decimal{*other.data_decimal};
-      break;
-    default:
+      this->current_type = Type::Decimal;
+      return *this;
+    case Type::Array:
+    case Type::Object:
       break;
   }
 
+  // Container source: copy first (may throw) so this is unchanged on failure,
+  // then destroy and shallow-move into place. Both the copy and the destroy
+  // use the iterative pipeline and handle arbitrary depth
+  JSON copy = other;
+  this->~JSON();
+  std::construct_at(this, std::move(copy));
   return *this;
 }
 
 auto JSON::operator=(JSON &&other) noexcept -> JSON & {
-  this->maybe_destruct_union();
-  this->current_type = other.current_type;
-  switch (other.current_type) {
-    case Type::Boolean:
-      this->data_boolean = other.data_boolean;
-      break;
-    case Type::Integer:
-      this->data_integer = other.data_integer;
-      break;
-    case Type::Real:
-      this->data_real = other.data_real;
-      break;
-    case Type::String:
-      std::construct_at(&this->data_string, std::move(other.data_string));
-      other.current_type = Type::Null;
-      break;
-    case Type::Array:
-      std::construct_at(&this->data_array, std::move(other.data_array));
-      other.current_type = Type::Null;
-      break;
-    case Type::Object:
-      std::construct_at(&this->data_object, std::move(other.data_object));
-      other.current_type = Type::Null;
-      break;
-    case Type::Decimal:
-      this->data_decimal = std::exchange(other.data_decimal, nullptr);
-      other.current_type = Type::Null;
-      break;
-    default:
-      break;
+  // Destroy-then-rebuild so the existing value in this is torn down by the
+  // iterative destructor
+  if (this == &other) {
+    return *this;
   }
-
+  this->~JSON();
+  std::construct_at(this, std::move(other));
   return *this;
 }
 
-JSON::~JSON() { this->maybe_destruct_union(); }
+JSON::~JSON() {
+  // Drain only nested container children iteratively so deeply nested values
+  // do not overflow the call stack. Scalar and empty children are left in
+  // place to be destroyed by maybe_destruct_union, which is non-recursive
+  // for non-container types. pending stays empty when no descendant has its
+  // own container children, so containers full of scalars cost no heap
+  // allocation. Allocation failures during destruction have no sensible
+  // recovery, so terminate
+  if (this->current_type == Type::Array || this->current_type == Type::Object) {
+    try {
+      std::vector<JSON> pending;
+
+      if (this->current_type == Type::Array) {
+        for (auto &child : this->data_array.data) {
+          if (child.current_type == Type::Array ||
+              child.current_type == Type::Object) {
+            pending.push_back(std::move(child));
+          }
+        }
+      } else {
+        for (auto &entry : this->data_object.data) {
+          if (entry.second.current_type == Type::Array ||
+              entry.second.current_type == Type::Object) {
+            pending.push_back(std::move(entry.second));
+          }
+        }
+      }
+
+      while (!pending.empty()) {
+        // Use copy-init so the move constructor is selected. Direct-list-init
+        // would route through JSON(initializer_list<JSON>) on GCC and MSVC,
+        // whose single-element workaround takes the slower copy-and-replace
+        // path instead of a direct move
+        JSON node = std::move(pending.back());
+        pending.pop_back();
+        if (node.current_type == Type::Array) {
+          for (auto &child : node.data_array.data) {
+            if (child.current_type == Type::Array ||
+                child.current_type == Type::Object) {
+              pending.push_back(std::move(child));
+            }
+          }
+          node.data_array.~JSONArray();
+          node.current_type = Type::Null;
+        } else {
+          for (auto &entry : node.data_object.data) {
+            if (entry.second.current_type == Type::Array ||
+                entry.second.current_type == Type::Object) {
+              pending.push_back(std::move(entry.second));
+            }
+          }
+          node.data_object.~JSONObject();
+          node.current_type = Type::Null;
+        }
+      }
+    } catch (...) {
+      std::terminate();
+    }
+  }
+
+  this->maybe_destruct_union();
+}
 
 auto JSON::make_array() -> JSON { return JSON{Array{}}; }
 

@@ -55,6 +55,9 @@ function(sourcemeta_library)
     add_library(${TARGET_NAME}
       ${PUBLIC_HEADER} ${ABSOLUTE_PRIVATE_HEADERS} ${SOURCEMETA_LIBRARY_SOURCES})
     sourcemeta_add_default_options(PRIVATE ${TARGET_NAME})
+    if(SOURCEMETA_COMPILER_MSVC)
+      target_link_options(${TARGET_NAME} PRIVATE /guard:cf /CETCOMPAT)
+    endif()
   else()
     add_library(${TARGET_NAME} INTERFACE
       ${PUBLIC_HEADER} ${ABSOLUTE_PRIVATE_HEADERS})

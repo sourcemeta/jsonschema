@@ -1,6 +1,6 @@
 vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
-core https://github.com/sourcemeta/core 8018e9d85ef6fc0fd9ccd11c2ae438789214b00a
-jsonschema-test-suite https://github.com/json-schema-org/JSON-Schema-Test-Suite c7257e92580678a086f0b9243a1903ed88bd27f7
+core https://github.com/sourcemeta/core cd56ace324a42f067b4b8f651f73b9aa0313ca2a
+jsonschema-test-suite https://github.com/json-schema-org/JSON-Schema-Test-Suite aa77c9d343a2da809d4c8734f473c4d5b5d80f14
 jsonschema-2020-12 https://github.com/json-schema-org/json-schema-spec 769daad75a9553562333a8937a187741cb708c72
 jsonschema-2019-09 https://github.com/json-schema-org/json-schema-spec 41014ea723120ce70b314d72f863c6929d9f3cfd
 jsonschema-draft7 https://github.com/json-schema-org/json-schema-spec 567f768506aaa33a38e552c85bf0586029ef1b32

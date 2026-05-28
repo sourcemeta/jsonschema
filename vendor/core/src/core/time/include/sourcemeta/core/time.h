@@ -5,7 +5,10 @@
 #include <sourcemeta/core/time_export.h>
 #endif
 
+#include <array>       // std::array
+#include <cassert>     // assert
 #include <chrono>      // std::chrono::system_clock::time_point
+#include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -105,6 +108,128 @@ auto from_gmt(const std::string_view time)
 /// ```
 SOURCEMETA_CORE_TIME_EXPORT
 auto is_rfc3339_datetime(const std::string_view value) -> bool;
+
+/// @ingroup time
+/// Check whether the given string is a valid full-date value per RFC 3339
+/// Section 5.6 (Internet Date/Time Format). This implements the `full-date`
+/// production rule:
+///
+/// ```
+/// full-date = date-fullyear "-" date-month "-" date-mday
+/// ```
+///
+/// with the day-of-month and leap year restrictions from RFC 3339 §5.7 and
+/// Appendix C. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_rfc3339_fulldate("2024-01-15"));
+/// assert(sourcemeta::core::is_rfc3339_fulldate("2000-02-29"));
+/// assert(!sourcemeta::core::is_rfc3339_fulldate("2021-02-29"));
+/// assert(!sourcemeta::core::is_rfc3339_fulldate("2024-01-15T00:00:00Z"));
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto is_rfc3339_fulldate(const std::string_view value) -> bool;
+
+/// @ingroup time
+/// Check whether the given string is a valid full-time value per RFC 3339
+/// Section 5.6 (Internet Date/Time Format). This implements the `full-time`
+/// production rule:
+///
+/// ```
+/// full-time = partial-time time-offset
+/// ```
+///
+/// where "Z" may also be lowercase "z" (per RFC 3339 §5.6 NOTE). When
+/// `time-second` is `60` (leap second), only the UTC `23:59` alignment is
+/// verified; the §5.7 calendar restriction to June 30 or December 31
+/// requires date context and is therefore out of scope. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_rfc3339_fulltime("23:20:50.52Z"));
+/// assert(sourcemeta::core::is_rfc3339_fulltime("16:39:57-08:00"));
+/// assert(sourcemeta::core::is_rfc3339_fulltime("23:59:60Z"));
+/// assert(!sourcemeta::core::is_rfc3339_fulltime("14:30:00"));
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto is_rfc3339_fulltime(const std::string_view value) -> bool;
+
+/// @ingroup time
+/// Check whether the given string is a valid duration value per RFC 3339
+/// Appendix A (ISO 8601 Collected ABNF). This implements the `duration`
+/// production rule:
+///
+/// ```
+/// duration = "P" (dur-date / dur-time / dur-week)
+/// ```
+///
+/// where `dur-week` is mutually exclusive with the date and time components.
+/// Only ASCII digits and uppercase unit letters are accepted; fractional
+/// values are not permitted by the RFC 3339 ABNF. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_rfc3339_duration("P4DT12H30M5S"));
+/// assert(sourcemeta::core::is_rfc3339_duration("P1Y2M3D"));
+/// assert(sourcemeta::core::is_rfc3339_duration("P2W"));
+/// assert(!sourcemeta::core::is_rfc3339_duration("PT1D"));
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto is_rfc3339_duration(const std::string_view value) -> bool;
+
+/// @ingroup time
+/// Check whether the given year is a leap year per the Gregorian calendar
+/// (RFC 3339 Appendix C). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_leap_year(2020));
+/// assert(sourcemeta::core::is_leap_year(2000));
+/// assert(!sourcemeta::core::is_leap_year(1900));
+/// assert(!sourcemeta::core::is_leap_year(2021));
+/// ```
+inline constexpr auto is_leap_year(const std::uint16_t year) -> bool {
+  return (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0);
+}
+
+/// @ingroup time
+/// Compute the maximum day-of-month for the given month and year per the
+/// Gregorian calendar. The month must be in the range 1-12. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::max_day_in_month(1, 2024) == 31);
+/// assert(sourcemeta::core::max_day_in_month(2, 2020) == 29);
+/// assert(sourcemeta::core::max_day_in_month(2, 2021) == 28);
+/// assert(sourcemeta::core::max_day_in_month(4, 2024) == 30);
+/// ```
+inline constexpr auto max_day_in_month(const std::uint8_t month,
+                                       const std::uint16_t year)
+    -> std::uint8_t {
+  assert(month >= 1 && month <= 12);
+  constexpr std::array<std::uint8_t, 13> days{
+      {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
+  if (month == 2 && is_leap_year(year)) {
+    return 29;
+  }
+  return days[month];
+}
 
 } // namespace sourcemeta::core
 

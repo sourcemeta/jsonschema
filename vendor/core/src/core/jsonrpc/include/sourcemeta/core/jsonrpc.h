@@ -7,9 +7,8 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <cstdint>     // std::int64_t
-#include <optional>    // std::optional, std::nullopt
-#include <string_view> // std::string_view
+#include <cstdint>  // std::int64_t
+#include <optional> // std::optional, std::nullopt
 
 /// @defgroup jsonrpc JSON-RPC
 /// @brief An implementation of the JSON-RPC 2.0 specification.
@@ -118,7 +117,7 @@ auto jsonrpc_is_request(const sourcemeta::core::JSON &request) -> bool;
 /// assert(sourcemeta::core::jsonrpc_method(request) == "ping");
 /// ```
 SOURCEMETA_CORE_JSONRPC_EXPORT
-auto jsonrpc_method(const sourcemeta::core::JSON &request) -> std::string_view;
+auto jsonrpc_method(const sourcemeta::core::JSON &request) -> JSON::StringView;
 
 /// @ingroup jsonrpc
 /// Extract the params from a JSON-RPC 2.0 envelope, or `nullptr` when the
@@ -218,7 +217,7 @@ auto jsonrpc_make_success_empty(const sourcemeta::core::JSON &identifier)
 /// ```
 SOURCEMETA_CORE_JSONRPC_EXPORT
 auto jsonrpc_make_error(const sourcemeta::core::JSON *identifier,
-                        const std::int64_t code, const std::string_view message,
+                        const std::int64_t code, const JSON::StringView message,
                         std::optional<sourcemeta::core::JSON> data =
                             std::nullopt) -> sourcemeta::core::JSON;
 

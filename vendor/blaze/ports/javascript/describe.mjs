@@ -83,6 +83,37 @@ function escapeString(input) {
   return '"' + String(input).replaceAll('"', '\\"') + '"';
 }
 
+function describeExtras(valid, target, allowed) {
+  if (valid || target === null || typeof target !== 'object' ||
+      Array.isArray(target)) {
+    return '';
+  }
+
+  const extras = [];
+  for (const key in target) {
+    if (!allowed.has(key)) {
+      extras.push(key);
+    }
+  }
+
+  if (extras.length === 0) return '';
+  extras.sort();
+
+  if (extras.length === 1) {
+    return ', but it also defines the property ' + escapeString(extras[0]);
+  }
+
+  let message = ', but it also defines properties ';
+  for (let index = 0; index < extras.length; index++) {
+    if (index === extras.length - 1) {
+      message += 'and ' + escapeString(extras[index]);
+    } else {
+      message += escapeString(extras[index]) + ', ';
+    }
+  }
+  return message;
+}
+
 function stringifyValue(value) {
   if (typeof value === 'bigint') return String(value);
   return JSON.stringify(value, (key, current) =>
@@ -944,7 +975,7 @@ export function describe(valid, instruction, evaluatePath,
         message += escapeString(sorted[index]) + ', ';
       }
     }
-    return message;
+    return message + describeExtras(valid, target, new Set(value));
   }
 
   if (opcode === ASSERTION_DEFINES_EXACTLY_STRICT) {
@@ -958,13 +989,15 @@ export function describe(valid, instruction, evaluatePath,
         message += escapeString(sorted[index]) + ', ';
       }
     }
-    return message;
+    return message + describeExtras(valid, target, new Set(value));
   }
 
   if (opcode === ASSERTION_DEFINES_EXACTLY_STRICT_HASH3) {
     const entries = value[0];
-    return 'The value was expected to be an object that only defines the ' +
+    const message = 'The value was expected to be an object that only defines the ' +
       entries.length + ' given properties';
+    return message + describeExtras(valid, target,
+      new Set(entries.map(entry => entry[1])));
   }
 
   if (opcode === ASSERTION_TYPE || opcode === ASSERTION_TYPE_STRICT) {

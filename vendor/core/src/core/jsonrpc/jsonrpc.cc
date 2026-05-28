@@ -2,32 +2,23 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <cstdint>     // std::int64_t
-#include <optional>    // std::optional, std::nullopt
-#include <string>      // std::string
-#include <string_view> // std::string_view
-#include <utility>     // std::move
+#include <cstdint>  // std::int64_t
+#include <optional> // std::optional, std::nullopt
+#include <utility>  // std::move
 
 namespace {
 
-const auto JSONRPC_HASH_ID{
-    sourcemeta::core::JSON::make_object().as_object().hash("id")};
+const auto JSONRPC_HASH_ID{sourcemeta::core::JSON::Object::hash("id")};
 const auto JSONRPC_HASH_JSONRPC{
-    sourcemeta::core::JSON::make_object().as_object().hash("jsonrpc")};
-const auto JSONRPC_HASH_METHOD{
-    sourcemeta::core::JSON::make_object().as_object().hash("method")};
-const auto JSONRPC_HASH_RESULT{
-    sourcemeta::core::JSON::make_object().as_object().hash("result")};
-const auto JSONRPC_HASH_ERROR{
-    sourcemeta::core::JSON::make_object().as_object().hash("error")};
-const auto JSONRPC_HASH_CODE{
-    sourcemeta::core::JSON::make_object().as_object().hash("code")};
+    sourcemeta::core::JSON::Object::hash("jsonrpc")};
+const auto JSONRPC_HASH_METHOD{sourcemeta::core::JSON::Object::hash("method")};
+const auto JSONRPC_HASH_RESULT{sourcemeta::core::JSON::Object::hash("result")};
+const auto JSONRPC_HASH_ERROR{sourcemeta::core::JSON::Object::hash("error")};
+const auto JSONRPC_HASH_CODE{sourcemeta::core::JSON::Object::hash("code")};
 const auto JSONRPC_HASH_MESSAGE{
-    sourcemeta::core::JSON::make_object().as_object().hash("message")};
-const auto JSONRPC_HASH_DATA{
-    sourcemeta::core::JSON::make_object().as_object().hash("data")};
-const auto JSONRPC_HASH_PARAMS{
-    sourcemeta::core::JSON::make_object().as_object().hash("params")};
+    sourcemeta::core::JSON::Object::hash("message")};
+const auto JSONRPC_HASH_DATA{sourcemeta::core::JSON::Object::hash("data")};
+const auto JSONRPC_HASH_PARAMS{sourcemeta::core::JSON::Object::hash("params")};
 
 } // namespace
 
@@ -73,7 +64,7 @@ auto jsonrpc_is_request(const sourcemeta::core::JSON &request) -> bool {
   return method_field != nullptr && method_field->is_string();
 }
 
-auto jsonrpc_method(const sourcemeta::core::JSON &request) -> std::string_view {
+auto jsonrpc_method(const sourcemeta::core::JSON &request) -> JSON::StringView {
   if (!request.is_object()) {
     return {};
   }
@@ -120,13 +111,11 @@ auto jsonrpc_make_success(const sourcemeta::core::JSON &identifier,
                           sourcemeta::core::JSON result)
     -> sourcemeta::core::JSON {
   auto envelope{sourcemeta::core::JSON::make_object()};
-  envelope.assign_assume_new(std::string{"jsonrpc"},
-                             sourcemeta::core::JSON{"2.0"},
+  envelope.assign_assume_new("jsonrpc", sourcemeta::core::JSON{"2.0"},
                              JSONRPC_HASH_JSONRPC);
-  envelope.assign_assume_new(
-      std::string{"id"}, sourcemeta::core::JSON{identifier}, JSONRPC_HASH_ID);
-  envelope.assign_assume_new(std::string{"result"}, std::move(result),
-                             JSONRPC_HASH_RESULT);
+  envelope.assign_assume_new("id", sourcemeta::core::JSON{identifier},
+                             JSONRPC_HASH_ID);
+  envelope.assign_assume_new("result", std::move(result), JSONRPC_HASH_RESULT);
   return envelope;
 }
 
@@ -137,30 +126,26 @@ auto jsonrpc_make_success_empty(const sourcemeta::core::JSON &identifier)
 }
 
 auto jsonrpc_make_error(const sourcemeta::core::JSON *identifier,
-                        const std::int64_t code, const std::string_view message,
+                        const std::int64_t code, const JSON::StringView message,
                         std::optional<sourcemeta::core::JSON> data)
     -> sourcemeta::core::JSON {
   auto envelope{sourcemeta::core::JSON::make_object()};
-  envelope.assign_assume_new(std::string{"jsonrpc"},
-                             sourcemeta::core::JSON{"2.0"},
+  envelope.assign_assume_new("jsonrpc", sourcemeta::core::JSON{"2.0"},
                              JSONRPC_HASH_JSONRPC);
-  envelope.assign_assume_new(std::string{"id"},
+  envelope.assign_assume_new("id",
                              identifier != nullptr
                                  ? sourcemeta::core::JSON{*identifier}
                                  : sourcemeta::core::JSON{nullptr},
                              JSONRPC_HASH_ID);
   auto error{sourcemeta::core::JSON::make_object()};
-  error.assign_assume_new(std::string{"code"}, sourcemeta::core::JSON{code},
+  error.assign_assume_new("code", sourcemeta::core::JSON{code},
                           JSONRPC_HASH_CODE);
-  error.assign_assume_new(std::string{"message"},
-                          sourcemeta::core::JSON{message},
+  error.assign_assume_new("message", sourcemeta::core::JSON{message},
                           JSONRPC_HASH_MESSAGE);
   if (data.has_value()) {
-    error.assign_assume_new(std::string{"data"}, std::move(data.value()),
-                            JSONRPC_HASH_DATA);
+    error.assign_assume_new("data", std::move(data.value()), JSONRPC_HASH_DATA);
   }
-  envelope.assign_assume_new(std::string{"error"}, std::move(error),
-                             JSONRPC_HASH_ERROR);
+  envelope.assign_assume_new("error", std::move(error), JSONRPC_HASH_ERROR);
   return envelope;
 }
 
