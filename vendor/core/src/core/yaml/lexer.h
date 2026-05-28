@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_YAML_LEXER_H_
 #define SOURCEMETA_CORE_YAML_LEXER_H_
 
+#include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/yaml_error.h>
 
@@ -1006,7 +1007,7 @@ private:
       } else if (current == '+') {
         chomping = '+';
         this->advance(1);
-      } else if (current >= '1' && current <= '9') {
+      } else if (is_positive_digit(current)) {
         explicit_indent = static_cast<std::size_t>(current - '0');
         if (chomping == 'c') {
           indent_first = true;

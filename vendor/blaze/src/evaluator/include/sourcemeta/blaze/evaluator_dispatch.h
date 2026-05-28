@@ -3,9 +3,11 @@
 
 #include <sourcemeta/blaze/evaluator.h>
 
+#include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/dns.h>
 #include <sourcemeta/core/email.h>
 #include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/regex.h>
 #include <sourcemeta/core/time.h>
 #include <sourcemeta/core/uritemplate.h>
 
@@ -882,6 +884,9 @@ INSTRUCTION_HANDLER(AssertionStringType) {
     case ValueStringType::Email:
       result = is_email(target);
       break;
+    case ValueStringType::IDNEmail:
+      result = is_idn_email(target);
+      break;
     case ValueStringType::IPv4:
       result = is_ipv4(target);
       break;
@@ -891,11 +896,32 @@ INSTRUCTION_HANDLER(AssertionStringType) {
     case ValueStringType::Hostname:
       result = is_hostname(target);
       break;
+    case ValueStringType::IDNHostname:
+      result = is_idn_hostname(target);
+      break;
     case ValueStringType::DateTime:
       result = is_rfc3339_datetime(target);
       break;
+    case ValueStringType::Date:
+      result = is_rfc3339_fulldate(target);
+      break;
+    case ValueStringType::Time:
+      result = is_rfc3339_fulltime(target);
+      break;
+    case ValueStringType::Duration:
+      result = is_rfc3339_duration(target);
+      break;
     case ValueStringType::JSONPointer:
       result = is_pointer(target);
+      break;
+    case ValueStringType::RelativeJSONPointer:
+      result = is_relative_pointer(target);
+      break;
+    case ValueStringType::UUID:
+      result = is_uuid_like(target);
+      break;
+    case ValueStringType::Regex:
+      result = is_regex_ecma(target);
       break;
     default:
       std::unreachable();

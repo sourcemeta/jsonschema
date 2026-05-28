@@ -32,6 +32,42 @@ template <typename... Ts>
 concept any_decimal = (std::same_as<Ts, Decimal> || ...);
 
 /// @ingroup numeric
+/// Check whether the given character is an ASCII decimal digit (`'0'`-`'9'`).
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_digit('0'));
+/// assert(sourcemeta::core::is_digit('9'));
+/// assert(!sourcemeta::core::is_digit('a'));
+/// assert(!sourcemeta::core::is_digit(' '));
+/// ```
+inline constexpr auto is_digit(const char character) -> bool {
+  return character >= '0' && character <= '9';
+}
+
+/// @ingroup numeric
+/// Check whether the given character is a non-zero ASCII decimal digit
+/// (`'1'`-`'9'`). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_positive_digit('1'));
+/// assert(sourcemeta::core::is_positive_digit('9'));
+/// assert(!sourcemeta::core::is_positive_digit('0'));
+/// assert(!sourcemeta::core::is_positive_digit('a'));
+/// ```
+inline constexpr auto is_positive_digit(const char character) -> bool {
+  return character >= '1' && character <= '9';
+}
+
+/// @ingroup numeric
 /// Check whether a value fits in an unsigned 8-bit byte
 template <typename T> constexpr auto is_byte(const T &value) -> bool {
   if constexpr (std::same_as<T, Decimal>) {

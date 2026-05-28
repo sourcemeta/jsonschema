@@ -3,6 +3,7 @@
 #include <sourcemeta/core/json_value.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
+#include <sourcemeta/core/numeric.h>
 #include <sourcemeta/core/uri.h>
 
 #include "parser.h"
@@ -431,6 +432,46 @@ auto is_pointer(const std::string_view input) noexcept -> bool {
   } catch (...) {
     return false;
   }
+}
+
+auto is_relative_pointer(const std::string_view input) noexcept -> bool {
+  const auto size{input.size()};
+  if (size == 0) {
+    return false;
+  }
+
+  // non-negative-integer = "0" / (%x31-39 *DIGIT)
+  // The "0" case is a single character; otherwise consume every digit
+  std::string_view::size_type position{0};
+  if (input[0] == '0') {
+    position = 1;
+  } else if (is_positive_digit(input[0])) {
+    position = 1;
+    while (position < size && is_digit(input[position])) {
+      position += 1;
+    }
+  } else {
+    return false;
+  }
+
+  // After the integer:
+  // - end of string: zero-length json-pointer suffix, valid
+  // - "#": must be the only remaining character
+  // - "/": the remainder (including the "/") must be a valid RFC 6901
+  //   json-pointer
+  if (position == size) {
+    return true;
+  }
+
+  if (input[position] == '#') {
+    return position + 1 == size;
+  }
+
+  if (input[position] == '/') {
+    return is_pointer(input.substr(position));
+  }
+
+  return false;
 }
 
 } // namespace sourcemeta::core

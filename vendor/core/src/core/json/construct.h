@@ -500,10 +500,10 @@ do_construct_object_key: {
   const auto key_length{key_entry.length};
   if (std::memchr(key_data, '\\', key_length)) {
     key = internal::unescape_string(key_data, key_length);
-    key_hash = frames.back().get().as_object().hash(key);
+    key_hash = Result::Object::hash(key);
   } else {
     key.assign(key_data, key_length);
-    key_hash = frames.back().get().as_object().hash(key_data, key_length);
+    key_hash = Result::Object::hash(key_data, key_length);
   }
   key_line = key_entry.line;
   key_column = key_entry.column;

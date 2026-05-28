@@ -5,7 +5,7 @@
 #include <sourcemeta/core/numeric_export.h>
 #endif
 
-#include <cstdint>  // std::int64_t
+#include <cstdint>  // std::int64_t, std::uint64_t
 #include <optional> // std::optional
 #include <string>   // std::string
 
@@ -27,6 +27,12 @@ auto to_int64_t(const std::string &input) noexcept
 SOURCEMETA_CORE_NUMERIC_EXPORT
 auto to_int64_t(const std::string &input, const int base) noexcept
     -> std::optional<std::int64_t>;
+
+/// @ingroup numeric
+/// Attempt to parse a string as an unsigned 64-bit decimal integer.
+SOURCEMETA_CORE_NUMERIC_EXPORT
+auto to_uint64_t(const std::string &input) noexcept
+    -> std::optional<std::uint64_t>;
 
 } // namespace sourcemeta::core
 

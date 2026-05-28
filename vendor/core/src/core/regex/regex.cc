@@ -59,18 +59,19 @@ auto to_regex(const std::string_view pattern) -> std::optional<Regex> {
     return RegexTypeRange{minimum, maximum};
   }
 
-  const auto pcre2_pattern{preprocess_regex(std::string{pattern})};
-  if (!pcre2_pattern.has_value()) {
+  const auto preprocessed{preprocess_regex(std::string{pattern})};
+  if (!preprocessed.transformed.has_value()) {
     return std::nullopt;
   }
 
   int pcre2_error_code{0};
   PCRE2_SIZE pcre2_error_offset{0};
   pcre2_code *pcre2_regex_raw{pcre2_compile(
-      reinterpret_cast<PCRE2_SPTR>(pcre2_pattern.value().c_str()),
-      pcre2_pattern.value().size(),
+      reinterpret_cast<PCRE2_SPTR>(preprocessed.transformed.value().c_str()),
+      preprocessed.transformed.value().size(),
       PCRE2_UTF | PCRE2_UCP | PCRE2_NO_AUTO_CAPTURE | PCRE2_DOTALL |
-          PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK,
+          PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK |
+          PCRE2_ALLOW_EMPTY_CLASS,
       &pcre2_error_code, &pcre2_error_offset, nullptr)};
 
   if (pcre2_regex_raw != nullptr) {
@@ -113,6 +114,30 @@ auto matches_if_valid(const std::string_view pattern,
                       const std::string_view value) -> bool {
   const auto regex{to_regex(pattern)};
   return regex.has_value() && matches(regex.value(), value);
+}
+
+auto is_regex_ecma(const std::string_view pattern) -> bool {
+  const auto preprocessed{preprocess_regex(std::string{pattern})};
+  if (!preprocessed.ecma_valid || !preprocessed.transformed.has_value()) {
+    return false;
+  }
+
+  int pcre2_error_code{0};
+  PCRE2_SIZE pcre2_error_offset{0};
+  pcre2_code *pcre2_regex_raw{pcre2_compile(
+      reinterpret_cast<PCRE2_SPTR>(preprocessed.transformed.value().c_str()),
+      preprocessed.transformed.value().size(),
+      PCRE2_UTF | PCRE2_UCP | PCRE2_NO_AUTO_CAPTURE | PCRE2_DOTALL |
+          PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK |
+          PCRE2_ALLOW_EMPTY_CLASS,
+      &pcre2_error_code, &pcre2_error_offset, nullptr)};
+
+  if (pcre2_regex_raw == nullptr) {
+    return false;
+  }
+
+  pcre2_code_free(pcre2_regex_raw);
+  return true;
 }
 
 } // namespace sourcemeta::core

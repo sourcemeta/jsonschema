@@ -2529,9 +2529,7 @@ auto compiler_draft3_validation_format(const Context &context,
     } else if (name == "uri") {
       type = ValueStringType::URI;
     } else if (name == "date") {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
-          "The \"date\" format is not supported in assertion mode yet");
+      type = ValueStringType::Date;
     } else if (name == "time") {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base, to_pointer(schema_context.relative_pointer),
@@ -2541,9 +2539,7 @@ auto compiler_draft3_validation_format(const Context &context,
           schema_context.base, to_pointer(schema_context.relative_pointer),
           "The \"utc-millisec\" format is not supported in assertion mode yet");
     } else if (name == "regex") {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
-          "The \"regex\" format is not supported in assertion mode yet");
+      type = ValueStringType::Regex;
     } else if (name == "color") {
       throw sourcemeta::blaze::CompilerError(
           schema_context.base, to_pointer(schema_context.relative_pointer),

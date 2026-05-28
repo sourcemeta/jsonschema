@@ -132,20 +132,20 @@ public:
   // the `Key`-accepting overload as before.
 
   /// Compute a hash for a key
-  [[nodiscard]] inline auto hash(const Key &key) const noexcept -> hash_type {
-    return this->hasher(key);
+  [[nodiscard]] static inline auto hash(const Key &key) noexcept -> hash_type {
+    return hasher(key);
   }
 
   /// Compute a hash for a key
   template <typename T>
     requires std::same_as<std::remove_cvref_t<T>, KeyView>
-  [[nodiscard]] inline auto hash(T key) const noexcept -> hash_type {
-    return this->hasher(key.data(), key.size());
+  [[nodiscard]] static inline auto hash(T key) noexcept -> hash_type {
+    return hasher(key.data(), key.size());
   }
 
   /// Compute a hash from raw data
-  [[nodiscard]] inline auto hash(const char *raw_data,
-                                 const std::size_t raw_size) const noexcept
+  [[nodiscard]] static inline auto hash(const char *raw_data,
+                                        const std::size_t raw_size) noexcept
       -> hash_type {
     return hasher(raw_data, raw_size);
   }
@@ -693,6 +693,7 @@ public:
   }
 
 private:
+  friend Value;
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN
