@@ -64,22 +64,6 @@ non-sense results.
 > pure-JavaScript evaluator for browsers and JavaScript runtimes like
 > Node.js, letting you compile with this CLI and validate anywhere.
 
-> [!WARNING]
-> This tool (and its underlying [Blaze](https://github.com/sourcemeta/blaze)
-> evaluator) does not support turning on
-> [`format`](https://www.learnjsonschema.com/2020-12/format-annotation/format/)
-> validation in JSON Schema 2019-09 and older (an optional feature as per the
-> specification), nor the optional JSON Schema 2020-12
-> [`format-assertion`](https://www.learnjsonschema.com/2020-12/format-assertion/)
-> vocabulary (which has seen extremely little adoption in the wild). Over time,
-> `format` optional validation proved to be inconsistent across implementations
-> and led to significant confusion in the community. We strongly suggest you
-> treat
-> [`format`](https://www.learnjsonschema.com/2020-12/format-annotation/format/)
-> as an annotation and explicitly validate strings with the less ambiguous
-> [`pattern`](https://www.learnjsonschema.com/2020-12/validation/pattern/)
-> keyword, if needed.
-
 Examples
 --------
 
