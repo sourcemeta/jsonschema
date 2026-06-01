@@ -217,8 +217,14 @@ oneof_to_anyof_disjoint_types
 orphan_definitions
   Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
 
+pattern_non_ecma_regex
+  For interoperability reasons, only set this keyword to a regular expression that strictly adheres to the ECMA-262 dialect
+
 pattern_properties_default
   Setting the `patternProperties` keyword to the empty object does not add any further constraint
+
+pattern_properties_non_ecma_regex
+  For interoperability reasons, only set the keys of this keyword to regular expressions that strictly adhere to the ECMA-262 dialect
 
 portable_anchor_names
   Keep anchors within the safe allowed character set across JSON Schema dialects (`^[A-Za-z][A-Za-z0-9_.-]*$`)
@@ -307,7 +313,7 @@ unsatisfiable_max_contains
 unsatisfiable_min_properties
   Setting `minProperties` to a number less than `required` does not add any further constraint
 
-Number of rules: 99
+Number of rules: 101
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

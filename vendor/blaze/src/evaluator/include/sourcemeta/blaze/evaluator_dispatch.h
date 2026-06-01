@@ -4,6 +4,7 @@
 #include <sourcemeta/blaze/evaluator.h>
 
 #include <sourcemeta/core/crypto.h>
+#include <sourcemeta/core/css.h>
 #include <sourcemeta/core/dns.h>
 #include <sourcemeta/core/email.h>
 #include <sourcemeta/core/ip.h>
@@ -881,6 +882,12 @@ INSTRUCTION_HANDLER(AssertionStringType) {
     case ValueStringType::URITemplate:
       result = URITemplate::is_uritemplate(target);
       break;
+    case ValueStringType::IRI:
+      result = URI::is_iri(target);
+      break;
+    case ValueStringType::IRIReference:
+      result = URI::is_iri_reference(target);
+      break;
     case ValueStringType::Email:
       result = is_email(target);
       break;
@@ -908,6 +915,9 @@ INSTRUCTION_HANDLER(AssertionStringType) {
     case ValueStringType::Time:
       result = is_rfc3339_fulltime(target);
       break;
+    case ValueStringType::PartialTime:
+      result = is_rfc3339_partialtime_no_secfrac(target);
+      break;
     case ValueStringType::Duration:
       result = is_rfc3339_duration(target);
       break;
@@ -922,6 +932,9 @@ INSTRUCTION_HANDLER(AssertionStringType) {
       break;
     case ValueStringType::Regex:
       result = is_regex_ecma(target);
+      break;
+    case ValueStringType::Color:
+      result = is_css2_color(target);
       break;
     default:
       std::unreachable();

@@ -20,7 +20,9 @@ if(NOT BLAZE_COMPONENTS)
 endif()
 
 include(CMakeFindDependencyMacro)
-find_dependency(Core COMPONENTS regex uri uritemplate json jsonpointer io yaml crypto html email ip dns time)
+find_dependency(Core COMPONENTS
+  unicode punycode idna regex uri uritemplate json
+  jsonpointer io yaml crypto html email ip dns time css)
 
 foreach(component ${BLAZE_COMPONENTS})
   if(component STREQUAL "foundation")

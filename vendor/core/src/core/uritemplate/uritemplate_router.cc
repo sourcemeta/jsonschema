@@ -241,18 +241,19 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     throw URITemplateRouterDuplicateOperationIdError{operation_id};
   }
 
-  // Walk base path segments to establish the trie prefix
+  if (!uri_template.empty() && uri_template.front() != '/' &&
+      !(uri_template.size() >= 2 && uri_template[0] == '{' &&
+        uri_template[1] == '/')) {
+    throw URITemplateRouterInvalidSegmentError{"Template must start with '/'",
+                                               uri_template};
+  }
+
   Node *current = nullptr;
   if (!this->base_path_.empty()) {
-    const char *base_position = this->base_path_.data();
-    const char *const base_end = base_position + this->base_path_.size();
-    while (base_position < base_end) {
-      while (base_position < base_end && *base_position == '/') {
-        ++base_position;
-      }
-      if (base_position >= base_end) {
-        break;
-      }
+    const char *base_position = this->base_path_.data() + 1;
+    const char *const base_end =
+        this->base_path_.data() + this->base_path_.size();
+    while (true) {
       const char *segment_start = base_position;
       while (base_position < base_end && *base_position != '/') {
         ++base_position;
@@ -262,6 +263,10 @@ auto URITemplateRouter::add(const std::string_view uri_template,
           static_cast<std::size_t>(base_position - segment_start)};
       auto &literals = current ? current->literals : this->root_.literals;
       current = &find_or_create_literal_child(literals, segment);
+      if (base_position >= base_end) {
+        break;
+      }
+      ++base_position;
     }
   }
 
@@ -300,18 +305,23 @@ auto URITemplateRouter::add(const std::string_view uri_template,
     return;
   }
 
-  Node *base_path_end = current;
   bool absorbed = false;
   const char *position = uri_template.data();
   const char *const end = position + uri_template.size();
 
-  while (position < end && !absorbed) {
-    while (position < end && *position == '/') {
-      ++position;
-    }
+  if (position < end && *position == '/') {
+    ++position;
+  }
 
-    if (position >= end) {
-      break;
+  while (true) {
+    if (position >= end || *position == '/') {
+      auto &literals = current ? current->literals : this->root_.literals;
+      current = &find_or_create_literal_child(literals, "");
+      if (position >= end) {
+        break;
+      }
+      ++position;
+      continue;
     }
 
     const char *segment_start = position;
@@ -425,14 +435,16 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       const std::string_view varname{
           varname_start, static_cast<std::size_t>(varname_end - varname_start)};
 
-      ++position; // skip '}'
+      ++position;
 
-      if (position < end && *position != '/') {
-        if (*position != '{' || position + 1 >= end || *(position + 1) != '/') {
-          throw URITemplateRouterInvalidSegmentError{
-              "Path segment cannot mix literals and variables",
-              extract_segment(expression_start, end)};
-        }
+      const bool followed_by_path_operator =
+          position < end && *position == '{' && position + 1 < end &&
+          *(position + 1) == '/';
+
+      if (position < end && *position != '/' && !followed_by_path_operator) {
+        throw URITemplateRouterInvalidSegmentError{
+            "Path segment cannot mix literals and variables",
+            extract_segment(expression_start, end)};
       }
 
       if (is_expansion_type(type) && position < end) {
@@ -448,47 +460,54 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       } else {
         current = result;
       }
-    } else {
-      while (position < end && *position != '/' && *position != '{') {
-        if (*position == '}') {
-          throw URITemplateRouterInvalidSegmentError{
-              "Unmatched closing brace", extract_segment(segment_start, end)};
-        }
-        ++position;
+
+      if (absorbed || position >= end) {
+        break;
       }
-
-      if (position < end && *position == '{') {
-        if (position + 1 < end && *(position + 1) == '/') {
-          const std::string_view segment{
-              segment_start,
-              static_cast<std::size_t>(position - segment_start)};
-          auto &literals = current ? current->literals : this->root_.literals;
-          current = &find_or_create_literal_child(literals, segment);
-          continue;
-        }
-        const char *expr_end = find_expression_end(position, end);
-        const char *seg_end = expr_end;
-        while (seg_end < end && *seg_end != '/') {
-          ++seg_end;
-        }
-        throw URITemplateRouterInvalidSegmentError{
-            "Path segment cannot mix literals and variables",
-            std::string_view{segment_start, static_cast<std::size_t>(
-                                                seg_end - segment_start)}};
+      if (followed_by_path_operator) {
+        continue;
       }
-
-      const std::string_view segment{
-          segment_start, static_cast<std::size_t>(position - segment_start)};
-
-      auto &literals = current ? current->literals : this->root_.literals;
-      current = &find_or_create_literal_child(literals, segment);
+      ++position;
+      continue;
     }
-  }
 
-  if (current == base_path_end && uri_template.size() == 1 &&
-      uri_template[0] == '/') {
+    while (position < end && *position != '/' && *position != '{') {
+      if (*position == '}') {
+        throw URITemplateRouterInvalidSegmentError{
+            "Unmatched closing brace", extract_segment(segment_start, end)};
+      }
+      ++position;
+    }
+
+    if (position < end && *position == '{') {
+      if (position + 1 < end && *(position + 1) == '/') {
+        const std::string_view segment{
+            segment_start, static_cast<std::size_t>(position - segment_start)};
+        auto &literals = current ? current->literals : this->root_.literals;
+        current = &find_or_create_literal_child(literals, segment);
+        continue;
+      }
+      const char *expr_end = find_expression_end(position, end);
+      const char *seg_end = expr_end;
+      while (seg_end < end && *seg_end != '/') {
+        ++seg_end;
+      }
+      throw URITemplateRouterInvalidSegmentError{
+          "Path segment cannot mix literals and variables",
+          std::string_view{segment_start,
+                           static_cast<std::size_t>(seg_end - segment_start)}};
+    }
+
+    const std::string_view segment{
+        segment_start, static_cast<std::size_t>(position - segment_start)};
+
     auto &literals = current ? current->literals : this->root_.literals;
-    current = &find_or_create_literal_child(literals, "");
+    current = &find_or_create_literal_child(literals, segment);
+
+    if (position >= end) {
+      break;
+    }
+    ++position;
   }
 
   if (!absorbed && current != nullptr) {
@@ -555,28 +574,19 @@ auto URITemplateRouter::match(const std::string_view path,
                           this->root_.context);
   }
 
-  if (path.size() == 1 && path[0] == '/') {
-    if (auto *child = find_literal_child(this->root_.literals, "")) {
-      return finalize_match(this->otherwise_, child->identifier,
-                            child->context);
-    }
+  if (path.front() != '/') {
     return finalize_match(this->otherwise_, 0, 0);
   }
 
   const Node *current = nullptr;
-  const char *position = path.data();
-  const char *const path_end = position + path.size();
+  const char *position = path.data() + 1;
+  const char *const path_end = path.data() + path.size();
 
   const std::vector<std::unique_ptr<Node>> *literal_children =
       &this->root_.literals;
   const std::unique_ptr<Node> *variable_child = &this->root_.variable;
 
   std::size_t variable_index = 0;
-
-  // Skip leading slash
-  if (position < path_end && *position == '/') {
-    ++position;
-  }
 
   while (true) {
     const char *segment_start = position;
@@ -586,14 +596,9 @@ auto URITemplateRouter::match(const std::string_view path,
     const std::string_view segment{
         segment_start, static_cast<std::size_t>(position - segment_start)};
 
-    // Empty segment (from double slash or trailing slash) doesn't match
-    if (segment.empty()) {
-      return finalize_match(this->otherwise_, 0, 0);
-    }
-
     if (auto *literal_match = find_literal_child(*literal_children, segment)) {
       current = literal_match;
-    } else if (*variable_child) {
+    } else if (!segment.empty() && *variable_child) {
       assert(variable_index <=
              std::numeric_limits<URITemplateRouter::Index>::max());
       if (is_expansion_type((*variable_child)->type)) {
@@ -615,12 +620,9 @@ auto URITemplateRouter::match(const std::string_view path,
     literal_children = &current->literals;
     variable_child = &current->variable;
 
-    // Check if there's more path
     if (position >= path_end) {
       break;
     }
-
-    // Skip the slash and continue to next segment
     ++position;
   }
 

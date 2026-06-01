@@ -29,6 +29,14 @@ auto jsonrpc_is_server_error(const std::int64_t code) -> bool {
          code <= JSONRPC_CODE_SERVER_ERROR_MAX;
 }
 
+auto jsonrpc_is_batch(const sourcemeta::core::JSON &payload) -> bool {
+  return payload.is_array();
+}
+
+auto jsonrpc_is_valid_batch(const sourcemeta::core::JSON &payload) -> bool {
+  return jsonrpc_is_batch(payload) && !payload.empty();
+}
+
 auto jsonrpc_request_id(const sourcemeta::core::JSON &request)
     -> const sourcemeta::core::JSON * {
   if (!request.is_object()) {

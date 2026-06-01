@@ -2447,15 +2447,85 @@ auto compiler_draft3_validation_format(const Context &context,
   static constexpr auto unsupported_dialect_message{
       "The format assertion tweak not supported in this dialect"};
 
-  if (schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Format) ||
-      schema_context.vocabularies.contains(
-          Known::JSON_Schema_2020_12_Format_Annotation)) {
-    if (context.tweaks.format_assertion) {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
-          unsupported_dialect_message);
+  const auto is_2019_09_format{
+      schema_context.vocabularies.contains(Known::JSON_Schema_2019_09_Format)};
+  const auto is_2020_12_format_annotation{schema_context.vocabularies.contains(
+      Known::JSON_Schema_2020_12_Format_Annotation)};
+  const auto is_2020_12_format_assertion{schema_context.vocabularies.contains(
+      Known::JSON_Schema_2020_12_Format_Assertion)};
+
+  if ((is_2019_09_format && context.tweaks.format_assertion) ||
+      is_2020_12_format_assertion ||
+      (is_2020_12_format_annotation && context.tweaks.format_assertion)) {
+    const auto &format{schema_context.schema.at(dynamic_context.keyword)};
+    if (!format.is_string()) {
+      return {};
     }
 
+    const auto &name{format.to_string()};
+    ValueStringType type;
+    if (name == "date-time") {
+      type = ValueStringType::DateTime;
+    } else if (name == "date") {
+      type = ValueStringType::Date;
+    } else if (name == "time") {
+      type = ValueStringType::Time;
+    } else if (name == "duration") {
+      type = ValueStringType::Duration;
+    } else if (name == "email") {
+      type = ValueStringType::Email;
+    } else if (name == "idn-email") {
+      type = ValueStringType::IDNEmail;
+    } else if (name == "hostname") {
+      type = ValueStringType::Hostname;
+    } else if (name == "idn-hostname") {
+      type = ValueStringType::IDNHostname;
+    } else if (name == "ipv4") {
+      type = ValueStringType::IPv4;
+    } else if (name == "ipv6") {
+      type = ValueStringType::IPv6;
+    } else if (name == "uri") {
+      type = ValueStringType::URI;
+    } else if (name == "uri-reference") {
+      type = ValueStringType::URIReference;
+    } else if (name == "iri") {
+      type = ValueStringType::IRI;
+    } else if (name == "iri-reference") {
+      type = ValueStringType::IRIReference;
+    } else if (name == "uri-template") {
+      type = ValueStringType::URITemplate;
+    } else if (name == "json-pointer") {
+      type = ValueStringType::JSONPointer;
+    } else if (name == "relative-json-pointer") {
+      type = ValueStringType::RelativeJSONPointer;
+    } else if (name == "regex") {
+      type = ValueStringType::Regex;
+    } else if (name == "uuid") {
+      type = ValueStringType::UUID;
+    } else {
+      return {};
+    }
+
+    Instructions instructions{
+        make(sourcemeta::blaze::InstructionIndex::AssertionStringType, context,
+             schema_context, dynamic_context, type)};
+
+    if (context.mode == Mode::Exhaustive) {
+      Instructions annotation_children{
+          make(sourcemeta::blaze::InstructionIndex::AnnotationEmit, context,
+               schema_context, dynamic_context,
+               sourcemeta::core::JSON{
+                   schema_context.schema.at(dynamic_context.keyword)})};
+      instructions.push_back(
+          make(sourcemeta::blaze::InstructionIndex::ControlGroupWhenType,
+               context, schema_context, relative_dynamic_context(),
+               ValueType::String, std::move(annotation_children)));
+    }
+
+    return instructions;
+  }
+
+  if (is_2019_09_format || is_2020_12_format_annotation) {
     if (context.mode == Mode::FastValidation) {
       return {};
     }
@@ -2492,8 +2562,49 @@ auto compiler_draft3_validation_format(const Context &context,
   const auto is_draft6{
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6) ||
       schema_context.vocabularies.contains(Known::JSON_Schema_Draft_6_Hyper)};
+  const auto is_draft7{
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7) ||
+      schema_context.vocabularies.contains(Known::JSON_Schema_Draft_7_Hyper)};
 
-  if (is_draft4 || is_draft6) {
+  if (is_draft7) {
+    if (name == "date-time") {
+      type = ValueStringType::DateTime;
+    } else if (name == "date") {
+      type = ValueStringType::Date;
+    } else if (name == "time") {
+      type = ValueStringType::Time;
+    } else if (name == "email") {
+      type = ValueStringType::Email;
+    } else if (name == "idn-email") {
+      type = ValueStringType::IDNEmail;
+    } else if (name == "hostname") {
+      type = ValueStringType::Hostname;
+    } else if (name == "idn-hostname") {
+      type = ValueStringType::IDNHostname;
+    } else if (name == "ipv4") {
+      type = ValueStringType::IPv4;
+    } else if (name == "ipv6") {
+      type = ValueStringType::IPv6;
+    } else if (name == "uri") {
+      type = ValueStringType::URI;
+    } else if (name == "uri-reference") {
+      type = ValueStringType::URIReference;
+    } else if (name == "uri-template") {
+      type = ValueStringType::URITemplate;
+    } else if (name == "json-pointer") {
+      type = ValueStringType::JSONPointer;
+    } else if (name == "relative-json-pointer") {
+      type = ValueStringType::RelativeJSONPointer;
+    } else if (name == "regex") {
+      type = ValueStringType::Regex;
+    } else if (name == "iri") {
+      type = ValueStringType::IRI;
+    } else if (name == "iri-reference") {
+      type = ValueStringType::IRIReference;
+    } else {
+      return {};
+    }
+  } else if (is_draft4 || is_draft6) {
     if (name == "date-time") {
       type = ValueStringType::DateTime;
     } else if (name == "email") {
@@ -2531,24 +2642,26 @@ auto compiler_draft3_validation_format(const Context &context,
     } else if (name == "date") {
       type = ValueStringType::Date;
     } else if (name == "time") {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
-          "The \"time\" format is not supported in assertion mode yet");
+      type = ValueStringType::PartialTime;
     } else if (name == "utc-millisec") {
+      // TODO: Support this old format, even though not even the official test
+      // suite covers it
       throw sourcemeta::blaze::CompilerError(
           schema_context.base, to_pointer(schema_context.relative_pointer),
           "The \"utc-millisec\" format is not supported in assertion mode yet");
     } else if (name == "regex") {
       type = ValueStringType::Regex;
     } else if (name == "color") {
-      throw sourcemeta::blaze::CompilerError(
-          schema_context.base, to_pointer(schema_context.relative_pointer),
-          "The \"color\" format is not supported in assertion mode yet");
+      type = ValueStringType::Color;
     } else if (name == "style") {
+      // TODO: Support this old format, even though not even the official test
+      // suite covers it
       throw sourcemeta::blaze::CompilerError(
           schema_context.base, to_pointer(schema_context.relative_pointer),
           "The \"style\" format is not supported in assertion mode yet");
     } else if (name == "phone") {
+      // TODO: Support this old format, even though not even the official test
+      // suite covers it
       throw sourcemeta::blaze::CompilerError(
           schema_context.base, to_pointer(schema_context.relative_pointer),
           "The \"phone\" format is not supported in assertion mode yet");

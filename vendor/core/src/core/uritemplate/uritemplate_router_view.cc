@@ -497,87 +497,46 @@ auto URITemplateRouterView::match(
   const auto string_table_size =
       header->arguments_offset - header->string_table_offset;
 
-  // Empty path matches empty template
   if (path.empty()) {
     return finalize_match(otherwise_context, nodes[0].identifier,
                           nodes[0].context);
   }
 
-  // Root path "/" is stored as an empty literal segment
-  if (path.size() == 1 && path[0] == '/') {
-    const auto &root = nodes[0];
-    if (root.first_literal_child == NO_CHILD) {
-      return finalize_match(otherwise_context, 0, 0);
-    }
-
-    if (root.first_literal_child >= header->node_count ||
-        root.literal_child_count >
-            header->node_count - root.first_literal_child) {
-      return finalize_match(otherwise_context, 0, 0);
-    }
-
-    const auto match = binary_search_literal_children(
-        nodes, string_table, string_table_size, root.first_literal_child,
-        root.literal_child_count, "", 0);
-    if (match == NO_CHILD) {
-      return finalize_match(otherwise_context, 0, 0);
-    }
-    return finalize_match(otherwise_context, nodes[match].identifier,
-                          nodes[match].context);
+  if (path.front() != '/') {
+    return finalize_match(otherwise_context, 0, 0);
   }
 
-  // Walk the trie, matching each path segment
   std::uint32_t current_node = 0;
-  const char *position = path.data();
-  const char *const path_end = position + path.size();
+  const char *position = path.data() + 1;
+  const char *const path_end = path.data() + path.size();
 
   std::size_t variable_index = 0;
 
-  // Skip leading slash
-  if (position < path_end && *position == '/') {
-    ++position;
-  }
-
   while (true) {
-    // Extract segment
     const char *segment_start = position;
     while (position < path_end && *position != '/') {
       ++position;
     }
-
     const auto segment_length =
         static_cast<std::uint32_t>(position - segment_start);
-
-    // Empty segment (from double slash or trailing slash) doesn't match
-    if (segment_length == 0) {
-      return finalize_match(otherwise_context, 0, 0);
-    }
 
     const auto &node = nodes[current_node];
     const auto node_count = header->node_count;
 
-    // Try literal children first
+    std::uint32_t literal_match = NO_CHILD;
     if (node.first_literal_child != NO_CHILD) {
       if (node.first_literal_child >= node_count ||
           node.literal_child_count > node_count - node.first_literal_child) {
         return finalize_match(otherwise_context, 0, 0);
       }
-
-      const auto literal_match = binary_search_literal_children(
+      literal_match = binary_search_literal_children(
           nodes, string_table, string_table_size, node.first_literal_child,
           node.literal_child_count, segment_start, segment_length);
-      if (literal_match != NO_CHILD) {
-        current_node = literal_match;
-        if (position >= path_end) {
-          break;
-        }
-        ++position;
-        continue;
-      }
     }
 
-    // Fall back to variable child
-    if (node.variable_child != NO_CHILD) {
+    if (literal_match != NO_CHILD) {
+      current_node = literal_match;
+    } else if (segment_length > 0 && node.variable_child != NO_CHILD) {
       if (node.variable_child >= node_count ||
           variable_index >
               std::numeric_limits<URITemplateRouter::Index>::max()) {
@@ -592,8 +551,6 @@ auto URITemplateRouterView::match(
         return finalize_match(otherwise_context, 0, 0);
       }
 
-      // Both Expansion and OptionalExpansion consume the rest of the path
-      // verbatim
       if (is_expansion_type(variable_node.type)) {
         const auto remaining_length =
             static_cast<std::uint32_t>(path_end - segment_start);
@@ -605,22 +562,20 @@ auto URITemplateRouterView::match(
                               variable_node.context);
       }
 
-      // Regular variable - match single segment
       callback(static_cast<URITemplateRouter::Index>(variable_index),
                {string_table + variable_node.string_offset,
                 variable_node.string_length},
                {segment_start, segment_length});
       ++variable_index;
       current_node = node.variable_child;
-      if (position >= path_end) {
-        break;
-      }
-      ++position;
-      continue;
+    } else {
+      return finalize_match(otherwise_context, 0, 0);
     }
 
-    // No match
-    return finalize_match(otherwise_context, 0, 0);
+    if (position >= path_end) {
+      break;
+    }
+    ++position;
   }
 
   const auto &final_node = nodes[current_node];

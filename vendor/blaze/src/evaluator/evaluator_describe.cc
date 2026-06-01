@@ -2123,6 +2123,12 @@ auto describe(const bool valid, const Instruction &step,
       case ValueStringType::URITemplate:
         message << " URI template";
         break;
+      case ValueStringType::IRI:
+        message << " IRI";
+        break;
+      case ValueStringType::IRIReference:
+        message << " IRI reference";
+        break;
       case ValueStringType::Email:
         message << " email address";
         break;
@@ -2150,6 +2156,9 @@ auto describe(const bool valid, const Instruction &step,
       case ValueStringType::Time:
         message << " RFC 3339 full-time";
         break;
+      case ValueStringType::PartialTime:
+        message << " RFC 3339 partial-time without fractional seconds";
+        break;
       case ValueStringType::Duration:
         message << " RFC 3339 duration";
         break;
@@ -2164,6 +2173,9 @@ auto describe(const bool valid, const Instruction &step,
         break;
       case ValueStringType::Regex:
         message << " ECMA-262 regular expression";
+        break;
+      case ValueStringType::Color:
+        message << " CSS 2 color";
         break;
       default:
         return unknown();

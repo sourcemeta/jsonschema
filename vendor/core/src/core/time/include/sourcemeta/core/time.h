@@ -162,6 +162,33 @@ SOURCEMETA_CORE_TIME_EXPORT
 auto is_rfc3339_fulltime(const std::string_view value) -> bool;
 
 /// @ingroup time
+/// Check whether the given string is a valid partial-time value per RFC 3339
+/// Section 5.6 (Internet Date/Time Format), excluding the optional
+/// fractional seconds component. This implements the `partial-time`
+/// production rule without `[time-secfrac]`:
+///
+/// ```
+/// partial-time = time-hour ":" time-minute ":" time-second
+/// ```
+///
+/// This matches the JSON Schema Draft 3 `time` format (`hh:mm:ss`). For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_rfc3339_partialtime_no_secfrac("08:30:06"));
+/// assert(sourcemeta::core::is_rfc3339_partialtime_no_secfrac("23:59:60"));
+/// assert(!sourcemeta::core::is_rfc3339_partialtime_no_secfrac("08:30:06.5"));
+/// assert(!sourcemeta::core::is_rfc3339_partialtime_no_secfrac("08:30:06Z"));
+/// assert(!sourcemeta::core::is_rfc3339_partialtime_no_secfrac("8:30 AM"));
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto is_rfc3339_partialtime_no_secfrac(const std::string_view value) -> bool;
+
+/// @ingroup time
 /// Check whether the given string is a valid duration value per RFC 3339
 /// Appendix A (ISO 8601 Collected ABNF). This implements the `duration`
 /// production rule:

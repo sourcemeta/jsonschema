@@ -67,6 +67,37 @@ SOURCEMETA_CORE_JSONRPC_EXPORT
 auto jsonrpc_is_server_error(const std::int64_t code) -> bool;
 
 /// @ingroup jsonrpc
+/// Check whether the given JSON value is a JSON-RPC 2.0 batch envelope. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonrpc.h>
+/// #include <cassert>
+///
+/// const auto payload{sourcemeta::core::parse_json(R"([])")};
+/// assert(sourcemeta::core::jsonrpc_is_batch(payload));
+/// ```
+SOURCEMETA_CORE_JSONRPC_EXPORT
+auto jsonrpc_is_batch(const sourcemeta::core::JSON &payload) -> bool;
+
+/// @ingroup jsonrpc
+/// Check whether the given JSON value is a non-empty JSON-RPC 2.0 batch
+/// envelope. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/core/jsonrpc.h>
+/// #include <cassert>
+///
+/// const auto payload{sourcemeta::core::parse_json(
+///     R"([ { "jsonrpc": "2.0", "method": "ping" } ])")};
+/// assert(sourcemeta::core::jsonrpc_is_valid_batch(payload));
+/// ```
+SOURCEMETA_CORE_JSONRPC_EXPORT
+auto jsonrpc_is_valid_batch(const sourcemeta::core::JSON &payload) -> bool;
+
+/// @ingroup jsonrpc
 /// Extract the request identifier from a JSON-RPC 2.0 envelope. Returns a
 /// pointer to the identifier (string, number, or null per the specification)
 /// or `nullptr` when the field is missing or not one of those types. For

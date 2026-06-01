@@ -253,7 +253,9 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "linter/items_array_default.h"
 #include "linter/items_schema_default.h"
 #include "linter/multiple_of_default.h"
+#include "linter/pattern_non_ecma_regex.h"
 #include "linter/pattern_properties_default.h"
+#include "linter/pattern_properties_non_ecma_regex.h"
 #include "linter/portable_anchor_names.h"
 #include "linter/properties_default.h"
 #include "linter/property_names_default.h"
@@ -459,6 +461,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<DivisibleByDefault>();
     bundle.add<MultipleOfDefault>();
     bundle.add<PatternPropertiesDefault>();
+    bundle.add<PatternNonEcmaRegex>();
+    bundle.add<PatternPropertiesNonEcmaRegex>();
     bundle.add<PropertiesDefault>();
     bundle.add<PropertyNamesDefault>();
     bundle.add<PropertyNamesTypeDefault>();
