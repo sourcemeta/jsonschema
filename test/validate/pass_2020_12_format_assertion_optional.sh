@@ -34,7 +34,7 @@ cat << 'EOF' > "$TMP/schema.json"
 EOF
 
 cat << 'EOF' > "$TMP/instance.json"
-{ "email": "not-an-email" }
+{ "email": "foo@bar.com" }
 EOF
 
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
@@ -46,9 +46,6 @@ ok: $(realpath "$TMP")/instance.json
 annotation: "email"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
-annotation: "email"
-  at instance location "/email" (line 1, column 3)
-  at evaluate path "/properties/email/format"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

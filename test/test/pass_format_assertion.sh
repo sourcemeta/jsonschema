@@ -37,6 +37,11 @@ cat << 'EOF' > "$TMP/test.json"
       "description": "A valid instance",
       "valid": true,
       "data": "foo@bar.com"
+    },
+    {
+      "description": "An invalid instance",
+      "valid": false,
+      "data": "not-an-email"
     }
   ]
 }
@@ -44,31 +49,10 @@ EOF
 
 "$1" test "$TMP/test.json" \
   --resolve "$TMP/metaschema.json" --resolve "$TMP/schema.json" \
-  1> "$TMP/output.txt" 2>&1 \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "4"
+  > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
-$(realpath "$TMP")/test.json:
-error: Cannot compile unsupported vocabulary
-  at file path $(realpath "$TMP")/test.json
-  at uri https://json-schema.org/draft/2020-12/vocab/format-assertion
+$(realpath "$TMP")/test.json: PASS 2/2
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
-
-"$1" test "$TMP/test.json" \
-  --resolve "$TMP/metaschema.json" --resolve "$TMP/schema.json" \
-  --json > "$TMP/stdout.txt" \
-  && EXIT_CODE="$?" || EXIT_CODE="$?"
-test "$EXIT_CODE" = "4"
-
-cat << EOF > "$TMP/expected.txt"
-{
-  "error": "Cannot compile unsupported vocabulary",
-  "filePath": "$(realpath "$TMP")/test.json",
-  "uri": "https://json-schema.org/draft/2020-12/vocab/format-assertion"
-}
-EOF
-
-diff "$TMP/stdout.txt" "$TMP/expected.txt"
