@@ -207,6 +207,14 @@ constexpr auto mcp_supports_implementation_website_url(
 }
 
 /// @ingroup mcp
+/// Whether the given protocol version supports JSON-RPC 2.0 batching.
+constexpr auto
+mcp_supports_jsonrpc_batching(const MCPProtocolVersion version) noexcept
+    -> bool {
+  return version == MCPProtocolVersion::V_2025_03_26;
+}
+
+/// @ingroup mcp
 /// Build an MCP `text` content block carrying the given text payload. For
 /// example:
 ///
@@ -321,13 +329,12 @@ auto mcp_make_tool_error(const sourcemeta::core::JSON &identifier,
 /// #include <cassert>
 ///
 /// const auto identifier{sourcemeta::core::JSON{3}};
-/// const auto envelope{sourcemeta::core::mcp_make_error_resource_not_found(
-///     identifier, "file:///missing")};
+/// const auto envelope{
+///     sourcemeta::core::mcp_make_error_resource_not_found(identifier)};
 /// assert(envelope.at("error").at("code").to_integer() == -32002);
 /// ```
 SOURCEMETA_CORE_MCP_EXPORT
-auto mcp_make_error_resource_not_found(const sourcemeta::core::JSON &identifier,
-                                       const JSON::StringView uri)
+auto mcp_make_error_resource_not_found(const sourcemeta::core::JSON &identifier)
     -> sourcemeta::core::JSON;
 
 /// @ingroup mcp

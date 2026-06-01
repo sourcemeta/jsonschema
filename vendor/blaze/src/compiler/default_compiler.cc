@@ -28,6 +28,7 @@ auto sourcemeta::blaze::default_schema_compiler(
                              Known::JSON_Schema_2020_12_Validation,
                              Known::JSON_Schema_2020_12_Meta_Data,
                              Known::JSON_Schema_2020_12_Format_Annotation,
+                             Known::JSON_Schema_2020_12_Format_Assertion,
                              Known::JSON_Schema_2020_12_Content,
                              Known::JSON_Schema_2019_09_Core,
                              Known::JSON_Schema_2019_09_Applicator,
@@ -112,6 +113,8 @@ auto sourcemeta::blaze::default_schema_compiler(
   COMPILE(Known::JSON_Schema_2020_12_Content, "contentSchema",
           compiler_2019_09_content_contentschema);
   COMPILE(Known::JSON_Schema_2020_12_Format_Annotation, "format",
+          compiler_draft3_validation_format);
+  COMPILE(Known::JSON_Schema_2020_12_Format_Assertion, "format",
           compiler_draft3_validation_format);
 
   // Same as Draft 7

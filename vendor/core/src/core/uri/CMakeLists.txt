@@ -12,3 +12,5 @@ target_link_libraries(sourcemeta_core_uri
   PRIVATE sourcemeta::core::io)
 target_link_libraries(sourcemeta_core_uri
   PRIVATE sourcemeta::core::ip)
+target_link_libraries(sourcemeta_core_uri
+  PRIVATE sourcemeta::core::unicode)

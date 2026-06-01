@@ -1,5 +1,7 @@
 #include <sourcemeta/core/dns.h>
+#include <sourcemeta/core/idna.h>
 
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
@@ -56,6 +58,20 @@ auto is_hostname(const std::string_view value) -> bool {
     const auto label_length{position - label_start};
     if (label_length == 0 || label_length > 63 || last_was_hyphen) {
       return false;
+    }
+
+    // RFC 5890 §2.3.2.1: the ACE prefix "xn--" is case-insensitive. A-labels
+    // must also satisfy RFC 5891 §4.2.3 and RFC 5892 (Punycode round-trip,
+    // IDNA 2008 derived properties, contextual rules)
+    if (label_length >= 4 && ((value[label_start] | 0x20) == 'x') &&
+        ((value[label_start + 1] | 0x20) == 'n') &&
+        value[label_start + 2] == '-' && value[label_start + 3] == '-') {
+      std::string canonical{value.substr(label_start, label_length)};
+      canonical[0] = 'x';
+      canonical[1] = 'n';
+      if (!idna_is_valid_a_label(canonical)) {
+        return false;
+      }
     }
 
     if (position < value.size()) {

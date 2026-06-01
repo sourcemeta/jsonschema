@@ -178,12 +178,10 @@ auto mcp_make_tool_error(const sourcemeta::core::JSON &identifier,
                                                 std::move(envelope_result));
 }
 
-auto mcp_make_error_resource_not_found(const sourcemeta::core::JSON &identifier,
-                                       const JSON::StringView uri)
+auto mcp_make_error_resource_not_found(const sourcemeta::core::JSON &identifier)
     -> sourcemeta::core::JSON {
   return sourcemeta::core::jsonrpc_make_error(
-      &identifier, MCP_CODE_RESOURCE_NOT_FOUND, "Resource not found",
-      sourcemeta::core::JSON{uri});
+      &identifier, MCP_CODE_RESOURCE_NOT_FOUND, "Resource not found");
 }
 
 auto mcp_make_resource(const JSON::StringView uri, const JSON::StringView name,

@@ -31,3 +31,5 @@ target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::time)
 target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
   sourcemeta::core::crypto)
+target_link_libraries(sourcemeta_blaze_evaluator PUBLIC
+  sourcemeta::core::css)
