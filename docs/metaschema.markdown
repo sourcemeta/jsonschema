@@ -10,7 +10,7 @@ jsonschema metaschema [schemas-or-directories...]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--ignore/-i <schemas-or-directories>] [--trace/-t]
-  [--default-dialect/-d <uri>] [--json/-j]
+  [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
 ```
 
 Ensure that a schema or a set of schemas are considered valid with regards to
@@ -106,6 +106,17 @@ jsonschema metaschema --extension .schema.json
 
 ```sh
 jsonschema metaschema path/to/my/schema.json --trace
+```
+
+### Validate the metaschema of a JSON Schema forcing every `format` to assert
+
+The `--format-assertion`/`-F` option forces every `format` keyword in the
+metaschema to behave as an assertion. For 2020-12 schemas, this turns checks
+like `$id` being a valid URI reference into hard failures rather than just
+annotations.
+
+```sh
+jsonschema metaschema path/to/my/schema.json --format-assertion
 ```
 
 ### Validate the metaschema of a JSON Schema and print the result as JSON

@@ -10,6 +10,7 @@ jsonschema compile <schema.json|.yaml> [--http/-h] [--verbose/-v] [--debug/-g]
   [--resolve/-r <schemas-or-directories> ...] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--fast/-f] [--default-dialect/-d <uri>]
   [--minify/-m] [--json/-j] [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
+  [--format-assertion/-F]
 ```
 
 The `validate` command will first compile the schema into an optimised
@@ -49,6 +50,16 @@ jsonschema compile path/to/my/schema.json > template.json
 
 ```sh
 jsonschema compile path/to/my/schema.json --fast > template.json
+```
+
+### Compile a JSON Schema forcing every `format` to assert
+
+The `--format-assertion`/`-F` option bakes format assertion behavior into the
+template, so every `format` keyword becomes an assertion regardless of dialect
+or vocabulary at evaluation time.
+
+```sh
+jsonschema compile path/to/my/schema.json --format-assertion > template.json
 ```
 
 ### Compile a JSON Schema resolving one of its dependencies

@@ -12,6 +12,7 @@
 #include <filesystem> // std::filesystem::current_path
 #include <iostream>   // std::cerr, std::cout
 #include <numeric>    // std::accumulate
+#include <optional>   // std::optional
 #include <ostream>    // std::ostream
 #include <sstream>    // std::ostringstream
 
@@ -146,7 +147,8 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
                       std::unordered_set<std::string> &rule_names,
                       const std::filesystem::path &rule_path,
                       const std::string_view dialect,
-                      const sourcemeta::blaze::SchemaResolver &custom_resolver)
+                      const sourcemeta::blaze::SchemaResolver &custom_resolver,
+                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
     -> void {
   auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
   if (!rule_schema.defines("description")) {
@@ -167,7 +169,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   try {
     bundle.add<sourcemeta::blaze::SchemaRule>(
         rule_schema, sourcemeta::blaze::schema_walker, custom_resolver,
-        sourcemeta::blaze::default_schema_compiler, dialect);
+        sourcemeta::blaze::default_schema_compiler, dialect, tweaks);
   } catch (const sourcemeta::blaze::SchemaRuleMissingNameError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaRuleMissingNameError>(rule_path, error);
@@ -250,7 +252,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     for (const auto &rule_path : configuration.value().lint.rules) {
       LOG_VERBOSE(options) << "Loading custom rule from configuration: "
                            << rule_path.string() << "\n";
-      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver);
+      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
+                sourcemeta::jsonschema::format_assertion_tweaks(options));
     }
   }
 
@@ -266,7 +269,8 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
       const auto dialect{default_dialect(options, configuration)};
       const auto &custom_resolver{
           resolver(options, options.contains("http"), dialect, configuration)};
-      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver);
+      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
+                sourcemeta::jsonschema::format_assertion_tweaks(options));
     }
   }
 

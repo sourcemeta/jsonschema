@@ -8,7 +8,7 @@ jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
-  [--rule/-a <rule-schema>]
+  [--rule/-a <rule-schema>] [--format-assertion/-F]
   [--default-dialect/-d <uri>] [--indentation/-n <spaces>]
 ```
 
@@ -247,6 +247,17 @@ jsonschema lint --rule path/to/my/rule.json path/to/my/schema.json
 
 ```sh
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
+```
+
+### Lint with custom rules forcing every `format` to assert
+
+The `--format-assertion`/`-F` option forces every `format` keyword in custom
+lint rules to behave as an assertion. This is useful for rules that match
+against schema properties expected to follow a specific format such as `uri`
+or `email`.
+
+```sh
+jsonschema lint --rule path/to/my/rule.json path/to/my/schema.json --format-assertion
 ```
 
 ### Lint a JSON Schema with a custom HTTP header

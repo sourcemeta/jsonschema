@@ -40,7 +40,7 @@ Commands:
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-            [--continue/-c]
+            [--continue/-c] [--format-assertion/-F]
 
        Validate one or more instances against the given schema.
 
@@ -57,6 +57,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
+              [--format-assertion/-F]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
@@ -64,13 +65,14 @@ Commands:
    compile <schema.json|.yaml> [--extension/-e <extension>]
            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
            [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
+           [--format-assertion/-F]
 
        Compile the given schema into an internal optimised representation.
        Use --include/-n to output as a C/C++ header file.
        Use --entrypoint/-p to compile a subschema by JSON Pointer or URI.
 
    test [schemas-or-directories...] [--extension/-e <extension>]
-        [--ignore/-i <schemas-or-directories>]
+        [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
@@ -86,7 +88,7 @@ Commands:
         [--keep-ordering/-k] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
-        [--rule/-a <rule-schema>]
+        [--rule/-a <rule-schema>] [--format-assertion/-F]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
@@ -165,6 +167,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "lint") {
     app.flag("fix", {"f"});
     app.flag("format", {"m"});
+    app.flag("format-assertion", {"F"});
     app.flag("keep-ordering", {"k"});
     app.flag("list", {"l"});
     app.option("extension", {"e"});
@@ -180,6 +183,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("benchmark", {"b"});
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
+    app.flag("format-assertion", {"F"});
     app.flag("continue", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
@@ -191,6 +195,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "metaschema") {
     app.flag("trace", {"t"});
+    app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
@@ -198,6 +203,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "compile") {
     app.flag("fast", {"f"});
+    app.flag("format-assertion", {"F"});
     app.flag("minify", {"m"});
     app.option("include", {"n"});
     app.option("entrypoint", {"p"});
@@ -205,6 +211,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
   } else if (command == "test") {
+    app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});

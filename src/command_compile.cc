@@ -72,14 +72,16 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
           bundled, sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler, frame, entrypoint_uri,
           fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                    : sourcemeta::blaze::Mode::Exhaustive);
+                    : sourcemeta::blaze::Mode::Exhaustive,
+          sourcemeta::jsonschema::format_assertion_tweaks(options));
     } else {
       schema_template = sourcemeta::blaze::compile(
           schema, sourcemeta::blaze::schema_walker, custom_resolver,
           sourcemeta::blaze::default_schema_compiler,
           fast_mode ? sourcemeta::blaze::Mode::FastValidation
                     : sourcemeta::blaze::Mode::Exhaustive,
-          dialect, schema_default_id);
+          dialect, schema_default_id, "",
+          sourcemeta::jsonschema::format_assertion_tweaks(options));
     }
   } catch (const sourcemeta::blaze::CompilerInvalidEntryPoint &error) {
     throw sourcemeta::core::FileError<

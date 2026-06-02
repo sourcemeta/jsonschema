@@ -106,6 +106,15 @@ inline auto parse_indentation(const sourcemeta::core::Options &options)
   return 2;
 }
 
+inline auto format_assertion_tweaks(const sourcemeta::core::Options &options)
+    -> std::optional<sourcemeta::blaze::Tweaks> {
+  if (options.contains("format-assertion")) {
+    return sourcemeta::blaze::Tweaks{.format_assertion = true};
+  }
+
+  return std::nullopt;
+}
+
 inline auto print(const sourcemeta::blaze::SimpleOutput &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,
                   std::ostream &stream) -> void {
