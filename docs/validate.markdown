@@ -50,6 +50,26 @@ code 2.
 > error messages, at the expense of speed. The `--fast`/`-f` option makes the
 > schema compiler optimise for speed, at the expense of error messages.
 
+> [!TIP]
+> The `format` keyword is treated as an annotation by default across all
+> dialects (except 2020-12 with the [Format
+> Assertion](https://www.learnjsonschema.com/2020-12/format-assertion/)
+> vocabulary enabled). To force `format` to behave as an assertion at a
+> specific location, set the custom `x-format-assertion` keyword to `true` as
+> a sibling to `format`. This works across all supported dialects.
+
+For example, the following Draft 4 schema asserts that the instance is a valid
+email address rather than just annotating it:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string",
+  "format": "email",
+  "x-format-assertion": true
+}
+```
+
 To speed-up the compilation process, you may pre-compile a schema using the
 [`compile`](./compile.markdown) command and pass the result using the
 `--template`/`-m` option. However, you still need to pass the original schema

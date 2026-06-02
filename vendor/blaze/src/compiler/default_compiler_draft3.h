@@ -2454,9 +2454,16 @@ auto compiler_draft3_validation_format(const Context &context,
   const auto is_2020_12_format_assertion{schema_context.vocabularies.contains(
       Known::JSON_Schema_2020_12_Format_Assertion)};
 
-  if ((is_2019_09_format && context.tweaks.format_assertion) ||
-      is_2020_12_format_assertion ||
-      (is_2020_12_format_annotation && context.tweaks.format_assertion)) {
+  const auto force_assertion{
+      schema_context.schema.is_object() &&
+      schema_context.schema.defines("x-format-assertion") &&
+      schema_context.schema.at("x-format-assertion").is_boolean() &&
+      schema_context.schema.at("x-format-assertion").to_boolean()};
+
+  const auto assert_active{context.tweaks.format_assertion || force_assertion};
+
+  if ((is_2019_09_format && assert_active) || is_2020_12_format_assertion ||
+      (is_2020_12_format_annotation && assert_active)) {
     const auto &format{schema_context.schema.at(dynamic_context.keyword)};
     if (!format.is_string()) {
       return {};
@@ -2541,7 +2548,7 @@ auto compiler_draft3_validation_format(const Context &context,
                  ValueType::String, std::move(children))};
   }
 
-  if (!context.tweaks.format_assertion) {
+  if (!assert_active) {
     return {};
   }
 
