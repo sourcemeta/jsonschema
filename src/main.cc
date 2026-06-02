@@ -165,6 +165,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
   } else if (command == "lint") {
     app.flag("fix", {"f"});
     app.flag("format", {"m"});
+    app.flag("format-assertion", {"F"});
     app.flag("keep-ordering", {"k"});
     app.flag("list", {"l"});
     app.option("extension", {"e"});
@@ -180,6 +181,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("benchmark", {"b"});
     app.flag("trace", {"t"});
     app.flag("fast", {"f"});
+    app.flag("format-assertion", {"F"});
     app.flag("continue", {"c"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
@@ -191,6 +193,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "metaschema") {
     app.flag("trace", {"t"});
+    app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});
@@ -198,6 +201,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "compile") {
     app.flag("fast", {"f"});
+    app.flag("format-assertion", {"F"});
     app.flag("minify", {"m"});
     app.option("include", {"n"});
     app.option("entrypoint", {"p"});
@@ -205,6 +209,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     sourcemeta::jsonschema::compile(app);
     return EXIT_SUCCESS;
   } else if (command == "test") {
+    app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
     app.parse(argc, argv, {.skip = 1});

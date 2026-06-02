@@ -10,7 +10,7 @@ jsonschema test [schemas-or-directories...]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
-  [--default-dialect/-d <uri>] [--json/-j]
+  [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -181,4 +181,15 @@ jsonschema test path/to/test.json --resolve path/to/external.json
 
 ```sh
 jsonschema test path/to/test.json --resolve path/to/schemas --extension schema.json
+```
+
+### Run a single test definition forcing every `format` to assert
+
+The `--format-assertion`/`-F` option forces every `format` keyword in the
+schema under test to behave as an assertion regardless of dialect or
+vocabulary, which lets tests cover invalid-format cases without changing the
+schema.
+
+```sh
+jsonschema test path/to/test.json --resolve path/to/schema.json --format-assertion
 ```

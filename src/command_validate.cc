@@ -65,7 +65,8 @@ auto get_schema_template(const sourcemeta::core::JSON &bundled,
       bundled, sourcemeta::blaze::schema_walker, resolver,
       sourcemeta::blaze::default_schema_compiler, frame, entrypoint_uri,
       fast_mode ? sourcemeta::blaze::Mode::FastValidation
-                : sourcemeta::blaze::Mode::Exhaustive);
+                : sourcemeta::blaze::Mode::Exhaustive,
+      sourcemeta::jsonschema::format_assertion_tweaks(options));
 }
 
 auto parse_loop(const sourcemeta::core::Options &options) -> std::uint64_t {

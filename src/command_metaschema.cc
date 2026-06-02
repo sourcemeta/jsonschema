@@ -70,7 +70,8 @@ auto sourcemeta::jsonschema::metaschema(
         const auto metaschema_template{sourcemeta::blaze::compile(
             bundled, sourcemeta::blaze::schema_walker, custom_resolver,
             sourcemeta::blaze::default_schema_compiler, frame, frame.root(),
-            sourcemeta::blaze::Mode::Exhaustive)};
+            sourcemeta::blaze::Mode::Exhaustive,
+            sourcemeta::jsonschema::format_assertion_tweaks(options))};
         cache.insert({std::string{dialect}, metaschema_template});
       }
 

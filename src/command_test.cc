@@ -7,6 +7,7 @@
 #include <algorithm>   // std::find, std::distance
 #include <chrono>      // std::chrono
 #include <iostream>    // std::cout
+#include <optional>    // std::optional
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -24,13 +25,14 @@ namespace {
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::blaze::SchemaResolver &schema_resolver,
-                      const std::string_view dialect, const bool json_output)
+                      const std::string_view dialect, const bool json_output,
+                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
     -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
         entry.second, entry.positions, entry.resolution_base.parent_path(),
         schema_resolver, sourcemeta::blaze::schema_walker,
-        sourcemeta::blaze::default_schema_compiler, dialect);
+        sourcemeta::blaze::default_schema_compiler, dialect, "", tweaks);
   } catch (const sourcemeta::blaze::TestParseError &error) {
     if (!json_output) {
       std::cout << entry.first << ":\n";
@@ -117,7 +119,9 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
     const auto &schema_resolver{sourcemeta::jsonschema::resolver(
         options, options.contains("http"), dialect, configuration)};
 
-    auto test_suite{parse_test_suite(entry, schema_resolver, dialect, false)};
+    auto test_suite{parse_test_suite(
+        entry, schema_resolver, dialect, false,
+        sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
     std::cout << entry.first << ":";
 
@@ -251,7 +255,9 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
     const auto &schema_resolver{sourcemeta::jsonschema::resolver(
         options, options.contains("http"), dialect, configuration)};
 
-    auto test_suite{parse_test_suite(entry, schema_resolver, dialect, true)};
+    auto test_suite{parse_test_suite(
+        entry, schema_resolver, dialect, true,
+        sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
     const auto file_path{entry.first};
 

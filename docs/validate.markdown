@@ -12,7 +12,7 @@ jsonschema validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|di
   [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
   [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
   [--template/-m <template.json>] [--json/-j] [--entrypoint/-p <pointer|uri>]
-  [--continue/-c]
+  [--continue/-c] [--format-assertion/-F]
 ```
 
 The most popular use case of JSON Schema is to validate JSON documents. The
@@ -54,9 +54,11 @@ code 2.
 > The `format` keyword is treated as an annotation by default across all
 > dialects (except 2020-12 with the [Format
 > Assertion](https://www.learnjsonschema.com/2020-12/format-assertion/)
-> vocabulary enabled). To force `format` to behave as an assertion at a
-> specific location, set the custom `x-format-assertion` keyword to `true` as
-> a sibling to `format`. This works across all supported dialects.
+> vocabulary enabled). To force `format` to behave as an assertion, you have
+> two options. Pass `--format-assertion`/`-F` to force every `format` in the
+> schema to assert. Alternatively, set the custom `x-format-assertion` keyword
+> to `true` as a sibling to a specific `format` to force assertion at that
+> location only. Both mechanisms work across all supported dialects.
 
 For example, the following Draft 4 schema asserts that the instance is a valid
 email address rather than just annotating it:
@@ -138,6 +140,12 @@ jsonschema validate path/to/my/schema.json path/to/my/instance.json \
 
 ```sh
 jsonschema validate path/to/my/schema.json path/to/my/instance.json --fast
+```
+
+### Validate a JSON instance forcing every `format` to assert
+
+```sh
+jsonschema validate path/to/my/schema.json path/to/my/instance.json --format-assertion
 ```
 
 ### Validate a multiple JSON instances against a schema
