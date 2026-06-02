@@ -297,6 +297,13 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
         "The --entrypoint option cannot be used with --template"};
   }
 
+  if (options.contains("format-assertion") && options.contains("template") &&
+      !options.at("template").empty()) {
+    throw OptionConflictError{
+        "The --format-assertion option cannot be used with --template. "
+        "Re-compile the template with --format-assertion instead"};
+  }
+
   const auto schema_default_id{
       sourcemeta::jsonschema::default_id(schema_resolution_base)};
 
