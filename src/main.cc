@@ -40,7 +40,7 @@ Commands:
             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
-            [--continue/-c]
+            [--continue/-c] [--format-assertion/-F]
 
        Validate one or more instances against the given schema.
 
@@ -57,6 +57,7 @@ Commands:
 
    metaschema [schemas-or-directories...] [--extension/-e <extension>]
               [--ignore/-i <schemas-or-directories>] [--trace/-t]
+              [--format-assertion/-F]
 
        Validate that a schema or a set of schemas are valid with respect
        to their metaschemas.
@@ -64,13 +65,14 @@ Commands:
    compile <schema.json|.yaml> [--extension/-e <extension>]
            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
            [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
+           [--format-assertion/-F]
 
        Compile the given schema into an internal optimised representation.
        Use --include/-n to output as a C/C++ header file.
        Use --entrypoint/-p to compile a subschema by JSON Pointer or URI.
 
    test [schemas-or-directories...] [--extension/-e <extension>]
-        [--ignore/-i <schemas-or-directories>]
+        [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
@@ -86,7 +88,7 @@ Commands:
         [--keep-ordering/-k] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
-        [--rule/-a <rule-schema>]
+        [--rule/-a <rule-schema>] [--format-assertion/-F]
 
        Lint the input schemas and potentially fix the reported issues.
        The --fix/-f option is not supported when passing YAML schemas.
