@@ -512,10 +512,16 @@ auto sourcemeta::blaze::parse_vocabularies(
     return std::nullopt;
   }
 
-  assert(vocabulary_entry->is_object());
+  if (!vocabulary_entry->is_object()) {
+    return std::nullopt;
+  }
+
   sourcemeta::blaze::Vocabularies result;
   for (const auto &entry : vocabulary_entry->as_object()) {
-    assert(entry.second.is_boolean());
+    if (!entry.second.is_boolean()) {
+      return std::nullopt;
+    }
+
     result.insert(entry.first, entry.second.to_boolean());
   }
 
