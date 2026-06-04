@@ -125,17 +125,12 @@ inline auto
 merge_configuration_ignore(const std::filesystem::path &configuration_path,
                            std::set<std::filesystem::path> &blacklist,
                            const sourcemeta::core::Options &options) -> void {
-  try {
-    const auto configuration{sourcemeta::blaze::Configuration::read_json(
-        configuration_path, sourcemeta::core::read_file_to_string<>)};
-    for (const auto &ignore_path : configuration.ignore) {
-      LOG_VERBOSE(options) << "Ignoring path from configuration: "
-                           << ignore_path << "\n";
-      blacklist.insert(ignore_path);
-    }
-  } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-    throw sourcemeta::core::FileError<
-        sourcemeta::blaze::ConfigurationParseError>(configuration_path, error);
+  const auto &configuration{load_configuration(options, configuration_path)};
+  assert(configuration.has_value());
+  for (const auto &ignore_path : configuration.value().ignore) {
+    LOG_VERBOSE(options) << "Ignoring path from configuration: " << ignore_path
+                         << "\n";
+    blacklist.insert(ignore_path);
   }
 }
 
@@ -486,27 +481,18 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
     }
 
     for (const auto &entry : arguments) {
-      std::optional<sourcemeta::blaze::Configuration> entry_configuration{
+      std::optional<std::filesystem::path> entry_configuration_path{
           std::nullopt};
       if (entry != "-") {
         const auto entry_path{
             sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
-        const auto configuration_path{
+        entry_configuration_path =
             find_configuration(std::filesystem::is_directory(entry_path)
                                    ? entry_path
-                                   : entry_path.parent_path())};
-        if (configuration_path.has_value()) {
-          try {
-            entry_configuration = sourcemeta::blaze::Configuration::read_json(
-                configuration_path.value(),
-                sourcemeta::core::read_file_to_string<>);
-          } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-            throw sourcemeta::core::FileError<
-                sourcemeta::blaze::ConfigurationParseError>(
-                configuration_path.value(), error);
-          }
-        }
+                                   : entry_path.parent_path());
       }
+      const auto &entry_configuration{
+          load_configuration(options, entry_configuration_path)};
       const auto &extensions{parse_extensions(options, entry_configuration)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);

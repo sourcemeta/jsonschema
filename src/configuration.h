@@ -28,22 +28,19 @@ inline auto find_configuration(const std::filesystem::path &path)
   return sourcemeta::blaze::Configuration::find(path);
 }
 
-inline auto read_configuration(
+inline auto load_configuration(
     const sourcemeta::core::Options &options,
-    const std::optional<std::filesystem::path> &configuration_path,
-    const std::optional<std::filesystem::path> &schema_path = std::nullopt)
+    const std::optional<std::filesystem::path> &configuration_path)
     -> const std::optional<sourcemeta::blaze::Configuration> & {
   using CacheKey = std::optional<std::filesystem::path>;
   static std::map<CacheKey, std::optional<sourcemeta::blaze::Configuration>>
       configuration_cache;
 
-  // Check if configuration is already cached for this path
   auto iterator{configuration_cache.find(configuration_path)};
   if (iterator != configuration_cache.end()) {
     return iterator->second;
   }
 
-  // Compute and cache the configuration
   std::optional<sourcemeta::blaze::Configuration> result{std::nullopt};
   if (configuration_path.has_value()) {
     LOG_DEBUG(options) << "Using configuration file: "
@@ -95,21 +92,31 @@ inline auto read_configuration(
         }
       }
     }
-
-    if (schema_path.has_value() &&
-        !result.value().applies_to(schema_path.value())) {
-      LOG_DEBUG(options)
-          << "Ignoring configuration file given extensions mismatch: "
-          << sourcemeta::core::weakly_canonical(configuration_path.value())
-                 .string()
-          << "\n";
-      result = std::nullopt;
-    }
   }
 
   auto [inserted_iterator, inserted] =
       configuration_cache.emplace(configuration_path, std::move(result));
   return inserted_iterator->second;
+}
+
+inline auto read_configuration(
+    const sourcemeta::core::Options &options,
+    const std::optional<std::filesystem::path> &configuration_path,
+    const std::optional<std::filesystem::path> &schema_path = std::nullopt)
+    -> const std::optional<sourcemeta::blaze::Configuration> & {
+  const auto &configuration{load_configuration(options, configuration_path)};
+  if (configuration.has_value() && schema_path.has_value() &&
+      !configuration.value().applies_to(schema_path.value())) {
+    LOG_DEBUG(options)
+        << "Ignoring configuration file given extensions mismatch: "
+        << sourcemeta::core::weakly_canonical(configuration_path.value())
+               .string()
+        << "\n";
+    static const std::optional<sourcemeta::blaze::Configuration> empty{
+        std::nullopt};
+    return empty;
+  }
+  return configuration;
 }
 
 } // namespace sourcemeta::jsonschema
