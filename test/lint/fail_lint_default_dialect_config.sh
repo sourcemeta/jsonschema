@@ -29,6 +29,9 @@ cd "$TMP"
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 Linting: $(realpath "$TMP")/schema.json
 schema.json:5:3:
   Setting \`type\` alongside \`enum\` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)

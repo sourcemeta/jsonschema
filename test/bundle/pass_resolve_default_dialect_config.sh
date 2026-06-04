@@ -54,6 +54,9 @@ EOF
 diff "$TMP/result.json" "$TMP/expected.json"
 
 cat << 'EOF' > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

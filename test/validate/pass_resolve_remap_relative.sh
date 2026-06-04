@@ -46,6 +46,9 @@ cd "$TMP"
   --resolve remote.json --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 ok: $(realpath "$TMP")/instance.json
   matches $(realpath "$TMP")/schema.json
 EOF

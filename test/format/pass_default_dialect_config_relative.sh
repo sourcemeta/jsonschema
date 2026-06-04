@@ -39,6 +39,9 @@ EOF
 diff "$TMP/schema.json" "$TMP/expected.json"
 
 cat << EOF > "$TMP/expected_output.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 Formatting: $(realpath "$TMP")/schema.json
 EOF
 

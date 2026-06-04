@@ -49,6 +49,9 @@ cd "$TMP"
 "$1" test test.json --resolve schema.json --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 $(realpath "$TMP")/test.json:
   1/2 PASS First test
   2/2 PASS Invalid type

@@ -49,6 +49,9 @@ cd "$TMP"
 "$BIN" lint v2/person.json --verbose > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 Linting: $(realpath "$TMP")/v2/person.json
 EOF
 
