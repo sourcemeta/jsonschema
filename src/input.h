@@ -485,22 +485,29 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       }
     }
 
-    std::optional<sourcemeta::blaze::Configuration> shared_configuration{
-        std::nullopt};
-    if (seen_configurations.size() == 1) {
-      const std::filesystem::path shared_configuration_path{
-          *seen_configurations.begin()};
-      try {
-        shared_configuration = sourcemeta::blaze::Configuration::read_json(
-            shared_configuration_path, sourcemeta::core::read_file_to_string<>);
-      } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
-        throw sourcemeta::core::FileError<
-            sourcemeta::blaze::ConfigurationParseError>(
-            shared_configuration_path, error);
-      }
-    }
-    const auto extensions{parse_extensions(options, shared_configuration)};
     for (const auto &entry : arguments) {
+      std::optional<sourcemeta::blaze::Configuration> entry_configuration{
+          std::nullopt};
+      if (entry != "-") {
+        const auto entry_path{
+            sourcemeta::core::weakly_canonical(std::filesystem::path{entry})};
+        const auto configuration_path{
+            find_configuration(std::filesystem::is_directory(entry_path)
+                                   ? entry_path
+                                   : entry_path.parent_path())};
+        if (configuration_path.has_value()) {
+          try {
+            entry_configuration = sourcemeta::blaze::Configuration::read_json(
+                configuration_path.value(),
+                sourcemeta::core::read_file_to_string<>);
+          } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+            throw sourcemeta::core::FileError<
+                sourcemeta::blaze::ConfigurationParseError>(
+                configuration_path.value(), error);
+          }
+        }
+      }
+      const auto &extensions{parse_extensions(options, entry_configuration)};
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);
       std::sort(
