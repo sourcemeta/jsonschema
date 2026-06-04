@@ -23,6 +23,7 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .schema.json
 error: Could not determine the base dialect of the schema
   at file path $(realpath "$TMP/document.json")
 

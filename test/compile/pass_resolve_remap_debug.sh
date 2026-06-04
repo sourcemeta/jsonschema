@@ -106,6 +106,9 @@ diff "$TMP/template.json" "$TMP/expected.json"
 
 cat << EOF > "$TMP/expected.txt"
 debug: Using configuration file: $(realpath "$TMP")/jsonschema.json
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 debug: Detecting schema resources from file: $(realpath "$TMP")/remote.json
 debug: Importing schema into the resolution context: file://$(realpath "$TMP")/remote.json
 debug: Importing schema into the resolution context: https://example.com/nested

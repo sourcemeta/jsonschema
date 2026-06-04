@@ -485,7 +485,21 @@ inline auto for_each_json(const std::vector<std::string_view> &arguments,
       }
     }
 
-    const auto extensions{parse_extensions(options, std::nullopt)};
+    std::optional<sourcemeta::blaze::Configuration> shared_configuration{
+        std::nullopt};
+    if (seen_configurations.size() == 1) {
+      const std::filesystem::path shared_configuration_path{
+          *seen_configurations.begin()};
+      try {
+        shared_configuration = sourcemeta::blaze::Configuration::read_json(
+            shared_configuration_path, sourcemeta::core::read_file_to_string<>);
+      } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+        throw sourcemeta::core::FileError<
+            sourcemeta::blaze::ConfigurationParseError>(
+            shared_configuration_path, error);
+      }
+    }
+    const auto extensions{parse_extensions(options, shared_configuration)};
     for (const auto &entry : arguments) {
       const auto before{result.size()};
       handle_json_entry(entry, blacklist, extensions, result, options);

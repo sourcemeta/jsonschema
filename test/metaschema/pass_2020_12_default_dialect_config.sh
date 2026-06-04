@@ -27,6 +27,9 @@ EOF
 "$1" metaschema --verbose "$TMP/schema.json" 2> "$TMP/output.txt"
 
 cat << EOF > "$TMP/expected.txt"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 ok: $(realpath "$TMP")/schema.json
   matches https://json-schema.org/draft/2020-12/schema
 EOF

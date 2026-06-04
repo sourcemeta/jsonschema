@@ -50,6 +50,9 @@ EOF
 cat << EOF > "$TMP/expected.txt"
 Ignoring path: "$(realpath "$TMP")/instances/experimental"
 Ignoring path from configuration: "$(realpath "$TMP")/instances/drafts"
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 ok: $(realpath "$TMP")/instances/valid.json
   matches $(realpath "$TMP")/schema.json
 EOF

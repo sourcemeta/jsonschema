@@ -40,6 +40,9 @@ cd "$TMP"
 cat << EOF > "$TMP/expected.txt"
 Loading custom rule from configuration: $(realpath "$TMP")/rule.json
 Only enabling rule: require_type
+Using extension: .json
+Using extension: .yaml
+Using extension: .yml
 Linting: $(realpath "$TMP")/schema.json
 EOF
 
