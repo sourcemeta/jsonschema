@@ -198,7 +198,8 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
     std::ignore = transformer.apply(
         schema, sourcemeta::blaze::schema_walker, custom_resolver,
         [](const auto &, const auto, const auto, const auto &, const auto) {},
-        dialect, sourcemeta::jsonschema::default_id(schema_resolution_base));
+        dialect, sourcemeta::jsonschema::default_id(schema_resolution_base), "",
+        options.contains("meta"));
   }
 
   sourcemeta::blaze::format(schema, sourcemeta::blaze::schema_walker,
