@@ -48,7 +48,8 @@ auto check_rules(
     const sourcemeta::blaze::SchemaResolver &resolver,
     const sourcemeta::blaze::SchemaTransformer::Callback &callback,
     const sourcemeta::core::JSON::String &exclude_keyword,
-    const bool non_mutating_only) -> std::pair<bool, std::uint8_t> {
+    const bool non_mutating_only, const bool is_metaschema)
+    -> std::pair<bool, std::uint8_t> {
   std::unordered_set<sourcemeta::core::Pointer,
                      sourcemeta::core::Pointer::Hasher>
       visited;
@@ -84,7 +85,7 @@ auto check_rules(
 
       const auto outcome{rule->check(current, schema, current_vocabularies,
                                      walker, resolver, frame, entry.second,
-                                     exclude_keyword)};
+                                     exclude_keyword, is_metaschema)};
       if (outcome.applies) {
         subschema_failed = true;
         callback(entry_pointer, rule->name(), rule->message(), outcome,
@@ -150,17 +151,15 @@ auto SchemaTransformRule::rereference(const std::string_view reference,
                                    "The reference broke after transformation");
 }
 
-auto SchemaTransformRule::check(const core::JSON &schema,
-                                const core::JSON &root,
-                                const blaze::Vocabularies &vocabularies,
-                                const blaze::SchemaWalker &walker,
-                                const blaze::SchemaResolver &resolver,
-                                const blaze::SchemaFrame &frame,
-                                const blaze::SchemaFrame::Location &location,
-                                const core::JSON::String &exclude_keyword) const
+auto SchemaTransformRule::check(
+    const core::JSON &schema, const core::JSON &root,
+    const blaze::Vocabularies &vocabularies, const blaze::SchemaWalker &walker,
+    const blaze::SchemaResolver &resolver, const blaze::SchemaFrame &frame,
+    const blaze::SchemaFrame::Location &location,
+    const core::JSON::String &exclude_keyword, const bool is_metaschema) const
     -> SchemaTransformRule::Result {
   auto result{this->condition(schema, root, vocabularies, frame, location,
-                              walker, resolver)};
+                              walker, resolver, is_metaschema)};
 
   if (result.applies && !exclude_keyword.empty() && schema.is_object()) {
     const auto *exclude_value{schema.try_at(exclude_keyword)};
@@ -182,12 +181,13 @@ auto SchemaTransformer::check(const core::JSON &schema,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
                               std::string_view default_id,
-                              const core::JSON::String &exclude_keyword) const
+                              const core::JSON::String &exclude_keyword,
+                              const bool is_metaschema) const
     -> std::pair<bool, std::uint8_t> {
   blaze::SchemaFrame frame{blaze::SchemaFrame::Mode::References};
   analyse_frame(frame, schema, walker, resolver, default_dialect, default_id);
   return check_rules(schema, frame, this->rules, walker, resolver, callback,
-                     exclude_keyword, false);
+                     exclude_keyword, false, is_metaschema);
 }
 
 auto SchemaTransformer::apply(core::JSON &schema,
@@ -196,7 +196,8 @@ auto SchemaTransformer::apply(core::JSON &schema,
                               const SchemaTransformer::Callback &callback,
                               std::string_view default_dialect,
                               std::string_view default_id,
-                              const core::JSON::String &exclude_keyword) const
+                              const core::JSON::String &exclude_keyword,
+                              const bool is_metaschema) const
     -> std::pair<bool, std::uint8_t> {
   assert(!this->rules.empty());
   std::unordered_set<std::tuple<core::Pointer, std::string_view, core::JSON>,
@@ -251,8 +252,8 @@ auto SchemaTransformer::apply(core::JSON &schema,
         }
 
         auto outcome{rule->check(current, schema, current_vocabularies, walker,
-                                 resolver, frame, entry.second,
-                                 exclude_keyword)};
+                                 resolver, frame, entry.second, exclude_keyword,
+                                 is_metaschema)};
 
         if (!outcome.applies) {
           continue;
@@ -353,7 +354,8 @@ auto SchemaTransformer::apply(core::JSON &schema,
             frame.vocabularies(new_location.value().get(), resolver)};
 
         if (rule->check(current, schema, new_vocabularies, walker, resolver,
-                        frame, new_location.value().get(), exclude_keyword)
+                        frame, new_location.value().get(), exclude_keyword,
+                        is_metaschema)
                 .applies) {
           std::ostringstream error;
           error << "Rule condition holds after application: " << rule->name();
@@ -394,7 +396,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
   }
 
   return check_rules(schema, frame, this->rules, walker, resolver, callback,
-                     exclude_keyword, true);
+                     exclude_keyword, true, is_metaschema);
 }
 
 auto SchemaTransformer::remove(const std::string_view name) -> bool {

@@ -12,7 +12,7 @@ public:
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver) const
+            const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(
         vocabularies.contains_any(

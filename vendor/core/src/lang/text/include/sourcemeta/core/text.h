@@ -108,6 +108,69 @@ auto to_lowercase(std::filesystem::path &value) -> void;
 
 /// @ingroup text
 ///
+/// Return whether a character is not ASCII uppercase. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_lowercase('a'));
+/// assert(!sourcemeta::core::is_lowercase('A'));
+/// assert(sourcemeta::core::is_lowercase('5'));
+/// ```
+template <typename Character>
+  requires std::same_as<Character, char> ||
+           std::same_as<Character, signed char> ||
+           std::same_as<Character, unsigned char> ||
+           std::same_as<Character, wchar_t>
+inline constexpr auto is_lowercase(const Character character) noexcept -> bool {
+  return character < 'A' || character > 'Z';
+}
+
+/// @ingroup text
+///
+/// Return whether every code unit of a string is not ASCII uppercase. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// assert(sourcemeta::core::is_lowercase(std::string{"hello"}));
+/// assert(!sourcemeta::core::is_lowercase(std::string{"Hello"}));
+/// ```
+template <typename String>
+  requires requires(const String &value) {
+    { is_lowercase(*value.begin()) } -> std::same_as<bool>;
+  }
+inline auto is_lowercase(const String &value) noexcept -> bool {
+  for (const auto character : value) {
+    if (!is_lowercase(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// @ingroup text
+///
+/// Return whether every code unit of a filesystem path is not ASCII
+/// uppercase. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+/// #include <filesystem>
+///
+/// assert(sourcemeta::core::is_lowercase(std::filesystem::path{"/foo/bar"}));
+/// assert(!sourcemeta::core::is_lowercase(std::filesystem::path{"/Foo/Bar"}));
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto is_lowercase(const std::filesystem::path &value) noexcept -> bool;
+
+/// @ingroup text
+///
 /// Truncate a string in place to at most `maximum_length` bytes, appending
 /// `marker` on truncation. Rewinds to a UTF-8 code-point boundary so
 /// multi-byte characters are never split. For example:

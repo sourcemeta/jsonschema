@@ -5,8 +5,8 @@
 #include <sourcemeta/core/numeric_export.h>
 #endif
 
-#include <cstdint>     // std::int64_t, std::uint32_t, std::uint64_t
-#include <optional>    // std::optional
+#include <cstdint>  // std::int64_t, std::uint16_t, std::uint32_t, std::uint64_t
+#include <optional> // std::optional
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
@@ -45,6 +45,12 @@ auto to_uint32_t(const std::string_view input) noexcept
 SOURCEMETA_CORE_NUMERIC_EXPORT
 auto to_uint32_t(const std::string_view input, const int base) noexcept
     -> std::optional<std::uint32_t>;
+
+/// @ingroup numeric
+/// Attempt to parse a string as an unsigned 16-bit decimal integer
+SOURCEMETA_CORE_NUMERIC_EXPORT
+auto to_uint16_t(const std::string_view input) noexcept
+    -> std::optional<std::uint16_t>;
 
 } // namespace sourcemeta::core
 

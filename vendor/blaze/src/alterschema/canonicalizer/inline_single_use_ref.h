@@ -11,7 +11,7 @@ public:
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const
+            const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object() && schema.size() == 1);
 
