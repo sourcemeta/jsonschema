@@ -104,8 +104,8 @@ Commands:
        Upgrade the given schema to a newer JSON Schema dialect.
        Defaults to the latest dialect (2020-12). Schemas that declare a
        custom meta-schema cannot be upgraded by this command.
-       Pass --meta/-m when the input is itself a meta-schema
-       (not auto-detectable obvious on Draft 7 and older dialects).
+       Pass --meta/-m as a hint when the input is a meta-schema
+       (not auto-detectable on Draft 7 and older dialects).
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
