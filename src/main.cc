@@ -99,11 +99,13 @@ Commands:
        Use --rule/-a to add a custom lint rule defined as a JSON Schema.
 
    upgrade <schema.json|.yaml>
-           [--to/-t draft4|draft6|draft7|2019-09|2020-12]
+           [--to/-t draft4|draft6|draft7|2019-09|2020-12] [--meta/-m]
 
        Upgrade the given schema to a newer JSON Schema dialect.
        Defaults to the latest dialect (2020-12). Schemas that declare a
        custom meta-schema cannot be upgraded by this command.
+       Pass --meta/-m when the input is itself a meta-schema
+       (not auto-detectable obvious on Draft 7 and older dialects).
 
    bundle <schema.json|.yaml> [--extension/-e <extension>]
           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
@@ -239,6 +241,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     return EXIT_SUCCESS;
   } else if (command == "upgrade") {
     app.option("to", {"t"});
+    app.flag("meta", {"m"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
     return EXIT_SUCCESS;

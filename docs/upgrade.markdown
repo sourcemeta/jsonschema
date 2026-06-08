@@ -3,7 +3,7 @@ Upgrading
 
 ```sh
 jsonschema upgrade <schema.json|.yaml> [--to/-t draft4|draft6|draft7|2019-09|2020-12]
-  [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
+  [--meta/-m] [--http/-h] [--verbose/-v] [--debug/-g] [--json/-j]
   [--header/-H "<name>: <value>"]
   [--resolve/-r <schemas-or-directories> ...]
   [--default-dialect/-d <uri>]
@@ -75,6 +75,15 @@ The result will be something like this:
 > the schema unchanged. For example, asking the CLI to upgrade a 2020-12
 > schema to Draft 7 will do nothing.
 
+> [!NOTE]
+> Pass `--meta/-m` when the input schema is itself a meta-schema (a schema
+> intended to describe other schemas). From JSON Schema 2019-09 onwards,
+> meta-schemas are required to declare a `$vocabulary` keyword. When the
+> flag is set, the upgrade synthesizes the standard `$vocabulary` block
+> for the target dialect at the document root if one is not already
+> present. This is mainly relevant when upgrading from Draft 7 to
+> 2019-09 (or transitively to 2020-12).
+
 Examples
 --------
 
@@ -114,4 +123,10 @@ jsonschema upgrade path/to/schema.json \
 
 ```sh
 jsonschema upgrade path/to/schema.yaml
+```
+
+### Upgrade a Draft 7 meta-schema to a newer dialect
+
+```sh
+jsonschema upgrade path/to/metaschema.json --to 2019-09 --meta
 ```
