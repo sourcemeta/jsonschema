@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const
+            const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     static const JSON::String KEYWORD{"anyOf"};
     ONLY_CONTINUE_IF(vocabularies.contains_any(

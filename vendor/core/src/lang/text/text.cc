@@ -25,6 +25,10 @@ auto to_lowercase(std::filesystem::path &value) -> void {
   value = std::filesystem::path{std::move(native)};
 }
 
+auto is_lowercase(const std::filesystem::path &value) noexcept -> bool {
+  return is_lowercase(value.native());
+}
+
 auto to_title_case(std::string &value) -> void {
   std::size_t write{0};
   bool capitalize_next{true};

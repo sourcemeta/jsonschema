@@ -10,7 +10,7 @@ public:
   [[nodiscard]] auto
   condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
             const SchemaFrame &, const SchemaFrame::Location &,
-            const SchemaWalker &, const SchemaResolver &) const
+            const SchemaWalker &, const SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_2020_12_Applicator,

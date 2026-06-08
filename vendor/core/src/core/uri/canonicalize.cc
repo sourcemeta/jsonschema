@@ -1,37 +1,23 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
 #include "normalize.h"
 
-#include <cctype>   // std::tolower
 #include <optional> // std::optional
 #include <string>   // std::string
-
-namespace {
-
-auto to_lowercase(const std::string_view input) -> std::string {
-  std::string result;
-  result.reserve(input.size());
-  for (const auto character : input) {
-    result +=
-        static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
-  }
-  return result;
-}
-
-} // namespace
 
 namespace sourcemeta::core {
 
 auto URI::canonicalize() -> URI & {
   // Lowercase scheme (schemes are case-insensitive per RFC 3986)
   if (this->scheme_.has_value()) {
-    this->scheme_ = to_lowercase(this->scheme_.value());
+    sourcemeta::core::to_lowercase(this->scheme_.value());
   }
 
   // Lowercase host (hostnames are case-insensitive per RFC 3986)
   if (this->host_.has_value()) {
-    this->host_ = to_lowercase(this->host_.value());
+    sourcemeta::core::to_lowercase(this->host_.value());
   }
 
   // Canonicalize path by removing "." and ".." segments

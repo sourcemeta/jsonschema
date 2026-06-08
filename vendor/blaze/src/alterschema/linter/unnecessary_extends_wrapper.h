@@ -13,8 +13,8 @@ public:
   [[nodiscard]] auto
   condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
             const SchemaFrame &frame, const SchemaFrame::Location &location,
-            const SchemaWalker &walker, const SchemaResolver &) const
-      -> SchemaTransformRule::Result override {
+            const SchemaWalker &walker, const SchemaResolver &,
+            const bool) const -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(vocabularies.contains_any(
         {Vocabularies::Known::JSON_Schema_Draft_3,
          Vocabularies::Known::JSON_Schema_Draft_3_Hyper}));

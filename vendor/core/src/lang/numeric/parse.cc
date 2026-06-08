@@ -67,4 +67,16 @@ auto to_uint32_t(const std::string_view input, const int base) noexcept
   return value;
 }
 
+auto to_uint16_t(const std::string_view input) noexcept
+    -> std::optional<std::uint16_t> {
+  std::uint16_t value{};
+  const auto result =
+      std::from_chars(input.data(), input.data() + input.size(), value);
+  if (result.ec != std::errc{} || result.ptr != input.data() + input.size()) {
+    return std::nullopt;
+  }
+
+  return value;
+}
+
 } // namespace sourcemeta::core

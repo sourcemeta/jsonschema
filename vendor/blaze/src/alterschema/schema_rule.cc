@@ -79,8 +79,8 @@ auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
                            const sourcemeta::blaze::SchemaFrame &,
                            const sourcemeta::blaze::SchemaFrame::Location &,
                            const sourcemeta::blaze::SchemaWalker &,
-                           const sourcemeta::blaze::SchemaResolver &) const
-    -> SchemaTransformRule::Result {
+                           const sourcemeta::blaze::SchemaResolver &,
+                           const bool) const -> SchemaTransformRule::Result {
   SimpleOutput output{schema};
   Evaluator evaluator;
   const auto result{

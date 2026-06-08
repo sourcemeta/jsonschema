@@ -8,6 +8,7 @@
 // NOLINTBEGIN(misc-include-cleaner)
 #include <sourcemeta/core/io_atomic.h>
 #include <sourcemeta/core/io_binary.h>
+#include <sourcemeta/core/io_bytestream.h>
 #include <sourcemeta/core/io_error.h>
 #include <sourcemeta/core/io_fileview.h>
 #include <sourcemeta/core/io_temporary.h>

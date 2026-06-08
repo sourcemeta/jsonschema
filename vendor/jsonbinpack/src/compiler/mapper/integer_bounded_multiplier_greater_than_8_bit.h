@@ -14,7 +14,7 @@ public:
             const sourcemeta::blaze::SchemaFrame &,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &,
-            const sourcemeta::blaze::SchemaResolver &) const
+            const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> sourcemeta::blaze::SchemaTransformRule::Result override {
     if (location.dialect != "https://json-schema.org/draft/2020-12/schema" ||
         !vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::

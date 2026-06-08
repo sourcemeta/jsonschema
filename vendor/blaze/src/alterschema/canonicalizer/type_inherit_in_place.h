@@ -15,7 +15,7 @@ public:
             const sourcemeta::blaze::SchemaFrame &frame,
             const sourcemeta::blaze::SchemaFrame::Location &location,
             const sourcemeta::blaze::SchemaWalker &walker,
-            const sourcemeta::blaze::SchemaResolver &resolver) const
+            const sourcemeta::blaze::SchemaResolver &resolver, const bool) const
       -> SchemaTransformRule::Result override {
     using namespace sourcemeta::core;
     ONLY_CONTINUE_IF(schema.is_object());

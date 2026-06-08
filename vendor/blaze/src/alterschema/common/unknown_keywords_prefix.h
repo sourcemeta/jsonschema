@@ -12,8 +12,8 @@ public:
   [[nodiscard]] auto
   condition(const JSON &schema, const JSON &, const Vocabularies &vocabularies,
             const SchemaFrame &, const SchemaFrame::Location &,
-            const SchemaWalker &walker, const SchemaResolver &) const
-      -> SchemaTransformRule::Result override {
+            const SchemaWalker &walker, const SchemaResolver &,
+            const bool) const -> SchemaTransformRule::Result override {
     ONLY_CONTINUE_IF(schema.is_object());
     std::vector<Pointer> locations;
     for (const auto &entry : schema.as_object()) {

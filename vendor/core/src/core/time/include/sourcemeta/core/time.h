@@ -9,6 +9,7 @@
 #include <cassert>     // assert
 #include <chrono>      // std::chrono::system_clock::time_point
 #include <cstdint>     // std::uint8_t, std::uint16_t
+#include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -25,64 +26,97 @@
 namespace sourcemeta::core {
 
 /// @ingroup time
-/// Convert a time point into a GMT string. For example:
+/// Format a time point as an RFC 9110 §5.6.7 IMF-fixdate string. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/time.h>
-///
-/// #include <chrono>
-/// #include <ctime>
 /// #include <cassert>
 ///
-/// std::tm parts = {};
-/// parts.tm_year = 115;
-/// parts.tm_mon = 9;
-/// parts.tm_mday = 21;
-/// parts.tm_hour = 11;
-/// parts.tm_min = 28;
-/// parts.tm_sec = 0;
-/// parts.tm_isdst = 0;
-///
-/// const auto point{std::chrono::system_clock::from_time_t(timegm(&parts))};
-///
-/// assert(sourcemeta::core::to_gmt(point) ==
-///   "Wed, 21 Oct 2015 11:28:00 GMT");
+/// const auto point{std::chrono::system_clock::from_time_t(0)};
+/// assert(sourcemeta::core::to_imf_fixdate(point) ==
+///   "Thu, 01 Jan 1970 00:00:00 GMT");
 /// ```
-///
-/// On Windows, you might need to use `_mkgmtime` instead of `timegm`.
 SOURCEMETA_CORE_TIME_EXPORT
-auto to_gmt(const std::chrono::system_clock::time_point time) -> std::string;
+auto to_imf_fixdate(const std::chrono::system_clock::time_point time)
+    -> std::string;
 
 /// @ingroup time
-/// Parse a GMT string into a time point. For example:
+/// Parse an RFC 9110 §5.6.7 IMF-fixdate string into a time point. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/time.h>
-///
-/// #include <chrono>
-/// #include <ctime>
 /// #include <cassert>
 ///
 /// const auto point{
-///     sourcemeta::core::from_gmt("Wed, 21 Oct 2015 11:28:00 GMT")};
-///
-/// std::tm parts = {};
-/// parts.tm_year = 115;
-/// parts.tm_mon = 9;
-/// parts.tm_mday = 21;
-/// parts.tm_hour = 11;
-/// parts.tm_min = 28;
-/// parts.tm_sec = 0;
-/// parts.tm_isdst = 0;
-/// const auto expected{std::chrono::system_clock::from_time_t(timegm(&parts))};
-///
-/// assert(point = expected);
+///     sourcemeta::core::from_imf_fixdate("Thu, 01 Jan 1970 00:00:00 GMT")};
+/// assert(point.has_value());
 /// ```
-///
-/// On Windows, you might need to use `_mkgmtime` instead of `timegm`.
 SOURCEMETA_CORE_TIME_EXPORT
-auto from_gmt(const std::string_view time)
-    -> std::chrono::system_clock::time_point;
+auto from_imf_fixdate(const std::string_view value) noexcept
+    -> std::optional<std::chrono::system_clock::time_point>;
+
+/// @ingroup time
+/// Format a time point as an RFC 850 date string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{std::chrono::system_clock::from_time_t(0)};
+/// assert(sourcemeta::core::to_rfc850_date(point) ==
+///   "Thursday, 01-Jan-70 00:00:00 GMT");
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto to_rfc850_date(const std::chrono::system_clock::time_point time)
+    -> std::string;
+
+/// @ingroup time
+/// Parse an RFC 850 date string into a time point. The two-digit year is
+/// interpreted per RFC 9110 §5.6.7. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{
+///     sourcemeta::core::from_rfc850_date("Sunday, 06-Nov-94 08:49:37 GMT")};
+/// assert(point.has_value());
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto from_rfc850_date(const std::string_view value) noexcept
+    -> std::optional<std::chrono::system_clock::time_point>;
+
+/// @ingroup time
+/// Format a time point as an RFC 9110 §5.6.7 asctime-date string. The output
+/// matches the ANSI C `asctime()` field layout but omits the trailing newline
+/// that `asctime()` itself appends. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{std::chrono::system_clock::from_time_t(0)};
+/// assert(sourcemeta::core::to_asctime(point) == "Thu Jan  1 00:00:00 1970");
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto to_asctime(const std::chrono::system_clock::time_point time)
+    -> std::string;
+
+/// @ingroup time
+/// Parse an RFC 9110 §5.6.7 asctime-date string into a time point. The format
+/// has no timezone token and is interpreted as GMT. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{
+///     sourcemeta::core::from_asctime("Sun Nov  6 08:49:37 1994")};
+/// assert(point.has_value());
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto from_asctime(const std::string_view value) noexcept
+    -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time
 /// Check whether the given string is a valid date-time value per RFC 3339

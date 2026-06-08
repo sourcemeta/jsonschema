@@ -111,13 +111,13 @@ public:
              const Compiler &compiler,
              const std::string_view default_dialect = "",
              const std::optional<Tweaks> &tweaks = std::nullopt);
-  [[nodiscard]] auto condition(const sourcemeta::core::JSON &,
-                               const sourcemeta::core::JSON &,
-                               const sourcemeta::blaze::Vocabularies &,
-                               const sourcemeta::blaze::SchemaFrame &,
-                               const sourcemeta::blaze::SchemaFrame::Location &,
-                               const sourcemeta::blaze::SchemaWalker &,
-                               const sourcemeta::blaze::SchemaResolver &) const
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &, const sourcemeta::core::JSON &,
+            const sourcemeta::blaze::Vocabularies &,
+            const sourcemeta::blaze::SchemaFrame &,
+            const sourcemeta::blaze::SchemaFrame::Location &,
+            const sourcemeta::blaze::SchemaWalker &,
+            const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override;
 
 private:
