@@ -30,8 +30,7 @@ EOF
 cat << 'EOF' > "$TMP/jsonschema.json"
 {
   "resolve": {
-    "https://example.com/other": "https://example.com/middle",
-    "https://example.com/middle": "https://example.com/nested"
+    "https://example.com/other": "https://example.com/nested"
   }
 }
 EOF
@@ -112,8 +111,7 @@ Using extension: .yml
 debug: Detecting schema resources from file: $(realpath "$TMP")/remote.json
 debug: Importing schema into the resolution context: file://$(realpath "$TMP")/remote.json
 debug: Importing schema into the resolution context: https://example.com/nested
-debug: Resolving https://example.com/other as https://example.com/middle given the configuration file
-debug: Resolving https://example.com/middle as https://example.com/nested given the configuration file
+debug: Resolving https://example.com/other as https://example.com/nested given the configuration file
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -58,7 +58,7 @@ describes the available configuration options:
 | `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema` | - |
 | `extension` | String / String[] | The schema extension/s used by the project | `.json` / `.yaml` / `.yml` |
 | `ignore` | String[] | Paths to ignore relative to `jsonschema.json`. Glob patterns are not currently supported | `[]` |
-| `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping | `{}` |
+| `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping. Lookups are non-transitive: the value of a matching entry is the final target and is not itself looked up in `resolve` again | `{}` |
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 | `lint` | Object | Lint configuration | `{}` |
 | `lint.rules` | String[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)) | `[]` |

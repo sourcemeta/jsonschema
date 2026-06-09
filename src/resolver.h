@@ -399,18 +399,18 @@ public:
             -> std::optional<std::string> {
           return resolve_map_uri(config, string_identifier);
         });
+    const std::string &target{mapped_result.has_value() ? mapped_result.value()
+                                                        : string_identifier};
     if (mapped_result.has_value()) {
-      LOG_DEBUG(this->options_)
-          << "Resolving " << identifier << " as " << mapped_result.value()
-          << " given the configuration file\n";
-      return this->operator()(mapped_result.value());
+      LOG_DEBUG(this->options_) << "Resolving " << identifier << " as "
+                                << target << " given the configuration file\n";
     }
 
-    if (this->schemas.contains(string_identifier)) {
-      return this->schemas.at(string_identifier);
+    if (this->schemas.contains(target)) {
+      return this->schemas.at(target);
     }
 
-    return fetch_schema(this->options_, identifier, this->remote_);
+    return fetch_schema(this->options_, target, this->remote_);
   }
 
 private:
