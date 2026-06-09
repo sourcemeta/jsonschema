@@ -38,8 +38,7 @@ EOF
 cat << 'EOF' > "$TMP/jsonschema.json"
 {
   "resolve": {
-    "https://example.com/other": "https://example.com/middle",
-    "https://example.com/middle": "https://example.com"
+    "https://example.com/other": "https://example.com"
   }
 }
 EOF
