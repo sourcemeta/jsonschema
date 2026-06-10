@@ -92,6 +92,17 @@ inline auto load_configuration(
         }
       }
     }
+
+    if (result.value().default_dialect.has_value()) {
+      try {
+        const sourcemeta::core::URI dialect_uri{
+            result.value().default_dialect.value()};
+        static_cast<void>(dialect_uri);
+      } catch (const sourcemeta::core::URIParseError &) {
+        throw sourcemeta::core::FileError<InvalidDefaultDialectError>{
+            configuration_path.value(), result.value().default_dialect.value()};
+      }
+    }
   }
 
   auto [inserted_iterator, inserted] =

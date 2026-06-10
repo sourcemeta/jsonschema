@@ -83,6 +83,20 @@ private:
   std::vector<std::string> values_;
 };
 
+class InvalidDefaultDialectError : public std::runtime_error {
+public:
+  InvalidDefaultDialectError(std::string value)
+      : std::runtime_error{"The default dialect is not a valid URI reference"},
+        value_{std::move(value)} {}
+
+  [[nodiscard]] auto value() const noexcept -> const std::string & {
+    return this->value_;
+  }
+
+private:
+  std::string value_;
+};
+
 class NotSchemaError : public std::runtime_error {
 public:
   NotSchemaError(std::filesystem::path path)
@@ -937,6 +951,15 @@ inline auto try_catch(const sourcemeta::core::Options &options,
       std::cerr << "\nRun the `help` command for usage information\n";
     }
 
+    return EXIT_INVALID_CLI_ARGUMENTS;
+  } catch (
+      const sourcemeta::core::FileError<InvalidDefaultDialectError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (const InvalidDefaultDialectError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
     return EXIT_INVALID_CLI_ARGUMENTS;
   } catch (const PositionalArgumentError &error) {
     const auto is_json{options.contains("json")};

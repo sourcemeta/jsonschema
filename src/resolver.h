@@ -69,14 +69,7 @@ resolve_map_uri(const sourcemeta::blaze::Configuration &configuration,
     return std::nullopt;
   }
 
-  const sourcemeta::core::URI new_uri{match->second};
-  if (new_uri.is_relative()) {
-    return sourcemeta::core::URI::from_path(configuration.base_path /
-                                            new_uri.to_path())
-        .recompose();
-  }
-
-  return match->second;
+  return resolve_relative_uri(match->second, configuration.base_path);
 }
 
 static constexpr std::string_view HTTP_HEADER_EXAMPLE{

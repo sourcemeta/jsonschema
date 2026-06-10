@@ -13,6 +13,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
 
+#include "error.h"
 #include "input.h"
 
 #include <filesystem>  // std::filesystem::path
@@ -30,6 +31,19 @@ inline auto default_id(const std::filesystem::path &schema_path)
     -> std::string {
   return sourcemeta::core::URI::from_path(
              sourcemeta::core::weakly_canonical(schema_path))
+      .recompose();
+}
+
+inline auto resolve_relative_uri(const std::string &value,
+                                 const std::filesystem::path &base)
+    -> std::string {
+  const sourcemeta::core::URI uri{value};
+  if (!uri.is_relative()) {
+    return value;
+  }
+
+  return sourcemeta::core::URI::from_path(
+             sourcemeta::core::weakly_canonical(base / uri.to_path()))
       .recompose();
 }
 
@@ -80,18 +94,22 @@ inline auto looks_like_test_document(const sourcemeta::core::JSON &document)
 inline auto default_dialect(
     const sourcemeta::core::Options &options,
     const std::optional<sourcemeta::blaze::Configuration> &configuration)
-    -> std::string_view {
+    -> std::string {
   if (options.contains("default-dialect")) {
-    return options.at("default-dialect").front();
+    std::string value{options.at("default-dialect").front()};
+    try {
+      return resolve_relative_uri(value, std::filesystem::current_path());
+    } catch (const sourcemeta::core::URIParseError &) {
+      throw InvalidDefaultDialectError{std::move(value)};
+    }
   }
 
-  const auto from_config =
-      configuration.and_then([](const sourcemeta::blaze::Configuration &config)
-                                 -> std::optional<std::string_view> {
-        return config.default_dialect;
-      });
+  const auto from_config = configuration.and_then(
+      [](const sourcemeta::blaze::Configuration &config)
+          -> std::optional<std::string> { return config.default_dialect; });
   if (from_config.has_value()) {
-    return from_config.value();
+    return resolve_relative_uri(from_config.value(),
+                                configuration.value().base_path);
   }
 
   return "";
