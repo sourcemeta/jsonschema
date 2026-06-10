@@ -13,6 +13,7 @@
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/output.h>
 
+#include "error.h"
 #include "input.h"
 
 #include <filesystem>  // std::filesystem::path
@@ -95,17 +96,24 @@ inline auto default_dialect(
     const std::optional<sourcemeta::blaze::Configuration> &configuration)
     -> std::string {
   if (options.contains("default-dialect")) {
-    return resolve_relative_uri(
-        std::string{options.at("default-dialect").front()},
-        std::filesystem::current_path());
+    std::string value{options.at("default-dialect").front()};
+    try {
+      return resolve_relative_uri(value, std::filesystem::current_path());
+    } catch (const sourcemeta::core::URIParseError &) {
+      throw InvalidDefaultDialectError{std::move(value)};
+    }
   }
 
   const auto from_config = configuration.and_then(
       [](const sourcemeta::blaze::Configuration &config)
           -> std::optional<std::string> { return config.default_dialect; });
   if (from_config.has_value()) {
-    return resolve_relative_uri(from_config.value(),
-                                configuration.value().base_path);
+    try {
+      return resolve_relative_uri(from_config.value(),
+                                  configuration.value().base_path);
+    } catch (const sourcemeta::core::URIParseError &) {
+      throw InvalidDefaultDialectError{from_config.value()};
+    }
   }
 
   return "";
