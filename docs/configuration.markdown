@@ -55,7 +55,7 @@ describes the available configuration options:
 | `website` | String | Project website URL | - |
 | `baseUri` | String | The base URI for your schemas (**not used in this CLI yet**) | - |
 | `path` | String | Relative path to the directory containing your schemas | Directory containing `jsonschema.json` |
-| `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema` | - |
+| `defaultDialect` | String | The default JSON Schema dialect to use when a schema doesn't specify `$schema`. May be an absolute URI or a relative path, which is resolved to a canonical `file://` URI relative to the directory containing `jsonschema.json`. Relative resolution is always against the configuration file, never against a schema's own `$id`. The same resolution applies to the `--default-dialect` command-line flag, using the current working directory as the base | - |
 | `extension` | String / String[] | The schema extension/s used by the project | `.json` / `.yaml` / `.yml` |
 | `ignore` | String[] | Paths to ignore relative to `jsonschema.json`. Glob patterns are not currently supported | `[]` |
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping. Lookups are non-transitive: the value of a matching entry is the final target and is not itself looked up in `resolve` again | `{}` |
