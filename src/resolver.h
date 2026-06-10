@@ -232,6 +232,27 @@ static inline auto fetch_schema(const sourcemeta::core::Options &options,
   return std::nullopt;
 }
 
+static inline auto
+ensure_identifier(sourcemeta::core::JSON &schema, const std::string_view target,
+                  const sourcemeta::blaze::SchemaResolver &resolver) -> void {
+  if (!sourcemeta::blaze::is_schema(schema) || !schema.is_object()) {
+    return;
+  }
+
+  const auto resolved_base_dialect{
+      sourcemeta::blaze::base_dialect(schema, resolver, "")};
+  if (!resolved_base_dialect.has_value()) {
+    return;
+  }
+
+  if (!sourcemeta::blaze::identify(schema, resolved_base_dialect.value())
+           .empty()) {
+    return;
+  }
+
+  sourcemeta::blaze::reidentify(schema, target, resolved_base_dialect.value());
+}
+
 class CustomResolver {
 public:
   CustomResolver(
@@ -403,7 +424,12 @@ public:
       return this->schemas.at(target);
     }
 
-    return fetch_schema(this->options_, target, this->remote_);
+    auto fetched{fetch_schema(this->options_, target, this->remote_)};
+    if (fetched.has_value()) {
+      ensure_identifier(fetched.value(), string_identifier, *this);
+    }
+
+    return fetched;
   }
 
 private:
