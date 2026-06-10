@@ -47,7 +47,7 @@ inline auto resolve_relative_uri(const std::string &value,
   const auto canonical{
       sourcemeta::core::weakly_canonical(base / uri.to_path())};
 
-  if (!extensions.empty() && !std::filesystem::exists(canonical)) {
+  if (!extensions.empty() && !std::filesystem::is_regular_file(canonical)) {
     for (const auto &extension : extensions) {
       if (extension.empty()) {
         continue;
@@ -55,7 +55,7 @@ inline auto resolve_relative_uri(const std::string &value,
 
       std::filesystem::path candidate{canonical};
       candidate += extension;
-      if (std::filesystem::exists(candidate)) {
+      if (std::filesystem::is_regular_file(candidate)) {
         return sourcemeta::core::URI::from_path(candidate).recompose();
       }
     }
