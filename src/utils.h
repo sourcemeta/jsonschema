@@ -20,6 +20,7 @@
 #include <memory>      // std::make_shared
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
+#include <set>         // std::set
 #include <string>      // std::string, std::stoull
 #include <string_view> // std::string_view
 #include <utility>     // std::unreachable
@@ -35,16 +36,32 @@ inline auto default_id(const std::filesystem::path &schema_path)
 }
 
 inline auto resolve_relative_uri(const std::string &value,
-                                 const std::filesystem::path &base)
+                                 const std::filesystem::path &base,
+                                 const std::set<std::string> &extensions = {})
     -> std::string {
   const sourcemeta::core::URI uri{value};
   if (!uri.is_relative()) {
     return value;
   }
 
-  return sourcemeta::core::URI::from_path(
-             sourcemeta::core::weakly_canonical(base / uri.to_path()))
-      .recompose();
+  const auto canonical{
+      sourcemeta::core::weakly_canonical(base / uri.to_path())};
+
+  if (!extensions.empty() && !std::filesystem::exists(canonical)) {
+    for (const auto &extension : extensions) {
+      if (extension.empty()) {
+        continue;
+      }
+
+      std::filesystem::path candidate{canonical};
+      candidate += extension;
+      if (std::filesystem::exists(candidate)) {
+        return sourcemeta::core::URI::from_path(candidate).recompose();
+      }
+    }
+  }
+
+  return sourcemeta::core::URI::from_path(canonical).recompose();
 }
 
 inline auto default_id(const InputJSON &entry) -> std::string {
@@ -98,18 +115,30 @@ inline auto default_dialect(
   if (options.contains("default-dialect")) {
     std::string value{options.at("default-dialect").front()};
     try {
-      return resolve_relative_uri(value, std::filesystem::current_path());
+      const sourcemeta::core::URI uri{value};
+      if (!uri.is_relative()) {
+        return value;
+      }
     } catch (const sourcemeta::core::URIParseError &) {
       throw InvalidDefaultDialectError{std::move(value)};
     }
+
+    return resolve_relative_uri(value, std::filesystem::current_path(),
+                                parse_extensions(options, configuration));
   }
 
   const auto from_config = configuration.and_then(
       [](const sourcemeta::blaze::Configuration &config)
           -> std::optional<std::string> { return config.default_dialect; });
   if (from_config.has_value()) {
+    const sourcemeta::core::URI uri{from_config.value()};
+    if (!uri.is_relative()) {
+      return from_config.value();
+    }
+
     return resolve_relative_uri(from_config.value(),
-                                configuration.value().base_path);
+                                configuration.value().base_path,
+                                parse_extensions(options, configuration));
   }
 
   return "";
