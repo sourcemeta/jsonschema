@@ -108,12 +108,8 @@ inline auto default_dialect(
       [](const sourcemeta::blaze::Configuration &config)
           -> std::optional<std::string> { return config.default_dialect; });
   if (from_config.has_value()) {
-    try {
-      return resolve_relative_uri(from_config.value(),
-                                  configuration.value().base_path);
-    } catch (const sourcemeta::core::URIParseError &) {
-      throw InvalidDefaultDialectError{from_config.value()};
-    }
+    return resolve_relative_uri(from_config.value(),
+                                configuration.value().base_path);
   }
 
   return "";
