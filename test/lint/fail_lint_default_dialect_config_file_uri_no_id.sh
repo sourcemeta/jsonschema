@@ -52,3 +52,42 @@ schemas/sample.json:1:1:
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+"$1" lint --json > "$TMP/output.json" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2"
+
+cat << EOF > "$TMP/expected.json"
+{
+  "valid": false,
+  "health": 0,
+  "errors": [
+    {
+      "path": "$(realpath "$TMP")/project/schemas/sample.json",
+      "id": "top_level_title",
+      "message": "Set a concise non-empty title at the top level of the schema to explain what the definition is about",
+      "description": null,
+      "schemaLocation": [],
+      "position": [ 1, 1, 1, 20 ]
+    },
+    {
+      "path": "$(realpath "$TMP")/project/schemas/sample.json",
+      "id": "top_level_description",
+      "message": "Set a non-empty description at the top level of the schema to explain what the definition is about in detail",
+      "description": null,
+      "schemaLocation": [],
+      "position": [ 1, 1, 1, 20 ]
+    },
+    {
+      "path": "$(realpath "$TMP")/project/schemas/sample.json",
+      "id": "top_level_examples",
+      "message": "Set a non-empty examples array at the top level of the schema to illustrate the expected data",
+      "description": null,
+      "schemaLocation": [],
+      "position": [ 1, 1, 1, 20 ]
+    }
+  ]
+}
+EOF
+
+diff "$TMP/output.json" "$TMP/expected.json"
