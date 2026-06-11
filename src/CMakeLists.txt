@@ -1,3 +1,5 @@
+add_subdirectory(http)
+
 sourcemeta_executable(
   PROJECT jsonschema
   NAME cli
@@ -25,6 +27,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::uri)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::json)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::jsonl)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::gzip)
+target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::http)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::jsonpointer)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::yaml)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::core::regex)
@@ -43,7 +46,7 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::test)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::alterschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::codegen)
-target_link_libraries(jsonschema_cli PRIVATE CPR::cpr)
+target_link_libraries(jsonschema_cli PRIVATE jsonschema_http)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

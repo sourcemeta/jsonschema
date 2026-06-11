@@ -5,7 +5,6 @@ blaze https://github.com/sourcemeta/blaze 7b214cff6d575831c16a2ce33f55d97c02eb63
 mbedtls https://github.com/Mbed-TLS/mbedtls v3.6.6
 curl https://github.com/curl/curl curl-8_20_0
 nghttp2 https://github.com/nghttp2/nghttp2 v1.67.1
-cpr https://github.com/libcpr/cpr 1.14.2
 c-ares https://github.com/c-ares/c-ares v1.34.5
 libpsl https://github.com/rockdaboot/libpsl 0.21.5
 zlib https://github.com/madler/zlib v1.3.2
