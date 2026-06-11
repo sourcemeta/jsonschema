@@ -30,6 +30,12 @@ FileView::FileView(const std::filesystem::path &path) {
   }
   this->size_ = static_cast<std::size_t>(file_size.QuadPart);
 
+  // Mapping a zero-length file is not possible, so leave the view empty
+  if (this->size_ == 0) {
+    this->data_ = nullptr;
+    return;
+  }
+
   this->mapping_handle_ = CreateFileMappingW(this->file_handle_, nullptr,
                                              PAGE_READONLY, 0, 0, nullptr);
   if (this->mapping_handle_ == nullptr) {
@@ -76,6 +82,12 @@ FileView::FileView(const std::filesystem::path &path) {
     throw FileViewError(path, "Could not determine the file size");
   }
   this->size_ = static_cast<std::size_t>(file_stat.st_size);
+
+  // Mapping a zero-length region fails with EINVAL, so leave the view empty
+  if (this->size_ == 0) {
+    this->data_ = nullptr;
+    return;
+  }
 
   void *mapped = mmap(nullptr, this->size_, PROT_READ, MAP_PRIVATE,
                       this->file_descriptor_, 0);

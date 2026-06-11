@@ -56,6 +56,10 @@ JSON::JSON(const String &value) : current_type{Type::String} {
   std::construct_at(&this->data_string, value);
 }
 
+JSON::JSON(String &&value) : current_type{Type::String} {
+  std::construct_at(&this->data_string, std::move(value));
+}
+
 JSON::JSON(const std::basic_string_view<Char, CharTraits> &value)
     : current_type{Type::String} {
   std::construct_at(&this->data_string, value);
@@ -99,7 +103,7 @@ JSON::JSON(const Decimal &value) : current_type{Type::Decimal} {
     throw std::invalid_argument("JSON does not support Infinity or NaN");
   }
 
-  this->data_decimal = new Decimal{value};
+  std::construct_at(&this->data_decimal, value);
 }
 
 JSON::JSON(Decimal &&value) : current_type{Type::Decimal} {
@@ -107,7 +111,7 @@ JSON::JSON(Decimal &&value) : current_type{Type::Decimal} {
     throw std::invalid_argument("JSON does not support Infinity or NaN");
   }
 
-  this->data_decimal = new Decimal{std::move(value)};
+  std::construct_at(&this->data_decimal, std::move(value));
 }
 
 JSON::JSON(const JSON &other) {
@@ -133,7 +137,7 @@ JSON::JSON(const JSON &other) {
       this->current_type = Type::String;
       return;
     case Type::Decimal:
-      this->data_decimal = new Decimal{*other.data_decimal};
+      std::construct_at(&this->data_decimal, other.data_decimal);
       this->current_type = Type::Decimal;
       return;
     case Type::Array:
@@ -183,7 +187,7 @@ JSON::JSON(const JSON &other) {
           destination.current_type = Type::String;
           break;
         case Type::Decimal:
-          destination.data_decimal = new Decimal{*source.data_decimal};
+          std::construct_at(&destination.data_decimal, source.data_decimal);
           destination.current_type = Type::Decimal;
           break;
         case Type::Array: {
@@ -251,7 +255,12 @@ JSON::JSON(JSON &&other) noexcept : current_type{other.current_type} {
       other.current_type = Type::Null;
       break;
     case Type::Decimal:
-      this->data_decimal = std::exchange(other.data_decimal, nullptr);
+      std::construct_at(&this->data_decimal, std::move(other.data_decimal));
+      // Marking the source as empty means its destructor will never visit
+      // the decimal member again, so end that member's lifetime here. The
+      // moved-from state owns no heap coefficient, making this a no-op
+      // branch rather than a deallocation
+      other.data_decimal.~Decimal();
       other.current_type = Type::Null;
       break;
     default:
@@ -264,39 +273,51 @@ auto JSON::operator=(const JSON &other) -> JSON & {
     return *this;
   }
 
-  // Fast path for scalar sources: destroy this iteratively (safe for any
-  // depth) then assign the scalar directly. Avoids the copy-then-move dance
-  // that the container path needs for strong exception safety
+  // Fast path for scalar sources: tear this value down iteratively, which is
+  // safe for any depth, then assign the scalar directly. Each scalar is
+  // buffered into a local first, because the source may be nested inside this
+  // value, and tearing this value down would otherwise free the storage still
+  // being read from
   switch (other.current_type) {
     case Type::Null:
       this->~JSON();
       this->current_type = Type::Null;
       return *this;
-    case Type::Boolean:
+    case Type::Boolean: {
+      const auto value{other.data_boolean};
       this->~JSON();
-      this->data_boolean = other.data_boolean;
+      this->data_boolean = value;
       this->current_type = Type::Boolean;
       return *this;
-    case Type::Integer:
+    }
+    case Type::Integer: {
+      const auto value{other.data_integer};
       this->~JSON();
-      this->data_integer = other.data_integer;
+      this->data_integer = value;
       this->current_type = Type::Integer;
       return *this;
-    case Type::Real:
+    }
+    case Type::Real: {
+      const auto value{other.data_real};
       this->~JSON();
-      this->data_real = other.data_real;
+      this->data_real = value;
       this->current_type = Type::Real;
       return *this;
-    case Type::String:
+    }
+    case Type::String: {
+      String value{other.data_string};
       this->~JSON();
-      std::construct_at(&this->data_string, other.data_string);
+      std::construct_at(&this->data_string, std::move(value));
       this->current_type = Type::String;
       return *this;
-    case Type::Decimal:
+    }
+    case Type::Decimal: {
+      Decimal value{other.data_decimal};
       this->~JSON();
-      this->data_decimal = new Decimal{*other.data_decimal};
+      std::construct_at(&this->data_decimal, std::move(value));
       this->current_type = Type::Decimal;
       return *this;
+    }
     case Type::Array:
     case Type::Object:
       break;
@@ -312,13 +333,17 @@ auto JSON::operator=(const JSON &other) -> JSON & {
 }
 
 auto JSON::operator=(JSON &&other) noexcept -> JSON & {
-  // Destroy-then-rebuild so the existing value in this is torn down by the
-  // iterative destructor
   if (this == &other) {
     return *this;
   }
+
+  // Steal the source into a local before this value is torn down, because the
+  // source may be nested inside this value, and tearing it down first would
+  // free the storage still being moved from. Parentheses select the move
+  // constructor rather than the list constructor
+  JSON moved(std::move(other));
   this->~JSON();
-  std::construct_at(this, std::move(other));
+  std::construct_at(this, std::move(moved));
   return *this;
 }
 
@@ -495,7 +520,7 @@ auto JSON::operator==(const JSON &other) const noexcept -> bool {
     case Type::Real:
       return this->data_real == other.data_real;
     case Type::Decimal:
-      return *this->data_decimal == *other.data_decimal;
+      return this->data_decimal == other.data_decimal;
     case Type::String:
       return this->data_string == other.data_string;
     case Type::Array:
@@ -825,7 +850,7 @@ auto JSON::assign(const JSON::String &key, const JSON &value) -> void {
 
 auto JSON::assign(const JSON::String &key, JSON &&value) -> void {
   assert(this->is_object());
-  this->data_object.emplace(key, value);
+  this->data_object.emplace(key, std::move(value));
 }
 
 auto JSON::try_assign_before(const String &key, const JSON &value,
@@ -860,9 +885,10 @@ auto JSON::assign_assume_new(JSON::String &&key, JSON &&value) -> void {
 }
 
 auto JSON::assign_assume_new(JSON::String &&key, JSON &&value,
-                             Object::hash_type hash) -> void {
+                             Object::hash_type hash) -> JSON & {
   assert(this->is_object());
-  this->data_object.emplace_assume_new(std::move(key), std::move(value), hash);
+  return this->data_object.emplace_assume_new(std::move(key), std::move(value),
+                                              hash);
 }
 
 auto JSON::erase(const JSON::String &key) -> typename Object::size_type {
@@ -907,6 +933,15 @@ auto JSON::clear_except(std::initializer_list<JSON::String> keys) -> void {
 
 auto JSON::merge(const JSON::Object &other) -> void {
   assert(this->is_object());
+  // When the source is this object's own container, the insertions below would
+  // reallocate the very storage being iterated, so it is snapshotted first
+  if (&other == &this->data_object) {
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+    const JSON::Object snapshot{other};
+    this->merge(snapshot);
+    return;
+  }
+
   for (const auto &pair : other) {
     const auto maybe_key{this->try_at(pair.first, pair.hash)};
     if (maybe_key && maybe_key->is_object() && pair.second.is_object()) {
@@ -974,7 +1009,7 @@ auto JSON::maybe_destruct_union() -> void {
       this->data_object.~JSONObject();
       break;
     case Type::Decimal:
-      delete this->data_decimal;
+      this->data_decimal.~Decimal();
       break;
     default:
       break;

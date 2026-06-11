@@ -31,10 +31,28 @@ macro(sourcemeta_enable_simd)
       endif()
     endif()
   elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64" AND NOT MSVC)
-    check_cxx_compiler_flag("-march=armv8-a+fp+simd" COMPILER_SUPPORTS_NEON)
-    if(COMPILER_SUPPORTS_NEON)
-      message(STATUS "Enabling SIMD NEON")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+fp+simd")
+    # +crc is part of the optional Armv8.0-A CRC32 extension. It is
+    # guaranteed on Apple Silicon (Armv8.5+) and several other modern cores,
+    # but Cortex-A53-class CPUs do not have it. The compiler accepting the
+    # flag does not prove the runtime CPU supports the instruction, so the
+    # only platform we auto-enable +crc on is Apple Silicon. Other aarch64
+    # targets keep the plain NEON baseline and the CRC32 software fallback.
+    set(SIMD_NEON_FLAG_APPLIED FALSE)
+    if(APPLE)
+      check_cxx_compiler_flag("-march=armv8-a+fp+simd+crc"
+        COMPILER_SUPPORTS_NEON_CRC)
+      if(COMPILER_SUPPORTS_NEON_CRC)
+        message(STATUS "Enabling SIMD NEON + CRC32")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+fp+simd+crc")
+        set(SIMD_NEON_FLAG_APPLIED TRUE)
+      endif()
+    endif()
+    if(NOT SIMD_NEON_FLAG_APPLIED)
+      check_cxx_compiler_flag("-march=armv8-a+fp+simd" COMPILER_SUPPORTS_NEON)
+      if(COMPILER_SUPPORTS_NEON)
+        message(STATUS "Enabling SIMD NEON")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+fp+simd")
+      endif()
     endif()
   endif()
 endmacro()

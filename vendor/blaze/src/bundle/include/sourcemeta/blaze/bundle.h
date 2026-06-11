@@ -20,6 +20,7 @@
 #include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/frame.h>
 
+#include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
@@ -35,6 +36,18 @@ namespace sourcemeta::blaze {
 using DependencyCallback =
     std::function<void(std::string_view, const sourcemeta::core::WeakPointer &,
                        std::string_view, const sourcemeta::core::JSON &)>;
+
+/// @ingroup bundle
+/// The strategies that the bundling process can follow
+enum class BundleMode : std::uint8_t {
+  /// Embed every external reference, including any non-official
+  /// meta-schemas that the schema or its dependencies declare, along
+  /// with the dependencies of those meta-schemas
+  NonOfficialMetaschemas,
+  /// Embed every external reference, skipping meta-schema
+  /// declarations entirely
+  References
+};
 
 /// @ingroup bundle
 ///
@@ -117,7 +130,8 @@ auto dependencies(const sourcemeta::core::JSON &schema,
 /// })JSON");
 ///
 /// sourcemeta::blaze::bundle(document,
-///   sourcemeta::blaze::schema_walker, test_resolver);
+///   sourcemeta::blaze::schema_walker, test_resolver,
+///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 ///
 /// const sourcemeta::core::JSON expected =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -136,7 +150,7 @@ auto dependencies(const sourcemeta::core::JSON &schema,
 /// ```
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver,
+            const SchemaResolver &resolver, const BundleMode mode,
             std::string_view default_dialect = "",
             std::string_view default_id = "",
             const std::optional<sourcemeta::core::Pointer> &default_container =
@@ -179,7 +193,8 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
 ///
 /// const sourcemeta::core::JSON result =
 ///   sourcemeta::blaze::bundle(document,
-///     sourcemeta::blaze::schema_walker, test_resolver);
+///     sourcemeta::blaze::schema_walker, test_resolver,
+///     sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 ///
 /// const sourcemeta::core::JSON expected =
 ///     sourcemeta::core::parse_json(R"JSON({
@@ -199,8 +214,8 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
 SOURCEMETA_BLAZE_BUNDLE_EXPORT
 auto bundle(
     const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-    const SchemaResolver &resolver, std::string_view default_dialect = "",
-    std::string_view default_id = "",
+    const SchemaResolver &resolver, const BundleMode mode,
+    std::string_view default_dialect = "", std::string_view default_id = "",
     const std::optional<sourcemeta::core::Pointer> &default_container =
         std::nullopt,
     const SchemaFrame::Paths &paths = {sourcemeta::core::empty_weak_pointer})

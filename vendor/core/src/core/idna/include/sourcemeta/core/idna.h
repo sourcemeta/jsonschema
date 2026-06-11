@@ -142,7 +142,10 @@ auto idna_passes_bidi_rule(const std::u32string_view label) noexcept -> bool;
 /// Return whether the given label is a valid U-label per RFC 5891 §4. See
 /// https://www.rfc-editor.org/rfc/rfc5891#section-4 for the criteria.
 /// The Bidi rule is not checked here because Bidi domain detection is a
-/// property of the whole domain, not of a single label. For example:
+/// property of the whole domain, not of a single label. A pure-ASCII label
+/// that satisfies the structural rules is accepted even though it carries no
+/// non-ASCII codepoint, so this check is not on its own a guarantee that the
+/// label requires IDNA processing. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/idna.h>
@@ -158,10 +161,13 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool;
 /// @ingroup idna
 /// Return whether the given label is a valid A-label per RFC 5891 §4. See
 /// https://www.rfc-editor.org/rfc/rfc5891#section-4 for the criteria.
-/// A valid A-label starts with the ACE prefix "xn--", is pure ASCII, has a
-/// non-empty Punycode body that decodes to a U-label containing at least
-/// one non-ASCII codepoint, and round-trips through Punycode in its
-/// canonical form. For example:
+/// A valid A-label starts with the lowercase ACE prefix "xn--", is pure
+/// ASCII, is at most 63 octets, has a non-empty Punycode body that decodes to
+/// a U-label containing at least one non-ASCII codepoint, and round-trips
+/// through Punycode in its canonical form. Both the prefix and the Punycode
+/// body are matched case-sensitively, so an uppercase prefix or a mixed-case
+/// body is rejected. This is intended for registration-side validation rather
+/// than case-folding lookup. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/idna.h>

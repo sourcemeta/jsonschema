@@ -56,37 +56,50 @@ public:
 
   auto operator<(const JSONObject<Key, Value, Hash> &other) const noexcept
       -> bool {
-    // The `std::unordered_map` container, by definition, does not provide
-    // ordering. However, we still want some level of ordering to allow
-    // arrays of objects to be sorted.
-
-    // First try a size comparison
+    // Objects have no inherent order, but a deterministic strict weak ordering
+    // independent of insertion order is needed so that collections of objects
+    // can be sorted. Smaller objects come first, and objects of equal size are
+    // ordered as their entries would compare in key order. That outcome is
+    // decided entirely by the smallest key at which the two objects differ,
+    // which is found by scanning the entries in place to avoid allocating
     if (this->data.size() != other.data.size()) {
       return this->data.size() < other.data.size();
     }
 
-    // Otherwise do value comparison for common properties
-    for (const auto &entry : *this) {
-      const auto other_entry{other.find(entry.first)};
-      if (other_entry != other.cend() && entry.second < other_entry->second) {
-        return true;
+    const Key *decisive_key{nullptr};
+    bool decision{false};
+    for (const auto &entry : this->data) {
+      const auto match{other.find(entry.first)};
+      const bool differs{match == other.cend() ||
+                         !(entry.second == match->second)};
+      if (differs && (decisive_key == nullptr || entry.first < *decisive_key)) {
+        decisive_key = &entry.first;
+        decision = match == other.cend() || entry.second < match->second;
       }
     }
 
-    return false;
+    for (const auto &entry : other.data) {
+      if (this->find(entry.first) == this->cend() &&
+          (decisive_key == nullptr || entry.first < *decisive_key)) {
+        decisive_key = &entry.first;
+        decision = false;
+      }
+    }
+
+    return decision;
   }
 
   auto operator<=(const JSONObject<Key, Value, Hash> &other) const noexcept
       -> bool {
-    return this->data <= other.data;
+    return !(other < *this);
   }
   auto operator>(const JSONObject<Key, Value, Hash> &other) const noexcept
       -> bool {
-    return this->data > other.data;
+    return other < *this;
   }
   auto operator>=(const JSONObject<Key, Value, Hash> &other) const noexcept
       -> bool {
-    return this->data >= other.data;
+    return !(*this < other);
   }
 
   auto operator==(const JSONObject<Key, Value, Hash> &other) const noexcept
@@ -532,7 +545,31 @@ public:
       }
     }
 
-    this->data.push_back({key, value, key_hash});
+    this->data.push_back({std::move(key), std::move(value), key_hash});
+    return key_hash;
+  }
+
+  /// Emplace an object property
+  inline auto emplace(const Key &key, mapped_type &&value) -> hash_type {
+    const auto key_hash{this->hash(key)};
+
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash) {
+          entry.second = std::move(value);
+          return key_hash;
+        }
+      }
+    } else {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first == key) {
+          entry.second = std::move(value);
+          return key_hash;
+        }
+      }
+    }
+
+    this->data.push_back({key, std::move(value), key_hash});
     return key_hash;
   }
 
@@ -575,10 +612,12 @@ public:
     return key_hash;
   }
 
-  /// Emplace an object property with a pre-computed hash
+  /// Emplace an object property with a pre-computed hash, returning the
+  /// inserted value
   inline auto emplace_assume_new(Key &&key, mapped_type &&value,
-                                 const hash_type key_hash) -> void {
+                                 const hash_type key_hash) -> mapped_type & {
     this->data.push_back({std::move(key), std::move(value), key_hash});
+    return this->data.back().second;
   }
 
   /// Emplace an object property with a pre-computed hash

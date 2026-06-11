@@ -439,9 +439,11 @@ auto compile(const sourcemeta::core::JSON &schema,
   assert(is_schema(schema));
 
   // Make sure the input schema is bundled, otherwise we won't be able to
-  // resolve remote references here
+  // resolve remote references here. Meta-schemas are not needed, as we
+  // can determine vocabularies through the resolver
   const sourcemeta::core::JSON result{sourcemeta::blaze::bundle(
-      schema, walker, resolver, default_dialect, default_id)};
+      schema, walker, resolver, sourcemeta::blaze::BundleMode::References,
+      default_dialect, default_id)};
 
   sourcemeta::blaze::SchemaFrame frame{
       sourcemeta::blaze::SchemaFrame::Mode::References};

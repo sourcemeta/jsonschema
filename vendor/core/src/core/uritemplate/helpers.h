@@ -5,6 +5,7 @@
 
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint16_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <type_traits> // std::void_t
@@ -51,6 +52,38 @@ inline auto is_hex(const char character) -> bool {
 static constexpr std::array<char, 16> HEX_DIGITS = {
     {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
      'F'}};
+
+// The prefix modifier counts characters rather than bytes, where a percent
+// encoded triplet and a multi-byte UTF-8 sequence each count as one character
+// See https://www.rfc-editor.org/rfc/rfc6570#section-2.4.1
+inline auto prefix_by_characters(const std::string_view input,
+                                 const std::uint16_t characters)
+    -> std::string_view {
+  std::string_view::size_type position = 0;
+  std::uint16_t taken = 0;
+  while (position < input.size() && taken < characters) {
+    if (input[position] == '%' && position + 2 < input.size() &&
+        is_hex(input[position + 1]) && is_hex(input[position + 2])) {
+      position += 3;
+    } else {
+      const auto lead = static_cast<unsigned char>(input[position]);
+      const std::string_view::size_type size = lead < 0x80   ? 1
+                                               : lead < 0xE0 ? 2
+                                               : lead < 0xF0 ? 3
+                                               : lead < 0xF8 ? 4
+                                                             : 1;
+      position += size;
+    }
+
+    taken++;
+  }
+
+  if (position > input.size()) {
+    position = input.size();
+  }
+
+  return input.substr(0, position);
+}
 
 inline auto append_percent_encoded(std::string &output, const char character)
     -> void {
@@ -108,6 +141,32 @@ inline auto append_name(std::string &result, const std::string_view name,
     } else {
       result += '=';
     }
+  }
+}
+
+// RFC 6570 Section 2.1: a literal character outside the pct-encoded form. The
+// apostrophe is also accepted because the specification's own normative
+// examples rely on it as a literal
+inline auto is_literal_char(const char character) noexcept -> bool {
+  const auto byte = static_cast<unsigned char>(character);
+  if (byte >= 0x80) {
+    return true;
+  }
+
+  switch (byte) {
+    case 0x21:
+    case 0x23:
+    case 0x24:
+    case 0x26:
+    case 0x27:
+    case 0x3D:
+    case 0x5D:
+    case 0x5F:
+    case 0x7E:
+      return true;
+    default:
+      return (byte >= 0x28 && byte <= 0x3B) || (byte >= 0x3F && byte <= 0x5B) ||
+             (byte >= 0x61 && byte <= 0x7A);
   }
 }
 
@@ -245,13 +304,17 @@ parse_variable_list(const std::string_view input, std::size_t position,
       throw URITemplateParseError(1);
     }
 
+    // A varspec must be followed by another varspec or the expression close
+    // See https://www.rfc-editor.org/rfc/rfc6570#section-2.3
     if (input[position] == '}') {
       break;
     }
 
-    if (input[position] == ',') {
-      position++;
+    if (input[position] != ',') {
+      throw URITemplateParseError(position + 1);
     }
+
+    position++;
   }
 
   return position;
@@ -266,18 +329,28 @@ auto parse_expression(const std::string_view input)
       return std::nullopt;
     }
 
-    if (input[0] == '}') {
-      throw URITemplateParseError(1);
-    }
-
-    std::size_t position = 1;
+    std::size_t position = 0;
     while (position < input.size()) {
-      if (input[position] == '{') {
+      const char character = input[position];
+      if (character == '{') {
         break;
       }
-      if (input[position] == '}') {
+
+      // See https://www.rfc-editor.org/rfc/rfc6570#section-2.1
+      if (character == '%') {
+        if (position + 2 >= input.size() || !is_hex(input[position + 1]) ||
+            !is_hex(input[position + 2])) {
+          throw URITemplateParseError(position + 1);
+        }
+
+        position += 3;
+        continue;
+      }
+
+      if (!is_literal_char(character)) {
         throw URITemplateParseError(position + 1);
       }
+
       position++;
     }
 
@@ -350,7 +423,7 @@ auto expand_expression(
 
       auto actual_value = value;
       if (variable.length > 0) {
-        actual_value = actual_value.substr(0, variable.length);
+        actual_value = prefix_by_characters(actual_value, variable.length);
       }
 
       if (variable.explode) {

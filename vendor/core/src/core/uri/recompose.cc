@@ -101,6 +101,63 @@ auto URI::recompose() const -> std::string {
   return result;
 }
 
+auto URI::recompose_relative() const -> std::string {
+  std::string result;
+  result.reserve(128);
+
+  const auto result_path{this->path()};
+  if (result_path.has_value()) {
+    const auto &path_value = result_path.value();
+
+    // For a path-noscheme reference (no leading slash), the first segment
+    // cannot contain ':' per RFC 3986 Section 3.3 segment-nz-nc, or a
+    // re-parser would mistake the prefix for a scheme name. Percent-encode
+    // any ':' in the first segment.
+    if (!path_value.starts_with('/')) {
+      const auto first_slash = path_value.find('/');
+      const auto first_segment_length =
+          first_slash == std::string::npos ? path_value.size() : first_slash;
+      const auto first_segment{path_value.substr(0, first_segment_length)};
+      if (first_segment.contains(':')) {
+        std::string encoded;
+        encoded.reserve(first_segment_length + 4);
+        for (const char character : first_segment) {
+          if (character == ':') {
+            encoded += "%3A";
+          } else {
+            encoded += character;
+          }
+        }
+        escape_component_to_string(result, encoded, URIEscapeMode::Path);
+        if (first_slash != std::string::npos) {
+          escape_component_to_string(
+              result, std::string_view{path_value}.substr(first_slash),
+              URIEscapeMode::Path);
+        }
+      } else {
+        escape_component_to_string(result, path_value, URIEscapeMode::Path);
+      }
+    } else {
+      escape_component_to_string(result, path_value, URIEscapeMode::Path);
+    }
+  }
+
+  const auto result_query{this->query()};
+  if (result_query.has_value()) {
+    result += '?';
+    escape_component_to_string(result, result_query.value().raw(),
+                               URIEscapeMode::Fragment);
+  }
+
+  if (this->fragment_.has_value()) {
+    result += '#';
+    escape_component_to_string(result, this->fragment_.value(),
+                               URIEscapeMode::Fragment);
+  }
+
+  return result;
+}
+
 auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   std::string result;
   result.reserve(256);

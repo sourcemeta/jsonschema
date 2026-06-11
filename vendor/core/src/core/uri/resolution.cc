@@ -2,7 +2,6 @@
 
 #include "normalize.h"
 
-#include <cassert>  // assert
 #include <optional> // std::optional
 #include <string>   // std::string
 
@@ -37,11 +36,6 @@ namespace sourcemeta::core {
 
 auto URI::resolve_from(const URI &base) -> URI & {
   // RFC 3986 Section 5.2.2: Transform References
-
-  // Check if this is a dot reference ("." or "./") before we modify the path
-  const bool was_dot_reference =
-      this->path_.has_value() &&
-      (this->path_.value() == "." || this->path_.value() == "./");
 
   // Reference has a scheme - use as-is (already absolute)
   if (this->scheme_.has_value()) {
@@ -97,18 +91,6 @@ auto URI::resolve_from(const URI &base) -> URI & {
 
   // Reference has empty path
   if (!this->path_.has_value() || this->path_.value().empty()) {
-    // Special case: "." or "./" resolves to the containing directory
-    if (was_dot_reference) {
-      const auto base_path = base.path_.value_or("");
-      const auto last_slash = base_path.rfind('/');
-      if (last_slash != std::string::npos) {
-        this->path_ = base_path.substr(0, last_slash + 1);
-      } else {
-        this->path_ = std::nullopt;
-      }
-      return *this;
-    }
-
     // Empty path with query or fragment means use base path
     this->path_ = base.path_;
     if (!this->query_.has_value()) {
@@ -264,14 +246,6 @@ auto URI::relative_to(const URI &base) -> URI & {
     if (this_path.starts_with(current_base_parent)) {
       const auto remainder{this_path.substr(current_base_parent.length())};
       if (!remainder.empty()) {
-        // Check if the target is just the base path plus a trailing slash
-        // e.g., base="/foo/bar" and target="/foo/bar/"
-        // These should stay absolute as they represent different resources
-        if (current_base_parent == base_parent &&
-            this_path == base_path + "/") {
-          return *this;
-        }
-
         relative_path += remainder;
       }
 
@@ -295,37 +269,51 @@ auto URI::relative_to(const URI &base) -> URI & {
     current_base_parent = current_base_parent.substr(0, parent_slash + 1);
   }
 
-  // If we reached the root, we can make it relative unless the target path
-  // is ambiguous (i.e., it's a prefix of the base parent directory)
-  // This handles: "/a/b/c.json" vs "/d.json" -> "../../d.json"
-  // And: "/foo/bar" vs "/baz/qux" -> "../../baz/qux"
-  // But NOT: "/foo/bar" vs "/foo" (ambiguous: is /foo a file or directory?)
   if (current_base_parent == "/" && this_path.starts_with('/')) {
-    // Check if target path is a prefix of the original base parent
-    // If so, it's ambiguous and we should stay absolute
-    const bool is_prefix_of_base_parent =
-        base_parent.starts_with(this_path) &&
-        base_parent.length() > this_path.length() &&
-        (base_parent[this_path.length()] == '/');
+    relative_path += this_path.substr(1);
 
-    if (!is_prefix_of_base_parent) {
-      relative_path += this_path.substr(1);
+    this->scheme_.reset();
+    this->userinfo_.reset();
+    this->host_.reset();
+    this->port_.reset();
+    this->path_ = relative_path.empty()
+                      ? std::nullopt
+                      : std::optional<std::string>{relative_path};
 
-      this->scheme_.reset();
-      this->userinfo_.reset();
-      this->host_.reset();
-      this->port_.reset();
-      this->path_ = relative_path.empty()
-                        ? std::nullopt
-                        : std::optional<std::string>{relative_path};
-
-      return *this;
-    }
+    return *this;
   }
 
   // If we can't make it relative, return unchanged
   return *this;
 }
+
+namespace {
+
+auto merge_new_base_path(std::optional<std::string> &target_path,
+                         std::optional<std::string> &&new_base_path,
+                         std::optional<std::string> &&saved_path) -> void {
+  if (new_base_path.has_value() && saved_path.has_value()) {
+    auto merged{std::move(new_base_path.value())};
+    const auto &relative_path = saved_path.value();
+    const auto base_ends_with_slash = merged.ends_with('/');
+    const auto relative_starts_with_slash = relative_path.starts_with('/');
+    if (base_ends_with_slash && relative_starts_with_slash) {
+      merged.append(relative_path, 1);
+    } else if (!base_ends_with_slash && !relative_starts_with_slash) {
+      merged += '/';
+      merged += relative_path;
+    } else {
+      merged += relative_path;
+    }
+    target_path = std::move(merged);
+  } else if (new_base_path.has_value()) {
+    target_path = std::move(new_base_path);
+  } else {
+    target_path = std::move(saved_path);
+  }
+}
+
+} // namespace
 
 auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
   this->relative_to(base);
@@ -333,36 +321,43 @@ auto URI::rebase(const URI &base, const URI &new_base) -> URI & {
     return *this;
   }
 
-  // Save the relative path before copying new_base components
   auto saved_path = std::move(this->path_);
   auto saved_fragment = std::move(this->fragment_);
   auto saved_query = std::move(this->query_);
 
-  // Copy all components from new_base except path/query/fragment
   this->scheme_ = new_base.scheme_;
   this->userinfo_ = new_base.userinfo_;
   this->host_ = new_base.host_;
   this->port_ = new_base.port_;
 
-  if (new_base.path_.has_value() && saved_path.has_value()) {
-    const auto &base_path = new_base.path_.value();
-    const auto &relative_path = saved_path.value();
-    const auto base_ends_with_slash = base_path.ends_with('/');
-    const auto relative_starts_with_slash = relative_path.starts_with('/');
-    if (base_ends_with_slash && relative_starts_with_slash) {
-      this->path_ = base_path + relative_path.substr(1);
-    } else if (!base_ends_with_slash && !relative_starts_with_slash) {
-      this->path_ = base_path + '/' + relative_path;
-    } else {
-      this->path_ = base_path + relative_path;
-    }
-  } else if (new_base.path_.has_value()) {
-    this->path_ = new_base.path_;
-  } else {
-    this->path_ = std::move(saved_path);
+  std::optional<std::string> new_base_path_copy{new_base.path_};
+  merge_new_base_path(this->path_, std::move(new_base_path_copy),
+                      std::move(saved_path));
+
+  this->fragment_ = std::move(saved_fragment);
+  this->query_ = std::move(saved_query);
+
+  return *this;
+}
+
+auto URI::rebase(const URI &base, URI &&new_base) -> URI & {
+  this->relative_to(base);
+  if (!this->is_relative()) {
+    return *this;
   }
 
-  // Restore fragment and query from the relative URI
+  auto saved_path = std::move(this->path_);
+  auto saved_fragment = std::move(this->fragment_);
+  auto saved_query = std::move(this->query_);
+
+  this->scheme_ = std::move(new_base.scheme_);
+  this->userinfo_ = std::move(new_base.userinfo_);
+  this->host_ = std::move(new_base.host_);
+  this->port_ = new_base.port_;
+
+  merge_new_base_path(this->path_, std::move(new_base.path_),
+                      std::move(saved_path));
+
   this->fragment_ = std::move(saved_fragment);
   this->query_ = std::move(saved_query);
 

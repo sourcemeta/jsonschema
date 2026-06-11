@@ -480,6 +480,15 @@ public:
       exponent--;
     }
 
+    // A negative exponent on an integral value means the coefficient carries
+    // trailing zeros that the scale removes, so dividing recovers the true
+    // magnitude rather than returning a result that is too large by a power of
+    // ten
+    while (exponent < 0) {
+      value = value / 10;
+      exponent++;
+    }
+
     return value;
   }
 

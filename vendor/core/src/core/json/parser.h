@@ -6,8 +6,11 @@
 
 #include "grammar.h"
 
+#include <bit>     // std::countr_zero, std::endian
 #include <cassert> // assert
-#include <cstdint> // std::uint64_t, std::uint32_t
+#include <cstddef> // std::size_t
+#include <cstdint> // std::uint64_t, std::uint32_t, std::uint8_t
+#include <cstring> // std::memcpy
 #include <vector>  // std::vector
 
 namespace sourcemeta::core {
@@ -25,8 +28,15 @@ enum class TapeType : std::uint8_t {
   False
 };
 
+constexpr std::uint8_t TAPE_FLAG_STRING_ESCAPE{0x01};
+constexpr std::uint8_t TAPE_FLAG_NUMBER_DOT{0x02};
+constexpr std::uint8_t TAPE_FLAG_NUMBER_EXPONENT{0x04};
+
+// The flags byte lives in what was already padding, so recording scan facts
+// for construct does not grow the entry
 struct TapeEntry {
   TapeType type;
+  std::uint8_t flags;
   std::uint32_t offset;
   std::uint32_t length;
   std::uint32_t count;
@@ -34,7 +44,42 @@ struct TapeEntry {
   std::uint64_t column;
 };
 
+static_assert(sizeof(TapeEntry) == 32);
+
 namespace internal {
+
+constexpr std::uint64_t WORD_LOW_BITS{0x0101010101010101ULL};
+constexpr std::uint64_t WORD_HIGH_BITS{0x8080808080808080ULL};
+
+inline auto is_plain_string_byte(const char character) -> bool {
+  return character != internal::token_string_quote<char> &&
+         character != internal::token_string_escape<char> &&
+         static_cast<unsigned char>(character) >= 0x20;
+}
+
+// Flag every byte that ends the plain run of a string: the closing quote,
+// the escape introducer, or a control character that RFC 8259 forbids
+// unescaped. Subtraction borrows can falsely flag the byte directly after a
+// genuinely flagged byte, which is harmless because callers only act on the
+// first flagged byte, and the first flag is always genuine
+inline auto match_string_special_bytes(const std::uint64_t word)
+    -> std::uint64_t {
+  constexpr auto quote_pattern{
+      WORD_LOW_BITS *
+      static_cast<unsigned char>(internal::token_string_quote<char>)};
+  constexpr auto escape_pattern{
+      WORD_LOW_BITS *
+      static_cast<unsigned char>(internal::token_string_escape<char>)};
+  const auto quote_difference{word ^ quote_pattern};
+  const auto escape_difference{word ^ escape_pattern};
+  const auto quote_matches{(quote_difference - WORD_LOW_BITS) &
+                           ~quote_difference & WORD_HIGH_BITS};
+  const auto escape_matches{(escape_difference - WORD_LOW_BITS) &
+                            ~escape_difference & WORD_HIGH_BITS};
+  const auto control_matches{(word - (WORD_LOW_BITS * 0x20ULL)) & ~word &
+                             WORD_HIGH_BITS};
+  return quote_matches | escape_matches | control_matches;
+}
 
 template <bool TrackPositions>
 inline auto skip_whitespace(const char *&cursor, const char *end,
@@ -228,13 +273,26 @@ inline auto scan_string_escape(const std::uint64_t line, std::uint64_t &column,
 
 template <bool TrackPositions>
 inline auto scan_string(const std::uint64_t line, std::uint64_t &column,
-                        const char *&cursor, const char *end) -> void {
-  using CharT = typename JSON::Char;
+                        const char *&cursor, const char *end) -> bool {
+  bool has_escape{false};
   while (cursor < end) {
     const char *scan{cursor};
-    while (scan < end && *scan != internal::token_string_quote<CharT> &&
-           *scan != internal::token_string_escape<CharT> &&
-           static_cast<unsigned char>(*scan) >= 0x20) {
+
+    if constexpr (std::endian::native == std::endian::little) {
+      while (scan + sizeof(std::uint64_t) <= end) {
+        std::uint64_t word;
+        std::memcpy(&word, scan, sizeof(word));
+        const auto matches{internal::match_string_special_bytes(word)};
+        if (matches != 0) {
+          scan += static_cast<std::size_t>(std::countr_zero(matches)) >> 3;
+          break;
+        }
+
+        scan += sizeof(std::uint64_t);
+      }
+    }
+
+    while (scan < end && internal::is_plain_string_byte(*scan)) {
       scan++;
     }
 
@@ -259,8 +317,9 @@ inline auto scan_string(const std::uint64_t line, std::uint64_t &column,
 
     switch (character) {
       case internal::token_string_quote<typename JSON::Char>:
-        return;
+        return has_escape;
       case internal::token_string_escape<typename JSON::Char>:
+        has_escape = true;
         scan_string_escape<TrackPositions>(line, column, cursor, end);
         break;
       default:
@@ -296,11 +355,18 @@ inline auto scan_digits(const std::uint64_t line, std::uint64_t &column,
   }
 }
 
+struct NumberFacts {
+  std::uint8_t flags{0};
+  std::uint32_t significant_digits{0};
+};
+
 template <bool TrackPositions>
 inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
                         const char *&cursor, const char *end, const char first)
-    -> void {
+    -> NumberFacts {
   using CharT = typename JSON::Char;
+  NumberFacts facts;
+  const char *literal_start{cursor - 1};
   if (first == internal::token_number_minus<CharT>) {
     if (cursor >= end || *cursor < internal::token_number_zero<CharT> ||
         *cursor > internal::token_number_nine<CharT>) [[unlikely]] {
@@ -313,6 +379,8 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
 
   const char int_start{first == internal::token_number_minus<CharT> ? *cursor
                                                                     : first};
+  const char *integer_begin{
+      first == internal::token_number_minus<CharT> ? cursor : cursor - 1};
   if (first == internal::token_number_minus<CharT>) {
     if constexpr (TrackPositions) {
       column += 1;
@@ -332,7 +400,10 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
     scan_digits<TrackPositions>(line, column, cursor, end, false);
   }
 
+  const char *dot_position{nullptr};
   if (cursor < end && *cursor == internal::token_number_decimal_point<CharT>) {
+    dot_position = cursor;
+    facts.flags |= TAPE_FLAG_NUMBER_DOT;
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -343,6 +414,7 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
   if (cursor < end &&
       (*cursor == internal::token_number_exponent_lowercase<CharT> ||
        *cursor == internal::token_number_exponent_uppercase<CharT>)) {
+    facts.flags |= TAPE_FLAG_NUMBER_EXPONENT;
     if constexpr (TrackPositions) {
       column += 1;
     }
@@ -356,6 +428,35 @@ inline auto scan_number(const std::uint64_t line, std::uint64_t &column,
     }
     scan_digits<TrackPositions>(line, column, cursor, end, true);
   }
+
+  // The significant digit count only matters for choosing between a double
+  // and an arbitrary precision representation, a choice that exponents force
+  // on their own
+  if (dot_position && !(facts.flags & TAPE_FLAG_NUMBER_EXPONENT)) {
+    const char *first_significant{nullptr};
+    if (int_start != internal::token_number_zero<CharT>) {
+      first_significant = integer_begin;
+    } else {
+      for (const char *pointer = dot_position + 1; pointer < cursor;
+           pointer++) {
+        if (*pointer != internal::token_number_zero<CharT>) {
+          first_significant = pointer;
+          break;
+        }
+      }
+    }
+
+    if (first_significant) {
+      facts.significant_digits = static_cast<std::uint32_t>(
+          cursor - first_significant -
+          (dot_position > first_significant ? 1 : 0));
+    } else {
+      facts.significant_digits =
+          static_cast<std::uint32_t>(cursor - literal_start - 1);
+    }
+  }
+
+  return facts;
 }
 
 } // namespace internal
@@ -395,24 +496,27 @@ inline auto scan_json(const char *&cursor, const char *end,
     switch (character) {
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
         return;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
         return;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
         return;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
             static_cast<std::uint32_t>(cursor - buffer_start)};
-        internal::scan_string<TrackPositions>(line, column, cursor, end);
+        const auto string_has_escape{
+            internal::scan_string<TrackPositions>(line, column, cursor, end)};
         const auto string_length{static_cast<std::uint32_t>(
             cursor - buffer_start - string_start - 1)};
-        tape.push_back({TapeType::String, string_start, string_length, 0,
-                        value_line, value_column});
+        tape.push_back(
+            {TapeType::String,
+             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
+             string_start, string_length, 0, value_line, value_column});
         return;
       }
       case internal::token_array_begin<CharT>:
@@ -432,11 +536,12 @@ inline auto scan_json(const char *&cursor, const char *end,
       case internal::token_number_nine<CharT>: {
         const auto number_start{
             static_cast<std::uint32_t>(cursor - buffer_start - 1)};
-        internal::scan_number<TrackPositions>(line, column, cursor, end,
-                                              character);
+        const auto number_facts{internal::scan_number<TrackPositions>(
+            line, column, cursor, end, character)};
         const auto number_length{
             static_cast<std::uint32_t>(cursor - buffer_start - number_start)};
-        tape.push_back({TapeType::Number, number_start, number_length, 0,
+        tape.push_back({TapeType::Number, number_facts.flags, number_start,
+                        number_length, number_facts.significant_digits,
                         value_line, value_column});
         return;
       }
@@ -451,7 +556,7 @@ inline auto scan_json(const char *&cursor, const char *end,
 
 do_scan_array: {
   const auto start_index{tape.size()};
-  tape.push_back({TapeType::ArrayStart, 0, 0, 0, line, column});
+  tape.push_back({TapeType::ArrayStart, 0, 0, 0, 0, line, column});
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
@@ -468,7 +573,7 @@ do_scan_array: {
     }
     cursor++;
     tape[start_index].count = 0;
-    tape.push_back({TapeType::ArrayEnd, 0, 0, 0, line, column});
+    tape.push_back({TapeType::ArrayEnd, 0, 0, 0, 0, line, column});
     container_stack.pop_back();
     goto do_scan_container_end;
   }
@@ -502,24 +607,27 @@ do_scan_array_item:
         goto do_scan_object;
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_array_item_separator;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_array_item_separator;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_array_item_separator;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
             static_cast<std::uint32_t>(cursor - buffer_start)};
-        internal::scan_string<TrackPositions>(line, column, cursor, end);
+        const auto string_has_escape{
+            internal::scan_string<TrackPositions>(line, column, cursor, end)};
         const auto string_length{static_cast<std::uint32_t>(
             cursor - buffer_start - string_start - 1)};
-        tape.push_back({TapeType::String, string_start, string_length, 0,
-                        value_line, value_column});
+        tape.push_back(
+            {TapeType::String,
+             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
+             string_start, string_length, 0, value_line, value_column});
         goto do_scan_array_item_separator;
       }
       case internal::token_number_minus<CharT>:
@@ -535,11 +643,12 @@ do_scan_array_item:
       case internal::token_number_nine<CharT>: {
         const auto number_start{
             static_cast<std::uint32_t>(cursor - buffer_start - 1)};
-        internal::scan_number<TrackPositions>(line, column, cursor, end,
-                                              character);
+        const auto number_facts{internal::scan_number<TrackPositions>(
+            line, column, cursor, end, character)};
         const auto number_length{
             static_cast<std::uint32_t>(cursor - buffer_start - number_start)};
-        tape.push_back({TapeType::Number, number_start, number_length, 0,
+        tape.push_back({TapeType::Number, number_facts.flags, number_start,
+                        number_length, number_facts.significant_digits,
                         value_line, value_column});
         goto do_scan_array_item_separator;
       }
@@ -567,7 +676,7 @@ do_scan_array_item_separator:
       assert(!container_stack.empty());
       auto &frame{container_stack.back()};
       tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({TapeType::ArrayEnd, 0, 0, 0, line, column});
+      tape.push_back({TapeType::ArrayEnd, 0, 0, 0, 0, line, column});
       container_stack.pop_back();
       goto do_scan_container_end;
     }
@@ -581,7 +690,7 @@ do_scan_array_item_separator:
 
 do_scan_object: {
   const auto start_index{tape.size()};
-  tape.push_back({TapeType::ObjectStart, 0, 0, 0, line, column});
+  tape.push_back({TapeType::ObjectStart, 0, 0, 0, 0, line, column});
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
@@ -598,7 +707,7 @@ do_scan_object: {
     }
     cursor++;
     tape[start_index].count = 0;
-    tape.push_back({TapeType::ObjectEnd, 0, 0, 0, line, column});
+    tape.push_back({TapeType::ObjectEnd, 0, 0, 0, 0, line, column});
     container_stack.pop_back();
     goto do_scan_container_end;
   }
@@ -626,11 +735,14 @@ do_scan_object_key:
       const auto key_start{static_cast<std::uint32_t>(cursor - buffer_start)};
       const auto key_line{line};
       const auto key_column{column};
-      internal::scan_string<TrackPositions>(line, column, cursor, end);
+      const auto key_has_escape{
+          internal::scan_string<TrackPositions>(line, column, cursor, end)};
       const auto key_length{
           static_cast<std::uint32_t>(cursor - buffer_start - key_start - 1)};
       tape.push_back(
-          {TapeType::Key, key_start, key_length, 0, key_line, key_column});
+          {TapeType::Key,
+           key_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
+           key_start, key_length, 0, key_line, key_column});
       goto do_scan_object_separator;
     }
     default:
@@ -679,24 +791,27 @@ do_scan_object_value:
         goto do_scan_object;
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_object_property_end;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_object_property_end;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, value_line, value_column});
+        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
         goto do_scan_object_property_end;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
             static_cast<std::uint32_t>(cursor - buffer_start)};
-        internal::scan_string<TrackPositions>(line, column, cursor, end);
+        const auto string_has_escape{
+            internal::scan_string<TrackPositions>(line, column, cursor, end)};
         const auto string_length{static_cast<std::uint32_t>(
             cursor - buffer_start - string_start - 1)};
-        tape.push_back({TapeType::String, string_start, string_length, 0,
-                        value_line, value_column});
+        tape.push_back(
+            {TapeType::String,
+             string_has_escape ? TAPE_FLAG_STRING_ESCAPE : std::uint8_t{0},
+             string_start, string_length, 0, value_line, value_column});
         goto do_scan_object_property_end;
       }
       case internal::token_number_minus<CharT>:
@@ -712,11 +827,12 @@ do_scan_object_value:
       case internal::token_number_nine<CharT>: {
         const auto number_start{
             static_cast<std::uint32_t>(cursor - buffer_start - 1)};
-        internal::scan_number<TrackPositions>(line, column, cursor, end,
-                                              character);
+        const auto number_facts{internal::scan_number<TrackPositions>(
+            line, column, cursor, end, character)};
         const auto number_length{
             static_cast<std::uint32_t>(cursor - buffer_start - number_start)};
-        tape.push_back({TapeType::Number, number_start, number_length, 0,
+        tape.push_back({TapeType::Number, number_facts.flags, number_start,
+                        number_length, number_facts.significant_digits,
                         value_line, value_column});
         goto do_scan_object_property_end;
       }
@@ -744,7 +860,7 @@ do_scan_object_property_end:
       assert(!container_stack.empty());
       auto &frame{container_stack.back()};
       tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({TapeType::ObjectEnd, 0, 0, 0, line, column});
+      tape.push_back({TapeType::ObjectEnd, 0, 0, 0, 0, line, column});
       container_stack.pop_back();
       goto do_scan_container_end;
     }

@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/ip.h>
 
+#include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string_view> // std::string_view
 
 namespace {
@@ -75,6 +76,46 @@ inline constexpr auto is_ldh_str(const std::string_view value) -> bool {
   return true;
 }
 
+// RFC 5321 §4.1.3: Snum = 1*3DIGIT ; representing a decimal integer
+// value in the range 0 through 255. Leading zeros are permitted, unlike
+// the RFC 3986 dec-octet that backs is_ipv4
+inline constexpr auto is_snum(const std::string_view value) -> bool {
+  if (value.empty() || value.size() > 3) {
+    return false;
+  }
+  std::uint16_t result{0};
+  for (const auto character : value) {
+    if (character < '0' || character > '9') {
+      return false;
+    }
+    result = static_cast<std::uint16_t>(
+        result * 10 + static_cast<std::uint16_t>(character - '0'));
+  }
+  return result <= 255;
+}
+
+// RFC 5321 §4.1.3: IPv4-address-literal = Snum 3("." Snum)
+inline constexpr auto is_ipv4_address_literal(const std::string_view value)
+    -> bool {
+  std::string_view::size_type start{0};
+  std::uint8_t octets{0};
+  while (true) {
+    const auto dot{value.find('.', start)};
+    const auto octet{dot == std::string_view::npos
+                         ? value.substr(start)
+                         : value.substr(start, dot - start)};
+    if (!is_snum(octet)) {
+      return false;
+    }
+    octets = static_cast<std::uint8_t>(octets + 1);
+    if (dot == std::string_view::npos) {
+      break;
+    }
+    start = dot + 1;
+  }
+  return octets == 4;
+}
+
 // RFC 5234 §2.3: ABNF literal strings are case-insensitive by default
 // RFC 5321 §4.1.3: IPv6-address-literal prefix is the literal "IPv6:"
 inline constexpr auto matches_ipv6_tag(const std::string_view value) -> bool {
@@ -126,7 +167,7 @@ inline auto is_address_literal(const std::string_view domain) -> bool {
   // RFC 5321 §4.1.3: IPv4-address-literal has no ":";
   // General-address-literal requires ":"
   if (inner.find(':') == std::string_view::npos) {
-    return sourcemeta::core::is_ipv4(inner);
+    return is_ipv4_address_literal(inner);
   }
   return is_general_address_literal(inner);
 }

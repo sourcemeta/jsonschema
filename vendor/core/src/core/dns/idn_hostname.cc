@@ -68,7 +68,7 @@ auto is_idn_hostname(const std::string_view value) -> bool {
       try {
         const auto body{utf32_to_punycode(decoded)};
         a_label_octets = 4 + body.size();
-      } catch (...) {
+      } catch (const PunycodeError &) {
         return false;
       }
     } else if (*kind == IDNALabelKind::Ascii) {

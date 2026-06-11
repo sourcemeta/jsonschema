@@ -144,8 +144,20 @@ inline auto http_for_each_parameter(const std::string_view parameters,
       ++position;
     }
     std::size_t end_position{position};
-    while (end_position < parameters.size() &&
-           parameters[end_position] != ';') {
+    bool in_quotes{false};
+    while (end_position < parameters.size()) {
+      const char current{parameters[end_position]};
+      if (in_quotes) {
+        if (current == '\\' && end_position + 1 < parameters.size()) {
+          ++end_position;
+        } else if (current == '"') {
+          in_quotes = false;
+        }
+      } else if (current == '"') {
+        in_quotes = true;
+      } else if (current == ';') {
+        break;
+      }
       ++end_position;
     }
     const auto raw{http_subview(parameters, position, end_position - position)};
@@ -167,27 +179,29 @@ inline auto http_for_each_parameter(const std::string_view parameters,
   }
 }
 
-// RFC 9110 §5.6.5 q-value. Defaults to 1.0 on malformed input.
+// RFC 9110 §12.4.2 q-value. A malformed weight is a fail-safe refusal, so it
+// is treated as 0 rather than maximal preference. An absent weight is not
+// routed here and keeps its 1.0 default at the call site.
 inline auto http_parse_qvalue(const std::string_view value) noexcept -> float {
   if (value.empty()) {
-    return 1.0f;
+    return 0.0f;
   }
   if (value[0] != '0' && value[0] != '1') {
-    return 1.0f;
+    return 0.0f;
   }
   const float integer_part{static_cast<float>(value[0] - '0')};
   if (value.size() == 1) {
     return integer_part;
   }
   if (value[1] != '.' || value.size() > 5) {
-    return 1.0f;
+    return 0.0f;
   }
   std::uint16_t numerator{0};
   std::uint16_t denominator{1};
   for (std::size_t index{2}; index < value.size(); ++index) {
     const char character{value[index]};
     if (character < '0' || character > '9') {
-      return 1.0f;
+      return 0.0f;
     }
     numerator = static_cast<std::uint16_t>(numerator * 10 + (character - '0'));
     denominator = static_cast<std::uint16_t>(denominator * 10);
@@ -196,7 +210,7 @@ inline auto http_parse_qvalue(const std::string_view value) noexcept -> float {
                        static_cast<float>(denominator)};
   const float result{integer_part + fraction};
   if (result > 1.0f) {
-    return 1.0f;
+    return 0.0f;
   }
   return result;
 }

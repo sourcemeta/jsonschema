@@ -3,9 +3,9 @@
 
 #include <sourcemeta/core/stacktrace.h>
 
-#include <array>            // std::array
-#include <atomic>           // std::atomic
-#include <csignal>          // sigaction, struct sigaction, SIG*, raise
+#include <array>  // std::array
+#include <atomic> // std::atomic
+#include <csignal> // sigaction, struct sigaction, SIG*, raise, sigaltstack, stack_t, SA_ONSTACK
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::uintptr_t
 #include <cstring>          // std::strlen
@@ -161,6 +161,12 @@ constexpr const char *separator{"========================================"
 
 std::atomic<bool> crash_handler_installed{false};
 
+// A stack-overflow fault arrives on an already-exhausted stack, so the handler
+// must run on a separate region to be able to produce a trace. This is sized
+// generously to leave room for the backtrace machinery
+constexpr std::size_t alternate_stack_size{1 << 16};
+alignas(16) std::array<unsigned char, alternate_stack_size> alternate_stack{};
+
 } // namespace
 
 // NOTE: `backtrace`, `dladdr`, and `strlen` are not on POSIX's strict
@@ -228,9 +234,19 @@ __attribute__((visibility("default"))) auto stacktrace_on_crash() -> void {
     return;
   }
 
+  stack_t signal_stack{};
+  signal_stack.ss_sp = alternate_stack.data();
+  signal_stack.ss_size = alternate_stack.size();
+  signal_stack.ss_flags = 0;
+  const bool alternate_stack_ready{::sigaltstack(&signal_stack, nullptr) == 0};
+
   struct sigaction action{};
   action.sa_sigaction = &sourcemeta_core_stacktrace_crash_handler;
-  action.sa_flags = static_cast<int>(SA_SIGINFO | SA_RESETHAND | SA_NODEFER);
+  int flags{static_cast<int>(SA_SIGINFO | SA_RESETHAND | SA_NODEFER)};
+  if (alternate_stack_ready) {
+    flags |= static_cast<int>(SA_ONSTACK);
+  }
+  action.sa_flags = flags;
   sigemptyset(&action.sa_mask);
 
   for (const int signal_number : {SIGSEGV, SIGABRT, SIGFPE, SIGBUS, SIGILL}) {

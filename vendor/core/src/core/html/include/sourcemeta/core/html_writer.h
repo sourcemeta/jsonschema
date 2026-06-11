@@ -37,10 +37,14 @@ public:
     this->buffer_.reserve(bytes);
   }
 
-  /// Close the most recently opened element
+  /// Close the most recently opened element. Closing when no element is open
+  /// has no effect.
   SOURCEMETA_FORCEINLINE inline auto close() -> HTMLWriter & {
     this->flush_open_tag();
     assert(!this->tag_stack_.empty());
+    if (this->tag_stack_.empty()) [[unlikely]] {
+      return *this;
+    }
     this->buffer_.append("</");
     this->buffer_.append(this->tag_stack_.back());
     this->buffer_.append(">");

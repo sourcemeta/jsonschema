@@ -15,10 +15,12 @@ const bool cmark_initialized =
 
 namespace sourcemeta::core {
 
-auto markdown_to_html(const std::string_view input) -> std::string {
-  static constexpr auto options{CMARK_OPT_VALIDATE_UTF8 | CMARK_OPT_FOOTNOTES |
-                                CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE |
-                                CMARK_OPT_GITHUB_PRE_LANG};
+auto markdown_to_html(const std::string_view input, const bool safe)
+    -> std::string {
+  static constexpr auto base_options{
+      CMARK_OPT_VALIDATE_UTF8 | CMARK_OPT_FOOTNOTES |
+      CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE | CMARK_OPT_GITHUB_PRE_LANG};
+  const int options{safe ? (base_options | CMARK_OPT_SAFE) : base_options};
 
   auto *parser{cmark_parser_new(options)};
 

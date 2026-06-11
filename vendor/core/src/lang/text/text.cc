@@ -1,6 +1,5 @@
 #include <sourcemeta/core/text.h>
 
-#include <cctype>      // std::isalpha, std::toupper
 #include <cstddef>     // std::size_t
 #include <filesystem>  // std::filesystem::path
 #include <optional>    // std::optional, std::nullopt
@@ -13,6 +12,17 @@ namespace {
 auto is_ascii_whitespace(const char character) noexcept -> bool {
   return character == ' ' || character == '\t' || character == '\n' ||
          character == '\v' || character == '\f' || character == '\r';
+}
+
+auto is_ascii_letter(const char character) noexcept -> bool {
+  return (character >= 'a' && character <= 'z') ||
+         (character >= 'A' && character <= 'Z');
+}
+
+auto to_ascii_uppercase(const char character) noexcept -> char {
+  return (character >= 'a' && character <= 'z')
+             ? static_cast<char>(character - ('a' - 'A'))
+             : character;
 }
 
 } // namespace
@@ -45,9 +55,8 @@ auto to_title_case(std::string &value) -> void {
         capitalize_next = true;
       }
       if (capitalize_next) {
-        value[write++] = static_cast<char>(
-            std::toupper(static_cast<unsigned char>(character)));
-        if (std::isalpha(static_cast<unsigned char>(character))) {
+        value[write++] = to_ascii_uppercase(character);
+        if (is_ascii_letter(character)) {
           capitalize_next = false;
         }
       } else {

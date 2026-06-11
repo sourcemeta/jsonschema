@@ -321,6 +321,24 @@ auto supports_id_anchors(
   }
 }
 
+// Generic URI normalisation only decodes unreserved characters (see RFC 3986,
+// section 6.2.2.2), so a reference destination may still spell its JSON
+// Pointer fragment with percent-encoded octets. Re-serialise such fragments
+// from their parsed form so that reference destinations match the URIs that
+// locations are framed under
+auto canonicalize_pointer_fragment(sourcemeta::core::URI &uri) -> void {
+  const auto fragment{uri.fragment()};
+  if (!fragment.has_value() ||
+      fragment.value().find('%') == std::string_view::npos) {
+    return;
+  }
+
+  const auto destination{sourcemeta::core::fragment_to_pointer(uri)};
+  if (destination.has_value()) {
+    uri.fragment(sourcemeta::core::to_string(destination.value()));
+  }
+}
+
 auto set_base_and_fragment(
     sourcemeta::blaze::SchemaFrame::ReferencesEntry &entry) -> void {
   const std::string_view destination_view{entry.destination};
@@ -772,7 +790,8 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
                   entry.id ? std::optional<std::string_view>{*entry.id}
                            : std::nullopt)};
           if (!nearest_bases.first.empty()) {
-            metaschema.resolve_from(nearest_bases.first.front());
+            metaschema.resolve_from(
+                sourcemeta::core::URI{nearest_bases.first.front()});
           }
 
           metaschema.canonicalize();
@@ -1037,10 +1056,11 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
         }
 
         if (!nearest_bases.first.empty()) {
-          ref.resolve_from(nearest_bases.first.front());
+          ref.resolve_from(sourcemeta::core::URI{nearest_bases.first.front()});
         }
 
         ref.canonicalize();
+        canonicalize_pointer_fragment(ref);
         auto ref_pointer{common_pointer_weak};
         ref_pointer.push_back(std::cref(KEYWORD_REF));
         const auto [it, inserted] = this->references_.insert_or_assign(
@@ -1122,10 +1142,11 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
         }
 
         if (!nearest_bases.first.empty()) {
-          ref.resolve_from(nearest_bases.first.front());
+          ref.resolve_from(sourcemeta::core::URI{nearest_bases.first.front()});
         }
 
         ref.canonicalize();
+        canonicalize_pointer_fragment(ref);
         auto ref_string{ref.recompose()};
 
         // Note that here we cannot enforce the bookending requirement,

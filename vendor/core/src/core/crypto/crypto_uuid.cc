@@ -40,8 +40,8 @@ auto uuidv4() -> std::string {
     throw std::runtime_error("Could not generate random bytes with OpenSSL");
   }
 #else
-  static std::random_device device;
-  static std::mt19937 generator{device()};
+  thread_local std::random_device device;
+  thread_local std::mt19937 generator{device()};
   std::uniform_int_distribution<decltype(digits)::size_type> distribution(0,
                                                                           15);
   std::uniform_int_distribution<decltype(variant_digits)::size_type>

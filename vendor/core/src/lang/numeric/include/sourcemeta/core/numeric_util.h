@@ -8,6 +8,7 @@
 #include <concepts> // std::floating_point, std::integral, std::same_as
 #include <cstdint>  // std::uint8_t, std::int64_t, std::uint64_t
 #include <limits>   // std::numeric_limits
+#include <utility>  // std::cmp_greater_equal, std::cmp_less_equal
 
 namespace sourcemeta::core {
 
@@ -225,11 +226,22 @@ auto count_multiples(const Minimum &minimum, const Maximum &maximum,
     const auto signed_multiplier{static_cast<std::int64_t>(multiplier)};
     assert(signed_minimum <= signed_maximum);
     assert(signed_multiplier > 0);
-    return static_cast<std::uint64_t>(
-        divide_floor(signed_maximum,
-                     static_cast<std::uint64_t>(signed_multiplier)) -
-        divide_floor(signed_minimum - 1,
-                     static_cast<std::uint64_t>(signed_multiplier)));
+    const auto unsigned_multiplier{
+        static_cast<std::uint64_t>(signed_multiplier)};
+    const auto multiples_to_maximum{
+        divide_floor(signed_maximum, unsigned_multiplier)};
+    const auto multiples_below_minimum{
+        divide_floor(signed_minimum, unsigned_multiplier)};
+    // Count the multiples up to the maximum and subtract those strictly below
+    // the minimum. The lower bound is derived without forming one less than the
+    // smallest value, which would overflow for the most negative input, and the
+    // subtraction is performed in unsigned arithmetic so the difference cannot
+    // overflow a signed integer
+    const std::uint64_t minimum_is_multiple{
+        signed_minimum % signed_multiplier == 0 ? 1U : 0U};
+    return static_cast<std::uint64_t>(multiples_to_maximum) -
+           static_cast<std::uint64_t>(multiples_below_minimum) +
+           minimum_is_multiple;
   }
 }
 
@@ -247,7 +259,10 @@ constexpr auto uint_max = [] {
 template <typename T>
 constexpr auto is_within(const T &value, const std::int64_t lower,
                          const std::int64_t higher) noexcept -> bool {
-  return value >= lower && value <= higher;
+  // Compare across signedness without converting an unsigned value against a
+  // negative bound, which would otherwise wrap the bound to a large positive
+  return std::cmp_greater_equal(value, lower) &&
+         std::cmp_less_equal(value, higher);
 }
 
 /// @ingroup numeric
@@ -299,12 +314,18 @@ constexpr auto closest_smallest_exponent(const std::uint64_t value,
   assert(exponent_start <= exponent_end);
   std::uint64_t result{base};
   for (std::uint8_t exponent{1}; exponent < exponent_end; exponent++) {
-    const std::uint64_t next{result * base};
-    if (next > value && exponent >= exponent_start) {
-      return exponent;
-    } else {
-      result = next;
+    // Test whether the next power exceeds the value without forming it, since
+    // result multiplied by base could wrap the accumulator
+    const bool next_power_exceeds_value{result > value / base};
+    if (next_power_exceeds_value) {
+      if (exponent >= exponent_start) {
+        return exponent;
+      }
+
+      continue;
     }
+
+    result *= base;
   }
 
   assert(result <= value);

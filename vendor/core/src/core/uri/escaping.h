@@ -3,14 +3,9 @@
 
 #include "grammar.h"
 
-#include <array>    // std::array
-#include <cctype>   // std::isalnum
-#include <charconv> // std::from_chars
-#include <cstdint>  // std::uint8_t
-#include <istream>  // std::istream
-#include <iterator> // std::istream_iterator
-#include <ostream>  // std::ostream
-#include <string>   // std::string
+#include <cctype>  // std::isxdigit, std::toupper
+#include <cstdint> // std::uint8_t
+#include <string>  // std::string
 
 namespace sourcemeta::core {
 
@@ -37,107 +32,6 @@ enum class URIEscapeMode : std::uint8_t {
   // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
   UserInfo
 };
-
-inline auto uri_escape(std::istream &input, std::ostream &output,
-                       const URIEscapeMode mode,
-                       const bool preserve_percent_sequences = true) -> void {
-  char character = 0;
-  while (input.get(character)) {
-    // Check if this is an already percent-encoded sequence (%HEXHEX)
-    // If so, preserve it as-is to avoid double-encoding
-    // (only when preserve_percent_sequences is true)
-    if (preserve_percent_sequences && character == URI_PERCENT) {
-      const auto position = input.tellg();
-      char next_1 = 0;
-      char next_2 = 0;
-
-      if (input.get(next_1) && input.get(next_2) &&
-          std::isxdigit(static_cast<unsigned char>(next_1)) &&
-          std::isxdigit(static_cast<unsigned char>(next_2))) {
-        // Valid percent-encoded sequence - preserve it
-        output << character << next_1 << next_2;
-        continue;
-      }
-
-      // Not a valid percent-encoded sequence - restore position and escape %
-      input.seekg(position);
-    }
-
-    // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
-    // See https://www.rfc-editor.org/rfc/rfc3986#appendix-A
-    if (uri_is_unreserved(character)) {
-      output << character;
-      continue;
-    }
-
-    if (mode == URIEscapeMode::SkipSubDelims || mode == URIEscapeMode::Path ||
-        mode == URIEscapeMode::Fragment || mode == URIEscapeMode::Filesystem ||
-        mode == URIEscapeMode::UserInfo) {
-      if (uri_is_sub_delim(character)) {
-        output << character;
-        continue;
-      }
-    }
-
-    if (mode == URIEscapeMode::Path) {
-      if (character == URI_COLON || character == URI_AT ||
-          character == URI_SLASH) {
-        output << character;
-        continue;
-      }
-    }
-
-    if (mode == URIEscapeMode::Fragment) {
-      if (character == URI_COLON || character == URI_AT ||
-          character == URI_SLASH || character == URI_QUESTION) {
-        output << character;
-        continue;
-      }
-    }
-
-    if (mode == URIEscapeMode::Filesystem || mode == URIEscapeMode::UserInfo) {
-      if (character == URI_COLON) {
-        output << character;
-        continue;
-      }
-    }
-
-    const auto byte{static_cast<unsigned char>(character)};
-    const auto high{(byte >> 4) & 0x0F};
-    const auto low{byte & 0x0F};
-    output << URI_PERCENT;
-    output << static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10);
-    output << static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10);
-  }
-}
-
-inline auto uri_unescape(std::istream &input, std::ostream &output) -> void {
-  std::istream_iterator<char> iterator(input);
-  std::istream_iterator<char> end;
-  auto plus_1 = std::ranges::next(iterator, 1, end);
-  auto plus_2 = std::ranges::next(plus_1, 1, end);
-  const int hex_base = 16;
-
-  while (iterator != end) {
-    if (*iterator == URI_PERCENT && plus_1 != end && plus_2 != end &&
-        std::isxdigit(*(plus_1)) && std::isxdigit(*(plus_2))) {
-      const std::array<char, 2> hex{{*plus_1, *plus_2}};
-      int decoded_value{};
-      std::from_chars(hex.data(), hex.data() + hex.size(), decoded_value,
-                      hex_base);
-      output << static_cast<char>(decoded_value);
-
-      iterator = std::ranges::next(plus_2, 1, end);
-      plus_1 = std::ranges::next(iterator, 1, end);
-      plus_2 = std::ranges::next(plus_1, 1, end);
-    } else {
-      output << *iterator;
-      iterator = plus_1;
-      plus_1 = plus_2;
-      plus_2 = std::ranges::next(plus_1, 1, end);
-    }
-  }
-}
 
 inline auto uri_hex_to_int(char character) -> unsigned char {
   if (character >= '0' && character <= '9') {

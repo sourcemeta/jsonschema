@@ -12,7 +12,9 @@
 #include <cstdint>    // std::uint64_t
 #include <filesystem> // std::filesystem
 #include <istream>    // std::basic_istream
+#include <limits>     // std::numeric_limits
 #include <ostream>    // std::basic_ostream
+#include <utility>    // std::cmp_greater
 #include <vector>     // std::vector
 
 namespace sourcemeta::core {
@@ -23,6 +25,13 @@ static auto internal_parse_json(const char *&cursor, const char *end,
                                 const bool track_positions, JSON &output)
     -> void {
   const char *buffer_start{cursor};
+  // Tape entries address the input with 32-bit offsets and lengths, so a larger
+  // input cannot be represented without truncation
+  if (std::cmp_greater(end - cursor,
+                       std::numeric_limits<std::uint32_t>::max())) {
+    throw JSONParseError(line, column);
+  }
+
   std::vector<TapeEntry> tape;
   tape.reserve(static_cast<std::size_t>(end - cursor) / 8);
   if (callback || track_positions) {

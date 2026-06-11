@@ -1,6 +1,7 @@
 #include <sourcemeta/core/options.h>
 
 #include <cassert> // assert
+#include <cstddef> // std::size_t
 #include <utility> // std::forward
 
 namespace {
@@ -79,7 +80,8 @@ auto Options::parse(const int argc,
     -> void {
   bool end_of_options{false};
   // We assume that the first argument is the program name
-  for (auto index = static_cast<int>(options.skip + 1); index < argc; index++) {
+  const auto argument_count{static_cast<std::size_t>(argc)};
+  for (std::size_t index{options.skip + 1}; index < argument_count; index++) {
     const std::string_view token{argv[index]};
 
     if (end_of_options) {
@@ -90,7 +92,8 @@ auto Options::parse(const int argc,
       continue;
     }
 
-    const auto *const next{(index + 1) < argc ? argv[index + 1] : nullptr};
+    const auto *const next{(index + 1) < argument_count ? argv[index + 1]
+                                                        : nullptr};
 
     // Parse long options
     if (token.size() >= 3 && token[0] == '-' && token[1] == '-') {

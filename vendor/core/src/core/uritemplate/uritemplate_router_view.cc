@@ -4,6 +4,7 @@
 #include <algorithm>     // std::ranges::sort
 #include <array>         // std::array
 #include <cassert>       // assert
+#include <cstdint>       // std::uint32_t, std::uint8_t, std::uintptr_t
 #include <cstring>       // std::memcmp, std::memcpy
 #include <fstream>       // std::ofstream
 #include <limits>        // std::numeric_limits
@@ -585,7 +586,9 @@ auto URITemplateRouterView::match(
     if (variable_node.type == URITemplateRouter::NodeType::OptionalExpansion) {
       if (variable_node.string_offset > string_table_size ||
           variable_node.string_length >
-              string_table_size - variable_node.string_offset) {
+              string_table_size - variable_node.string_offset ||
+          variable_index >
+              std::numeric_limits<URITemplateRouter::Index>::max()) {
         return finalize_match(otherwise_context, 0, 0);
       }
       callback(static_cast<URITemplateRouter::Index>(variable_index),

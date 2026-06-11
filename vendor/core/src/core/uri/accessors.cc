@@ -1,9 +1,9 @@
 #include <sourcemeta/core/ip.h>
 #include <sourcemeta/core/uri.h>
 
-#include <cstdint>  // std::uint32_t
-#include <optional> // std::optional
-#include <string>   // std::string
+#include <cstdint>     // std::uint32_t
+#include <optional>    // std::optional
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
@@ -66,7 +66,13 @@ auto URI::host() const -> std::optional<std::string_view> {
 
 auto URI::port() const -> std::optional<std::uint32_t> { return this->port_; }
 
-auto URI::path() const -> std::optional<std::string> { return this->path_; }
+auto URI::path() const -> std::optional<std::string_view> {
+  if (this->path_.has_value()) {
+    return this->path_.value();
+  }
+
+  return std::nullopt;
+}
 
 auto URI::fragment() const -> std::optional<std::string_view> {
   return this->fragment_;
@@ -74,6 +80,11 @@ auto URI::fragment() const -> std::optional<std::string_view> {
 
 auto URI::userinfo() const -> std::optional<std::string_view> {
   return this->userinfo_;
+}
+
+auto URI::has_same_authority(const URI &other) const noexcept -> bool {
+  return this->userinfo_ == other.userinfo_ && this->host_ == other.host_ &&
+         this->port_ == other.port_;
 }
 
 } // namespace sourcemeta::core

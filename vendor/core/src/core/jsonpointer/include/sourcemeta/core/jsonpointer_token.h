@@ -79,7 +79,9 @@ public:
   /// ```
   GenericToken(const int value)
       : as_property{false}, property{DEFAULT_PROPERTY}, hash{0},
-        index{static_cast<Index>(value)} {}
+        index{static_cast<Index>(value)} {
+    assert(value >= 0);
+  }
 
 #if defined(_MSC_VER)
   /// This constructor creates an JSON Pointer token from an item index. For

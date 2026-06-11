@@ -8,6 +8,7 @@
 #include <sourcemeta/core/jsonpointer_error.h>
 
 #include <charconv>     // std::from_chars
+#include <cstddef>      // std::size_t
 #include <cstdint>      // std::uint64_t
 #include <istream>      // std::basic_istream
 #include <sstream>      // std::basic_stringstream
@@ -29,9 +30,9 @@ template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
 inline auto
 parse_index(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
-            const std::uint64_t column) -> unsigned long {
+            const std::uint64_t column) -> std::size_t {
   const auto input = stream.str();
-  unsigned long index_value{};
+  std::size_t index_value{};
   const auto result =
       std::from_chars(input.data(), input.data() + input.size(), index_value);
   if (result.ec != std::errc{}) [[unlikely]] {
@@ -52,12 +53,17 @@ auto parse_pointer(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> std::conditional_t<CheckOnly, void, Pointer> {
   [[maybe_unused]] Pointer result;
   JSON::Char character = 0;
+  JSON::CharTraits::int_type code = 0;
   [[maybe_unused]] std::basic_stringstream<JSON::Char> string;
   std::uint64_t column{0};
 
 parse_token_begin:
-  character = static_cast<JSON::Char>(stream.get());
+  code = stream.get();
   column += 1;
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    goto done;
+  }
+  character = JSON::CharTraits::to_char_type(code);
   // A JSON Pointer is a Unicode string
   // containing a sequence of zero or more reference tokens, each prefixed
   // by a '/' (%x2F) character.
@@ -65,14 +71,21 @@ parse_token_begin:
   switch (character) {
     case internal::token_pointer_slash<JSON::Char>:
       goto parse_token_content;
-    case static_cast<JSON::Char>(JSON::CharTraits::eof()):
-      goto done;
     default:
       throw PointerParseError(column);
   }
 
 parse_token_content:
-  character = static_cast<JSON::Char>(stream.peek());
+  code = stream.peek();
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    column += 1;
+    stream.ignore();
+    if constexpr (!CheckOnly) {
+      result.emplace_back("");
+    }
+    goto done;
+  }
+  character = JSON::CharTraits::to_char_type(code);
   switch (character) {
       // Note that leading zeros are not allowed
       // See https://www.rfc-editor.org/rfc/rfc6901#section-4
@@ -95,13 +108,6 @@ parse_token_content:
         string.put(character);
       }
       goto parse_token_index_rest_any;
-    case static_cast<JSON::Char>(JSON::CharTraits::eof()):
-      column += 1;
-      stream.ignore();
-      if constexpr (!CheckOnly) {
-        result.emplace_back("");
-      }
-      goto done;
     case internal::token_pointer_slash<JSON::Char>:
       if constexpr (!CheckOnly) {
         result.emplace_back("");
@@ -128,7 +134,17 @@ parse_token_index_end:
   if constexpr (!CheckOnly) {
     string.put(character);
   }
-  character = static_cast<JSON::Char>(stream.peek());
+  code = stream.peek();
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    column += 1;
+    stream.ignore();
+    if constexpr (!CheckOnly) {
+      result.emplace_back(internal::parse_index(string, column));
+      internal::reset(string);
+    }
+    goto done;
+  }
+  character = JSON::CharTraits::to_char_type(code);
   switch (character) {
     case internal::token_pointer_slash<JSON::Char>:
       column += 1;
@@ -138,20 +154,22 @@ parse_token_index_end:
         internal::reset(string);
       }
       goto parse_token_content;
-    case static_cast<JSON::Char>(JSON::CharTraits::eof()):
-      column += 1;
-      stream.ignore();
-      if constexpr (!CheckOnly) {
-        result.emplace_back(internal::parse_index(string, column));
-        internal::reset(string);
-      }
-      goto done;
     default:
       goto parse_token_property_rest_any;
   }
 
 parse_token_index_rest_any:
-  character = static_cast<JSON::Char>(stream.peek());
+  code = stream.peek();
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    column += 1;
+    stream.ignore();
+    if constexpr (!CheckOnly) {
+      result.emplace_back(internal::parse_index(string, column));
+      internal::reset(string);
+    }
+    goto done;
+  }
+  character = JSON::CharTraits::to_char_type(code);
   switch (character) {
     case internal::token_pointer_slash<JSON::Char>:
       column += 1;
@@ -161,14 +179,6 @@ parse_token_index_rest_any:
         internal::reset(string);
       }
       goto parse_token_content;
-    case static_cast<JSON::Char>(JSON::CharTraits::eof()):
-      column += 1;
-      stream.ignore();
-      if constexpr (!CheckOnly) {
-        result.emplace_back(internal::parse_index(string, column));
-        internal::reset(string);
-      }
-      goto done;
     case internal::token_pointer_number_zero<JSON::Char>:
     case internal::token_pointer_number_one<JSON::Char>:
     case internal::token_pointer_number_two<JSON::Char>:
@@ -195,8 +205,16 @@ parse_token_index_rest_any:
    */
 
 parse_token_property_rest_any:
-  character = static_cast<JSON::Char>(stream.get());
+  code = stream.get();
   column += 1;
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    if constexpr (!CheckOnly) {
+      result.emplace_back(string.str());
+      internal::reset(string);
+    }
+    goto done;
+  }
+  character = JSON::CharTraits::to_char_type(code);
   switch (character) {
     case internal::token_pointer_slash<JSON::Char>:
       if constexpr (!CheckOnly) {
@@ -206,12 +224,6 @@ parse_token_property_rest_any:
       goto parse_token_content;
     case internal::token_pointer_tilde<JSON::Char>:
       goto parse_token_escape_tilde;
-    case static_cast<JSON::Char>(JSON::CharTraits::eof()):
-      if constexpr (!CheckOnly) {
-        result.emplace_back(string.str());
-        internal::reset(string);
-      }
-      goto done;
     default:
       if constexpr (!CheckOnly) {
         string.put(character);
@@ -220,8 +232,12 @@ parse_token_property_rest_any:
   }
 
 parse_token_escape_tilde:
-  character = static_cast<JSON::Char>(stream.get());
+  code = stream.get();
   column += 1;
+  if (JSON::CharTraits::eq_int_type(code, JSON::CharTraits::eof())) {
+    throw PointerParseError(column);
+  }
+  character = JSON::CharTraits::to_char_type(code);
   // Because the characters '~' (%x7E) and '/' (%x2F) have special
   // meanings in JSON Pointer, '~' needs to be encoded as '~0' and '/'
   // needs to be encoded as '~1' when these characters appear in a

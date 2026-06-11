@@ -606,10 +606,6 @@ auto do_parse(const std::string_view input,
 
       uri_unescape_unreserved_inplace(parsed_path.value());
       path = std::move(parsed_path.value());
-    } else if (has_authority || has_scheme) {
-      if (input.ends_with(URI_SLASH) || input == "/") {
-        path = "/";
-      }
     }
   }
 

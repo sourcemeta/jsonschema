@@ -12,6 +12,54 @@
 
 namespace sourcemeta::core {
 
+namespace {
+
+// RFC 5890 §2.3.2.1: the maximum length of a label in A-label form
+constexpr std::size_t MAXIMUM_LABEL_OCTETS{63};
+
+// Decode and fully validate a Punycode A-label body (the substring after the
+// "xn--" prefix), writing the decoded U-label out on success. Returns false
+// when the body is not a canonical A-label.
+auto validate_a_label_body(const std::string_view encoded,
+                           std::u32string &decoded) -> bool {
+  if (encoded.empty()) {
+    return false;
+  }
+
+  try {
+    decoded = punycode_to_utf32(encoded);
+  } catch (const PunycodeError &) {
+    return false;
+  }
+
+  // RFC 5890 §2.3.2.1: a U-label contains at least one non-ASCII codepoint.
+  // A Punycode body that decodes to pure ASCII is not a real A-label.
+  bool has_non_ascii{false};
+  for (const auto codepoint : decoded) {
+    if (codepoint > 0x7F) {
+      has_non_ascii = true;
+      break;
+    }
+  }
+  if (!has_non_ascii) {
+    return false;
+  }
+
+  if (!idna_is_valid_u_label(decoded)) {
+    return false;
+  }
+
+  // RFC 5891 §4.2: A-labels must be in canonical Punycode form, so
+  // re-encoding the decoded U-label must yield the original bytes.
+  try {
+    return utf32_to_punycode(decoded) == encoded;
+  } catch (const PunycodeError &) {
+    return false;
+  }
+}
+
+} // namespace
+
 auto idna_classify_label(const std::u32string_view label,
                          std::u32string &decoded)
     -> std::optional<IDNALabelKind> {
@@ -34,23 +82,23 @@ auto idna_classify_label(const std::u32string_view label,
         ((label[1] | 0x20) == U'n') && label[2] == U'-' && label[3] == U'-'};
 
     if (has_a_label_prefix) {
+      // RFC 5890 §2.3.2.1: a label in A-label form is at most 63 octets
+      if (label.size() > MAXIMUM_LABEL_OCTETS) {
+        return std::nullopt;
+      }
+
       std::string ascii;
       ascii.reserve(label.size());
       for (const auto codepoint : label) {
         ascii.push_back(static_cast<char>(codepoint));
       }
       // Normalise the prefix to canonical lowercase before validating, so
-      // the round-trip equality inside `idna_is_valid_a_label` does not
-      // reject input that only differs in the case of the prefix
+      // the round-trip equality does not reject input that only differs in
+      // the case of the prefix
       ascii[0] = 'x';
       ascii[1] = 'n';
-      if (!idna_is_valid_a_label(ascii)) {
-        return std::nullopt;
-      }
-      try {
-        decoded = punycode_to_utf32(
-            std::string_view{ascii.data() + 4, ascii.size() - 4});
-      } catch (...) {
+      if (!validate_a_label_body(
+              std::string_view{ascii.data() + 4, ascii.size() - 4}, decoded)) {
         return std::nullopt;
       }
       return IDNALabelKind::ALabel;
@@ -128,24 +176,23 @@ auto idna_passes_contexto(const std::u32string_view label,
       break;
   }
 
-  // RFC 5892 Appendix A.8 ARABIC-INDIC DIGITS (U+0660..U+0669)
-  if (codepoint >= 0x0660 && codepoint <= 0x0669) {
-    for (const auto other : label) {
-      if (other >= 0x06F0 && other <= 0x06F9) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // RFC 5892 Appendix A.9 EXTENDED ARABIC-INDIC DIGITS (U+06F0..U+06F9)
-  if (codepoint >= 0x06F0 && codepoint <= 0x06F9) {
+  // RFC 5892 Appendix A.8 ARABIC-INDIC DIGITS (U+0660..U+0669) and
+  // Appendix A.9 EXTENDED ARABIC-INDIC DIGITS (U+06F0..U+06F9): a label must
+  // not mix the two blocks. A single scan over the label settles both rules.
+  const bool is_arabic_indic{codepoint >= 0x0660 && codepoint <= 0x0669};
+  const bool is_extended_arabic_indic{codepoint >= 0x06F0 &&
+                                      codepoint <= 0x06F9};
+  if (is_arabic_indic || is_extended_arabic_indic) {
+    bool has_arabic_indic{false};
+    bool has_extended_arabic_indic{false};
     for (const auto other : label) {
       if (other >= 0x0660 && other <= 0x0669) {
-        return false;
+        has_arabic_indic = true;
+      } else if (other >= 0x06F0 && other <= 0x06F9) {
+        has_extended_arabic_indic = true;
       }
     }
-    return true;
+    return !(has_arabic_indic && has_extended_arabic_indic);
   }
 
   // No RFC 5892 Appendix A.3-A.9 rule applies to this codepoint, so there
@@ -252,6 +299,16 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool {
     }
   }
 
+  // RFC 5890 §2.3.2.1: the corresponding A-label (the "xn--" prefix plus the
+  // Punycode-encoded body) must not exceed 63 octets
+  try {
+    if (4 + utf32_to_punycode(label).size() > MAXIMUM_LABEL_OCTETS) {
+      return false;
+    }
+  } catch (const PunycodeError &) {
+    return false;
+  }
+
   return true;
 }
 
@@ -350,6 +407,11 @@ auto idna_is_valid_a_label(const std::string_view label) -> bool {
     return false;
   }
 
+  // RFC 5890 §2.3.2.1: a label in A-label form is at most 63 octets
+  if (label.size() > MAXIMUM_LABEL_OCTETS) {
+    return false;
+  }
+
   // RFC 5890 §2.3.2.1: A-labels are pure ASCII
   for (const auto byte : label) {
     if (static_cast<unsigned char>(byte) > 0x7F) {
@@ -361,41 +423,9 @@ auto idna_is_valid_a_label(const std::string_view label) -> bool {
   // avoids `std::string_view::substr`, which is not noexcept.
   const std::string_view encoded{label.data() + prefix.size(),
                                  label.size() - prefix.size()};
-  if (encoded.empty()) {
-    return false;
-  }
 
   std::u32string decoded;
-  try {
-    decoded = punycode_to_utf32(encoded);
-  } catch (...) {
-    return false;
-  }
-
-  // RFC 5890 §2.3.2.1: a U-label contains at least one non-ASCII codepoint.
-  // A Punycode body that decodes to pure ASCII is not a real A-label.
-  bool has_non_ascii{false};
-  for (const auto codepoint : decoded) {
-    if (codepoint > 0x7F) {
-      has_non_ascii = true;
-      break;
-    }
-  }
-  if (!has_non_ascii) {
-    return false;
-  }
-
-  if (!idna_is_valid_u_label(decoded)) {
-    return false;
-  }
-
-  // RFC 5891 §4.2: A-labels must be in canonical Punycode form, so
-  // re-encoding the decoded U-label must yield the original bytes.
-  try {
-    return utf32_to_punycode(decoded) == encoded;
-  } catch (...) {
-    return false;
-  }
+  return validate_a_label_body(encoded, decoded);
 }
 
 } // namespace sourcemeta::core

@@ -12,8 +12,10 @@
 #include <array>       // std::array
 #include <cassert>     // assert
 #include <charconv>    // std::to_chars
+#include <cstddef>     // std::size_t
 #include <iterator>    // std::cbegin, std::cend, std::prev, std::advance
 #include <memory>      // std::allocator
+#include <optional>    // std::optional, std::nullopt
 #include <ostream>     // std::basic_ostream
 #include <sstream>     // std::basic_ostringstream, std::basic_stringstream
 #include <string>      // std::basic_string
@@ -22,6 +24,18 @@
 #include <utility>     // std::move
 
 namespace {
+
+auto uri_hex_value(const char character) -> int {
+  if (character >= '0' && character <= '9') {
+    return character - '0';
+  } else if (character >= 'A' && character <= 'F') {
+    return character - 'A' + 10;
+  } else if (character >= 'a' && character <= 'f') {
+    return character - 'a' + 10;
+  } else {
+    return -1;
+  }
+}
 
 template <template <typename T> typename Allocator, typename V,
           typename PointerT = sourcemeta::core::GenericPointer<
@@ -127,15 +141,19 @@ auto try_traverse(const sourcemeta::core::JSON &document,
       return nullptr;
     } else {
       const auto index{token.to_index()};
-      if (index < current->size()) {
-        if (is_object) {
-          std::array<char, 20> buffer{};
-          const auto [end_pointer, error_code] = std::to_chars(
-              buffer.data(), buffer.data() + buffer.size(), index);
-          current = &current->at(std::string_view{buffer.data(), end_pointer});
+      if (is_object) {
+        std::array<char, 20> buffer{};
+        const auto [end_pointer, error_code] =
+            std::to_chars(buffer.data(), buffer.data() + buffer.size(), index);
+        const auto *json_value{
+            current->try_at(std::string_view{buffer.data(), end_pointer})};
+        if (json_value) {
+          current = json_value;
         } else {
-          current = &current->at(index);
+          return nullptr;
         }
+      } else if (index < current->size()) {
+        current = &current->at(index);
       } else {
         return nullptr;
       }
@@ -260,11 +278,19 @@ auto set(JSON &document, const Pointer &pointer, JSON &&value) -> void {
   // the (nonexistent) member after the last array element.
   // See https://www.rfc-editor.org/rfc/rfc6901#section-4
   if (current.is_array() && last.is_hyphen()) {
-    current.push_back(value);
+    current.push_back(std::move(value));
   } else if (last.is_property()) {
     current.at(last.to_property()).into(std::move(value));
   } else {
-    current.at(last.to_index()).into(std::move(value));
+    if (current.is_object()) {
+      std::array<char, 20> buffer{};
+      const auto [end_pointer, error_code] = std::to_chars(
+          buffer.data(), buffer.data() + buffer.size(), last.to_index());
+      current.at(std::string_view{buffer.data(), end_pointer})
+          .into(std::move(value));
+    } else {
+      current.at(last.to_index()).into(std::move(value));
+    }
   }
 }
 
@@ -332,6 +358,48 @@ auto to_pointer(
       stream{std::basic_string<JSON::Char, JSON::CharTraits,
                                std::allocator<JSON::Char>>{input}};
   return parse_pointer<false>(stream);
+}
+
+auto fragment_to_pointer(const URI &uri) -> std::optional<Pointer> {
+  const auto fragment{uri.fragment()};
+  if (!fragment.has_value()) {
+    return std::nullopt;
+  }
+
+  // When a URI is dereferenced, the components and subcomponents significant
+  // to the scheme-specific dereferencing process (if any) must be parsed and
+  // separated before the percent-encoded octets within those components can
+  // be safely decoded.
+  // See https://www.rfc-editor.org/rfc/rfc3986#section-2.4
+  const auto &value{fragment.value()};
+  JSON::String input;
+  input.reserve(value.size());
+  for (std::size_t index = 0; index < value.size(); ++index) {
+    const auto character{value[index]};
+    if (character == '%' && index + 2 < value.size()) {
+      const auto high{uri_hex_value(value[index + 1])};
+      const auto low{uri_hex_value(value[index + 2])};
+      if (high >= 0 && low >= 0) {
+        input.push_back(static_cast<char>((high * 16) + low));
+        index += 2;
+        continue;
+      }
+    }
+
+    input.push_back(character);
+  }
+
+  if (input.empty()) {
+    return Pointer{};
+  } else if (input.front() != '/') {
+    return std::nullopt;
+  }
+
+  try {
+    return to_pointer(input);
+  } catch (const PointerParseError &) {
+    return std::nullopt;
+  }
 }
 
 auto to_pointer(const WeakPointer &pointer) -> Pointer {

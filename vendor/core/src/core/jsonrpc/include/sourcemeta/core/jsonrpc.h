@@ -67,8 +67,10 @@ SOURCEMETA_CORE_JSONRPC_EXPORT
 auto jsonrpc_is_server_error(const std::int64_t code) -> bool;
 
 /// @ingroup jsonrpc
-/// Check whether the given JSON value is a JSON-RPC 2.0 batch envelope. For
-/// example:
+/// Check whether the given JSON value is a JSON-RPC 2.0 batch envelope. This
+/// only verifies that the value is an array, so the caller remains responsible
+/// for the empty-batch single-error response and for omitting a response when a
+/// batch consists entirely of notifications. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
