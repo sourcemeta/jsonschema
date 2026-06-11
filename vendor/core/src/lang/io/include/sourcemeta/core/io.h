@@ -20,6 +20,7 @@
 #include <functional>   // std::function
 #include <iostream>     // std::cin
 #include <istream>      // std::basic_istream
+#include <limits>       // std::numeric_limits
 #include <ostream>      // std::ostream
 #include <span>         // std::span
 #include <sstream>      // std::basic_ostringstream
@@ -120,12 +121,12 @@ auto read_file(const std::filesystem::path &path)
   }
 
   const auto canonical_path{sourcemeta::core::canonical(path)};
-  std::ifstream stream{canonical_path};
+  std::basic_ifstream<CharT, Traits> stream{canonical_path};
   if (!stream.is_open()) {
     throw IOFilePermissionError{canonical_path};
   }
 
-  stream.exceptions(std::ifstream::badbit);
+  stream.exceptions(std::basic_ifstream<CharT, Traits>::badbit);
   return stream;
 }
 
@@ -199,6 +200,15 @@ auto read_file_to_string(const std::filesystem::path &path)
   const auto size{std::filesystem::file_size(canonical_path, file_size_error)};
   if (file_size_error) {
     return read_to_string<CharT, Traits>(stream);
+  }
+
+  // On 32-bit targets the file size can exceed what an in-memory string can
+  // hold, in which case fall back to a streaming read that grows as needed
+  if constexpr (std::numeric_limits<decltype(size)>::max() >
+                std::numeric_limits<std::size_t>::max()) {
+    if (size > std::numeric_limits<std::size_t>::max()) {
+      return read_to_string<CharT, Traits>(stream);
+    }
   }
 
   std::basic_string<CharT, Traits> result;

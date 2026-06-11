@@ -35,6 +35,7 @@ namespace sourcemeta::blaze {
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/blaze/bundle.h>
 /// #include <sourcemeta/blaze/foundation.h>
 /// #include <sourcemeta/blaze/editor.h>
 ///
@@ -46,7 +47,8 @@ namespace sourcemeta::blaze {
 ///
 /// sourcemeta::blaze::bundle(schema,
 ///   sourcemeta::blaze::schema_walker,
-///   sourcemeta::blaze::schema_resolver);
+///   sourcemeta::blaze::schema_resolver,
+///   sourcemeta::blaze::BundleMode::NonOfficialMetaschemas);
 /// sourcemeta::blaze::for_editor(schema,
 ///   sourcemeta::blaze::schema_walker,
 ///   sourcemeta::blaze::schema_resolver);

@@ -1,8 +1,7 @@
 #ifndef SOURCEMETA_CORE_ERROR_FILE_H_
 #define SOURCEMETA_CORE_ERROR_FILE_H_
 
-#include <cassert>    // assert
-#include <filesystem> // std::filesystem::path, std::filesystem::exists
+#include <filesystem> // std::filesystem::path
 #include <utility>    // std::move, std::forward
 
 namespace sourcemeta::core {
@@ -21,9 +20,7 @@ template <typename T> class FileError : public T {
 public:
   template <typename... Args>
   FileError(std::filesystem::path path, Args &&...args)
-      : T{std::forward<Args>(args)...}, path_{std::move(path)} {
-    assert(std::filesystem::exists(this->path_));
-  }
+      : T{std::forward<Args>(args)...}, path_{std::move(path)} {}
 
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;

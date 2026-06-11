@@ -103,19 +103,31 @@ public:
   template <typename Container,
             typename = std::void_t<typename Container::key_type>>
   [[nodiscard]] auto expand(const Container &variables) const -> std::string {
-    return this->expand([&variables](
-                            const std::string_view name) -> URITemplateValue {
-      const auto iterator{variables.find(typename Container::key_type{name})};
-      if (iterator == variables.end()) {
-        return std::nullopt;
-      } else {
-        return std::make_tuple(std::string_view{iterator->second}, std::nullopt,
-                               false);
-      }
-    });
+    return this->expand(
+        [&variables](const std::string_view name) -> URITemplateValue {
+          const auto iterator{find_variable(variables, name)};
+          if (iterator == variables.end()) {
+            return std::nullopt;
+          } else {
+            return std::make_tuple(std::string_view{iterator->second},
+                                   std::nullopt, false);
+          }
+        });
   }
 
 private:
+  // Prefer a heterogeneous lookup so the key is not materialized when the
+  // container supports it
+  template <typename Container>
+  static auto find_variable(const Container &variables,
+                            const std::string_view name) {
+    if constexpr (requires { variables.find(name); }) {
+      return variables.find(name);
+    } else {
+      return variables.find(typename Container::key_type{name});
+    }
+  }
+
 // Exporting symbols that depends on the standard C++ library is considered
 // safe.
 // https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-2-c4275?view=msvc-170&redirectedfrom=MSDN

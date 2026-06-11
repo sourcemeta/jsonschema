@@ -60,7 +60,7 @@ auto sourcemeta::jsonschema::metaschema(
           entry.second, custom_resolver, default_dialect_option)};
       const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
           metaschema, sourcemeta::blaze::schema_walker, custom_resolver,
-          default_dialect_option)};
+          sourcemeta::blaze::BundleMode::References, default_dialect_option)};
       sourcemeta::blaze::SchemaFrame frame{
           sourcemeta::blaze::SchemaFrame::Mode::References};
       frame.analyse(bundled, sourcemeta::blaze::schema_walker, custom_resolver,

@@ -1,12 +1,17 @@
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/io_atomic.h>
 
-#include <cassert>      // assert
-#include <cerrno>       // EACCES, errno
-#include <filesystem>   // std::filesystem
-#include <fstream>      // std::ofstream
-#include <ios>          // std::ios::binary, std::ios::trunc
-#include <ostream>      // std::ostream
+#include <cassert>    // assert
+#include <cerrno>     // EACCES, errno
+#include <cstddef>    // std::size_t
+#include <cstdint>    // std::uint64_t
+#include <filesystem> // std::filesystem
+#include <fstream>    // std::ofstream
+#include <ios>        // std::ios::binary, std::ios::trunc
+#include <ostream>    // std::ostream
+#include <random> // std::random_device, std::mt19937_64, std::uniform_int_distribution
+#include <string>       // std::string
+#include <string_view>  // std::string_view
 #include <system_error> // std::error_code, std::generic_category
 
 #if defined(__linux__)
@@ -21,15 +26,35 @@
 
 namespace {
 
+auto unique_staging_path(const std::filesystem::path &destination)
+    -> std::filesystem::path {
+  thread_local std::mt19937_64 generator{std::random_device{}()};
+  std::uniform_int_distribution<std::uint64_t> distribution;
+  std::string suffix{".tmp."};
+  suffix.reserve(suffix.size() + 16);
+  static constexpr std::string_view digits{"0123456789abcdef"};
+  auto value{distribution(generator)};
+  for (std::size_t index{0}; index < 16; index++) {
+    suffix.push_back(digits[value & 0xF]);
+    value >>= 4;
+  }
+
+  std::filesystem::path staging{destination};
+  staging += suffix;
+  return staging;
+}
+
 class AtomicFileWriter {
 public:
   AtomicFileWriter(const std::filesystem::path &destination)
-      : destination_{destination}, staging_{destination} {
+      : destination_{destination}, staging_{unique_staging_path(destination)} {
     // The staging file lives next to the destination so that
     // `std::filesystem::rename` stays on a single filesystem and remains
     // atomic. Using the system-wide temporary directory would risk `EXDEV`
     // errors on cross-filesystem builds (CI containers, NFS mounts, etc.).
-    this->staging_ += ".tmp";
+    // The staging name carries a per-writer random suffix so that concurrent
+    // writers targeting the same destination do not interleave into one
+    // staging file and break atomicity
 
     if (this->destination_.has_parent_path()) {
       std::filesystem::create_directories(this->destination_.parent_path());

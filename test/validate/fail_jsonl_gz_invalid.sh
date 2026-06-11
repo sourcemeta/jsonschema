@@ -24,7 +24,7 @@ EOF
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
-error: Could not decompress gzip stream
+error: Invalid gzip magic bytes
   at file path $(realpath "$TMP")/instance.jsonl.gz
 EOF
 
@@ -38,7 +38,7 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "Could not decompress gzip stream",
+  "error": "Invalid gzip magic bytes",
   "filePath": "$(realpath "$TMP")/instance.jsonl.gz"
 }
 EOF

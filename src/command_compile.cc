@@ -51,7 +51,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   try {
     if (options.contains("entrypoint") && !options.at("entrypoint").empty()) {
       const sourcemeta::core::JSON bundled{sourcemeta::blaze::bundle(
-          schema, sourcemeta::blaze::schema_walker, custom_resolver, dialect,
+          schema, sourcemeta::blaze::schema_walker, custom_resolver,
+          sourcemeta::blaze::BundleMode::References, dialect,
           schema_default_id)};
 
       sourcemeta::blaze::SchemaFrame frame{

@@ -9,7 +9,7 @@
 #include <sourcemeta/core/uri_error.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <concepts>    // std::convertible_to
+#include <concepts>    // std::convertible_to, std::same_as
 #include <cstddef>     // std::size_t, std::ptrdiff_t
 #include <cstdint>     // std::uint32_t
 #include <filesystem>  // std::filesystem
@@ -20,8 +20,8 @@
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
-#include <type_traits> // std::is_same_v
-#include <utility>     // std::pair
+#include <type_traits> // std::is_same_v, std::remove_cvref_t
+#include <utility>     // std::pair, std::forward
 #include <vector>      // std::vector
 
 /// @defgroup uri URI
@@ -64,7 +64,7 @@ public:
   template <typename T>
     requires std::convertible_to<T, std::string_view> &&
              (!std::is_same_v<std::decay_t<T>, URI>)
-  URI(T &&input) {
+  explicit URI(T &&input) {
     this->parse(std::string_view{std::forward<T>(input)});
   }
 
@@ -209,11 +209,13 @@ public:
   ///
   /// const sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
   /// assert(uri.host().has_value());
-  /// assert(uri.host().value() == "sourcemeta.com");
+  /// assert(uri.host().value() == "www.sourcemeta.com");
   /// ```
   [[nodiscard]] auto host() const -> std::optional<std::string_view>;
 
-  /// Get the port part of the URI, if any. For example:
+  /// Get the port part of the URI, if any. Parsing rejects a port that does not
+  /// fit in 32 bits even though RFC 3986 leaves the production unbounded. For
+  /// example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -236,7 +238,7 @@ public:
   /// assert(uri.path().has_value());
   /// assert(uri.path().value() == "/foo/bar");
   /// ```
-  [[nodiscard]] auto path() const -> std::optional<std::string>;
+  [[nodiscard]] auto path() const -> std::optional<std::string_view>;
 
   /// Set the path part of the URI. For example:
   ///
@@ -266,7 +268,9 @@ public:
   auto path(std::string &&path) -> URI &;
 
   /// Append a path to the existing URI path or set a path if such component
-  /// does not exist in the URI. For example:
+  /// does not exist in the URI. The argument is treated as a path component
+  /// to merge in. Authority prefixes and `?` or `#` delimiters throw
+  /// `URIError`. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -275,7 +279,38 @@ public:
   /// sourcemeta::core::URI uri{"https://www.sourcemeta.com/foo"};
   /// uri.append_path("bar/baz");
   /// assert(uri.recompose() == "https://www.sourcemeta.com/foo/bar/baz");
-  auto append_path(const std::string &path) -> URI &;
+  auto append_path(std::string_view path) -> URI &;
+
+  /// Append a path to the existing URI from a parsed reference. The
+  /// reference must contain only a path. A scheme, authority, query, or
+  /// fragment throws `URIError`. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://www.sourcemeta.com/foo"};
+  /// const sourcemeta::core::URI reference{"bar/baz"};
+  /// uri.append_path(reference);
+  /// assert(uri.recompose() == "https://www.sourcemeta.com/foo/bar/baz");
+  auto append_path(const URI &reference) -> URI &;
+
+  /// Append a path to the existing URI from a parsed reference, moving the
+  /// path out of the reference rather than copying it. The reference must
+  /// contain only a path. A scheme, authority, query, or fragment throws
+  /// `URIError`. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <utility>
+  ///
+  /// sourcemeta::core::URI uri{"https://www.sourcemeta.com/foo"};
+  /// sourcemeta::core::URI reference{"bar/baz"};
+  /// uri.append_path(std::move(reference));
+  /// assert(uri.recompose() == "https://www.sourcemeta.com/foo/bar/baz");
+  /// ```
+  auto append_path(URI &&reference) -> URI &;
 
   /// If the URI has a path, this method sets or replace the extension in the
   /// path. For example:
@@ -462,9 +497,24 @@ public:
   ///
   /// const sourcemeta::core::URI
   ///   uri{"https://www.sourcemeta.com/foo/../bar"};
-  /// assert(uri.recompose() == "https://sourcemeta.com/bar");
+  /// assert(uri.recompose() == "https://www.sourcemeta.com/foo/../bar");
   /// ```
   [[nodiscard]] auto recompose() const -> std::string;
+
+  /// Recompose the path, query, and fragment of a URI as an RFC 3986
+  /// Section 4.2 relative reference. Scheme and authority are omitted. The
+  /// result only resolves back to the original URI when used against a base
+  /// that shares the same scheme and authority. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::URI
+  ///   uri{"https://www.sourcemeta.com/foo?x=1#bar"};
+  /// assert(uri.recompose_relative() == "/foo?x=1#bar");
+  /// ```
+  [[nodiscard]] auto recompose_relative() const -> std::string;
 
   /// Recompose a URI as established by RFC 3986, but without including the
   /// fragment component. The result is an optional to handle the case where the
@@ -478,7 +528,7 @@ public:
   ///   uri{"https://www.sourcemeta.com/foo#bar"};
   /// assert(uri.recompose_without_fragment().has_value());
   /// assert(uri.recompose_without_fragment().value() ==
-  /// "https://sourcemeta.com/foo");
+  /// "https://www.sourcemeta.com/foo");
   /// ```
   [[nodiscard]] auto recompose_without_fragment() const
       -> std::optional<std::string>;
@@ -517,7 +567,7 @@ public:
   /// const sourcemeta::core::URI base{"https://www.sourcemeta.com"};
   /// sourcemeta::core::URI result{"foo"};
   /// result.resolve_from(base);
-  /// assert(result.recompose() == "https://sourcemeta.com/foo");
+  /// assert(result.recompose() == "https://www.sourcemeta.com/foo");
   /// ```
   auto resolve_from(const URI &base) -> URI &;
 
@@ -535,8 +585,8 @@ public:
   /// ```
   auto relative_to(const URI &base) -> URI &;
 
-  /// Attempt to change the base of a URI . If the URI is not
-  /// relative to the former, leave the URI intact. For example:
+  /// Attempt to change the base of a URI. If the URI is not relative to
+  /// the former, leave the URI intact. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/uri.h>
@@ -549,6 +599,40 @@ public:
   /// assert(uri.recompose() == "/qux/bar/baz");
   /// ```
   auto rebase(const URI &base, const URI &new_base) -> URI &;
+
+  /// Attempt to change the base of a URI, moving components out of
+  /// `new_base` rather than copying them. If the URI is not relative to
+  /// the former base, leave the URI intact. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <utility>
+  ///
+  /// sourcemeta::core::URI uri{"https://example.com/foo/bar/baz"};
+  /// const sourcemeta::core::URI base{"https://example.com/foo"};
+  /// sourcemeta::core::URI new_base{"/qux"};
+  /// uri.rebase(base, std::move(new_base));
+  /// assert(uri.recompose() == "/qux/bar/baz");
+  /// ```
+  auto rebase(const URI &base, URI &&new_base) -> URI &;
+
+  /// Check whether two URIs share the same authority component. The authority
+  /// is the user information, host, and port per RFC 3986 Section 3.2. The
+  /// scheme is not part of the authority and is not compared. Comparison is
+  /// byte-exact on the stored values, so call `canonicalize()` first if you
+  /// want host case-insensitivity or default-port elision. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::URI left{"https://example.com/foo"};
+  /// const sourcemeta::core::URI right{"https://example.com/bar"};
+  /// assert(left.has_same_authority(right));
+  /// ```
+  [[nodiscard]] auto has_same_authority(const URI &other) const noexcept
+      -> bool;
 
   /// Get the user information part of the URI, if any. For example:
   ///

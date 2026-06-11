@@ -55,7 +55,8 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
 
   try {
     sourcemeta::blaze::bundle(
-        schema, sourcemeta::blaze::schema_walker, custom_resolver, dialect,
+        schema, sourcemeta::blaze::schema_walker, custom_resolver,
+        sourcemeta::blaze::BundleMode::NonOfficialMetaschemas, dialect,
         sourcemeta::jsonschema::default_id(schema_resolution_base));
 
     if (options.contains("without-id")) {

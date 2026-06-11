@@ -18,6 +18,7 @@
 #include <cassert>     // assert
 #include <functional>  // std::reference_wrapper
 #include <memory>      // std::allocator
+#include <optional>    // std::optional
 #include <ostream>     // std::basic_ostream
 #include <string>      // std::basic_string
 #include <string_view> // std::string_view
@@ -403,6 +404,25 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_pointer(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
     -> Pointer;
+
+/// @ingroup jsonpointer
+/// Parse the URI fragment representation of a JSON Pointer, percent-decoding
+/// the fragment data before interpretation as mandated by RFC 3986, Section
+/// 2.4 and RFC 6901, Section 6. The result is not set if the URI has no
+/// fragment or if its fragment is not a valid JSON Pointer. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/uri.h>
+/// #include <sourcemeta/core/jsonpointer.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::URI uri{"https://www.example.com#/foo/bar"};
+/// const auto pointer{sourcemeta::core::fragment_to_pointer(uri)};
+/// assert(pointer.has_value());
+/// assert(pointer.value().size() == 2);
+/// ```
+SOURCEMETA_CORE_JSONPOINTER_EXPORT
+auto fragment_to_pointer(const URI &uri) -> std::optional<Pointer>;
 
 /// @ingroup jsonpointer
 /// Convert a JSON WeakPointer into a JSON Pointer. For example:

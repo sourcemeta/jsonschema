@@ -27,7 +27,9 @@
 namespace sourcemeta::core {
 
 /// @ingroup unicode
-/// Encode a single Unicode codepoint as a UTF-8 string. For example:
+/// Encode a single Unicode codepoint as a UTF-8 string. The codepoint must be
+/// a valid Unicode scalar value, otherwise the output is unspecified.
+/// For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/unicode.h>
@@ -39,8 +41,9 @@ SOURCEMETA_CORE_UNICODE_EXPORT
 auto codepoint_to_utf8(const char32_t codepoint) -> std::string;
 
 /// @ingroup unicode
-/// Encode a single Unicode codepoint as UTF-8 into an output stream.
-/// For example:
+/// Encode a single Unicode codepoint as UTF-8 into an output stream. The
+/// codepoint must be a valid Unicode scalar value, otherwise the output is
+/// unspecified. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/unicode.h>
@@ -56,7 +59,8 @@ auto codepoint_to_utf8(const char32_t codepoint, std::ostream &output) -> void;
 
 /// @ingroup unicode
 /// Encode a single Unicode codepoint as UTF-8, appending to an existing string.
-/// For example:
+/// The codepoint must be a valid Unicode scalar value, otherwise the output is
+/// unspecified. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/unicode.h>
@@ -138,7 +142,7 @@ inline constexpr auto utf8_lead_byte_size(const unsigned char byte)
 
 /// @ingroup unicode
 /// Check whether the given byte is a UTF-8 continuation byte (%x80-BF per
-/// RFC 6532 Section 3.1). For example:
+/// RFC 3629 Section 4). For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/unicode.h>
@@ -469,7 +473,7 @@ auto is_nfc(const std::u32string_view input) -> bool;
 /// @ingroup unicode
 /// Determine the byte length of the valid UTF-8 codepoint starting at the
 /// given position within the input. Returns 1 for an ASCII byte, 2/3/4 for a
-/// valid multi-byte UTF-8 sequence (RFC 6532 Section 3.1, excluding overlong
+/// valid multi-byte UTF-8 sequence (RFC 3629 Section 4, excluding overlong
 /// encodings, surrogates, and code points above U+10FFFF), or 0 if the bytes
 /// at that position do not start a valid UTF-8 codepoint. For example:
 ///
@@ -500,7 +504,7 @@ utf8_codepoint_length(const std::string_view input,
   }
 
   // The second byte after the lead has tighter sub-ranges for specific leads
-  // (RFC 6532 §3.1) that exclude overlong encodings, surrogates, and code
+  // (RFC 3629 §4) that exclude overlong encodings, surrogates, and code
   // points above U+10FFFF
   const auto byte_1{static_cast<unsigned char>(input[position + 1])};
   bool byte_1_ok{false};

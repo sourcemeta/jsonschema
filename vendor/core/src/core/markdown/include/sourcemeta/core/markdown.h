@@ -23,7 +23,10 @@ namespace sourcemeta::core {
 /// @ingroup markdown
 /// Convert a Markdown string to an HTML fragment using GitHub Flavored
 /// Markdown (GFM) with all standard extensions enabled (tables, autolinks,
-/// strikethrough, tag filtering, and task lists). For example:
+/// strikethrough, tag filtering, and task lists). Raw HTML and dangerous
+/// links in the input pass through unchanged by default, so the result is not
+/// safe to render from untrusted input. Enabling safe mode suppresses raw HTML
+/// and strips unsafe links. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/markdown.h>
@@ -34,7 +37,8 @@ namespace sourcemeta::core {
 /// assert(result == "<p>Hello <strong>world</strong></p>\n");
 /// ```
 SOURCEMETA_CORE_MARKDOWN_EXPORT
-auto markdown_to_html(const std::string_view input) -> std::string;
+auto markdown_to_html(const std::string_view input, const bool safe = false)
+    -> std::string;
 
 } // namespace sourcemeta::core
 

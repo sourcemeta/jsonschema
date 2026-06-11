@@ -16,12 +16,17 @@
 
 namespace {
 
-auto is_official_metaschema_reference(
+auto is_skippable_metaschema_reference(
+    const sourcemeta::blaze::BundleMode mode,
     const sourcemeta::core::WeakPointer &pointer,
     const std::string &destination) -> bool {
   assert(!pointer.empty());
   assert(pointer.back().is_property());
-  return pointer.back().to_property() == "$schema" &&
+  if (pointer.back().to_property() != "$schema") {
+    return false;
+  }
+
+  return mode == sourcemeta::blaze::BundleMode::References ||
          sourcemeta::blaze::is_official_schema(destination);
 }
 
@@ -47,7 +52,9 @@ auto dependencies_internal(
                                           const auto &reference) {
     // We don't want to report official schemas, as we can expect
     // virtually all implementations to understand them out of the box
-    if (is_official_metaschema_reference(pointer, reference.destination)) {
+    if (is_skippable_metaschema_reference(
+            sourcemeta::blaze::BundleMode::NonOfficialMetaschemas, pointer,
+            reference.destination)) {
       return;
     }
 
@@ -236,6 +243,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
                    sourcemeta::core::JSON &subschema,
                    const sourcemeta::blaze::SchemaWalker &walker,
                    const sourcemeta::blaze::SchemaResolver &resolver,
+                   const sourcemeta::blaze::BundleMode mode,
                    std::string_view default_dialect,
                    std::string_view default_id,
                    const sourcemeta::blaze::SchemaFrame::Paths &paths,
@@ -265,8 +273,10 @@ auto bundle_schema(sourcemeta::core::JSON &root,
   frame.for_each_unresolved_reference([&](const auto &pointer,
                                           const auto &reference) {
     // We don't want to bundle official schemas, as we can expect
-    // virtually all implementations to understand them out of the box
-    if (is_official_metaschema_reference(pointer, reference.destination)) {
+    // virtually all implementations to understand them out of the box.
+    // Depending on the bundling strategy, we may skip meta-schemas entirely
+    if (is_skippable_metaschema_reference(mode, pointer,
+                                          reference.destination)) {
       return;
     }
 
@@ -378,8 +388,8 @@ auto bundle_schema(sourcemeta::core::JSON &root,
   }
 
   for (auto &[remote, effective_id, remote_dialect] : deferred) {
-    bundle_schema(root, container, remote, walker, resolver, default_dialect,
-                  effective_id, paths, bundled, depth + 1);
+    bundle_schema(root, container, remote, walker, resolver, mode,
+                  default_dialect, effective_id, paths, bundled, depth + 1);
     elevate_embedded_resources(remote, root, container, remote_dialect,
                                resolver, default_dialect, bundled);
     embed_schema(root, container, effective_id, std::move(remote));
@@ -403,8 +413,8 @@ auto dependencies(const sourcemeta::core::JSON &schema,
 // TODO: Refactor this function to internally rely on the `.dependencies()`
 // function
 auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver, std::string_view default_dialect,
-            std::string_view default_id,
+            const SchemaResolver &resolver, const BundleMode mode,
+            std::string_view default_dialect, std::string_view default_id,
             const std::optional<sourcemeta::core::Pointer> &default_container,
             const SchemaFrame::Paths &paths) -> void {
   // Pre-scan the schema to find any already-embedded schemas and mark them
@@ -424,7 +434,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
     // This is undefined behavior
     assert(!default_container.value().empty());
     bundle_schema(schema, default_container.value(), schema, walker, resolver,
-                  default_dialect, default_id, paths, bundled);
+                  mode, default_dialect, default_id, paths, bundled);
     return;
   }
 
@@ -477,18 +487,18 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
   }
 
   bundle_schema(schema, {sourcemeta::core::JSON::String{container_keyword}},
-                schema, walker, resolver, default_dialect, default_id, paths,
-                bundled);
+                schema, walker, resolver, mode, default_dialect, default_id,
+                paths, bundled);
 }
 
 auto bundle(const sourcemeta::core::JSON &schema, const SchemaWalker &walker,
-            const SchemaResolver &resolver, std::string_view default_dialect,
-            std::string_view default_id,
+            const SchemaResolver &resolver, const BundleMode mode,
+            std::string_view default_dialect, std::string_view default_id,
             const std::optional<sourcemeta::core::Pointer> &default_container,
             const SchemaFrame::Paths &paths) -> sourcemeta::core::JSON {
   sourcemeta::core::JSON copy = schema;
-  bundle(copy, walker, resolver, default_dialect, default_id, default_container,
-         paths);
+  bundle(copy, walker, resolver, mode, default_dialect, default_id,
+         default_container, paths);
   return copy;
 }
 

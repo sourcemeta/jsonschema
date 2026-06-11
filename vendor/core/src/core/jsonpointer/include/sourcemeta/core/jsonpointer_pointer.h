@@ -868,7 +868,7 @@ public:
     for (const auto &element : value.as_array()) {
       if (element.is_string()) {
         result.emplace_back(element.to_string());
-      } else if (element.is_integer()) {
+      } else if (element.is_integer() && element.to_integer() >= 0) {
         result.emplace_back(
             static_cast<typename Token::Index>(element.to_integer()));
       } else {

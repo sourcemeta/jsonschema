@@ -11,9 +11,11 @@
 #include <cstring>   // std::strlen
 #include <iomanip>   // std::setprecision
 #include <limits>    // std::numeric_limits
+#include <optional>  // std::optional, std::nullopt
 #include <sstream>   // std::ostringstream
 #include <stdexcept> // std::out_of_range
 #include <string>    // std::string, std::stof, std::stod
+#include <vector>    // std::vector
 
 namespace {
 
@@ -69,16 +71,28 @@ struct ParsedDecimal {
 
 auto parse_digit_payload(const char *cursor, std::size_t count)
     -> std::int64_t {
-  std::int64_t payload = 0;
+  // The diagnostic payload of a NaN carries no arithmetic meaning here, so a
+  // payload longer than the storage saturates rather than overflowing, which
+  // would otherwise be signed integer overflow (undefined behaviour)
+  constexpr auto maximum{
+      static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())};
+  std::uint64_t payload = 0;
   for (std::size_t index = 0; index < count; index++) {
-    payload = payload * 10 + (cursor[index] - '0');
+    const auto digit = static_cast<std::uint64_t>(cursor[index] - '0');
+    if (payload > (maximum - digit) / 10) {
+      return std::numeric_limits<std::int64_t>::max();
+    }
+
+    payload = payload * 10 + digit;
   }
 
-  return payload;
+  return static_cast<std::int64_t>(payload);
 }
 
-auto parse_special(const char *input, std::size_t length) -> ParsedDecimal * {
-  static ParsedDecimal result;
+auto parse_special(const char *input, std::size_t length)
+    -> std::optional<ParsedDecimal> {
+  ParsedDecimal result{
+      .coefficient = 0, .coefficient_high = 0, .exponent = 0, .flags = 0};
   const char *cursor = input;
   std::uint8_t sign_flag = 0;
 
@@ -99,7 +113,7 @@ auto parse_special(const char *input, std::size_t length) -> ParsedDecimal * {
     result.exponent = 0;
     result.coefficient_high = 0;
     result.coefficient = parse_digit_payload(cursor + 3, remaining - 3);
-    return &result;
+    return result;
   }
 
   if (remaining >= 4 && (cursor[0] == 's' || cursor[0] == 'S') &&
@@ -110,7 +124,7 @@ auto parse_special(const char *input, std::size_t length) -> ParsedDecimal * {
     result.exponent = 0;
     result.coefficient_high = 0;
     result.coefficient = parse_digit_payload(cursor + 4, remaining - 4);
-    return &result;
+    return result;
   }
 
   if (remaining >= 3 && (cursor[0] == 'I' || cursor[0] == 'i') &&
@@ -126,17 +140,17 @@ auto parse_special(const char *input, std::size_t length) -> ParsedDecimal * {
     result.coefficient = 0;
     result.exponent = 0;
     result.coefficient_high = 0;
-    return &result;
+    return result;
   }
 
-  return nullptr;
+  return std::nullopt;
 }
 
 auto parse_decimal_string(const char *input, std::size_t length)
     -> ParsedDecimal {
-  auto *special = parse_special(input, length);
-  if (special) {
-    return *special;
+  const auto special = parse_special(input, length);
+  if (special.has_value()) {
+    return special.value();
   }
 
   ParsedDecimal result{
@@ -155,17 +169,27 @@ auto parse_decimal_string(const char *input, std::size_t length)
     throw sourcemeta::core::DecimalParseError{};
   }
 
-  std::array<char, 1024> digit_buffer{};
+  // RFC 8259 section 6 permits numbers of arbitrary magnitude and precision, so
+  // every significant digit must be retained to build the coefficient exactly.
+  // The inline buffer keeps the common case allocation-free, and inputs longer
+  // than it spill into a heap buffer sized to the remaining input so that the
+  // digit reads below can never run past the storage
+  std::array<char, 1024> inline_digit_buffer{};
+  std::vector<char> heap_digit_buffer;
+  char *digit_buffer = inline_digit_buffer.data();
+  const auto maximum_digits = static_cast<std::size_t>(end - cursor);
+  if (maximum_digits > inline_digit_buffer.size()) {
+    heap_digit_buffer.resize(maximum_digits);
+    digit_buffer = heap_digit_buffer.data();
+  }
+
   std::uint32_t digit_count_total = 0;
   std::int32_t decimal_offset = -1;
   bool has_digit = false;
 
   while (cursor < end) {
     if (*cursor >= '0' && *cursor <= '9') {
-      if (digit_count_total < digit_buffer.size()) {
-        digit_buffer[digit_count_total] = *cursor;
-      }
-
+      digit_buffer[digit_count_total] = *cursor;
       digit_count_total++;
       has_digit = true;
     } else if (*cursor == '.') {
@@ -233,19 +257,19 @@ auto parse_decimal_string(const char *input, std::size_t length)
     throw sourcemeta::core::DecimalParseError{};
   }
 
-  auto exponent_suffix = static_cast<std::int32_t>(std::min(
-      std::max(
-          exponent_suffix_64,
-          static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::min())),
-      static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())));
-
+  // Combine the explicit exponent with the fractional-digit adjustment in a
+  // wider type before clamping, so an extreme exponent suffix cannot underflow
+  // or overflow a narrow integer (undefined behaviour)
+  std::int64_t exponent_64 = exponent_suffix_64;
   if (decimal_offset >= 0) {
-    result.exponent =
-        exponent_suffix -
-        (static_cast<std::int32_t>(digit_count_total) - decimal_offset);
-  } else {
-    result.exponent = exponent_suffix;
+    exponent_64 -= static_cast<std::int64_t>(digit_count_total) -
+                   static_cast<std::int64_t>(decimal_offset);
   }
+
+  result.exponent = static_cast<std::int32_t>(std::min(
+      std::max(exponent_64, static_cast<std::int64_t>(
+                                std::numeric_limits<std::int32_t>::min())),
+      static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())));
 
   std::uint32_t leading_zeros = 0;
   while (leading_zeros < digit_count_total - 1 &&
@@ -283,7 +307,7 @@ auto parse_decimal_string(const char *input, std::size_t length)
     result.coefficient_high = high_word;
     result.flags |= FLAG_BIG;
   } else {
-    auto big = BigCoefficient::from_digits(digit_buffer.data() + leading_zeros,
+    auto big = BigCoefficient::from_digits(digit_buffer + leading_zeros,
                                            significant_digits);
     store_big_pointer(result.coefficient, std::move(big));
     result.coefficient_high = 0;
@@ -401,14 +425,22 @@ Decimal::Decimal(Decimal &&other) noexcept
 
 auto Decimal::operator=(const Decimal &other) -> Decimal & {
   if (this != &other) {
-    free_big_coefficient(this->coefficient_, this->flags_);
-    this->coefficient_ = other.coefficient_;
-    this->coefficient_high_ = other.coefficient_high_;
-    this->exponent_ = other.exponent_;
-    this->flags_ = other.flags_;
     if (other.flags_ & FLAG_HEAP) {
-      store_big_pointer(this->coefficient_,
-                        load_big_pointer(other.coefficient_)->clone());
+      // Copy the heap coefficient before releasing the current one, so that a
+      // failed allocation leaves this value intact rather than owning storage
+      // shared with the source, which would then be released twice
+      auto cloned{load_big_pointer(other.coefficient_)->clone()};
+      free_big_coefficient(this->coefficient_, this->flags_);
+      this->coefficient_high_ = other.coefficient_high_;
+      this->exponent_ = other.exponent_;
+      this->flags_ = other.flags_;
+      store_big_pointer(this->coefficient_, std::move(cloned));
+    } else {
+      free_big_coefficient(this->coefficient_, this->flags_);
+      this->coefficient_ = other.coefficient_;
+      this->coefficient_high_ = other.coefficient_high_;
+      this->exponent_ = other.exponent_;
+      this->flags_ = other.flags_;
     }
   }
 
@@ -636,7 +668,11 @@ auto Decimal::to_int64() const -> std::int64_t {
                                   this->flags_);
     auto value = big.to_uint128(this->exponent_);
     if (this->flags_ & FLAG_SIGN) {
-      return -static_cast<std::int64_t>(value);
+      // Negate in unsigned arithmetic so that the most negative value does not
+      // overflow, since applying unary minus to its positive magnitude in a
+      // signed type would be undefined behaviour
+      return static_cast<std::int64_t>(std::uint64_t{0} -
+                                       static_cast<std::uint64_t>(value));
     }
 
     return static_cast<std::int64_t>(value);
@@ -1810,7 +1846,8 @@ auto Decimal::operator%=(const Decimal &other) -> Decimal & {
               0, static_cast<std::size_t>(number_of_digits - digits_to_remove));
           auto old_sign =
               static_cast<std::uint8_t>(quotient.flags_ & FLAG_SIGN);
-          free_big_coefficient(quotient.coefficient_, quotient.flags_);
+          // The assignment below releases the current coefficient, so freeing
+          // it explicitly here as well would free the same allocation twice
           quotient = Decimal{integer_string};
           quotient.flags_ =
               static_cast<std::uint8_t>(quotient.flags_ | old_sign);

@@ -165,7 +165,6 @@ endif()
 
 if(SOURCEMETA_CORE_GZIP)
   find_package(LibDeflate REQUIRED)
-  find_package(ZLIB REQUIRED)
   add_subdirectory(src/core/gzip)
 endif()
 

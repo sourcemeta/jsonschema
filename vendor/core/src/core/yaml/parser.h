@@ -223,6 +223,22 @@ public:
   }
 
 private:
+  static constexpr std::size_t maximum_expanded_nodes{10000000};
+
+  auto count_expanded_nodes(const JSON &value) -> std::size_t {
+    std::size_t total{1};
+    if (value.is_array()) {
+      for (const auto &element : value.as_array()) {
+        total += this->count_expanded_nodes(element);
+      }
+    } else if (value.is_object()) {
+      for (const auto &entry : value.as_object()) {
+        total += this->count_expanded_nodes(entry.second);
+      }
+    }
+    return total;
+  }
+
   auto process_directives(Token &token) -> void {
     bool seen_yaml_directive{false};
     while (token.type == TokenType::DirectiveYAML ||
@@ -807,9 +823,14 @@ private:
       }
     }
 
+    // The YAML core schema permits a leading plus sign on numbers, but the
+    // strict numeric parsers (like RFC 8259 JSON) do not, so it must be
+    // stripped at this layer
+    const auto number{value.front() == '+' ? value.substr(1) : value};
+
     bool has_dot{false};
     bool has_exp{false};
-    for (const char character : value) {
+    for (const char character : number) {
       if (character == '.') {
         has_dot = true;
       }
@@ -819,14 +840,14 @@ private:
     }
 
     if (has_exp) {
-      return JSON{Decimal{value}};
+      return JSON{Decimal{number}};
     }
 
     if (has_dot) {
-      return this->parse_float(value);
+      return this->parse_float(number);
     }
 
-    return this->parse_integer(value);
+    return this->parse_integer(number);
   }
 
   auto parse_integer(const std::string_view value) -> JSON {
@@ -1412,6 +1433,12 @@ private:
       callback_index++;
     }
 
+    this->expanded_nodes_ += this->count_expanded_nodes(anchored.value);
+    if (this->expanded_nodes_ > maximum_expanded_nodes) [[unlikely]] {
+      throw YAMLParseError{token.line, token.column,
+                           "Maximum YAML alias expansion exceeded"};
+    }
+
     return anchored.value;
   }
 
@@ -1953,6 +1980,7 @@ private:
   std::unordered_map<std::string, AnchoredValue> anchors_;
   bool recording_anchor_{false};
   bool indent_width_detected_{false};
+  std::size_t expanded_nodes_{0};
   std::vector<CallbackRecord> current_anchor_callbacks_;
   std::deque<Token> pending_tokens_;
   std::optional<std::size_t> pending_token_position_;

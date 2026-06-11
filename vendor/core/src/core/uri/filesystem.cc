@@ -6,6 +6,7 @@
 #include <cctype>      // std::tolower
 #include <filesystem>  // std::filesystem
 #include <iterator>    // std::advance, std::next
+#include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -19,12 +20,34 @@ auto is_localhost_host(const std::string_view host) -> bool {
       });
 }
 
+auto append_raw_segment(std::optional<std::string> &path,
+                        const std::string_view segment) -> void {
+  if (segment.empty()) {
+    return;
+  }
+  if (!path.has_value()) {
+    path = std::string{segment};
+    return;
+  }
+  auto &current = path.value();
+  const bool current_ends_with_slash = current.ends_with('/');
+  const bool segment_starts_with_slash = segment.starts_with('/');
+  if (current_ends_with_slash && segment_starts_with_slash) {
+    current.append(segment, 1);
+  } else if (!current_ends_with_slash && !segment_starts_with_slash) {
+    current += '/';
+    current.append(segment);
+  } else {
+    current.append(segment);
+  }
+}
+
 } // namespace
 
 namespace sourcemeta::core {
 
 auto URI::to_path() const -> std::filesystem::path {
-  auto path = this->path().value_or("");
+  std::string path{this->path().value_or("")};
 
   // For non-file URIs, just return the path as-is
   if (!this->is_file()) {
@@ -97,17 +120,17 @@ auto URI::from_path(const std::filesystem::path &path) -> URI {
   // Process remaining path segments
   for (; iterator != final_path.end(); ++iterator) {
     if (iterator->empty()) {
-      result.append_path("/");
+      append_raw_segment(result.path_, "/");
     } else if (*iterator == "/") {
       if (std::next(iterator) == final_path.end()) {
-        result.append_path("/");
+        append_raw_segment(result.path_, "/");
       }
     } else {
       // Store raw segment - escaping will happen during recompose()
       const auto segment = iterator->string();
 
       if (result.path_.has_value()) {
-        result.append_path(segment);
+        append_raw_segment(result.path_, segment);
       } else {
         // First segment: file:// URIs need leading slash
         result.path_ = "/" + segment;

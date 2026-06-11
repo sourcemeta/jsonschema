@@ -47,7 +47,7 @@ URITemplate::URITemplate(const std::string_view source) {
                          URITemplateTokenQueryContinuationExpansion,
                          URITemplateTokenVariable, URITemplateTokenLiteral>(
               remaining, offset, &this->tokens_)) {
-        break;
+        throw URITemplateParseError(offset + 1);
       }
     } catch (URITemplateParseError &error) {
       throw URITemplateParseError(offset + error.column());

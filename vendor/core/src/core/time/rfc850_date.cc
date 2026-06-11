@@ -1,5 +1,7 @@
 #include <sourcemeta/core/time.h>
 
+#include "helpers.h"
+
 #include <algorithm>   // std::ranges::find
 #include <array>       // std::array
 #include <cassert>     // assert
@@ -111,6 +113,9 @@ auto from_rfc850_date(const std::string_view value) noexcept
   std::tm parts = {};
   stream >> std::get_time(&parts, FORMAT_RFC850_NORMALISED_INPUT);
   if (stream.fail()) {
+    return std::nullopt;
+  }
+  if (!is_valid_broken_down_time(parts)) {
     return std::nullopt;
   }
 #if defined(_MSC_VER)

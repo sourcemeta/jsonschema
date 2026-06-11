@@ -16,7 +16,10 @@ private:
   using internal = typename std::vector<PointerT>;
 
 public:
-  GenericPointerWalker(const JSON &document) { this->walk(document, {}); }
+  GenericPointerWalker(const JSON &document) {
+    PointerT accumulator;
+    this->walk(document, accumulator);
+  }
 
   using const_iterator = typename internal::const_iterator;
   [[nodiscard]] auto begin() const -> const_iterator {
@@ -33,19 +36,19 @@ public:
   };
 
 private:
-  auto walk(const JSON &document, const PointerT &pointer) -> void {
+  auto walk(const JSON &document, PointerT &pointer) -> void {
     this->pointers.push_back(pointer);
     if (document.is_array()) {
       for (std::size_t index = 0; index < document.size(); index++) {
-        PointerT subpointer{pointer};
-        subpointer.emplace_back(index);
-        this->walk(document.at(index), subpointer);
+        pointer.emplace_back(index);
+        this->walk(document.at(index), pointer);
+        pointer.pop_back();
       }
     } else if (document.is_object()) {
       for (const auto &pair : document.as_object()) {
-        PointerT subpointer{pointer};
-        subpointer.emplace_back(pair.first);
-        this->walk(pair.second, subpointer);
+        pointer.emplace_back(pair.first);
+        this->walk(pair.second, pointer);
+        pointer.pop_back();
       }
     }
   }

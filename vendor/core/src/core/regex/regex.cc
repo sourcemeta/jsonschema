@@ -95,9 +95,16 @@ auto matches(const Regex &regex, const std::string_view value) -> bool {
     case RegexIndex::PCRE2: {
       const RegexTypePCRE2 *pcre2_regex{std::get_if<RegexTypePCRE2>(&regex)};
       auto *pcre2_code_ptr{static_cast<pcre2_code *>(pcre2_regex->code.get())};
-      // Re-use this to avoid creating and destroying the `struct`on every call
+      // Allocated once per thread and reused across calls to avoid
+      // allocating every time. It is intentionally never freed, as
+      // releasing it on thread exit would make matching unsafe during the
+      // destruction of other objects with thread storage duration
       thread_local pcre2_match_data *match_data{
           pcre2_match_data_create(1, nullptr)};
+      // A null context selects the built-in default limits, which guarantee
+      // that pathological patterns applied to adversarial inputs terminate.
+      // Note that exhausting any matching resource, like the machine stack
+      // of the just-in-time fast path on long values, counts as a failure
       const int match_result{pcre2_match(
           pcre2_code_ptr, reinterpret_cast<PCRE2_SPTR>(value.data()),
           value.size(), 0, PCRE2_NO_UTF_CHECK, match_data, nullptr)};

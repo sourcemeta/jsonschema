@@ -123,7 +123,9 @@ constexpr auto mcp_is_request_method(const JSON::StringView method) noexcept
 
 /// @ingroup mcp
 /// Resolve an `MCP-Protocol-Version` header value into a known protocol
-/// version, or `std::nullopt` when the value is unrecognised. For example:
+/// version, or `std::nullopt` when the value is unrecognised. An absent header
+/// resolves to the oldest supported version per the Streamable HTTP transport.
+/// For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/mcp.h>

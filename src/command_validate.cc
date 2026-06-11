@@ -309,9 +309,10 @@ auto sourcemeta::jsonschema::validate(const sourcemeta::core::Options &options)
 
   const sourcemeta::core::JSON bundled{[&]() {
     try {
-      return sourcemeta::blaze::bundle(schema, sourcemeta::blaze::schema_walker,
-                                       custom_resolver, dialect,
-                                       schema_default_id);
+      return sourcemeta::blaze::bundle(
+          schema, sourcemeta::blaze::schema_walker, custom_resolver,
+          sourcemeta::blaze::BundleMode::References, dialect,
+          schema_default_id);
     } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
       throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
           schema_resolution_base, error);

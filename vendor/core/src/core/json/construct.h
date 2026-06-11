@@ -9,26 +9,26 @@
 
 #include "parser.h"
 
-#include <cassert>    // assert
-#include <cstddef>    // std::size_t
-#include <cstdint>    // std::uint64_t, std::uint32_t
-#include <cstring>    // std::memchr
-#include <functional> // std::reference_wrapper
-#include <stdexcept>  // std::invalid_argument
-#include <utility>    // std::move
-#include <vector>     // std::vector
+#include <cassert>     // assert
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint64_t, std::uint32_t, std::uint8_t
+#include <functional>  // std::reference_wrapper
+#include <stdexcept>   // std::invalid_argument
+#include <string_view> // std::string_view
+#include <utility>     // std::move
+#include <vector>      // std::vector
 
 namespace sourcemeta::core {
 
 namespace internal {
 
-inline auto unescape_string(const char *data, const std::uint32_t length) ->
-    typename JSON::String {
+inline auto unescape_string(const char *data, const std::uint32_t length,
+                            const bool has_escape) -> typename JSON::String {
   typename JSON::String result;
   const char *cursor{data};
   const char *string_end{data + length};
 
-  if (!std::memchr(data, '\\', length)) {
+  if (!has_escape) {
     result.append(data, length);
     return result;
   }
@@ -118,13 +118,10 @@ inline auto unescape_string(const char *data, const std::uint32_t length) ->
   return result;
 }
 
-inline auto construct_number(const char *data, const std::uint32_t length)
-    -> JSON {
-  const bool has_dot{std::memchr(data, '.', length) != nullptr};
-  const bool has_exponent{std::memchr(data, 'e', length) != nullptr ||
-                          std::memchr(data, 'E', length) != nullptr};
-
-  if (has_exponent) {
+inline auto construct_number(const char *data, const std::uint32_t length,
+                             const std::uint8_t flags,
+                             const std::uint32_t significant_digits) -> JSON {
+  if (flags & TAPE_FLAG_NUMBER_EXPONENT) {
     try {
       return JSON{Decimal{std::string_view{data, length}}};
     } catch (const DecimalParseError &) {
@@ -134,27 +131,8 @@ inline auto construct_number(const char *data, const std::uint32_t length)
     }
   }
 
-  if (has_dot) {
-    std::size_t first_nonzero_position{JSON::String::npos};
-    const auto decimal_position{static_cast<std::size_t>(
-        static_cast<const char *>(std::memchr(data, '.', length)) - data)};
-    for (std::size_t index = 0; index < length; index++) {
-      if (index != decimal_position && data[index] != '0' &&
-          data[index] != '-') {
-        first_nonzero_position = index;
-        break;
-      }
-    }
-
-    if (first_nonzero_position == JSON::String::npos) {
-      first_nonzero_position = 0;
-    }
-
-    const auto decimal_after_first_nonzero{decimal_position >
-                                           first_nonzero_position};
-    const auto significant_digits{length - first_nonzero_position -
-                                  (decimal_after_first_nonzero ? 1 : 0)};
-    constexpr std::size_t MAX_SAFE_SIGNIFICANT_DIGITS{15};
+  if (flags & TAPE_FLAG_NUMBER_DOT) {
+    constexpr std::uint32_t MAX_SAFE_SIGNIFICANT_DIGITS{15};
     if (significant_digits > MAX_SAFE_SIGNIFICANT_DIGITS) {
       try {
         return JSON{Decimal{std::string_view{data, length}}};
@@ -165,13 +143,13 @@ inline auto construct_number(const char *data, const std::uint32_t length)
       }
     }
 
-    const typename JSON::String string_value{data, length};
-    const auto double_result{sourcemeta::core::to_double(string_value)};
+    const std::string_view value{data, length};
+    const auto double_result{sourcemeta::core::to_double(value)};
     if (double_result.has_value()) {
       return JSON{double_result.value()};
     }
     try {
-      return JSON{Decimal{string_value}};
+      return JSON{Decimal{value}};
     } catch (const DecimalParseError &) {
       throw JSONParseError(1, 1);
     } catch (const std::invalid_argument &) {
@@ -185,13 +163,13 @@ inline auto construct_number(const char *data, const std::uint32_t length)
   }
 
   if (digit_length <= 19) {
-    const typename JSON::String string_value{data, length};
-    const auto int_result{sourcemeta::core::to_int64_t(string_value)};
+    const std::string_view value{data, length};
+    const auto int_result{sourcemeta::core::to_int64_t(value)};
     if (int_result.has_value()) {
       return JSON{int_result.value()};
     }
     try {
-      return JSON{Decimal{string_value}};
+      return JSON{Decimal{value}};
     } catch (const DecimalParseError &) {
       throw JSONParseError(1, 1);
     } catch (const std::invalid_argument &) {
@@ -282,15 +260,16 @@ inline auto construct_json(const char *buffer,
       return;
     case TapeType::String: {
       CALLBACK_PRE(String, entry, JSON::ParseContext::Root, 0, empty_property);
-      auto value{Result{
-          internal::unescape_string(buffer + entry.offset, entry.length)}};
+      auto value{Result{internal::unescape_string(
+          buffer + entry.offset, entry.length,
+          (entry.flags & TAPE_FLAG_STRING_ESCAPE) != 0)}};
       CALLBACK_POST(String, entry.line, internal::post_column_for(entry));
       output = std::move(value);
       return;
     }
     case TapeType::Number: {
-      auto value =
-          internal::construct_number(buffer + entry.offset, entry.length);
+      auto value = internal::construct_number(
+          buffer + entry.offset, entry.length, entry.flags, entry.count);
       if (value.is_integer()) {
         CALLBACK_PRE(Integer, entry, JSON::ParseContext::Root, 0,
                      empty_property);
@@ -336,13 +315,14 @@ do_construct_array: {
     frames.emplace_back(frames.back().get().back());
   } else if (levels.back() == Container::Object) {
     levels.push_back(Container::Array);
-    frames.back().get().assign(key, Result::make_array());
+    auto &inserted{frames.back().get().assign_assume_new(
+        std::move(key), Result::make_array(), key_hash)};
     if (callback) {
       callback(JSON::ParsePhase::Pre, JSON::Type::Array, key_line, key_column,
                JSON::ParseContext::Property, 0,
                frames.back().get().as_object().back_key());
     }
-    frames.emplace_back(frames.back().get().at(key));
+    frames.emplace_back(inserted);
   }
 
   frames.back().get().as_array().reserve(child_count);
@@ -400,15 +380,17 @@ do_construct_array_item: {
       CALLBACK_PRE(String, item_entry, JSON::ParseContext::Index,
                    frames.back().get().size(), empty_property);
       frames.back().get().push_back(Result{internal::unescape_string(
-          buffer + item_entry.offset, item_entry.length)});
+          buffer + item_entry.offset, item_entry.length,
+          (item_entry.flags & TAPE_FLAG_STRING_ESCAPE) != 0)});
       tape_index++;
       CALLBACK_POST(String, item_entry.line,
                     internal::post_column_for(item_entry));
       goto do_construct_array_item_separator;
     case TapeType::Number: {
       const auto current_index{frames.back().get().size()};
-      auto value = internal::construct_number(buffer + item_entry.offset,
-                                              item_entry.length);
+      auto value = internal::construct_number(
+          buffer + item_entry.offset, item_entry.length, item_entry.flags,
+          item_entry.count);
       if (value.is_integer()) {
         CALLBACK_PRE(Integer, item_entry, JSON::ParseContext::Index,
                      current_index, empty_property);
@@ -469,13 +451,14 @@ do_construct_object: {
     frames.emplace_back(frames.back().get().back());
   } else if (levels.back() == Container::Object) {
     levels.push_back(Container::Object);
-    frames.back().get().assign(key, Result::make_object());
+    auto &inserted{frames.back().get().assign_assume_new(
+        std::move(key), Result::make_object(), key_hash)};
     if (callback) {
       callback(JSON::ParsePhase::Pre, JSON::Type::Object, key_line, key_column,
                JSON::ParseContext::Property, 0,
                frames.back().get().as_object().back_key());
     }
-    frames.emplace_back(frames.back().get().at(key));
+    frames.emplace_back(inserted);
   }
 
   frames.back().get().as_object().reserve(property_count);
@@ -498,8 +481,8 @@ do_construct_object_key: {
   assert(key_entry.type == TapeType::Key);
   const char *key_data{buffer + key_entry.offset};
   const auto key_length{key_entry.length};
-  if (std::memchr(key_data, '\\', key_length)) {
-    key = internal::unescape_string(key_data, key_length);
+  if (key_entry.flags & TAPE_FLAG_STRING_ESCAPE) {
+    key = internal::unescape_string(key_data, key_length, true);
     key_hash = Result::Object::hash(key);
   } else {
     key.assign(key_data, key_length);
@@ -558,8 +541,9 @@ do_construct_object_value: {
     case TapeType::String:
       frames.back().get().assign_assume_new(
           std::move(key),
-          Result{internal::unescape_string(buffer + value_entry.offset,
-                                           value_entry.length)},
+          Result{internal::unescape_string(
+              buffer + value_entry.offset, value_entry.length,
+              (value_entry.flags & TAPE_FLAG_STRING_ESCAPE) != 0)},
           key_hash);
       if (callback) {
         callback(JSON::ParsePhase::Pre, JSON::Type::String, key_line,
@@ -571,8 +555,9 @@ do_construct_object_value: {
                     internal::post_column_for(value_entry));
       goto do_construct_object_property_end;
     case TapeType::Number: {
-      auto value = internal::construct_number(buffer + value_entry.offset,
-                                              value_entry.length);
+      auto value = internal::construct_number(
+          buffer + value_entry.offset, value_entry.length, value_entry.flags,
+          value_entry.count);
       const auto value_type{value.type()};
       frames.back().get().assign_assume_new(std::move(key), std::move(value),
                                             key_hash);

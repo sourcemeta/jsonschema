@@ -6,7 +6,6 @@
 #include <cassert>   // assert
 #include <cstdint>   // std::uint32_t, std::uint64_t
 #include <limits>    // std::numeric_limits
-#include <sstream>   // std::ostringstream
 #include <vector>    // std::vector
 
 namespace sourcemeta::core {
@@ -85,6 +84,11 @@ static auto punycode_encode(const std::u32string_view codepoints,
   non_basic_sorted.reserve(codepoints.size());
 
   for (const auto code_point : codepoints) {
+    if (code_point > 0x10FFFF ||
+        (code_point >= 0xD800 && code_point <= 0xDFFF)) {
+      throw PunycodeError("Invalid code point");
+    }
+
     if (is_basic(code_point)) {
       output.push_back(static_cast<char>(code_point));
     } else {
@@ -172,11 +176,15 @@ static auto punycode_decode(const std::string_view encoded,
   std::uint32_t insertion_index{0};
   std::uint32_t bias{INITIAL_BIAS};
 
+  decoded.reserve(encoded.size());
+
   const auto delimiter_position = encoded.rfind(DELIMITER);
   std::size_t position{0};
 
-  if (delimiter_position != std::string_view::npos) {
-    decoded.reserve(encoded.size());
+  // RFC 3492 Section 6.2: the delimiter is consumed only when at least one
+  // basic code point precedes it. A leading delimiter is not consumed and
+  // becomes the first extended digit, which fails to decode.
+  if (delimiter_position != std::string_view::npos && delimiter_position > 0) {
     for (std::size_t index = 0; index < delimiter_position; index += 1) {
       const auto code_point = static_cast<unsigned char>(encoded[index]);
       if (!is_basic(code_point)) {
@@ -303,11 +311,12 @@ auto utf8_to_punycode(const std::string_view input) -> std::string {
 auto punycode_to_utf8(const std::string_view input) -> std::string {
   std::u32string decoded;
   punycode_decode(input, decoded);
-  std::ostringstream output_stream;
+  std::string output;
+  output.reserve(decoded.size());
   for (const auto code_point : decoded) {
-    codepoint_to_utf8(code_point, output_stream);
+    codepoint_to_utf8(code_point, output);
   }
-  return output_stream.str();
+  return output;
 }
 
 } // namespace sourcemeta::core

@@ -43,6 +43,8 @@ public:
   [[nodiscard]] auto size() const noexcept -> std::size_t;
 
   /// Interpret the memory-mapped data as a pointer to T at the given offset.
+  /// The caller must ensure that the offset yields a pointer suitably aligned
+  /// for T, as dereferencing a misaligned pointer is undefined behavior.
   template <typename T>
   [[nodiscard]] auto as(const std::size_t offset = 0) const noexcept
       -> const T * {

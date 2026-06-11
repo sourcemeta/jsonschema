@@ -26,7 +26,8 @@
 namespace sourcemeta::core {
 
 /// @ingroup gzip
-/// Compress a byte buffer using the GZIP format (RFC 1952). For example:
+/// Compress a byte buffer using the GZIP format (RFC 1952). An optional
+/// compression level from 0 to 12 trades speed for ratio. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/gzip.h>
@@ -36,7 +37,8 @@ namespace sourcemeta::core {
 ///     reinterpret_cast<const std::uint8_t *>(input.data()), input.size())};
 /// ```
 auto SOURCEMETA_CORE_GZIP_EXPORT gzip(const std::uint8_t *input,
-                                      std::size_t size) -> std::string;
+                                      std::size_t size, int level = 1)
+    -> std::string;
 
 /// @ingroup gzip
 /// Decompress a GZIP compressed byte buffer (RFC 1952). An optional output

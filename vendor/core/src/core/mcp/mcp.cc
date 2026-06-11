@@ -321,6 +321,11 @@ auto mcp_make_initialize_result(const sourcemeta::core::JSON &request,
     requested_version = protocol_version_field->to_string();
   }
   const auto resolved{mcp_resolve_protocol_version(requested_version)};
+  // MCP lifecycle, version negotiation: "If the server supports the requested
+  // protocol version, it MUST respond with the same version. Otherwise, the
+  // server MUST respond with another protocol version it supports. This SHOULD
+  // be the latest version supported by the server."
+  // https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle#version-negotiation
   const auto version{resolved.value_or(MCPProtocolVersion::V_2025_11_25)};
 
   auto capabilities_object{sourcemeta::core::JSON::make_object()};

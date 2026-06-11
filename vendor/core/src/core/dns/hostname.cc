@@ -20,7 +20,9 @@ auto is_hostname(const std::string_view value) -> bool {
     return false;
   }
 
-  // RFC 1123 §2.1: SHOULD handle host names of up to 255 characters
+  // RFC 1123 §2.1: SHOULD handle host names of up to 255 characters. This is
+  // intentionally looser than the stricter 253-octet cap applied to the
+  // internationalized form
   if (value.size() > 255) {
     return false;
   }
