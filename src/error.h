@@ -9,6 +9,7 @@
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/core/error.h>
 #include <sourcemeta/core/gzip.h>
+#include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
@@ -27,7 +28,6 @@
 #include <vector>           // std::vector
 
 #include "exit_code.h"
-#include "http.h"
 
 namespace sourcemeta::jsonschema {
 
