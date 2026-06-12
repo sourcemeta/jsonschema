@@ -6,6 +6,9 @@
 #endif
 
 // NOLINTBEGIN(misc-include-cleaner)
+#include <sourcemeta/core/http_error.h>
+#include <sourcemeta/core/http_message.h>
+#include <sourcemeta/core/http_method.h>
 #include <sourcemeta/core/http_problem.h>
 #include <sourcemeta/core/http_status.h>
 // NOLINTEND(misc-include-cleaner)
