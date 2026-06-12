@@ -12,25 +12,6 @@
 
 namespace sourcemeta::jsonschema {
 
-// Thrown when the server replies with an unsuccessful HTTP status
-// TODO: Upstream this class into the `sourcemeta::core` HTTP module
-class HTTPStatusError : public sourcemeta::core::HTTPError {
-public:
-  HTTPStatusError(const sourcemeta::core::HTTPMethod method, std::string url,
-                  const sourcemeta::core::HTTPStatus status)
-      : sourcemeta::core::HTTPError{method, std::move(url),
-                                    "Unsuccessful HTTP response"},
-        status_{status} {}
-
-  [[nodiscard]] auto status() const noexcept
-      -> const sourcemeta::core::HTTPStatus & {
-    return this->status_;
-  }
-
-private:
-  sourcemeta::core::HTTPStatus status_;
-};
-
 inline constexpr std::string_view HTTP_RESPONSE_TOO_LARGE_MESSAGE{
     "The response exceeds the maximum allowed size"};
 

@@ -171,7 +171,8 @@ static inline auto http_fetch(const std::string &url,
   }
 
   if (response.status != sourcemeta::core::HTTP_STATUS_OK) {
-    throw HTTPStatusError{request.method, url, response.status};
+    throw sourcemeta::core::HTTPStatusError{request.method, url,
+                                            response.status};
   }
 
   const auto content_type{

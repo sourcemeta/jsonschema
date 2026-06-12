@@ -571,19 +571,18 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   if constexpr (requires(const Exception &current) {
                   {
                     current.status()
-                  }
-                  -> std::convertible_to<const sourcemeta::core::HTTPStatus &>;
+                  } -> std::same_as<sourcemeta::core::HTTPStatus>;
                 }) {
+    const auto status{exception.status()};
     if (is_json) {
-      error_json.assign("status",
-                        sourcemeta::core::JSON{
-                            static_cast<std::size_t>(exception.status().code)});
+      error_json.assign("status", sourcemeta::core::JSON{
+                                      static_cast<std::size_t>(status.code)});
     } else {
       std::cerr << "  with status ";
-      if (exception.status().wire.empty()) {
-        std::cerr << exception.status().code;
+      if (status.wire.empty()) {
+        std::cerr << status.code;
       } else {
-        std::cerr << exception.status().wire;
+        std::cerr << status.wire;
       }
       std::cerr << "\n";
     }
@@ -1058,7 +1057,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
-  } catch (const HTTPStatusError &error) {
+  } catch (const sourcemeta::core::HTTPStatusError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_UNEXPECTED_ERROR;
