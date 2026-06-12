@@ -6,7 +6,9 @@
 #endif
 
 #include <sourcemeta/core/http_method.h>
+#include <sourcemeta/core/http_status.h>
 
+#include <cstdint>   // std::uint16_t
 #include <stdexcept> // std::runtime_error
 #include <string>    // std::string
 #include <utility>   // std::move
@@ -53,6 +55,38 @@ public:
 private:
   HTTPMethod method_;
   std::string url_;
+};
+
+/// @ingroup http
+/// An error for a response with an unsuccessful status code, owning a copy
+/// of the status data. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::HTTPStatusError error{
+///     sourcemeta::core::HTTPMethod::GET,
+///     "https://example.com", sourcemeta::core::HTTP_STATUS_NOT_FOUND};
+/// assert(error.status() == sourcemeta::core::HTTP_STATUS_NOT_FOUND);
+/// ```
+class SOURCEMETA_CORE_HTTP_EXPORT HTTPStatusError : public HTTPError {
+public:
+  HTTPStatusError(const HTTPMethod method, std::string url,
+                  const HTTPStatus &status)
+      : HTTPError{method, std::move(url), "Unsuccessful HTTP response"},
+        code_{status.code}, phrase_{status.phrase}, wire_{status.wire} {}
+
+  /// Get the response status that triggered the failure. The contained
+  /// views borrow from this error and stay valid for its lifetime
+  [[nodiscard]] auto status() const noexcept -> HTTPStatus {
+    return {.code = this->code_, .phrase = this->phrase_, .wire = this->wire_};
+  }
+
+private:
+  std::uint16_t code_;
+  std::string phrase_;
+  std::string wire_;
 };
 
 #if defined(_MSC_VER)
