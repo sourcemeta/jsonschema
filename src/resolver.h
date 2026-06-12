@@ -1,22 +1,10 @@
 #ifndef SOURCEMETA_JSONSCHEMA_CLI_RESOLVER_H_
 #define SOURCEMETA_JSONSCHEMA_CLI_RESOLVER_H_
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnewline-eof"
-#endif
-#include <cpr/cpr.h>
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
-
 #include <sourcemeta/blaze/configuration.h>
 #include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/blaze/frame.h>
+#include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/options.h>
@@ -24,6 +12,7 @@
 #include <sourcemeta/core/yaml.h>
 
 #include "error.h"
+#include "http.h"
 #include "input.h"
 #include "logger.h"
 #include "utils.h"
@@ -36,12 +25,11 @@
 #include <iostream>    // std::cerr
 #include <map>         // std::map
 #include <optional>    // std::optional
-#include <sstream>     // std::ostringstream
-#include <stdexcept>   // std::runtime_error
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread::sleep_for
 #include <utility> // std::pair, std::piecewise_construct, std::forward_as_tuple
+#include <vector>  // std::vector
 
 namespace sourcemeta::jsonschema {
 
@@ -76,7 +64,7 @@ static constexpr std::string_view HTTP_HEADER_EXAMPLE{
     "--header \"Authorization: Bearer ${TOKEN}\""};
 
 static inline auto parse_http_header(const std::string_view input)
-    -> std::pair<std::string, std::string> {
+    -> std::pair<std::string_view, std::string_view> {
   const auto colon{input.find(':')};
   if (colon == std::string_view::npos) {
     throw PositionalArgumentError{
@@ -118,7 +106,7 @@ static inline auto parse_http_header(const std::string_view input)
     }
   }
 
-  return {std::string{raw_name}, std::string{raw_value}};
+  return {raw_name, raw_value};
 }
 
 static inline auto
@@ -132,14 +120,14 @@ validate_http_headers(const sourcemeta::core::Options &options) -> void {
 }
 
 static inline auto
-collect_http_headers(const sourcemeta::core::Options &options) -> cpr::Header {
-  cpr::Header headers;
+collect_http_headers(const sourcemeta::core::Options &options)
+    -> std::vector<std::pair<std::string_view, std::string_view>> {
+  std::vector<std::pair<std::string_view, std::string_view>> headers;
   if (!options.contains("header")) {
     return headers;
   }
   for (const auto &raw : options.at("header")) {
-    auto [name, value]{parse_http_header(raw)};
-    headers[std::move(name)] = std::move(value);
+    headers.emplace_back(parse_http_header(raw));
   }
   return headers;
 }
@@ -147,39 +135,54 @@ collect_http_headers(const sourcemeta::core::Options &options) -> cpr::Header {
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
-  const auto headers{collect_http_headers(options)};
-  cpr::Response response;
+  const HTTPRequest request{.method = sourcemeta::core::HTTPMethod::GET,
+                            .url = url,
+                            .headers = collect_http_headers(options),
+                            .body = std::nullopt,
+                            .maximum_response_size = std::nullopt};
+  HTTPResponse response;
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
                          << static_cast<int>(attempt) << "/"
                          << static_cast<int>(HTTP_MAXIMUM_RETRIES)
                          << "): " << url << "\n";
-    response = cpr::Get(cpr::Url{url}, cpr::Redirect{true}, headers);
+    try {
+      response = http_request(request);
+    } catch (const sourcemeta::core::HTTPError &error) {
+      if (attempt == HTTP_MAXIMUM_RETRIES) {
+        throw;
+      }
 
-    if (response.status_code == 200) {
+      LOG_VERBOSE(options) << "Request failed (" << error.what()
+                           << "), retrying...\n";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      continue;
+    }
+
+    if (response.status == sourcemeta::core::HTTP_STATUS_OK) {
       break;
     }
 
     if (attempt < HTTP_MAXIMUM_RETRIES) {
       LOG_VERBOSE(options) << "Request failed with HTTP "
-                           << response.status_code << ", retrying...\n";
+                           << response.status.code << ", retrying...\n";
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
 
-  if (response.status_code != 200) {
-    std::ostringstream error;
-    error << "HTTP " << response.status_code << "\n  at " << url;
-    throw std::runtime_error(error.str());
+  if (response.status != sourcemeta::core::HTTP_STATUS_OK) {
+    throw sourcemeta::core::HTTPStatusError{request.method, url,
+                                            response.status};
   }
 
-  const auto content_type_iterator{response.header.find("content-type")};
-  if (content_type_iterator != response.header.end() &&
-      content_type_iterator->second.starts_with("text/yaml")) {
-    return sourcemeta::core::parse_yaml(response.text);
+  const auto content_type{
+      sourcemeta::core::http_header_find(response.headers, "content-type")};
+  if (content_type.has_value() && sourcemeta::core::http_content_type_matches(
+                                      content_type.value(), "text/yaml")) {
+    return sourcemeta::core::parse_yaml(response.body);
   }
 
-  return sourcemeta::core::parse_json(response.text);
+  return sourcemeta::core::parse_json(response.body);
 }
 
 static inline auto fetch_schema(const sourcemeta::core::Options &options,

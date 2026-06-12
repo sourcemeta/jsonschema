@@ -10,7 +10,7 @@ namespace sourcemeta::core {
 /// A typed HTTP status code per RFC 9110 §15. For example:
 ///
 /// ```cpp
-/// #include <sourcemeta/core/http_status.h>
+/// #include <sourcemeta/core/http.h>
 /// #include <cassert>
 ///
 /// assert(sourcemeta::core::HTTP_STATUS_OK.code == 200);
@@ -385,6 +385,150 @@ inline constexpr HTTPStatus HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED{
     .code = 511,
     .phrase = "Network Authentication Required",
     .wire = "511 Network Authentication Required"};
+
+/// @ingroup http
+/// Resolve a numeric status code into its registered status, with unknown
+/// codes resolving to an empty reason phrase. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::http_status_from_code(200) ==
+///        sourcemeta::core::HTTP_STATUS_OK);
+/// assert(sourcemeta::core::http_status_from_code(599).phrase.empty());
+/// ```
+inline constexpr auto http_status_from_code(const std::uint16_t code) noexcept
+    -> HTTPStatus {
+  switch (code) {
+    case 100:
+      return HTTP_STATUS_CONTINUE;
+    case 101:
+      return HTTP_STATUS_SWITCHING_PROTOCOLS;
+    case 102:
+      return HTTP_STATUS_PROCESSING;
+    case 103:
+      return HTTP_STATUS_EARLY_HINTS;
+    case 200:
+      return HTTP_STATUS_OK;
+    case 201:
+      return HTTP_STATUS_CREATED;
+    case 202:
+      return HTTP_STATUS_ACCEPTED;
+    case 203:
+      return HTTP_STATUS_NON_AUTHORITATIVE_INFORMATION;
+    case 204:
+      return HTTP_STATUS_NO_CONTENT;
+    case 205:
+      return HTTP_STATUS_RESET_CONTENT;
+    case 206:
+      return HTTP_STATUS_PARTIAL_CONTENT;
+    case 207:
+      return HTTP_STATUS_MULTI_STATUS;
+    case 208:
+      return HTTP_STATUS_ALREADY_REPORTED;
+    case 226:
+      return HTTP_STATUS_IM_USED;
+    case 300:
+      return HTTP_STATUS_MULTIPLE_CHOICES;
+    case 301:
+      return HTTP_STATUS_MOVED_PERMANENTLY;
+    case 302:
+      return HTTP_STATUS_FOUND;
+    case 303:
+      return HTTP_STATUS_SEE_OTHER;
+    case 304:
+      return HTTP_STATUS_NOT_MODIFIED;
+    case 305:
+      return HTTP_STATUS_USE_PROXY;
+    case 307:
+      return HTTP_STATUS_TEMPORARY_REDIRECT;
+    case 308:
+      return HTTP_STATUS_PERMANENT_REDIRECT;
+    case 400:
+      return HTTP_STATUS_BAD_REQUEST;
+    case 401:
+      return HTTP_STATUS_UNAUTHORIZED;
+    case 402:
+      return HTTP_STATUS_PAYMENT_REQUIRED;
+    case 403:
+      return HTTP_STATUS_FORBIDDEN;
+    case 404:
+      return HTTP_STATUS_NOT_FOUND;
+    case 405:
+      return HTTP_STATUS_METHOD_NOT_ALLOWED;
+    case 406:
+      return HTTP_STATUS_NOT_ACCEPTABLE;
+    case 407:
+      return HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED;
+    case 408:
+      return HTTP_STATUS_REQUEST_TIMEOUT;
+    case 409:
+      return HTTP_STATUS_CONFLICT;
+    case 410:
+      return HTTP_STATUS_GONE;
+    case 411:
+      return HTTP_STATUS_LENGTH_REQUIRED;
+    case 412:
+      return HTTP_STATUS_PRECONDITION_FAILED;
+    case 413:
+      return HTTP_STATUS_CONTENT_TOO_LARGE;
+    case 414:
+      return HTTP_STATUS_URI_TOO_LONG;
+    case 415:
+      return HTTP_STATUS_UNSUPPORTED_MEDIA_TYPE;
+    case 416:
+      return HTTP_STATUS_RANGE_NOT_SATISFIABLE;
+    case 417:
+      return HTTP_STATUS_EXPECTATION_FAILED;
+    case 418:
+      return HTTP_STATUS_IM_A_TEAPOT;
+    case 421:
+      return HTTP_STATUS_MISDIRECTED_REQUEST;
+    case 422:
+      return HTTP_STATUS_UNPROCESSABLE_CONTENT;
+    case 423:
+      return HTTP_STATUS_LOCKED;
+    case 424:
+      return HTTP_STATUS_FAILED_DEPENDENCY;
+    case 425:
+      return HTTP_STATUS_TOO_EARLY;
+    case 426:
+      return HTTP_STATUS_UPGRADE_REQUIRED;
+    case 428:
+      return HTTP_STATUS_PRECONDITION_REQUIRED;
+    case 429:
+      return HTTP_STATUS_TOO_MANY_REQUESTS;
+    case 431:
+      return HTTP_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE;
+    case 451:
+      return HTTP_STATUS_UNAVAILABLE_FOR_LEGAL_REASONS;
+    case 500:
+      return HTTP_STATUS_INTERNAL_SERVER_ERROR;
+    case 501:
+      return HTTP_STATUS_NOT_IMPLEMENTED;
+    case 502:
+      return HTTP_STATUS_BAD_GATEWAY;
+    case 503:
+      return HTTP_STATUS_SERVICE_UNAVAILABLE;
+    case 504:
+      return HTTP_STATUS_GATEWAY_TIMEOUT;
+    case 505:
+      return HTTP_STATUS_HTTP_VERSION_NOT_SUPPORTED;
+    case 506:
+      return HTTP_STATUS_VARIANT_ALSO_NEGOTIATES;
+    case 507:
+      return HTTP_STATUS_INSUFFICIENT_STORAGE;
+    case 508:
+      return HTTP_STATUS_LOOP_DETECTED;
+    case 510:
+      return HTTP_STATUS_NOT_EXTENDED;
+    case 511:
+      return HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED;
+    default:
+      return HTTPStatus{.code = code, .phrase = {}, .wire = {}};
+  }
+}
 
 } // namespace sourcemeta::core
 

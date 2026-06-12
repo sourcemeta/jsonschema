@@ -9,11 +9,13 @@
 #include <sourcemeta/blaze/test.h>
 #include <sourcemeta/core/error.h>
 #include <sourcemeta/core/gzip.h>
+#include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
 
+#include <concepts>         // std::same_as, std::convertible_to
 #include <cstdint>          // std::uint64_t
 #include <filesystem>       // std::filesystem
 #include <functional>       // std::function
@@ -567,6 +569,54 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
+                  {
+                    current.status()
+                  } -> std::same_as<sourcemeta::core::HTTPStatus>;
+                }) {
+    const auto status{exception.status()};
+    if (is_json) {
+      error_json.assign("status", sourcemeta::core::JSON{
+                                      static_cast<std::size_t>(status.code)});
+    } else {
+      std::cerr << "  with status ";
+      if (status.wire.empty()) {
+        std::cerr << status.code;
+      } else {
+        std::cerr << status.wire;
+      }
+      std::cerr << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.method()
+                  } -> std::same_as<sourcemeta::core::HTTPMethod>;
+                }) {
+    if (is_json) {
+      error_json.assign(
+          "method",
+          sourcemeta::core::JSON{std::string{
+              sourcemeta::core::http_method_string(exception.method())}});
+    } else {
+      std::cerr << "  with method "
+                << sourcemeta::core::http_method_string(exception.method())
+                << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  { current.url() } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign("url",
+                        sourcemeta::core::JSON{std::string{exception.url()}});
+    } else {
+      std::cerr << "  at url " << exception.url() << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
                   current.base().recompose();
                 }) {
     if (is_json) {
@@ -1007,6 +1057,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const sourcemeta::core::HTTPStatusError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_UNEXPECTED_ERROR;
+  } catch (const sourcemeta::core::HTTPError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_UNEXPECTED_ERROR;
 
     // Standard library handlers
   } catch (const sourcemeta::core::IOFileNotFoundError &error) {

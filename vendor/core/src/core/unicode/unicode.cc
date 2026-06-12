@@ -1,10 +1,19 @@
 #include <sourcemeta/core/unicode.h>
 
-#include <array>    // std::array
-#include <cassert>  // assert
-#include <cstddef>  // std::size_t
-#include <cstdint>  // std::uint8_t
-#include <optional> // std::optional, std::nullopt
+#include <array>       // std::array
+#include <cassert>     // assert
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
+#include <optional>    // std::optional, std::nullopt
+#include <string>      // std::string, std::wstring
+#include <string_view> // std::string_view, std::wstring_view
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <limits>    // std::numeric_limits
+#include <windows.h> // MultiByteToWideChar, WideCharToMultiByte, CP_UTF8
+#endif
 
 #include "unicode_data.h"
 
@@ -164,6 +173,92 @@ auto utf8_to_utf32(const std::string_view input)
   }
 
   return result;
+}
+
+auto utf8_to_wide(const std::string_view input) -> std::wstring {
+  if (input.empty()) {
+    return L"";
+  }
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+  assert(input.size() <=
+         static_cast<std::size_t>(std::numeric_limits<int>::max()));
+  const auto size{MultiByteToWideChar(
+      CP_UTF8, 0, input.data(), static_cast<int>(input.size()), nullptr, 0)};
+  std::wstring result(static_cast<std::size_t>(size), L'\0');
+  MultiByteToWideChar(CP_UTF8, 0, input.data(), static_cast<int>(input.size()),
+                      result.data(), size);
+  return result;
+#else
+  // Outside of Windows, a wide character holds an entire codepoint, so the
+  // result never has more characters than the input has bytes
+  static_assert(sizeof(wchar_t) >= 4,
+                "a wide character must hold an entire codepoint");
+  std::wstring result(input.size(), L'\0');
+  std::size_t write{0};
+  std::size_t read{0};
+  while (read < input.size()) {
+    const auto lead{static_cast<std::uint8_t>(input[read])};
+    if (lead < 0x80) {
+      result[write++] = static_cast<wchar_t>(lead);
+      read += 1;
+    } else if (lead < 0xE0) {
+      result[write++] = static_cast<wchar_t>(
+          ((lead & 0x1FU) << 6U) |
+          (static_cast<std::uint8_t>(input[read + 1]) & 0x3FU));
+      read += 2;
+    } else if (lead < 0xF0) {
+      result[write++] = static_cast<wchar_t>(
+          ((lead & 0x0FU) << 12U) |
+          ((static_cast<std::uint8_t>(input[read + 1]) & 0x3FU) << 6U) |
+          (static_cast<std::uint8_t>(input[read + 2]) & 0x3FU));
+      read += 3;
+    } else {
+      result[write++] = static_cast<wchar_t>(
+          ((lead & 0x07U) << 18U) |
+          ((static_cast<std::uint8_t>(input[read + 1]) & 0x3FU) << 12U) |
+          ((static_cast<std::uint8_t>(input[read + 2]) & 0x3FU) << 6U) |
+          (static_cast<std::uint8_t>(input[read + 3]) & 0x3FU));
+      read += 4;
+    }
+  }
+
+  result.resize(write);
+  return result;
+#endif
+}
+
+auto wide_to_utf8(const std::wstring_view input) -> std::string {
+  if (input.empty()) {
+    return "";
+  }
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+  assert(input.size() <=
+         static_cast<std::size_t>(std::numeric_limits<int>::max()));
+  const auto size{WideCharToMultiByte(CP_UTF8, 0, input.data(),
+                                      static_cast<int>(input.size()), nullptr,
+                                      0, nullptr, nullptr)};
+  std::string result(static_cast<std::size_t>(size), '\0');
+  WideCharToMultiByte(CP_UTF8, 0, input.data(), static_cast<int>(input.size()),
+                      result.data(), size, nullptr, nullptr);
+  return result;
+#else
+  static_assert(sizeof(wchar_t) >= 4,
+                "a wide character must hold an entire codepoint");
+  std::size_t size{0};
+  for (const auto character : input) {
+    size += utf8_codepoint_byte_count(static_cast<char32_t>(character));
+  }
+
+  std::string result;
+  result.reserve(size);
+  for (const auto character : input) {
+    codepoint_to_utf8(static_cast<char32_t>(character), result);
+  }
+
+  return result;
+#endif
 }
 
 auto combining_class(const char32_t codepoint) noexcept -> std::uint8_t {

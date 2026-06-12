@@ -12,8 +12,8 @@
 #include <istream>     // std::istream
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
-#include <string>      // std::string, std::u32string
-#include <string_view> // std::string_view
+#include <string>      // std::string, std::u32string, std::wstring
+#include <string_view> // std::string_view, std::wstring_view
 
 /// @defgroup unicode Unicode
 /// @brief Unicode encoding utilities.
@@ -105,6 +105,33 @@ auto utf8_to_utf32(std::istream &input) -> std::optional<std::u32string>;
 SOURCEMETA_CORE_UNICODE_EXPORT
 auto utf8_to_utf32(const std::string_view input)
     -> std::optional<std::u32string>;
+
+/// @ingroup unicode
+/// Convert a UTF-8 string into its wide character form without validation.
+/// The input must be valid UTF-8, otherwise the result is undefined.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::utf8_to_wide("hello") == L"hello");
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto utf8_to_wide(const std::string_view input) -> std::wstring;
+
+/// @ingroup unicode
+/// Convert a wide string into its UTF-8 form without validation. The input
+/// must be valid, otherwise the result is undefined. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::wide_to_utf8(L"hello") == "hello");
+/// ```
+SOURCEMETA_CORE_UNICODE_EXPORT
+auto wide_to_utf8(const std::wstring_view input) -> std::string;
 
 /// @ingroup unicode
 /// Determine the byte length encoded by a UTF-8 lead byte. Returns 1 for an
