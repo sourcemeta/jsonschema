@@ -25,7 +25,6 @@
 #include <iostream>    // std::cerr
 #include <map>         // std::map
 #include <optional>    // std::optional
-#include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread::sleep_for
@@ -139,7 +138,8 @@ static inline auto http_fetch(const std::string &url,
   const HTTPRequest request{.method = HTTPMethod::Get,
                             .url = url,
                             .headers = collect_http_headers(options),
-                            .body = std::nullopt};
+                            .body = std::nullopt,
+                            .maximum_response_size = std::nullopt};
   HTTPResponse response;
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
@@ -171,15 +171,7 @@ static inline auto http_fetch(const std::string &url,
   }
 
   if (response.status != sourcemeta::core::HTTP_STATUS_OK) {
-    std::ostringstream error;
-    error << "HTTP ";
-    if (response.status.wire.empty()) {
-      error << response.status.code;
-    } else {
-      error << response.status.wire;
-    }
-
-    throw HTTPError{request.method, url, error.str()};
+    throw HTTPStatusError{request.method, url, response.status};
   }
 
   const auto content_type{http_header_find(response.headers, "content-type")};

@@ -288,7 +288,8 @@ inline constexpr auto http_status_from_code(const std::uint16_t code) noexcept
     case 511:
       return sourcemeta::core::HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED;
     default:
-      return sourcemeta::core::HTTPStatus{.code = code};
+      return sourcemeta::core::HTTPStatus{
+          .code = code, .phrase = "", .wire = ""};
   }
 }
 
@@ -312,6 +313,24 @@ public:
 private:
   HTTPMethod method_;
   std::string url_;
+};
+
+// Thrown when the server replies with an unsuccessful HTTP status
+// TODO: Upstream this class into the `sourcemeta::core` HTTP module
+class HTTPStatusError : public HTTPError {
+public:
+  HTTPStatusError(const HTTPMethod method, std::string url,
+                  const sourcemeta::core::HTTPStatus status)
+      : HTTPError{method, std::move(url), "Unsuccessful HTTP response"},
+        status_{status} {}
+
+  [[nodiscard]] auto status() const noexcept
+      -> const sourcemeta::core::HTTPStatus & {
+    return this->status_;
+  }
+
+private:
+  sourcemeta::core::HTTPStatus status_;
 };
 
 inline constexpr std::string_view HTTP_RESPONSE_TOO_LARGE_MESSAGE{
@@ -342,8 +361,10 @@ struct HTTPRequest {
 struct HTTPResponse {
   sourcemeta::core::HTTPStatus status{};
   // Header names are normalised to lowercase and repeated headers are
-  // preserved as separate entries. The response owns its data, as the
-  // backend buffers it was read from do not outlive the request
+  // preserved as separate entries, except on platform HTTP stacks like
+  // NSURLSession that fold them into a single comma-separated entry. The
+  // response owns its data, as the backend buffers it was read from do
+  // not outlive the request
   std::vector<std::pair<std::string, std::string>> headers;
   std::string body;
 };

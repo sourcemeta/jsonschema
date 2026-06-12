@@ -12,6 +12,7 @@
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint16_t
+#include <limits>      // std::numeric_limits
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
@@ -108,7 +109,10 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   const std::wstring host{components.lpszHostName, components.dwHostNameLength};
   std::wstring path{components.lpszUrlPath, components.dwUrlPathLength};
   if (components.lpszExtraInfo) {
-    path.append(components.lpszExtraInfo, components.dwExtraInfoLength);
+    // The fragment, if any, must never be sent to the server
+    const std::wstring_view extra_information{components.lpszExtraInfo,
+                                              components.dwExtraInfoLength};
+    path.append(extra_information.substr(0, extra_information.find(L'#')));
   }
 
   const WinHTTPHandle session{
@@ -145,6 +149,11 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   LPVOID body_data{WINHTTP_NO_REQUEST_DATA};
   DWORD body_size{0};
   if (request.body.has_value()) {
+    if (request.body.value().data.size() > std::numeric_limits<DWORD>::max()) {
+      throw HTTPError{request.method, std::string{request.url},
+                      "The request body is too large"};
+    }
+
     serialized_headers += "Content-Type: ";
     serialized_headers += request.body.value().content_type;
     serialized_headers += "\r\n";
