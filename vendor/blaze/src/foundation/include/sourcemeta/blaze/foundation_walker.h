@@ -150,7 +150,8 @@ private:
 /// @ingroup foundation
 ///
 /// Return an iterator over the top-level keywords of a given JSON Schema
-/// definition in the order in which an implementation must evaluate them.
+/// definition in the order in which an implementation must evaluate them,
+/// given the vocabularies in use by the schema.
 ///
 /// For example:
 ///
@@ -168,10 +169,12 @@ private:
 ///   "patternProperties": {}
 /// })JSON");
 ///
+/// const auto vocabularies{sourcemeta::blaze::vocabularies(
+///     document, sourcemeta::blaze::schema_resolver)};
+///
 /// for (const auto &entry :
 ///          sourcemeta::blaze::SchemaKeywordIterator{
-///          document, sourcemeta::blaze::schema_walker,
-///          sourcemeta::blaze::schema_resolver}) {
+///          document, sourcemeta::blaze::schema_walker, vocabularies}) {
 ///   sourcemeta::core::stringify(entry.pointer, std::cout);
 ///   std::cout << "\n";
 /// }
@@ -184,8 +187,7 @@ public:
   using const_iterator = typename internal::const_iterator;
   SchemaKeywordIterator(const sourcemeta::core::JSON &input,
                         const SchemaWalker &walker,
-                        const SchemaResolver &resolver,
-                        std::string_view default_dialect = "");
+                        const Vocabularies &vocabularies);
   [[nodiscard]] auto begin() const -> const_iterator;
   [[nodiscard]] auto end() const -> const_iterator;
   [[nodiscard]] auto cbegin() const -> const_iterator;

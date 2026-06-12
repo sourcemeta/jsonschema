@@ -419,23 +419,11 @@ sourcemeta::blaze::SchemaIteratorFlat::SchemaIteratorFlat(
 sourcemeta::blaze::SchemaKeywordIterator::SchemaKeywordIterator(
     const sourcemeta::core::JSON &schema,
     const sourcemeta::blaze::SchemaWalker &walker,
-    const sourcemeta::blaze::SchemaResolver &resolver,
-    const std::string_view default_dialect) {
+    const sourcemeta::blaze::Vocabularies &vocabularies) {
   assert(is_schema(schema));
   if (schema.is_boolean()) {
     return;
   }
-
-  const std::string_view resolved_dialect{
-      sourcemeta::blaze::dialect(schema, default_dialect)};
-  const auto maybe_base_dialect{
-      sourcemeta::blaze::base_dialect(schema, resolver, resolved_dialect)};
-
-  Vocabularies vocabularies{
-      maybe_base_dialect.has_value() && !resolved_dialect.empty()
-          ? sourcemeta::blaze::vocabularies(
-                resolver, maybe_base_dialect.value(), resolved_dialect)
-          : Vocabularies{}};
 
   // TODO: Use std::ranges::to<std::vector>() once libc++ supports it
   // (__cpp_lib_ranges_to_container)
@@ -445,9 +433,9 @@ sourcemeta::blaze::SchemaKeywordIterator::SchemaKeywordIterator(
     sourcemeta::blaze::SchemaIteratorEntry subschema_entry{
         .parent = std::nullopt,
         .pointer = std::move(entry_pointer),
-        .dialect = resolved_dialect,
+        .dialect = "",
         .vocabularies = vocabularies,
-        .base_dialect = maybe_base_dialect,
+        .base_dialect = std::nullopt,
         .subschema = entry.second,
         .orphan = false,
         .property_name = false};

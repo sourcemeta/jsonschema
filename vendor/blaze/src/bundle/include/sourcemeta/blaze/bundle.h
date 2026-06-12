@@ -52,7 +52,8 @@ enum class BundleMode : std::uint8_t {
 /// @ingroup bundle
 ///
 /// This function recursively traverses and reports the external references in a
-/// schema. For example:
+/// schema. References to official schemas are reported but not traversed into,
+/// as official schemas can only reference other official schemas. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

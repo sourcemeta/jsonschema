@@ -68,13 +68,6 @@ tracked in the lock file are fetched again.
 > We recommend committing `jsonschema.lock.json` to version control (similar to
 > `package-lock.json`) to enable reproducible installs across environments.
 
-> [!WARNING]
-> If a dependency uses a custom meta-schema that is itself an external
-> dependency, make sure to list both the meta-schema and the schema that uses
-> it in the `dependencies` map. The install command will resolve the
-> meta-schema during bundling regardless of processing order. We are working
-> on resolving this automatically in a future release.
-
 Use the global `--header/-H` flag to attach custom HTTP headers to outgoing
 requests. For example:
 

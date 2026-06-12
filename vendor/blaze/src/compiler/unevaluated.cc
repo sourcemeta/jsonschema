@@ -22,8 +22,7 @@ auto find_adjacent_dependencies(
     return;
   }
 
-  const auto subschema_vocabularies{
-      vocabularies(subschema, resolver, entry.dialect)};
+  const auto subschema_vocabularies{frame.vocabularies(entry, resolver)};
 
   for (const auto &property : subschema.as_object()) {
     if (property.first == current && entry.pointer == root.pointer) {

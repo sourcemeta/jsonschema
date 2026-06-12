@@ -9,6 +9,7 @@
 #include <cassert>    // assert
 #include <functional> // std::cref
 #include <iterator>   // std::distance
+#include <optional>   // std::optional
 #include <regex>      // std::regex, std::regex_match, std::smatch
 #include <utility>    // std::declval, std::move
 
@@ -186,13 +187,27 @@ inline auto static_frame_entry(const Context &context,
   return context.frame.locations().at({type, current});
 }
 
-inline auto walk_subschemas(const Context &context,
-                            const SchemaContext &schema_context,
-                            const DynamicContext &dynamic_context) -> auto {
+// Whether the current keyword value, as a schema, contains any nested
+// subschema. Note that while the schema of the schema context of a keyword
+// compiler is the parent subschema, its relative pointer already targets
+// the keyword value, so the frame entry we look up corresponds to the
+// keyword value and not to the parent subschema
+inline auto defines_nested_subschemas(const Context &context,
+                                      const SchemaContext &schema_context)
+    -> bool {
   const auto &entry{static_frame_entry(context, schema_context)};
-  return sourcemeta::blaze::SchemaIterator{
-      schema_context.schema.at(dynamic_context.keyword), context.walker,
-      context.resolver, entry.dialect};
+  for (const auto &location : context.frame.locations()) {
+    if ((location.second.type ==
+             sourcemeta::blaze::SchemaFrame::LocationType::Subschema ||
+         location.second.type ==
+             sourcemeta::blaze::SchemaFrame::LocationType::Resource) &&
+        location.second.pointer.starts_with(entry.pointer) &&
+        location.second.pointer.size() > entry.pointer.size()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // TODO: Get rid of this given the new Core regex optimisations
@@ -266,8 +281,8 @@ inline auto find_adjacent(const Context &context,
          possible_keyword_uri})};
     const auto &subschema{
         sourcemeta::core::get(context.root, frame_entry.pointer)};
-    const auto &subschema_vocabularies{sourcemeta::blaze::vocabularies(
-        subschema, context.resolver, frame_entry.dialect)};
+    const auto subschema_vocabularies{
+        context.frame.vocabularies(frame_entry, context.resolver)};
 
     if (std::ranges::any_of(vocabularies,
                             [&subschema_vocabularies](const auto &vocabulary) {
