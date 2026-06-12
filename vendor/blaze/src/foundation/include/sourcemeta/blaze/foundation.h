@@ -270,6 +270,43 @@ auto dialect(const sourcemeta::core::JSON &schema,
 
 /// @ingroup foundation
 ///
+/// Try to locate the meta-schema that the given schema declares from within
+/// the schema itself, as self-contained schemas embed the meta-schemas they
+/// depend on. The result points into the given document and is null if no
+/// valid embedded meta-schema could be found. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <sourcemeta/blaze/foundation.h>
+/// #include <cassert>
+///
+/// const sourcemeta::core::JSON schema =
+///   sourcemeta::core::parse_json(R"JSON({
+///   "$schema": "https://example.com/meta",
+///   "$defs": {
+///     "https://example.com/meta": {
+///       "$id": "https://example.com/meta",
+///       "$schema": "https://json-schema.org/draft/2020-12/schema",
+///       "type": "object"
+///     }
+///   }
+/// })JSON");
+///
+/// const auto *metaschema{sourcemeta::blaze::metaschema_try_embedded(
+///   schema, "https://example.com/meta",
+///   sourcemeta::blaze::schema_resolver)};
+///
+/// assert(metaschema);
+/// assert(metaschema == &schema.at("$defs").at("https://example.com/meta"));
+/// ```
+SOURCEMETA_BLAZE_FOUNDATION_EXPORT
+auto metaschema_try_embedded(const sourcemeta::core::JSON &schema,
+                             std::string_view identifier,
+                             const SchemaResolver &resolver)
+    -> const sourcemeta::core::JSON *;
+
+/// @ingroup foundation
+///
 /// Get the metaschema document that describes the given schema. For example:
 ///
 /// ```cpp

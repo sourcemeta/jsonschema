@@ -298,6 +298,12 @@ private:
   sourcemeta::core::JSON::String root_;
   Locations locations_;
   References references_;
+  // Custom meta-schemas that the resolver could not resolve but that were
+  // found embedded in the analysed document itself. The values point into
+  // the analysed document, which the frame must not outlive anyway
+  std::unordered_map<sourcemeta::core::JSON::String,
+                     const sourcemeta::core::JSON *>
+      probed_metaschemas_;
   mutable std::unordered_map<
       std::reference_wrapper<const sourcemeta::core::WeakPointer>,
       std::vector<const Location *>, sourcemeta::core::WeakPointer::Hasher,

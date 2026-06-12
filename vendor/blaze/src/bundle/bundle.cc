@@ -100,9 +100,16 @@ auto dependencies_internal(
     }
 
     callback(origin, pointer, identifier, remote.value());
+    visited.emplace(identifier);
+
+    // Official schemas can only reference other official schemas, so
+    // recursing into them can never surface further dependencies
+    if (sourcemeta::blaze::is_official_schema(identifier)) {
+      return;
+    }
+
     found.emplace_back(std::move(remote).value(),
                        sourcemeta::core::JSON::String{identifier});
-    visited.emplace(identifier);
   });
 
   for (const auto &entry : found) {

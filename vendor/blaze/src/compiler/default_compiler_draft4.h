@@ -182,15 +182,7 @@ auto compiler_draft4_applicator_not(const Context &context,
                                     const SchemaContext &schema_context,
                                     const DynamicContext &dynamic_context,
                                     const Instructions &) -> Instructions {
-  std::size_t subschemas{0};
-  for (const auto &subschema :
-       walk_subschemas(context, schema_context, dynamic_context)) {
-    if (subschema.pointer.empty()) {
-      continue;
-    }
-
-    subschemas += 1;
-  }
+  const auto subschemas{defines_nested_subschemas(context, schema_context)};
 
   Instructions children{compile(context, schema_context,
                                 relative_dynamic_context(),
@@ -208,7 +200,7 @@ auto compiler_draft4_applicator_not(const Context &context,
   // evaluation if we really need it. If the "not" subschema
   // does not define applicators, then that's an easy case
   // we can skip
-  if (subschemas > 0 &&
+  if (subschemas &&
       (requires_evaluation(context, schema_context) || track_items)) {
     return {make(sourcemeta::blaze::InstructionIndex::LogicalNotEvaluate,
                  context, schema_context, dynamic_context, ValueNone{},

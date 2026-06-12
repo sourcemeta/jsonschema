@@ -21,8 +21,7 @@ namespace {
 
 auto compile_subschema(const sourcemeta::blaze::Context &context,
                        const sourcemeta::blaze::SchemaContext &schema_context,
-                       const sourcemeta::blaze::DynamicContext &dynamic_context,
-                       const std::string_view default_dialect)
+                       const sourcemeta::blaze::DynamicContext &dynamic_context)
     -> sourcemeta::blaze::Instructions {
   using namespace sourcemeta::blaze;
   assert(is_schema(schema_context.schema));
@@ -45,8 +44,8 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
 
   Instructions steps;
   for (const auto &entry : sourcemeta::blaze::SchemaKeywordIterator{
-           schema_context.schema, context.walker, context.resolver,
-           default_dialect}) {
+           schema_context.schema, context.walker,
+           schema_context.vocabularies}) {
     assert(entry.pointer.back().is_property());
     const auto &keyword{entry.pointer.back().to_property()};
     // Bases must not contain fragments
@@ -381,8 +380,8 @@ auto compile(const sourcemeta::core::JSON &schema,
     }
 
     auto subschema{sourcemeta::core::get(context.root, entry.pointer)};
-    auto nested_vocabularies{sourcemeta::blaze::vocabularies(
-        subschema, context.resolver, entry.dialect)};
+    auto nested_vocabularies{
+        context.frame.vocabularies(entry, context.resolver)};
     const auto nested_relative_pointer{
         entry.pointer.slice(entry.relative_pointer)};
     const sourcemeta::core::URI nested_base{entry.base};
@@ -496,15 +495,13 @@ auto compile(const Context &context, const SchemaContext &schema_context,
       context,
       {.relative_pointer = new_relative_pointer,
        .schema = new_schema,
-       .vocabularies =
-           vocabularies(new_schema, context.resolver, entry.dialect),
+       .vocabularies = context.frame.vocabularies(entry, context.resolver),
        .base = new_base,
        .is_property_name = schema_context.is_property_name},
       {.keyword = dynamic_context.keyword,
        .base_schema_location = destination_pointer,
        .base_instance_location =
-           dynamic_context.base_instance_location.concat(instance_suffix)},
-      entry.dialect);
+           dynamic_context.base_instance_location.concat(instance_suffix)});
 }
 
 } // namespace sourcemeta::blaze
