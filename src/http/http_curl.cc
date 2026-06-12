@@ -81,7 +81,7 @@ auto body_callback(char *data, std::size_t size, std::size_t count,
 
 auto header_callback(char *data, std::size_t size, std::size_t count,
                      void *output) -> std::size_t {
-  sourcemeta::jsonschema::http_accumulate_header_line(
+  sourcemeta::core::http_accumulate_header_line(
       *static_cast<std::string *>(output),
       std::string_view{data, size * count});
   return size * count;
@@ -95,14 +95,15 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   static const CURLcode global_initialization{
       curl_global_init(CURL_GLOBAL_ALL)};
   if (global_initialization != CURLE_OK) {
-    throw HTTPError{request.method, std::string{request.url},
-                    curl_easy_strerror(global_initialization)};
+    throw sourcemeta::core::HTTPError{
+        request.method, std::string{request.url},
+        curl_easy_strerror(global_initialization)};
   }
 
   const CurlHandle handle;
   if (!handle) {
-    throw HTTPError{request.method, std::string{request.url},
-                    "Failed to initialise the HTTP client"};
+    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
+                                      "Failed to initialise the HTTP client"};
   }
 
   HTTPResponse response;
@@ -150,29 +151,32 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
     curl_easy_setopt(handle.get(), CURLOPT_HTTPHEADER, header_list.get());
   }
 
-  const std::string method{http_method_string(request.method)};
-  if (request.method == HTTPMethod::Head) {
+  const std::string method{
+      sourcemeta::core::http_method_string(request.method)};
+  if (request.method == sourcemeta::core::HTTPMethod::HEAD) {
     curl_easy_setopt(handle.get(), CURLOPT_NOBODY, 1L);
-  } else if (request.method != HTTPMethod::Get || request.body.has_value()) {
+  } else if (request.method != sourcemeta::core::HTTPMethod::GET ||
+             request.body.has_value()) {
     curl_easy_setopt(handle.get(), CURLOPT_CUSTOMREQUEST, method.c_str());
   }
 
   const auto code{curl_easy_perform(handle.get())};
   if (code != CURLE_OK) {
     if (body_context.maximum_size_exceeded) {
-      throw HTTPError{request.method, std::string{request.url},
-                      std::string{HTTP_RESPONSE_TOO_LARGE_MESSAGE}};
+      throw sourcemeta::core::HTTPError{
+          request.method, std::string{request.url},
+          std::string{HTTP_RESPONSE_TOO_LARGE_MESSAGE}};
     }
 
-    throw HTTPError{request.method, std::string{request.url},
-                    curl_easy_strerror(code)};
+    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
+                                      curl_easy_strerror(code)};
   }
 
   long status_code{0};
   curl_easy_getinfo(handle.get(), CURLINFO_RESPONSE_CODE, &status_code);
-  http_parse_headers(raw_headers, response.headers);
-  response.status =
-      http_status_from_code(static_cast<std::uint16_t>(status_code));
+  sourcemeta::core::http_parse_headers(raw_headers, response.headers);
+  response.status = sourcemeta::core::http_status_from_code(
+      static_cast<std::uint16_t>(status_code));
   return response;
 }
 

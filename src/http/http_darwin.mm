@@ -65,7 +65,7 @@ auto to_nsstring(const std::string_view input) -> NSString * {
       self.failure->assign("The response is not an HTTP response");
     } else {
       const auto *http_response{(NSHTTPURLResponse *)task.response};
-      self.response->status = sourcemeta::jsonschema::http_status_from_code(
+      self.response->status = sourcemeta::core::http_status_from_code(
           static_cast<std::uint16_t>(http_response.statusCode));
       auto *headers{&self.response->headers};
       [http_response.allHeaderFields
@@ -99,7 +99,8 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
     } else {
       NSMutableURLRequest *url_request{
           [NSMutableURLRequest requestWithURL:target]};
-      url_request.HTTPMethod = to_nsstring(http_method_string(request.method));
+      url_request.HTTPMethod =
+          to_nsstring(sourcemeta::core::http_method_string(request.method));
       for (const auto &[name, value] : request.headers) {
         // Repeated headers are folded into a single comma-separated field
         // line, which is semantically equivalent per RFC 9110
@@ -139,7 +140,8 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   }
 
   if (!failure.empty()) {
-    throw HTTPError{request.method, std::string{request.url}, failure};
+    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
+                                      failure};
   }
 
   return response;

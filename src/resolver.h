@@ -135,7 +135,7 @@ collect_http_headers(const sourcemeta::core::Options &options)
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
-  const HTTPRequest request{.method = HTTPMethod::Get,
+  const HTTPRequest request{.method = sourcemeta::core::HTTPMethod::GET,
                             .url = url,
                             .headers = collect_http_headers(options),
                             .body = std::nullopt,
@@ -148,7 +148,7 @@ static inline auto http_fetch(const std::string &url,
                          << "): " << url << "\n";
     try {
       response = http_request(request);
-    } catch (const HTTPError &error) {
+    } catch (const sourcemeta::core::HTTPError &error) {
       if (attempt == HTTP_MAXIMUM_RETRIES) {
         throw;
       }
@@ -174,7 +174,8 @@ static inline auto http_fetch(const std::string &url,
     throw HTTPStatusError{request.method, url, response.status};
   }
 
-  const auto content_type{http_header_find(response.headers, "content-type")};
+  const auto content_type{
+      sourcemeta::core::http_header_find(response.headers, "content-type")};
   if (content_type.has_value() && sourcemeta::core::http_content_type_matches(
                                       content_type.value(), "text/yaml")) {
     return sourcemeta::core::parse_yaml(response.body);

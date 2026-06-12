@@ -590,13 +590,18 @@ inline auto print_exception(const bool is_json, const Exception &exception)
   }
 
   if constexpr (requires(const Exception &current) {
-                  { current.method() } -> std::same_as<HTTPMethod>;
+                  {
+                    current.method()
+                  } -> std::same_as<sourcemeta::core::HTTPMethod>;
                 }) {
     if (is_json) {
-      error_json.assign("method", sourcemeta::core::JSON{std::string{
-                                      http_method_string(exception.method())}});
+      error_json.assign(
+          "method",
+          sourcemeta::core::JSON{std::string{
+              sourcemeta::core::http_method_string(exception.method())}});
     } else {
-      std::cerr << "  with method " << http_method_string(exception.method())
+      std::cerr << "  with method "
+                << sourcemeta::core::http_method_string(exception.method())
                 << "\n";
     }
   }
@@ -1057,7 +1062,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_UNEXPECTED_ERROR;
-  } catch (const HTTPError &error) {
+  } catch (const sourcemeta::core::HTTPError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_UNEXPECTED_ERROR;
