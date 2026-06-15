@@ -206,6 +206,54 @@ auto trim(const std::string_view input) noexcept -> std::string_view;
 
 /// @ingroup text
 ///
+/// Return `input` with leading occurrences of `character` removed. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::strip_left("000123", '0') == "123");
+/// assert(sourcemeta::core::strip_left("abc", '0') == "abc");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto strip_left(const std::string_view input, const char character) noexcept
+    -> std::string_view;
+
+/// @ingroup text
+///
+/// Return `input` with trailing occurrences of `character` removed. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::strip_right("hello\r\r", '\r') == "hello");
+/// assert(sourcemeta::core::strip_right("abc", '\r') == "abc");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto strip_right(const std::string_view input, const char character) noexcept
+    -> std::string_view;
+
+/// @ingroup text
+///
+/// Return `input` left-padded with `character` to at least `width` bytes, or
+/// a copy of `input` when it is already that long. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::pad_left("42", 5, '0') == "00042");
+/// assert(sourcemeta::core::pad_left("hello", 3, '0') == "hello");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto pad_left(const std::string_view input, const std::size_t width,
+              const char character) -> std::string;
+
+/// @ingroup text
+///
 /// Return the prefix of `input` up to (but excluding) the first occurrence
 /// of `marker`, or the full input when `marker` is absent. For example:
 ///
@@ -316,6 +364,39 @@ auto join_to(std::ostream &stream, const Range &items,
     first = false;
   }
 }
+
+/// @ingroup text
+///
+/// Decode a hexadecimal string into its raw bytes, returning no value when
+/// the input contains a character outside the hexadecimal alphabet, or has an
+/// odd length unless `allow_odd_length` is set, in which case a leading zero
+/// nibble is assumed. Both letter cases are accepted. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto bytes{sourcemeta::core::hex_to_bytes("666f6f")};
+/// assert(bytes.has_value());
+/// assert(bytes.value() == "foo");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto hex_to_bytes(const std::string_view input,
+                  const bool allow_odd_length = false)
+    -> std::optional<std::string>;
+
+/// @ingroup text
+///
+/// Encode a byte sequence as a lowercase hexadecimal string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::bytes_to_hex("foo") == "666f6f");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto bytes_to_hex(const std::string_view input) -> std::string;
 
 /// @ingroup text
 ///

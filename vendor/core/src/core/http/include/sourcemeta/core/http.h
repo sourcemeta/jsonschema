@@ -250,6 +250,24 @@ auto http_field_list_contains_any(
     const std::string_view header_value,
     std::initializer_list<std::string_view> tokens) noexcept -> bool;
 
+/// @ingroup http
+/// Extract the credential from an `Authorization` header that uses the Bearer
+/// scheme per RFC 6750 §2.1, matching the scheme case-insensitively per RFC
+/// 9110 §11.1 and tolerating optional whitespace around the token. Returns an
+/// empty view when the header is absent, uses another scheme, or does not carry
+/// a well-formed `b64token` credential. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::http_parse_bearer("Bearer abc123") == "abc123");
+/// assert(sourcemeta::core::http_parse_bearer("Basic abc123").empty());
+/// ```
+SOURCEMETA_CORE_HTTP_EXPORT
+auto http_parse_bearer(const std::string_view authorization) noexcept
+    -> std::string_view;
+
 } // namespace sourcemeta::core
 
 #endif

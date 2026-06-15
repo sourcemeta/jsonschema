@@ -31,6 +31,7 @@ option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
 option(SOURCEMETA_CORE_JSONRPC "Build the Sourcemeta Core JSON-RPC library" ON)
 option(SOURCEMETA_CORE_MCP "Build the Sourcemeta Core MCP library" ON)
 option(SOURCEMETA_CORE_HTTP "Build the Sourcemeta Core HTTP library" ON)
+option(SOURCEMETA_CORE_JOSE "Build the Sourcemeta Core JOSE library" ON)
 option(SOURCEMETA_CORE_SEMVER "Build the Sourcemeta Core SemVer library" ON)
 option(SOURCEMETA_CORE_GZIP "Build the Sourcemeta Core GZIP library" ON)
 option(SOURCEMETA_CORE_HTML "Build the Sourcemeta Core HTML library" ON)
@@ -121,7 +122,7 @@ endif()
 
 if(SOURCEMETA_CORE_CRYPTO)
   if(SOURCEMETA_CORE_CRYPTO_USE_SYSTEM_OPENSSL)
-    find_package(OpenSSL REQUIRED)
+    find_package(OpenSSL 3.0 REQUIRED)
   endif()
   add_subdirectory(src/core/crypto)
 endif()
@@ -186,6 +187,10 @@ endif()
 
 if(SOURCEMETA_CORE_HTTP)
   add_subdirectory(src/core/http)
+endif()
+
+if(SOURCEMETA_CORE_JOSE)
+  add_subdirectory(src/core/jose)
 endif()
 
 if(SOURCEMETA_CORE_SEMVER)
@@ -344,6 +349,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_HTTP)
     add_subdirectory(test/http)
+  endif()
+
+  if(SOURCEMETA_CORE_JOSE)
+    add_subdirectory(test/jose)
   endif()
 
   if(SOURCEMETA_CORE_SEMVER)

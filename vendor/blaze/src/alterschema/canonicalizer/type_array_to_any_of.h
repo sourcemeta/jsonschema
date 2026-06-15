@@ -18,15 +18,20 @@ public:
             const sourcemeta::blaze::SchemaResolver &, const bool) const
       -> SchemaTransformRule::Result override {
 
-    ONLY_CONTINUE_IF(vocabularies.contains_any(
-                         {Vocabularies::Known::JSON_Schema_2020_12_Validation,
-                          Vocabularies::Known::JSON_Schema_2020_12_Applicator,
-                          Vocabularies::Known::JSON_Schema_2019_09_Validation,
-                          Vocabularies::Known::JSON_Schema_2019_09_Applicator,
-                          Vocabularies::Known::JSON_Schema_Draft_7,
-                          Vocabularies::Known::JSON_Schema_Draft_6,
-                          Vocabularies::Known::JSON_Schema_Draft_4}) &&
-                     schema.is_object());
+    ONLY_CONTINUE_IF(
+        ((vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2020_12_Validation) &&
+          vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2020_12_Applicator)) ||
+         (vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2019_09_Validation) &&
+          vocabularies.contains(
+              Vocabularies::Known::JSON_Schema_2019_09_Applicator)) ||
+         vocabularies.contains_any(
+             {Vocabularies::Known::JSON_Schema_Draft_7,
+              Vocabularies::Known::JSON_Schema_Draft_6,
+              Vocabularies::Known::JSON_Schema_Draft_4})) &&
+        schema.is_object());
 
     const auto *type{schema.try_at("type")};
     ONLY_CONTINUE_IF(type && type->is_array());
