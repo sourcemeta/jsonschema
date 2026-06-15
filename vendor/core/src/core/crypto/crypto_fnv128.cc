@@ -1,13 +1,10 @@
 #include <sourcemeta/core/crypto_fnv128.h>
+#include <sourcemeta/core/text.h>
 
 #include <array>   // std::array
 #include <cstdint> // std::uint8_t, std::uint32_t, std::uint64_t
 
 namespace {
-
-constexpr std::array<char, 17> HEX_DIGITS{{'0', '1', '2', '3', '4', '5', '6',
-                                           '7', '8', '9', 'a', 'b', 'c', 'd',
-                                           'e', 'f', '\0'}};
 
 // The 128-bit FNV offset basis, in two 64-bit limbs
 // (draft-eastlake-fnv Section 5)
@@ -68,14 +65,8 @@ auto fnv128_digest(const std::string_view input)
 
 auto fnv128(const std::string_view input) -> std::string {
   const auto digest = fnv128_digest(input);
-  std::string result;
-  result.reserve(32);
-  for (std::uint64_t index = 0u; index < 16u; ++index) {
-    result.push_back(HEX_DIGITS[(digest[index] >> 4u) & 0x0fu]);
-    result.push_back(HEX_DIGITS[digest[index] & 0x0fu]);
-  }
-
-  return result;
+  return bytes_to_hex(
+      {reinterpret_cast<const char *>(digest.data()), digest.size()});
 }
 
 auto fnv128(const std::string_view input, std::ostream &output) -> void {

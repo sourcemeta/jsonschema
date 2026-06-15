@@ -48,7 +48,7 @@ to use a JSON Schema validator at runtime to enforce remaining constraints.
 | Applicator (2020-12) | `anyOf` | Yes |
 | Applicator (2020-12) | `patternProperties` | Partial (language limitations) |
 | Applicator (2020-12) | `propertyNames` | Ignored |
-| Applicator (2020-12) | `dependentSchemas` | Pending |
+| Applicator (2020-12) | `dependentSchemas` | Yes |
 | Applicator (2020-12) | `contains` | Ignored |
 | Applicator (2020-12) | `allOf` | Yes |
 | Applicator (2020-12) | `oneOf` | Partial (language limitations) |
@@ -70,7 +70,7 @@ to use a JSON Schema validator at runtime to enforce remaining constraints.
 | Validation (2020-12) | `multipleOf` | Ignored |
 | Validation (2020-12) | `minProperties` | Ignored |
 | Validation (2020-12) | `maxProperties` | Ignored |
-| Validation (2020-12) | `dependentRequired` | Pending |
+| Validation (2020-12) | `dependentRequired` | Yes |
 | Validation (2020-12) | `minItems` | Ignored |
 | Validation (2020-12) | `maxItems` | Ignored |
 | Validation (2020-12) | `minContains` | Ignored |

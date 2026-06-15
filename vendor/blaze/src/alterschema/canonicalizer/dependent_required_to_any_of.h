@@ -27,6 +27,15 @@ public:
     ONLY_CONTINUE_IF(std::ranges::any_of(
         dependent_required->as_object(),
         [](const auto &entry) { return entry.second.is_array(); }));
+
+    if (!vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_2019_09_Applicator,
+             Vocabularies::Known::JSON_Schema_2020_12_Applicator})) {
+      throw SchemaError(
+          "Cannot canonicalise `dependentRequired` without the Applicator "
+          "vocabulary");
+    }
+
     return true;
   }
 
@@ -45,19 +54,16 @@ public:
         required_all.push_back(dependent);
       }
 
-      auto not_required{JSON::make_object()};
-      not_required.assign("type", JSON{"object"});
-      not_required.assign("required", JSON::make_array());
-      not_required.at("required").push_back(JSON{entry.first});
-      auto not_branch{JSON::make_object()};
-      not_branch.assign("not", std::move(not_required));
+      auto absence_branch{JSON::make_object()};
+      absence_branch.assign("properties", JSON::make_object());
+      absence_branch.at("properties").assign(entry.first, JSON{false});
 
       auto required_branch{JSON::make_object()};
       required_branch.assign("type", JSON{"object"});
       required_branch.assign("required", std::move(required_all));
 
       auto pair{JSON::make_array()};
-      pair.push_back(std::move(not_branch));
+      pair.push_back(std::move(absence_branch));
       pair.push_back(std::move(required_branch));
 
       auto wrapper{JSON::make_object()};

@@ -5,6 +5,8 @@
 #include <sourcemeta/core/crypto_export.h>
 #endif
 
+#include <array>       // std::array
+#include <cstdint>     // std::uint8_t
 #include <ostream>     // std::ostream
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -38,6 +40,19 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256(const std::string_view input,
 /// ```
 auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256(const std::string_view input)
     -> std::string;
+
+/// @ingroup crypto
+/// Hash a string using SHA-256, returning the raw digest bytes. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto digest{sourcemeta::core::sha256_digest("foo bar")};
+/// assert(digest.size() == 32);
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256_digest(const std::string_view input)
+    -> std::array<std::uint8_t, 32>;
 
 } // namespace sourcemeta::core
 

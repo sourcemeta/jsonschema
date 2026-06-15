@@ -233,8 +233,10 @@ inline auto read_stdin() -> std::string { return read_to_string(std::cin); }
 
 /// @ingroup io
 ///
-/// Iterate the lines of `stream`, invoking `callback` with each line. The
-/// line view is only valid for the duration of the callback. For example:
+/// Iterate the lines of `stream`, invoking `callback` with each line. A
+/// trailing carriage return is dropped so that Windows line endings produce
+/// the same line as Unix ones. The line view is only valid for the duration
+/// of the callback. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/io.h>
@@ -251,7 +253,12 @@ template <typename Callback>
 auto for_each_line(std::istream &stream, Callback callback) -> void {
   std::string line;
   while (std::getline(stream, line)) {
-    callback(std::string_view{line});
+    std::string_view view{line};
+    if (!view.empty() && view.back() == '\r') {
+      view.remove_suffix(1);
+    }
+
+    callback(view);
   }
 }
 

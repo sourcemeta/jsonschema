@@ -119,6 +119,45 @@ auto from_asctime(const std::string_view value) noexcept
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time
+/// Convert a POSIX timestamp, the number of seconds since the Unix epoch
+/// ignoring leap seconds and possibly fractional, into a time point, returning
+/// no value when the timestamp is not representable. Fractional seconds finer
+/// than the time point's tick resolution are truncated towards zero. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <chrono>
+/// #include <cassert>
+///
+/// const auto point{
+///     sourcemeta::core::from_unix_timestamp(std::chrono::duration<double>{0})};
+/// assert(point.has_value());
+/// assert(point.value() == std::chrono::system_clock::from_time_t(0));
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto from_unix_timestamp(const std::chrono::duration<double> seconds) noexcept
+    -> std::optional<std::chrono::system_clock::time_point>;
+
+/// @ingroup time
+/// Convert a time point into a POSIX timestamp, the number of seconds since
+/// the Unix epoch ignoring leap seconds. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <chrono>
+/// #include <cassert>
+///
+/// const auto point{std::chrono::system_clock::from_time_t(0)};
+/// assert(sourcemeta::core::to_unix_timestamp(point) ==
+///   std::chrono::duration<double>{0});
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto to_unix_timestamp(
+    const std::chrono::system_clock::time_point time) noexcept
+    -> std::chrono::duration<double>;
+
+/// @ingroup time
 /// Check whether the given string is a valid date-time value per RFC 3339
 /// Section 5.6 (Internet Date/Time Format). This implements the full
 /// `date-time` production rule:
