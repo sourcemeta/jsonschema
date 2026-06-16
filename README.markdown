@@ -199,6 +199,17 @@ Keep in mind that it is hard to provide binaries that work across GNU/Linux
 distributions. We conservatively target Ubuntu and Alpine, but you might need
 to build from source if your distribution of choice is different.
 
+> [!NOTE]
+> On GNU/Linux (and other non-macOS, non-Windows platforms), the CLI performs
+> HTTP requests through your system's cURL library, which it loads at runtime.
+> This keeps the binaries distribution-independent and makes them respect your
+> system's TLS trust store. `libcurl` is present on most systems, but if it is
+> missing you can install it through your package manager (for example
+> `apt install libcurl4`, `dnf install libcurl`, or `apk add libcurl`). If it
+> lives in a non-standard location, point the CLI at it by setting the
+> `SOURCEMETA_JSONSCHEMA_CURL_SO` environment variable to the full path of
+> `libcurl.so.4`.
+
 To verify the GPG signature of the checksums file:
 
 ```sh

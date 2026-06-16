@@ -971,6 +971,10 @@ add_jsonschema_test_unix_ci(pass_install_http_header_multiple)
 add_jsonschema_test_unix_ci(pass_validate_http_header_auth)
 add_jsonschema_test_unix_ci(precommit_lint)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT JSONSCHEMA_USE_SYSTEM_CURL)
+  add_jsonschema_test_unix_ci(fail_validate_http_missing_curl)
+endif()
+
 add_jsonschema_test_windows_ci(pass_bundle_http)
 add_jsonschema_test_windows_ci(fail_bundle_http_non_200)
 add_jsonschema_test_windows_ci(fail_bundle_http_non_schema)

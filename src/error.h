@@ -28,6 +28,7 @@
 #include <vector>           // std::vector
 
 #include "exit_code.h"
+#include "http.h" // sourcemeta::jsonschema::HTTPDynamicBackendNotFound
 
 namespace sourcemeta::jsonschema {
 
@@ -684,6 +685,39 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     }
   }
 
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.variable()
+                  } -> std::convertible_to<std::string_view>;
+                }) {
+    if (is_json) {
+      error_json.assign("environmentVariable",
+                        sourcemeta::core::JSON{exception.variable()});
+    } else {
+      std::cerr << "  with environment variable " << exception.variable()
+                << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.paths()
+                  } -> std::convertible_to<const std::vector<std::string> &>;
+                }) {
+    if (is_json) {
+      auto paths_array{sourcemeta::core::JSON::make_array()};
+      for (const auto &path : exception.paths()) {
+        paths_array.push_back(sourcemeta::core::JSON{path});
+      }
+      error_json.assign("paths", std::move(paths_array));
+    } else {
+      std::cerr << "  with paths\n";
+      for (const auto &path : exception.paths()) {
+        std::cerr << "  - " << path << "\n";
+      }
+    }
+  }
+
   if (is_json) {
     sourcemeta::core::prettify(error_json, std::cout);
     std::cout << "\n";
@@ -1065,6 +1099,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_UNEXPECTED_ERROR;
+  } catch (const sourcemeta::jsonschema::HTTPDynamicBackendNotFound &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_NOT_SUPPORTED;
 
     // Standard library handlers
   } catch (const sourcemeta::core::IOFileNotFoundError &error) {

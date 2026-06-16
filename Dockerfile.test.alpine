@@ -1,5 +1,5 @@
 FROM alpine:3.21
-RUN apk add --no-cache cmake make g++ linux-headers zsh bash jq perl-utils
+RUN apk add --no-cache cmake make g++ linux-headers zsh bash jq perl-utils libcurl
 WORKDIR /src
 COPY CMakeLists.txt .
 COPY DEPENDENCIES DEPENDENCIES
