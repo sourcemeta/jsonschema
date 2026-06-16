@@ -83,13 +83,13 @@ jobs:
         if: runner.os == 'windows' && matrix.platform.type == 'wsl-2'
         with:
           distribution: Ubuntu-24.04
-          additional-packages: cmake build-essential gcc-14 g++-14 shellcheck pipx zsh jq bindfs nodejs
+          additional-packages: cmake build-essential gcc-14 g++-14 shellcheck pipx zsh jq bindfs nodejs libcurl4
           wsl-version: 2
 
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
         run: |
-          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates nodejs
+          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates nodejs libcurl
           apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --repository https://dl-cdn.alpinelinux.org/alpine/edge/community --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
 
       - name: Install pre-commit
@@ -114,7 +114,7 @@ jobs:
         run: |
           sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
           sudo apt-get update --yes
-          sudo apt-get install --yes gcc-14 g++-14 zsh bindfs
+          sudo apt-get install --yes gcc-14 g++-14 zsh bindfs libcurl4
 
       - run: cmake --version
       - name: Configure JSON Schema

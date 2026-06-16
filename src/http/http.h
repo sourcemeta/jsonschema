@@ -4,6 +4,7 @@
 #include <sourcemeta/core/http.h>
 
 #include <cstddef>     // std::size_t
+#include <exception>   // std::exception
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -46,6 +47,32 @@ struct HTTPResponse {
   // not outlive the request
   std::vector<std::pair<std::string, std::string>> headers;
   std::string body;
+};
+
+class HTTPDynamicBackendNotFound : public std::exception {
+public:
+  HTTPDynamicBackendNotFound(std::string message, std::string variable,
+                             std::vector<std::string> paths)
+      : message_{std::move(message)}, variable_{std::move(variable)},
+        paths_{std::move(paths)} {}
+
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return this->message_.c_str();
+  }
+
+  [[nodiscard]] auto variable() const noexcept -> const std::string & {
+    return this->variable_;
+  }
+
+  [[nodiscard]] auto paths() const noexcept
+      -> const std::vector<std::string> & {
+    return this->paths_;
+  }
+
+private:
+  std::string message_;
+  std::string variable_;
+  std::vector<std::string> paths_;
 };
 
 // Perform an HTTP request, following redirects. This function is

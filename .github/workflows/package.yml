@@ -87,7 +87,7 @@ jobs:
       - name: Install dependencies (Alpine)
         if: matrix.platform.type == 'container'
         run: |
-          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates nodejs
+          apk add --no-cache cmake make g++ linux-headers zsh bash jq shellcheck pipx git perl-utils ca-certificates nodejs libcurl
           apk add --no-cache --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --repository https://dl-cdn.alpinelinux.org/alpine/edge/community --repository https://dl-cdn.alpinelinux.org/alpine/edge/testing fuse3 bindfs
 
       - name: Install pre-commit
@@ -107,7 +107,7 @@ jobs:
         run: |
           sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
           sudo apt-get update --yes
-          sudo apt-get install --yes g++-14 zsh bindfs
+          sudo apt-get install --yes g++-14 zsh bindfs libcurl4
 
       - run: cmake --version
 
