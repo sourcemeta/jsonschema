@@ -274,14 +274,17 @@ using sourcemeta::jsonschema::HTTPDynamicBackendNotFound;
 
 constexpr std::string_view CURL_LIBRARY_ENV{"SOURCEMETA_JSONSCHEMA_CURL_SO"};
 
-// Tried in order. The bare soname is first because it resolves through the
-// dynamic linker (ld.so cache on glibc, default /lib:/usr/lib on musl) and
-// is present on every mainstream distribution. The absolute entries are
-// fallbacks for environments where the cache is absent (custom prefixes,
-// ldconfig not run). The trailing GnuTLS entry is an ABI-compatible last
-// resort for minimal Debian and Ubuntu systems that ship only that build
-constexpr std::array<std::string_view, 11> CURL_CANDIDATE_PATHS{
-    {"libcurl.so.4", "libcurl.so", "/usr/lib/x86_64-linux-gnu/libcurl.so.4",
+// Tried in order. Every entry carries the `.so.4` SONAME so we only ever
+// bind an ABI-compatible cURL (never the unversioned `libcurl.so` dev
+// symlink, which could point at a different major version). The bare
+// soname is first because it resolves through the dynamic linker (ld.so
+// cache on glibc, default /lib:/usr/lib on musl) and is present on every
+// mainstream distribution. The absolute entries are fallbacks for
+// environments where the cache is absent (custom prefixes, ldconfig not
+// run). The trailing GnuTLS entry is an ABI-compatible last resort for
+// minimal Debian and Ubuntu systems that ship only that build
+constexpr std::array<std::string_view, 10> CURL_CANDIDATE_PATHS{
+    {"libcurl.so.4", "/usr/lib/x86_64-linux-gnu/libcurl.so.4",
      "/usr/lib/aarch64-linux-gnu/libcurl.so.4",
      "/usr/lib/arm-linux-gnueabihf/libcurl.so.4",
      "/usr/lib/i386-linux-gnu/libcurl.so.4", "/usr/lib64/libcurl.so.4",
