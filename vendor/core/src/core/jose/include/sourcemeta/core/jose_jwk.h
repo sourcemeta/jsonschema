@@ -10,6 +10,7 @@
 #include <sourcemeta/core/jose_error.h>
 // NOLINTEND(misc-include-cleaner)
 
+#include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
 
 #include <cstdint>     // std::uint8_t
@@ -20,9 +21,9 @@
 namespace sourcemeta::core {
 
 /// @ingroup jose
-/// A parsed public JSON Web Key (RFC 7517), restricted to RSA and elliptic
-/// curve keys. The key owns its decoded material, so the source JSON document
-/// does not need to outlive it. For example:
+/// A parsed public JSON Web Key (RFC 7517), restricted to RSA, elliptic curve,
+/// and octet key pair (RFC 8037) keys. The key owns its decoded material, so
+/// the source JSON document does not need to outlive it. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/jose.h>
@@ -37,13 +38,19 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_JOSE_EXPORT JWK {
 public:
-  enum class Type : std::uint8_t { RSA, EllipticCurve };
+  enum class Type : std::uint8_t { RSA, EllipticCurve, OctetKeyPair };
 
   /// Parse a JSON Web Key from a JSON value, throwing on invalid input.
   explicit JWK(const JSON &value);
 
   /// Parse a JSON Web Key from a JSON value, throwing on invalid input.
   explicit JWK(JSON &&value);
+
+  /// A key exclusively owns its parsed public key, so it is move-only.
+  JWK(JWK &&other) noexcept = default;
+  auto operator=(JWK &&other) noexcept -> JWK & = default;
+  JWK(const JWK &) = delete;
+  auto operator=(const JWK &) -> JWK & = delete;
 
   /// Parse a JSON Web Key from a JSON value, returning no value on invalid
   /// input.
@@ -68,26 +75,18 @@ public:
     return this->algorithm_;
   }
 
-  // RSA keys (RFC 7518 Section 6.3): big-endian modulus and exponent
-  [[nodiscard]] auto modulus() const noexcept -> std::string_view {
-    return this->modulus_;
-  }
-
-  [[nodiscard]] auto exponent() const noexcept -> std::string_view {
-    return this->exponent_;
-  }
-
-  // Elliptic curve keys (RFC 7518 Section 6.2): curve name and coordinates
+  // Elliptic curve keys (RFC 7518 Section 6.2) and octet key pairs (RFC 8037
+  // Section 2) carry a curve name, which the elliptic curve algorithms pin to
+  // exactly one curve
   [[nodiscard]] auto curve() const noexcept -> std::string_view {
     return this->curve_;
   }
 
-  [[nodiscard]] auto coordinate_x() const noexcept -> std::string_view {
-    return this->coordinate_x_;
-  }
-
-  [[nodiscard]] auto coordinate_y() const noexcept -> std::string_view {
-    return this->coordinate_y_;
+  // The parsed platform key, built once from the decoded material so that
+  // verification reuses it rather than reconstructing it per signature. It is
+  // null when the material could not be turned into a key
+  [[nodiscard]] auto public_key() const noexcept -> const PublicKey * {
+    return this->public_key_.has_value() ? &*this->public_key_ : nullptr;
   }
 
 private:
@@ -100,11 +99,8 @@ private:
   Type type_{Type::RSA};
   std::optional<std::string> key_id_;
   std::optional<JWSAlgorithm> algorithm_;
-  std::string modulus_;
-  std::string exponent_;
   std::string curve_;
-  std::string coordinate_x_;
-  std::string coordinate_y_;
+  std::optional<PublicKey> public_key_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

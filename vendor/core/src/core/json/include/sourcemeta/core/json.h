@@ -19,6 +19,7 @@
 #include <fstream>          // std::basic_ifstream
 #include <initializer_list> // std::initializer_list
 #include <istream>          // std::basic_istream
+#include <optional>         // std::optional
 #include <ostream>          // std::basic_ostream
 #include <sstream>          // std::ostringstream
 #include <string>           // std::basic_string
@@ -74,6 +75,25 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 SOURCEMETA_CORE_JSON_EXPORT
 auto parse_json(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON;
+
+/// @ingroup json
+///
+/// Create a JSON document from a JSON string, returning no value instead of
+/// throwing when the input is not valid JSON. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+///
+/// const auto document{sourcemeta::core::try_parse_json("[ 1, 2, 3 ]")};
+/// assert(document.has_value());
+/// assert(document.value().is_array());
+/// assert(!sourcemeta::core::try_parse_json("[ 1, 2,").has_value());
+/// ```
+SOURCEMETA_CORE_JSON_EXPORT
+auto try_parse_json(
+    const std::basic_string_view<JSON::Char, JSON::CharTraits> input)
+    -> std::optional<JSON>;
 
 /// @ingroup json
 ///

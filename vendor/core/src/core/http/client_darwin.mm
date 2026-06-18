@@ -1,9 +1,8 @@
-#include "http.h"
+#include <sourcemeta/core/http.h>
+#include <sourcemeta/core/text.h>
 
 // NSURL, NSMutableURLRequest, NSURLSession, NSHTTPURLResponse, dispatch_*
 #import <Foundation/Foundation.h>
-
-#include <sourcemeta/core/text.h>
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint16_t
@@ -12,6 +11,9 @@
 #include <utility>     // std::move
 
 namespace {
+
+constexpr std::string_view HTTP_RESPONSE_TOO_LARGE_MESSAGE{
+    "The response exceeds the maximum allowed size"};
 
 auto to_nsstring(const std::string_view input) -> NSString * {
   return [[NSString alloc] initWithBytes:input.data()
@@ -24,25 +26,52 @@ auto to_nsstring(const std::string_view input) -> NSString * {
 // The delegate-based API streams the response body in chunks, allowing
 // the maximum response size to be enforced without first buffering the
 // entire response in memory
-@interface SourcemetaJSONSchemaHTTPDelegate
-    : NSObject <NSURLSessionDataDelegate>
-@property(nonatomic, assign) sourcemeta::jsonschema::HTTPResponse *response;
+@interface SourcemetaCoreHTTPDelegate : NSObject <NSURLSessionDataDelegate>
+@property(nonatomic, assign) sourcemeta::core::HTTPResponse *response;
 @property(nonatomic, assign) std::string *failure;
 @property(nonatomic, strong) dispatch_semaphore_t semaphore;
 @property(nonatomic, assign) BOOL hasMaximumResponseSize;
 @property(nonatomic, assign) std::size_t maximumResponseSize;
+@property(nonatomic, assign) BOOL followRedirects;
+@property(nonatomic, assign) std::size_t maximumRedirects;
+@property(nonatomic, assign) std::size_t redirectCount;
 @end
 
-@implementation SourcemetaJSONSchemaHTTPDelegate
+@implementation SourcemetaCoreHTTPDelegate
+
+- (void)URLSession:(NSURLSession *)session
+                          task:(NSURLSessionTask *)task
+    willPerformHTTPRedirection:(NSHTTPURLResponse *)response
+                    newRequest:(NSURLRequest *)request
+             completionHandler:
+                 (void (^)(NSURLRequest *))completionHandler {
+  // Passing a nil request stops the redirection and delivers the redirect
+  // response itself as the final response
+  if (!self.followRedirects) {
+    completionHandler(nil);
+    return;
+  }
+
+  self.redirectCount += 1;
+  if (self.redirectCount > self.maximumRedirects) {
+    self.failure->assign("The maximum number of redirects was exceeded");
+    [task cancel];
+    completionHandler(nil);
+    return;
+  }
+
+  completionHandler(request);
+}
 
 - (void)URLSession:(NSURLSession *)session
           dataTask:(NSURLSessionDataTask *)dataTask
     didReceiveData:(NSData *)data {
   auto *body{&self.response->body};
   if (self.hasMaximumResponseSize &&
-      body->size() + data.length > self.maximumResponseSize) {
-    self.failure->assign(
-        sourcemeta::jsonschema::HTTP_RESPONSE_TOO_LARGE_MESSAGE);
+      (body->size() > self.maximumResponseSize ||
+       static_cast<std::size_t>(data.length) >
+           self.maximumResponseSize - body->size())) {
+    self.failure->assign(HTTP_RESPONSE_TOO_LARGE_MESSAGE);
     [dataTask cancel];
     return;
   }
@@ -67,6 +96,10 @@ auto to_nsstring(const std::string_view input) -> NSString * {
       const auto *http_response{(NSHTTPURLResponse *)task.response};
       self.response->status = sourcemeta::core::http_status_from_code(
           static_cast<std::uint16_t>(http_response.statusCode));
+      if (http_response.URL != nil) {
+        self.response->url.assign([http_response.URL.absoluteString UTF8String]);
+      }
+
       auto *headers{&self.response->headers};
       [http_response.allHeaderFields
           enumerateKeysAndObjectsUsingBlock:^(NSString *name, NSString *value,
@@ -83,9 +116,9 @@ auto to_nsstring(const std::string_view input) -> NSString * {
 
 @end
 
-namespace sourcemeta::jsonschema {
+namespace sourcemeta::core {
 
-auto http_request(const HTTPRequest &request) -> HTTPResponse {
+auto HTTPSystemRequest::send() const -> HTTPResponse {
   HTTPResponse response;
   // The delegate runs on a background queue, where throwing would
   // terminate the process, so failures are recorded here and thrown
@@ -93,45 +126,57 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   std::string failure;
 
   @autoreleasepool {
-    NSURL *target{[NSURL URLWithString:to_nsstring(request.url)]};
+    NSURL *target{[NSURL URLWithString:to_nsstring(this->url_)]};
     if (target == nil) {
       failure = "Invalid URL";
     } else {
       NSMutableURLRequest *url_request{
           [NSMutableURLRequest requestWithURL:target]};
-      url_request.HTTPMethod =
-          to_nsstring(sourcemeta::core::http_method_string(request.method));
-      for (const auto &[name, value] : request.headers) {
+      url_request.HTTPMethod = to_nsstring(http_method_string(this->method_));
+      for (const auto &[name, value] : this->headers_) {
         // Repeated headers are folded into a single comma-separated field
         // line, which is semantically equivalent per RFC 9110
         [url_request addValue:to_nsstring(value)
             forHTTPHeaderField:to_nsstring(name)];
       }
 
-      if (request.body.has_value()) {
-        [url_request setValue:to_nsstring(request.body.value().content_type)
+      if (this->body_.has_value()) {
+        [url_request setValue:to_nsstring(this->body_.value().content_type)
             forHTTPHeaderField:@"Content-Type"];
         url_request.HTTPBody =
-            [NSData dataWithBytes:request.body.value().data.data()
-                           length:request.body.value().data.size()];
+            [NSData dataWithBytes:this->body_.value().data.data()
+                           length:this->body_.value().data.size()];
+      }
+
+      NSURLSessionConfiguration *configuration{
+          [NSURLSessionConfiguration ephemeralSessionConfiguration]};
+      configuration.timeoutIntervalForResource =
+          static_cast<double>(this->timeout_.count()) / 1000.0;
+      if (this->connect_timeout_.has_value()) {
+        configuration.timeoutIntervalForRequest =
+            static_cast<double>(this->connect_timeout_.value().count()) /
+            1000.0;
       }
 
       // The delegate completes before the semaphore is signalled, so
       // pointing to the stack-allocated locals from it is safe
-      SourcemetaJSONSchemaHTTPDelegate *delegate{
-          [[SourcemetaJSONSchemaHTTPDelegate alloc] init]};
+      SourcemetaCoreHTTPDelegate *delegate{
+          [[SourcemetaCoreHTTPDelegate alloc] init]};
       delegate.response = &response;
       delegate.failure = &failure;
       delegate.semaphore = dispatch_semaphore_create(0);
       delegate.hasMaximumResponseSize =
-          request.maximum_response_size.has_value() ? YES : NO;
-      delegate.maximumResponseSize = request.maximum_response_size.value_or(0);
+          this->maximum_response_size_.has_value() ? YES : NO;
+      delegate.maximumResponseSize =
+          this->maximum_response_size_.value_or(0);
+      delegate.followRedirects = this->follow_redirects_ ? YES : NO;
+      delegate.maximumRedirects = this->maximum_redirects_;
+      delegate.redirectCount = 0;
 
-      NSURLSession *session{[NSURLSession
-          sessionWithConfiguration:[NSURLSessionConfiguration
-                                       ephemeralSessionConfiguration]
-                          delegate:delegate
-                     delegateQueue:nil]};
+      NSURLSession *session{
+          [NSURLSession sessionWithConfiguration:configuration
+                                        delegate:delegate
+                                   delegateQueue:nil]};
       NSURLSessionDataTask *task{[session dataTaskWithRequest:url_request]};
       [task resume];
       dispatch_semaphore_wait(delegate.semaphore, DISPATCH_TIME_FOREVER);
@@ -140,11 +185,10 @@ auto http_request(const HTTPRequest &request) -> HTTPResponse {
   }
 
   if (!failure.empty()) {
-    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
-                                      failure};
+    throw HTTPError{this->method_, this->url_, failure};
   }
 
   return response;
 }
 
-} // namespace sourcemeta::jsonschema
+} // namespace sourcemeta::core

@@ -116,6 +116,10 @@ function(sourcemeta_add_default_options visibility target)
       -Wno-exit-time-destructors
       -Wrange-loop-analysis
 
+      # Manage Objective-C and Objective-C++ object lifetimes with Automatic
+      # Reference Counting
+      $<$<OR:$<COMPILE_LANGUAGE:OBJC>,$<COMPILE_LANGUAGE:OBJCXX>>:-fobjc-arc>
+
       # Enable loop vectorization for performance reasons
       $<$<NOT:$<CONFIG:Debug>>:-fvectorize>
       # Enable vectorization of straight-line code for performance

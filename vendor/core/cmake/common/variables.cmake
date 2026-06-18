@@ -1,3 +1,10 @@
+# Objective-C++ powers the Apple-specific backends and must be enabled before
+# we capture the project languages below, so its standard and visibility
+# defaults get applied
+if(APPLE)
+  enable_language(OBJCXX)
+endif()
+
 # Get the list of languages defined in the project
 get_property(SOURCEMETA_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
 

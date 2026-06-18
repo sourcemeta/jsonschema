@@ -12,7 +12,6 @@
 #include <sourcemeta/core/yaml.h>
 
 #include "error.h"
-#include "http.h"
 #include "input.h"
 #include "logger.h"
 #include "utils.h"
@@ -135,19 +134,19 @@ collect_http_headers(const sourcemeta::core::Options &options)
 static inline auto http_fetch(const std::string &url,
                               const sourcemeta::core::Options &options)
     -> sourcemeta::core::JSON {
-  const HTTPRequest request{.method = sourcemeta::core::HTTPMethod::GET,
-                            .url = url,
-                            .headers = collect_http_headers(options),
-                            .body = std::nullopt,
-                            .maximum_response_size = std::nullopt};
-  HTTPResponse response;
+  sourcemeta::core::HTTPSystemRequest request{url};
+  for (const auto &header : collect_http_headers(options)) {
+    request.header(std::string{header.first}, std::string{header.second});
+  }
+
+  sourcemeta::core::HTTPResponse response;
   for (std::uint8_t attempt{1}; attempt <= HTTP_MAXIMUM_RETRIES; ++attempt) {
     LOG_VERBOSE(options) << "Resolving over HTTP (attempt "
                          << static_cast<int>(attempt) << "/"
                          << static_cast<int>(HTTP_MAXIMUM_RETRIES)
                          << "): " << url << "\n";
     try {
-      response = http_request(request);
+      response = request.send();
     } catch (const sourcemeta::core::HTTPError &error) {
       if (attempt == HTTP_MAXIMUM_RETRIES) {
         throw;
@@ -171,8 +170,8 @@ static inline auto http_fetch(const std::string &url,
   }
 
   if (response.status != sourcemeta::core::HTTP_STATUS_OK) {
-    throw sourcemeta::core::HTTPStatusError{request.method, url,
-                                            response.status};
+    throw sourcemeta::core::HTTPStatusError{sourcemeta::core::HTTPMethod::GET,
+                                            url, response.status};
   }
 
   const auto content_type{

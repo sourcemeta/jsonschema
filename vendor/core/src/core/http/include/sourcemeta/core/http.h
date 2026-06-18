@@ -11,6 +11,7 @@
 #include <sourcemeta/core/http_method.h>
 #include <sourcemeta/core/http_problem.h>
 #include <sourcemeta/core/http_status.h>
+#include <sourcemeta/core/http_system.h>
 // NOLINTEND(misc-include-cleaner)
 
 #include <chrono>           // std::chrono::system_clock

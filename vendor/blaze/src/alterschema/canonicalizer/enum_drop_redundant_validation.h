@@ -63,6 +63,27 @@ public:
         continue;
       }
 
+      // In Draft 3 and older, `required` and `optional` are property-presence
+      // flags read by the parent object validator, not value assertions that an
+      // `enum` could make redundant
+      if (entry.first == "required" &&
+          vocabularies.contains_any(
+              {Vocabularies::Known::JSON_Schema_Draft_3,
+               Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+        continue;
+      }
+
+      if (entry.first == "optional" &&
+          vocabularies.contains_any(
+              {Vocabularies::Known::JSON_Schema_Draft_0,
+               Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
+               Vocabularies::Known::JSON_Schema_Draft_1,
+               Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
+               Vocabularies::Known::JSON_Schema_Draft_2,
+               Vocabularies::Known::JSON_Schema_Draft_2_Hyper})) {
+        continue;
+      }
+
       if (entry.second.is_boolean() && entry.second.to_boolean()) {
         if (!frame.has_references_through(
                 location.pointer, WeakPointer::Token{std::cref(entry.first)})) {

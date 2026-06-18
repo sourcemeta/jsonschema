@@ -1,5 +1,3 @@
-add_subdirectory(http)
-
 sourcemeta_executable(
   PROJECT jsonschema
   NAME cli
@@ -46,7 +44,6 @@ target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::output)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::test)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::alterschema)
 target_link_libraries(jsonschema_cli PRIVATE sourcemeta::blaze::codegen)
-target_link_libraries(jsonschema_cli PRIVATE jsonschema_http)
 
 configure_file(configure.h.in configure.h @ONLY)
 target_include_directories(jsonschema_cli PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

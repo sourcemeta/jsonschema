@@ -137,9 +137,6 @@
             },
             "format": {
               "type": "string"
-            },
-            "required": {
-              "type": "boolean"
             }
           },
           "unevaluatedProperties": false
@@ -169,9 +166,6 @@
             },
             "maximum": {
               "type": "number"
-            },
-            "required": {
-              "type": "boolean"
             }
           },
           "unevaluatedProperties": false
@@ -206,9 +200,6 @@
               "type": "boolean"
             },
             "exclusiveMaximum": {
-              "type": "boolean"
-            },
-            "required": {
               "type": "boolean"
             }
           },
@@ -256,9 +247,6 @@
                   "type": "boolean"
                 }
               ]
-            },
-            "required": {
-              "type": "boolean"
             }
           },
           "unevaluatedProperties": false
@@ -291,9 +279,6 @@
               "minimum": 0
             },
             "uniqueItems": {
-              "type": "boolean"
-            },
-            "required": {
               "type": "boolean"
             }
           },
@@ -348,9 +333,6 @@
             },
             "uniqueItems": {
               "type": "boolean"
-            },
-            "required": {
-              "type": "boolean"
             }
           },
           "unevaluatedProperties": false
@@ -397,6 +379,9 @@
               "items": {
                 "$ref": "#/$defs/schema"
               }
+            },
+            "required": {
+              "type": "boolean"
             }
           },
           "unevaluatedProperties": false
@@ -416,6 +401,7 @@
           "properties": {
             "disallow": {
               "type": "array",
+              "maxItems": 1,
               "minItems": 1,
               "items": {
                 "$ref": "#/$defs/schema"

@@ -20,7 +20,7 @@ cat << 'EOF' > "$TMP/instance.json"
 { "type": "string" }
 EOF
 
-SOURCEMETA_JSONSCHEMA_CURL_SO="$TMP/does-not-exist.so" \
+SOURCEMETA_CORE_CURL_SO="$TMP/does-not-exist.so" \
   "$1" validate "$TMP/schema.json" "$TMP/instance.json" --http \
   > "$TMP/stdout.txt" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
@@ -29,14 +29,14 @@ test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 error: Could not load the cURL library from the configured path
-  with environment variable SOURCEMETA_JSONSCHEMA_CURL_SO
+  with environment variable SOURCEMETA_CORE_CURL_SO
   with paths
   - $TMP/does-not-exist.so
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
 
-SOURCEMETA_JSONSCHEMA_CURL_SO="$TMP/does-not-exist.so" \
+SOURCEMETA_CORE_CURL_SO="$TMP/does-not-exist.so" \
   "$1" validate "$TMP/schema.json" "$TMP/instance.json" --http --json \
   > "$TMP/stdout_json.txt" 2> "$TMP/stderr_json.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
@@ -46,7 +46,7 @@ test "$EXIT_CODE" = "3"
 cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "Could not load the cURL library from the configured path",
-  "environmentVariable": "SOURCEMETA_JSONSCHEMA_CURL_SO",
+  "environmentVariable": "SOURCEMETA_CORE_CURL_SO",
   "paths": [ "$TMP/does-not-exist.so" ]
 }
 EOF
