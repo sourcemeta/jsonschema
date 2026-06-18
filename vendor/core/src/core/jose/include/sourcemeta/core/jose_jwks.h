@@ -44,6 +44,12 @@ public:
   explicit JWKS(const JSON &value);
   explicit JWKS(JSON &&value);
 
+  /// A key set exclusively owns its keys, so it is move-only.
+  JWKS(JWKS &&other) noexcept = default;
+  auto operator=(JWKS &&other) noexcept -> JWKS & = default;
+  JWKS(const JWKS &) = delete;
+  auto operator=(const JWKS &) -> JWKS & = delete;
+
   /// Parse a JSON Web Key Set from a JSON value, returning no value on invalid
   /// input.
   [[nodiscard]] static auto from(const JSON &value) -> std::optional<JWKS>;

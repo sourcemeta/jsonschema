@@ -1,6 +1,6 @@
-#include "http.h"
+#include <sourcemeta/core/http.h>
 
-#ifdef JSONSCHEMA_USE_SYSTEM_CURL
+#ifdef SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL
 #include <curl/curl.h> // curl_easy_*, curl_slist_*, curl_global_init, CURLOPT_*
 #endif
 
@@ -10,7 +10,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
-#ifndef JSONSCHEMA_USE_SYSTEM_CURL
+#ifndef SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL
 #include <dlfcn.h> // dlopen, dlsym, dlerror, RTLD_NOW
 
 #include <array>   // std::array
@@ -53,8 +53,11 @@ constexpr CURLcode CURLE_OK{0};
 constexpr long CURL_GLOBAL_ALL{3};                   // SSL(1<<0) | WIN32(1<<1)
 constexpr CURLoption CURLOPT_URL{10002};             // STRINGPOINT + 2
 constexpr CURLoption CURLOPT_FOLLOWLOCATION{52};     // LONG + 52
+constexpr CURLoption CURLOPT_MAXREDIRS{68};          // LONG + 68
 constexpr CURLoption CURLOPT_NOSIGNAL{99};           // LONG + 99
 constexpr CURLoption CURLOPT_ACCEPT_ENCODING{10102}; // STRINGPOINT + 102
+constexpr CURLoption CURLOPT_TIMEOUT_MS{155};        // LONG + 155
+constexpr CURLoption CURLOPT_CONNECTTIMEOUT_MS{156}; // LONG + 156
 constexpr CURLoption CURLOPT_WRITEFUNCTION{20011};   // FUNCTIONPOINT + 11
 constexpr CURLoption CURLOPT_WRITEDATA{10001};       // CBPOINT + 1
 constexpr CURLoption CURLOPT_HEADERFUNCTION{20079};  // FUNCTIONPOINT + 79
@@ -65,15 +68,20 @@ constexpr CURLoption CURLOPT_HTTPHEADER{10023};          // SLISTPOINT + 23
 constexpr CURLoption CURLOPT_NOBODY{44};                 // LONG + 44
 constexpr CURLoption CURLOPT_CUSTOMREQUEST{10036};       // STRINGPOINT + 36
 constexpr CURLINFO CURLINFO_RESPONSE_CODE{2097154}; // CURLINFO_LONG(0x200000)+2
+constexpr CURLINFO CURLINFO_EFFECTIVE_URL{
+    1048577}; // CURLINFO_STRING(0x100000)+1
 #endif
 
-namespace sourcemeta::jsonschema {
+namespace {
 
-// The subset of the libcurl C API this CLI relies on, captured as function
-// pointers so the request logic is shared between the link-time backend
-// (JSONSCHEMA_USE_SYSTEM_CURL) and the default runtime-loaded (dlopen)
-// backend. Member types are derived from the curl headers, so they stay in
-// sync with the real prototypes
+constexpr std::string_view HTTP_RESPONSE_TOO_LARGE_MESSAGE{
+    "The response exceeds the maximum allowed size"};
+
+// The subset of the libcurl C API this backend relies on, captured as
+// function pointers so the request logic is shared between the link-time
+// backend (SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL) and the default
+// runtime-loaded (dlopen) backend. Member types are derived from the curl
+// headers, so they stay in sync with the real prototypes
 struct CurlApi {
   decltype(&curl_global_init) global_init;
   decltype(&curl_easy_init) easy_init;
@@ -85,12 +93,6 @@ struct CurlApi {
   decltype(&curl_slist_append) slist_append;
   decltype(&curl_slist_free_all) slist_free_all;
 };
-
-} // namespace sourcemeta::jsonschema
-
-namespace {
-
-using sourcemeta::jsonschema::CurlApi;
 
 class CurlHandle {
 public:
@@ -107,7 +109,7 @@ public:
   CurlHandle(CurlHandle &&) = delete;
   auto operator=(CurlHandle &&) -> CurlHandle & = delete;
 
-  auto get() const -> CURL * { return this->handle_; }
+  [[nodiscard]] auto get() const -> CURL * { return this->handle_; }
   explicit operator bool() const { return this->handle_ != nullptr; }
 
 private:
@@ -136,7 +138,7 @@ public:
     }
   }
 
-  auto get() const -> curl_slist * { return this->list_; }
+  [[nodiscard]] auto get() const -> curl_slist * { return this->list_; }
 
 private:
   const CurlApi &api_;
@@ -152,16 +154,17 @@ struct BodyContext {
 auto body_callback(char *data, std::size_t size, std::size_t count,
                    void *user_data) -> std::size_t {
   auto *context{static_cast<BodyContext *>(user_data)};
+  const std::size_t chunk{size * count};
   if (context->maximum_size.has_value() &&
-      context->output->size() + (size * count) >
-          context->maximum_size.value()) {
+      (context->output->size() > context->maximum_size.value() ||
+       chunk > context->maximum_size.value() - context->output->size())) {
     context->maximum_size_exceeded = true;
     // Returning a smaller count than given aborts the transfer
     return 0;
   }
 
-  context->output->append(data, size * count);
-  return size * count;
+  context->output->append(data, chunk);
+  return chunk;
 }
 
 auto header_callback(char *data, std::size_t size, std::size_t count,
@@ -172,107 +175,11 @@ auto header_callback(char *data, std::size_t size, std::size_t count,
   return size * count;
 }
 
-} // namespace
+#ifndef SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL
 
-namespace sourcemeta::jsonschema {
+using sourcemeta::core::HTTPSystemBackendError;
 
-auto perform_request(const CurlApi &api, const HTTPRequest &request)
-    -> HTTPResponse {
-  static const CURLcode global_initialization{api.global_init(CURL_GLOBAL_ALL)};
-  if (global_initialization != CURLE_OK) {
-    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
-                                      api.easy_strerror(global_initialization)};
-  }
-
-  const CurlHandle handle{api};
-  if (!handle) {
-    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
-                                      "Failed to initialise the HTTP client"};
-  }
-
-  HTTPResponse response;
-  const std::string url{request.url};
-  api.easy_setopt(handle.get(), CURLOPT_URL, url.c_str());
-  api.easy_setopt(handle.get(), CURLOPT_FOLLOWLOCATION, 1L);
-  api.easy_setopt(handle.get(), CURLOPT_NOSIGNAL, 1L);
-  // Advertise and transparently decode all supported content encodings,
-  // matching what the NSURLSession and WinHTTP backends do
-  api.easy_setopt(handle.get(), CURLOPT_ACCEPT_ENCODING, "");
-
-  std::string raw_headers;
-  BodyContext body_context{&response.body, request.maximum_response_size};
-  api.easy_setopt(handle.get(), CURLOPT_WRITEFUNCTION, body_callback);
-  api.easy_setopt(handle.get(), CURLOPT_WRITEDATA, &body_context);
-  api.easy_setopt(handle.get(), CURLOPT_HEADERFUNCTION, header_callback);
-  api.easy_setopt(handle.get(), CURLOPT_HEADERDATA, &raw_headers);
-
-  CurlHeaderList header_list{api};
-  for (const auto &[name, value] : request.headers) {
-    std::string line{name};
-    // The semicolon form is how cURL distinguishes a header with an
-    // empty value from a header to suppress
-    if (value.empty()) {
-      line += ";";
-    } else {
-      line += ": ";
-      line += value;
-    }
-
-    header_list.append(line);
-  }
-
-  if (request.body.has_value()) {
-    std::string content_type_line{"Content-Type: "};
-    content_type_line += request.body.value().content_type;
-    header_list.append(content_type_line);
-    api.easy_setopt(handle.get(), CURLOPT_POSTFIELDSIZE_LARGE,
-                    static_cast<curl_off_t>(request.body.value().data.size()));
-    api.easy_setopt(handle.get(), CURLOPT_POSTFIELDS,
-                    request.body.value().data.data());
-  }
-
-  if (header_list.get()) {
-    api.easy_setopt(handle.get(), CURLOPT_HTTPHEADER, header_list.get());
-  }
-
-  const std::string method{
-      sourcemeta::core::http_method_string(request.method)};
-  if (request.method == sourcemeta::core::HTTPMethod::HEAD) {
-    api.easy_setopt(handle.get(), CURLOPT_NOBODY, 1L);
-  } else if (request.method != sourcemeta::core::HTTPMethod::GET ||
-             request.body.has_value()) {
-    api.easy_setopt(handle.get(), CURLOPT_CUSTOMREQUEST, method.c_str());
-  }
-
-  const auto code{api.easy_perform(handle.get())};
-  if (code != CURLE_OK) {
-    if (body_context.maximum_size_exceeded) {
-      throw sourcemeta::core::HTTPError{
-          request.method, std::string{request.url},
-          std::string{HTTP_RESPONSE_TOO_LARGE_MESSAGE}};
-    }
-
-    throw sourcemeta::core::HTTPError{request.method, std::string{request.url},
-                                      api.easy_strerror(code)};
-  }
-
-  long status_code{0};
-  api.easy_getinfo(handle.get(), CURLINFO_RESPONSE_CODE, &status_code);
-  sourcemeta::core::http_parse_headers(raw_headers, response.headers);
-  response.status = sourcemeta::core::http_status_from_code(
-      static_cast<std::uint16_t>(status_code));
-  return response;
-}
-
-} // namespace sourcemeta::jsonschema
-
-#ifndef JSONSCHEMA_USE_SYSTEM_CURL
-
-namespace {
-
-using sourcemeta::jsonschema::HTTPDynamicBackendNotFound;
-
-constexpr std::string_view CURL_LIBRARY_ENV{"SOURCEMETA_JSONSCHEMA_CURL_SO"};
+constexpr std::string_view CURL_LIBRARY_ENV{"SOURCEMETA_CORE_CURL_SO"};
 
 // Tried in order. Every entry carries the `.so.4` SONAME so we only ever
 // bind an ABI-compatible cURL (never the unversioned `libcurl.so` dev
@@ -303,7 +210,7 @@ auto resolve_symbol(const ResolvedLibrary &library, const char *name)
   dlerror();
   void *symbol{dlsym(library.handle, name)};
   if (dlerror() != nullptr) {
-    throw HTTPDynamicBackendNotFound{
+    throw HTTPSystemBackendError{
         "The cURL library was loaded but does not provide the expected API",
         std::string{CURL_LIBRARY_ENV},
         {library.path}};
@@ -324,7 +231,7 @@ auto open_library() -> ResolvedLibrary {
       return {handle, configured_path};
     }
 
-    throw HTTPDynamicBackendNotFound{
+    throw HTTPSystemBackendError{
         "Could not load the cURL library from the configured path",
         std::string{CURL_LIBRARY_ENV},
         {std::string{configured_path}}};
@@ -342,7 +249,7 @@ auto open_library() -> ResolvedLibrary {
     searched.emplace_back(candidate);
   }
 
-  throw HTTPDynamicBackendNotFound{
+  throw HTTPSystemBackendError{
       "Could not find the system cURL library (libcurl)",
       std::string{CURL_LIBRARY_ENV}, std::move(searched)};
 }
@@ -352,42 +259,152 @@ auto load_curl() -> const CurlApi & {
   // must remain valid for the lifetime of the process
   static const ResolvedLibrary library{open_library()};
   static const CurlApi api{
-      resolve_symbol<decltype(CurlApi::global_init)>(library,
-                                                     "curl_global_init"),
-      resolve_symbol<decltype(CurlApi::easy_init)>(library, "curl_easy_init"),
-      resolve_symbol<decltype(CurlApi::easy_cleanup)>(library,
-                                                      "curl_easy_cleanup"),
-      resolve_symbol<decltype(CurlApi::easy_setopt)>(library,
-                                                     "curl_easy_setopt"),
-      resolve_symbol<decltype(CurlApi::easy_perform)>(library,
-                                                      "curl_easy_perform"),
-      resolve_symbol<decltype(CurlApi::easy_getinfo)>(library,
-                                                      "curl_easy_getinfo"),
-      resolve_symbol<decltype(CurlApi::easy_strerror)>(library,
-                                                       "curl_easy_strerror"),
-      resolve_symbol<decltype(CurlApi::slist_append)>(library,
-                                                      "curl_slist_append"),
-      resolve_symbol<decltype(CurlApi::slist_free_all)>(library,
-                                                        "curl_slist_free_all")};
+      .global_init = resolve_symbol<decltype(CurlApi::global_init)>(
+          library, "curl_global_init"),
+      .easy_init = resolve_symbol<decltype(CurlApi::easy_init)>(
+          library, "curl_easy_init"),
+      .easy_cleanup = resolve_symbol<decltype(CurlApi::easy_cleanup)>(
+          library, "curl_easy_cleanup"),
+      .easy_setopt = resolve_symbol<decltype(CurlApi::easy_setopt)>(
+          library, "curl_easy_setopt"),
+      .easy_perform = resolve_symbol<decltype(CurlApi::easy_perform)>(
+          library, "curl_easy_perform"),
+      .easy_getinfo = resolve_symbol<decltype(CurlApi::easy_getinfo)>(
+          library, "curl_easy_getinfo"),
+      .easy_strerror = resolve_symbol<decltype(CurlApi::easy_strerror)>(
+          library, "curl_easy_strerror"),
+      .slist_append = resolve_symbol<decltype(CurlApi::slist_append)>(
+          library, "curl_slist_append"),
+      .slist_free_all = resolve_symbol<decltype(CurlApi::slist_free_all)>(
+          library, "curl_slist_free_all")};
   return api;
+}
+
+#endif
+
+auto acquire_api() -> const CurlApi & {
+#ifdef SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL
+  static const CurlApi api{.global_init = &curl_global_init,
+                           .easy_init = &curl_easy_init,
+                           .easy_cleanup = &curl_easy_cleanup,
+                           .easy_setopt = &curl_easy_setopt,
+                           .easy_perform = &curl_easy_perform,
+                           .easy_getinfo = &curl_easy_getinfo,
+                           .easy_strerror = &curl_easy_strerror,
+                           .slist_append = &curl_slist_append,
+                           .slist_free_all = &curl_slist_free_all};
+  return api;
+#else
+  return load_curl();
+#endif
 }
 
 } // namespace
 
-#endif
+namespace sourcemeta::core {
 
-namespace sourcemeta::jsonschema {
+auto HTTPSystemRequest::send() const -> HTTPResponse {
+  const CurlApi &api{acquire_api()};
 
-auto http_request(const HTTPRequest &request) -> HTTPResponse {
-#ifdef JSONSCHEMA_USE_SYSTEM_CURL
-  static const CurlApi api{
-      &curl_global_init,   &curl_easy_init,    &curl_easy_cleanup,
-      &curl_easy_setopt,   &curl_easy_perform, &curl_easy_getinfo,
-      &curl_easy_strerror, &curl_slist_append, &curl_slist_free_all};
-  return perform_request(api, request);
-#else
-  return perform_request(load_curl(), request);
-#endif
+  static const CURLcode global_initialization{api.global_init(CURL_GLOBAL_ALL)};
+  if (global_initialization != CURLE_OK) {
+    throw HTTPError{this->method_, this->url_,
+                    api.easy_strerror(global_initialization)};
+  }
+
+  const CurlHandle handle{api};
+  if (!handle) {
+    throw HTTPError{this->method_, this->url_,
+                    "Failed to initialise the HTTP client"};
+  }
+
+  HTTPResponse response;
+  api.easy_setopt(handle.get(), CURLOPT_URL, this->url_.c_str());
+  api.easy_setopt(handle.get(), CURLOPT_FOLLOWLOCATION,
+                  this->follow_redirects_ ? 1L : 0L);
+  if (this->follow_redirects_) {
+    api.easy_setopt(handle.get(), CURLOPT_MAXREDIRS,
+                    static_cast<long>(this->maximum_redirects_));
+  }
+
+  api.easy_setopt(handle.get(), CURLOPT_NOSIGNAL, 1L);
+  api.easy_setopt(handle.get(), CURLOPT_TIMEOUT_MS,
+                  static_cast<long>(this->timeout_.count()));
+  if (this->connect_timeout_.has_value()) {
+    api.easy_setopt(handle.get(), CURLOPT_CONNECTTIMEOUT_MS,
+                    static_cast<long>(this->connect_timeout_.value().count()));
+  }
+
+  // Advertise and transparently decode all supported content encodings,
+  // matching what the NSURLSession and WinHTTP backends do
+  api.easy_setopt(handle.get(), CURLOPT_ACCEPT_ENCODING, "");
+
+  std::string raw_headers;
+  BodyContext body_context{.output = &response.body,
+                           .maximum_size = this->maximum_response_size_};
+  api.easy_setopt(handle.get(), CURLOPT_WRITEFUNCTION, body_callback);
+  api.easy_setopt(handle.get(), CURLOPT_WRITEDATA, &body_context);
+  api.easy_setopt(handle.get(), CURLOPT_HEADERFUNCTION, header_callback);
+  api.easy_setopt(handle.get(), CURLOPT_HEADERDATA, &raw_headers);
+
+  CurlHeaderList header_list{api};
+  for (const auto &[name, value] : this->headers_) {
+    std::string line{name};
+    // The semicolon form is how cURL distinguishes a header with an
+    // empty value from a header to suppress
+    if (value.empty()) {
+      line += ";";
+    } else {
+      line += ": ";
+      line += value;
+    }
+
+    header_list.append(line);
+  }
+
+  if (this->body_.has_value()) {
+    std::string content_type_line{"Content-Type: "};
+    content_type_line += this->body_.value().content_type;
+    header_list.append(content_type_line);
+    api.easy_setopt(handle.get(), CURLOPT_POSTFIELDSIZE_LARGE,
+                    static_cast<curl_off_t>(this->body_.value().data.size()));
+    api.easy_setopt(handle.get(), CURLOPT_POSTFIELDS,
+                    this->body_.value().data.data());
+  }
+
+  if (header_list.get()) {
+    api.easy_setopt(handle.get(), CURLOPT_HTTPHEADER, header_list.get());
+  }
+
+  const std::string method{http_method_string(this->method_)};
+  if (this->method_ == HTTPMethod::HEAD) {
+    api.easy_setopt(handle.get(), CURLOPT_NOBODY, 1L);
+  } else if (this->method_ != HTTPMethod::GET || this->body_.has_value()) {
+    api.easy_setopt(handle.get(), CURLOPT_CUSTOMREQUEST, method.c_str());
+  }
+
+  const auto code{api.easy_perform(handle.get())};
+  if (code != CURLE_OK) {
+    if (body_context.maximum_size_exceeded) {
+      throw HTTPError{this->method_, this->url_,
+                      std::string{HTTP_RESPONSE_TOO_LARGE_MESSAGE}};
+    }
+
+    throw HTTPError{this->method_, this->url_, api.easy_strerror(code)};
+  }
+
+  long status_code{0};
+  api.easy_getinfo(handle.get(), CURLINFO_RESPONSE_CODE, &status_code);
+  char *effective_url{nullptr};
+  api.easy_getinfo(handle.get(), CURLINFO_EFFECTIVE_URL, &effective_url);
+  if (effective_url != nullptr) {
+    response.url.assign(effective_url);
+  }
+
+  http_parse_headers(raw_headers, response.headers);
+  response.status =
+      http_status_from_code(static_cast<std::uint16_t>(status_code));
+  return response;
 }
 
-} // namespace sourcemeta::jsonschema
+} // namespace sourcemeta::core

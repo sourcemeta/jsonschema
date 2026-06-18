@@ -174,6 +174,21 @@ auto split_once(const std::string_view input,
   return std::pair{before, after};
 }
 
+auto equals_ignore_case(const std::string_view left,
+                        const std::string_view right) noexcept -> bool {
+  if (left.size() != right.size()) {
+    return false;
+  }
+
+  for (std::size_t index{0}; index < left.size(); ++index) {
+    if (to_lowercase(left[index]) != to_lowercase(right[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 auto remove_suffix_ignore_case(const std::string_view input,
                                const std::string_view suffix) noexcept
     -> std::string_view {

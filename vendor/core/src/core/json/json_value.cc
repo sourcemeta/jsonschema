@@ -432,6 +432,9 @@ auto JSON::size(const String &value) noexcept -> std::size_t {
   return result;
 }
 
+// `as_real` is reached only for integer and real operands here, never a
+// decimal, so it cannot throw even though it is no longer noexcept
+// NOLINTNEXTLINE(bugprone-exception-escape)
 auto JSON::operator<(const JSON &other) const noexcept -> bool {
   if ((this->type() == Type::Integer && other.type() == Type::Real) ||
       (this->type() == Type::Real && other.type() == Type::Integer)) {
@@ -489,6 +492,9 @@ auto JSON::operator>=(const JSON &other) const noexcept -> bool {
   return *this > other || *this == other;
 }
 
+// `as_real` is reached only for integer and real operands here, never a
+// decimal, so it cannot throw even though it is no longer noexcept
+// NOLINTNEXTLINE(bugprone-exception-escape)
 auto JSON::operator==(const JSON &other) const noexcept -> bool {
   if ((this->type() == Type::Integer && other.type() == Type::Real) ||
       (this->type() == Type::Real && other.type() == Type::Integer)) {

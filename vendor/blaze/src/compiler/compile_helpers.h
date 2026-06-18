@@ -409,7 +409,10 @@ inline auto required_properties(const SchemaContext &schema_context)
       schema_context.schema.at("properties").is_object()) {
     for (const auto &entry :
          schema_context.schema.at("properties").as_object()) {
+      // In Draft 3, keywords sibling to `$ref` are never evaluated, so a
+      // `required` flag next to a `$ref` does not make the property mandatory
       if (entry.second.is_object() && entry.second.defines("required") &&
+          !entry.second.defines("$ref") &&
           entry.second.at("required").is_boolean() &&
           entry.second.at("required").to_boolean()) {
         result.insert(entry.first);

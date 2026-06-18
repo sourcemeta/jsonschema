@@ -5,6 +5,7 @@
 #include <sourcemeta/core/crypto_sha384.h>
 #include <sourcemeta/core/crypto_sha512.h>
 #include <sourcemeta/core/crypto_verify.h>
+#include <sourcemeta/core/text.h>
 
 #include <cstddef>     // std::size_t
 #include <string>      // std::string
@@ -17,6 +18,22 @@ namespace sourcemeta::core {
 // the range of valid key sizes
 inline constexpr std::size_t MAXIMUM_KEY_BYTES{512};
 
+// Whether a signature representative, as a big-endian integer, is strictly
+// less than the modulus. RFC 8017 Section 5.2.2 requires this range check, so
+// that an unreduced signature, which an attacker forges by adding the modulus
+// without changing the modular exponentiation result, is rejected
+inline auto rsa_signature_in_range(const std::string_view signature,
+                                   const std::string_view modulus) noexcept
+    -> bool {
+  const auto value{strip_left(signature, '\x00')};
+  const auto bound{strip_left(modulus, '\x00')};
+  if (value.size() != bound.size()) {
+    return value.size() < bound.size();
+  }
+
+  return value < bound;
+}
+
 inline auto curve_field_bytes(const EllipticCurve curve) noexcept
     -> std::size_t {
   switch (curve) {
@@ -26,6 +43,32 @@ inline auto curve_field_bytes(const EllipticCurve curve) noexcept
       return 48;
     case EllipticCurve::P521:
       return 66;
+  }
+
+  std::unreachable();
+}
+
+// The public key and signature octet lengths are fixed per curve (RFC 8032
+// Section 5.1.2 and Section 5.1.6)
+inline auto eddsa_public_key_bytes(const EdwardsCurve curve) noexcept
+    -> std::size_t {
+  switch (curve) {
+    case EdwardsCurve::Ed25519:
+      return 32;
+    case EdwardsCurve::Ed448:
+      return 57;
+  }
+
+  std::unreachable();
+}
+
+inline auto eddsa_signature_bytes(const EdwardsCurve curve) noexcept
+    -> std::size_t {
+  switch (curve) {
+    case EdwardsCurve::Ed25519:
+      return 64;
+    case EdwardsCurve::Ed448:
+      return 114;
   }
 
   std::unreachable();

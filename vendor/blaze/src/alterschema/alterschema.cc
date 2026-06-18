@@ -118,14 +118,19 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/dependent_required_to_any_of.h"
 #include "canonicalizer/dependent_schemas_to_any_of.h"
 #include "canonicalizer/deprecated_false_drop.h"
+#include "canonicalizer/disallow_array_to_extends.h"
+#include "canonicalizer/disallow_extends_to_type.h"
 #include "canonicalizer/disallow_to_array_of_schemas.h"
+#include "canonicalizer/disallow_type_union_to_extends.h"
 #include "canonicalizer/divisible_by_implicit.h"
 #include "canonicalizer/draft3_type_any.h"
+#include "canonicalizer/duplicate_disallow_entries.h"
 #include "canonicalizer/empty_definitions_drop.h"
 #include "canonicalizer/empty_defs_drop.h"
 #include "canonicalizer/empty_dependencies_drop.h"
 #include "canonicalizer/empty_dependent_required_drop.h"
 #include "canonicalizer/empty_dependent_schemas_drop.h"
+#include "canonicalizer/empty_disallow_drop.h"
 #include "canonicalizer/enum_drop_redundant_validation.h"
 #include "canonicalizer/enum_filter_by_type.h"
 #include "canonicalizer/exclusive_maximum_boolean_integer_fold.h"
@@ -151,6 +156,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/optional_property_implicit.h"
 #include "canonicalizer/recursive_anchor_false_drop.h"
 #include "canonicalizer/required_property_implicit.h"
+#include "canonicalizer/required_to_extends.h"
 #include "canonicalizer/single_branch_allof.h"
 #include "canonicalizer/single_branch_anyof.h"
 #include "canonicalizer/single_branch_oneof.h"
@@ -158,6 +164,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/type_boolean_as_enum.h"
 #include "canonicalizer/type_inherit_in_place.h"
 #include "canonicalizer/type_null_as_enum.h"
+#include "canonicalizer/type_union_distribute_keywords.h"
 #include "canonicalizer/type_union_implicit.h"
 #include "canonicalizer/type_union_to_schemas.h"
 #include "canonicalizer/type_with_applicator_to_allof.h"
@@ -511,6 +518,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<UnsatisfiableTypeAndEnum>();
     bundle.add<EnumFilterByType>();
     bundle.add<TypeUnionToSchemas>();
+    bundle.add<TypeUnionDistributeKeywords>();
     bundle.add<DependenciesToAnyOf>();
     bundle.add<DependenciesToExtendsDisallow>();
     bundle.add<DependentSchemasToAnyOf>();
@@ -523,9 +531,15 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<EmptyDependenciesDrop>();
     bundle.add<EmptyDependentSchemasDrop>();
     bundle.add<EmptyDependentRequiredDrop>();
+    bundle.add<EmptyDisallowDrop>();
     bundle.add<AdditionalItemsImplicit>();
     bundle.add<RequiredPropertyImplicit>();
     bundle.add<OptionalPropertyImplicit>();
+    bundle.add<DuplicateDisallowEntries>();
+    bundle.add<DisallowArrayToExtends>();
+    bundle.add<DisallowExtendsToType>();
+    bundle.add<DisallowTypeUnionToExtends>();
+    bundle.add<RequiredToExtends>();
     bundle.add<SingleBranchAllOf>();
     bundle.add<SingleBranchAnyOf>();
     bundle.add<SingleBranchOneOf>();

@@ -28,7 +28,6 @@
 #include <vector>           // std::vector
 
 #include "exit_code.h"
-#include "http.h" // sourcemeta::jsonschema::HTTPDynamicBackendNotFound
 
 namespace sourcemeta::jsonschema {
 
@@ -1099,7 +1098,7 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_UNEXPECTED_ERROR;
-  } catch (const sourcemeta::jsonschema::HTTPDynamicBackendNotFound &error) {
+  } catch (const sourcemeta::core::HTTPSystemBackendError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;

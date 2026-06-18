@@ -31,6 +31,15 @@ public:
   }
 };
 
+/// @ingroup jose
+/// An error that occurs when parsing an invalid JSON Web Token.
+class SOURCEMETA_CORE_JOSE_EXPORT JWTParseError : public std::exception {
+public:
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The input is not a valid JSON Web Token";
+  }
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

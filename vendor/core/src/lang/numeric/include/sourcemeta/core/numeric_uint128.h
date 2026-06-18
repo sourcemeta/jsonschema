@@ -55,14 +55,32 @@ struct uint128_t {
     return *this;
   }
 
+  auto operator-=(const uint128_t &other) noexcept -> uint128_t & {
+    const auto old_low = this->low;
+    this->low -= other.low;
+    this->high -= other.high + (old_low < other.low ? 1 : 0);
+    return *this;
+  }
+
   auto operator*=(const uint128_t &other) noexcept -> uint128_t & {
     *this = *this * other;
+    return *this;
+  }
+
+  auto operator%=(const uint128_t &other) noexcept -> uint128_t & {
+    *this = *this % other;
     return *this;
   }
 
   friend auto operator+(uint128_t left, const uint128_t &right) noexcept
       -> uint128_t {
     left += right;
+    return left;
+  }
+
+  friend auto operator-(uint128_t left, const uint128_t &right) noexcept
+      -> uint128_t {
+    left -= right;
     return left;
   }
 

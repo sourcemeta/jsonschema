@@ -21,9 +21,11 @@
 #include <cstdint>          // std::int64_t, std::uint8_t
 #include <functional>       // std::less, std::reference_wrapper, std::function
 #include <initializer_list> // std::initializer_list
+#include <limits>           // std::numeric_limits
 #include <memory>           // std::allocator
 #include <set>              // std::set
 #include <sstream>          // std::basic_istringstream
+#include <stdexcept>        // std::out_of_range
 #include <string>           // std::basic_string, std::char_traits
 #include <string_view>      // std::basic_string_view
 #include <type_traits>      // std::is_same_v, std::remove_cvref_t
@@ -774,7 +776,9 @@ public:
   }
 
   /// Get the JSON numeric document as a real number if it is not one already.
-  /// For example:
+  /// A decimal whose magnitude does not fit in a double throws
+  /// `std::out_of_range`, matching the behaviour of converting that decimal
+  /// directly. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
@@ -783,16 +787,21 @@ public:
   /// const sourcemeta::core::JSON document{5};
   /// assert(document.as_real() == 5.0);
   /// ```
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto as_real() const noexcept
-      -> Real {
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto as_real() const -> Real {
     assert(this->is_number());
-    return this->is_real() ? this->to_real()
-                           : static_cast<Real>(this->to_integer());
+    if (this->is_real()) {
+      return this->to_real();
+    } else if (this->is_integer()) {
+      return static_cast<Real>(this->to_integer());
+    } else {
+      return this->to_decimal().to_double();
+    }
   }
 
   /// Get the JSON numeric document as an integer number if it is not one
-  /// already. If the number is a real number, truncation will take place. For
-  /// example:
+  /// already. If the number is a real number, truncation will take place. A
+  /// value whose magnitude does not fit in a 64-bit integer throws
+  /// `std::out_of_range`. For example:
   ///
   /// ```cpp
   /// #include <sourcemeta/core/json.h>
@@ -801,13 +810,28 @@ public:
   /// const sourcemeta::core::JSON document{5.3};
   /// assert(document.as_integer() == 5);
   /// ```
-  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto as_integer() const noexcept
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto as_integer() const
       -> Integer {
     assert(this->is_number());
     if (this->is_integer()) {
       return this->to_integer();
+    } else if (this->is_real()) {
+      const auto truncated{std::trunc(this->to_real())};
+      if (truncated < static_cast<Real>(std::numeric_limits<Integer>::min()) ||
+          truncated >= static_cast<Real>(std::numeric_limits<Integer>::max())) {
+        throw std::out_of_range{
+            "The real number does not fit in a 64-bit integer"};
+      }
+
+      return static_cast<Integer>(truncated);
     } else {
-      return static_cast<Integer>(std::trunc(this->to_real()));
+      const auto integral{this->to_decimal().to_integral()};
+      if (!integral.is_int64()) {
+        throw std::out_of_range{
+            "The decimal number does not fit in a 64-bit integer"};
+      }
+
+      return integral.to_int64();
     }
   }
 

@@ -25,6 +25,8 @@ auto to_jws_algorithm(const std::string_view value) noexcept
     return JWSAlgorithm::ES384;
   } else if (value == "ES512") {
     return JWSAlgorithm::ES512;
+  } else if (value == "EdDSA") {
+    return JWSAlgorithm::EdDSA;
   } else {
     return std::nullopt;
   }

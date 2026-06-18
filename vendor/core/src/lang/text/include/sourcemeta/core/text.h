@@ -400,6 +400,22 @@ auto bytes_to_hex(const std::string_view input) -> std::string;
 
 /// @ingroup text
 ///
+/// Return whether two strings are equal under ASCII case-insensitive
+/// comparison. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::equals_ignore_case("Hello", "hELLO"));
+/// assert(!sourcemeta::core::equals_ignore_case("foo", "bar"));
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto equals_ignore_case(const std::string_view left,
+                        const std::string_view right) noexcept -> bool;
+
+/// @ingroup text
+///
 /// Return `input` with `suffix` removed from the end under ASCII
 /// case-insensitive comparison, or `input` unchanged when the suffix does
 /// not match. For example:

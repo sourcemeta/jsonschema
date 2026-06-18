@@ -184,11 +184,17 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
     }
   }
 
-  // Draft 4
+  // Draft 4 and 3
   // Old `id` anchor form
   if (schema.is_object() &&
-      vocabularies.contains(
-          sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_4)) {
+      (vocabularies.contains(
+           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_4) ||
+       vocabularies.contains(
+           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_4_Hyper) ||
+       vocabularies.contains(
+           sourcemeta::blaze::Vocabularies::Known::JSON_Schema_Draft_3) ||
+       vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
+                                 JSON_Schema_Draft_3_Hyper))) {
     const auto *id_value{schema.try_at("id")};
     if (id_value) {
       assert(id_value->is_string());
@@ -196,7 +202,7 @@ auto find_anchors(const sourcemeta::core::JSON &schema,
       // A bare "#" carries no anchor name, so we treat it as no anchor at
       // all.
       if (id_view.starts_with('#') && id_view.size() > 1) {
-        // Draft 4 imposes no plain-name pattern on the fragment, but the
+        // Draft 4 and 3 impose no plain-name pattern on the fragment, but the
         // value must still be a valid URI reference per RFC 3986
         if (!sourcemeta::core::URI::is_uri_reference(id_view)) {
           throw sourcemeta::blaze::SchemaKeywordError(
@@ -315,6 +321,8 @@ auto supports_id_anchors(
     case SchemaBaseDialect::JSON_Schema_Draft_6_Hyper:
     case SchemaBaseDialect::JSON_Schema_Draft_4:
     case SchemaBaseDialect::JSON_Schema_Draft_4_Hyper:
+    case SchemaBaseDialect::JSON_Schema_Draft_3:
+    case SchemaBaseDialect::JSON_Schema_Draft_3_Hyper:
       return true;
     default:
       return false;

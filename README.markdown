@@ -207,7 +207,7 @@ to build from source if your distribution of choice is different.
 > missing you can install it through your package manager (for example
 > `apt install libcurl4`, `dnf install libcurl`, or `apk add libcurl`). If it
 > lives in a non-standard location, point the CLI at it by setting the
-> `SOURCEMETA_JSONSCHEMA_CURL_SO` environment variable to the full path of
+> `SOURCEMETA_CORE_CURL_SO` environment variable to the full path of
 > `libcurl.so.4`.
 
 To verify the GPG signature of the checksums file:
