@@ -8,6 +8,8 @@ vendor/hydra
 vendor/jsonbinpack
 vendor/codegen
 vendor/vendorpull
+vendor/ctrf
+vendor/ctrf.mask
 .ackrc
 .editorconfig
 action.yml
