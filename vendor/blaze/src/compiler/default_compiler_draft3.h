@@ -204,10 +204,13 @@ auto compile_required_assertions(const Context &context,
     if (is_closed_properties_required(schema_context.schema, properties_set)) {
       if (context.mode == Mode::FastValidation && assume_object) {
         static const std::string properties_keyword{"properties"};
+        // `SchemaContext::relative_pointer` is a reference, so the concatenated
+        // pointer must outlive `new_schema_context`
+        const auto properties_pointer{
+            schema_context.relative_pointer.initial().concat(
+                sourcemeta::blaze::make_weak_pointer(properties_keyword))};
         const SchemaContext new_schema_context{
-            .relative_pointer =
-                schema_context.relative_pointer.initial().concat(
-                    sourcemeta::blaze::make_weak_pointer(properties_keyword)),
+            .relative_pointer = properties_pointer,
             .schema = schema_context.schema,
             .vocabularies = schema_context.vocabularies,
             .base = schema_context.base,
@@ -1073,6 +1076,56 @@ auto compiler_draft3_applicator_patternproperties(
       context, schema_context, dynamic_context, false, false);
 }
 
+// Determine whether the `properties` keyword on its own enforces a closed
+// object (i.e. compiles to one of the `LoopPropertiesExactly*` forms). This
+// happens when every property subschema reduces to a single strict type
+// assertion of the same type. In that case `additionalProperties: false` is
+// already enforced by `properties` and does not need to emit anything.
+inline auto
+properties_enforce_closed_object(const Context &context,
+                                 const SchemaContext &schema_context) -> bool {
+  const bool assume_object{schema_context.schema.defines("type") &&
+                           schema_context.schema.at("type").is_string() &&
+                           schema_context.schema.at("type").to_string() ==
+                               "object"};
+  if (!assume_object || !schema_context.schema.defines("properties") ||
+      !schema_context.schema.at("properties").is_object()) {
+    return false;
+  }
+
+  // `SchemaContext::relative_pointer` is a reference, so the concatenated
+  // pointer must outlive `new_schema_context`
+  const auto properties_pointer{
+      schema_context.relative_pointer.initial().concat(
+          sourcemeta::blaze::make_weak_pointer(KEYWORD_PROPERTIES))};
+  const SchemaContext new_schema_context{
+      .relative_pointer = properties_pointer,
+      .schema = schema_context.schema,
+      .vocabularies = schema_context.vocabularies,
+      .base = schema_context.base,
+      .is_property_name = schema_context.is_property_name};
+  const DynamicContext new_dynamic_context{
+      .keyword = KEYWORD_PROPERTIES,
+      .base_schema_location = sourcemeta::core::empty_weak_pointer,
+      .base_instance_location = sourcemeta::core::empty_weak_pointer};
+  const auto properties{
+      compile_properties(context, new_schema_context, new_dynamic_context, {})};
+  if (!std::ranges::all_of(properties, [](const auto &property) {
+        return property.second.size() == 1 &&
+               property.second.front().type ==
+                   InstructionIndex::AssertionTypeStrict;
+      })) {
+    return false;
+  }
+
+  std::set<ValueType> types;
+  for (const auto &property : properties) {
+    types.insert(std::get<ValueType>(property.second.front().value));
+  }
+
+  return types.size() == 1;
+}
+
 auto compiler_draft3_applicator_additionalproperties_with_options(
     const Context &context, const SchemaContext &schema_context,
     const DynamicContext &dynamic_context, const bool annotate,
@@ -1145,17 +1198,24 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     return {};
   }
 
-  // When all properties are required and `additionalProperties: false`,
-  // the `required` keyword compiles to `AssertionDefinesExactly` which already
-  // checks that the object has exactly the required properties, so we don't
-  // need to emit anything for `additionalProperties`
+  // When all properties are required and `additionalProperties: false`, the
+  // object is closed by another keyword, so we don't need to emit anything for
+  // `additionalProperties`. This happens either because `required` compiles to
+  // an `AssertionDefinesExactly` variant (only when there is more than one
+  // required property) or because `properties` itself compiles to a closed
+  // form. With a single required property `required` only compiles to
+  // `AssertionDefinesStrict`, which does not reject unknown properties, so we
+  // must still emit the closure unless `properties` enforces it.
   if (context.mode == Mode::FastValidation && children.size() == 1 &&
       children.front().type == InstructionIndex::AssertionFail &&
       !filter_strings.empty() && filter_prefixes.empty() &&
-      filter_regexes.empty() &&
-      is_closed_properties_required(schema_context.schema,
-                                    required_properties(schema_context))) {
-    return {};
+      filter_regexes.empty()) {
+    const auto required{required_properties(schema_context)};
+    if (is_closed_properties_required(schema_context.schema, required) &&
+        (required.size() > 1 ||
+         properties_enforce_closed_object(context, schema_context))) {
+      return {};
+    }
   }
 
   if (context.mode == Mode::FastValidation && filter_strings.empty() &&

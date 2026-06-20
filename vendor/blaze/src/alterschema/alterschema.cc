@@ -119,6 +119,7 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
 #include "canonicalizer/dependent_schemas_to_any_of.h"
 #include "canonicalizer/deprecated_false_drop.h"
 #include "canonicalizer/disallow_array_to_extends.h"
+#include "canonicalizer/disallow_double_negation.h"
 #include "canonicalizer/disallow_extends_to_type.h"
 #include "canonicalizer/disallow_to_array_of_schemas.h"
 #include "canonicalizer/disallow_type_union_to_extends.h"
@@ -539,6 +540,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<DisallowArrayToExtends>();
     bundle.add<DisallowExtendsToType>();
     bundle.add<DisallowTypeUnionToExtends>();
+    bundle.add<DisallowDoubleNegation>();
     bundle.add<RequiredToExtends>();
     bundle.add<SingleBranchAllOf>();
     bundle.add<SingleBranchAnyOf>();
