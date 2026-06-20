@@ -70,7 +70,56 @@
         }
       }
     },
-    "schema": {
+    "extends": {
+      "x-lint-exclude": "simple_properties_identifiers",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/metadata"
+        },
+        {
+          "$ref": "#/$defs/core"
+        }
+      ],
+      "required": [ "extends" ],
+      "properties": {
+        "extends": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/schema"
+          }
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "union": {
+      "x-lint-exclude": "simple_properties_identifiers",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/metadata"
+        },
+        {
+          "$ref": "#/$defs/core"
+        }
+      ],
+      "required": [ "type" ],
+      "properties": {
+        "type": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/schema"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "leaf": {
       "anyOf": [
         {
           "const": {}
@@ -336,55 +385,19 @@
             }
           },
           "unevaluatedProperties": false
+        }
+      ]
+    },
+    "schema": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/leaf"
         },
         {
-          "x-lint-exclude": "simple_properties_identifiers",
-          "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
-          "required": [ "type" ],
-          "properties": {
-            "type": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/$defs/schema"
-              }
-            }
-          },
-          "unevaluatedProperties": false
+          "$ref": "#/$defs/union"
         },
         {
-          "x-lint-exclude": "simple_properties_identifiers",
-          "type": "object",
-          "allOf": [
-            {
-              "$ref": "#/$defs/metadata"
-            },
-            {
-              "$ref": "#/$defs/core"
-            }
-          ],
-          "required": [ "extends" ],
-          "properties": {
-            "extends": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "$ref": "#/$defs/schema"
-              }
-            },
-            "required": {
-              "type": "boolean"
-            }
-          },
-          "unevaluatedProperties": false
+          "$ref": "#/$defs/extends"
         },
         {
           "x-lint-exclude": "simple_properties_identifiers",
@@ -404,7 +417,18 @@
               "maxItems": 1,
               "minItems": 1,
               "items": {
-                "$ref": "#/$defs/schema"
+                "$comment": "TODO: `disallow` should only ever wrap a single-kind leaf. We additionally permit `extends` and `type` unions here as an interim escape hatch: negating a conjunction or disjunction whose wrapper is targeted by a `$ref` cannot be pushed to the leaves, because doing so would dissolve the referenced node. The proper fix is to invert such references so the `disallow` wraps a `$ref` leaf instead, after which both can be dropped from this list",
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/leaf"
+                  },
+                  {
+                    "$ref": "#/$defs/union"
+                  },
+                  {
+                    "$ref": "#/$defs/extends"
+                  }
+                ]
               }
             }
           },
