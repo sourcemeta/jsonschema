@@ -178,7 +178,11 @@ static inline auto http_fetch(const std::string &url,
       sourcemeta::core::http_header_find(response.headers, "content-type")};
   if (content_type.has_value() && sourcemeta::core::http_content_type_matches(
                                       content_type.value(), "text/yaml")) {
-    return sourcemeta::core::parse_yaml(response.body);
+    try {
+      return sourcemeta::core::parse_yaml(response.body);
+    } catch (const sourcemeta::core::YAMLParseError &error) {
+      throw sourcemeta::core::YAMLFileParseError{url, error};
+    }
   }
 
   return sourcemeta::core::parse_json(response.body);

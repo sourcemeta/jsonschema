@@ -369,7 +369,11 @@ handle_json_entry(const std::filesystem::path &entry_path,
                           index, property_storage->back());
               };
           sourcemeta::core::JSON document{sourcemeta::core::JSON{nullptr}};
-          sourcemeta::core::parse_yaml(stream, document, callback);
+          try {
+            sourcemeta::core::parse_yaml(stream, document, callback);
+          } catch (const sourcemeta::core::YAMLParseError &error) {
+            throw sourcemeta::core::YAMLFileParseError{canonical, error};
+          }
           documents.push_back({std::move(document), std::move(positions),
                                std::move(property_storage)});
           line_offset += max_line > 0 ? max_line - 1 : 0;
