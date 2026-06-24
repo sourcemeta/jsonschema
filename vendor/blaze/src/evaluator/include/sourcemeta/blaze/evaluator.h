@@ -193,10 +193,10 @@ public:
                      const sourcemeta::core::JSON &instance,
                      const Callback *callback) -> bool;
 
-  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+  // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON null{nullptr};
   static inline const sourcemeta::core::JSON empty_string{""};
-  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+  // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables,bugprone-throwing-static-initialization)
 
   // Compute a hash that fits within the IEEE 754 double-precision safe
   // integer range (2^53 - 1), ensuring the serialized template labels

@@ -84,6 +84,23 @@ auto normalize(const std::filesystem::path &canonical_path)
   return normalized;
 }
 
+auto path_components_cover(const std::filesystem::path &path,
+                           const std::filesystem::path &prefix) -> bool {
+  auto path_iterator{path.begin()};
+  auto prefix_iterator{prefix.begin()};
+
+  while (prefix_iterator != prefix.end()) {
+    if (path_iterator == path.end() || *path_iterator != *prefix_iterator) {
+      return false;
+    }
+
+    ++path_iterator;
+    ++prefix_iterator;
+  }
+
+  return true;
+}
+
 } // namespace
 
 namespace sourcemeta::core {
@@ -133,23 +150,13 @@ auto weakly_canonical(const std::filesystem::path &path)
 
 auto is_under_path(const std::filesystem::path &path,
                    const std::filesystem::path &prefix) -> bool {
-  const auto canonical_path{sourcemeta::core::weakly_canonical(path)};
-  const auto canonical_prefix{sourcemeta::core::weakly_canonical(prefix)};
+  return path_components_cover(sourcemeta::core::weakly_canonical(path),
+                               sourcemeta::core::weakly_canonical(prefix));
+}
 
-  auto path_iterator{canonical_path.begin()};
-  auto prefix_iterator{canonical_prefix.begin()};
-
-  while (prefix_iterator != canonical_prefix.end()) {
-    if (path_iterator == canonical_path.end() ||
-        *path_iterator != *prefix_iterator) {
-      return false;
-    }
-
-    ++path_iterator;
-    ++prefix_iterator;
-  }
-
-  return true;
+auto is_lexically_under_path(const std::filesystem::path &path,
+                             const std::filesystem::path &prefix) -> bool {
+  return path_components_cover(normalize(path), normalize(prefix));
 }
 
 auto strip_path_prefix(const std::filesystem::path &path,

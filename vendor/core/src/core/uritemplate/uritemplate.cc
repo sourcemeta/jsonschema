@@ -115,7 +115,7 @@ auto URITemplate::expand(
 
   for (const auto &token : this->tokens_) {
     std::visit(
-        [&result, &callback](const auto &expansion) {
+        [&result, &callback](const auto &expansion) -> void {
           using T = std::decay_t<decltype(expansion)>;
           if constexpr (std::is_same_v<T, URITemplateTokenLiteral>) {
             result += expansion.value;

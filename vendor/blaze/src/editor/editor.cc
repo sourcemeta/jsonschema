@@ -115,12 +115,17 @@ auto for_editor(sourcemeta::core::JSON &schema,
           }
 
           reference_changes.push_back(
-              {sourcemeta::core::to_pointer(key.second),
-               sourcemeta::core::to_uri(destination.value().get()).recompose(),
-               keyword, true});
+              {.pointer = sourcemeta::core::to_pointer(key.second),
+               .new_value = sourcemeta::core::to_uri(destination.value().get())
+                                .recompose(),
+               .keyword = keyword,
+               .rename_to_ref = true});
         } else {
           reference_changes.push_back(
-              {sourcemeta::core::to_pointer(key.second), "", keyword, true});
+              {.pointer = sourcemeta::core::to_pointer(key.second),
+               .new_value = "",
+               .keyword = keyword,
+               .rename_to_ref = true});
         }
       } else {
         if (keyword == "$schema") {
@@ -130,10 +135,12 @@ auto for_editor(sourcemeta::core::JSON &schema,
           const auto origin{frame.traverse(uri_it->second.get())};
           assert(origin.has_value());
           reference_changes.push_back(
-              {sourcemeta::core::to_pointer(key.second),
-               sourcemeta::core::JSON::String{sourcemeta::blaze::to_string(
-                   origin.value().get().base_dialect)},
-               keyword, false});
+              {.pointer = sourcemeta::core::to_pointer(key.second),
+               .new_value =
+                   sourcemeta::core::JSON::String{sourcemeta::blaze::to_string(
+                       origin.value().get().base_dialect)},
+               .keyword = keyword,
+               .rename_to_ref = false});
           continue;
         }
 
@@ -142,13 +149,18 @@ auto for_editor(sourcemeta::core::JSON &schema,
           const bool should_rename =
               keyword == "$dynamicRef" || keyword == "$recursiveRef";
           reference_changes.push_back(
-              {sourcemeta::core::to_pointer(key.second),
-               sourcemeta::core::to_uri(result.value().get().pointer)
-                   .recompose(),
-               keyword, should_rename});
+              {.pointer = sourcemeta::core::to_pointer(key.second),
+               .new_value =
+                   sourcemeta::core::to_uri(result.value().get().pointer)
+                       .recompose(),
+               .keyword = keyword,
+               .rename_to_ref = should_rename});
         } else {
-          reference_changes.push_back({sourcemeta::core::to_pointer(key.second),
-                                       reference.destination, keyword, false});
+          reference_changes.push_back(
+              {.pointer = sourcemeta::core::to_pointer(key.second),
+               .new_value = reference.destination,
+               .keyword = keyword,
+               .rename_to_ref = false});
         }
       }
     }
@@ -173,12 +185,15 @@ auto for_editor(sourcemeta::core::JSON &schema,
       const auto vocabularies{frame.vocabularies(entry.second, resolver)};
 
       subschema_changes.push_back(
-          {sourcemeta::core::to_pointer(entry.second.pointer),
-           entry.second.base_dialect, add_schema,
-           vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
-                                     JSON_Schema_2020_12_Core),
-           vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
-                                     JSON_Schema_2019_09_Core)});
+          {.pointer = sourcemeta::core::to_pointer(entry.second.pointer),
+           .base_dialect = entry.second.base_dialect,
+           .add_schema_declaration = add_schema,
+           .erase_2020_12_keywords =
+               vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
+                                         JSON_Schema_2020_12_Core),
+           .erase_2019_09_keywords =
+               vocabularies.contains(sourcemeta::blaze::Vocabularies::Known::
+                                         JSON_Schema_2019_09_Core)});
     }
   }
 

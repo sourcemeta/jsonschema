@@ -171,6 +171,145 @@ auto is_lowercase(const std::filesystem::path &value) noexcept -> bool;
 
 /// @ingroup text
 ///
+/// Return whether a character is an ASCII letter (A-Z or a-z). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_alpha('a'));
+/// assert(sourcemeta::core::is_alpha('Z'));
+/// assert(!sourcemeta::core::is_alpha('5'));
+/// ```
+template <typename Character>
+  requires std::same_as<Character, char> ||
+           std::same_as<Character, signed char> ||
+           std::same_as<Character, unsigned char> ||
+           std::same_as<Character, wchar_t>
+inline constexpr auto is_alpha(const Character character) noexcept -> bool {
+  return (character >= 'a' && character <= 'z') ||
+         (character >= 'A' && character <= 'Z');
+}
+
+/// @ingroup text
+///
+/// Return whether a string is non-empty and consists entirely of ASCII letters
+/// (A-Z or a-z). An empty string is not considered a match. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_alpha("abc"));
+/// assert(!sourcemeta::core::is_alpha("ab1"));
+/// assert(!sourcemeta::core::is_alpha(""));
+/// ```
+inline constexpr auto is_alpha(const std::string_view value) noexcept -> bool {
+  if (value.empty()) {
+    return false;
+  }
+  for (const auto character : value) {
+    if (!is_alpha(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// @ingroup text
+///
+/// Return whether a character is an ASCII digit (0-9). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_digit('5'));
+/// assert(!sourcemeta::core::is_digit('a'));
+/// ```
+template <typename Character>
+  requires std::same_as<Character, char> ||
+           std::same_as<Character, signed char> ||
+           std::same_as<Character, unsigned char> ||
+           std::same_as<Character, wchar_t>
+inline constexpr auto is_digit(const Character character) noexcept -> bool {
+  return character >= '0' && character <= '9';
+}
+
+/// @ingroup text
+///
+/// Return whether a string is non-empty and consists entirely of ASCII digits
+/// (0-9). An empty string is not considered a match. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_digit("123"));
+/// assert(!sourcemeta::core::is_digit("12a"));
+/// assert(!sourcemeta::core::is_digit(""));
+/// ```
+inline constexpr auto is_digit(const std::string_view value) noexcept -> bool {
+  if (value.empty()) {
+    return false;
+  }
+  for (const auto character : value) {
+    if (!is_digit(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// @ingroup text
+///
+/// Return whether a character is an ASCII letter or digit. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_alphanum('a'));
+/// assert(sourcemeta::core::is_alphanum('5'));
+/// assert(!sourcemeta::core::is_alphanum('-'));
+/// ```
+template <typename Character>
+  requires std::same_as<Character, char> ||
+           std::same_as<Character, signed char> ||
+           std::same_as<Character, unsigned char> ||
+           std::same_as<Character, wchar_t>
+inline constexpr auto is_alphanum(const Character character) noexcept -> bool {
+  return is_alpha(character) || is_digit(character);
+}
+
+/// @ingroup text
+///
+/// Return whether a string is non-empty and consists entirely of ASCII letters
+/// or digits. An empty string is not considered a match. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_alphanum("abc123"));
+/// assert(!sourcemeta::core::is_alphanum("abc-123"));
+/// assert(!sourcemeta::core::is_alphanum(""));
+/// ```
+inline constexpr auto is_alphanum(const std::string_view value) noexcept
+    -> bool {
+  if (value.empty()) {
+    return false;
+  }
+  for (const auto character : value) {
+    if (!is_alphanum(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// @ingroup text
+///
 /// Truncate a string in place to at most `maximum_length` bytes, appending
 /// `marker` on truncation. Rewinds to a UTF-8 code-point boundary so
 /// multi-byte characters are never split. For example:

@@ -1,3 +1,4 @@
+#include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
@@ -31,6 +32,15 @@ auto canonicalize_path(const std::string_view input, std::string &output)
     } else if (character == sourcemeta::core::URI_SLASH ||
                sourcemeta::core::uri_is_pchar(character)) {
       ++index;
+    } else if ((static_cast<unsigned char>(character) & 0x80U) != 0U) {
+      // Accept the non-ASCII characters permitted by RFC 3987, so that IRI
+      // paths are handled in addition to URI paths
+      const auto decoded{sourcemeta::core::utf8_decode(output, index)};
+      if (!decoded.has_value() ||
+          !sourcemeta::core::is_ucschar(decoded.value().first)) {
+        return false;
+      }
+      index += decoded.value().second;
     } else {
       return false;
     }

@@ -22,8 +22,8 @@ public:
     const auto *dependencies{schema.try_at("dependencies")};
     ONLY_CONTINUE_IF(dependencies && dependencies->is_object());
 
-    ONLY_CONTINUE_IF(
-        std::ranges::any_of(dependencies->as_object(), [](const auto &entry) {
+    ONLY_CONTINUE_IF(std::ranges::any_of(
+        dependencies->as_object(), [](const auto &entry) -> auto {
           return is_schema(entry.second) || entry.second.is_array();
         }));
     return true;

@@ -1,5 +1,6 @@
 class ItemsSchemaDefault final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"items"};
 
 public:

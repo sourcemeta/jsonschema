@@ -64,6 +64,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 13> KEYWORDS{
       {"$anchor", "$recursiveAnchor", "$recursiveRef", "$vocabulary", "$defs",
        "dependentSchemas", "dependentRequired", "unevaluatedItems",

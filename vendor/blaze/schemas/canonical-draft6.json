@@ -87,6 +87,38 @@
           "properties": {
             "enum": {
               "type": "array",
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                {
+                  "items": {
+                    "type": "boolean"
+                  }
+                },
+                {
+                  "items": {
+                    "type": "null"
+                  }
+                },
+                {
+                  "items": {
+                    "type": "array"
+                  }
+                },
+                {
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              ],
               "minItems": 1,
               "uniqueItems": true
             }

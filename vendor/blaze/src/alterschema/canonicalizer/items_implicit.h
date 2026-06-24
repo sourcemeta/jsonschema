@@ -41,7 +41,7 @@ public:
         !WALK_UP_IN_PLACE_APPLICATORS(
              root, frame, location, walker, resolver,
              [](const JSON &ancestor,
-                const Vocabularies &ancestor_vocabularies) {
+                const Vocabularies &ancestor_vocabularies) -> bool {
                return ancestor.defines("unevaluatedItems") &&
                       ancestor_vocabularies.contains_any(
                           {Vocabularies::Known::JSON_Schema_2020_12_Unevaluated,

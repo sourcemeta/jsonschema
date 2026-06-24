@@ -33,13 +33,18 @@ auto parse_yaml(const JSON::String &input) -> JSON {
 auto read_yaml(const std::filesystem::path &path) -> JSON {
   const auto input{read_file_to_string(path)};
 
-  yaml::Lexer lexer{input};
-  yaml::Parser parser{&lexer, nullptr};
-  auto result{parser.parse()};
+  try {
+    yaml::Lexer lexer{input};
+    yaml::Parser parser{&lexer, nullptr};
+    auto result{parser.parse()};
 
-  parser.validate_end_of_stream();
+    parser.validate_end_of_stream();
 
-  return result;
+    return result;
+  } catch (const YAMLParseError &error) {
+    // For producing better error messages
+    throw YAMLFileParseError(path, error);
+  }
 }
 
 auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
@@ -67,11 +72,16 @@ auto read_yaml(const std::filesystem::path &path, JSON &output,
                const JSON::ParseCallback &callback) -> void {
   const auto input{read_file_to_string(path)};
 
-  yaml::Lexer lexer{input};
-  yaml::Parser parser{&lexer, &callback};
-  output = parser.parse();
+  try {
+    yaml::Lexer lexer{input};
+    yaml::Parser parser{&lexer, &callback};
+    output = parser.parse();
 
-  parser.validate_end_of_stream();
+    parser.validate_end_of_stream();
+  } catch (const YAMLParseError &error) {
+    // For producing better error messages
+    throw YAMLFileParseError(path, error);
+  }
 }
 
 auto read_yaml_or_json(const std::filesystem::path &path) -> JSON {

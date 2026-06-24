@@ -7,8 +7,10 @@
 
 #include <cstdint>     // std::uint64_t
 #include <exception>   // std::exception
+#include <filesystem>  // std::filesystem::path
 #include <string>      // std::string
 #include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace sourcemeta::core {
 
@@ -70,6 +72,34 @@ private:
   std::uint64_t line_;
   std::uint64_t column_;
   const char *message_;
+};
+
+/// @ingroup yaml
+/// An error that represents a YAML parse error occurring from parsing a file
+class SOURCEMETA_CORE_YAML_EXPORT YAMLFileParseError : public YAMLParseError {
+public:
+  YAMLFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column, const char *message)
+      : YAMLParseError{line, column, message}, path_{std::move(path)} {}
+  YAMLFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column, std::string message) = delete;
+  YAMLFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column,
+                     std::string &&message) = delete;
+  YAMLFileParseError(std::filesystem::path path, const std::uint64_t line,
+                     const std::uint64_t column,
+                     std::string_view message) = delete;
+
+  YAMLFileParseError(std::filesystem::path path, const YAMLParseError &parent)
+      : YAMLParseError{parent.line(), parent.column(), parent.what()},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::filesystem::path path_;
 };
 
 /// @ingroup yaml

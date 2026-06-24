@@ -248,7 +248,7 @@ auto count_multiples(const Minimum &minimum, const Maximum &maximum,
 /// @ingroup numeric
 /// The maximum value representable by an unsigned integer of T bits
 template <unsigned int T>
-constexpr auto uint_max = [] {
+constexpr auto uint_max = []() -> std::uint64_t {
   static_assert(T > 0 && T < 64, "uint_max<T> requires 0 < T < 64");
   return (std::uint64_t{1} << T) - 1;
 }();

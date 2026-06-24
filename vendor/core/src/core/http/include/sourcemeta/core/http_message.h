@@ -175,24 +175,27 @@ template <typename Container>
   }
 inline auto http_parse_headers(const std::string_view input, Container &headers)
     -> void {
-  http_parse_headers(input, [&headers](const std::string_view name,
-                                       const std::string_view value) {
-    if (name.empty()) {
-      // RFC 9112 §5.2 mandates replacing "each received obs-fold with
-      // one or more SP octets prior to interpreting the field value"
-      if (!headers.empty()) {
-        auto &previous_value{headers.back().second};
-        previous_value += ' ';
-        previous_value += value;
-      }
+  http_parse_headers(input,
+                     [&headers](const std::string_view name,
+                                const std::string_view value) -> auto {
+                       if (name.empty()) {
+                         // RFC 9112 §5.2 mandates replacing "each received
+                         // obs-fold with one or more SP octets prior to
+                         // interpreting the field value"
+                         if (!headers.empty()) {
+                           auto &previous_value{headers.back().second};
+                           previous_value += ' ';
+                           previous_value += value;
+                         }
 
-      return;
-    }
+                         return;
+                       }
 
-    std::string header_name{name};
-    to_lowercase(header_name);
-    headers.emplace_back(std::move(header_name), std::string{value});
-  });
+                       std::string header_name{name};
+                       to_lowercase(header_name);
+                       headers.emplace_back(std::move(header_name),
+                                            std::string{value});
+                     });
 }
 
 /// @ingroup http

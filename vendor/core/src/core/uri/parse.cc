@@ -46,42 +46,14 @@ auto validate_percent_encoded_utf8(const std::string_view input,
 decode_utf8_codepoint(const std::string_view input,
                       const std::string_view::size_type position)
     -> std::pair<char32_t, std::uint8_t> {
-  const auto lead = static_cast<unsigned char>(input[position]);
-  const auto length = sourcemeta::core::utf8_lead_byte_size(lead);
-  if (length == 0 || position + length > input.size()) [[unlikely]] {
+  const auto decoded{sourcemeta::core::utf8_decode(input, position)};
+  if (!decoded.has_value()) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
 
-  char32_t codepoint{0};
-  if (length == 1) {
-    codepoint = static_cast<char32_t>(lead);
-  } else if (length == 2) {
-    codepoint = static_cast<char32_t>(lead & 0x1FU);
-  } else if (length == 3) {
-    codepoint = static_cast<char32_t>(lead & 0x0FU);
-  } else {
-    codepoint = static_cast<char32_t>(lead & 0x07U);
-  }
-
-  for (std::uint8_t offset{1}; offset < length; offset += 1) {
-    const auto continuation =
-        static_cast<unsigned char>(input[position + offset]);
-    if (!sourcemeta::core::is_utf8_continuation(continuation)) [[unlikely]] {
-      throw sourcemeta::core::URIParseError{
-          static_cast<std::uint64_t>(position + 1)};
-    }
-    codepoint = (codepoint << 6) | static_cast<char32_t>(continuation & 0x3FU);
-  }
-
-  if (!sourcemeta::core::is_valid_codepoint(codepoint) ||
-      sourcemeta::core::utf8_codepoint_byte_count(codepoint) != length)
-      [[unlikely]] {
-    throw sourcemeta::core::URIParseError{
-        static_cast<std::uint64_t>(position + 1)};
-  }
-
-  return {codepoint, length};
+  return {decoded.value().first,
+          static_cast<std::uint8_t>(decoded.value().second)};
 }
 
 template <bool IRI, bool AllowIPrivate = false>
@@ -662,9 +634,15 @@ auto URI::parse(const std::string_view input) -> void {
   assert(!this->path_.has_value());
   assert(!this->query_.has_value());
   assert(!this->fragment_.has_value());
-  do_parse<false, false>(input, this->scheme_, this->userinfo_, this->host_,
-                         this->port_, this->path_, this->query_,
-                         this->fragment_, this->ip_literal_);
+  if (this->iri_) {
+    do_parse<false, true>(input, this->scheme_, this->userinfo_, this->host_,
+                          this->port_, this->path_, this->query_,
+                          this->fragment_, this->ip_literal_);
+  } else {
+    do_parse<false, false>(input, this->scheme_, this->userinfo_, this->host_,
+                           this->port_, this->path_, this->query_,
+                           this->fragment_, this->ip_literal_);
+  }
 }
 
 auto URI::is_uri(const std::string_view input) noexcept -> bool {

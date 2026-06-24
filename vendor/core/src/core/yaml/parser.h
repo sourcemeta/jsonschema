@@ -347,7 +347,13 @@ private:
 
     if (this->recording_anchor_) {
       this->current_anchor_callbacks_.push_back(
-          {phase, type, line, column, context, index, std::string{property}});
+          {.phase = phase,
+           .type = type,
+           .line = line,
+           .column = column,
+           .context = context,
+           .index = index,
+           .property = std::string{property}});
     }
   }
 

@@ -809,14 +809,16 @@ auto sourcemeta::blaze::schema_keyword_priority(
   const auto &result{walker(keyword, vocabularies)};
   const auto priority_from_dependencies{std::ranges::fold_left(
       result.dependencies, static_cast<std::uint64_t>(0),
-      [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
+      [&vocabularies, &walker](const auto accumulator,
+                               const auto &dependency) -> std::uint64_t {
         return std::max(
             accumulator,
             schema_keyword_priority(dependency, vocabularies, walker) + 1);
       })};
   const auto priority_from_order_dependencies{std::ranges::fold_left(
       result.order_dependencies, static_cast<std::uint64_t>(0),
-      [&vocabularies, &walker](const auto accumulator, const auto &dependency) {
+      [&vocabularies, &walker](const auto accumulator,
+                               const auto &dependency) -> std::uint64_t {
         return std::max(
             accumulator,
             schema_keyword_priority(dependency, vocabularies, walker) + 1);

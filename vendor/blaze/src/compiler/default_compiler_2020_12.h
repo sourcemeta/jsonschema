@@ -16,8 +16,8 @@ auto compiler_2020_12_applicator_prefixitems(
     -> Instructions {
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
-  const bool track{
-      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+  const bool track{std::ranges::any_of(
+      context.unevaluated, [](const auto &dependency) -> auto {
         return dependency.first.ends_with("unevaluatedItems");
       })};
 
@@ -37,8 +37,8 @@ auto compiler_2020_12_applicator_items(const Context &context,
 
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
-  const bool track{
-      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+  const bool track{std::ranges::any_of(
+      context.unevaluated, [](const auto &dependency) -> auto {
         return dependency.first.ends_with("unevaluatedItems");
       })};
 
@@ -55,8 +55,8 @@ auto compiler_2020_12_applicator_contains(const Context &context,
     -> Instructions {
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
-  const bool track{
-      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+  const bool track{std::ranges::any_of(
+      context.unevaluated, [](const auto &dependency) -> auto {
         return dependency.first.ends_with("unevaluatedItems");
       })};
 

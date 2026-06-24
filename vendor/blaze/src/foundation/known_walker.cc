@@ -10,9 +10,11 @@ using Known = Vocabularies::Known;
 using KeywordHandler =
     const SchemaWalkerResult &(*)(const Vocabularies &vocabularies);
 
+// NOLINTNEXTLINE(bugprone-throwing-static-initialization)
 static const SchemaWalkerResult UNKNOWN_RESULT{
     SchemaKeywordType::Unknown, std::nullopt, {}, {}, {}};
 
+// NOLINTNEXTLINE(bugprone-throwing-static-initialization)
 static const SchemaWalkerResult UNKNOWN_WITH_REF_RESULT{
     SchemaKeywordType::Unknown, std::nullopt, {"$ref"}, {}, {}};
 

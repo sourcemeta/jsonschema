@@ -73,8 +73,10 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_3_URL{
       "http://json-schema.org/draft-03/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
 

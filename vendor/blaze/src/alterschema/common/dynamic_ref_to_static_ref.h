@@ -1,6 +1,8 @@
 class DynamicRefToStaticRef final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD_DYNAMIC_REF{"$dynamicRef"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD_RECURSIVE_REF{"$recursiveRef"};
 
 public:

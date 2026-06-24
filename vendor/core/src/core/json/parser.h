@@ -496,15 +496,33 @@ inline auto scan_json(const char *&cursor, const char *end,
     switch (character) {
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::True,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         return;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::False,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         return;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::Null,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         return;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
@@ -556,7 +574,13 @@ inline auto scan_json(const char *&cursor, const char *end,
 
 do_scan_array: {
   const auto start_index{tape.size()};
-  tape.push_back({TapeType::ArrayStart, 0, 0, 0, 0, line, column});
+  tape.push_back({.type = TapeType::ArrayStart,
+                  .flags = 0,
+                  .offset = 0,
+                  .length = 0,
+                  .count = 0,
+                  .line = line,
+                  .column = column});
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
@@ -573,7 +597,13 @@ do_scan_array: {
     }
     cursor++;
     tape[start_index].count = 0;
-    tape.push_back({TapeType::ArrayEnd, 0, 0, 0, 0, line, column});
+    tape.push_back({.type = TapeType::ArrayEnd,
+                    .flags = 0,
+                    .offset = 0,
+                    .length = 0,
+                    .count = 0,
+                    .line = line,
+                    .column = column});
     container_stack.pop_back();
     goto do_scan_container_end;
   }
@@ -607,15 +637,33 @@ do_scan_array_item:
         goto do_scan_object;
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::True,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_array_item_separator;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::False,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_array_item_separator;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::Null,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_array_item_separator;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
@@ -676,7 +724,13 @@ do_scan_array_item_separator:
       assert(!container_stack.empty());
       auto &frame{container_stack.back()};
       tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({TapeType::ArrayEnd, 0, 0, 0, 0, line, column});
+      tape.push_back({.type = TapeType::ArrayEnd,
+                      .flags = 0,
+                      .offset = 0,
+                      .length = 0,
+                      .count = 0,
+                      .line = line,
+                      .column = column});
       container_stack.pop_back();
       goto do_scan_container_end;
     }
@@ -690,7 +744,13 @@ do_scan_array_item_separator:
 
 do_scan_object: {
   const auto start_index{tape.size()};
-  tape.push_back({TapeType::ObjectStart, 0, 0, 0, 0, line, column});
+  tape.push_back({.type = TapeType::ObjectStart,
+                  .flags = 0,
+                  .offset = 0,
+                  .length = 0,
+                  .count = 0,
+                  .line = line,
+                  .column = column});
   container_stack.push_back({start_index, 0});
 
   internal::skip_whitespace<TrackPositions>(cursor, end, line, column);
@@ -707,7 +767,13 @@ do_scan_object: {
     }
     cursor++;
     tape[start_index].count = 0;
-    tape.push_back({TapeType::ObjectEnd, 0, 0, 0, 0, line, column});
+    tape.push_back({.type = TapeType::ObjectEnd,
+                    .flags = 0,
+                    .offset = 0,
+                    .length = 0,
+                    .count = 0,
+                    .line = line,
+                    .column = column});
     container_stack.pop_back();
     goto do_scan_container_end;
   }
@@ -791,15 +857,33 @@ do_scan_object_value:
         goto do_scan_object;
       case internal::token_true<CharT>:
         internal::scan_true<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::True, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::True,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_object_property_end;
       case internal::token_false<CharT>:
         internal::scan_false<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::False, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::False,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_object_property_end;
       case internal::token_null<CharT>:
         internal::scan_null<TrackPositions>(line, column, cursor, end);
-        tape.push_back({TapeType::Null, 0, 0, 0, 0, value_line, value_column});
+        tape.push_back({.type = TapeType::Null,
+                        .flags = 0,
+                        .offset = 0,
+                        .length = 0,
+                        .count = 0,
+                        .line = value_line,
+                        .column = value_column});
         goto do_scan_object_property_end;
       case internal::token_string_quote<CharT>: {
         const auto string_start{
@@ -860,7 +944,13 @@ do_scan_object_property_end:
       assert(!container_stack.empty());
       auto &frame{container_stack.back()};
       tape[frame.tape_index].count = frame.child_count;
-      tape.push_back({TapeType::ObjectEnd, 0, 0, 0, 0, line, column});
+      tape.push_back({.type = TapeType::ObjectEnd,
+                      .flags = 0,
+                      .offset = 0,
+                      .length = 0,
+                      .count = 0,
+                      .line = line,
+                      .column = column});
       container_stack.pop_back();
       goto do_scan_container_end;
     }

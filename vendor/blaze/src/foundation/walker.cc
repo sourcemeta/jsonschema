@@ -86,8 +86,22 @@ auto walk(const std::optional<sourcemeta::core::WeakPointer> &parent,
   const auto current_dialect{entry.dialect};
   const auto current_base_dialect{entry.base_dialect};
 
+  // A subschema may be an embedded resource that pins its own custom
+  // meta-schema inside its own `$defs`/`definitions`. Probe for it here, the
+  // same way we do at the document root, so that nested self-contained
+  // meta-schemas resolve to their embedded definition before the resolver
   const auto vocabularies{sourcemeta::blaze::vocabularies(
-      resolver, current_base_dialect, current_dialect)};
+      [&subschema, &resolver](const std::string_view identifier)
+          -> std::optional<sourcemeta::core::JSON> {
+        const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
+            subschema, identifier, resolver)};
+        if (embedded) {
+          return *embedded;
+        }
+
+        return resolver(identifier);
+      },
+      current_base_dialect, current_dialect)};
 
   if (type == SchemaWalkerType_t::Deep || level > 0) {
     sourcemeta::blaze::SchemaIteratorEntry iterator_entry{

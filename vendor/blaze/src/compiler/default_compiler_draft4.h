@@ -96,7 +96,7 @@ auto compiler_draft4_applicator_anyof(const Context &context,
   }
 
   if (context.mode == Mode::FastValidation &&
-      std::ranges::all_of(disjunctors, [](const auto &instruction) {
+      std::ranges::all_of(disjunctors, [](const auto &instruction) -> auto {
         return instruction.children.size() == 1 &&
                (instruction.children.front().type ==
                     sourcemeta::blaze::InstructionIndex::AssertionTypeStrict ||
@@ -191,8 +191,8 @@ auto compiler_draft4_applicator_not(const Context &context,
 
   // TODO: Be smarter about how we treat `unevaluatedItems` like how we do for
   // `unevaluatedProperties`
-  const bool track_items{
-      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
+  const bool track_items{std::ranges::any_of(
+      context.unevaluated, [](const auto &dependency) -> auto {
         return dependency.first.ends_with("unevaluatedItems");
       })};
 

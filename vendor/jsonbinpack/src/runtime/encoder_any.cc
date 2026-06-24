@@ -31,10 +31,9 @@ auto Encoder::LARGE_CHOICE_INDEX(const sourcemeta::core::JSON &document,
                                  const struct LARGE_CHOICE_INDEX &options)
     -> void {
   assert(options.choices.size() > 0);
-  const auto iterator{
-      std::ranges::find_if(options.choices, [&document](const auto &choice) {
-        return choice == document;
-      })};
+  const auto iterator{std::ranges::find_if(
+      options.choices,
+      [&document](const auto &choice) -> bool { return choice == document; })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
   assert(sourcemeta::core::is_within(cursor, static_cast<std::uint64_t>(0),
@@ -47,10 +46,9 @@ auto Encoder::TOP_LEVEL_BYTE_CHOICE_INDEX(
     const struct TOP_LEVEL_BYTE_CHOICE_INDEX &options) -> void {
   assert(options.choices.size() > 0);
   assert(sourcemeta::core::is_byte(options.choices.size()));
-  const auto iterator{
-      std::ranges::find_if(options.choices, [&document](auto const &choice) {
-        return choice == document;
-      })};
+  const auto iterator{std::ranges::find_if(
+      options.choices,
+      [&document](auto const &choice) -> bool { return choice == document; })};
   assert(iterator != std::cend(options.choices));
   const auto cursor{std::distance(std::cbegin(options.choices), iterator)};
   assert(sourcemeta::core::is_within(

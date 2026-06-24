@@ -8,4 +8,5 @@ endif()
 target_link_libraries(sourcemeta_core_dns
   PRIVATE sourcemeta::core::unicode
   PRIVATE sourcemeta::core::punycode
-  PRIVATE sourcemeta::core::idna)
+  PRIVATE sourcemeta::core::idna
+  PRIVATE sourcemeta::core::text)

@@ -15,7 +15,7 @@ namespace {
 auto is_localhost_host(const std::string_view host) -> bool {
   constexpr std::string_view localhost{"localhost"};
   return std::ranges::equal(
-      host, localhost, [](const char left, const char right) {
+      host, localhost, [](const char left, const char right) -> bool {
         return std::tolower(static_cast<unsigned char>(left)) == right;
       });
 }

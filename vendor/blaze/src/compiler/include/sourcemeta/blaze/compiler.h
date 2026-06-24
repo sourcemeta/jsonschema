@@ -25,6 +25,7 @@
 #include <string_view>   // std::string_view
 #include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <vector>        // std::vector
 
 /// @defgroup compiler Compiler
@@ -98,6 +99,10 @@ struct Tweaks {
   std::size_t target_inline_threshold{50};
   /// When set, force `format` to be compiled as an assertion
   bool format_assertion{false};
+  /// Select which keywords emit annotations in exhaustive mode. When not set,
+  /// every annotation keyword is emitted
+  std::optional<std::unordered_set<sourcemeta::core::JSON::StringView>>
+      annotations{};
 };
 
 /// @ingroup compiler

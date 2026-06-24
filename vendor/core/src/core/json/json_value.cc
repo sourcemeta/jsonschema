@@ -159,7 +159,7 @@ JSON::JSON(const JSON &other) {
   };
   std::vector<CopyTask> tasks;
   tasks.reserve(16);
-  tasks.push_back({&other, this});
+  tasks.push_back({.source = &other, .destination = this});
 
   try {
     while (!tasks.empty()) {
@@ -200,7 +200,8 @@ JSON::JSON(const JSON &other) {
             destination_data.emplace_back(nullptr);
           }
           for (std::size_t index = 0; index < source_data.size(); ++index) {
-            tasks.push_back({&source_data[index], &destination_data[index]});
+            tasks.push_back({.source = &source_data[index],
+                             .destination = &destination_data[index]});
           }
           break;
         }
@@ -215,8 +216,8 @@ JSON::JSON(const JSON &other) {
                                           entry.hash);
           }
           for (std::size_t index = 0; index < source_data.size(); ++index) {
-            tasks.push_back(
-                {&source_data[index].second, &destination_data[index].second});
+            tasks.push_back({.source = &source_data[index].second,
+                             .destination = &destination_data[index].second});
           }
           break;
         }
@@ -630,18 +631,17 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
   // which we are not taking into account here, as its typically
   // implementation dependent. This function is just a rough estimate.
   if (this->is_object()) {
-    return std::ranges::fold_left(this->as_object(),
-                                  static_cast<std::uint64_t>(0),
-                                  [](const std::uint64_t accumulator,
-                                     const typename Object::value_type &pair) {
-                                    return accumulator +
-                                           (pair.first.size() * sizeof(Char)) +
-                                           pair.second.estimated_byte_size();
-                                  });
+    return std::ranges::fold_left(
+        this->as_object(), static_cast<std::uint64_t>(0),
+        [](const std::uint64_t accumulator,
+           const typename Object::value_type &pair) -> std::uint64_t {
+          return accumulator + (pair.first.size() * sizeof(Char)) +
+                 pair.second.estimated_byte_size();
+        });
   } else if (this->is_array()) {
     return std::ranges::fold_left(
         this->as_array(), static_cast<std::uint64_t>(0),
-        [](const std::uint64_t accumulator, const JSON &item) {
+        [](const std::uint64_t accumulator, const JSON &item) -> std::uint64_t {
           return accumulator + item.estimated_byte_size();
         });
   } else if (this->is_string()) {
@@ -673,16 +673,17 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
     case Type::String:
       return 3 + this->byte_size();
     case Type::Array:
-      return std::ranges::fold_left(
-          this->as_array(), static_cast<std::uint64_t>(6),
-          [](const std::uint64_t accumulator, const JSON &item) {
-            return accumulator + 1 + item.fast_hash();
-          });
+      return std::ranges::fold_left(this->as_array(),
+                                    static_cast<std::uint64_t>(6),
+                                    [](const std::uint64_t accumulator,
+                                       const JSON &item) -> std::uint64_t {
+                                      return accumulator + 1 + item.fast_hash();
+                                    });
     case Type::Object:
       return std::ranges::fold_left(
           this->as_object(), static_cast<std::uint64_t>(7),
           [](const std::uint64_t accumulator,
-             const typename Object::value_type &pair) {
+             const typename Object::value_type &pair) -> std::uint64_t {
             return accumulator + 1 + pair.first.size() +
                    pair.second.fast_hash();
           });

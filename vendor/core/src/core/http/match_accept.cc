@@ -34,19 +34,21 @@ auto http_match_accept(const std::string_view accept_header,
     assert(candidate.find_first_of(" \t,;*") == std::string_view::npos);
     float candidate_quality{0.0f};
     std::uint8_t candidate_specificity{0};
-    http_for_each_accept_entry(accept_header, [&](const std::string_view value,
-                                                  const float quality) {
-      const std::uint8_t specificity{http_media_specificity(value, candidate)};
-      if (specificity == 0) {
-        return;
-      }
-      if (specificity > candidate_specificity ||
-          (specificity == candidate_specificity &&
-           quality > candidate_quality)) {
-        candidate_quality = quality;
-        candidate_specificity = specificity;
-      }
-    });
+    http_for_each_accept_entry(
+        accept_header,
+        [&](const std::string_view value, const float quality) -> void {
+          const std::uint8_t specificity{
+              http_media_specificity(value, candidate)};
+          if (specificity == 0) {
+            return;
+          }
+          if (specificity > candidate_specificity ||
+              (specificity == candidate_specificity &&
+               quality > candidate_quality)) {
+            candidate_quality = quality;
+            candidate_specificity = specificity;
+          }
+        });
     if (candidate_quality > 0.0f &&
         (candidate_quality > best_quality ||
          (candidate_quality == best_quality &&

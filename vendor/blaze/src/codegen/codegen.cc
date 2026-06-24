@@ -76,7 +76,7 @@ auto compile(const sourcemeta::core::JSON &input,
   [[maybe_unused]] const auto canonicalized{canonicalizer.apply(
       schema, walker, resolver,
       [](const auto &, const auto, const auto, const auto &,
-         [[maybe_unused]] const auto applied) { assert(applied); },
+         [[maybe_unused]] const auto applied) -> auto { assert(applied); },
       default_dialect, default_id)};
   assert(canonicalized.first);
 
@@ -129,10 +129,12 @@ auto compile(const sourcemeta::core::JSON &input,
   std::ranges::sort(
       result,
       [](const CodegenIREntity &left, const CodegenIREntity &right) -> bool {
-        return std::visit([](const auto &entry) { return entry.pointer; },
-                          right) <
-               std::visit([](const auto &entry) { return entry.pointer; },
-                          left);
+        return std::visit(
+                   [](const auto &entry) -> auto { return entry.pointer; },
+                   right) <
+               std::visit(
+                   [](const auto &entry) -> auto { return entry.pointer; },
+                   left);
       });
 
   return result;

@@ -1,5 +1,6 @@
 class ElseEmpty final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"else"};
 
 public:

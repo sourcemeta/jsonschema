@@ -1,5 +1,6 @@
 class UnnecessaryAllOfWrapper final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"allOf"};
 
 public:
@@ -128,7 +129,7 @@ public:
         }
 
         if (std::ranges::any_of(metadata.dependencies,
-                                [&](const auto &dependency) {
+                                [&](const auto &dependency) -> auto {
                                   return !entry.defines(dependency) &&
                                          (schema.defines(dependency) ||
                                           elevated.contains(dependency));

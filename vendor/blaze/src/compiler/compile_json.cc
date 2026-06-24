@@ -27,7 +27,9 @@ auto to_json(const sourcemeta::blaze::Instruction &instruction,
   // Don't encode empty values, which tend to happen a lot
   if (value_index != 0) {
     value.push_back(std::visit(
-        [](const auto &variant) { return sourcemeta::core::to_json(variant); },
+        [](const auto &variant) -> auto {
+          return sourcemeta::core::to_json(variant);
+        },
         instruction.value));
   }
   assert(value.is_array());
@@ -38,7 +40,7 @@ auto to_json(const sourcemeta::blaze::Instruction &instruction,
   if (!instruction.children.empty()) {
     auto children_json{sourcemeta::core::JSON::make_array()};
     result.push_back(sourcemeta::core::to_json(
-        instruction.children, [&extra](const auto &subinstruction) {
+        instruction.children, [&extra](const auto &subinstruction) -> auto {
           return to_json(subinstruction, extra);
         }));
   }
@@ -61,7 +63,7 @@ auto to_json(const Template &schema_template) -> sourcemeta::core::JSON {
   auto targets{sourcemeta::core::JSON::make_array()};
   for (const auto &target : schema_template.targets) {
     targets.push_back(sourcemeta::core::to_json(
-        target, [&schema_template](const auto &instruction) {
+        target, [&schema_template](const auto &instruction) -> auto {
           return ::to_json(instruction, schema_template.extra);
         }));
   }

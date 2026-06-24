@@ -5,19 +5,19 @@ function(sourcemeta_clang_tidy_attempt_install)
   endif()
 
   # See https://pypi.org/project/clang-tidy/
-  set(CLANG_TIDY_BINARY_VERSION "20.1.0")
+  set(CLANG_TIDY_BINARY_VERSION "22.1.7")
   set(CLANG_TIDY_BINARY_Windows_AMD64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-win_amd64.whl")
   set(CLANG_TIDY_BINARY_MSYS_x86_64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-win_amd64.whl")
   set(CLANG_TIDY_BINARY_Darwin_arm64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-macosx_11_0_arm64.whl")
   set(CLANG_TIDY_BINARY_Darwin_x86_64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-macosx_10_9_x86_64.whl")
-  set(CLANG_TIDY_BINARY_Linux_aarch64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl")
-  set(CLANG_TIDY_BINARY_Linux_x86_64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl")
-  set(CLANG_TIDY_BINARY_CHECKSUM_Windows_AMD64 "02/f0/dd985d9d9b76f8c39f1995aa475d8d5aabbea0d3e0cf498df44dc7bf1cb0")
-  set(CLANG_TIDY_BINARY_CHECKSUM_MSYS_x86_64 "02/f0/dd985d9d9b76f8c39f1995aa475d8d5aabbea0d3e0cf498df44dc7bf1cb0")
-  set(CLANG_TIDY_BINARY_CHECKSUM_Darwin_arm64 "95/02/838baf08764b08327322096bda55e8d1e2344e4a13b9308e5642cfaafd8e")
-  set(CLANG_TIDY_BINARY_CHECKSUM_Darwin_x86_64 "6d/5b/dcfc84b895d8544e00186738ca85132bbd14db4d11dbe39502630ece5391")
-  set(CLANG_TIDY_BINARY_CHECKSUM_Linux_aarch64 "be/61/9e1a0797639e81c41d38d7b8b2508a9be4b05b9a23baa9d64e7284d07238")
-  set(CLANG_TIDY_BINARY_CHECKSUM_Linux_x86_64 "52/76/42c61be1c1fdf8bacdbb265f0cd3e11321fee7362f91fa840717a6a41ad6")
+  set(CLANG_TIDY_BINARY_Linux_aarch64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl")
+  set(CLANG_TIDY_BINARY_Linux_x86_64 "clang_tidy-${CLANG_TIDY_BINARY_VERSION}-py2.py3-none-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl")
+  set(CLANG_TIDY_BINARY_CHECKSUM_Windows_AMD64 "51/9b/755d77e51e8aebd03e287dc19727d5c4ca286fd419ff4cf5bd904f7b0366")
+  set(CLANG_TIDY_BINARY_CHECKSUM_MSYS_x86_64 "51/9b/755d77e51e8aebd03e287dc19727d5c4ca286fd419ff4cf5bd904f7b0366")
+  set(CLANG_TIDY_BINARY_CHECKSUM_Darwin_arm64 "e2/eb/bd4179187eb12348350d9de3a3124fb1466f0fd5ff33619ed45575752683")
+  set(CLANG_TIDY_BINARY_CHECKSUM_Darwin_x86_64 "bc/4e/de59bc2bda314fa0622b967d0542e16c78e156038827422740fc9749a3b0")
+  set(CLANG_TIDY_BINARY_CHECKSUM_Linux_aarch64 "27/8d/f21976010dfd1746d5eac80bccaa364f56df61ab968c6d9279513e21f945")
+  set(CLANG_TIDY_BINARY_CHECKSUM_Linux_x86_64 "43/69/3be98747ee4e8aedcfc4525a8e0c1576118bcd4de9a560d84a2a398158ce")
   set(CLANG_TIDY_BINARY_NAME_Windows_AMD64 "clang-tidy.exe")
   set(CLANG_TIDY_BINARY_NAME_MSYS_x86_64 "clang-tidy.exe")
   set(CLANG_TIDY_BINARY_NAME_Darwin_arm64 "clang-tidy")
@@ -44,7 +44,10 @@ function(sourcemeta_clang_tidy_attempt_install)
   # Download and extract the pre-built binary ZIP if needed
   set(CLANG_TIDY_BINARY_NAME "${${CLANG_TIDY_BINARY_NAME_VAR}}")
   set(CLANG_TIDY_BINARY_OUTPUT "${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL_OUTPUT_DIRECTORY}/${CLANG_TIDY_BINARY_NAME}")
-  if(EXISTS "${CLANG_TIDY_BINARY_OUTPUT}")
+  get_filename_component(CLANG_TIDY_BINARY_ROOT
+      "${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL_OUTPUT_DIRECTORY}" DIRECTORY)
+  set(CLANG_TIDY_BINARY_RESOURCE_DIRECTORY "${CLANG_TIDY_BINARY_ROOT}/lib/clang")
+  if(EXISTS "${CLANG_TIDY_BINARY_OUTPUT}" AND IS_DIRECTORY "${CLANG_TIDY_BINARY_RESOURCE_DIRECTORY}")
     message(STATUS "Found existing `clang-tidy` pre-built binary at ${CLANG_TIDY_BINARY_OUTPUT}")
     return()
   endif()
@@ -67,12 +70,18 @@ function(sourcemeta_clang_tidy_attempt_install)
   file(MAKE_DIRECTORY "${CLANG_TIDY_BINARY_EXTRACT_DIR}")
   file(ARCHIVE_EXTRACT INPUT "${CLANG_TIDY_BINARY_WHEEL}" DESTINATION "${CLANG_TIDY_BINARY_EXTRACT_DIR}")
 
-  # Install the binary
+  # Install the binary alongside the resource directory that ships in the
+  # wheel, replicating the upstream `bin` and `lib` layout so that clang-tidy
+  # discovers its own matching built-in headers. Otherwise it falls back to the
+  # system compiler resource directory, which breaks whenever that compiler is
+  # newer than the clang-tidy front-end
   file(MAKE_DIRECTORY "${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL_OUTPUT_DIRECTORY}")
   file(COPY "${CLANG_TIDY_BINARY_EXTRACT_DIR}/clang_tidy/data/bin/${CLANG_TIDY_BINARY_NAME}"
        DESTINATION "${SOURCEMETA_TARGET_CLANG_TIDY_ATTEMPT_INSTALL_OUTPUT_DIRECTORY}")
   file(CHMOD "${CLANG_TIDY_BINARY_OUTPUT}" PERMISSIONS
        OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  file(COPY "${CLANG_TIDY_BINARY_EXTRACT_DIR}/clang_tidy/data/lib"
+       DESTINATION "${CLANG_TIDY_BINARY_ROOT}")
   message(STATUS "Installed `clang-tidy` pre-built binary to ${CLANG_TIDY_BINARY_OUTPUT}")
 endfunction()
 
@@ -102,13 +111,10 @@ function(sourcemeta_clang_tidy_attempt_enable)
     set(CLANG_TIDY_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-tidy.json")
     execute_process(COMMAND xcrun --show-sdk-path
         OUTPUT_VARIABLE MACOSX_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
-        OUTPUT_VARIABLE MACOSX_RESOURCE_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
     set(SOURCEMETA_CXX_CLANG_TIDY
         "${CLANG_TIDY_BIN};--config-file=${CLANG_TIDY_CONFIG};-header-filter=${PROJECT_SOURCE_DIR}/src/*"
         "--extra-arg=-isysroot"
         "--extra-arg=${MACOSX_SDK_PATH}"
-        "--extra-arg=-resource-dir=${MACOSX_RESOURCE_PATH}"
         CACHE STRING "CXX_CLANG_TIDY")
   endif()
 

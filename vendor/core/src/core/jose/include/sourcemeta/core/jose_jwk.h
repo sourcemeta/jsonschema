@@ -65,7 +65,7 @@ public:
   [[nodiscard]] auto key_id() const noexcept
       -> std::optional<std::string_view> {
     if (this->key_id_.has_value()) {
-      return std::string_view{this->key_id_.value()};
+      return std::string_view{*this->key_id_};
     }
 
     return std::nullopt;

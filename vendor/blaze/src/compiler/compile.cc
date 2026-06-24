@@ -417,9 +417,10 @@ auto compile(const sourcemeta::core::JSON &schema,
       requires_evaluation(context, entrypoint_location.pointer) ||
       // TODO: This expression should go away if we start properly compiling
       // `unevaluatedItems` like we compile `unevaluatedProperties`
-      std::ranges::any_of(context.unevaluated, [](const auto &dependency) {
-        return dependency.first.ends_with("unevaluatedItems");
-      })};
+      std::ranges::any_of(
+          context.unevaluated, [](const auto &dependency) -> auto {
+            return dependency.first.ends_with("unevaluatedItems");
+          })};
   return {.dynamic = uses_dynamic_scopes,
           .track = track,
           .targets = std::move(compiled_targets),

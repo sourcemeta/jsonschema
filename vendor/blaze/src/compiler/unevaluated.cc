@@ -8,8 +8,10 @@ using namespace sourcemeta::core;
 using namespace sourcemeta::blaze;
 using Known = Vocabularies::Known;
 
+// NOLINTBEGIN(bugprone-throwing-static-initialization)
 static const std::string UNEVALUATED_PROPERTIES{"unevaluatedProperties"};
 static const std::string UNEVALUATED_ITEMS{"unevaluatedItems"};
+// NOLINTEND(bugprone-throwing-static-initialization)
 
 auto find_adjacent_dependencies(
     const JSON::String &current, const JSON &schema, const SchemaFrame &frame,

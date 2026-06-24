@@ -26,7 +26,7 @@ public:
 
     ONLY_CONTINUE_IF(std::ranges::any_of(
         dependent_required->as_object(),
-        [](const auto &entry) { return entry.second.is_array(); }));
+        [](const auto &entry) -> auto { return entry.second.is_array(); }));
 
     if (!vocabularies.contains_any(
             {Vocabularies::Known::JSON_Schema_2019_09_Applicator,

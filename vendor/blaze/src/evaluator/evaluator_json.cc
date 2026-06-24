@@ -108,10 +108,12 @@ auto instructions_from_json(
          .schema_resource = std::move(schema_resource_result).value()});
 
     // TODO: Maybe we should emplace here?
-    result.push_back({std::move(type_result).value(),
-                      std::move(relative_instance_location_result).value(),
-                      std::move(value_result).value(),
-                      std::move(children_result).value(), extra_index});
+    result.push_back({.type = std::move(type_result).value(),
+                      .relative_instance_location =
+                          std::move(relative_instance_location_result).value(),
+                      .value = std::move(value_result).value(),
+                      .children = std::move(children_result).value(),
+                      .extra_index = extra_index});
   }
 
   return result;

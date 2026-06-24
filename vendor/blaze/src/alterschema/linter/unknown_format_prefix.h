@@ -75,15 +75,19 @@ private:
     return nullptr;
   }
 
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_3_FORMATS{
       "date-time",  "date",  "time",     "utc-millisec", "regex",
       "color",      "style", "phone",    "uri",          "email",
       "ip-address", "ipv6",  "host-name"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_4_FORMATS{
       "date-time", "email", "hostname", "ipv4", "ipv6", "uri"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_6_FORMATS{
       "date-time", "email",         "hostname",     "ipv4",        "ipv6",
       "uri",       "uri-reference", "uri-template", "json-pointer"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::unordered_set<std::string_view> DRAFT_7_FORMATS{
       "date-time",     "date",         "time",          "email",
       "idn-email",     "hostname",     "idn-hostname",  "ipv4",
@@ -91,6 +95,7 @@ private:
       "iri-reference", "uri-template", "json-pointer",  "relative-json-pointer",
       "regex"};
   static inline const std::unordered_set<std::string_view>
+      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
       DRAFT_2019_09_FORMATS{
           "date-time",    "date",          "time",
           "duration",     "email",         "idn-email",
@@ -100,6 +105,7 @@ private:
           "uri-template", "json-pointer",  "relative-json-pointer",
           "regex"};
   static inline const std::unordered_set<std::string_view>
+      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
       DRAFT_2020_12_FORMATS{
           "date-time",    "date",          "time",
           "duration",     "email",         "idn-email",

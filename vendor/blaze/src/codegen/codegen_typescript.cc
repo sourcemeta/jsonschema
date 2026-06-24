@@ -166,8 +166,8 @@ auto TypeScript::operator()(const CodegenIRObject &entry) -> void {
     this->output << ";\n";
   }
 
-  const auto has_non_prefix_pattern{
-      std::ranges::any_of(entry.pattern, [](const auto &pattern_property) {
+  const auto has_non_prefix_pattern{std::ranges::any_of(
+      entry.pattern, [](const auto &pattern_property) -> auto {
         return !pattern_property.prefix.has_value();
       })};
 

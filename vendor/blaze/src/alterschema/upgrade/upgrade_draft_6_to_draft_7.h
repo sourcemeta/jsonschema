@@ -58,12 +58,16 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_6_URL{
       "http://json-schema.org/draft-06/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_7_URL{
       "http://json-schema.org/draft-07/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 8> PROMOTED_KEYWORDS{
       {"$comment", "if", "then", "else", "readOnly", "writeOnly",
        "contentMediaType", "contentEncoding"}};

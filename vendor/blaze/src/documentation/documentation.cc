@@ -1545,7 +1545,7 @@ auto to_documentation(const sourcemeta::core::JSON &schema,
   [[maybe_unused]] const auto canonicalized{canonicalizer.apply(
       canonical, walker, resolver,
       [](const auto &, const auto, const auto, const auto &,
-         [[maybe_unused]] const auto applied) { assert(applied); })};
+         [[maybe_unused]] const auto applied) -> auto { assert(applied); })};
   assert(canonicalized.first);
 
   sourcemeta::blaze::SchemaFrame frame{

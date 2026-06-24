@@ -139,10 +139,11 @@ auto SimpleOutput::operator()(
     for (const auto &mask_entry : this->mask) {
       if (evaluate_path.starts_with(mask_entry.first)) {
         this->masked_traces[mask_entry].push_back(
-            {describe(result, step, evaluate_path, instance_location,
-                      this->instance_, annotation),
-             instance_location, std::move(effective_evaluate_path),
-             step_metadata.keyword_location});
+            {.message = describe(result, step, evaluate_path, instance_location,
+                                 this->instance_, annotation),
+             .instance_location = instance_location,
+             .evaluate_path = std::move(effective_evaluate_path),
+             .schema_location = step_metadata.keyword_location});
 
         return;
       }
@@ -150,10 +151,11 @@ auto SimpleOutput::operator()(
   }
 
   this->output.push_back(
-      {describe(result, step, evaluate_path, instance_location, this->instance_,
-                annotation),
-       instance_location, std::move(effective_evaluate_path),
-       step_metadata.keyword_location});
+      {.message = describe(result, step, evaluate_path, instance_location,
+                           this->instance_, annotation),
+       .instance_location = instance_location,
+       .evaluate_path = std::move(effective_evaluate_path),
+       .schema_location = step_metadata.keyword_location});
 }
 
 } // namespace sourcemeta::blaze

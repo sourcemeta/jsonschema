@@ -24,7 +24,8 @@ auto gzip(const std::uint8_t *input, const std::size_t size, const int level)
   // avoids zero-filling multi-megabyte allocations that are immediately
   // discarded
   output.resize_and_overwrite(
-      max_size, [&](char *const buffer, const std::size_t capacity) {
+      max_size,
+      [&](char *const buffer, const std::size_t capacity) -> std::size_t {
         actual_size = libdeflate_gzip_compress(compressor.get(), input, size,
                                                buffer, capacity);
         return capacity;
@@ -57,12 +58,14 @@ auto gunzip(const std::uint8_t *input, const std::size_t size,
     // libdeflate writes only the decompressed bytes, so leaving the buffer
     // uninitialised avoids zero-filling multi-megabyte allocations on every
     // retry of the doubling loop
-    output.resize_and_overwrite(capacity, [&](char *const buffer,
-                                              const std::size_t buffer_size) {
-      result = libdeflate_gzip_decompress(decompressor.get(), input, size,
-                                          buffer, buffer_size, &actual_size);
-      return buffer_size;
-    });
+    output.resize_and_overwrite(
+        capacity,
+        [&](char *const buffer, const std::size_t buffer_size) -> std::size_t {
+          result =
+              libdeflate_gzip_decompress(decompressor.get(), input, size,
+                                         buffer, buffer_size, &actual_size);
+          return buffer_size;
+        });
 
     if (result == LIBDEFLATE_SUCCESS) {
       output.resize(actual_size);

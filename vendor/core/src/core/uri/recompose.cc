@@ -1,3 +1,4 @@
+#include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
@@ -16,7 +17,8 @@ namespace sourcemeta::core {
 namespace {
 
 auto escape_component_to_string(std::string &output, std::string_view input,
-                                const URIEscapeMode mode) -> void {
+                                const URIEscapeMode mode, const bool iri,
+                                const bool allow_iprivate = false) -> void {
   output.reserve(output.size() + input.size() * 3);
 
   for (std::string_view::size_type index = 0; index < input.size(); ++index) {
@@ -31,6 +33,21 @@ auto escape_component_to_string(std::string &output, std::string_view input,
       output += input[index + 2];
       index += 2;
       continue;
+    }
+
+    // In IRI mode, the non-ASCII characters permitted by RFC 3987, including
+    // private-use characters within the query, are preserved literally rather
+    // than percent-encoded
+    if (iri && (static_cast<unsigned char>(character) & 0x80U) != 0U) {
+      const auto decoded{sourcemeta::core::utf8_decode(input, index)};
+      if (decoded.has_value() &&
+          (sourcemeta::core::is_ucschar(decoded.value().first) ||
+           (allow_iprivate &&
+            sourcemeta::core::is_iprivate(decoded.value().first)))) {
+        output.append(input.substr(index, decoded.value().second));
+        index += decoded.value().second - 1;
+        continue;
+      }
     }
 
     if (uri_is_unreserved(character)) {
@@ -96,7 +113,7 @@ auto URI::recompose() const -> std::string {
   result.reserve(result.size() + this->fragment_.value().size() * 3 + 1);
   result += '#';
   escape_component_to_string(result, this->fragment_.value(),
-                             URIEscapeMode::Fragment);
+                             URIEscapeMode::Fragment, this->iri_);
 
   return result;
 }
@@ -128,17 +145,20 @@ auto URI::recompose_relative() const -> std::string {
             encoded += character;
           }
         }
-        escape_component_to_string(result, encoded, URIEscapeMode::Path);
+        escape_component_to_string(result, encoded, URIEscapeMode::Path,
+                                   this->iri_);
         if (first_slash != std::string::npos) {
           escape_component_to_string(
               result, std::string_view{path_value}.substr(first_slash),
-              URIEscapeMode::Path);
+              URIEscapeMode::Path, this->iri_);
         }
       } else {
-        escape_component_to_string(result, path_value, URIEscapeMode::Path);
+        escape_component_to_string(result, path_value, URIEscapeMode::Path,
+                                   this->iri_);
       }
     } else {
-      escape_component_to_string(result, path_value, URIEscapeMode::Path);
+      escape_component_to_string(result, path_value, URIEscapeMode::Path,
+                                 this->iri_);
     }
   }
 
@@ -146,13 +166,13 @@ auto URI::recompose_relative() const -> std::string {
   if (result_query.has_value()) {
     result += '?';
     escape_component_to_string(result, result_query.value().raw(),
-                               URIEscapeMode::Fragment);
+                               URIEscapeMode::Fragment, this->iri_, true);
   }
 
   if (this->fragment_.has_value()) {
     result += '#';
     escape_component_to_string(result, this->fragment_.value(),
-                               URIEscapeMode::Fragment);
+                               URIEscapeMode::Fragment, this->iri_);
   }
 
   return result;
@@ -183,7 +203,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
 
   if (user_info.has_value()) {
     escape_component_to_string(result, user_info.value(),
-                               URIEscapeMode::UserInfo);
+                               URIEscapeMode::UserInfo, this->iri_);
     result += '@';
   }
 
@@ -195,7 +215,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
       result += ']';
     } else {
       escape_component_to_string(result, result_host.value(),
-                                 URIEscapeMode::SkipSubDelims);
+                                 URIEscapeMode::SkipSubDelims, this->iri_);
     }
   }
 
@@ -214,7 +234,8 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   if (result_path.has_value()) {
     const auto &path_value = result_path.value();
 
-    escape_component_to_string(result, path_value, URIEscapeMode::Path);
+    escape_component_to_string(result, path_value, URIEscapeMode::Path,
+                               this->iri_);
   }
 
   // Query
@@ -222,7 +243,7 @@ auto URI::recompose_without_fragment() const -> std::optional<std::string> {
   if (result_query.has_value()) {
     result += '?';
     escape_component_to_string(result, result_query.value().raw(),
-                               URIEscapeMode::Fragment);
+                               URIEscapeMode::Fragment, this->iri_, true);
   }
 
   if (result.empty()) {

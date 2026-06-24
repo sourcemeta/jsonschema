@@ -46,7 +46,7 @@ public:
       }
 
       const bool all_in_parent{std::ranges::all_of(
-          entry_types, [&parent_type_names](const auto &type_name) {
+          entry_types, [&parent_type_names](const auto &type_name) -> auto {
             return parent_type_names.contains(type_name);
           })};
       if (!all_in_parent) {

@@ -11,8 +11,36 @@
 // feature macro that the compiler sets when the right -march or -mcpu is in
 // effect
 #if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-#include <arm_acle.h> // __crc32b, __crc32d
 #define SOURCEMETA_CORE_CRYPTO_CRC32_ARM 1
+#endif
+
+// The CRC32 operations are reached through compiler builtins rather than the
+// <arm_acle.h> intrinsics. On aarch64-apple-darwin, GCC's header fails to
+// compile under warnings-as-errors because of unrelated random number
+// intrinsics whose inline bodies pass a pointer of the wrong width, and merely
+// including the header type-checks those bodies even though we never call them
+#ifdef SOURCEMETA_CORE_CRYPTO_CRC32_ARM
+namespace {
+
+auto crc32_hardware_word(const std::uint32_t checksum,
+                         const std::uint64_t value) noexcept -> std::uint32_t {
+#if defined(__clang__)
+  return __builtin_arm_crc32d(checksum, value);
+#else
+  return __builtin_aarch64_crc32x(checksum, value);
+#endif
+}
+
+auto crc32_hardware_byte(const std::uint32_t checksum,
+                         const std::uint8_t value) noexcept -> std::uint32_t {
+#if defined(__clang__)
+  return __builtin_arm_crc32b(checksum, value);
+#else
+  return __builtin_aarch64_crc32b(checksum, value);
+#endif
+}
+
+} // namespace
 #endif
 
 #ifndef SOURCEMETA_CORE_CRYPTO_CRC32_ARM
@@ -68,12 +96,12 @@ auto crc32_update(const std::uint32_t previous, const std::string_view input)
   while (remaining >= 8) {
     std::uint64_t chunk{0};
     std::memcpy(&chunk, data, sizeof(chunk));
-    checksum = __crc32d(checksum, chunk);
+    checksum = crc32_hardware_word(checksum, chunk);
     data += 8;
     remaining -= 8;
   }
   while (remaining > 0) {
-    checksum = __crc32b(checksum, *data++);
+    checksum = crc32_hardware_byte(checksum, *data++);
     --remaining;
   }
   return checksum ^ 0xFFFFFFFFu;

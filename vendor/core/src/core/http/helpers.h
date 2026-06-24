@@ -219,8 +219,9 @@ inline auto http_extract_quality(const std::string_view parameters) noexcept
     -> float {
   float quality{1.0f};
   http_for_each_parameter(
-      parameters, [&quality](const std::string_view name,
-                             const std::string_view value) noexcept {
+      parameters,
+      [&quality](const std::string_view name,
+                 const std::string_view value) noexcept -> void {
         if (name.size() == 1 && (name[0] == 'q' || name[0] == 'Q')) {
           quality = http_parse_qvalue(value);
         }
@@ -231,24 +232,26 @@ inline auto http_extract_quality(const std::string_view parameters) noexcept
 template <typename Visitor>
 inline auto http_for_each_accept_entry(const std::string_view header,
                                        Visitor visit) -> void {
-  http_for_each_list_entry(header, [&visit](const std::string_view entry) {
-    const auto [value, parameters] = http_split_entry(entry);
-    if (!value.empty()) {
-      visit(value, http_extract_quality(parameters));
-    }
-  });
+  http_for_each_list_entry(
+      header, [&visit](const std::string_view entry) -> auto {
+        const auto [value, parameters] = http_split_entry(entry);
+        if (!value.empty()) {
+          visit(value, http_extract_quality(parameters));
+        }
+      });
 }
 
 template <typename Visitor>
 inline auto http_for_each_field_value(const std::string_view header,
                                       Visitor visit) -> void {
-  http_for_each_list_entry(header, [&visit](const std::string_view entry) {
-    const auto [value, parameters] = http_split_entry(entry);
-    (void)parameters;
-    if (!value.empty()) {
-      visit(value);
-    }
-  });
+  http_for_each_list_entry(
+      header, [&visit](const std::string_view entry) -> auto {
+        const auto [value, parameters] = http_split_entry(entry);
+        (void)parameters;
+        if (!value.empty()) {
+          visit(value);
+        }
+      });
 }
 
 } // namespace sourcemeta::core
