@@ -124,10 +124,11 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
 }
 
 auto PointerPositionTracker::size() const -> std::size_t {
-  return static_cast<std::size_t>(std::count_if(
-      this->events.cbegin(), this->events.cend(), [](const Event &event) {
-        return event.phase == JSON::ParsePhase::Post;
-      }));
+  return static_cast<std::size_t>(
+      std::count_if(this->events.cbegin(), this->events.cend(),
+                    [](const Event &event) -> bool {
+                      return event.phase == JSON::ParsePhase::Post;
+                    }));
 }
 
 auto PointerPositionTracker::to_json() const -> JSON {

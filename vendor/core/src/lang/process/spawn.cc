@@ -168,8 +168,14 @@ auto spawn(const std::string &program,
       std::filesystem::current_path()};
   std::filesystem::current_path(directory);
 #else
+  // The standardized child-directory file action is not yet provided by every
+  // system and toolchain this builds on, so we keep using the long-standing
+  // platform extension and silence the deprecation that newer SDKs attach to it
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   const int addchdir_result{
       posix_spawn_file_actions_addchdir_np(&file_actions, directory.c_str())};
+#pragma GCC diagnostic pop
   if (addchdir_result != 0) {
     posix_spawn_file_actions_destroy(&file_actions);
     posix_spawnattr_destroy(&attributes);

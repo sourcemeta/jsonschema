@@ -536,7 +536,8 @@ auto is_relative_pointer(const std::string_view input) noexcept -> bool {
   }
 
   if (input[position] == '/') {
-    return is_pointer(input.substr(position));
+    return is_pointer(
+        std::string_view{input.data() + position, size - position});
   }
 
   return false;

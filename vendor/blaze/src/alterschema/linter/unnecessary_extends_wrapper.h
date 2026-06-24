@@ -1,5 +1,6 @@
 class UnnecessaryExtendsWrapper final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"extends"};
 
 public:
@@ -84,7 +85,7 @@ public:
         }
 
         if (std::ranges::any_of(
-                metadata.dependencies, [&](const auto &dependency) {
+                metadata.dependencies, [&](const auto &dependency) -> auto {
                   return !entry.defines(std::string{dependency}) &&
                          (schema.defines(std::string{dependency}) ||
                           elevated.contains(dependency));
@@ -139,7 +140,7 @@ private:
     if (!type.is_array()) {
       return false;
     }
-    return std::ranges::all_of(type.as_array(), [](const auto &entry) {
+    return std::ranges::all_of(type.as_array(), [](const auto &entry) -> auto {
       return entry.is_string() && entry.to_string() != "any";
     });
   }

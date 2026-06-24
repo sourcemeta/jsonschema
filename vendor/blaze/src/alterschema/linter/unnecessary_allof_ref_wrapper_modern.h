@@ -30,7 +30,7 @@ public:
     // define `$ref` (a common multiple composition pattern)
     ONLY_CONTINUE_IF(
         !(all_of.size() > 1 &&
-          std::ranges::all_of(all_of.as_array(), [](const auto &entry) {
+          std::ranges::all_of(all_of.as_array(), [](const auto &entry) -> auto {
             return entry.is_object() && entry.defines("$ref");
           })));
 

@@ -270,11 +270,13 @@ auto SchemaTransformer::apply(core::JSON &schema,
 
           const auto &target{destination.value().get()};
           potentially_broken_references.push_back(
-              {core::to_pointer(reference.first.second),
-               core::JSON::String{reference.second.original},
-               reference.second.destination,
-               core::JSON::String{reference.second.fragment.value()},
-               core::to_pointer(target.pointer), target.relative_pointer});
+              {.origin = core::to_pointer(reference.first.second),
+               .original = core::JSON::String{reference.second.original},
+               .destination = reference.second.destination,
+               .fragment =
+                   core::JSON::String{reference.second.fragment.value()},
+               .target_pointer = core::to_pointer(target.pointer),
+               .target_relative_pointer = target.relative_pointer});
         }
 
         rule->transform(current, outcome);
@@ -400,7 +402,7 @@ auto SchemaTransformer::apply(core::JSON &schema,
 }
 
 auto SchemaTransformer::remove(const std::string_view name) -> bool {
-  return std::erase_if(this->rules, [&name](const auto &entry) {
+  return std::erase_if(this->rules, [&name](const auto &entry) -> auto {
            return std::get<0>(entry)->name() == name;
          }) > 0;
 }

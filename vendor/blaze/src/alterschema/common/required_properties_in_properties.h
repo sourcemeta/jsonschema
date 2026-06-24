@@ -47,7 +47,7 @@ public:
           !this->defined_in_properties_sibling(schema, property.to_string()) &&
           !WALK_UP_IN_PLACE_APPLICATORS(
                root, frame, location, walker, resolver,
-               [&](const JSON &ancestor, const Vocabularies &) {
+               [&](const JSON &ancestor, const Vocabularies &) -> bool {
                  return this->defined_in_properties_sibling(
                      ancestor, property.to_string());
                })

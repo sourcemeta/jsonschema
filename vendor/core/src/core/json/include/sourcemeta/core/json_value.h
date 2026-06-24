@@ -1521,8 +1521,9 @@ public:
   template <typename Iterator>
   [[nodiscard]] auto defines_any(Iterator begin, Iterator end) const -> bool {
     assert(this->is_object());
-    return std::any_of(begin, end,
-                       [this](const auto &key) { return this->defines(key); });
+    return std::any_of(begin, end, [this](const auto &key) -> auto {
+      return this->defines(key);
+    });
   }
 
   /// This method checks whether an input JSON object defines at least one given

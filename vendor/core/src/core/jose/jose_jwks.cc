@@ -5,8 +5,9 @@
 #include <utility>     // std::move
 
 namespace {
+using namespace std::string_view_literals;
 
-const auto HASH_KEYS{sourcemeta::core::JSON::Object::hash("keys")};
+const auto HASH_KEYS{sourcemeta::core::JSON::Object::hash("keys"sv)};
 
 } // namespace
 
@@ -61,7 +62,7 @@ auto JWKS::from(JSON &&value) -> std::optional<JWKS> { return from(value); }
 auto JWKS::find(const std::string_view key_id) const noexcept -> const JWK * {
   for (const auto &key : this->keys_) {
     const auto candidate{key.key_id()};
-    if (candidate.has_value() && candidate.value() == key_id) {
+    if (candidate.has_value() && *candidate == key_id) {
       return &key;
     }
   }

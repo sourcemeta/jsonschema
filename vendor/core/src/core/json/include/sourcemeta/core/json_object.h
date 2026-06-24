@@ -726,7 +726,7 @@ public:
   /// Reorder object properties by keys according to a comparator function
   template <typename Compare> auto reorder(const Compare &compare) -> void {
     std::sort(this->data.begin(), this->data.end(),
-              [&compare](const auto &left, const auto &right) {
+              [&compare](const auto &left, const auto &right) -> auto {
                 return compare(left.first, right.first);
               });
   }

@@ -196,6 +196,7 @@ private:
       "https://json-schema.org/draft/2020-12/vocab/unevaluated"};
 
   static inline const std::unordered_map<std::string, std::string>
+      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
       VOCAB_URI_MAP_2019_09_TO_2020_12{
           {"https://json-schema.org/draft/2019-09/vocab/core",
            "https://json-schema.org/draft/2020-12/vocab/core"},
@@ -541,7 +542,8 @@ private:
 
       const auto relative_weak{pointer.resolve_from(resource_pointer)};
       this->anchor_renames_.push_back(
-          {sourcemeta::core::to_pointer(relative_weak), rename_iter->second});
+          {.subschema_pointer = sourcemeta::core::to_pointer(relative_weak),
+           .new_name = rename_iter->second});
     }
 
     for (const auto &reference : frame.references()) {
@@ -567,7 +569,8 @@ private:
       const auto relative_weak{
           reference.first.second.resolve_from(resource_pointer)};
       this->anchor_ref_rewrites_.push_back(
-          {sourcemeta::core::to_pointer(relative_weak), new_value});
+          {.ref_pointer = sourcemeta::core::to_pointer(relative_weak),
+           .new_value = new_value});
     }
   }
 

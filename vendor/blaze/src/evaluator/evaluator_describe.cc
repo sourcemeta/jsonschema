@@ -67,18 +67,19 @@ auto escape_string(const std::string_view input) -> std::string {
   }
 
   std::string result;
-  result.resize_and_overwrite(size, [&](char *buffer, std::size_t) {
-    auto *cursor{buffer};
-    *cursor++ = '"';
-    for (const auto character : input) {
-      if (character == '"') {
-        *cursor++ = '\\';
-      }
-      *cursor++ = character;
-    }
-    *cursor++ = '"';
-    return static_cast<std::size_t>(cursor - buffer);
-  });
+  result.resize_and_overwrite(
+      size, [&](char *buffer, std::size_t) -> std::size_t {
+        auto *cursor{buffer};
+        *cursor++ = '"';
+        for (const auto character : input) {
+          if (character == '"') {
+            *cursor++ = '\\';
+          }
+          *cursor++ = character;
+        }
+        *cursor++ = '"';
+        return static_cast<std::size_t>(cursor - buffer);
+      });
 
   return result;
 }
@@ -285,9 +286,10 @@ auto describe_reference(const sourcemeta::core::JSON &target) -> std::string {
 
 auto is_within_keyword(const sourcemeta::core::WeakPointer &evaluate_path,
                        const std::string &keyword) -> bool {
-  return std::ranges::any_of(evaluate_path, [&keyword](const auto &token) {
-    return token.is_property() && token.to_property() == keyword;
-  });
+  return std::ranges::any_of(
+      evaluate_path, [&keyword](const auto &token) -> bool {
+        return token.is_property() && token.to_property() == keyword;
+      });
 }
 
 auto unknown() -> std::string {
@@ -391,7 +393,7 @@ auto describe(const bool valid, const Instruction &step,
     std::ostringstream message;
 
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -1498,7 +1500,7 @@ auto describe(const bool valid, const Instruction &step,
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionType ||
       step.type == sourcemeta::blaze::InstructionIndex::AssertionTypeStrict) {
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -1639,7 +1641,7 @@ auto describe(const bool valid, const Instruction &step,
 
   if (step.type == sourcemeta::blaze::InstructionIndex::AssertionRegex) {
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -1912,7 +1914,7 @@ auto describe(const bool valid, const Instruction &step,
     const auto &value{instruction_value<ValueJSON>(step)};
 
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -2040,7 +2042,7 @@ auto describe(const bool valid, const Instruction &step,
     assert(!value.empty());
 
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -2087,7 +2089,7 @@ auto describe(const bool valid, const Instruction &step,
     assert(!value.empty());
 
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&
@@ -2660,7 +2662,7 @@ auto describe(const bool valid, const Instruction &step,
 
   if (step.type == sourcemeta::blaze::InstructionIndex::ControlJump) {
     if (std::ranges::any_of(evaluate_path,
-                            [](const auto &token) {
+                            [](const auto &token) -> bool {
                               return token.is_property() &&
                                      token.to_property() == "propertyNames";
                             }) &&

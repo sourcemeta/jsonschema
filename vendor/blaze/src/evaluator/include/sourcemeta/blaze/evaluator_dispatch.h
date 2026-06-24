@@ -1454,7 +1454,7 @@ INSTRUCTION_HANDLER(ControlDynamicAnchorJump) {
     const auto label{Evaluator::hash(resource, value)};
     const auto match{std::ranges::find_if(
         context.schema->labels,
-        [&label](const auto &entry) { return entry.first == label; })};
+        [&label](const auto &entry) -> bool { return entry.first == label; })};
     if (match != context.schema->labels.cend()) [[likely]] {
       result = true;
       assert(match->second < context.schema->targets.size());
@@ -1605,15 +1605,17 @@ INSTRUCTION_HANDLER(LoopPropertiesUnevaluatedExcept) {
         continue;
       }
 
-      if (std::ranges::any_of(filter_prefixes, [&entry](const auto &prefix) {
-            return entry.first.starts_with(prefix);
-          })) {
+      if (std::ranges::any_of(filter_prefixes,
+                              [&entry](const auto &prefix) -> bool {
+                                return entry.first.starts_with(prefix);
+                              })) {
         continue;
       }
 
-      if (std::ranges::any_of(filter_regexes, [&entry](const auto &pattern) {
-            return matches(pattern.first, entry.first);
-          })) {
+      if (std::ranges::any_of(filter_regexes,
+                              [&entry](const auto &pattern) -> bool {
+                                return matches(pattern.first, entry.first);
+                              })) {
         continue;
       }
 
@@ -1906,15 +1908,17 @@ INSTRUCTION_HANDLER(LoopPropertiesExcept) {
       continue;
     }
 
-    if (std::ranges::any_of(filter_prefixes, [&entry](const auto &prefix) {
-          return entry.first.starts_with(prefix);
-        })) {
+    if (std::ranges::any_of(filter_prefixes,
+                            [&entry](const auto &prefix) -> bool {
+                              return entry.first.starts_with(prefix);
+                            })) {
       continue;
     }
 
-    if (std::ranges::any_of(filter_regexes, [&entry](const auto &pattern) {
-          return matches(pattern.first, entry.first);
-        })) {
+    if (std::ranges::any_of(filter_regexes,
+                            [&entry](const auto &pattern) -> bool {
+                              return matches(pattern.first, entry.first);
+                            })) {
       continue;
     }
 
@@ -2053,7 +2057,7 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
       for (; iterator != object.cend(); ++iterator) {
         // NOLINTNEXTLINE(modernize-use-ranges)
         if (std::ranges::none_of(value.second.first,
-                                 [&iterator](const auto &entry) {
+                                 [&iterator](const auto &entry) -> bool {
                                    return entry.first == iterator->hash;
                                  })) {
           result = false;
@@ -2415,10 +2419,11 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
         } else if (entry.hash == value.second.first[index].first) {
           index += 1;
           continue;
-        } else if (!std::ranges::any_of(value.second.first,
-                                        [&entry](const auto &hash_entry) {
-                                          return hash_entry.first == entry.hash;
-                                        })) {
+        } else if (!std::ranges::any_of(
+                       value.second.first,
+                       [&entry](const auto &hash_entry) -> bool {
+                         return hash_entry.first == entry.hash;
+                       })) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         } else {

@@ -1,5 +1,6 @@
 class IfWithoutThenElse final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"if"};
 
 public:

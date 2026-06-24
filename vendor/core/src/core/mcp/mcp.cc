@@ -3,68 +3,73 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonrpc.h>
 
-#include <algorithm> // std::clamp
-#include <cassert>   // assert
-#include <cmath>     // std::isnan
-#include <cstddef>   // std::size_t
-#include <optional>  // std::optional
-#include <sstream>   // std::ostringstream
-#include <string>    // std::string
-#include <utility>   // std::move
+#include <algorithm>   // std::clamp
+#include <cassert>     // assert
+#include <cmath>       // std::isnan
+#include <cstddef>     // std::size_t
+#include <optional>    // std::optional
+#include <sstream>     // std::ostringstream
+#include <string>      // std::string
+#include <string_view> // std::string_view_literals
+#include <utility>     // std::move
 
 namespace {
+using namespace std::string_view_literals;
 
 const auto MCP_HASH_ANNOTATIONS{
-    sourcemeta::core::JSON::Object::hash("annotations")};
+    sourcemeta::core::JSON::Object::hash("annotations"sv)};
 const auto MCP_HASH_ARGUMENTS{
-    sourcemeta::core::JSON::Object::hash("arguments")};
+    sourcemeta::core::JSON::Object::hash("arguments"sv)};
 const auto MCP_HASH_CAPABILITIES{
-    sourcemeta::core::JSON::Object::hash("capabilities")};
+    sourcemeta::core::JSON::Object::hash("capabilities"sv)};
 const auto MCP_HASH_COMPLETIONS{
-    sourcemeta::core::JSON::Object::hash("completions")};
-const auto MCP_HASH_CONTENT{sourcemeta::core::JSON::Object::hash("content")};
-const auto MCP_HASH_CONTENTS{sourcemeta::core::JSON::Object::hash("contents")};
+    sourcemeta::core::JSON::Object::hash("completions"sv)};
+const auto MCP_HASH_CONTENT{sourcemeta::core::JSON::Object::hash("content"sv)};
+const auto MCP_HASH_CONTENTS{
+    sourcemeta::core::JSON::Object::hash("contents"sv)};
 const auto MCP_HASH_DESCRIPTION{
-    sourcemeta::core::JSON::Object::hash("description")};
+    sourcemeta::core::JSON::Object::hash("description"sv)};
 const auto MCP_HASH_DESTRUCTIVE_HINT{
-    sourcemeta::core::JSON::Object::hash("destructiveHint")};
+    sourcemeta::core::JSON::Object::hash("destructiveHint"sv)};
 const auto MCP_HASH_IDEMPOTENT_HINT{
-    sourcemeta::core::JSON::Object::hash("idempotentHint")};
+    sourcemeta::core::JSON::Object::hash("idempotentHint"sv)};
 const auto MCP_HASH_INPUT_SCHEMA{
-    sourcemeta::core::JSON::Object::hash("inputSchema")};
+    sourcemeta::core::JSON::Object::hash("inputSchema"sv)};
 const auto MCP_HASH_INSTRUCTIONS{
-    sourcemeta::core::JSON::Object::hash("instructions")};
-const auto MCP_HASH_IS_ERROR{sourcemeta::core::JSON::Object::hash("isError")};
-const auto MCP_HASH_LOGGING{sourcemeta::core::JSON::Object::hash("logging")};
-const auto MCP_HASH_MIME_TYPE{sourcemeta::core::JSON::Object::hash("mimeType")};
-const auto MCP_HASH_NAME{sourcemeta::core::JSON::Object::hash("name")};
+    sourcemeta::core::JSON::Object::hash("instructions"sv)};
+const auto MCP_HASH_IS_ERROR{sourcemeta::core::JSON::Object::hash("isError"sv)};
+const auto MCP_HASH_LOGGING{sourcemeta::core::JSON::Object::hash("logging"sv)};
+const auto MCP_HASH_MIME_TYPE{
+    sourcemeta::core::JSON::Object::hash("mimeType"sv)};
+const auto MCP_HASH_NAME{sourcemeta::core::JSON::Object::hash("name"sv)};
 const auto MCP_HASH_OPEN_WORLD_HINT{
-    sourcemeta::core::JSON::Object::hash("openWorldHint")};
+    sourcemeta::core::JSON::Object::hash("openWorldHint"sv)};
 const auto MCP_HASH_OUTPUT_SCHEMA{
-    sourcemeta::core::JSON::Object::hash("outputSchema")};
-const auto MCP_HASH_PRIORITY{sourcemeta::core::JSON::Object::hash("priority")};
-const auto MCP_HASH_PROMPTS{sourcemeta::core::JSON::Object::hash("prompts")};
+    sourcemeta::core::JSON::Object::hash("outputSchema"sv)};
+const auto MCP_HASH_PRIORITY{
+    sourcemeta::core::JSON::Object::hash("priority"sv)};
+const auto MCP_HASH_PROMPTS{sourcemeta::core::JSON::Object::hash("prompts"sv)};
 const auto MCP_HASH_PROTOCOL_VERSION{
-    sourcemeta::core::JSON::Object::hash("protocolVersion")};
+    sourcemeta::core::JSON::Object::hash("protocolVersion"sv)};
 const auto MCP_HASH_READ_ONLY_HINT{
-    sourcemeta::core::JSON::Object::hash("readOnlyHint")};
+    sourcemeta::core::JSON::Object::hash("readOnlyHint"sv)};
 const auto MCP_HASH_RESOURCES{
-    sourcemeta::core::JSON::Object::hash("resources")};
+    sourcemeta::core::JSON::Object::hash("resources"sv)};
 const auto MCP_HASH_SERVER_INFO{
-    sourcemeta::core::JSON::Object::hash("serverInfo")};
-const auto MCP_HASH_SIZE{sourcemeta::core::JSON::Object::hash("size")};
+    sourcemeta::core::JSON::Object::hash("serverInfo"sv)};
+const auto MCP_HASH_SIZE{sourcemeta::core::JSON::Object::hash("size"sv)};
 const auto MCP_HASH_STRUCTURED_CONTENT{
-    sourcemeta::core::JSON::Object::hash("structuredContent")};
-const auto MCP_HASH_TEXT{sourcemeta::core::JSON::Object::hash("text")};
-const auto MCP_HASH_TITLE{sourcemeta::core::JSON::Object::hash("title")};
-const auto MCP_HASH_TOOLS{sourcemeta::core::JSON::Object::hash("tools")};
-const auto MCP_HASH_TYPE{sourcemeta::core::JSON::Object::hash("type")};
-const auto MCP_HASH_URI{sourcemeta::core::JSON::Object::hash("uri")};
+    sourcemeta::core::JSON::Object::hash("structuredContent"sv)};
+const auto MCP_HASH_TEXT{sourcemeta::core::JSON::Object::hash("text"sv)};
+const auto MCP_HASH_TITLE{sourcemeta::core::JSON::Object::hash("title"sv)};
+const auto MCP_HASH_TOOLS{sourcemeta::core::JSON::Object::hash("tools"sv)};
+const auto MCP_HASH_TYPE{sourcemeta::core::JSON::Object::hash("type"sv)};
+const auto MCP_HASH_URI{sourcemeta::core::JSON::Object::hash("uri"sv)};
 const auto MCP_HASH_URI_TEMPLATE{
-    sourcemeta::core::JSON::Object::hash("uriTemplate")};
-const auto MCP_HASH_VERSION{sourcemeta::core::JSON::Object::hash("version")};
+    sourcemeta::core::JSON::Object::hash("uriTemplate"sv)};
+const auto MCP_HASH_VERSION{sourcemeta::core::JSON::Object::hash("version"sv)};
 const auto MCP_HASH_WEBSITE_URL{
-    sourcemeta::core::JSON::Object::hash("websiteUrl")};
+    sourcemeta::core::JSON::Object::hash("websiteUrl"sv)};
 
 } // namespace
 

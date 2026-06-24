@@ -31,7 +31,7 @@ public:
 
     ONLY_CONTINUE_IF(
         std::any_of(required->as_array().cbegin(), required->as_array().cend(),
-                    [dependent_required](const auto &element) {
+                    [dependent_required](const auto &element) -> auto {
                       return element.is_string() &&
                              dependent_required->defines(element.to_string());
                     }));

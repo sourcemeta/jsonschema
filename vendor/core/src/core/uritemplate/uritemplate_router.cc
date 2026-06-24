@@ -5,6 +5,7 @@
 
 #include <algorithm> // std::ranges::lower_bound, std::ranges::find_if
 #include <cassert>   // assert
+#include <cstdint>   // std::uint8_t
 #include <limits>    // std::numeric_limits
 #include <tuple>     // std::get, std::make_tuple
 
@@ -47,6 +48,62 @@ auto find_or_create_literal_child(std::vector<std::unique_ptr<Node>> &literals,
 
 inline auto is_expansion_type(const NodeType type) noexcept -> bool {
   return type == NodeType::Expansion || type == NodeType::OptionalExpansion;
+}
+
+enum class DescribeWalk : std::uint8_t { NoMatch, Captured, Reached };
+
+// Walk the segments of a rooted path fragment through the trie, starting from
+// the given node. A null node means the root. On a successful walk, the node is
+// advanced to where the fragment ends
+auto walk_describe_fragment(const Node *&current, const Node &root,
+                            const std::string_view fragment) noexcept
+    -> DescribeWalk {
+  if (fragment.empty()) {
+    return DescribeWalk::Reached;
+  }
+
+  if (fragment.front() != '/') {
+    return DescribeWalk::NoMatch;
+  }
+
+  const char *position = fragment.data() + 1;
+  const char *const fragment_end = fragment.data() + fragment.size();
+
+  if (position >= fragment_end) {
+    return DescribeWalk::Reached;
+  }
+
+  while (true) {
+    const char *segment_start = position;
+    while (position < fragment_end && *position != '/') {
+      ++position;
+    }
+    const std::string_view segment{
+        segment_start, static_cast<std::size_t>(position - segment_start)};
+
+    const auto &literal_children = current ? current->literals : root.literals;
+    const auto &variable_child = current ? current->variable : root.variable;
+
+    const Node *next = find_literal_child(literal_children, segment);
+    if (next == nullptr) {
+      if (segment.empty() || !variable_child) {
+        return DescribeWalk::NoMatch;
+      }
+      if (is_expansion_type(variable_child->type)) {
+        return DescribeWalk::Captured;
+      }
+      next = variable_child.get();
+    }
+
+    current = next;
+
+    if (position >= fragment_end) {
+      break;
+    }
+    ++position;
+  }
+
+  return DescribeWalk::Reached;
 }
 
 auto find_or_create_variable_child(std::unique_ptr<Node> &variable,
@@ -160,7 +217,7 @@ auto URITemplateRouter::context(const Identifier identifier) const
     -> Identifier {
   assert(identifier > 0);
   const auto entry = std::ranges::find_if(
-      this->entries_, [&identifier](const auto &candidate) {
+      this->entries_, [&identifier](const auto &candidate) -> bool {
         return std::get<0>(candidate) == identifier;
       });
   assert(entry != this->entries_.end());
@@ -170,7 +227,7 @@ auto URITemplateRouter::context(const Identifier identifier) const
 auto URITemplateRouter::path(const Identifier identifier) const -> std::string {
   assert(identifier > 0);
   const auto entry = std::ranges::find_if(
-      this->entries_, [&identifier](const auto &candidate) {
+      this->entries_, [&identifier](const auto &candidate) -> bool {
         return std::get<0>(candidate) == identifier;
       });
   assert(entry != this->entries_.end());
@@ -191,8 +248,8 @@ auto URITemplateRouter::operation_id(const Identifier identifier) const
   if (identifier == 0) {
     return {};
   }
-  const auto entry =
-      std::ranges::find_if(this->operations_, [&identifier](const auto &item) {
+  const auto entry = std::ranges::find_if(
+      this->operations_, [&identifier](const auto &item) -> bool {
         return item.second.first == identifier;
       });
   if (entry == this->operations_.end()) {
@@ -206,8 +263,10 @@ auto URITemplateRouter::otherwise(const Identifier context,
     -> void {
   this->otherwise_.context = context;
 
-  const auto existing = std::ranges::find_if(
-      this->arguments_, [](const auto &entry) { return entry.first == 0; });
+  const auto existing =
+      std::ranges::find_if(this->arguments_, [](const auto &entry) -> bool {
+        return entry.first == 0;
+      });
   if (existing == this->arguments_.end()) {
     if (!arguments.empty()) {
       this->arguments_.emplace_back(
@@ -277,14 +336,15 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       this->entries_.emplace_back(identifier, context, uri_template);
     } else {
       const auto existing = std::ranges::find_if(
-          this->entries_, [&previous_identifier](const auto &candidate) {
+          this->entries_,
+          [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
       if (existing != this->entries_.end()) {
         *existing = std::make_tuple(identifier, context, uri_template);
       }
       std::erase_if(this->operations_,
-                    [&previous_identifier](const auto &entry) {
+                    [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;
                     });
     }
@@ -294,7 +354,7 @@ auto URITemplateRouter::add(const std::string_view uri_template,
         operation_id, std::pair<Identifier, Identifier>{identifier, context});
     if (!arguments.empty()) {
       assert(std::ranges::none_of(this->arguments_,
-                                  [&identifier](const auto &entry) {
+                                  [&identifier](const auto &entry) -> bool {
                                     return entry.first == identifier;
                                   }));
       this->arguments_.emplace_back(
@@ -516,14 +576,15 @@ auto URITemplateRouter::add(const std::string_view uri_template,
       this->entries_.emplace_back(identifier, context, uri_template);
     } else {
       const auto existing = std::ranges::find_if(
-          this->entries_, [&previous_identifier](const auto &candidate) {
+          this->entries_,
+          [&previous_identifier](const auto &candidate) -> bool {
             return std::get<0>(candidate) == previous_identifier;
           });
       if (existing != this->entries_.end()) {
         *existing = std::make_tuple(identifier, context, uri_template);
       }
       std::erase_if(this->operations_,
-                    [&previous_identifier](const auto &entry) {
+                    [&previous_identifier](const auto &entry) -> bool {
                       return entry.second.first == previous_identifier;
                     });
     }
@@ -533,7 +594,7 @@ auto URITemplateRouter::add(const std::string_view uri_template,
         operation_id, std::pair<Identifier, Identifier>{identifier, context});
     if (!arguments.empty()) {
       assert(std::ranges::none_of(this->arguments_,
-                                  [&identifier](const auto &entry) {
+                                  [&identifier](const auto &entry) -> bool {
                                     return entry.first == identifier;
                                   }));
       this->arguments_.emplace_back(
@@ -545,6 +606,39 @@ auto URITemplateRouter::add(const std::string_view uri_template,
 
 auto URITemplateRouter::root() const noexcept -> const Node & {
   return this->root_;
+}
+
+auto URITemplateRouter::describes(
+    const std::string_view path,
+    const std::string_view base_path) const noexcept -> bool {
+  const Node *current = nullptr;
+
+  if (!base_path.empty()) {
+    switch (walk_describe_fragment(current, this->root_, base_path)) {
+      case DescribeWalk::NoMatch:
+        return false;
+      case DescribeWalk::Captured:
+        return true;
+      case DescribeWalk::Reached:
+        break;
+    }
+  }
+
+  switch (walk_describe_fragment(current, this->root_, path)) {
+    case DescribeWalk::NoMatch:
+      return false;
+    case DescribeWalk::Captured:
+      return true;
+    case DescribeWalk::Reached:
+      break;
+  }
+
+  if (current == nullptr) {
+    return this->root_.identifier != 0 || !this->root_.literals.empty() ||
+           this->root_.variable != nullptr;
+  }
+
+  return true;
 }
 
 auto URITemplateRouter::arguments(const Identifier identifier,

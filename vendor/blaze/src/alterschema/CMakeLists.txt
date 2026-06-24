@@ -27,6 +27,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT blaze NAME alterschema
     canonicalizer/empty_disallow_drop.h
     canonicalizer/enum_drop_redundant_validation.h
     canonicalizer/enum_filter_by_type.h
+    canonicalizer/enum_split_by_type.h
     canonicalizer/exclusive_maximum_boolean_integer_fold.h
     canonicalizer/exclusive_maximum_integer_to_maximum.h
     canonicalizer/exclusive_minimum_boolean_integer_fold.h

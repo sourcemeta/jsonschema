@@ -29,7 +29,7 @@ auto FIXED_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   std::transform(prefix_encodings.as_array().cbegin(),
                  prefix_encodings.as_array().cend(),
                  std::back_inserter(encodings),
-                 [](const auto &element) { return load(element); });
+                 [](const auto &element) -> Encoding { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::FIXED_TYPED_ARRAY{
       .size = static_cast<std::uint64_t>(size.to_integer()),
@@ -57,7 +57,7 @@ auto BOUNDED_8BITS_TYPED_ARRAY(const sourcemeta::core::JSON &options)
   std::transform(prefix_encodings.as_array().cbegin(),
                  prefix_encodings.as_array().cend(),
                  std::back_inserter(encodings),
-                 [](const auto &element) { return load(element); });
+                 [](const auto &element) -> Encoding { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::BOUNDED_8BITS_TYPED_ARRAY{
       .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
@@ -81,7 +81,7 @@ auto FLOOR_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   std::transform(prefix_encodings.as_array().cbegin(),
                  prefix_encodings.as_array().cend(),
                  std::back_inserter(encodings),
-                 [](const auto &element) { return load(element); });
+                 [](const auto &element) -> Encoding { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::FLOOR_TYPED_ARRAY{
       .minimum = static_cast<std::uint64_t>(minimum.to_integer()),
@@ -104,7 +104,7 @@ auto ROOF_TYPED_ARRAY(const sourcemeta::core::JSON &options) -> Encoding {
   std::transform(prefix_encodings.as_array().cbegin(),
                  prefix_encodings.as_array().cend(),
                  std::back_inserter(encodings),
-                 [](const auto &element) { return load(element); });
+                 [](const auto &element) -> Encoding { return load(element); });
   assert(encodings.size() == prefix_encodings.size());
   return sourcemeta::jsonbinpack::ROOF_TYPED_ARRAY{
       .maximum = static_cast<std::uint64_t>(maximum.to_integer()),

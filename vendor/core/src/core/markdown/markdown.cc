@@ -6,17 +6,22 @@
 
 #include <array>   // std::array
 #include <cstdlib> // std::free
+#include <mutex>   // std::mutex, std::scoped_lock
 #include <string>  // std::string
-
-namespace {
-const bool cmark_initialized =
-    (cmark_gfm_core_extensions_ensure_registered(), true);
-}
 
 namespace sourcemeta::core {
 
 auto markdown_to_html(const std::string_view input, const bool safe)
     -> std::string {
+  [[maybe_unused]] static const bool cmark_initialized{
+      (cmark_gfm_core_extensions_ensure_registered(), true)};
+
+  // cmark-gfm toggles process-global special-character tables when syntax
+  // extensions are attached and detached, so parser construction through
+  // teardown cannot run concurrently
+  static std::mutex cmark_mutex;
+  const std::scoped_lock lock{cmark_mutex};
+
   static constexpr auto base_options{
       CMARK_OPT_VALIDATE_UTF8 | CMARK_OPT_FOOTNOTES |
       CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE | CMARK_OPT_GITHUB_PRE_LANG};

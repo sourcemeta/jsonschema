@@ -64,6 +64,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 8> KEYWORDS{
       {"$comment", "if", "then", "else", "readOnly", "writeOnly",
        "contentMediaType", "contentEncoding"}};

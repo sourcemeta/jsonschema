@@ -70,7 +70,7 @@ inline auto convert_to_property_type_assertions(Instructions &instructions)
     if (!instruction.relative_instance_location.empty() &&
         std::ranges::all_of(
             instruction.relative_instance_location,
-            [](const auto &token) { return token.is_property(); })) {
+            [](const auto &token) -> auto { return token.is_property(); })) {
       switch (instruction.type) {
         case InstructionIndex::AssertionTypeStrict:
           instruction.type = InstructionIndex::AssertionPropertyTypeStrict;
@@ -337,7 +337,7 @@ transform_instruction(Instruction &instruction, Instructions &output,
   if (!instruction.relative_instance_location.empty() &&
       std::ranges::all_of(
           instruction.relative_instance_location,
-          [](const auto &token) { return token.is_property(); })) {
+          [](const auto &token) -> auto { return token.is_property(); })) {
     switch (instruction.type) {
       case InstructionIndex::AssertionTypeStrict:
         instruction.type = InstructionIndex::AssertionPropertyTypeStrict;

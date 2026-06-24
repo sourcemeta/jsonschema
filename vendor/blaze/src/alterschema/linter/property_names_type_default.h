@@ -31,7 +31,7 @@ public:
         type && ((type->is_string() && type->to_string() == "string") ||
                  (type->is_array() &&
                   std::all_of(type->as_array().begin(), type->as_array().end(),
-                              [](const auto &item) {
+                              [](const auto &item) -> auto {
                                 return item.is_string() &&
                                        item.to_string() == "string";
                               }))));

@@ -83,12 +83,13 @@ private:
       return true;
     }
     if (value.is_array()) {
-      return std::ranges::any_of(value.as_array(), [](const auto &entry) {
-        if (entry.is_string()) {
-          return entry.to_string() == "any";
-        }
-        return sourcemeta::blaze::is_empty_schema(entry);
-      });
+      return std::ranges::any_of(
+          value.as_array(), [](const auto &entry) -> auto {
+            if (entry.is_string()) {
+              return entry.to_string() == "any";
+            }
+            return sourcemeta::blaze::is_empty_schema(entry);
+          });
     }
     return false;
   }

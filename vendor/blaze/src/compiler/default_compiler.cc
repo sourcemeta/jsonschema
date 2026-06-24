@@ -626,7 +626,7 @@ auto sourcemeta::blaze::default_schema_compiler(
       return {};
     }
 
-    if (context.mode == Mode::FastValidation ||
+    if (!annotations_enabled(context, dynamic_context.keyword) ||
         schema_context.is_property_name) {
       return {};
     }

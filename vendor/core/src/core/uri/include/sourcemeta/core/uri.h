@@ -664,8 +664,9 @@ public:
   /// ```
   auto userinfo(const std::string_view userinfo) -> URI &;
 
-  /// To support equality of URIs
-  auto operator==(const URI &other) const noexcept -> bool = default;
+  /// Two URIs are equal when their components match, independent of how the
+  /// input was parsed
+  auto operator==(const URI &other) const noexcept -> bool;
 
   /// To support ordering of URIs
   auto operator<(const URI &other) const noexcept -> bool;
@@ -694,6 +695,34 @@ public:
   /// assert(uri.recompose() == "file:///foo/bar");
   /// ```
   static auto from_path(const std::filesystem::path &path) -> URI;
+
+  /// Create a URI from a string that may be an Internationalized Resource
+  /// Identifier (IRI) as defined by RFC 3987, accepting the non-ASCII
+  /// characters that a plain URI does not permit. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const auto
+  /// uri{sourcemeta::core::URI::from_iri("https://example.com/café")};
+  /// assert(uri.recompose() == "https://example.com/café");
+  /// ```
+  static auto from_iri(std::string_view input) -> URI;
+
+  /// Check whether this object holds an Internationalized Resource Identifier
+  /// (IRI) as defined by RFC 3987, rather than a plain URI. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// const auto
+  /// iri{sourcemeta::core::URI::from_iri("https://example.com/foo")};
+  /// assert(iri.is_internationalized());
+  /// assert(!sourcemeta::core::URI{"https://example.com/foo"}.is_internationalized());
+  /// ```
+  [[nodiscard]] auto is_internationalized() const noexcept -> bool;
 
   /// A convenient method to canonicalize and recompose a URI from a string. For
   /// example:
@@ -811,6 +840,9 @@ private:
   std::optional<std::string> fragment_{};
   std::optional<std::string> query_{};
   bool ip_literal_{false};
+  // Whether this object was parsed as an IRI (RFC 3987) rather than a URI
+  // (RFC 3986)
+  bool iri_{false};
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

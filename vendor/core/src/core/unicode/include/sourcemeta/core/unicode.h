@@ -14,6 +14,7 @@
 #include <ostream>     // std::ostream
 #include <string>      // std::string, std::u32string, std::wstring
 #include <string_view> // std::string_view, std::wstring_view
+#include <utility>     // std::pair, std::make_pair
 
 /// @defgroup unicode Unicode
 /// @brief Unicode encoding utilities.
@@ -569,6 +570,52 @@ utf8_codepoint_length(const std::string_view input,
   }
 
   return size;
+}
+
+/// @ingroup unicode
+/// Decode the single UTF-8 codepoint that begins at the given position within
+/// the input, returning the codepoint together with the number of bytes it
+/// occupies, or an empty result when the bytes at that position do not start a
+/// valid UTF-8 codepoint (RFC 3629 Section 4, excluding overlong encodings,
+/// surrogates, and code points above U+10FFFF). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// const auto result{sourcemeta::core::utf8_decode("\xCE\xB1", 0)};
+/// assert(result.has_value());
+/// assert(result.value().first == 0x03B1);
+/// assert(result.value().second == 2);
+/// assert(!sourcemeta::core::utf8_decode("\xED\xA0\x80", 0).has_value());
+/// ```
+inline constexpr auto utf8_decode(const std::string_view input,
+                                  const std::string_view::size_type position)
+    -> std::optional<std::pair<char32_t, std::size_t>> {
+  const auto size{utf8_codepoint_length(input, position)};
+  if (size == 0) {
+    return std::nullopt;
+  }
+
+  const auto lead{static_cast<unsigned char>(input[position])};
+  char32_t codepoint{0};
+  if (size == 1) {
+    codepoint = static_cast<char32_t>(lead);
+  } else if (size == 2) {
+    codepoint = static_cast<char32_t>(lead & 0x1FU);
+  } else if (size == 3) {
+    codepoint = static_cast<char32_t>(lead & 0x0FU);
+  } else {
+    codepoint = static_cast<char32_t>(lead & 0x07U);
+  }
+
+  for (std::size_t index{1}; index < size; ++index) {
+    const auto continuation{
+        static_cast<unsigned char>(input[position + index])};
+    codepoint = (codepoint << 6) | static_cast<char32_t>(continuation & 0x3FU);
+  }
+
+  return std::make_pair(codepoint, size);
 }
 
 } // namespace sourcemeta::core

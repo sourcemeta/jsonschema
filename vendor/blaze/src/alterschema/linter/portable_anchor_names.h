@@ -53,11 +53,16 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ANCHOR{"$anchor"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String DYNAMIC_ANCHOR{
       "$dynamicAnchor"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ID_MODERN{"$id"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const sourcemeta::core::JSON::String ID_DRAFT_4{"id"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const Regex SAFE_ANCHOR_PATTERN{
       to_regex("^[A-Za-z][A-Za-z0-9_.-]*$").value()};
 

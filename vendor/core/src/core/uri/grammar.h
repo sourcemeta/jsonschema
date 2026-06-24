@@ -1,7 +1,7 @@
 #ifndef SOURCEMETA_CORE_URI_GRAMMAR_H_
 #define SOURCEMETA_CORE_URI_GRAMMAR_H_
 
-#include <cctype> // std::isalnum, std::isalpha, std::isdigit
+#include <sourcemeta/core/text.h>
 
 namespace sourcemeta::core {
 
@@ -50,7 +50,7 @@ constexpr char URI_PERCENT = '%';
 // unreserved = ALPHA / DIGIT / "-" / "." / "_" / "~"
 // See https://www.rfc-editor.org/rfc/rfc3986#section-2.3
 inline auto uri_is_unreserved(const char character) -> bool {
-  if (std::isalnum(static_cast<unsigned char>(character))) {
+  if (is_alphanum(character)) {
     return true;
   }
 
@@ -89,7 +89,7 @@ inline auto uri_is_sub_delim(const char character) -> bool {
 // Scheme characters: ALPHA / DIGIT / "+" / "-" / "."
 // See https://www.rfc-editor.org/rfc/rfc3986#section-3.1
 inline auto uri_is_scheme_char(const char character) -> bool {
-  if (std::isalnum(static_cast<unsigned char>(character))) {
+  if (is_alphanum(character)) {
     return true;
   }
 

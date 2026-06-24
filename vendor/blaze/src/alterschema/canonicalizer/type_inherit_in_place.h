@@ -51,11 +51,11 @@ public:
     // rules may want to lift type out of conjunctions
     const auto ancestor{WALK_UP(
         root, frame, location, walker, resolver,
-        [](const SchemaKeywordType keyword_type) {
+        [](const SchemaKeywordType keyword_type) -> bool {
           return IS_IN_PLACE_APPLICATOR(keyword_type) &&
                  keyword_type != SchemaKeywordType::ApplicatorElementsInPlace;
         },
-        [](const JSON &ancestor_schema, const Vocabularies &) {
+        [](const JSON &ancestor_schema, const Vocabularies &) -> bool {
           return ancestor_schema.defines("type");
         })};
 

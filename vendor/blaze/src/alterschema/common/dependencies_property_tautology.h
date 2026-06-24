@@ -38,7 +38,7 @@ public:
       ONLY_CONTINUE_IF(properties && properties->is_object());
 
       ONLY_CONTINUE_IF(std::ranges::any_of(
-          properties->as_object(), [dependencies](const auto &entry) {
+          properties->as_object(), [dependencies](const auto &entry) -> auto {
             if (!entry.second.is_object()) {
               return false;
             }
@@ -58,7 +58,7 @@ public:
     ONLY_CONTINUE_IF(required && required->is_array());
 
     ONLY_CONTINUE_IF(std::ranges::any_of(
-        required->as_array(), [dependencies](const auto &element) {
+        required->as_array(), [dependencies](const auto &element) -> auto {
           if (!element.is_string()) {
             return false;
           }
@@ -70,7 +70,7 @@ public:
 
   auto transform(JSON &schema, const Result &result) const -> void override {
     const bool is_draft_3_path{
-        std::ranges::any_of(result.locations, [](const auto &pointer) {
+        std::ranges::any_of(result.locations, [](const auto &pointer) -> auto {
           return pointer.size() == 1 && pointer.at(0).is_property() &&
                  pointer.at(0).to_property() == "properties";
         })};

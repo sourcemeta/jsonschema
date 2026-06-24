@@ -86,6 +86,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"$ref"};
   mutable std::unordered_map<JSON::String, std::optional<JSON>> resolver_cache_;
   mutable std::unordered_map<JSON::String, std::unique_ptr<SchemaFrame>>

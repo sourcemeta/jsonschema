@@ -1,5 +1,6 @@
 class NotFalse final : public SchemaTransformRule {
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string KEYWORD{"not"};
 
 public:

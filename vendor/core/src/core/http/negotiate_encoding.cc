@@ -25,7 +25,7 @@ auto http_negotiate_encoding(
 
   http_for_each_accept_entry(
       accept_encoding_header,
-      [&](const std::string_view token, const float quality) {
+      [&](const std::string_view token, const float quality) -> void {
         if (http_iequals_ascii(token, "gzip") ||
             http_iequals_ascii(token, "x-gzip")) {
           gzip_listed = true;

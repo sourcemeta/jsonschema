@@ -17,9 +17,11 @@ namespace sourcemeta::blaze {
 
 // Static keyword strings for use in DynamicContext references
 static const sourcemeta::core::JSON::String KEYWORD_EMPTY{};
+// NOLINTBEGIN(bugprone-throwing-static-initialization)
 static const sourcemeta::core::JSON::String KEYWORD_PROPERTIES{"properties"};
 static const sourcemeta::core::JSON::String KEYWORD_THEN{"then"};
 static const sourcemeta::core::JSON::String KEYWORD_ELSE{"else"};
+// NOLINTEND(bugprone-throwing-static-initialization)
 
 // Helper to create a single-element WeakPointer from a property name reference
 inline auto make_weak_pointer(const std::string &property)
@@ -284,11 +286,11 @@ inline auto find_adjacent(const Context &context,
     const auto subschema_vocabularies{
         context.frame.vocabularies(frame_entry, context.resolver)};
 
-    if (std::ranges::any_of(vocabularies,
-                            [&subschema_vocabularies](const auto &vocabulary) {
-                              return subschema_vocabularies.contains(
-                                  vocabulary);
-                            }) &&
+    if (std::ranges::any_of(
+            vocabularies,
+            [&subschema_vocabularies](const auto &vocabulary) -> auto {
+              return subschema_vocabularies.contains(vocabulary);
+            }) &&
         subschema.type() == type) {
       result.emplace_back(subschema);
     }
@@ -334,6 +336,13 @@ inline auto requires_evaluation(const Context &context,
                                 const SchemaContext &schema_context) -> bool {
   const auto &entry{static_frame_entry(context, schema_context)};
   return requires_evaluation(context, entry.pointer);
+}
+
+inline auto annotations_enabled(const Context &context,
+                                const std::string_view keyword) -> bool {
+  return context.mode == Mode::Exhaustive &&
+         (!context.tweaks.annotations.has_value() ||
+          context.tweaks.annotations.value().contains(keyword));
 }
 
 // TODO: Elevate to Core and test

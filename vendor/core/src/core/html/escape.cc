@@ -35,63 +35,64 @@ auto html_escape(std::string &text) -> void {
   }
 
   // Write escaped characters backwards to avoid overwriting unprocessed data
-  text.resize_and_overwrite(required_size,
-                            [original_size](char *buffer, std::size_t count) {
-                              auto read_position = original_size;
-                              auto write_position = count;
+  text.resize_and_overwrite(
+      required_size,
+      [original_size](char *buffer, std::size_t count) -> std::size_t {
+        auto read_position = original_size;
+        auto write_position = count;
 
-                              while (read_position > 0) {
-                                --read_position;
-                                const auto character = buffer[read_position];
+        while (read_position > 0) {
+          --read_position;
+          const auto character = buffer[read_position];
 
-                                switch (character) {
-                                  case '&':
-                                    write_position -= 5;
-                                    buffer[write_position] = '&';
-                                    buffer[write_position + 1] = 'a';
-                                    buffer[write_position + 2] = 'm';
-                                    buffer[write_position + 3] = 'p';
-                                    buffer[write_position + 4] = ';';
-                                    break;
-                                  case '<':
-                                    write_position -= 4;
-                                    buffer[write_position] = '&';
-                                    buffer[write_position + 1] = 'l';
-                                    buffer[write_position + 2] = 't';
-                                    buffer[write_position + 3] = ';';
-                                    break;
-                                  case '>':
-                                    write_position -= 4;
-                                    buffer[write_position] = '&';
-                                    buffer[write_position + 1] = 'g';
-                                    buffer[write_position + 2] = 't';
-                                    buffer[write_position + 3] = ';';
-                                    break;
-                                  case '"':
-                                    write_position -= 6;
-                                    buffer[write_position] = '&';
-                                    buffer[write_position + 1] = 'q';
-                                    buffer[write_position + 2] = 'u';
-                                    buffer[write_position + 3] = 'o';
-                                    buffer[write_position + 4] = 't';
-                                    buffer[write_position + 5] = ';';
-                                    break;
-                                  case '\'':
-                                    write_position -= 5;
-                                    buffer[write_position] = '&';
-                                    buffer[write_position + 1] = '#';
-                                    buffer[write_position + 2] = '3';
-                                    buffer[write_position + 3] = '9';
-                                    buffer[write_position + 4] = ';';
-                                    break;
-                                  default:
-                                    --write_position;
-                                    buffer[write_position] = character;
-                                }
-                              }
+          switch (character) {
+            case '&':
+              write_position -= 5;
+              buffer[write_position] = '&';
+              buffer[write_position + 1] = 'a';
+              buffer[write_position + 2] = 'm';
+              buffer[write_position + 3] = 'p';
+              buffer[write_position + 4] = ';';
+              break;
+            case '<':
+              write_position -= 4;
+              buffer[write_position] = '&';
+              buffer[write_position + 1] = 'l';
+              buffer[write_position + 2] = 't';
+              buffer[write_position + 3] = ';';
+              break;
+            case '>':
+              write_position -= 4;
+              buffer[write_position] = '&';
+              buffer[write_position + 1] = 'g';
+              buffer[write_position + 2] = 't';
+              buffer[write_position + 3] = ';';
+              break;
+            case '"':
+              write_position -= 6;
+              buffer[write_position] = '&';
+              buffer[write_position + 1] = 'q';
+              buffer[write_position + 2] = 'u';
+              buffer[write_position + 3] = 'o';
+              buffer[write_position + 4] = 't';
+              buffer[write_position + 5] = ';';
+              break;
+            case '\'':
+              write_position -= 5;
+              buffer[write_position] = '&';
+              buffer[write_position + 1] = '#';
+              buffer[write_position + 2] = '3';
+              buffer[write_position + 3] = '9';
+              buffer[write_position + 4] = ';';
+              break;
+            default:
+              --write_position;
+              buffer[write_position] = character;
+          }
+        }
 
-                              return count;
-                            });
+        return count;
+      });
 }
 
 static auto needs_escape(const std::string_view input) -> bool {

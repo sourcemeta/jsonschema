@@ -2,6 +2,7 @@
 #define SOURCEMETA_CORE_EMAIL_HELPERS_H_
 
 #include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/text.h>
 
 #include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string_view> // std::string_view
@@ -34,9 +35,7 @@ inline constexpr auto is_atext(const char character) -> bool {
     case '~':
       return true;
     default:
-      return (character >= 'A' && character <= 'Z') ||
-             (character >= 'a' && character <= 'z') ||
-             (character >= '0' && character <= '9');
+      return sourcemeta::core::is_alphanum(character);
   }
 }
 
@@ -45,13 +44,6 @@ inline constexpr auto is_qtext_smtp(const unsigned char character) -> bool {
   return (character >= 32 && character <= 33) ||
          (character >= 35 && character <= 91) ||
          (character >= 93 && character <= 126);
-}
-
-// RFC 5321 §4.1.2: Let-dig = ALPHA / DIGIT
-inline constexpr auto is_let_dig(const char character) -> bool {
-  return (character >= 'A' && character <= 'Z') ||
-         (character >= 'a' && character <= 'z') ||
-         (character >= '0' && character <= '9');
 }
 
 // RFC 5321 §4.1.3: dcontent = %d33-90 / %d94-126
@@ -63,13 +55,13 @@ inline constexpr auto is_dcontent(const unsigned char character) -> bool {
 // RFC 5321 §4.1.2: Ldh-str = *( ALPHA / DIGIT / "-" ) Let-dig
 // RFC 5321 §4.1.3: Standardized-tag = Ldh-str
 inline constexpr auto is_ldh_str(const std::string_view value) -> bool {
-  if (value.empty() || !is_let_dig(value.back())) {
+  if (value.empty() || !sourcemeta::core::is_alphanum(value.back())) {
     return false;
   }
   for (std::string_view::size_type position{0}; position + 1 < value.size();
        position += 1) {
     const auto character{value[position]};
-    if (!is_let_dig(character) && character != '-') {
+    if (!sourcemeta::core::is_alphanum(character) && character != '-') {
       return false;
     }
   }

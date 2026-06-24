@@ -87,6 +87,21 @@ auto is_under_path(const std::filesystem::path &path,
 
 /// @ingroup io
 ///
+/// Check whether a path lies under another path lexically, comparing component
+/// by component without resolving against the filesystem. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/io.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_lexically_under_path("foo/bar/baz", "foo"));
+/// ```
+SOURCEMETA_CORE_IO_EXPORT
+auto is_lexically_under_path(const std::filesystem::path &path,
+                             const std::filesystem::path &prefix) -> bool;
+
+/// @ingroup io
+///
 /// Return the portion of a path that follows a given prefix, or the path
 /// unchanged if it does not lie under the prefix. For example:
 ///

@@ -74,7 +74,7 @@ auto Configuration::applies_to(const std::filesystem::path &path) const
 
   const std::string filename{path.filename().string()};
   return std::ranges::any_of(this->extension,
-                             [&path, &filename](const auto &suffix) {
+                             [&path, &filename](const auto &suffix) -> auto {
                                if (suffix.empty()) {
                                  return path.extension().empty();
                                }

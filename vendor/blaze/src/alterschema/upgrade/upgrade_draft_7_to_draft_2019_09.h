@@ -113,22 +113,26 @@ private:
   static constexpr std::string_view VOCAB_2019_09_CONTENT_URL{
       "https://json-schema.org/draft/2019-09/vocab/content"};
 
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 12> SHADOW_EXEMPT_KEYWORDS{
       {"$schema", "$id", "title", "description", "default", "examples",
        "$comment", "readOnly", "writeOnly", "deprecated", "contentMediaType",
        "contentEncoding"}};
 
   static inline const std::array<std::string_view, 13>
+      // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
       PROMOTED_2019_09_KEYWORDS{{"$anchor", "$recursiveAnchor", "$recursiveRef",
                                  "$vocabulary", "$defs", "dependentSchemas",
                                  "dependentRequired", "unevaluatedItems",
                                  "unevaluatedProperties", "maxContains",
                                  "minContains", "contentSchema", "deprecated"}};
 
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 8> PROMOTED_DRAFT_7_KEYWORDS{
       {"$comment", "if", "then", "else", "readOnly", "writeOnly",
        "contentMediaType", "contentEncoding"}};
 
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 4> PROMOTED_DRAFT_6_KEYWORDS{
       {"const", "contains", "propertyNames", "examples"}};
 
@@ -139,9 +143,10 @@ private:
   mutable bool metaschema_synthesis_pending_{false};
 
   static auto is_shadow_exempt(const std::string_view keyword) -> bool {
-    return std::ranges::any_of(
-        SHADOW_EXEMPT_KEYWORDS,
-        [&keyword](const auto &candidate) { return candidate == keyword; });
+    return std::ranges::any_of(SHADOW_EXEMPT_KEYWORDS,
+                               [&keyword](const auto &candidate) -> auto {
+                                 return candidate == keyword;
+                               });
   }
 
   static auto is_plain_name_fragment(const std::string_view fragment) -> bool {

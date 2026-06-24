@@ -13,6 +13,8 @@ auto URI::is_absolute() const noexcept -> bool {
   return this->scheme_.has_value();
 }
 
+auto URI::is_internationalized() const noexcept -> bool { return this->iri_; }
+
 auto URI::is_urn() const -> bool {
   const auto scheme{this->scheme()};
   return scheme.has_value() && scheme.value() == "urn";

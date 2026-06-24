@@ -127,10 +127,13 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_4_URL{
       "http://json-schema.org/draft-04/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::string DRAFT_6_URL{
       "http://json-schema.org/draft-06/schema#"};
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 4> PROMOTED_KEYWORDS{
       {"const", "contains", "propertyNames", "examples"}};
 

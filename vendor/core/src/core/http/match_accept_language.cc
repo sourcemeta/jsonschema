@@ -57,7 +57,7 @@ auto http_match_accept_language(
     std::size_t candidate_specificity{0};
     http_for_each_accept_entry(
         accept_language_header,
-        [&](const std::string_view value, const float quality) {
+        [&](const std::string_view value, const float quality) -> void {
           const std::size_t specificity{language_specificity(value, candidate)};
           if (specificity == 0) {
             return;

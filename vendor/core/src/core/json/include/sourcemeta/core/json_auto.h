@@ -599,8 +599,9 @@ auto from_json(const JSON &value) -> std::optional<T> {
 /// @ingroup json
 template <json_auto_tuple_mono T> auto to_json(const T &value) -> JSON {
   auto tuple = JSON::make_array();
-  std::apply([&](const auto &element) { tuple.push_back(to_json(element)); },
-             value);
+  std::apply(
+      [&](const auto &element) -> auto { tuple.push_back(to_json(element)); },
+      value);
   return tuple;
 }
 
@@ -623,7 +624,7 @@ auto from_json(const JSON &value) -> std::optional<T> {
 template <json_auto_tuple_poly T> auto to_json(const T &value) -> JSON {
   auto tuple = JSON::make_array();
   std::apply(
-      [&tuple](const auto &...elements) {
+      [&tuple](const auto &...elements) -> auto {
         (tuple.push_back(to_json(elements)), ...);
       },
       value);
@@ -662,7 +663,7 @@ auto to_json(const T &value) -> JSON {
   auto result{JSON::make_array()};
   result.push_back(JSON{static_cast<std::int64_t>(value.index())});
   std::visit(
-      [&result](const auto &alternative) {
+      [&result](const auto &alternative) -> auto {
         result.push_back(to_json(alternative));
       },
       value);

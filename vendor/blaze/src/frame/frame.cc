@@ -18,10 +18,12 @@
 enum class AnchorType : std::uint8_t { Static, Dynamic, All };
 
 // Static keyword strings for reference pointers
+// NOLINTBEGIN(bugprone-throwing-static-initialization)
 static const std::string KEYWORD_SCHEMA{"$schema"};
 static const std::string KEYWORD_REF{"$ref"};
 static const std::string KEYWORD_RECURSIVE_REF{"$recursiveRef"};
 static const std::string KEYWORD_DYNAMIC_REF{"$dynamicRef"};
+// NOLINTEND(bugprone-throwing-static-initialization)
 
 namespace {
 
@@ -612,7 +614,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
   for (const auto &path : paths) {
     // Passing paths that overlap is undefined behavior. No path should
     // start with another one, else you are doing something wrong
-    assert(std::ranges::all_of(paths, [&path](const auto &other) {
+    assert(std::ranges::all_of(paths, [&path](const auto &other) -> bool {
       return path == other || !path.starts_with(other);
     }));
 
@@ -682,6 +684,25 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
           {entry.pointer,
            DialectAtPointer{.dialects = {entry.dialect},
                             .base_dialect = entry.base_dialect.value()}});
+
+      // A nested resource may pin a custom meta-schema inside its own
+      // containers. Cache it here, just like we do for the root, so that later
+      // vocabulary lookups (which consult this cache) can resolve it. If the
+      // same meta-schema identifier is embedded in more than one place with a
+      // different definition, that is an ambiguity we refuse to resolve
+      if (!sourcemeta::blaze::to_base_dialect(entry.dialect).has_value()) {
+        const sourcemeta::core::JSON::String dialect_key{entry.dialect};
+        const auto *embedded{sourcemeta::blaze::metaschema_try_embedded(
+            entry.subschema.get(), entry.dialect, resolver)};
+        if (embedded) {
+          const auto match{this->probed_metaschemas_.find(dialect_key)};
+          if (match == this->probed_metaschemas_.cend()) {
+            this->probed_metaschemas_.emplace(dialect_key, embedded);
+          } else if (*(match->second) != *embedded) {
+            throw_already_exists(dialect_key);
+          }
+        }
+      }
 
       // Schema identifier
       // We need to store the default_id in a local variable to ensure
@@ -1208,8 +1229,8 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
   }
 
   // A schema is standalone if all references can be resolved within itself
-  this->standalone_ =
-      std::ranges::all_of(this->references_, [&](const auto &reference) {
+  this->standalone_ = std::ranges::all_of(
+      this->references_, [&](const auto &reference) -> bool {
         assert(!reference.first.second.empty());
         assert(reference.first.second.back().is_property());
         // TODO: This check might need to be more elaborate given
@@ -1265,8 +1286,10 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
           SchemaFrame::References::key_type{SchemaReferenceType::Static,
                                             reference.first.second},
           SchemaFrame::References::mapped_type{
-              reference.second.original, *match->second.front(),
-              std::string_view{}, std::nullopt});
+              .original = reference.second.original,
+              .destination = *match->second.front(),
+              .base = std::string_view{},
+              .fragment = std::nullopt});
     }
 
     // Because we can't mutate a map as we are traversing it

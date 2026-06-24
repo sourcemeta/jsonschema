@@ -28,16 +28,17 @@ public:
     } else {
       ONLY_CONTINUE_IF(!schema.defines("minContains") &&
                        !schema.defines("maxContains"));
-      ONLY_CONTINUE_IF(!WALK_UP_IN_PLACE_APPLICATORS(
-                            root, frame, location, walker, resolver,
-                            [](const JSON &ancestor,
-                               const Vocabularies &ancestor_vocabularies) {
-                              return ancestor.defines("unevaluatedItems") &&
-                                     ancestor_vocabularies.contains(
-                                         Vocabularies::Known::
-                                             JSON_Schema_2020_12_Unevaluated);
-                            })
-                            .has_value());
+      ONLY_CONTINUE_IF(
+          !WALK_UP_IN_PLACE_APPLICATORS(
+               root, frame, location, walker, resolver,
+               [](const JSON &ancestor,
+                  const Vocabularies &ancestor_vocabularies) -> bool {
+                 return ancestor.defines("unevaluatedItems") &&
+                        ancestor_vocabularies.contains(
+                            Vocabularies::Known::
+                                JSON_Schema_2020_12_Unevaluated);
+               })
+               .has_value());
     }
 
     return true;

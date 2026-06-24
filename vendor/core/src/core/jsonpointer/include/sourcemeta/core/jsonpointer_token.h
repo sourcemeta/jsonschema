@@ -275,7 +275,7 @@ public:
 
 private:
   // We need this as a member for making WeakPointer work
-  inline static const Value::String DEFAULT_PROPERTY = "";
+  inline static const Value::String DEFAULT_PROPERTY{};
   inline static const Hash hasher;
 
   bool as_property;

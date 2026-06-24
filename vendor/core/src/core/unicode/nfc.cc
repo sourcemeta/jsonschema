@@ -61,11 +61,12 @@ auto canonical_reorder(std::u32string &buffer) -> void {
     while (end < buffer.size() && combining_class(buffer[end]) != 0) {
       end += 1;
     }
-    std::stable_sort(buffer.begin() + static_cast<std::ptrdiff_t>(index),
-                     buffer.begin() + static_cast<std::ptrdiff_t>(end),
-                     [](const char32_t left, const char32_t right) noexcept {
-                       return combining_class(left) < combining_class(right);
-                     });
+    std::stable_sort(
+        buffer.begin() + static_cast<std::ptrdiff_t>(index),
+        buffer.begin() + static_cast<std::ptrdiff_t>(end),
+        [](const char32_t left, const char32_t right) noexcept -> bool {
+          return combining_class(left) < combining_class(right);
+        });
     index = end;
   }
 }

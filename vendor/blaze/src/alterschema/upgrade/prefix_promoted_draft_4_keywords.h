@@ -64,6 +64,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 7> KEYWORDS{
       {"multipleOf", "maxProperties", "minProperties", "allOf", "anyOf",
        "oneOf", "not"}};

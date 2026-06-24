@@ -44,7 +44,7 @@ public:
         declared_types.test(std::to_underlying(JSON::Type::Integer))};
     ONLY_CONTINUE_IF(std::ranges::none_of(
         enum_value->as_array(),
-        [&declared_types, integer_matches_integral](const auto &value) {
+        [&declared_types, integer_matches_integral](const auto &value) -> auto {
           return declared_types.test(std::to_underlying(value.type())) ||
                  (integer_matches_integral && value.is_integral());
         }));

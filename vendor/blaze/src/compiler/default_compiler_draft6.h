@@ -25,7 +25,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_null(); })) {
+              [](const auto &value) -> auto { return value.is_null(); })) {
         return {};
       }
 
@@ -44,7 +44,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_boolean(); })) {
+              [](const auto &value) -> auto { return value.is_boolean(); })) {
         return {};
       }
 
@@ -82,7 +82,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_object(); })) {
+              [](const auto &value) -> auto { return value.is_object(); })) {
         return {};
       }
 
@@ -141,7 +141,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_array(); })) {
+              [](const auto &value) -> auto { return value.is_array(); })) {
         return {};
       }
 
@@ -160,7 +160,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_number(); })) {
+              [](const auto &value) -> auto { return value.is_number(); })) {
         return {};
       }
 
@@ -182,7 +182,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_integral(); })) {
+              [](const auto &value) -> auto { return value.is_integral(); })) {
         return {};
       }
 
@@ -224,7 +224,7 @@ auto compiler_draft6_validation_type(const Context &context,
           schema_context.schema.at("enum").is_array() &&
           std::ranges::all_of(
               schema_context.schema.at("enum").as_array(),
-              [](const auto &value) { return value.is_string(); })) {
+              [](const auto &value) -> auto { return value.is_string(); })) {
         return {};
       }
 

@@ -104,6 +104,7 @@ sourcemeta::blaze::Vocabularies::Vocabularies(
   }
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 auto sourcemeta::blaze::Vocabularies::contains(
     const sourcemeta::core::JSON::String &uri) const noexcept -> bool {
   if (this->unknown.has_value()) {
@@ -142,6 +143,7 @@ auto sourcemeta::blaze::Vocabularies::contains_any(
   return false;
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 auto sourcemeta::blaze::Vocabularies::insert(
     const sourcemeta::core::JSON::String &uri, bool required) noexcept -> void {
   // We NEED to allow official vocabulary string URIs here, as that's how
@@ -171,6 +173,7 @@ auto sourcemeta::blaze::Vocabularies::insert(Known vocabulary,
   assert((this->required_known & this->optional_known).none());
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 auto sourcemeta::blaze::Vocabularies::get(
     const sourcemeta::core::JSON::String &uri) const noexcept
     -> std::optional<bool> {
@@ -218,7 +221,7 @@ auto sourcemeta::blaze::Vocabularies::empty() const noexcept -> bool {
 }
 
 auto sourcemeta::blaze::Vocabularies::has_unknown() const noexcept -> bool {
-  return this->unknown.has_value() && !this->unknown.value().empty();
+  return this->unknown.has_value() && !this->unknown->empty();
 }
 
 auto sourcemeta::blaze::operator<<(std::ostream &stream,

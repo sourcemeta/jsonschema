@@ -8,22 +8,23 @@
 #include <utility>     // std::move, std::unreachable
 
 namespace {
+using namespace std::string_view_literals;
 
-const auto HASH_KTY{sourcemeta::core::JSON::Object::hash("kty")};
-const auto HASH_N{sourcemeta::core::JSON::Object::hash("n")};
-const auto HASH_E{sourcemeta::core::JSON::Object::hash("e")};
-const auto HASH_CRV{sourcemeta::core::JSON::Object::hash("crv")};
-const auto HASH_X{sourcemeta::core::JSON::Object::hash("x")};
-const auto HASH_Y{sourcemeta::core::JSON::Object::hash("y")};
-const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid")};
-const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg")};
-const auto HASH_D{sourcemeta::core::JSON::Object::hash("d")};
-const auto HASH_P{sourcemeta::core::JSON::Object::hash("p")};
-const auto HASH_Q{sourcemeta::core::JSON::Object::hash("q")};
-const auto HASH_DP{sourcemeta::core::JSON::Object::hash("dp")};
-const auto HASH_DQ{sourcemeta::core::JSON::Object::hash("dq")};
-const auto HASH_QI{sourcemeta::core::JSON::Object::hash("qi")};
-const auto HASH_OTH{sourcemeta::core::JSON::Object::hash("oth")};
+const auto HASH_KTY{sourcemeta::core::JSON::Object::hash("kty"sv)};
+const auto HASH_N{sourcemeta::core::JSON::Object::hash("n"sv)};
+const auto HASH_E{sourcemeta::core::JSON::Object::hash("e"sv)};
+const auto HASH_CRV{sourcemeta::core::JSON::Object::hash("crv"sv)};
+const auto HASH_X{sourcemeta::core::JSON::Object::hash("x"sv)};
+const auto HASH_Y{sourcemeta::core::JSON::Object::hash("y"sv)};
+const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
+const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
+const auto HASH_D{sourcemeta::core::JSON::Object::hash("d"sv)};
+const auto HASH_P{sourcemeta::core::JSON::Object::hash("p"sv)};
+const auto HASH_Q{sourcemeta::core::JSON::Object::hash("q"sv)};
+const auto HASH_DP{sourcemeta::core::JSON::Object::hash("dp"sv)};
+const auto HASH_DQ{sourcemeta::core::JSON::Object::hash("dq"sv)};
+const auto HASH_QI{sourcemeta::core::JSON::Object::hash("qi"sv)};
+const auto HASH_OTH{sourcemeta::core::JSON::Object::hash("oth"sv)};
 
 // The RSA algorithms only require an RSA key, each ECDSA algorithm is tied to a
 // specific curve (RFC 7518 Section 3.1), and the Edwards-curve algorithm

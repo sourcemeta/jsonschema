@@ -91,7 +91,7 @@ private:
     if (!type.is_array()) {
       return false;
     }
-    return std::ranges::all_of(type.as_array(), [](const auto &entry) {
+    return std::ranges::all_of(type.as_array(), [](const auto &entry) -> auto {
       return entry.is_string() && entry.to_string() != "any";
     });
   }

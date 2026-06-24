@@ -58,6 +58,7 @@ public:
   }
 
 private:
+  // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
   static inline const std::array<std::string_view, 3> KEYWORDS{
       {"prefixItems", "$dynamicAnchor", "$dynamicRef"}};
 

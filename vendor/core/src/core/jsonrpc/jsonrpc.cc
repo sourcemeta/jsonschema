@@ -2,23 +2,28 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <cstdint>  // std::int64_t
-#include <optional> // std::optional, std::nullopt
-#include <utility>  // std::move
+#include <cstdint>     // std::int64_t
+#include <optional>    // std::optional, std::nullopt
+#include <string_view> // std::string_view_literals
+#include <utility>     // std::move
 
 namespace {
+using namespace std::string_view_literals;
 
-const auto JSONRPC_HASH_ID{sourcemeta::core::JSON::Object::hash("id")};
+const auto JSONRPC_HASH_ID{sourcemeta::core::JSON::Object::hash("id"sv)};
 const auto JSONRPC_HASH_JSONRPC{
-    sourcemeta::core::JSON::Object::hash("jsonrpc")};
-const auto JSONRPC_HASH_METHOD{sourcemeta::core::JSON::Object::hash("method")};
-const auto JSONRPC_HASH_RESULT{sourcemeta::core::JSON::Object::hash("result")};
-const auto JSONRPC_HASH_ERROR{sourcemeta::core::JSON::Object::hash("error")};
-const auto JSONRPC_HASH_CODE{sourcemeta::core::JSON::Object::hash("code")};
+    sourcemeta::core::JSON::Object::hash("jsonrpc"sv)};
+const auto JSONRPC_HASH_METHOD{
+    sourcemeta::core::JSON::Object::hash("method"sv)};
+const auto JSONRPC_HASH_RESULT{
+    sourcemeta::core::JSON::Object::hash("result"sv)};
+const auto JSONRPC_HASH_ERROR{sourcemeta::core::JSON::Object::hash("error"sv)};
+const auto JSONRPC_HASH_CODE{sourcemeta::core::JSON::Object::hash("code"sv)};
 const auto JSONRPC_HASH_MESSAGE{
-    sourcemeta::core::JSON::Object::hash("message")};
-const auto JSONRPC_HASH_DATA{sourcemeta::core::JSON::Object::hash("data")};
-const auto JSONRPC_HASH_PARAMS{sourcemeta::core::JSON::Object::hash("params")};
+    sourcemeta::core::JSON::Object::hash("message"sv)};
+const auto JSONRPC_HASH_DATA{sourcemeta::core::JSON::Object::hash("data"sv)};
+const auto JSONRPC_HASH_PARAMS{
+    sourcemeta::core::JSON::Object::hash("params"sv)};
 
 } // namespace
 

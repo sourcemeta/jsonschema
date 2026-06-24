@@ -1,18 +1,11 @@
 #include <sourcemeta/core/dns.h>
 #include <sourcemeta/core/idna.h>
+#include <sourcemeta/core/text.h>
 
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
-
-// RFC 952 §B: let-dig = ALPHA / DIGIT
-// RFC 1123 §2.1: first character of a label is letter or digit
-static constexpr auto is_let_dig(const char character) -> bool {
-  return (character >= 'A' && character <= 'Z') ||
-         (character >= 'a' && character <= 'z') ||
-         (character >= '0' && character <= '9');
-}
 
 auto is_hostname(const std::string_view value) -> bool {
   // RFC 952 §B: <hname> requires at least one <name>
@@ -46,7 +39,8 @@ auto is_hostname(const std::string_view value) -> bool {
         continue;
       }
 
-      if (is_let_dig(character)) {
+      // RFC 952 §B: let-dig = ALPHA / DIGIT
+      if (is_alphanum(character)) {
         last_was_hyphen = false;
         position += 1;
         label_has_content = true;

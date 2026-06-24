@@ -58,18 +58,20 @@ public:
     const auto hash{this->hasher(value)};
     if (!this->contains(value, hash)) {
       this->data.emplace_back(value, hash);
-      std::ranges::sort(this->data, [](const auto &left, const auto &right) {
-        return left.first < right.first;
-      });
+      std::ranges::sort(this->data,
+                        [](const auto &left, const auto &right) -> bool {
+                          return left.first < right.first;
+                        });
     }
   }
   inline auto insert(string_type &&value) -> void {
     const auto hash{this->hasher(value)};
     if (!this->contains(value, hash)) {
       this->data.emplace_back(std::move(value), hash);
-      std::ranges::sort(this->data, [](const auto &left, const auto &right) {
-        return left.first < right.first;
-      });
+      std::ranges::sort(this->data,
+                        [](const auto &left, const auto &right) -> bool {
+                          return left.first < right.first;
+                        });
     }
   }
 
@@ -94,7 +96,7 @@ public:
   }
 
   [[nodiscard]] auto to_json() const -> sourcemeta::core::JSON {
-    return sourcemeta::core::to_json(this->data, [](const auto &item) {
+    return sourcemeta::core::to_json(this->data, [](const auto &item) -> auto {
       return sourcemeta::core::to_json(item.first);
     });
   }

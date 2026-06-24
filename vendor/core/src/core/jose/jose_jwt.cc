@@ -11,18 +11,19 @@
 #include <utility>     // std::move
 
 namespace {
+using namespace std::string_view_literals;
 
-const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg")};
-const auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit")};
-const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid")};
-const auto HASH_TYP{sourcemeta::core::JSON::Object::hash("typ")};
-const auto HASH_ISS{sourcemeta::core::JSON::Object::hash("iss")};
-const auto HASH_SUB{sourcemeta::core::JSON::Object::hash("sub")};
-const auto HASH_AUD{sourcemeta::core::JSON::Object::hash("aud")};
-const auto HASH_EXP{sourcemeta::core::JSON::Object::hash("exp")};
-const auto HASH_NBF{sourcemeta::core::JSON::Object::hash("nbf")};
-const auto HASH_IAT{sourcemeta::core::JSON::Object::hash("iat")};
-const auto HASH_JTI{sourcemeta::core::JSON::Object::hash("jti")};
+const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
+const auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit"sv)};
+const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
+const auto HASH_TYP{sourcemeta::core::JSON::Object::hash("typ"sv)};
+const auto HASH_ISS{sourcemeta::core::JSON::Object::hash("iss"sv)};
+const auto HASH_SUB{sourcemeta::core::JSON::Object::hash("sub"sv)};
+const auto HASH_AUD{sourcemeta::core::JSON::Object::hash("aud"sv)};
+const auto HASH_EXP{sourcemeta::core::JSON::Object::hash("exp"sv)};
+const auto HASH_NBF{sourcemeta::core::JSON::Object::hash("nbf"sv)};
+const auto HASH_IAT{sourcemeta::core::JSON::Object::hash("iat"sv)};
+const auto HASH_JTI{sourcemeta::core::JSON::Object::hash("jti"sv)};
 
 auto string_claim(const sourcemeta::core::JSON &object,
                   const sourcemeta::core::JSON::StringView name,
@@ -157,7 +158,7 @@ auto JWT::token_id() const noexcept -> std::optional<std::string_view> {
 }
 
 auto JWT::has_audience(const std::string_view audience) const noexcept -> bool {
-  const auto *member{this->payload_.try_at("aud", HASH_AUD)};
+  const auto *member{this->payload_.try_at("aud"sv, HASH_AUD)};
   if (member == nullptr) {
     return false;
   }

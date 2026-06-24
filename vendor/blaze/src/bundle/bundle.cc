@@ -49,7 +49,7 @@ auto dependencies_internal(
       found;
 
   frame.for_each_unresolved_reference([&](const auto &pointer,
-                                          const auto &reference) {
+                                          const auto &reference) -> void {
     // We don't want to report official schemas, as we can expect
     // virtually all implementations to understand them out of the box
     if (is_skippable_metaschema_reference(
@@ -278,7 +278,7 @@ auto bundle_schema(sourcemeta::core::JSON &root,
       ref_rewrites;
 
   frame.for_each_unresolved_reference([&](const auto &pointer,
-                                          const auto &reference) {
+                                          const auto &reference) -> void {
     // We don't want to bundle official schemas, as we can expect
     // virtually all implementations to understand them out of the box.
     // Depending on the bundling strategy, we may skip meta-schemas entirely
@@ -433,7 +433,7 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
   SchemaFrame initial_frame{SchemaFrame::Mode::Locations};
   initial_frame.analyse(schema, walker, resolver, default_dialect, default_id,
                         paths);
-  initial_frame.for_each_resource_uri([&bundled](const auto &uri) {
+  initial_frame.for_each_resource_uri([&bundled](const auto &uri) -> void {
     bundled.emplace(sourcemeta::core::JSON::String{uri},
                     sourcemeta::core::JSON::String{uri});
   });

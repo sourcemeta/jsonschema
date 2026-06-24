@@ -28,7 +28,8 @@ auto http_accept_includes_all(
     std::uint8_t best_specificity{0};
     http_for_each_accept_entry(
         accept_header,
-        [&](const std::string_view value, const float quality) noexcept {
+        [&](const std::string_view value,
+            const float quality) noexcept -> void {
           const std::uint8_t specificity{
               http_media_specificity(value, media_type)};
           if (specificity == 0) {

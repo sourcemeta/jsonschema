@@ -35,7 +35,7 @@ public:
   /// const sourcemeta::core::Pointer pointer;
   /// assert(pointer.empty());
   /// ```
-  GenericPointer() : data{} {}
+  GenericPointer() noexcept : data{} {}
 
   /// This constructor is the preferred way of creating a pointer.
   /// For example:
