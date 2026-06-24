@@ -14,6 +14,7 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
+#include <sourcemeta/core/yaml.h>
 
 #include <concepts>         // std::same_as, std::convertible_to
 #include <cstdint>          // std::uint64_t
@@ -1009,6 +1010,10 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const sourcemeta::core::YAMLFileParseError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::JSONFileParseError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
