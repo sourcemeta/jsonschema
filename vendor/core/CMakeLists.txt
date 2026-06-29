@@ -27,6 +27,7 @@ option(SOURCEMETA_CORE_URI "Build the Sourcemeta Core URI library" ON)
 option(SOURCEMETA_CORE_URITEMPLATE "Build the Sourcemeta Core URI Template library" ON)
 option(SOURCEMETA_CORE_JSON "Build the Sourcemeta Core JSON library" ON)
 option(SOURCEMETA_CORE_JSONPOINTER "Build the Sourcemeta Core JSON Pointer library" ON)
+option(SOURCEMETA_CORE_JSONLD "Build the Sourcemeta Core JSON-LD library" ON)
 option(SOURCEMETA_CORE_JSONL "Build the Sourcemeta Core JSONL library" ON)
 option(SOURCEMETA_CORE_YAML "Build the Sourcemeta Core YAML library" ON)
 option(SOURCEMETA_CORE_JSONRPC "Build the Sourcemeta Core JSON-RPC library" ON)
@@ -169,6 +170,10 @@ endif()
 
 if(SOURCEMETA_CORE_JSONPOINTER)
   add_subdirectory(src/core/jsonpointer)
+endif()
+
+if(SOURCEMETA_CORE_JSONLD)
+  add_subdirectory(src/core/jsonld)
 endif()
 
 if(SOURCEMETA_CORE_GZIP)
@@ -336,6 +341,10 @@ if(SOURCEMETA_CORE_TESTS)
 
   if(SOURCEMETA_CORE_JSONPOINTER)
     add_subdirectory(test/jsonpointer)
+  endif()
+
+  if(SOURCEMETA_CORE_JSONLD)
+    add_subdirectory(test/jsonld)
   endif()
 
   if(SOURCEMETA_CORE_GZIP)

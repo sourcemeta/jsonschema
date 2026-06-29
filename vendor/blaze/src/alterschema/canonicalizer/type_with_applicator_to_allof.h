@@ -434,7 +434,7 @@ public:
 
     for (const auto &typed_kw : this->typed_keywords_) {
       if (typed_kw == keyword) {
-        const Pointer old_prefix{current.concat({keyword})};
+        const Pointer old_prefix{current.concat(keyword)};
         if (this->strategy_ == Strategy::SafeExtract) {
           const Pointer new_prefix{current.concat(
               {allof_keyword, this->typed_branch_index_, keyword})};
@@ -468,7 +468,7 @@ public:
         if (keyword == applicator ||
             (this->has_if_then_else_ && std::string_view{applicator} == "if" &&
              (keyword == "then" || keyword == "else"))) {
-          const Pointer old_prefix{current.concat({keyword})};
+          const Pointer old_prefix{current.concat(keyword)};
           const Pointer new_prefix{
               current.concat({allof_keyword, index, keyword})};
           return target.rebase(old_prefix, new_prefix);

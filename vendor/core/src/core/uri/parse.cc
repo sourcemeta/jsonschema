@@ -645,6 +645,22 @@ auto URI::parse(const std::string_view input) -> void {
   }
 }
 
+auto URI::is_scheme(const std::string_view input) noexcept -> bool {
+  if (input.empty() || !is_alpha(input.front())) {
+    return false;
+  }
+  for (const auto character : input) {
+    if (!uri_is_scheme_char(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+auto URI::is_gen_delim(const char character) noexcept -> bool {
+  return uri_is_gen_delim(character);
+}
+
 auto URI::is_uri(const std::string_view input) noexcept -> bool {
   try {
     std::optional<std::string> scheme, userinfo, host, path, query, fragment;

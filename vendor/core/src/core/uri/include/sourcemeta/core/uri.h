@@ -737,6 +737,31 @@ public:
   /// ```
   static auto canonicalize(std::string_view input) -> std::string;
 
+  /// Check if the given string is a valid URI scheme per RFC 3986
+  /// (`ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )`). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URI::is_scheme("https"));
+  /// assert(!sourcemeta::core::URI::is_scheme("1https"));
+  /// assert(!sourcemeta::core::URI::is_scheme("http:"));
+  /// ```
+  [[nodiscard]] static auto is_scheme(std::string_view input) noexcept -> bool;
+
+  /// Check if the given character is a URI generic delimiter per RFC 3986
+  /// (`":" / "/" / "?" / "#" / "[" / "]" / "@"`). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::URI::is_gen_delim(':'));
+  /// assert(!sourcemeta::core::URI::is_gen_delim('a'));
+  /// ```
+  [[nodiscard]] static auto is_gen_delim(char character) noexcept -> bool;
+
   /// Check if the given string is a valid absolute URI (has a scheme) per
   /// RFC 3986 without constructing a full URI object. For example:
   ///

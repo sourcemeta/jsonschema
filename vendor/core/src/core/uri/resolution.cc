@@ -156,6 +156,34 @@ auto URI::relative_to(const URI &base) -> URI & {
     return *this;
   }
 
+  // Both URIs share the same path and differ only in their query or fragment.
+  // An empty relative path is safe when this URI carries its own query or the
+  // base has none, since resolution then will not re-inherit the base's query.
+  // Otherwise a non-empty path is required to reset the query, which is only
+  // possible when there is a path to express.
+  if (this->path_ == base.path_) {
+    const bool empty_path_safe{this->query_.has_value() ||
+                               !base.query_.has_value()};
+    if (empty_path_safe || this->path_.has_value()) {
+      this->scheme_.reset();
+      this->userinfo_.reset();
+      this->host_.reset();
+      this->port_.reset();
+      if (empty_path_safe) {
+        this->path_.reset();
+      } else {
+        // Use the last path segment, or "./" when the path has no final segment
+        // (it ends in a slash).
+        const auto &path{this->path_.value()};
+        const auto slash{path.rfind('/')};
+        auto segment{slash == std::string::npos ? path
+                                                : path.substr(slash + 1)};
+        this->path_ = segment.empty() ? std::string{"./"} : std::move(segment);
+      }
+      return *this;
+    }
+  }
+
   // If this URI doesn't have a path, we can't make it relative
   if (!this->path_.has_value()) {
     return *this;

@@ -69,7 +69,7 @@ public:
                                  const Pointer &current) const
       -> Pointer override {
     static const JSON::String KEYWORD{"extends"};
-    const auto prefix{current.concat({KEYWORD})};
+    const auto prefix{current.concat(KEYWORD)};
     if (!target.starts_with(prefix)) {
       return target;
     }
@@ -83,12 +83,12 @@ public:
         const Pointer old_prefix{
             prefix.concat({old_index, KEYWORD, inner.value()})};
         if (target.starts_with(old_prefix)) {
-          const Pointer new_prefix{prefix.concat({mapped})};
+          const Pointer new_prefix{prefix.concat(mapped)};
           return target.rebase(old_prefix, new_prefix);
         }
       } else if (outer == old_index) {
-        const Pointer old_prefix{prefix.concat({old_index})};
-        const Pointer new_prefix{prefix.concat({mapped})};
+        const Pointer old_prefix{prefix.concat(old_index)};
+        const Pointer new_prefix{prefix.concat(mapped)};
         return target.rebase(old_prefix, new_prefix);
       }
     }

@@ -138,7 +138,7 @@ public:
                                  const Pointer &current) const
       -> Pointer override {
     if (this->wrap_) {
-      const auto type_prefix{current.concat({"type"})};
+      const auto type_prefix{current.concat("type")};
       if (target.starts_with(type_prefix)) {
         return target.rebase(
             type_prefix,
@@ -146,7 +146,7 @@ public:
       }
 
       for (const auto &keyword : this->wrap_keywords_) {
-        const auto keyword_prefix{current.concat({keyword})};
+        const auto keyword_prefix{current.concat(keyword)};
         if (target.starts_with(keyword_prefix)) {
           return target.rebase(
               keyword_prefix,
@@ -162,7 +162,7 @@ public:
         continue;
       }
 
-      const auto keyword_prefix{current.concat({entry.first})};
+      const auto keyword_prefix{current.concat(entry.first)};
       if (target.starts_with(keyword_prefix)) {
         return target.rebase(
             keyword_prefix,

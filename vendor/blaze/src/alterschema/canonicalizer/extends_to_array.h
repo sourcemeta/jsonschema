@@ -35,7 +35,7 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    return target.rebase(current.concat({"extends"}),
-                         current.concat({"extends", 0}));
+    return target.rebase(current.concat("extends"),
+                         current.concat(Pointer{"extends", 0}));
   }
 };

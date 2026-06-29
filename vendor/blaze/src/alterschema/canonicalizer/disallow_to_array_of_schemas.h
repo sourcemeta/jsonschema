@@ -70,8 +70,8 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    return target.rebase(current.concat({"disallow"}),
-                         current.concat({"disallow", 0}));
+    return target.rebase(current.concat("disallow"),
+                         current.concat(Pointer{"disallow", 0}));
   }
 
 private:

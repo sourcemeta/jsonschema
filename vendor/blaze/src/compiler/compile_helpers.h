@@ -81,7 +81,7 @@ inline auto make_with_resource(const InstructionIndex type,
       dynamic_context.keyword.empty()
           ? to_pointer(dynamic_context.base_schema_location)
           : to_pointer(dynamic_context.base_schema_location)
-                .concat({dynamic_context.keyword})};
+                .concat(dynamic_context.keyword)};
   const auto extra_index{context.extra.size()};
   context.extra.push_back(
       {.relative_schema_location = schema_location,
@@ -115,7 +115,7 @@ inline auto make(const InstructionIndex type, const Context &context,
       dynamic_context.keyword.empty()
           ? to_pointer(dynamic_context.base_schema_location)
           : to_pointer(dynamic_context.base_schema_location)
-                .concat({dynamic_context.keyword})};
+                .concat(dynamic_context.keyword)};
   const auto extra_index{context.extra.size()};
   context.extra.push_back(
       {.relative_schema_location = schema_location,
@@ -259,7 +259,7 @@ inline auto find_adjacent(const Context &context,
         sourcemeta::core::to_uri(
             sourcemeta::core::to_pointer(
                 std::string{reference.fragment.value_or("")})
-                .concat({keyword}))
+                .concat(keyword))
             .resolve_from(sourcemeta::core::URI{reference.base})};
 
     // TODO: When this logic is used by

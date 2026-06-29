@@ -103,7 +103,7 @@ public:
 
     for (const auto &typed_keyword : this->typed_keywords_) {
       if (typed_keyword == keyword) {
-        const Pointer old_prefix{current.concat({keyword})};
+        const Pointer old_prefix{current.concat(keyword)};
         const std::size_t typed_index{
             static_cast<std::size_t>(std::popcount(this->applicator_indices_))};
         const Pointer new_prefix{
@@ -115,7 +115,7 @@ public:
     std::size_t index{0};
     for (const auto &applicator : APPLICATORS) {
       if (keyword == applicator) {
-        const Pointer old_prefix{current.concat({keyword})};
+        const Pointer old_prefix{current.concat(keyword)};
         const Pointer new_prefix{
             current.concat({extends_keyword, index, keyword})};
         return target.rebase(old_prefix, new_prefix);
