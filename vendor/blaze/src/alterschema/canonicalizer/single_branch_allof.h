@@ -61,7 +61,7 @@ public:
                                  const Pointer &current) const
       -> Pointer override {
     static const JSON::String KEYWORD{"allOf"};
-    const auto prefix{current.concat({KEYWORD, 0})};
+    const auto prefix{current.concat(Pointer{KEYWORD, 0})};
     if (!target.starts_with(prefix)) {
       return target;
     }

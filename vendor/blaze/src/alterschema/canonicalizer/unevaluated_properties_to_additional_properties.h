@@ -50,7 +50,7 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    return target.rebase(current.concat({"unevaluatedProperties"}),
-                         current.concat({"additionalProperties"}));
+    return target.rebase(current.concat("unevaluatedProperties"),
+                         current.concat("additionalProperties"));
   }
 };

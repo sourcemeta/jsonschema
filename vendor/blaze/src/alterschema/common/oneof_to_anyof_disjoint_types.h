@@ -94,8 +94,8 @@ public:
   rereference(const std::string_view, const Pointer &origin [[maybe_unused]],
               const Pointer &target, const Pointer &current) const
       -> Pointer override {
-    const Pointer oneof_prefix{current.concat({"oneOf"})};
-    const Pointer anyof_prefix{current.concat({"anyOf"})};
+    const Pointer oneof_prefix{current.concat("oneOf")};
+    const Pointer anyof_prefix{current.concat("anyOf")};
     return target.rebase(oneof_prefix, anyof_prefix);
   }
 };

@@ -65,9 +65,9 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    auto old_prefix{current.concat({"not", "not"})};
-    while (target.starts_with(old_prefix.concat({"not", "not"}))) {
-      old_prefix = old_prefix.concat({"not", "not"});
+    auto old_prefix{current.concat(Pointer{"not", "not"})};
+    while (target.starts_with(old_prefix.concat(Pointer{"not", "not"}))) {
+      old_prefix = old_prefix.concat(Pointer{"not", "not"});
     }
     if (!target.starts_with(old_prefix)) {
       return target;

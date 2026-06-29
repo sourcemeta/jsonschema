@@ -1146,7 +1146,7 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
         if (ref != "#") {
           throw sourcemeta::blaze::SchemaReferenceError(
               entry.id.value_or(""),
-              to_pointer(common_pointer_weak).concat({"$recursiveRef"}),
+              to_pointer(common_pointer_weak).concat("$recursiveRef"),
               "Invalid recursive reference");
         }
 

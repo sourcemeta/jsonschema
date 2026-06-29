@@ -95,14 +95,16 @@ public:
 
     const auto index{relative.at(1).to_index()};
     if (index == this->merge_from_) {
-      const Pointer old_prefix{current.concat({KEYWORD, this->merge_from_})};
-      const Pointer new_prefix{current.concat({KEYWORD, this->merge_into_})};
+      const Pointer old_prefix{
+          current.concat(Pointer{KEYWORD, this->merge_from_})};
+      const Pointer new_prefix{
+          current.concat(Pointer{KEYWORD, this->merge_into_})};
       return target.rebase(old_prefix, new_prefix);
     }
 
     if (index > this->merge_from_) {
-      const Pointer old_prefix{current.concat({KEYWORD, index})};
-      const Pointer new_prefix{current.concat({KEYWORD, index - 1})};
+      const Pointer old_prefix{current.concat(Pointer{KEYWORD, index})};
+      const Pointer new_prefix{current.concat(Pointer{KEYWORD, index - 1})};
       return target.rebase(old_prefix, new_prefix);
     }
 

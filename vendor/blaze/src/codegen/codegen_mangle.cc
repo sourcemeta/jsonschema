@@ -28,24 +28,26 @@ auto symbol_to_identifier(const std::string_view prefix,
       continue;
     }
 
-    bool first_in_segment{true};
+    bool at_word_start{true};
+    bool at_segment_start{true};
     for (const auto character : segment) {
       if (is_alpha(character)) {
-        if (first_in_segment) {
-          result += to_upper(character);
-          first_in_segment = false;
-        } else {
-          result += character;
-        }
+        result += at_word_start ? to_upper(character) : character;
+        at_word_start = false;
+        at_segment_start = false;
       } else if (is_digit(character)) {
-        if (first_in_segment) {
+        if (at_segment_start) {
           result += '_';
         }
         result += character;
-        first_in_segment = false;
+        at_word_start = false;
+        at_segment_start = false;
       } else if (character == '_' || character == '$') {
         result += character;
-        first_in_segment = false;
+        at_word_start = false;
+        at_segment_start = false;
+      } else {
+        at_word_start = true;
       }
     }
   }

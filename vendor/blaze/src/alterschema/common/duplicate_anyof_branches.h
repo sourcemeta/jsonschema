@@ -63,12 +63,12 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    const auto anyof_prefix{current.concat({"anyOf"})};
+    const auto anyof_prefix{current.concat("anyOf")};
     const auto relative{target.resolve_from(anyof_prefix)};
     const auto old_index{relative.at(0).to_index()};
     const auto new_index{this->index_mapping_.at(old_index)};
-    const Pointer old_prefix{anyof_prefix.concat({old_index})};
-    const Pointer new_prefix{anyof_prefix.concat({new_index})};
+    const Pointer old_prefix{anyof_prefix.concat(old_index)};
+    const Pointer new_prefix{anyof_prefix.concat(new_index)};
     return target.rebase(old_prefix, new_prefix);
   }
 

@@ -80,7 +80,7 @@ public:
     }
 
     const auto index{relative.at(0).to_index()};
-    return target.rebase(type_prefix.concat({index}),
+    return target.rebase(type_prefix.concat(index),
                          current.concat({"extends", index, "disallow", 0}));
   }
 

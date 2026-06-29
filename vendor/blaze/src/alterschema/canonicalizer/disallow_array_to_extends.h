@@ -63,7 +63,7 @@ public:
                                  const Pointer &target,
                                  const Pointer &current) const
       -> Pointer override {
-    const auto disallow_prefix{current.concat({"disallow"})};
+    const auto disallow_prefix{current.concat("disallow")};
     if (!target.starts_with(disallow_prefix)) {
       return target;
     }
@@ -75,7 +75,7 @@ public:
 
     const auto index{relative.at(0).to_index()};
     return target.rebase(
-        current.concat({"disallow", index}),
+        current.concat(Pointer{"disallow", index}),
         current.concat(
             {"extends", this->extends_start_ + index, "disallow", 0}));
   }

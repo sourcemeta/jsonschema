@@ -65,6 +65,23 @@ inline auto uri_is_unreserved(const char character) -> bool {
   }
 }
 
+// gen-delims = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+// See https://www.rfc-editor.org/rfc/rfc3986#section-2.2
+inline auto uri_is_gen_delim(const char character) -> bool {
+  switch (character) {
+    case URI_COLON:
+    case URI_SLASH:
+    case URI_QUESTION:
+    case URI_HASH:
+    case URI_OPEN_BRACKET:
+    case URI_CLOSE_BRACKET:
+    case URI_AT:
+      return true;
+    default:
+      return false;
+  }
+}
+
 // sub-delims = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
 // See https://www.rfc-editor.org/rfc/rfc3986#section-2.2
 inline auto uri_is_sub_delim(const char character) -> bool {

@@ -61,11 +61,11 @@ public:
       -> Pointer override {
     static const JSON::String KEYWORD{"oneOf"};
     if (this->has_unevaluated_) {
-      const auto old_prefix{current.concat({KEYWORD})};
-      const Pointer new_prefix{current.concat({"allOf"})};
+      const auto old_prefix{current.concat(KEYWORD)};
+      const Pointer new_prefix{current.concat("allOf")};
       return target.rebase(old_prefix, new_prefix);
     }
-    const auto prefix{current.concat({KEYWORD, 0})};
+    const auto prefix{current.concat(Pointer{KEYWORD, 0})};
     if (!target.starts_with(prefix)) {
       return target;
     }

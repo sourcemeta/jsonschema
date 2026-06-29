@@ -76,7 +76,7 @@ public:
                                  const Pointer &current) const
       -> Pointer override {
     for (const auto &keyword : this->wrapped_keywords_) {
-      const auto keyword_prefix{current.concat({keyword})};
+      const auto keyword_prefix{current.concat(keyword)};
       if (target.starts_with(keyword_prefix)) {
         return target.rebase(
             keyword_prefix,

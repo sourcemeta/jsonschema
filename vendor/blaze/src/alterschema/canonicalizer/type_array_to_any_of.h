@@ -125,9 +125,9 @@ public:
                                               current);
     }
 
-    const Pointer old_prefix{current.concat({keyword})};
+    const Pointer old_prefix{current.concat(keyword)};
     const Pointer new_prefix{current.concat(this->disjunctors_prefix_)
-                                 .concat({match->second, keyword})};
+                                 .concat(Pointer{match->second, keyword})};
     return target.rebase(old_prefix, new_prefix);
   }
 

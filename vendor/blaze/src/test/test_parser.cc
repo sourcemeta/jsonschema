@@ -58,17 +58,17 @@ auto TestCase::parse(
                 "`dataPath` property, but not both");
   TEST_ERROR_IF(test_case_json.defines("dataPath") &&
                     !test_case_json.at("dataPath").is_string(),
-                tracker, location.concat({"dataPath"}),
+                tracker, location.concat("dataPath"),
                 "Test case documents must set the `dataPath` property to a "
                 "string");
   TEST_ERROR_IF(test_case_json.defines("description") &&
                     !test_case_json.at("description").is_string(),
-                tracker, location.concat({"description"}),
+                tracker, location.concat("description"),
                 "If you set a test case description, it must be a string");
   TEST_ERROR_IF(!test_case_json.defines("valid"), tracker, location,
                 "Test case documents must contain a `valid` property");
   TEST_ERROR_IF(!test_case_json.at("valid").is_boolean(), tracker,
-                location.concat({"valid"}),
+                location.concat("valid"),
                 "The test case document `valid` property must be a boolean");
 
   sourcemeta::core::JSON::String description;
