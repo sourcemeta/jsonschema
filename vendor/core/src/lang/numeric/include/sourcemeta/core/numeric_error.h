@@ -6,6 +6,7 @@
 #endif
 
 #include <exception> // std::exception
+#include <stdexcept> // std::out_of_range
 
 namespace sourcemeta::core {
 
@@ -53,6 +54,16 @@ public:
   [[nodiscard]] auto what() const noexcept -> const char * override {
     return "Numeric overflow";
   }
+};
+
+/// @ingroup numeric
+/// This class represents a numeric value that falls outside the range of the
+/// target type
+class SOURCEMETA_CORE_NUMERIC_EXPORT NumericOutOfRangeError
+    : public std::out_of_range {
+public:
+  NumericOutOfRangeError()
+      : std::out_of_range{"Numeric value is out of range"} {}
 };
 
 /// @ingroup numeric

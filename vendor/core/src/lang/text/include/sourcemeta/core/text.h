@@ -13,6 +13,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::pair
+#include <vector>      // std::vector
 
 /// @defgroup text Text
 /// @brief A collection of general-purpose text manipulation utilities
@@ -475,6 +476,30 @@ auto split(const std::string_view input, const char delimiter,
     callback(next->first);
     rest = next->second;
   }
+}
+
+/// @ingroup text
+///
+/// Return the parts of `input` separated by `delimiter` as a vector, preserving
+/// empty parts. The parts are views into `input`, which must outlive them. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto parts{sourcemeta::core::split("alpha;beta;gamma", ';')};
+/// assert(parts.size() == 3);
+/// assert(parts.at(0) == "alpha");
+/// assert(parts.at(2) == "gamma");
+/// ```
+inline auto split(const std::string_view input, const char delimiter)
+    -> std::vector<std::string_view> {
+  std::vector<std::string_view> parts;
+  sourcemeta::core::split(
+      input, delimiter,
+      [&parts](const std::string_view part) -> void { parts.push_back(part); });
+  return parts;
 }
 
 /// @ingroup text

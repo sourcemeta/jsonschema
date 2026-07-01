@@ -3,12 +3,14 @@
 
 #include <sourcemeta/core/numeric_decimal.h>
 
+#include <bit>      // std::bit_cast
 #include <cassert>  // assert
 #include <cmath>    // std::modf, std::floor, std::isfinite
 #include <concepts> // std::floating_point, std::integral, std::same_as
-#include <cstdint>  // std::uint8_t, std::int64_t, std::uint64_t
+#include <cstdint>  // std::uint8_t, std::int64_t, std::uint64_t, std::uint32_t
 #include <limits>   // std::numeric_limits
-#include <utility>  // std::cmp_greater_equal, std::cmp_less_equal
+#include <type_traits> // std::conditional_t
+#include <utility>     // std::cmp_greater_equal, std::cmp_less_equal
 
 namespace sourcemeta::core {
 
@@ -370,6 +372,53 @@ constexpr auto real_digits(Real value, std::uint64_t &point_position)
 
   point_position = shifts;
   return static_cast<Integer>(std::floor(integral_part));
+}
+
+/// @ingroup numeric
+/// Compare two floating-point values for equality within a small tolerance of
+/// four units in the last place, which absorbs the rounding error a typical
+/// computation accumulates. A NaN is never equal to anything, and an infinity
+/// is equal only to the same infinity. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/numeric.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::real_equal(0.1 + 0.2, 0.3));
+/// assert(!sourcemeta::core::real_equal(1.0, 2.0));
+/// ```
+template <std::floating_point Real>
+  requires(sizeof(Real) == sizeof(std::uint32_t) ||
+           sizeof(Real) == sizeof(std::uint64_t))
+auto real_equal(const Real left, const Real right) -> bool {
+  using Bits = std::conditional_t<sizeof(Real) == sizeof(std::uint32_t),
+                                  std::uint32_t, std::uint64_t>;
+
+  // A NaN equals nothing and an infinity equals only the same infinity, both
+  // handled exactly here. Only finite values fall through to the tolerance
+  // below, which would otherwise treat the largest finite value and infinity as
+  // equal because their encodings are adjacent
+  if (!std::isfinite(left) || !std::isfinite(right)) {
+    return left == right;
+  }
+
+  // Map the sign-and-magnitude bit pattern to a biased ordering in which
+  // adjacent representable values differ by one, so their distance counts the
+  // units in the last place between them
+  constexpr Bits sign_bit{Bits{1} << (8 * sizeof(Bits) - 1)};
+  const Bits left_bits{std::bit_cast<Bits>(left)};
+  const Bits right_bits{std::bit_cast<Bits>(right)};
+  const Bits left_biased{(sign_bit & left_bits) != 0
+                             ? static_cast<Bits>(~left_bits + Bits{1})
+                             : static_cast<Bits>(sign_bit | left_bits)};
+  const Bits right_biased{(sign_bit & right_bits) != 0
+                              ? static_cast<Bits>(~right_bits + Bits{1})
+                              : static_cast<Bits>(sign_bit | right_bits)};
+  constexpr Bits maximum_units_in_last_place{4};
+  return (left_biased >= right_biased
+              ? left_biased - right_biased
+              : right_biased - left_biased) <= maximum_units_in_last_place;
 }
 
 } // namespace sourcemeta::core

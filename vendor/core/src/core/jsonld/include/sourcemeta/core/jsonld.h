@@ -7,6 +7,7 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonld_error.h>
+#include <sourcemeta/core/jsonld_materialize.h>
 
 #include <cstdint>    // std::uint8_t
 #include <functional> // std::function

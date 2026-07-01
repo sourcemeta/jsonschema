@@ -63,10 +63,6 @@ if(NOT APPLE)
   set(CMAKE_INSTALL_RPATH $ORIGIN)
 endif()
 
-# Delay GoogleTest discovery until before running the tests
-# See https://discourse.cmake.org/t/default-value-for-new-discovery-mode-option-for-gtest-discover-tests/1422
-set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
-
 # Always use folders in IDE
 # See https://cmake.org/cmake/help/latest/prop_gbl/USE_FOLDERS.html
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -116,7 +112,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 # Turn on POSIX.1-2008 compatibility on MSYS2
-# At least GoogleTest does not seem to compile without this
+# Some projects do not seem to compile without this
 if(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
   add_compile_definitions(_POSIX_C_SOURCE=200809L)
 endif()
