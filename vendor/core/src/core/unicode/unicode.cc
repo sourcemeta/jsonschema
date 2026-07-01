@@ -56,6 +56,30 @@ auto utf8_decode_sequence(const std::uint8_t lead, const std::uint8_t size,
   return code_point;
 }
 
+// Append the UTF-8 byte sequence for `codepoint` by magnitude, without
+// validating that it is a Unicode scalar value. A surrogate falls into the
+// three-byte branch and produces its (ill-formed) WTF-8 encoding. The codepoint
+// must be within the Unicode codespace, otherwise the four-byte branch would
+// overflow the lead byte.
+auto append_utf8(const char32_t codepoint, std::string &output) -> void {
+  assert(codepoint <= 0x10FFFF);
+  if (codepoint < 0x80) {
+    output.push_back(static_cast<char>(codepoint));
+  } else if (codepoint < 0x800) {
+    output.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
+    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  } else if (codepoint < 0x10000) {
+    output.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
+    output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  } else {
+    output.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
+    output.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+    output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+  }
+}
+
 } // namespace
 
 auto codepoint_to_utf8(const char32_t codepoint, std::ostream &output) -> void {
@@ -79,26 +103,28 @@ auto codepoint_to_utf8(const char32_t codepoint, std::ostream &output) -> void {
 
 auto codepoint_to_utf8(const char32_t codepoint, std::string &output) -> void {
   assert(is_valid_codepoint(codepoint));
-  if (codepoint < 0x80) {
-    output.push_back(static_cast<char>(codepoint));
-  } else if (codepoint < 0x800) {
-    output.push_back(static_cast<char>(0xC0 | (codepoint >> 6)));
-    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
-  } else if (codepoint < 0x10000) {
-    output.push_back(static_cast<char>(0xE0 | (codepoint >> 12)));
-    output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
-    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
-  } else {
-    output.push_back(static_cast<char>(0xF0 | (codepoint >> 18)));
-    output.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
-    output.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
-    output.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
-  }
+  append_utf8(codepoint, output);
 }
 
 auto codepoint_to_utf8(const char32_t codepoint) -> std::string {
   std::string output;
   codepoint_to_utf8(codepoint, output);
+  return output;
+}
+
+auto utf32_to_utf8(const std::u32string_view input) -> std::string {
+  std::string output;
+  for (const auto codepoint : input) {
+    codepoint_to_utf8(codepoint, output);
+  }
+  return output;
+}
+
+auto utf32_to_utf8_lenient(const std::u32string_view input) -> std::string {
+  std::string output;
+  for (const auto codepoint : input) {
+    append_utf8(codepoint, output);
+  }
   return output;
 }
 

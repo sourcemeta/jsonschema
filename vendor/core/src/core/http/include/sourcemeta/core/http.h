@@ -155,6 +155,26 @@ auto http_from_date(const std::string_view value) noexcept
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup http
+/// Read the `max-age` response directive from a `Cache-Control` header value
+/// per RFC 9111 §5.2.2.1. Returns an empty value when the directive is absent
+/// or malformed. A value larger than the cache can represent saturates to
+/// `2147483648` seconds as mandated by RFC 9111 §1.2.2. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+/// #include <chrono>
+///
+/// const auto max_age{sourcemeta::core::http_cache_control_max_age(
+///     "public, max-age=600")};
+/// assert(max_age.has_value());
+/// assert(max_age.value() == std::chrono::seconds{600});
+/// ```
+SOURCEMETA_CORE_HTTP_EXPORT
+auto http_cache_control_max_age(const std::string_view cache_control) noexcept
+    -> std::optional<std::chrono::seconds>;
+
+/// @ingroup http
 /// A typed RFC 8288 §3 link-value. The caller owns the backing storage for
 /// every field, must URI-escape `target`, and must ensure parameter values are
 /// valid `quoted-string` content.

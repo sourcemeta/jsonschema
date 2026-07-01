@@ -721,11 +721,19 @@ auto Decimal::to_uint32() const -> std::uint32_t {
 }
 
 auto Decimal::to_float() const -> float {
-  return std::stof(this->to_scientific_string());
+  try {
+    return std::stof(this->to_scientific_string());
+  } catch (const std::out_of_range &) {
+    throw NumericOutOfRangeError{};
+  }
 }
 
 auto Decimal::to_double() const -> double {
-  return std::stod(this->to_scientific_string());
+  try {
+    return std::stod(this->to_scientific_string());
+  } catch (const std::out_of_range &) {
+    throw NumericOutOfRangeError{};
+  }
 }
 
 auto Decimal::is_zero() const -> bool {

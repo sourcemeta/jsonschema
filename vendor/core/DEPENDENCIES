@@ -6,7 +6,6 @@ uritemplate-test https://github.com/uri-templates/uritemplate-test 1eb27ab4462b9
 pyca-cryptography https://github.com/pyca/cryptography 9747d06e83764e7f1ea4c04daf134cb8f861700b
 wycheproof https://github.com/C2SP/wycheproof 6d7cccd0fcb1917368579adeeac10fe802f1b521
 pcre2 https://github.com/PCRE2Project/pcre2 pcre2-10.47
-googletest https://github.com/google/googletest a7f443b80b105f940225332ed3c31f2790092f47
 googlebenchmark https://github.com/google/benchmark 378fe693a1ef51500db21b11ff05a8018c5f0e55
 libdeflate https://github.com/ebiggers/libdeflate v1.25
 unicodetools https://github.com/unicode-org/unicodetools final-17.0-20250910

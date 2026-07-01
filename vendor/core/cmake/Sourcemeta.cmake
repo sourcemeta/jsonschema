@@ -12,7 +12,7 @@ include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/executable.cmake")
 include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/clang-format.cmake")
 include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/shellcheck.cmake")
 include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/doxygen.cmake")
-include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/googletest.cmake")
+include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/test.cmake")
 include("${SOURCEMETA_UTILITIES_DIRECTORY}/targets/googlebenchmark.cmake")
 include("${SOURCEMETA_UTILITIES_DIRECTORY}/clang-tidy.cmake")
 

@@ -194,7 +194,8 @@ auto compiler_2019_09_applicator_contains(const Context &context,
                                           const Instructions &current)
     -> Instructions {
   return compiler_2019_09_applicator_contains_with_options(
-      context, schema_context, dynamic_context, current, false, false);
+      context, schema_context, dynamic_context, current,
+      annotations_collected(context), false);
 }
 
 auto compiler_2019_09_applicator_additionalproperties(
@@ -203,8 +204,7 @@ auto compiler_2019_09_applicator_additionalproperties(
 
     -> Instructions {
   return compiler_draft3_applicator_additionalproperties_with_options(
-      context, schema_context, dynamic_context,
-      context.mode == Mode::Exhaustive,
+      context, schema_context, dynamic_context, annotations_collected(context),
       requires_evaluation(context, schema_context));
 }
 
@@ -222,12 +222,11 @@ auto compiler_2019_09_applicator_items(const Context &context,
   if (schema_context.schema.at(dynamic_context.keyword).is_array()) {
     return compiler_draft3_applicator_items_with_options(
         context, schema_context, dynamic_context,
-        context.mode == Mode::Exhaustive, track);
+        annotations_collected(context), track);
   }
 
   return compiler_draft3_applicator_items_with_options(
-      context, schema_context, dynamic_context,
-      context.mode == Mode::Exhaustive,
+      context, schema_context, dynamic_context, annotations_collected(context),
       track && !schema_context.schema.defines("unevaluatedItems"));
 }
 
@@ -243,8 +242,7 @@ auto compiler_2019_09_applicator_additionalitems(
       })};
 
   return compiler_draft3_applicator_additionalitems_with_options(
-      context, schema_context, dynamic_context,
-      context.mode == Mode::Exhaustive,
+      context, schema_context, dynamic_context, annotations_collected(context),
       track && !schema_context.schema.defines("unevaluatedItems"));
 }
 
@@ -434,7 +432,7 @@ auto compiler_2019_09_applicator_properties(
     -> Instructions {
   return compiler_draft3_applicator_properties_with_options(
       context, schema_context, dynamic_context, current,
-      context.mode == Mode::Exhaustive,
+      annotations_collected(context),
       requires_evaluation(context, schema_context));
 }
 
@@ -443,8 +441,7 @@ auto compiler_2019_09_applicator_patternproperties(
     const DynamicContext &dynamic_context, const Instructions &)
     -> Instructions {
   return compiler_draft3_applicator_patternproperties_with_options(
-      context, schema_context, dynamic_context,
-      context.mode == Mode::Exhaustive,
+      context, schema_context, dynamic_context, annotations_collected(context),
       requires_evaluation(context, schema_context));
 }
 

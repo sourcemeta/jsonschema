@@ -614,7 +614,8 @@ auto compiler_draft3_applicator_properties_with_options(
   auto properties{compile_properties(context, schema_context,
                                      effective_dynamic_context, current)};
 
-  if (context.mode == Mode::FastValidation && !required.empty() &&
+  if (!emit_annotation && context.mode == Mode::FastValidation &&
+      !required.empty() &&
       schema_context.schema.defines("additionalProperties") &&
       schema_context.schema.at("additionalProperties").is_boolean() &&
       !schema_context.schema.at("additionalProperties").to_boolean() &&
@@ -689,7 +690,8 @@ auto compiler_draft3_applicator_properties_with_options(
   }
 
   auto attempt_object_fusion{context.mode == Mode::FastValidation &&
-                             !annotate && !track_evaluation && assume_object};
+                             !emit_annotation && !track_evaluation &&
+                             assume_object};
   if (attempt_object_fusion) {
     for (const auto &entry : schema_context.schema.as_object()) {
       const auto &keyword{entry.first};
@@ -1220,7 +1222,8 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     const auto required{required_properties(schema_context)};
     if (is_closed_properties_required(schema_context.schema, required) &&
         (required.size() > 1 ||
-         properties_enforce_closed_object(context, schema_context))) {
+         (properties_enforce_closed_object(context, schema_context) &&
+          !annotations_enabled(context, "properties")))) {
       return {};
     }
   }
@@ -1586,8 +1589,9 @@ auto compiler_draft3_applicator_additionalitems_from_cursor(
   Instructions children;
 
   if (!subchildren.empty()) {
-    if (context.mode == Mode::FastValidation && cursor == 0 && !annotate &&
-        !track_evaluation && is_integer_bounded_pattern(subchildren)) {
+    if (context.mode == Mode::FastValidation && cursor == 0 &&
+        !emit_annotation && !track_evaluation &&
+        is_integer_bounded_pattern(subchildren)) {
       children.push_back(
           make(sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded,
                context, schema_context, dynamic_context,

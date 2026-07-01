@@ -141,6 +141,7 @@ auto compiler_draft4_applicator_anyof(const Context &context,
   }
 
   const auto requires_exhaustive{context.mode == Mode::Exhaustive ||
+                                 annotations_collected(context) ||
                                  requires_evaluation(context, schema_context)};
 
   return {make(sourcemeta::blaze::InstructionIndex::LogicalOr, context,
@@ -171,6 +172,7 @@ auto compiler_draft4_applicator_oneof(const Context &context,
   }
 
   const auto requires_exhaustive{context.mode == Mode::Exhaustive ||
+                                 annotations_collected(context) ||
                                  requires_evaluation(context, schema_context)};
 
   return {make(sourcemeta::blaze::InstructionIndex::LogicalXor, context,
