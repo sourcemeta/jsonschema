@@ -23,6 +23,8 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_IO_EXPORT TemporaryDirectory {
 public:
+  /// Create a uniquely-named temporary directory under the given parent using
+  /// the given name prefix.
   TemporaryDirectory(const std::filesystem::path &parent,
                      const std::string_view prefix);
   ~TemporaryDirectory();
@@ -32,6 +34,7 @@ public:
   TemporaryDirectory(TemporaryDirectory &&) = delete;
   auto operator=(TemporaryDirectory &&) -> TemporaryDirectory & = delete;
 
+  /// The path to the temporary directory.
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path &;
 
 private:

@@ -27,8 +27,11 @@ namespace sourcemeta::core {
 /// @ingroup mcp
 /// The supported MCP protocol revisions.
 enum class MCPProtocolVersion : std::uint8_t {
+  /// The MCP 2025-03-26 protocol revision.
   V_2025_03_26,
+  /// The MCP 2025-06-18 protocol revision.
   V_2025_06_18,
+  /// The MCP 2025-11-25 protocol revision.
   V_2025_11_25,
 };
 

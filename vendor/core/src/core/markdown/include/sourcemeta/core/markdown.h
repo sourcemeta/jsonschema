@@ -24,9 +24,10 @@ namespace sourcemeta::core {
 /// Convert a Markdown string to an HTML fragment using GitHub Flavored
 /// Markdown (GFM) with all standard extensions enabled (tables, autolinks,
 /// strikethrough, tag filtering, and task lists). Raw HTML and dangerous
-/// links in the input pass through unchanged by default, so the result is not
-/// safe to render from untrusted input. Enabling safe mode suppresses raw HTML
-/// and strips unsafe links. For example:
+/// links are suppressed by default, so the result is safe to render from
+/// untrusted input. Passing a false safe argument lets raw HTML and unsafe
+/// links pass through unchanged, which must only be done for trusted input.
+/// For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/markdown.h>
@@ -37,7 +38,7 @@ namespace sourcemeta::core {
 /// assert(result == "<p>Hello <strong>world</strong></p>\n");
 /// ```
 SOURCEMETA_CORE_MARKDOWN_EXPORT
-auto markdown_to_html(const std::string_view input, const bool safe = false)
+auto markdown_to_html(const std::string_view input, const bool safe = true)
     -> std::string;
 
 } // namespace sourcemeta::core

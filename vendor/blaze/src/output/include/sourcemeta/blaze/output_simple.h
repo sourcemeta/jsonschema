@@ -103,6 +103,17 @@ public:
     return this->annotations_;
   }
 
+  /// Move out the collected error entries, leaving this output empty. Useful to
+  /// take ownership of the trace without copying when the output is no longer
+  /// needed
+  [[nodiscard]] auto release() && -> container_type {
+    auto result{std::move(this->output)};
+    // A moved-from container is left in a valid but unspecified state, so
+    // clear it to honor the documented empty postcondition portably
+    this->output.clear();
+    return result;
+  }
+
   // NOLINTNEXTLINE(bugprone-exception-escape)
   struct Location {
     auto operator<(const Location &other) const noexcept -> bool {

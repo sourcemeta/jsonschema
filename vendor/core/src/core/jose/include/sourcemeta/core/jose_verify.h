@@ -24,11 +24,17 @@ namespace sourcemeta::core {
 /// The claim validation errors that claim checking can return, one per check
 /// performed rather than an exhaustive list of registered claims.
 enum class JWTClaimError : std::uint8_t {
+  /// The issuer claim is missing or does not match the expected value.
   Issuer,
+  /// The subject claim is missing or does not match the expected value.
   Subject,
+  /// The audience claim is missing or does not contain the expected value.
   Audience,
+  /// The expiration time claim is missing or the token has expired.
   Expiration,
+  /// The not-before time claim is malformed or lies in the future.
   NotBefore,
+  /// The issued-at time claim is malformed or lies in the future.
   IssuedAt
 };
 
@@ -120,15 +126,25 @@ auto jwt_verify_signature(const JWT &token, const JWK &key) -> bool;
 /// The steps of full token verification that can fail, in the order they are
 /// evaluated.
 enum class JWTVerificationError : std::uint8_t {
+  /// The token's algorithm is missing or absent from the allow-list.
   AlgorithmNotAllowed,
+  /// No key in the set could be selected or verified the signature.
   UnknownKey,
+  /// The named key was found but its signature did not verify.
   Signature,
+  /// The token type does not match the expected media type.
   Type,
+  /// The issuer claim is missing or does not match the expected value.
   Issuer,
+  /// The subject claim is missing or does not match the expected value.
   Subject,
+  /// The audience claim is missing or does not contain the expected value.
   Audience,
+  /// The expiration time claim is missing or the token has expired.
   Expiration,
+  /// The not-before time claim is malformed or lies in the future.
   NotBefore,
+  /// The issued-at time claim is malformed or lies in the future.
   IssuedAt
 };
 

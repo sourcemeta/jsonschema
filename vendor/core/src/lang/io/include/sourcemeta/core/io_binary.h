@@ -29,6 +29,7 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_IO_EXPORT BinaryWriter {
 public:
+  /// Construct a writer over the given output stream.
   BinaryWriter(std::ostream &stream) noexcept;
 
   // Prevent copying, as this class is tied to a stream resource
@@ -37,13 +38,19 @@ public:
   auto operator=(const BinaryWriter &) -> BinaryWriter & = delete;
   auto operator=(BinaryWriter &&) -> BinaryWriter & = delete;
 
+  /// Write a single byte.
   auto put_byte(const std::uint8_t value) -> void;
+  /// Write a 16-bit unsigned integer.
   auto put_word(const std::uint16_t value) -> void;
+  /// Write a 32-bit unsigned integer.
   auto put_dword(const std::uint32_t value) -> void;
+  /// Write a 64-bit unsigned integer.
   auto put_qword(const std::uint64_t value) -> void;
 
+  /// Write a raw sequence of bytes.
   auto put_bytes(const std::byte *data, const std::size_t size) -> void;
 
+  /// The number of bytes written so far.
   [[nodiscard]] auto position() const -> std::size_t;
 
 private:
@@ -69,7 +76,9 @@ private:
 /// ```
 class SOURCEMETA_CORE_IO_EXPORT BinaryReader {
 public:
+  /// Construct a reader over the given file view.
   BinaryReader(const FileView &view) noexcept;
+  /// Construct a reader over the given input stream.
   BinaryReader(std::istream &stream) noexcept;
 
   // Prevent copying, as this class is tied to an input resource
@@ -78,13 +87,19 @@ public:
   auto operator=(const BinaryReader &) -> BinaryReader & = delete;
   auto operator=(BinaryReader &&) -> BinaryReader & = delete;
 
+  /// Read a single byte.
   [[nodiscard]] auto get_byte() -> std::uint8_t;
+  /// Read a 16-bit unsigned integer.
   [[nodiscard]] auto get_word() -> std::uint16_t;
+  /// Read a 32-bit unsigned integer.
   [[nodiscard]] auto get_dword() -> std::uint32_t;
+  /// Read a 64-bit unsigned integer.
   [[nodiscard]] auto get_qword() -> std::uint64_t;
 
+  /// Read a raw sequence of bytes.
   auto get_bytes(std::byte *destination, const std::size_t size) -> void;
 
+  /// The current cursor position in bytes.
   [[nodiscard]] auto position() const -> std::size_t;
 
   /// Move the cursor to `position`.

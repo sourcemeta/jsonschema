@@ -1,11 +1,13 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_ECC_H_
 #define SOURCEMETA_CORE_CRYPTO_ECC_H_
 
-// Short Weierstrass elliptic curve arithmetic over the NIST prime curves
-// for the reference signature verification backend. Points are kept in
-// Jacobian coordinates so that scalar multiplication needs a single modular
-// inversion at the end rather than one per step. Constant time execution is
-// not required, since verification consumes only public inputs
+// Short Weierstrass elliptic curve arithmetic over the NIST prime curves for
+// the reference signature backend. Verification keeps points in Jacobian
+// coordinates so that scalar multiplication needs a single modular inversion at
+// the end, and consumes only public inputs, so it stays variable time. Signing
+// uses the constant-time scalar multiplication below, a fixed-length ladder
+// over the complete projective formula evaluated with the constant-time field
+// layer, so it does not depend on the secret scalar
 
 #include "crypto_bignum.h"
 
@@ -502,6 +504,102 @@ inline auto point_affine_x(const JacobianPoint &point,
   const auto z_inverse{bignum_mod_inverse(point.z, curve.prime)};
   const auto z_inverse_squared{field_square(z_inverse, curve)};
   return field_mod_multiply(point.x, z_inverse_squared, curve);
+}
+
+inline auto point_conditional_select(const bool condition,
+                                     const JacobianPoint &when_true,
+                                     const JacobianPoint &when_false) noexcept
+    -> JacobianPoint {
+  return {.x = bignum_conditional_select(condition, when_true.x, when_false.x),
+          .y = bignum_conditional_select(condition, when_true.y, when_false.y),
+          .z = bignum_conditional_select(condition, when_true.z, when_false.z)};
+}
+
+// Complete projective point addition for the prime-order NIST curves, whose
+// coefficient a is negative three (Renes, Costello, and Batina 2016, Algorithm
+// 4). It has no exceptional cases, so the signing ladder needs no
+// secret-dependent branch, and it also doubles, so one routine serves both
+// ladder steps. Coordinates here are projective, so the affine point is X / Z
+inline auto point_complete_add(const JacobianPoint &left,
+                               const JacobianPoint &right,
+                               const Bignum &coefficient_b,
+                               const BarrettContext &field) noexcept
+    -> JacobianPoint {
+  auto t0{field_mod_multiply_ct(left.x, right.x, field)};
+  auto t1{field_mod_multiply_ct(left.y, right.y, field)};
+  auto t2{field_mod_multiply_ct(left.z, right.z, field)};
+  auto t3{field_add_ct(left.x, left.y, field)};
+  auto t4{field_add_ct(right.x, right.y, field)};
+  t3 = field_mod_multiply_ct(t3, t4, field);
+  t4 = field_add_ct(t0, t1, field);
+  t3 = field_subtract_ct(t3, t4, field);
+  t4 = field_add_ct(left.y, left.z, field);
+  auto x3{field_add_ct(right.y, right.z, field)};
+  t4 = field_mod_multiply_ct(t4, x3, field);
+  x3 = field_add_ct(t1, t2, field);
+  t4 = field_subtract_ct(t4, x3, field);
+  x3 = field_add_ct(left.x, left.z, field);
+  auto y3{field_add_ct(right.x, right.z, field)};
+  x3 = field_mod_multiply_ct(x3, y3, field);
+  y3 = field_add_ct(t0, t2, field);
+  y3 = field_subtract_ct(x3, y3, field);
+  auto z3{field_mod_multiply_ct(coefficient_b, t2, field)};
+  x3 = field_subtract_ct(y3, z3, field);
+  z3 = field_add_ct(x3, x3, field);
+  x3 = field_add_ct(x3, z3, field);
+  z3 = field_subtract_ct(t1, x3, field);
+  x3 = field_add_ct(t1, x3, field);
+  y3 = field_mod_multiply_ct(coefficient_b, y3, field);
+  t1 = field_add_ct(t2, t2, field);
+  t2 = field_add_ct(t1, t2, field);
+  y3 = field_subtract_ct(y3, t2, field);
+  y3 = field_subtract_ct(y3, t0, field);
+  t1 = field_add_ct(y3, y3, field);
+  y3 = field_add_ct(t1, y3, field);
+  t1 = field_add_ct(t0, t0, field);
+  t0 = field_add_ct(t1, t0, field);
+  t0 = field_subtract_ct(t0, t2, field);
+  t1 = field_mod_multiply_ct(t4, y3, field);
+  t2 = field_mod_multiply_ct(t0, y3, field);
+  y3 = field_mod_multiply_ct(x3, z3, field);
+  y3 = field_add_ct(y3, t2, field);
+  x3 = field_mod_multiply_ct(t3, x3, field);
+  x3 = field_subtract_ct(x3, t1, field);
+  z3 = field_mod_multiply_ct(t4, z3, field);
+  t1 = field_mod_multiply_ct(t3, t0, field);
+  z3 = field_add_ct(z3, t1, field);
+  return {.x = x3, .y = y3, .z = z3};
+}
+
+// For the signing path, where the scalar is the secret nonce: a fixed-length
+// double-and-add-always ladder over the complete formula with a masked
+// selection, so neither the per-bit branch nor the field arithmetic underneath
+// depends on the scalar. The input point and the result are projective
+inline auto point_scalar_multiply_constant_time(
+    const Bignum &scalar, const JacobianPoint &point,
+    const EllipticCurveParameters &curve) -> JacobianPoint {
+  const auto field{barrett_context(curve.prime)};
+  JacobianPoint result{.x = Bignum{}, .y = bignum_from_u64(1), .z = Bignum{}};
+  const auto scalar_bits{bignum_bit_length(curve.order)};
+  for (std::size_t index = scalar_bits; index > 0; --index) {
+    result = point_complete_add(result, result, curve.coefficient_b, field);
+    const auto sum{
+        point_complete_add(result, point, curve.coefficient_b, field)};
+    result = point_conditional_select(bignum_get_bit_fixed(scalar, index - 1),
+                                      sum, result);
+  }
+
+  return result;
+}
+
+inline auto point_affine_x_constant_time(const JacobianPoint &point,
+                                         const EllipticCurveParameters &curve)
+    -> Bignum {
+  const auto field{barrett_context(curve.prime)};
+  const auto z_inverse{field_inverse_ct(point.z, field)};
+  auto result{field_mod_multiply_ct(point.x, z_inverse, field)};
+  bignum_normalize(result);
+  return result;
 }
 
 // Whether the affine point satisfies y^2 = x^3 + a*x + b (mod p)

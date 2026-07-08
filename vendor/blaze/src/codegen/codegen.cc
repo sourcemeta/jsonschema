@@ -1,5 +1,5 @@
-#include <sourcemeta/blaze/alterschema.h>
 #include <sourcemeta/blaze/bundle.h>
+#include <sourcemeta/blaze/canonicalizer.h>
 #include <sourcemeta/blaze/codegen.h>
 #include <sourcemeta/blaze/frame.h>
 
@@ -70,15 +70,8 @@ auto compile(const sourcemeta::core::JSON &input,
   // (2) Canonicalize the schema for easier analysis
   // --------------------------------------------------------------------------
 
-  sourcemeta::blaze::SchemaTransformer canonicalizer;
-  sourcemeta::blaze::add(canonicalizer,
-                         sourcemeta::blaze::AlterSchemaMode::Canonicalizer);
-  [[maybe_unused]] const auto canonicalized{canonicalizer.apply(
-      schema, walker, resolver,
-      [](const auto &, const auto, const auto, const auto &,
-         [[maybe_unused]] const auto applied) -> auto { assert(applied); },
-      default_dialect, default_id)};
-  assert(canonicalized.first);
+  sourcemeta::blaze::canonicalize(schema, walker, resolver, default_dialect,
+                                  default_id);
 
   // --------------------------------------------------------------------------
   // (3) Frame the resulting schema with instance location information

@@ -86,6 +86,10 @@ struct alignas(8) SerializedNode {
   std::array<std::uint8_t, 6> padding2;
 };
 
+// The nodes follow the header contiguously, so the header size must be a
+// multiple of the node alignment for the nodes to land on an aligned offset
+static_assert(sizeof(RouterHeader) % alignof(SerializedNode) == 0);
+
 inline auto
 finalize_match(const URITemplateRouter::Identifier otherwise_context,
                const URITemplateRouter::Identifier identifier,
@@ -530,7 +534,19 @@ URITemplateRouterView::URITemplateRouterView(
 
 URITemplateRouterView::URITemplateRouterView(const std::uint8_t *data,
                                              const std::size_t size)
-    : data_{data}, size_{size} {}
+    : data_{data}, size_{size} {
+  // The header and serialized nodes are read through over-aligned types, so an
+  // unaligned external buffer would make those reads undefined. Keep the
+  // zero-copy path when the caller's buffer is already aligned, and otherwise
+  // mirror it into aligned storage that outlives the view
+  if (data != nullptr && size > 0 &&
+      (reinterpret_cast<std::uintptr_t>(data) % alignof(SerializedNode)) != 0) {
+    this->owned_.resize(size / sizeof(std::uint64_t) +
+                        (size % sizeof(std::uint64_t) != 0 ? 1 : 0));
+    std::memcpy(this->owned_.data(), data, size);
+    this->data_ = reinterpret_cast<const std::uint8_t *>(this->owned_.data());
+  }
+}
 
 URITemplateRouterView::~URITemplateRouterView() = default;
 

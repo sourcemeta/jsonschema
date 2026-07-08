@@ -14,11 +14,7 @@
 #include <sourcemeta/blaze/foundation_walker.h>
 // NOLINTEND(misc-include-cleaner)
 
-#include <cstdint>     // std::uint8_t
-#include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt
-#include <set>         // std::set
-#include <string>      // std::string
 #include <string_view> // std::string_view
 
 /// @defgroup foundation Foundation
@@ -66,46 +62,6 @@ auto to_string(const SchemaBaseDialect base_dialect) -> std::string_view;
 SOURCEMETA_BLAZE_FOUNDATION_EXPORT
 auto to_base_dialect(const std::string_view base_dialect)
     -> std::optional<SchemaBaseDialect>;
-
-/// @ingroup foundation
-///
-/// Calculate the priority of a keyword that determines the ordering in which a
-/// JSON Schema implementation should evaluate keyword on a subschema. It does
-/// so based on the keyword dependencies expressed in the schema walker. The
-/// higher the priority, the more the evaluation of such keyword must be
-/// delayed.
-///
-/// For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/json.h>
-/// #include <sourcemeta/blaze/foundation.h>
-/// #include <cassert>
-///
-/// const sourcemeta::core::JSON document =
-///   sourcemeta::core::parse_json(R"JSON({
-///   "$schema": "https://json-schema.org/draft/2020-12/schema",
-///   "prefixItems": [ true, true ],
-///   "items": false
-/// })JSON");
-///
-/// const auto vocabularies{
-///   sourcemeta::blaze::vocabularies(
-///     document, sourcemeta::blaze::schema_resolver)};
-///
-/// assert(sourcemeta::blaze::schema_keyword_priority(
-///   "prefixItems", vocabularies,
-///   sourcemeta::blaze::schema_walker) == 0);
-///
-/// // The "items" keyword must be evaluated after the "prefixItems" keyword
-/// assert(sourcemeta::blaze::schema_keyword_priority(
-///   "items", vocabularies,
-///   sourcemeta::blaze::schema_walker) == 1);
-/// ```
-SOURCEMETA_BLAZE_FOUNDATION_EXPORT
-auto schema_keyword_priority(const std::string_view keyword,
-                             const Vocabularies &vocabularies,
-                             const SchemaWalker &walker) -> std::uint64_t;
 
 /// @ingroup foundation
 ///

@@ -24,7 +24,7 @@ auto http_cache_control_max_age(const std::string_view cache_control) noexcept
 
         const auto separator{directive.find('=')};
         if (separator == std::string_view::npos ||
-            !http_iequals_ascii(http_subview(directive, 0, separator),
+            !equals_ignore_case(http_subview(directive, 0, separator),
                                 "max-age")) {
           return;
         }

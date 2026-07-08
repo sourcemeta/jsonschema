@@ -42,6 +42,8 @@ public:
   /// Parse a JSON Web Key Set from a JSON value, throwing a `JWKSParseError`
   /// on invalid input.
   explicit JWKS(const JSON &value);
+  /// Parse a JSON Web Key Set from a JSON value, throwing a `JWKSParseError`
+  /// on invalid input.
   explicit JWKS(JSON &&value);
 
   /// A key set exclusively owns its keys, so it is move-only.
@@ -53,6 +55,8 @@ public:
   /// Parse a JSON Web Key Set from a JSON value, returning no value on invalid
   /// input.
   [[nodiscard]] static auto from(const JSON &value) -> std::optional<JWKS>;
+  /// Parse a JSON Web Key Set from a JSON value, returning no value on invalid
+  /// input.
   [[nodiscard]] static auto from(JSON &&value) -> std::optional<JWKS>;
 
   /// Look up a key by its identifier (RFC 7515 Section 4.1.4), returning no
@@ -60,10 +64,12 @@ public:
   [[nodiscard]] auto find(const std::string_view key_id) const noexcept
       -> const JWK *;
 
+  /// The number of keys in the set.
   [[nodiscard]] auto size() const noexcept -> std::size_t {
     return this->keys_.size();
   }
 
+  /// Whether the set holds no keys.
   [[nodiscard]] auto empty() const noexcept -> bool {
     return this->keys_.empty();
   }

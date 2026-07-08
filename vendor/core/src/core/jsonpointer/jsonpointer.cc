@@ -4,6 +4,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/jsonpointer_pointer.h>
 #include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include "parser.h"
@@ -24,18 +25,6 @@
 #include <utility>     // std::move
 
 namespace {
-
-auto uri_hex_value(const char character) -> int {
-  if (character >= '0' && character <= '9') {
-    return character - '0';
-  } else if (character >= 'A' && character <= 'F') {
-    return character - 'A' + 10;
-  } else if (character >= 'a' && character <= 'f') {
-    return character - 'a' + 10;
-  } else {
-    return -1;
-  }
-}
 
 template <template <typename T> typename Allocator, typename V,
           typename PointerT = sourcemeta::core::GenericPointer<
@@ -377,8 +366,8 @@ auto fragment_to_pointer(const URI &uri) -> std::optional<Pointer> {
   for (std::size_t index = 0; index < value.size(); ++index) {
     const auto character{value[index]};
     if (character == '%' && index + 2 < value.size()) {
-      const auto high{uri_hex_value(value[index + 1])};
-      const auto low{uri_hex_value(value[index + 2])};
+      const auto high{sourcemeta::core::hex_digit_value(value[index + 1])};
+      const auto low{sourcemeta::core::hex_digit_value(value[index + 2])};
       if (high >= 0 && low >= 0) {
         input.push_back(static_cast<char>((high * 16) + low));
         index += 2;

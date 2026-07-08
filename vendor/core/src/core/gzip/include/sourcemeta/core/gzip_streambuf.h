@@ -16,6 +16,7 @@ namespace sourcemeta::core {
 /// an input stream.
 class SOURCEMETA_CORE_GZIP_EXPORT GZIPStreamBuffer : public std::streambuf {
 public:
+  /// Construct a stream buffer over a compressed input stream.
   GZIPStreamBuffer(std::istream &compressed_stream);
   ~GZIPStreamBuffer() override;
 
@@ -25,6 +26,7 @@ public:
   auto operator=(GZIPStreamBuffer &&) -> GZIPStreamBuffer & = delete;
 
 protected:
+  /// Refill the buffer with more decompressed data.
   auto underflow() -> int_type override;
 
 private:

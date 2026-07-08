@@ -30,6 +30,7 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_IO_EXPORT FileView {
 public:
+  /// Memory-map the file at the given path.
   FileView(const std::filesystem::path &path);
   ~FileView();
 

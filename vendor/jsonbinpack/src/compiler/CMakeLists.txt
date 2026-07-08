@@ -32,3 +32,5 @@ target_link_libraries(sourcemeta_jsonbinpack_compiler PUBLIC
   sourcemeta::blaze::foundation)
 target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
   sourcemeta::blaze::alterschema)
+target_link_libraries(sourcemeta_jsonbinpack_compiler PRIVATE
+  sourcemeta::blaze::canonicalizer)

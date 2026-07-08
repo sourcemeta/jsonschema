@@ -45,7 +45,28 @@ struct ActiveContext {
 
 // The mutable state shared by the expansion algorithms for the duration of a
 // single top-level expansion.
+// RAII counter that bounds the depth of the mutually recursive expansion and
+// compaction algorithms, decrementing on every exit path
+struct NestingDepthScope {
+  std::size_t &counter;
+  explicit NestingDepthScope(std::size_t &value) : counter{value} {
+    this->counter += 1;
+  }
+  ~NestingDepthScope() { this->counter -= 1; }
+  NestingDepthScope(const NestingDepthScope &) = delete;
+  auto operator=(const NestingDepthScope &) -> NestingDepthScope & = delete;
+  NestingDepthScope(NestingDepthScope &&) = delete;
+  auto operator=(NestingDepthScope &&) -> NestingDepthScope & = delete;
+};
+
 struct ExpansionState {
+  // Bounds the expansion and compaction recursion so a deeply nested document
+  // cannot overflow the stack on attacker-controlled input. The bound is
+  // conservative so that it holds on platforms with a small default stack such
+  // as Windows, and is still far above any realistic nesting
+  static constexpr std::size_t maximum_depth{100};
+  std::size_t depth{0};
+
   // Used to load remote contexts. The chain detects recursive inclusion.
   const JSONLDResolver *resolver{nullptr};
   std::vector<JSON::String> remote_context_chain;

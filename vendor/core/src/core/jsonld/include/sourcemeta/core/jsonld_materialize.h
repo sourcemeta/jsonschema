@@ -20,21 +20,31 @@ namespace sourcemeta::core {
 /// How a position connects to its parent. The position is the object of the
 /// edge, asserted in reverse when the flag is set.
 struct JSONLDEdge {
+  /// The predicate that connects the position to its parent.
   JSON::String predicate{};
+  /// Whether the edge is asserted in reverse.
   bool reverse{false};
 };
 
 /// @ingroup jsonld
 /// The base direction of a language-tagged string
-enum class JSONLDDirection : std::uint8_t { LTR, RTL };
+enum class JSONLDDirection : std::uint8_t {
+  /// The left-to-right base direction
+  LTR,
+  /// The right-to-left base direction
+  RTL
+};
 
 /// @ingroup jsonld
 /// A position that is an object. An absent identifier means a fresh blank node,
 /// and the graph flag asserts the node's descendants in the named graph the
 /// identifier denotes.
 struct JSONLDNode {
+  /// The node identifier, absent for a fresh blank node.
   std::optional<JSON::String> id{};
+  /// The types of the node.
   std::vector<JSON::String> types{};
+  /// Whether the node's descendants are asserted in the named graph it denotes.
   bool graph{false};
 };
 
@@ -43,31 +53,56 @@ struct JSONLDNode {
 /// JSON value, a language may carry a direction, and the JSON flag preserves an
 /// opaque JSON literal verbatim.
 struct JSONLDLiteral {
+  /// The literal datatype, defaulting to the native type of the value.
   std::optional<JSON::String> datatype{};
+  /// The language tag of the literal.
   std::optional<JSON::String> language{};
+  /// The base direction of the literal.
   std::optional<JSONLDDirection> direction{};
+  /// Whether the literal is preserved as an opaque JSON literal.
   bool json{false};
 };
 
 /// @ingroup jsonld
 /// A scalar promoted to an identified node
 struct JSONLDReference {
+  /// The identifier of the promoted node.
   JSON::String id{};
+  /// The types of the promoted node.
   std::vector<JSON::String> types{};
 };
 
 /// @ingroup jsonld
-/// A position that is an array, asserted as an RDF list when ordered and as a
-/// set otherwise
+/// The container form of a collection position. List and Set range over an
+/// array; Language and Index range over an object.
+enum class JSONLDContainer : std::uint8_t {
+  /// An ordered RDF list ranging over an array
+  List,
+  /// An unordered set ranging over an array
+  Set,
+  /// A map of language tag to string ranging over an object
+  Language,
+  /// A map of index labels carrying no RDF ranging over an object
+  Index
+};
+
+/// @ingroup jsonld
+/// A position that is a collection. A List is asserted as an RDF list and a Set
+/// as a set, both ranging over an array. A Language container ranges over an
+/// object of language tag to string, and an Index container over an object
+/// whose keys are index labels that carry no RDF.
 struct JSONLDCollection {
-  bool ordered{false};
+  /// The container form of the collection.
+  JSONLDContainer container{JSONLDContainer::Set};
 };
 
 /// @ingroup jsonld
 /// The semantics of a single instance position: how it connects to its parent
 /// and what it is
 struct JSONLDDescriptor {
+  /// How the position connects to its parent.
   std::vector<JSONLDEdge> edges{};
+  /// What the position is.
   std::variant<JSONLDNode, JSONLDLiteral, JSONLDReference, JSONLDCollection>
       value{};
 };

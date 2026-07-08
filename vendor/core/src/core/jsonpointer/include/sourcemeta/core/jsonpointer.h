@@ -35,9 +35,12 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer
+/// A JSON Pointer whose object property tokens own their string values.
 using Pointer = GenericPointer<JSON::String, PropertyHashJSON<JSON::String>>;
 
 /// @ingroup jsonpointer
+/// A JSON Pointer whose object property tokens reference externally owned
+/// strings.
 using WeakPointer = GenericPointer<
     // We use this instead of a string view as the latter occupies more memory
     std::reference_wrapper<const std::string>, PropertyHashJSON<JSON::String>>;
@@ -616,14 +619,19 @@ SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const Pointer &pointer, const URI &base) -> URI;
 
 /// @ingroup jsonpointer
+/// Stringify the input JSON Pointer into a properly escaped URI fragment.
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const WeakPointer &pointer) -> URI;
 
 /// @ingroup jsonpointer
+/// Stringify the input JSON Pointer into a properly escaped URI fragment
+/// alongside a base URI.
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const WeakPointer &pointer, const URI &base) -> URI;
 
 /// @ingroup jsonpointer
+/// Stringify the input JSON Pointer into a properly escaped URI fragment
+/// alongside a base URI.
 SOURCEMETA_CORE_JSONPOINTER_EXPORT
 auto to_uri(const WeakPointer &pointer, const std::string_view base) -> URI;
 

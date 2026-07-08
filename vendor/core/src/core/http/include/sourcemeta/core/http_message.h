@@ -146,6 +146,90 @@ inline auto http_parse_headers(const std::string_view input, Callback callback)
 }
 
 /// @ingroup http
+/// Parse the value of an RFC 6265 §4.2 `Cookie` request header, given without
+/// the field name, into its cookie-pairs, invoking the callback once per pair
+/// with the name and value. A request cookie header carries only names and
+/// values, never attributes. Surrounding whitespace is trimmed, values are
+/// otherwise reported verbatim, and pairs that lack a `=` or have an empty name
+/// are skipped. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// std::string_view last_value;
+/// sourcemeta::core::http_parse_cookies(
+///     "session=abc; theme=dark",
+///     [&last_value](const std::string_view, const std::string_view value) {
+///       last_value = value;
+///     });
+/// assert(last_value == "dark");
+/// ```
+template <typename Callback>
+  requires std::invocable<Callback, std::string_view, std::string_view>
+inline auto http_parse_cookies(const std::string_view input, Callback callback)
+    -> void {
+  std::string_view rest{input};
+  while (!rest.empty()) {
+    std::string_view pair;
+    const auto separator{rest.find(';')};
+    if (separator == std::string_view::npos) {
+      pair = rest;
+      rest = {};
+    } else {
+      pair = rest.substr(0, separator);
+      rest = rest.substr(separator + 1);
+    }
+
+    const auto parts{split_once(trim(pair), '=')};
+    if (!parts.has_value()) {
+      continue;
+    }
+
+    const auto name{trim(parts->first)};
+    if (name.empty()) {
+      continue;
+    }
+
+    callback(name, trim(parts->second));
+  }
+}
+
+/// @ingroup http
+/// Parse the value of an RFC 6265 §4.2 `Cookie` request header, given without
+/// the field name, into any container of name and value pairs. The names and
+/// values are forwarded as views that borrow from `input`, so a container of
+/// `std::string_view` pairs collects them without copying, while a container of
+/// `std::string` pairs owns them. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+/// #include <string_view>
+/// #include <utility>
+/// #include <vector>
+///
+/// std::vector<std::pair<std::string_view, std::string_view>> cookies;
+/// sourcemeta::core::http_parse_cookies("session=abc; theme=dark", cookies);
+/// assert(cookies.size() == 2);
+/// assert(cookies.at(0).first == "session");
+/// assert(cookies.at(0).second == "abc");
+/// ```
+template <typename Container>
+  requires requires(Container container, std::string_view entry) {
+    container.emplace_back(entry, entry);
+  }
+inline auto http_parse_cookies(const std::string_view input, Container &cookies)
+    -> void {
+  http_parse_cookies(input,
+                     [&cookies](const std::string_view name,
+                                const std::string_view value) -> void {
+                       cookies.emplace_back(name, value);
+                     });
+}
+
+/// @ingroup http
 /// Parse the field lines of a raw message header block, skipping the start
 /// line, into any container of name and value pairs, normalising names to
 /// lowercase given that RFC 9110 §5.1 mandates that "field names are

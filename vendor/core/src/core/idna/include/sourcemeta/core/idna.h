@@ -183,6 +183,33 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool;
 SOURCEMETA_CORE_IDNA_EXPORT
 auto idna_is_valid_a_label(const std::string_view label) -> bool;
 
+/// @ingroup idna
+/// Apply the UTS #46 mapping to `input` and return the result normalised to
+/// NFC. This is the mapping and normalisation half of UTS #46 processing
+/// (steps 1 and 2), performed with Nontransitional Processing and
+/// UseSTD3ASCIIRules disabled, so the four deviation characters (U+00DF,
+/// U+03C2, U+200C, U+200D) map to themselves. Following the UTS #46 Map step,
+/// disallowed codepoints are left unchanged rather than removed, so that the
+/// later per-label validity check is what rejects them (the same is true of
+/// ASCII characters outside the LDH set). Label separation and the per-label
+/// validity checks are not performed here. See
+/// https://www.unicode.org/reports/tr46/ for the algorithm. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/idna.h>
+/// #include <cassert>
+///
+/// // Uppercase is case-folded, fullwidth digits map to ASCII
+/// assert(sourcemeta::core::idna_uts46_map(U"EXAMPLE") == U"example");
+/// assert(sourcemeta::core::idna_uts46_map(U"\uFF11\uFF12\uFF13") == U"123");
+/// // Soft hyphen is ignored
+/// assert(sourcemeta::core::idna_uts46_map(U"a\u00ADb") == U"ab");
+/// // A disallowed codepoint is preserved for validation to reject
+/// assert(sourcemeta::core::idna_uts46_map(U"\u0080") == U"\u0080");
+/// ```
+SOURCEMETA_CORE_IDNA_EXPORT
+auto idna_uts46_map(const std::u32string_view input) -> std::u32string;
+
 } // namespace sourcemeta::core
 
 #endif

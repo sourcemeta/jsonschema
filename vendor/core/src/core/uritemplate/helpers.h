@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_URITEMPLATE_HELPERS_H_
 #define SOURCEMETA_CORE_URITEMPLATE_HELPERS_H_
 
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uritemplate.h>
 
 #include <array>       // std::array
@@ -43,12 +44,6 @@ inline auto is_reserved(const char character) -> bool {
          character == ',' || character == ';' || character == '=';
 }
 
-inline auto is_hex(const char character) -> bool {
-  return (character >= '0' && character <= '9') ||
-         (character >= 'A' && character <= 'F') ||
-         (character >= 'a' && character <= 'f');
-}
-
 static constexpr std::array<char, 16> HEX_DIGITS = {
     {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E',
      'F'}};
@@ -63,7 +58,8 @@ inline auto prefix_by_characters(const std::string_view input,
   std::uint16_t taken = 0;
   while (position < input.size() && taken < characters) {
     if (input[position] == '%' && position + 2 < input.size() &&
-        is_hex(input[position + 1]) && is_hex(input[position + 2])) {
+        is_hex_digit(input[position + 1]) &&
+        is_hex_digit(input[position + 2])) {
       position += 3;
     } else {
       const auto lead = static_cast<unsigned char>(input[position]);
@@ -112,7 +108,7 @@ inline auto percent_encode_reserved(std::string &output,
     const char character = input[index];
     if (is_unreserved(character) || is_reserved(character) ||
         (character == '%' && index + 2 < input.size() &&
-         is_hex(input[index + 1]) && is_hex(input[index + 2]))) {
+         is_hex_digit(input[index + 1]) && is_hex_digit(input[index + 2]))) {
       output += character;
     } else {
       append_percent_encoded(output, character);
@@ -224,7 +220,8 @@ inline auto parse_varname(const std::string_view input, std::size_t position)
       if (position + 2 >= input.size()) {
         throw URITemplateParseError(position + 1);
       }
-      if (!is_hex(input[position + 1]) || !is_hex(input[position + 2])) {
+      if (!is_hex_digit(input[position + 1]) ||
+          !is_hex_digit(input[position + 2])) {
         throw URITemplateParseError(position + 1);
       }
       position += 3;
@@ -338,8 +335,9 @@ auto parse_expression(const std::string_view input)
 
       // See https://www.rfc-editor.org/rfc/rfc6570#section-2.1
       if (character == '%') {
-        if (position + 2 >= input.size() || !is_hex(input[position + 1]) ||
-            !is_hex(input[position + 2])) {
+        if (position + 2 >= input.size() ||
+            !is_hex_digit(input[position + 1]) ||
+            !is_hex_digit(input[position + 2])) {
           throw URITemplateParseError(position + 1);
         }
 
@@ -438,8 +436,14 @@ auto expand_expression(
 
         if (object_key.has_value()) {
           encode<T>(result, object_key.value());
-          result += '=';
-          encode<T>(result, actual_value);
+          if (actual_value.empty()) {
+            if constexpr (has_empty_suffix<T>::value) {
+              result += T::empty_suffix;
+            }
+          } else {
+            result += '=';
+            encode<T>(result, actual_value);
+          }
         } else if constexpr (T::named) {
           result += variable.name;
           if (actual_value.empty()) {
@@ -454,20 +458,23 @@ auto expand_expression(
           encode<T>(result, actual_value);
         }
       } else {
+        // An associative-array pair always contributes its key, so it is never
+        // empty even when the pair value is the empty string
+        const bool value_empty{!object_key.has_value() && actual_value.empty()};
         if (first_var && first_value) {
           if constexpr (has_prefix<T>::value) {
             result += T::prefix;
           }
           first_var = false;
-          append_name<T>(result, variable.name, actual_value.empty(), has_more);
+          append_name<T>(result, variable.name, value_empty, has_more);
         } else if (first_value) {
           result += T::separator;
-          append_name<T>(result, variable.name, actual_value.empty(), has_more);
+          append_name<T>(result, variable.name, value_empty, has_more);
         } else {
           result += ',';
         }
 
-        if (!first_value || !actual_value.empty() || has_more) {
+        if (!first_value || !value_empty || has_more) {
           if (object_key.has_value()) {
             encode<T>(result, object_key.value());
             result += ',';

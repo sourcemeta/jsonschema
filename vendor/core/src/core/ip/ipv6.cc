@@ -1,25 +1,7 @@
 #include <sourcemeta/core/ip.h>
-
-#include <array>   // std::array
-#include <cstdint> // std::uint8_t
+#include <sourcemeta/core/text.h>
 
 namespace sourcemeta::core {
-
-static constexpr auto make_hex_table() -> std::array<bool, 256> {
-  std::array<bool, 256> table{};
-  for (auto index{0u}; index < 256; index++) {
-    table[index] = (index >= '0' && index <= '9') ||
-                   (index >= 'a' && index <= 'f') ||
-                   (index >= 'A' && index <= 'F');
-  }
-  return table;
-}
-
-static constexpr auto HEX_TABLE{make_hex_table()};
-
-static constexpr auto is_hex_digit(const char character) -> bool {
-  return HEX_TABLE[static_cast<std::uint8_t>(character)];
-}
 
 auto is_ipv6(const std::string_view address) -> bool {
   if (address.empty()) {

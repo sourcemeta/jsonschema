@@ -119,6 +119,36 @@ auto from_asctime(const std::string_view value) noexcept
     -> std::optional<std::chrono::system_clock::time_point>;
 
 /// @ingroup time
+/// Format a time point as an ISO 8601 basic format UTC string
+/// (`YYYYMMDDTHHMMSSZ`). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{std::chrono::system_clock::from_time_t(0)};
+/// assert(sourcemeta::core::to_iso8601_basic(point) == "19700101T000000Z");
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto to_iso8601_basic(const std::chrono::system_clock::time_point time)
+    -> std::string;
+
+/// @ingroup time
+/// Parse an ISO 8601 basic format UTC string (`YYYYMMDDTHHMMSSZ`) into a time
+/// point. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/time.h>
+/// #include <cassert>
+///
+/// const auto point{sourcemeta::core::from_iso8601_basic("19700101T000000Z")};
+/// assert(point.has_value());
+/// ```
+SOURCEMETA_CORE_TIME_EXPORT
+auto from_iso8601_basic(const std::string_view value) noexcept
+    -> std::optional<std::chrono::system_clock::time_point>;
+
+/// @ingroup time
 /// Convert a POSIX timestamp, the number of seconds since the Unix epoch
 /// ignoring leap seconds and possibly fractional, into a time point, returning
 /// no value when the timestamp is not representable. Fractional seconds finer

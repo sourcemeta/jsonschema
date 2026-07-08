@@ -18,10 +18,12 @@ add_custom_command(
   COMMAND "${SOURCEMETA_CORE_IDNA_CODEGEN_TARGET}"
     "${SOURCEMETA_CORE_IDNA_DATA_HEADER}"
     "${SOURCEMETA_CORE_IDNA_UCD_DIR}/Idna2008.txt"
+    "${SOURCEMETA_CORE_IDNA_UCD_DIR}/IdnaMappingTable.txt"
   DEPENDS
     "${SOURCEMETA_CORE_IDNA_CODEGEN_TARGET}"
     "${SOURCEMETA_CORE_IDNA_UCD_DIR}/Idna2008.txt"
-  COMMENT "Generating IDNA property tables"
+    "${SOURCEMETA_CORE_IDNA_UCD_DIR}/IdnaMappingTable.txt"
+  COMMENT "Generating IDNA property and mapping tables"
   VERBATIM)
 
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME idna

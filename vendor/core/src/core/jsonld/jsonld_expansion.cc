@@ -871,6 +871,11 @@ auto expand_entries(ExpansionState &state, ActiveContext &active_context,
 auto expand(ExpansionState &state, ActiveContext &active_context,
             const std::optional<JSON::String> &active_property,
             const JSON &element, const WeakPointer &pointer) -> JSON {
+  const NestingDepthScope scope{state.depth};
+  if (state.depth > ExpansionState::maximum_depth) {
+    throw JSONLDError("Maximum nesting depth exceeded", pointer);
+  }
+
   if (element.is_null()) {
     return JSON{nullptr};
   }

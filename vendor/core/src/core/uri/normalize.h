@@ -13,11 +13,10 @@ namespace sourcemeta::core {
 // extension because the spec algorithm assumes a path that has already been
 // merged with an absolute base; applied to a stand-alone relative path it
 // would discard semantic intent that is needed at later resolution time.
-inline auto normalize_path(std::string &path) -> void {
-  const std::string buffer{std::move(path)};
-  std::string_view input{buffer};
+[[nodiscard]] inline auto normalize_path(std::string_view input)
+    -> std::string {
   std::string output;
-  output.reserve(buffer.size());
+  output.reserve(input.size());
   const bool is_absolute{!input.empty() && input.front() == '/'};
 
   while (!input.empty()) {
@@ -71,7 +70,12 @@ inline auto normalize_path(std::string &path) -> void {
     }
   }
 
-  path = std::move(output);
+  return output;
+}
+
+// Remove "." and ".." segments from a URI path in place
+inline auto normalize_path(std::string &path) -> void {
+  path = normalize_path(std::string_view{path});
 }
 
 } // namespace sourcemeta::core

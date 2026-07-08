@@ -62,6 +62,28 @@ auto is_hostname(const std::string_view value) -> bool;
 SOURCEMETA_CORE_DNS_EXPORT
 auto is_idn_hostname(const std::string_view value) -> bool;
 
+/// @ingroup dns
+/// Check whether the given string is a valid internationalized host name after
+/// UTS #46 processing. The input is first mapped and normalised to NFC under
+/// UTS #46 Nontransitional Processing, then the mapped result is validated with
+/// the same IDNA 2008 per-label rules as a strict host name. This is the
+/// lookup-side behaviour: human-typed forms such as uppercase ASCII and
+/// fullwidth characters are folded before validation rather than rejected. See
+/// https://www.unicode.org/reports/tr46/ for the algorithm. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/dns.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_idn_hostname_uts46("www.example.com"));
+/// // Uppercase and fullwidth input is mapped before validation
+/// assert(sourcemeta::core::is_idn_hostname_uts46("WWW.EXAMPLE.COM"));
+/// assert(!sourcemeta::core::is_idn_hostname_uts46("-bad"));
+/// ```
+SOURCEMETA_CORE_DNS_EXPORT
+auto is_idn_hostname_uts46(const std::string_view value) -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

@@ -26,13 +26,13 @@ auto http_negotiate_encoding(
   http_for_each_accept_entry(
       accept_encoding_header,
       [&](const std::string_view token, const float quality) -> void {
-        if (http_iequals_ascii(token, "gzip") ||
-            http_iequals_ascii(token, "x-gzip")) {
+        if (equals_ignore_case(token, "gzip") ||
+            equals_ignore_case(token, "x-gzip")) {
           gzip_listed = true;
           if (quality > gzip_quality) {
             gzip_quality = quality;
           }
-        } else if (http_iequals_ascii(token, "identity")) {
+        } else if (equals_ignore_case(token, "identity")) {
           identity_listed = true;
           if (quality > identity_quality) {
             identity_quality = quality;

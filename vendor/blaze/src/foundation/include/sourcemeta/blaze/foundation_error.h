@@ -172,26 +172,6 @@ private:
 };
 
 /// @ingroup foundation
-/// An error that represents an unrecognized base dialect
-class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaBaseDialectError
-    : public std::exception {
-public:
-  SchemaBaseDialectError(const std::string_view base_dialect)
-      : base_dialect_{base_dialect} {}
-
-  [[nodiscard]] auto what() const noexcept -> const char * override {
-    return "Unrecognized base dialect";
-  }
-
-  [[nodiscard]] auto base_dialect() const noexcept -> std::string_view {
-    return this->base_dialect_;
-  }
-
-private:
-  std::string base_dialect_;
-};
-
-/// @ingroup foundation
 /// An error that represents a schema keyword error
 class SOURCEMETA_BLAZE_FOUNDATION_EXPORT SchemaKeywordError
     : public std::exception {

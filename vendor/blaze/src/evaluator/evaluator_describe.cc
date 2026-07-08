@@ -385,6 +385,16 @@ auto describe(const bool valid, const Instruction &step,
       return describe_reference(target);
     }
 
+    // For the wrapper instruction we emit when hoisting `then` subschemas
+    // whose `if` condition compiles to nothing
+    if (keyword == "then") {
+      std::ostringstream message;
+      message << "The " << type_name(target.type())
+              << " value was expected to validate against the given "
+                 "conditional";
+      return message.str();
+    }
+
     return unknown();
   }
 

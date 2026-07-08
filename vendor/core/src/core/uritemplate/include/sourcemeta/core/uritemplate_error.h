@@ -27,6 +27,7 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateParseError
     : public std::exception {
 public:
+  /// Construct an error given the column number where parsing failed
   URITemplateParseError(const std::uint64_t column) : column_{column} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -47,6 +48,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateExpansionError
     : public std::runtime_error {
 public:
+  /// Construct an error with a descriptive message
   URITemplateExpansionError(const std::string &message)
       : std::runtime_error{message} {}
 };
@@ -56,6 +58,7 @@ public:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterVariableMismatchError
     : public std::exception {
 public:
+  /// Construct an error given the existing and conflicting variable names
   URITemplateRouterVariableMismatchError(const std::string_view left,
                                          const std::string_view right)
       : left_{left}, right_{right} {}
@@ -84,6 +87,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterInvalidSegmentError
     : public std::exception {
 public:
+  /// Construct an error given a descriptive message and the offending segment
   URITemplateRouterInvalidSegmentError(const char *message,
                                        const std::string_view segment)
       : message_{message}, segment_{segment} {}
@@ -108,6 +112,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT
     URITemplateRouterInvalidOperationIdError : public std::exception {
 public:
+  /// Construct an error given the offending operation identifier
   URITemplateRouterInvalidOperationIdError(const std::string_view operation_id)
       : operation_id_{operation_id} {}
 
@@ -130,6 +135,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT
     URITemplateRouterDuplicateOperationIdError : public std::exception {
 public:
+  /// Construct an error given the conflicting operation identifier
   URITemplateRouterDuplicateOperationIdError(
       const std::string_view operation_id)
       : operation_id_{operation_id} {}
@@ -152,6 +158,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterSaveError
     : public std::exception {
 public:
+  /// Construct an error given the target path and a descriptive message
   URITemplateRouterSaveError(std::filesystem::path path, const char *message)
       : path_{std::move(path)}, message_{message} {}
 
@@ -159,6 +166,7 @@ public:
     return this->message_;
   }
 
+  /// Get the path that could not be saved
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }
@@ -173,6 +181,7 @@ private:
 class SOURCEMETA_CORE_URITEMPLATE_EXPORT URITemplateRouterReadError
     : public std::exception {
 public:
+  /// Construct an error given the target path
   URITemplateRouterReadError(std::filesystem::path path)
       : path_{std::move(path)} {}
 
@@ -180,6 +189,7 @@ public:
     return "Failed to open router file for reading";
   }
 
+  /// Get the path that could not be read
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }

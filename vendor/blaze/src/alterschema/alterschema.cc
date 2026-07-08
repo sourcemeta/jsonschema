@@ -109,74 +109,6 @@ auto WALK_UP_IN_PLACE_APPLICATORS(const JSON &root, const SchemaFrame &frame,
     return false;                                                              \
   }
 
-#include "canonicalizer/additional_items_implicit.h"
-#include "canonicalizer/allof_merge_compatible_branches.h"
-#include "canonicalizer/comment_drop.h"
-#include "canonicalizer/const_as_enum.h"
-#include "canonicalizer/dependencies_to_any_of.h"
-#include "canonicalizer/dependencies_to_extends_disallow.h"
-#include "canonicalizer/dependent_required_to_any_of.h"
-#include "canonicalizer/dependent_schemas_to_any_of.h"
-#include "canonicalizer/deprecated_false_drop.h"
-#include "canonicalizer/disallow_array_to_extends.h"
-#include "canonicalizer/disallow_double_negation.h"
-#include "canonicalizer/disallow_extends_to_type.h"
-#include "canonicalizer/disallow_to_array_of_schemas.h"
-#include "canonicalizer/disallow_type_union_to_extends.h"
-#include "canonicalizer/divisible_by_implicit.h"
-#include "canonicalizer/draft3_type_any.h"
-#include "canonicalizer/duplicate_disallow_entries.h"
-#include "canonicalizer/empty_definitions_drop.h"
-#include "canonicalizer/empty_defs_drop.h"
-#include "canonicalizer/empty_dependencies_drop.h"
-#include "canonicalizer/empty_dependent_required_drop.h"
-#include "canonicalizer/empty_dependent_schemas_drop.h"
-#include "canonicalizer/empty_disallow_drop.h"
-#include "canonicalizer/enum_drop_redundant_validation.h"
-#include "canonicalizer/enum_filter_by_type.h"
-#include "canonicalizer/enum_split_by_type.h"
-#include "canonicalizer/exclusive_maximum_boolean_integer_fold.h"
-#include "canonicalizer/exclusive_maximum_integer_to_maximum.h"
-#include "canonicalizer/exclusive_minimum_boolean_integer_fold.h"
-#include "canonicalizer/exclusive_minimum_integer_to_minimum.h"
-#include "canonicalizer/extends_to_array.h"
-#include "canonicalizer/if_then_else_implicit.h"
-#include "canonicalizer/implicit_contains_keywords.h"
-#include "canonicalizer/implicit_object_keywords.h"
-#include "canonicalizer/inline_single_use_ref.h"
-#include "canonicalizer/items_implicit.h"
-#include "canonicalizer/max_contains_covered_by_max_items.h"
-#include "canonicalizer/max_decimal_implicit.h"
-#include "canonicalizer/maximum_can_equal_integer_fold.h"
-#include "canonicalizer/maximum_can_equal_true_drop.h"
-#include "canonicalizer/min_items_given_min_contains.h"
-#include "canonicalizer/min_length_implicit.h"
-#include "canonicalizer/min_properties_covered_by_required.h"
-#include "canonicalizer/minimum_can_equal_integer_fold.h"
-#include "canonicalizer/minimum_can_equal_true_drop.h"
-#include "canonicalizer/multiple_of_implicit.h"
-#include "canonicalizer/optional_property_implicit.h"
-#include "canonicalizer/recursive_anchor_false_drop.h"
-#include "canonicalizer/required_property_implicit.h"
-#include "canonicalizer/required_to_extends.h"
-#include "canonicalizer/single_branch_allof.h"
-#include "canonicalizer/single_branch_anyof.h"
-#include "canonicalizer/single_branch_oneof.h"
-#include "canonicalizer/type_array_to_any_of.h"
-#include "canonicalizer/type_boolean_as_enum.h"
-#include "canonicalizer/type_inherit_in_place.h"
-#include "canonicalizer/type_null_as_enum.h"
-#include "canonicalizer/type_union_distribute_keywords.h"
-#include "canonicalizer/type_union_implicit.h"
-#include "canonicalizer/type_union_to_schemas.h"
-#include "canonicalizer/type_with_applicator_to_allof.h"
-#include "canonicalizer/type_with_applicator_to_extends.h"
-#include "canonicalizer/unevaluated_items_to_items.h"
-#include "canonicalizer/unevaluated_properties_to_additional_properties.h"
-#include "canonicalizer/unsatisfiable_can_equal_bounds.h"
-#include "canonicalizer/unsatisfiable_exclusive_equal_bounds.h"
-#include "canonicalizer/unsatisfiable_type_and_enum.h"
-
 // Common
 #include "common/allof_false_simplify.h"
 #include "common/anyof_false_simplify.h"
@@ -348,36 +280,7 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     return;
   }
 
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<ExclusiveMinimumBooleanIntegerFold>();
-    bundle.add<ExclusiveMaximumBooleanIntegerFold>();
-    bundle.add<UnsatisfiableExclusiveEqualBounds>();
-    bundle.add<MinimumCanEqualIntegerFold>();
-    bundle.add<MaximumCanEqualIntegerFold>();
-    bundle.add<MinimumCanEqualTrueDrop>();
-    bundle.add<MaximumCanEqualTrueDrop>();
-    bundle.add<CommentDrop>();
-    bundle.add<DeprecatedFalseDrop>();
-    bundle.add<RecursiveAnchorFalseDrop>();
-    bundle.add<UnevaluatedItemsToItems>();
-    bundle.add<UnevaluatedPropertiesToAdditionalProperties>();
-    bundle.add<IfThenElseImplicit>();
-    bundle.add<ImplicitObjectKeywords>();
-    bundle.add<ImplicitContainsKeywords>();
-    bundle.add<ExtendsToArray>();
-    bundle.add<DisallowToArrayOfSchemas>();
-  }
-
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<InlineSingleUseRef>();
-    bundle.add<AllOfMergeCompatibleBranches>();
-    bundle.add<TypeInheritInPlace>();
-    bundle.add<TypeUnionImplicit>();
-    bundle.add<TypeArrayToAnyOf>();
-  }
-
-  if (mode == AlterSchemaMode::Linter ||
-      mode == AlterSchemaMode::Canonicalizer) {
+  if (mode == AlterSchemaMode::Linter) {
     bundle.add<DefinitionsToDefs>();
   }
 
@@ -395,9 +298,6 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<FlattenNestedAllOf>();
   bundle.add<FlattenNestedExtends>();
   bundle.add<FlattenNestedAnyOf>();
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<Draft3TypeAny>();
-  }
   bundle.add<UnsatisfiableInPlaceApplicatorType>();
   bundle.add<AllOfFalseSimplify>();
   bundle.add<AnyOfFalseSimplify>();
@@ -411,10 +311,8 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<MaxContainsWithoutContains>();
   bundle.add<MinContainsWithoutContains>();
   bundle.add<NotFalse>();
-  if (mode != AlterSchemaMode::Canonicalizer) {
-    bundle.add<ThenEmpty>();
-    bundle.add<ElseEmpty>();
-  }
+  bundle.add<ThenEmpty>();
+  bundle.add<ElseEmpty>();
   bundle.add<ThenWithoutIf>();
   bundle.add<DependenciesPropertyTautology>();
   bundle.add<DependentRequiredTautology>();
@@ -440,23 +338,6 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
   bundle.add<UnknownLocalRef>();
   bundle.add<RequiredPropertiesInProperties>();
   bundle.add<OrphanDefinitions>();
-
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<ConstAsEnum>();
-    bundle.add<EqualNumericBoundsToConst>();
-    bundle.add<ExclusiveMaximumIntegerToMaximum>();
-    bundle.add<ExclusiveMinimumIntegerToMinimum>();
-    bundle.add<TypeBooleanAsEnum>();
-    bundle.add<TypeNullAsEnum>();
-    bundle.add<MaxContainsCoveredByMaxItems>();
-    bundle.add<MinItemsGivenMinContains>();
-    bundle.add<MinPropertiesCoveredByRequired>();
-    bundle.add<MinLengthImplicit>();
-    bundle.add<MultipleOfImplicit>();
-    bundle.add<DivisibleByImplicit>();
-    bundle.add<MaxDecimalImplicit>();
-    bundle.add<ItemsImplicit>();
-  }
 
   if (mode == AlterSchemaMode::Linter) {
     bundle.add<EqualNumericBoundsToConst>();
@@ -501,53 +382,15 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void {
     bundle.add<ValidExamples>();
   }
 
-  if (mode != AlterSchemaMode::Canonicalizer) {
-    bundle.add<UnnecessaryAllOfRefWrapperModern>();
-  }
+  bundle.add<UnnecessaryAllOfRefWrapperModern>();
   bundle.add<UnnecessaryAllOfRefWrapperDraft>();
   bundle.add<UnnecessaryExtendsRefWrapper>();
-
-  if (mode != AlterSchemaMode::Canonicalizer) {
-    bundle.add<UnnecessaryAllOfWrapper>();
-    bundle.add<UnnecessaryExtendsWrapper>();
-  }
+  bundle.add<UnnecessaryAllOfWrapper>();
+  bundle.add<UnnecessaryExtendsWrapper>();
 
   bundle.add<DropAllOfEmptySchemas>();
   bundle.add<DropExtendsEmptySchemas>();
   bundle.add<EmptyObjectAsTrue>();
-
-  if (mode == AlterSchemaMode::Canonicalizer) {
-    bundle.add<UnsatisfiableTypeAndEnum>();
-    bundle.add<EnumFilterByType>();
-    bundle.add<TypeUnionToSchemas>();
-    bundle.add<TypeUnionDistributeKeywords>();
-    bundle.add<DependenciesToAnyOf>();
-    bundle.add<DependenciesToExtendsDisallow>();
-    bundle.add<DependentSchemasToAnyOf>();
-    bundle.add<DependentRequiredToAnyOf>();
-    bundle.add<EnumDropRedundantValidation>();
-    bundle.add<EnumSplitByType>();
-    bundle.add<TypeWithApplicatorToAllOf>();
-    bundle.add<TypeWithApplicatorToExtends>();
-    bundle.add<EmptyDefinitionsDrop>();
-    bundle.add<EmptyDefsDrop>();
-    bundle.add<EmptyDependenciesDrop>();
-    bundle.add<EmptyDependentSchemasDrop>();
-    bundle.add<EmptyDependentRequiredDrop>();
-    bundle.add<EmptyDisallowDrop>();
-    bundle.add<AdditionalItemsImplicit>();
-    bundle.add<RequiredPropertyImplicit>();
-    bundle.add<OptionalPropertyImplicit>();
-    bundle.add<DuplicateDisallowEntries>();
-    bundle.add<DisallowArrayToExtends>();
-    bundle.add<DisallowExtendsToType>();
-    bundle.add<DisallowTypeUnionToExtends>();
-    bundle.add<DisallowDoubleNegation>();
-    bundle.add<RequiredToExtends>();
-    bundle.add<SingleBranchAllOf>();
-    bundle.add<SingleBranchAnyOf>();
-    bundle.add<SingleBranchOneOf>();
-  }
 }
 
 } // namespace sourcemeta::blaze

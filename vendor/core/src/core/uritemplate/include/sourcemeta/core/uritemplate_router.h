@@ -56,31 +56,47 @@ public:
   using Callback =
       std::function<void(Index, std::string_view, std::string_view)>;
 
+  /// The value of a route argument
   using ArgumentValue = std::variant<std::string_view, std::int64_t, bool>;
+
+  /// A named route argument
   using Argument = std::pair<std::string_view, ArgumentValue>;
+
+  /// The argument callback (name, value)
   using ArgumentCallback =
       std::function<void(std::string_view, const ArgumentValue &)>;
 
   /// The type of a node in the router trie
   enum class NodeType : std::uint8_t {
+    /// The root of the trie
     Root = 0,
+    /// A fixed literal path segment
     Literal = 1,
+    /// A single path segment capture
     Variable = 2,
+    /// A greedy capture requiring at least one trailing segment
     Expansion = 3,
+    /// A greedy capture allowing zero trailing segments
     OptionalExpansion = 4
   };
 
   /// A node in the router trie
   struct Node {
+    /// The handler identifier of the route ending at this node
     Identifier identifier{0};
+    /// The context identifier associated with this node
     Identifier context{0};
+    /// The kind of component this node represents
     NodeType type{NodeType::Root};
+    /// The literal text or variable name of this node
     std::string_view value;
 
     // This children distinction enforces that there can only be one non-literal
     // child at the type level. Also allows us to more efficiently search on
     // literals
+    /// The literal children of this node
     std::vector<std::unique_ptr<Node>> literals;
+    /// The single non-literal child of this node
     std::unique_ptr<Node> variable;
   };
 
@@ -192,6 +208,7 @@ public:
   static auto save(const URITemplateRouter &router,
                    const std::filesystem::path &path) -> void;
 
+  /// Construct a view by loading a serialized router from a file
   URITemplateRouterView(const std::filesystem::path &path);
 
   /// Construct a view over an externally-owned buffer. The buffer must
@@ -271,6 +288,9 @@ private:
   const std::uint8_t *data_{nullptr};
   std::size_t size_{0};
   std::unique_ptr<FileView> owner_;
+  // Holds an eight-byte-aligned copy of an unaligned external buffer, so the
+  // over-aligned serialized nodes are always read from aligned storage
+  std::vector<std::uint64_t> owned_;
 };
 
 #if defined(_MSC_VER)

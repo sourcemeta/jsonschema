@@ -25,7 +25,9 @@ auto markdown_to_html(const std::string_view input, const bool safe)
   static constexpr auto base_options{
       CMARK_OPT_VALIDATE_UTF8 | CMARK_OPT_FOOTNOTES |
       CMARK_OPT_STRIKETHROUGH_DOUBLE_TILDE | CMARK_OPT_GITHUB_PRE_LANG};
-  const int options{safe ? (base_options | CMARK_OPT_SAFE) : base_options};
+  // This cmark-gfm suppresses raw HTML and unsafe links by default, so raw
+  // output requires explicitly opting out through CMARK_OPT_UNSAFE
+  const int options{safe ? base_options : (base_options | CMARK_OPT_UNSAFE)};
 
   auto *parser{cmark_parser_new(options)};
 

@@ -90,6 +90,11 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
              const JSON &inverse_context,
              const std::optional<JSON::String> &active_property,
              const JSON &element, const bool compact_arrays) -> JSON {
+  const NestingDepthScope scope{state.depth};
+  if (state.depth > ExpansionState::maximum_depth) {
+    throw JSONLDError("Maximum nesting depth exceeded", empty_weak_pointer);
+  }
+
   if (!element.is_object() && !element.is_array()) {
     return element;
   }

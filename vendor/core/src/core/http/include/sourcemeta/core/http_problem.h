@@ -13,10 +13,15 @@ namespace sourcemeta::core {
 /// @ingroup http
 /// Fields of an RFC 9457 §3.1 Problem Details object.
 struct HTTPProblemDetails {
+  /// The HTTP status code for this occurrence of the problem
   HTTPStatus status;
+  /// The identifier for the problem type
   JSON::StringView type{"about:blank"};
+  /// The short human-readable summary of the problem type
   JSON::StringView title{};
+  /// The human-readable explanation specific to this occurrence
   JSON::StringView detail{};
+  /// The identifier for this specific occurrence of the problem
   JSON::StringView instance{};
 };
 

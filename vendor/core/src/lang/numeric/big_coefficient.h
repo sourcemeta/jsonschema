@@ -475,6 +475,12 @@ public:
       value = value * BASE + this->words[index - 1];
     }
 
+    // Zero admits arbitrarily extreme exponents, which would otherwise make
+    // the scaling loops below spin for billions of iterations
+    if (value == 0) {
+      return value;
+    }
+
     while (exponent > 0) {
       value *= 10;
       exponent--;

@@ -73,6 +73,7 @@ public:
   // Disallow copies given the unique pointers
   Options(const Options &) = delete;
   auto operator=(const Options &) -> Options & = delete;
+  /// Move constructor
   Options(Options &&) noexcept = default;
   auto operator=(Options &&) noexcept -> Options & = default;
 

@@ -7,12 +7,15 @@
 namespace sourcemeta::core {
 
 /// @ingroup json
+/// An ordered sequence of JSON values
 template <typename Value> class JSONArray {
 public:
   // Constructors
+  /// The underlying container type that holds the array elements
   using Container =
       std::vector<Value, typename Value::template Allocator<Value>>;
   JSONArray() : data{} {}
+  /// Construct an array from a list of values
   JSONArray(std::initializer_list<Value> values) : data{values} {}
 
   // Operators

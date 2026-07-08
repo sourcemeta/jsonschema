@@ -1,6 +1,8 @@
 #ifndef SOURCEMETA_CORE_REGEX_PREPROCESS_H_
 #define SOURCEMETA_CORE_REGEX_PREPROCESS_H_
 
+#include <sourcemeta/core/text.h>
+
 #include <array>       // std::array
 #include <bitset>      // std::bitset
 #include <cstddef>     // std::size_t
@@ -62,26 +64,10 @@ constexpr std::string_view simple_escapes{"btnrfv0"};
 constexpr std::string_view simple_escape_values{"\b\t\n\r\f\v"};
 constexpr std::string_view v_flag_syntax{"-][(){}/'|!#%&*+,.:;<=>?@`~^$"};
 
-inline auto hex_value(char character) -> int {
-  if (character >= '0' && character <= '9') {
-    return character - '0';
-  }
-
-  if (character >= 'a' && character <= 'f') {
-    return character - 'a' + 10;
-  }
-
-  if (character >= 'A' && character <= 'F') {
-    return character - 'A' + 10;
-  }
-
-  return -1;
-}
-
 inline auto all_hex(const std::string &content, std::size_t start,
                     std::size_t count) -> bool {
   for (std::size_t offset = 0; offset < count; ++offset) {
-    if (hex_value(content[start + offset]) < 0) {
+    if (hex_digit_value(content[start + offset]) < 0) {
       return false;
     }
   }
@@ -93,7 +79,13 @@ inline auto parse_hex_digits(const std::string &content, std::size_t start,
                              std::size_t count) -> int {
   int value = 0;
   for (std::size_t offset = 0; offset < count; ++offset) {
-    value = (value << 4) | hex_value(content[start + offset]);
+    value = (value << 4) | hex_digit_value(content[start + offset]);
+    // Stop once the value is unambiguously past the Unicode range, so a long
+    // "\u{...}" digit run cannot overflow the accumulator. The callers only
+    // care whether the result is a small ASCII value
+    if (value > 0x10FFFF) {
+      return value;
+    }
   }
 
   return value;
@@ -218,7 +210,7 @@ inline auto parse_escape(const std::string &content, std::size_t position,
     if (content[position + 2] == '{') {
       std::size_t brace_end = position + 3;
       while (brace_end < content.size() && content[brace_end] != '}' &&
-             hex_value(content[brace_end]) >= 0) {
+             hex_digit_value(content[brace_end]) >= 0) {
         ++brace_end;
       }
 
@@ -451,7 +443,7 @@ inline auto is_valid_escape(const std::string &content, std::size_t position)
       for (auto end = position + 3; end < content.size(); ++end) {
         if (content[end] == '}') {
           return true;
-        } else if (hex_value(content[end]) < 0) {
+        } else if (hex_digit_value(content[end]) < 0) {
           return false;
         }
       }
@@ -648,7 +640,38 @@ struct PreprocessResult {
   std::optional<std::string> transformed;
 };
 
+// Character classes nest through set operations and the expansion below is
+// recursive, so a pattern that nests past this many levels is rejected up front
+// to keep the recursion from overflowing the stack on attacker-controlled input
+constexpr std::size_t MAXIMUM_CLASS_DEPTH{64};
+
+inline auto exceeds_class_depth(const std::string &pattern) -> bool {
+  std::size_t depth{0};
+  for (std::size_t position = 0; position < pattern.size(); ++position) {
+    if (pattern[position] == '\\') {
+      // Skip the escaped character so an escaped bracket does not open a class
+      position += 1;
+      continue;
+    }
+
+    if (pattern[position] == '[') {
+      depth += 1;
+      if (depth > MAXIMUM_CLASS_DEPTH) {
+        return true;
+      }
+    } else if (pattern[position] == ']' && depth > 0) {
+      depth -= 1;
+    }
+  }
+
+  return false;
+}
+
 inline auto preprocess_regex(const std::string &pattern) -> PreprocessResult {
+  if (exceeds_class_depth(pattern)) {
+    return {.ecma_valid = false, .transformed = std::nullopt};
+  }
+
   std::string result;
   result.reserve(pattern.size() * 2);
   bool in_class = false;

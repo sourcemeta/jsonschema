@@ -11,3 +11,4 @@ libdeflate https://github.com/ebiggers/libdeflate v1.25
 unicodetools https://github.com/unicode-org/unicodetools final-17.0-20250910
 jose-cookbook https://github.com/ietf-jose/cookbook 13692b68bfc18b99557a5b1ed311fd5077bfff04
 w3c-json-ld https://github.com/w3c/json-ld-api 8654ac22b6cf4f441d2fee915ae634d36b5a8067
+aws-sig-v4-test-suite https://github.com/saibotsivad/aws-sig-v4-test-suite 38179d1173c9547a964e7f92e9308e73795534ff
