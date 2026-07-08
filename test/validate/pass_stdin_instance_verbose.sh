@@ -28,12 +28,12 @@ ok: /dev/stdin
 annotation: "Test schema"
   at instance location "" (line 1, column 1)
   at evaluate path "/description"
-annotation: "foo"
-  at instance location "" (line 1, column 1)
-  at evaluate path "/properties"
 annotation: "Test"
   at instance location "" (line 1, column 1)
   at evaluate path "/title"
+annotation: "foo"
+  at instance location "" (line 1, column 1)
+  at evaluate path "/properties"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

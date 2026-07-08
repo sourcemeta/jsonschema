@@ -369,24 +369,22 @@ print_annotations(const sourcemeta::blaze::SimpleOutput &output,
                   std::ostream &stream) -> void {
   if (options.contains("verbose")) {
     for (const auto &annotation : output.annotations()) {
-      for (const auto &value : annotation.second) {
-        stream << "annotation: ";
-        sourcemeta::core::stringify(value, stream);
-        stream << "\n  at instance location \"";
-        sourcemeta::core::stringify(annotation.first.instance_location, stream);
-        stream << "\"";
+      stream << "annotation: ";
+      sourcemeta::core::stringify(annotation.value, stream);
+      stream << "\n  at instance location \"";
+      sourcemeta::core::stringify(annotation.instance_location, stream);
+      stream << "\"";
 
-        const auto position{tracker.get(
-            sourcemeta::core::to_pointer(annotation.first.instance_location))};
-        if (position.has_value()) {
-          const auto [line, column, end_line, end_column] = position.value();
-          stream << " (line " << line << ", column " << column << ")";
-        }
-
-        stream << "\n  at evaluate path \"";
-        sourcemeta::core::stringify(annotation.first.evaluate_path, stream);
-        stream << "\"\n";
+      const auto position{tracker.get(
+          sourcemeta::core::to_pointer(annotation.instance_location))};
+      if (position.has_value()) {
+        const auto [line, column, end_line, end_column] = position.value();
+        stream << " (line " << line << ", column " << column << ")";
       }
+
+      stream << "\n  at evaluate path \"";
+      sourcemeta::core::stringify(annotation.evaluate_path, stream);
+      stream << "\"\n";
     }
   }
 }
