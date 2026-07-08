@@ -26,7 +26,7 @@
 #include <stdexcept>        // std::runtime_error
 #include <string>           // std::string
 #include <type_traits>      // std::is_base_of_v, std::is_same_v
-#include <utility>          // std::forward
+#include <utility>          // std::forward, std::move
 #include <vector>           // std::vector
 
 #include "exit_code.h"
@@ -232,6 +232,34 @@ private:
   std::filesystem::path path_;
   sourcemeta::core::Pointer location_;
   std::string dialect_;
+};
+
+class RdfResolutionError : public std::runtime_error {
+public:
+  RdfResolutionError(std::string message, std::string facet,
+                     sourcemeta::core::Pointer instance_location,
+                     std::filesystem::path path)
+      : std::runtime_error{std::move(message)}, facet_{std::move(facet)},
+        instance_location_{std::move(instance_location)},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto facet() const noexcept -> const std::string & {
+    return this->facet_;
+  }
+
+  [[nodiscard]] auto instance_location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->instance_location_;
+  }
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::string facet_;
+  sourcemeta::core::Pointer instance_location_;
+  std::filesystem::path path_;
 };
 
 class UnsupportedDialectRdfError : public std::runtime_error {
@@ -536,6 +564,34 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.instance_location()
+                  } -> std::convertible_to<const sourcemeta::core::Pointer &>;
+                }) {
+    if (is_json) {
+      error_json.assign("instanceLocation",
+                        sourcemeta::core::JSON{sourcemeta::core::to_string(
+                            exception.instance_location())});
+    } else {
+      std::cerr << "  at instance location \""
+                << sourcemeta::core::to_string(exception.instance_location())
+                << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.facet()
+                  } -> std::convertible_to<const std::string &>;
+                }) {
+    if (is_json) {
+      error_json.assign("facet", sourcemeta::core::JSON{exception.facet()});
+    } else {
+      std::cerr << "  at facet \"" << exception.facet() << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
@@ -804,6 +860,14 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const PositionError<RdfResolutionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const RdfResolutionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const UnsupportedDialectRdfError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);

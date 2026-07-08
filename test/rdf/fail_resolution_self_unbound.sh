@@ -30,7 +30,9 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: A JSON-LD self identity template variable must bind to a string, number, or boolean
-  at instance location "" (line 1, column 1)
+  at line 1
+  at column 1
+  at instance location ""
   at facet "self"
   at file path $(realpath "$TMP")/instance.json
 EOF
@@ -46,6 +48,8 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "A JSON-LD self identity template variable must bind to a string, number, or boolean",
+  "line": 1,
+  "column": 1,
   "instanceLocation": "",
   "facet": "self",
   "filePath": "$(realpath "$TMP")/instance.json"

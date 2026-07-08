@@ -32,7 +32,9 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: A JSON-LD type can only be assigned to an object value
-  at instance location "/name" (line 1, column 3)
+  at line 1
+  at column 3
+  at instance location "/name"
   at facet "type"
   at file path $(realpath "$TMP")/instance.json
 EOF
@@ -48,6 +50,8 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "A JSON-LD type can only be assigned to an object value",
+  "line": 1,
+  "column": 3,
   "instanceLocation": "/name",
   "facet": "type",
   "filePath": "$(realpath "$TMP")/instance.json"

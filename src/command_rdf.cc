@@ -69,39 +69,6 @@ auto assert_annotations_support(
   }
 }
 
-auto report_resolution_error(
-    const sourcemeta::blaze::JSONLDResolutionError &error,
-    const sourcemeta::core::PointerPositionTracker &positions,
-    const std::string &instance_display_path, const bool json_output) -> void {
-  const auto instance_location{
-      sourcemeta::core::to_string(error.instance_location)};
-  if (json_output) {
-    auto error_json{sourcemeta::core::JSON::make_object()};
-    error_json.assign("error", sourcemeta::core::JSON{error.message});
-    error_json.assign("instanceLocation",
-                      sourcemeta::core::JSON{instance_location});
-    error_json.assign(
-        "facet", sourcemeta::core::JSON{std::string{facet_name(error.facet)}});
-    error_json.assign("filePath",
-                      sourcemeta::core::JSON{instance_display_path});
-    sourcemeta::core::prettify(error_json, std::cout);
-    std::cout << "\n";
-    return;
-  }
-
-  std::cerr << "error: " << error.message << "\n";
-  std::cerr << "  at instance location \"" << instance_location << "\"";
-  const auto position{positions.get(error.instance_location)};
-  if (position.has_value()) {
-    const auto [line, column, end_line, end_column] = position.value();
-    std::cerr << " (line " << line << ", column " << column << ")";
-  }
-
-  std::cerr << "\n";
-  std::cerr << "  at facet \"" << facet_name(error.facet) << "\"\n";
-  std::cerr << "  at file path " << instance_display_path << "\n";
-}
-
 } // namespace
 
 auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
@@ -213,10 +180,22 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
 
   if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
           outcome)) {
-    report_resolution_error(
-        std::get<sourcemeta::blaze::JSONLDResolutionError>(outcome),
-        parsed_instance.positions, instance_display_path, json_output);
-    throw Fail{EXIT_SCHEMA_INPUT_ERROR};
+    auto &error{std::get<sourcemeta::blaze::JSONLDResolutionError>(outcome)};
+    const auto position{parsed_instance.positions.get(error.instance_location)};
+    if (position.has_value()) {
+      throw PositionError<RdfResolutionError>{
+          std::get<0>(position.value()),
+          std::get<1>(position.value()),
+          std::move(error.message),
+          std::string{facet_name(error.facet)},
+          std::move(error.instance_location),
+          instance_from_stdin ? stdin_path() : instance_path};
+    }
+
+    throw RdfResolutionError{
+        std::move(error.message), std::string{facet_name(error.facet)},
+        std::move(error.instance_location),
+        instance_from_stdin ? stdin_path() : instance_path};
   }
 
   auto document{std::get<sourcemeta::core::JSON>(std::move(outcome))};

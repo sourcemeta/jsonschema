@@ -36,7 +36,9 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: A JSON-LD container cannot be assigned more than one value
-  at instance location "/tags" (line 1, column 3)
+  at line 1
+  at column 3
+  at instance location "/tags"
   at facet "container"
   at file path $(realpath "$TMP")/instance.json
 EOF
@@ -52,6 +54,8 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "A JSON-LD container cannot be assigned more than one value",
+  "line": 1,
+  "column": 3,
   "instanceLocation": "/tags",
   "facet": "container",
   "filePath": "$(realpath "$TMP")/instance.json"

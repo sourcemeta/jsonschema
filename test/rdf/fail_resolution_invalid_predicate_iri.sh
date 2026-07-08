@@ -28,7 +28,9 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 error: The value of x-jsonld-id must be an absolute IRI
-  at instance location "/name" (line 1, column 3)
+  at line 1
+  at column 3
+  at instance location "/name"
   at facet "predicate"
   at file path $(realpath "$TMP")/instance.json
 EOF
@@ -44,6 +46,8 @@ test "$EXIT_CODE" = "4"
 cat << EOF > "$TMP/expected.txt"
 {
   "error": "The value of x-jsonld-id must be an absolute IRI",
+  "line": 1,
+  "column": 3,
   "instanceLocation": "/name",
   "facet": "predicate",
   "filePath": "$(realpath "$TMP")/instance.json"
