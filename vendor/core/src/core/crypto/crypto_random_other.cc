@@ -1,6 +1,9 @@
 #include "crypto_random.h"
 
+// glibc and the BSDs declare the entropy call in the random header while
+// musl only declares it in the standard POSIX header, so both are needed
 #include <sys/random.h> // getentropy
+#include <unistd.h>     // getentropy
 
 #include <algorithm> // std::min
 #include <cstddef>   // std::size_t
