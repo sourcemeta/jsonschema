@@ -4,9 +4,9 @@
 
 #include "jsonld_keywords.h"
 
-#include <algorithm>   // std::ranges::sort, std::ranges::none_of
-#include <cassert>     // assert
-#include <cstddef>     // std::size_t
+#include <algorithm> // std::ranges::sort, std::ranges::stable_sort, std::ranges::unique, std::ranges::none_of
+#include <cassert>   // assert
+#include <cstddef>   // std::size_t
 #include <functional>  // std::reference_wrapper, std::cref
 #include <optional>    // std::optional, std::nullopt
 #include <type_traits> // std::is_same_v
@@ -19,16 +19,51 @@ namespace sourcemeta::core {
 namespace {
 
 template <typename PointerT>
+using AnnotationIndex = std::vector<const JSONLDBasicAnnotation<PointerT> *>;
+
+// A contiguous run of sorted annotations whose positions are all extensions
+// of, or equal to, the position currently being visited
+template <typename PointerT> struct AnnotationRange {
+  typename AnnotationIndex<PointerT>::const_iterator begin;
+  typename AnnotationIndex<PointerT>::const_iterator end;
+};
+
+// The sub-run of annotations that belong to the child position the pointer
+// currently names, advancing the scan iterator past it. Annotations sorting
+// before the child correspond to positions the walk does not visit and are
+// skipped for good.
+template <typename PointerT>
+auto child_range(typename AnnotationIndex<PointerT>::const_iterator &iterator,
+                 const typename AnnotationIndex<PointerT>::const_iterator end,
+                 const PointerT &pointer) -> AnnotationRange<PointerT> {
+  const auto depth{pointer.size() - 1};
+  const auto &token{pointer.at(depth)};
+  while (iterator != end && (*iterator)->pointer.at(depth) < token) {
+    iterator += 1;
+  }
+  const auto begin{iterator};
+  while (iterator != end && (*iterator)->pointer.at(depth) == token) {
+    iterator += 1;
+  }
+  return {begin, iterator};
+}
+
+template <typename PointerT>
 auto materialize_value(const JSON &value, PointerT &pointer,
-                       const JSONLDBasicAnnotationMap<PointerT> &map,
+                       AnnotationRange<PointerT> range,
                        std::vector<JSON> &standalone,
                        const std::vector<JSONLDEdge> **matched_edges = nullptr)
     -> std::optional<JSON>;
 
 template <typename PointerT>
 auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
-               const JSONLDBasicAnnotationMap<PointerT> &map,
+               const AnnotationRange<PointerT> &range,
                std::vector<JSON> &standalone) -> void;
+
+template <typename PointerT>
+auto materialize_member(const JSON &value, PointerT &pointer,
+                        const AnnotationRange<PointerT> &range,
+                        std::vector<JSON> &standalone) -> std::optional<JSON>;
 
 // Append an object key to the pointer, copying it for an owning pointer and
 // taking a non-owning view for a weak pointer.
@@ -70,23 +105,24 @@ auto types_to_array(const std::vector<JSON::String> &types) -> JSON {
 
 // The property array of node under the given predicate, creating it as needed.
 auto property_target(JSON &node, const JSON::StringView predicate) -> JSON & {
-  if (!node.defines(predicate)) {
-    node.assign_assume_new(JSON::String{predicate}, JSON::make_array());
+  const auto hash{node.as_object().hash(predicate)};
+  const auto existing{node.try_at(predicate, hash)};
+  if (existing != nullptr) {
+    return *existing;
   }
-  return node.at(predicate);
+  return node.assign_assume_new(JSON::String{predicate}, JSON::make_array(),
+                                hash);
 }
 
 // The property array nested under @reverse and the given predicate.
 auto reverse_target(JSON &node, const JSON::StringView predicate) -> JSON & {
-  if (!node.defines(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)) {
-    node.assign_assume_new(JSON::String{KEYWORD_REVERSE}, JSON::make_object(),
-                           KEYWORD_REVERSE_HASH);
-  }
-  auto &reverse{node.at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)};
-  if (!reverse.defines(predicate)) {
-    reverse.assign_assume_new(JSON::String{predicate}, JSON::make_array());
-  }
-  return reverse.at(predicate);
+  const auto existing{node.try_at(KEYWORD_REVERSE, KEYWORD_REVERSE_HASH)};
+  auto &reverse{existing != nullptr
+                    ? *existing
+                    : node.assign_assume_new(JSON::String{KEYWORD_REVERSE},
+                                             JSON::make_object(),
+                                             KEYWORD_REVERSE_HASH)};
+  return property_target(reverse, predicate);
 }
 
 // Attach a value under a single edge. A set, represented as a bare array,
@@ -160,13 +196,16 @@ auto materialize_reference(const JSONLDReference &descriptor) -> JSON {
 
 template <typename PointerT>
 auto build_collection(const JSON &value, PointerT &pointer,
-                      const JSONLDBasicAnnotationMap<PointerT> &map,
+                      const AnnotationRange<PointerT> &range,
                       std::vector<JSON> &standalone, const bool ordered)
     -> JSON {
   auto elements{JSON::make_array()};
+  auto iterator{range.begin};
   for (std::size_t index = 0; index < value.size(); index += 1) {
     pointer.push_back(index);
-    auto element{materialize_value(value.at(index), pointer, map, standalone)};
+    auto element{materialize_member(value.at(index), pointer,
+                                    child_range(iterator, range.end, pointer),
+                                    standalone)};
     pointer.pop_back();
     if (!element.has_value()) {
       continue;
@@ -246,13 +285,15 @@ auto build_language_collection(const JSON &value) -> JSON {
 // The index keys carry no RDF and are dropped.
 template <typename PointerT>
 auto build_index_collection(const JSON &value, PointerT &pointer,
-                            const JSONLDBasicAnnotationMap<PointerT> &map,
+                            const AnnotationRange<PointerT> &range,
                             std::vector<JSON> &standalone) -> JSON {
   auto elements{JSON::make_array()};
+  auto iterator{range.begin};
   for (const auto key : sorted_keys(value)) {
     push_property(pointer, key.get());
-    auto element{
-        materialize_value(value.at(key.get()), pointer, map, standalone)};
+    auto element{materialize_member(value.at(key.get()), pointer,
+                                    child_range(iterator, range.end, pointer),
+                                    standalone)};
     pointer.pop_back();
     if (!element.has_value()) {
       continue;
@@ -270,10 +311,34 @@ auto build_index_collection(const JSON &value, PointerT &pointer,
   return elements;
 }
 
+// An undescribed collection member still materializes with a default kind, a
+// scalar as a plain literal and a nested array as an unordered collection.
+// An undescribed object member keeps the anonymous node treatment of any
+// other position.
+template <typename PointerT>
+auto materialize_member(const JSON &value, PointerT &pointer,
+                        const AnnotationRange<PointerT> &range,
+                        std::vector<JSON> &standalone) -> std::optional<JSON> {
+  const auto described{range.begin != range.end &&
+                       (*range.begin)->pointer.size() == pointer.size()};
+  if (described || value.is_object()) {
+    return materialize_value(value, pointer, range, standalone);
+  }
+
+  if (value.is_null()) {
+    return std::nullopt;
+  }
+
+  if (value.is_array()) {
+    return build_collection(value, pointer, range, standalone, false);
+  }
+
+  return materialize_literal(JSONLDLiteral{}, value);
+}
+
 template <typename PointerT>
 auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
-                      PointerT &pointer,
-                      const JSONLDBasicAnnotationMap<PointerT> &map,
+                      PointerT &pointer, const AnnotationRange<PointerT> &range,
                       std::vector<JSON> &standalone) -> JSON {
   auto node{JSON::make_object()};
   if (descriptor.id.has_value()) {
@@ -298,7 +363,7 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
                               JSON{descriptor.id.value()}, KEYWORD_ID_HASH);
     }
     std::vector<JSON> graph_nodes;
-    fill_node(inner, value, pointer, map, graph_nodes);
+    fill_node(inner, value, pointer, range, graph_nodes);
     auto graph{JSON::make_array()};
     if (inner.object_size() > (descriptor.id.has_value() ? 1 : 0)) {
       graph.push_back(std::move(inner));
@@ -311,13 +376,13 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
     return node;
   }
 
-  fill_node(node, value, pointer, map, standalone);
+  fill_node(node, value, pointer, range, standalone);
   return node;
 }
 
 template <typename PointerT>
 auto materialize_value(const JSON &value, PointerT &pointer,
-                       const JSONLDBasicAnnotationMap<PointerT> &map,
+                       AnnotationRange<PointerT> range,
                        std::vector<JSON> &standalone,
                        const std::vector<JSONLDEdge> **matched_edges)
     -> std::optional<JSON> {
@@ -329,14 +394,16 @@ auto materialize_value(const JSON &value, PointerT &pointer,
     return std::nullopt;
   }
 
-  const auto iterator{map.find(pointer)};
-  if (iterator == map.cend()) {
+  // Every annotation in the range extends the current position, so one of
+  // equal length is the annotation of the position itself and sorts first
+  if (range.begin == range.end ||
+      (*range.begin)->pointer.size() != pointer.size()) {
     // An undescribed object with described descendants becomes an anonymous
     // blank node so its children have a subject. Anything else is not
     // annotated.
-    if (value.is_object()) {
+    if (value.is_object() && range.begin != range.end) {
       auto node{JSON::make_object()};
-      fill_node(node, value, pointer, map, standalone);
+      fill_node(node, value, pointer, range, standalone);
       if (node.empty()) {
         return std::nullopt;
       }
@@ -345,13 +412,14 @@ auto materialize_value(const JSON &value, PointerT &pointer,
     return std::nullopt;
   }
 
-  const auto &descriptor{iterator->second};
+  const auto &descriptor{(*range.begin)->descriptor};
+  range.begin += 1;
   if (matched_edges != nullptr) {
     *matched_edges = &descriptor.edges;
   }
   if (std::holds_alternative<JSONLDNode>(descriptor.value)) {
     return materialize_node(std::get<JSONLDNode>(descriptor.value), value,
-                            pointer, map, standalone);
+                            pointer, range, standalone);
   }
   if (std::holds_alternative<JSONLDLiteral>(descriptor.value)) {
     return materialize_literal(std::get<JSONLDLiteral>(descriptor.value),
@@ -368,7 +436,7 @@ auto materialize_value(const JSON &value, PointerT &pointer,
       if (!value.is_array()) {
         return std::nullopt;
       }
-      return build_collection(value, pointer, map, standalone,
+      return build_collection(value, pointer, range, standalone,
                               collection.container == JSONLDContainer::List);
     case JSONLDContainer::Language:
       assert(value.is_object());
@@ -379,7 +447,7 @@ auto materialize_value(const JSON &value, PointerT &pointer,
       return build_language_collection(value);
     case JSONLDContainer::Index:
       assert(value.is_object());
-      return build_index_collection(value, pointer, map, standalone);
+      return build_index_collection(value, pointer, range, standalone);
   }
 
   std::unreachable();
@@ -387,7 +455,7 @@ auto materialize_value(const JSON &value, PointerT &pointer,
 
 template <typename PointerT>
 auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
-               const JSONLDBasicAnnotationMap<PointerT> &map,
+               const AnnotationRange<PointerT> &range,
                std::vector<JSON> &standalone) -> void {
   std::vector<std::reference_wrapper<const JSON::String>> keys;
   keys.reserve(instance_object.object_size());
@@ -398,11 +466,13 @@ auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
     return left.get() < right.get();
   });
 
+  auto iterator{range.begin};
   for (const auto key : keys) {
     push_property(pointer, key.get());
     const std::vector<JSONLDEdge> *edges{nullptr};
-    auto child_value{materialize_value(instance_object.at(key.get()), pointer,
-                                       map, standalone, &edges)};
+    auto child_value{materialize_value(
+        instance_object.at(key.get()), pointer,
+        child_range(iterator, range.end, pointer), standalone, &edges)};
     pointer.pop_back();
     if (!child_value.has_value()) {
       continue;
@@ -424,10 +494,28 @@ auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
 
 template <typename PointerT>
 auto materialize_root(const JSON &instance,
-                      const JSONLDBasicAnnotationMap<PointerT> &map) -> JSON {
+                      const JSONLDBasicAnnotationList<PointerT> &annotations)
+    -> JSON {
+  AnnotationIndex<PointerT> index;
+  index.reserve(annotations.size());
+  for (const auto &annotation : annotations) {
+    index.push_back(&annotation);
+  }
+
+  std::ranges::stable_sort(index,
+                           [](const auto *left, const auto *right) -> bool {
+                             return left->pointer < right->pointer;
+                           });
+  const auto duplicates{std::ranges::unique(
+      index, [](const auto *left, const auto *right) -> bool {
+        return left->pointer == right->pointer;
+      })};
+  index.erase(duplicates.begin(), duplicates.end());
+
   std::vector<JSON> standalone;
   PointerT pointer;
-  auto root{materialize_value(instance, pointer, map, standalone)};
+  auto root{materialize_value(instance, pointer, {index.cbegin(), index.cend()},
+                              standalone)};
 
   auto result{JSON::make_array()};
   if (root.has_value()) {
@@ -454,14 +542,14 @@ auto materialize_root(const JSON &instance,
 
 } // namespace
 
-auto jsonld_materialize(const JSON &instance, const JSONLDAnnotationMap &map)
-    -> JSON {
-  return materialize_root<Pointer>(instance, map);
+auto jsonld_materialize(const JSON &instance,
+                        const JSONLDAnnotationList &annotations) -> JSON {
+  return materialize_root<Pointer>(instance, annotations);
 }
 
 auto jsonld_materialize(const JSON &instance,
-                        const JSONLDWeakAnnotationMap &map) -> JSON {
-  return materialize_root<WeakPointer>(instance, map);
+                        const JSONLDWeakAnnotationList &annotations) -> JSON {
+  return materialize_root<WeakPointer>(instance, annotations);
 }
 
 } // namespace sourcemeta::core

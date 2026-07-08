@@ -1,14 +1,48 @@
 #include <sourcemeta/blaze/output_simple.h>
 #include <sourcemeta/blaze/output_standard.h>
 
+#include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
 #include <cassert>    // assert
-#include <functional> // std::ref
+#include <functional> // std::ref, std::reference_wrapper
+#include <map>        // std::map
+#include <string>     // std::string
+#include <tuple>      // std::tie
+#include <vector>     // std::vector
 
 namespace sourcemeta::blaze {
 
 namespace {
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+struct AnnotationLocation {
+  auto operator<(const AnnotationLocation &other) const noexcept -> bool {
+    return std::tie(this->instance_location, this->evaluate_path,
+                    this->schema_location.get()) <
+           std::tie(other.instance_location, other.evaluate_path,
+                    other.schema_location.get());
+  }
+
+  sourcemeta::core::WeakPointer instance_location;
+  sourcemeta::core::WeakPointer evaluate_path;
+  std::reference_wrapper<const std::string> schema_location;
+};
+
+auto group_annotations(const SimpleOutput &output)
+    -> std::map<AnnotationLocation, std::vector<sourcemeta::core::JSON>> {
+  std::map<AnnotationLocation, std::vector<sourcemeta::core::JSON>> result;
+  for (const auto &entry : output.annotations()) {
+    auto &values{result[{.instance_location = entry.instance_location,
+                         .evaluate_path = entry.evaluate_path,
+                         .schema_location = entry.schema_location}]};
+    if (values.empty() || values.back() != entry.value) {
+      values.push_back(entry.value);
+    }
+  }
+
+  return result;
+}
 
 auto handle_standard(Evaluator &evaluator, const Template &schema,
                      const sourcemeta::core::JSON &instance,
@@ -30,7 +64,7 @@ auto handle_standard(Evaluator &evaluator, const Template &schema,
       auto result{sourcemeta::core::JSON::make_object()};
       result.assign_assume_new("valid", sourcemeta::core::JSON{valid});
       auto annotations{sourcemeta::core::JSON::make_array()};
-      for (const auto &annotation : output.annotations()) {
+      for (const auto &annotation : group_annotations(output)) {
         auto unit{sourcemeta::core::JSON::make_object()};
         unit.assign_assume_new(
             "keywordLocation",

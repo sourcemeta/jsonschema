@@ -413,6 +413,54 @@ public:
     std::unreachable();
   }
 
+  /// Try to access an object entry by its key name
+  [[nodiscard]] inline auto try_at(const Key &key, const hash_type key_hash)
+      -> mapped_type * {
+    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first.size() == key.size()) {
+          return &entry.second;
+        }
+      }
+    } else {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first == key) {
+          return &entry.second;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
+  /// Try to access an object entry by its key name
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, KeyView>
+  [[nodiscard]] inline auto try_at(T key, const hash_type key_hash)
+      -> mapped_type * {
+    assert(this->hash(key) == key_hash);
+
+    // Move the perfect hash condition out of the loop for extra performance
+    if (this->hasher.is_perfect(key_hash)) {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first.size() == key.size()) {
+          return &entry.second;
+        }
+      }
+    } else {
+      for (auto &entry : this->data) {
+        if (entry.hash == key_hash && entry.first == key) {
+          return &entry.second;
+        }
+      }
+    }
+
+    return nullptr;
+  }
+
   /// Try to access an object entry by its underlying positional index
   [[nodiscard]] inline auto try_at(const Key &key,
                                    const hash_type key_hash) const

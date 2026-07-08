@@ -1419,6 +1419,67 @@ public:
     return object.try_at(key, hash);
   }
 
+  /// This method tries to retrieve a mutable object element by key. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
+  /// auto result{document.try_at("foo")};
+  /// assert(result);
+  /// result->into(sourcemeta::core::JSON{2});
+  /// assert(document.at("foo").to_integer() == 2);
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto try_at(const String &key)
+      -> JSON * {
+    assert(this->is_object());
+    auto &object{this->data_object};
+    return object.try_at(key, object.hash(key));
+  }
+
+  /// This method tries to retrieve a mutable object element by string view key
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto try_at(T key) -> JSON * {
+    assert(this->is_object());
+    auto &object{this->data_object};
+    return object.try_at(key, object.hash(key));
+  }
+
+  /// This method tries to retrieve a mutable object element given a
+  /// pre-calculated property hash. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json("{ \"foo\": 1 }");
+  /// auto result{document.try_at("foo",
+  ///   document.as_object().hash("foo"))};
+  /// assert(result);
+  /// result->into(sourcemeta::core::JSON{2});
+  /// assert(document.at("foo").to_integer() == 2);
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  try_at(const String &key, const typename Object::hash_type hash) -> JSON * {
+    assert(this->is_object());
+    return this->data_object.try_at(key, hash);
+  }
+
+  /// This method tries to retrieve a mutable object element by string view key
+  /// given a pre-calculated property hash
+  template <typename T>
+    requires std::same_as<std::remove_cvref_t<T>, StringView>
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  try_at(T key, const typename Object::hash_type hash) -> JSON * {
+    assert(this->is_object());
+    return this->data_object.try_at(key, hash);
+  }
+
   /// Try to get a property, scanning from a caller-provided start offset.
   /// On hit, advances `start` past the found index. When looking up multiple
   /// keys in insertion order, each lookup hits on the first probe, making the

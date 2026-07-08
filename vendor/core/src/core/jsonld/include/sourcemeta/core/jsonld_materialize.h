@@ -8,11 +8,10 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <cstdint>       // std::uint8_t
-#include <optional>      // std::optional
-#include <unordered_map> // std::unordered_map
-#include <variant>       // std::variant
-#include <vector>        // std::vector
+#include <cstdint>  // std::uint8_t
+#include <optional> // std::optional
+#include <variant>  // std::variant
+#include <vector>   // std::vector
 
 namespace sourcemeta::core {
 
@@ -108,27 +107,36 @@ struct JSONLDDescriptor {
 };
 
 /// @ingroup jsonld
-/// A resolved mapping of instance positions to their JSON-LD semantics, keyed
-/// by a JSON Pointer of the given kind
+/// An instance position paired with its JSON-LD semantics
+template <typename PointerT> struct JSONLDBasicAnnotation {
+  /// The instance position the annotation describes.
+  PointerT pointer{};
+  /// The JSON-LD semantics of the position.
+  JSONLDDescriptor descriptor{};
+};
+
+/// @ingroup jsonld
+/// A flat collection of annotated instance positions, in any order. When more
+/// than one entry describes the same position, the first one wins.
 template <typename PointerT>
-using JSONLDBasicAnnotationMap =
-    std::unordered_map<PointerT, JSONLDDescriptor, typename PointerT::Hasher>;
+using JSONLDBasicAnnotationList = std::vector<JSONLDBasicAnnotation<PointerT>>;
 
 /// @ingroup jsonld
-/// A resolved annotation map keyed by an owning JSON Pointer
-using JSONLDAnnotationMap = JSONLDBasicAnnotationMap<Pointer>;
+/// An annotation list whose positions are owning JSON Pointers
+using JSONLDAnnotationList = JSONLDBasicAnnotationList<Pointer>;
 
 /// @ingroup jsonld
-/// A resolved annotation map keyed by a non-owning weak JSON Pointer. The keys
-/// reference strings owned elsewhere that must outlive any materialization
-/// call.
-using JSONLDWeakAnnotationMap = JSONLDBasicAnnotationMap<WeakPointer>;
+/// An annotation list whose positions are non-owning weak JSON Pointers. The
+/// positions reference strings owned elsewhere that must outlive any
+/// materialization call.
+using JSONLDWeakAnnotationList = JSONLDBasicAnnotationList<WeakPointer>;
 
 /// @ingroup jsonld
 ///
-/// Materialize an instance into expanded JSON-LD using an annotation map that
-/// assigns JSON-LD semantics to instance positions. The result is always a JSON
-/// array. For example:
+/// Materialize an instance into expanded JSON-LD using an annotation list that
+/// assigns JSON-LD semantics to instance positions. An undescribed member of a
+/// collection defaults to a plain literal, or to an unordered collection for a
+/// nested array. The result is always a JSON array. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -138,30 +146,34 @@ using JSONLDWeakAnnotationMap = JSONLDBasicAnnotationMap<WeakPointer>;
 /// const auto instance{sourcemeta::core::parse_json(
 ///     R"({ "name": "Sourcemeta" })")};
 ///
-/// sourcemeta::core::JSONLDAnnotationMap map;
-/// map.emplace(sourcemeta::core::Pointer{},
-///             sourcemeta::core::JSONLDDescriptor{
-///                 {}, sourcemeta::core::JSONLDNode{
-///                         "https://example.com/org", {}, false }});
-/// map.emplace(sourcemeta::core::Pointer{"name"},
-///             sourcemeta::core::JSONLDDescriptor{
-///                 { { "https://schema.org/name", false } },
-///                 sourcemeta::core::JSONLDLiteral{}});
+/// sourcemeta::core::JSONLDAnnotationList annotations;
+/// annotations.push_back(
+///     {sourcemeta::core::Pointer{},
+///      sourcemeta::core::JSONLDDescriptor{
+///          {}, sourcemeta::core::JSONLDNode{
+///                  "https://example.com/org", {}, false }}});
+/// annotations.push_back(
+///     {sourcemeta::core::Pointer{"name"},
+///      sourcemeta::core::JSONLDDescriptor{
+///          { { "https://schema.org/name", false } },
+///          sourcemeta::core::JSONLDLiteral{}}});
 ///
-/// const auto expanded{sourcemeta::core::jsonld_materialize(instance, map)};
+/// const auto expanded{
+///     sourcemeta::core::jsonld_materialize(instance, annotations)};
 /// sourcemeta::core::prettify(expanded, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_CORE_JSONLD_EXPORT
-auto jsonld_materialize(const JSON &instance, const JSONLDAnnotationMap &map)
-    -> JSON;
+auto jsonld_materialize(const JSON &instance,
+                        const JSONLDAnnotationList &annotations) -> JSON;
 
 /// @ingroup jsonld
 ///
-/// Materialize an instance into expanded JSON-LD using a weak annotation map
-/// whose keys are non-owning views into strings owned elsewhere. The backing
-/// strings must outlive the call. The result is always a JSON array. For
-/// example:
+/// Materialize an instance into expanded JSON-LD using a weak annotation list
+/// whose positions are non-owning views into strings owned elsewhere. The
+/// backing strings must outlive the call. An undescribed member of a
+/// collection defaults to a plain literal, or to an unordered collection for a
+/// nested array. The result is always a JSON array. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -174,23 +186,26 @@ auto jsonld_materialize(const JSON &instance, const JSONLDAnnotationMap &map)
 ///
 /// const sourcemeta::core::JSON::String name_key{"name"};
 ///
-/// sourcemeta::core::JSONLDWeakAnnotationMap map;
-/// map.emplace(sourcemeta::core::WeakPointer{},
-///             sourcemeta::core::JSONLDDescriptor{
-///                 {}, sourcemeta::core::JSONLDNode{
-///                         "https://example.com/org", {}, false }});
-/// map.emplace(sourcemeta::core::WeakPointer{std::cref(name_key)},
-///             sourcemeta::core::JSONLDDescriptor{
-///                 { { "https://schema.org/name", false } },
-///                 sourcemeta::core::JSONLDLiteral{}});
+/// sourcemeta::core::JSONLDWeakAnnotationList annotations;
+/// annotations.push_back(
+///     {sourcemeta::core::WeakPointer{},
+///      sourcemeta::core::JSONLDDescriptor{
+///          {}, sourcemeta::core::JSONLDNode{
+///                  "https://example.com/org", {}, false }}});
+/// annotations.push_back(
+///     {sourcemeta::core::WeakPointer{std::cref(name_key)},
+///      sourcemeta::core::JSONLDDescriptor{
+///          { { "https://schema.org/name", false } },
+///          sourcemeta::core::JSONLDLiteral{}}});
 ///
-/// const auto expanded{sourcemeta::core::jsonld_materialize(instance, map)};
+/// const auto expanded{
+///     sourcemeta::core::jsonld_materialize(instance, annotations)};
 /// sourcemeta::core::prettify(expanded, std::cout);
 /// std::cout << std::endl;
 /// ```
 SOURCEMETA_CORE_JSONLD_EXPORT
 auto jsonld_materialize(const JSON &instance,
-                        const JSONLDWeakAnnotationMap &map) -> JSON;
+                        const JSONLDWeakAnnotationList &annotations) -> JSON;
 
 } // namespace sourcemeta::core
 

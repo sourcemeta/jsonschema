@@ -66,18 +66,11 @@ auto SimpleOutput::operator()(
 
   if (is_annotation(step.type)) {
     if (type == EvaluationType::Post) {
-      Location location{.instance_location = instance_location,
-                        .evaluate_path = std::move(effective_evaluate_path),
-                        .schema_location = step_metadata.keyword_location};
-      const auto match{this->annotations_.find(location)};
-      if (match == this->annotations_.cend()) {
-        this->annotations_[std::move(location)].push_back(annotation);
-
-        // To avoid emitting the exact same annotation more than once
-        // This is right now mostly because of `unevaluatedItems`
-      } else if (match->second.back() != annotation) {
-        match->second.push_back(annotation);
-      }
+      this->annotations_.push_back(
+          {.instance_location = instance_location,
+           .evaluate_path = std::move(effective_evaluate_path),
+           .schema_location = step_metadata.keyword_location,
+           .value = annotation});
     }
 
     return;
@@ -122,15 +115,11 @@ auto SimpleOutput::operator()(
   }
 
   if (type == EvaluationType::Post && !this->annotations_.empty()) {
-    for (auto iterator = this->annotations_.begin();
-         iterator != this->annotations_.end();) {
-      if (iterator->first.evaluate_path.starts_with_initial(evaluate_path) &&
-          iterator->first.instance_location == instance_location) {
-        iterator = this->annotations_.erase(iterator);
-      } else {
-        ++iterator;
-      }
-    }
+    std::erase_if(
+        this->annotations_, [&](const AnnotationEntry &entry) -> bool {
+          return entry.evaluate_path.starts_with_initial(evaluate_path) &&
+                 entry.instance_location == instance_location;
+        });
   }
 
   if (keyword == "if") {
