@@ -95,6 +95,7 @@ documentation:
 - [`jsonschema bundle`](./docs/bundle.markdown) (for inlining remote references in a schema)
 - [`jsonschema upgrade`](./docs/upgrade.markdown) (for upgrading schemas to a newer JSON Schema dialect)
 - [`jsonschema inspect`](./docs/inspect.markdown) (for debugging references)
+- [`jsonschema rdf`](./docs/rdf.markdown) (for turning instances into Linked Data / JSON-LD)
 - [`jsonschema codegen`](./docs/codegen.markdown) (for generating code from schemas)
 - [`jsonschema encode`](./docs/encode.markdown) (for binary compression)
 - [`jsonschema decode`](./docs/decode.markdown)

@@ -12,6 +12,7 @@
 #include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/yaml.h>
@@ -230,6 +231,26 @@ public:
 private:
   std::filesystem::path path_;
   sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
+class UnsupportedDialectRdfError : public std::runtime_error {
+public:
+  UnsupportedDialectRdfError(std::filesystem::path path, std::string dialect)
+      : std::runtime_error{"This command requires the schema to declare JSON "
+                           "Schema 2019-09 or newer"},
+        path_{std::move(path)}, dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
   std::string dialect_;
 };
 
@@ -556,6 +577,21 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.pointer()
+                  } -> std::convertible_to<const sourcemeta::core::Pointer &>;
+                }) {
+    if (is_json) {
+      error_json.assign("location",
+                        sourcemeta::core::JSON{
+                            sourcemeta::core::to_string(exception.pointer())});
+    } else {
+      std::cerr << "  at document location \""
+                << sourcemeta::core::to_string(exception.pointer()) << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.other()
                   } -> std::convertible_to<const sourcemeta::core::Pointer &>;
                 }) {
@@ -768,6 +804,18 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const UnsupportedDialectRdfError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nThe x-jsonld-* keywords rely on annotation collection, "
+                   "which JSON Schema\n";
+      std::cerr << "only introduced in the 2019-09 dialect. Consider running "
+                   "the `upgrade`\n";
+      std::cerr << "command to move your schema to a newer dialect\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const InvalidLintRuleError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -900,6 +948,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::ConfigurationParseError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<sourcemeta::core::JSONLDError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
