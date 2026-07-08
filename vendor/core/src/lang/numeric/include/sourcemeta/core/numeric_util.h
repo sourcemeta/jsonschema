@@ -71,27 +71,6 @@ inline constexpr auto is_positive_digit(const char character) -> bool {
 }
 
 /// @ingroup numeric
-/// Check whether the given character is an ASCII hexadecimal digit
-/// (`'0'`-`'9'`, `'a'`-`'f'`, `'A'`-`'F'`). For example:
-///
-/// ```cpp
-/// #include <sourcemeta/core/numeric.h>
-///
-/// #include <cassert>
-///
-/// assert(sourcemeta::core::is_hex_digit('0'));
-/// assert(sourcemeta::core::is_hex_digit('a'));
-/// assert(sourcemeta::core::is_hex_digit('F'));
-/// assert(!sourcemeta::core::is_hex_digit('g'));
-/// assert(!sourcemeta::core::is_hex_digit(' '));
-/// ```
-inline constexpr auto is_hex_digit(const char character) noexcept -> bool {
-  return (character >= '0' && character <= '9') ||
-         (character >= 'a' && character <= 'f') ||
-         (character >= 'A' && character <= 'F');
-}
-
-/// @ingroup numeric
 /// Check whether a value fits in an unsigned 8-bit byte
 template <typename T> constexpr auto is_byte(const T &value) -> bool {
   if constexpr (std::same_as<T, Decimal>) {

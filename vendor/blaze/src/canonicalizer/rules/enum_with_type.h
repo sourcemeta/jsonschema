@@ -1,0 +1,84 @@
+class EnumWithType final : public SchemaTransformRule {
+public:
+  using reframe_after_transform = std::true_type;
+  EnumWithType() : SchemaTransformRule{"enum_with_type"} {};
+
+  [[nodiscard]] auto
+  condition(const sourcemeta::core::JSON &schema,
+            const sourcemeta::core::JSON &,
+            const sourcemeta::blaze::Vocabularies &vocabularies,
+            const sourcemeta::blaze::SchemaFrame &,
+            const sourcemeta::blaze::SchemaFrame::Location &,
+            const sourcemeta::blaze::SchemaWalker &,
+            const sourcemeta::blaze::SchemaResolver &) const -> bool override {
+    ONLY_CONTINUE_IF(vocabularies.contains_any(
+        {Vocabularies::Known::JSON_Schema_2020_12_Validation,
+         Vocabularies::Known::JSON_Schema_2019_09_Validation,
+         Vocabularies::Known::JSON_Schema_Draft_7,
+         Vocabularies::Known::JSON_Schema_Draft_6,
+         Vocabularies::Known::JSON_Schema_Draft_4,
+         Vocabularies::Known::JSON_Schema_Draft_3,
+         Vocabularies::Known::JSON_Schema_Draft_3_Hyper,
+         Vocabularies::Known::JSON_Schema_Draft_2,
+         Vocabularies::Known::JSON_Schema_Draft_1}));
+    ONLY_CONTINUE_IF(schema.is_object());
+    const auto *type{schema.try_at("type")};
+    ONLY_CONTINUE_IF(type);
+    const auto *enum_value{schema.try_at("enum")};
+    ONLY_CONTINUE_IF(enum_value && enum_value->is_array());
+
+    if (vocabularies.contains_any(
+            {Vocabularies::Known::JSON_Schema_Draft_3,
+             Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+      if (type->is_string() && type->to_string() == "any") {
+        return true;
+      }
+
+      if (type->is_array()) {
+        bool has_tautology{false};
+        bool has_unknown_subschema{false};
+        for (const auto &entry : type->as_array()) {
+          if (entry.is_string() && entry.to_string() == "any") {
+            has_tautology = true;
+            break;
+          }
+          if (entry.is_object()) {
+            if (entry.empty()) {
+              has_tautology = true;
+              break;
+            }
+            has_unknown_subschema = true;
+          }
+        }
+
+        if (has_tautology) {
+          return true;
+        }
+
+        if (has_unknown_subschema) {
+          return false;
+        }
+      }
+    }
+
+    const auto current_types{parse_schema_type(*type)};
+    ONLY_CONTINUE_IF(current_types.any());
+    const bool integer_matches_integral{
+        vocabularies.contains_any({Vocabularies::Known::JSON_Schema_Draft_6,
+                                   Vocabularies::Known::JSON_Schema_Draft_7}) &&
+        current_types.test(
+            std::to_underlying(sourcemeta::core::JSON::Type::Integer))};
+    ONLY_CONTINUE_IF(std::ranges::all_of(
+        enum_value->as_array(),
+        [&current_types, integer_matches_integral](const auto &item) -> auto {
+          return current_types.test(std::to_underlying(item.type())) ||
+                 (integer_matches_integral && item.is_integral());
+        }));
+
+    return true;
+  }
+
+  auto transform(sourcemeta::core::JSON &schema) const -> void override {
+    schema.erase("type");
+  }
+};

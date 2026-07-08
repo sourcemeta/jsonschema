@@ -3,12 +3,14 @@
 
 #include <algorithm>        // std::ranges::contains, std::ranges::fold_left
 #include <cassert>          // assert
-#include <cmath>            // std::isinf, std::isnan, std::modf
+#include <cmath>            // std::isinf, std::isnan, std::modf, std::floor
+#include <compare>          // std::strong_ordering, std::is_eq, std::is_lt
 #include <cstddef>          // std::size_t
 #include <cstdint>          // std::int64_t
 #include <exception>        // std::terminate
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
+#include <limits>           // std::numeric_limits
 #include <memory>           // std::construct_at
 #include <sstream>          // std::basic_istringstream
 #include <stdexcept>        // std::invalid_argument
@@ -20,6 +22,95 @@
 namespace sourcemeta::core {
 
 static constexpr auto TRIM_WHITESPACE = " \t\n\r\v\f";
+
+namespace {
+
+// Reverse the direction of a comparison result
+auto reverse_ordering(const std::strong_ordering ordering)
+    -> std::strong_ordering {
+  if (std::is_lt(ordering)) {
+    return std::strong_ordering::greater;
+  }
+
+  if (std::is_gt(ordering)) {
+    return std::strong_ordering::less;
+  }
+
+  return std::strong_ordering::equal;
+}
+
+// Order a 64-bit integer against a real by exact value, without ever converting
+// the integer to a double, which would lose precision beyond 2^53
+auto integer_real_ordering(const std::int64_t left, const double right)
+    -> std::strong_ordering {
+  // Real values in a JSON document are always finite
+  constexpr double lowest{-9223372036854775808.0};
+  constexpr double past_highest{9223372036854775808.0};
+  const double floor_of_right{std::floor(right)};
+  if (floor_of_right >= past_highest) {
+    return std::strong_ordering::less;
+  }
+
+  if (floor_of_right < lowest) {
+    return std::strong_ordering::greater;
+  }
+
+  const auto integer_floor{static_cast<std::int64_t>(floor_of_right)};
+  if (left != integer_floor) {
+    return left < integer_floor ? std::strong_ordering::less
+                                : std::strong_ordering::greater;
+  }
+
+  // The integer equals the floor of the real, so they are equal only when the
+  // real has no fractional part, and otherwise the real is the larger of the
+  // two
+  return floor_of_right == right ? std::strong_ordering::equal
+                                 : std::strong_ordering::less;
+}
+
+// Order two numbers held in different representations by exact mathematical
+// value. Integer and integral operands are compared without allocating, and
+// only a real against a non-integral or out-of-range decimal falls back to the
+// exact arbitrary precision expansion
+auto cross_numeric_ordering(const JSON &left, const JSON &right)
+    -> std::strong_ordering {
+  if (left.is_integer() && right.is_real()) {
+    return integer_real_ordering(left.to_integer(), right.to_real());
+  }
+
+  if (left.is_real() && right.is_integer()) {
+    return reverse_ordering(
+        integer_real_ordering(right.to_integer(), left.to_real()));
+  }
+
+  if (left.is_real() && right.is_decimal() &&
+      right.to_decimal().is_integral() && right.to_decimal().is_int64()) {
+    return reverse_ordering(
+        integer_real_ordering(right.to_decimal().to_int64(), left.to_real()));
+  }
+
+  if (left.is_decimal() && right.is_real() && left.to_decimal().is_integral() &&
+      left.to_decimal().is_int64()) {
+    return integer_real_ordering(left.to_decimal().to_int64(), right.to_real());
+  }
+
+  const Decimal left_decimal = left.is_decimal() ? left.to_decimal()
+                               : left.is_integer()
+                                   ? Decimal{left.to_integer()}
+                                   : Decimal::exact_from(left.to_real());
+  const Decimal right_decimal = right.is_decimal() ? right.to_decimal()
+                                : right.is_integer()
+                                    ? Decimal{right.to_integer()}
+                                    : Decimal::exact_from(right.to_real());
+  if (left_decimal == right_decimal) {
+    return std::strong_ordering::equal;
+  }
+
+  return left_decimal < right_decimal ? std::strong_ordering::less
+                                      : std::strong_ordering::greater;
+}
+
+} // namespace
 
 JSON::JSON(const std::int64_t value) : current_type{Type::Integer} {
   this->data_integer = value;
@@ -433,26 +524,12 @@ auto JSON::size(const String &value) noexcept -> std::size_t {
   return result;
 }
 
-// `as_real` is reached only for integer and real operands here, never a
-// decimal, so it cannot throw even though it is no longer noexcept
-// NOLINTNEXTLINE(bugprone-exception-escape)
-auto JSON::operator<(const JSON &other) const noexcept -> bool {
-  if ((this->type() == Type::Integer && other.type() == Type::Real) ||
-      (this->type() == Type::Real && other.type() == Type::Integer)) {
-    return this->as_real() < other.as_real();
-  }
-
-  if ((this->type() == Type::Decimal &&
-       (other.type() == Type::Integer || other.type() == Type::Real)) ||
-      ((this->type() == Type::Integer || this->type() == Type::Real) &&
-       other.type() == Type::Decimal)) {
-    const Decimal left = this->is_decimal()   ? this->to_decimal()
-                         : this->is_integer() ? Decimal{this->to_integer()}
-                                              : Decimal{this->to_real()};
-    const Decimal right = other.is_decimal()   ? other.to_decimal()
-                          : other.is_integer() ? Decimal{other.to_integer()}
-                                               : Decimal{other.to_real()};
-    return left < right;
+// Ordering numbers of different representations by exact value may allocate an
+// arbitrary precision expansion, so this comparison is not noexcept
+auto JSON::operator<(const JSON &other) const -> bool {
+  if (this->is_number() && other.is_number() &&
+      this->current_type != other.current_type) {
+    return std::is_lt(cross_numeric_ordering(*this, other));
   }
 
   if (this->type() != other.type()) {
@@ -481,38 +558,24 @@ auto JSON::operator<(const JSON &other) const noexcept -> bool {
   }
 }
 
-auto JSON::operator<=(const JSON &other) const noexcept -> bool {
+auto JSON::operator<=(const JSON &other) const -> bool {
   return *this < other || *this == other;
 }
 
-auto JSON::operator>(const JSON &other) const noexcept -> bool {
+auto JSON::operator>(const JSON &other) const -> bool {
   return !(*this < other) && *this != other;
 }
 
-auto JSON::operator>=(const JSON &other) const noexcept -> bool {
+auto JSON::operator>=(const JSON &other) const -> bool {
   return *this > other || *this == other;
 }
 
-// `as_real` is reached only for integer and real operands here, never a
-// decimal, so it cannot throw even though it is no longer noexcept
-// NOLINTNEXTLINE(bugprone-exception-escape)
-auto JSON::operator==(const JSON &other) const noexcept -> bool {
-  if ((this->type() == Type::Integer && other.type() == Type::Real) ||
-      (this->type() == Type::Real && other.type() == Type::Integer)) {
-    return this->as_real() == other.as_real();
-  }
-
-  if ((this->type() == Type::Decimal &&
-       (other.type() == Type::Integer || other.type() == Type::Real)) ||
-      ((this->type() == Type::Integer || this->type() == Type::Real) &&
-       other.type() == Type::Decimal)) {
-    const Decimal left = this->is_decimal()   ? this->to_decimal()
-                         : this->is_integer() ? Decimal{this->to_integer()}
-                                              : Decimal{this->to_real()};
-    const Decimal right = other.is_decimal()   ? other.to_decimal()
-                          : other.is_integer() ? Decimal{other.to_integer()}
-                                               : Decimal{other.to_real()};
-    return left == right;
+// Comparing numbers of different representations by exact value may allocate an
+// arbitrary precision expansion, so this comparison is not noexcept
+auto JSON::operator==(const JSON &other) const -> bool {
+  if (this->is_number() && other.is_number() &&
+      this->current_type != other.current_type) {
+    return std::is_eq(cross_numeric_ordering(*this, other));
   }
 
   if (this->current_type != other.current_type) {
@@ -552,7 +615,16 @@ auto JSON::operator+(const JSON &other) const -> JSON {
                                                : Decimal{other.to_real()};
     return JSON{left + right};
   } else if (this->is_integer() && other.is_integer()) {
-    return JSON{this->to_integer() + other.to_integer()};
+    const auto left{this->to_integer()};
+    const auto right{other.to_integer()};
+    // Promote to arbitrary precision when the sum would not fit, since signed
+    // integer overflow is undefined behavior
+    if ((right > 0 && left > std::numeric_limits<Integer>::max() - right) ||
+        (right < 0 && left < std::numeric_limits<Integer>::min() - right)) {
+      return JSON{Decimal{left} + Decimal{right}};
+    }
+
+    return JSON{left + right};
   } else if (this->is_integer() && other.is_real()) {
     return JSON{this->as_real() + other.to_real()};
   } else if (this->is_real() && other.is_integer()) {
@@ -575,7 +647,16 @@ auto JSON::operator-(const JSON &other) const -> JSON {
                                                : Decimal{other.to_real()};
     return JSON{left - right};
   } else if (this->is_integer() && other.is_integer()) {
-    return JSON{this->to_integer() - other.to_integer()};
+    const auto left{this->to_integer()};
+    const auto right{other.to_integer()};
+    // Promote to arbitrary precision when the difference would not fit, since
+    // signed integer overflow is undefined behavior
+    if ((right < 0 && left > std::numeric_limits<Integer>::max() + right) ||
+        (right > 0 && left < std::numeric_limits<Integer>::min() + right)) {
+      return JSON{Decimal{left} - Decimal{right}};
+    }
+
+    return JSON{left - right};
   } else if (this->is_integer() && other.is_real()) {
     return JSON{this->as_real() - other.to_real()};
   } else if (this->is_real() && other.is_integer()) {
@@ -668,8 +749,21 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
       return this->to_boolean() ? 1 : 0;
     case Type::Integer:
       return 4 + (static_cast<std::uint64_t>(this->to_integer()) % 256);
-    case Type::Real:
+    case Type::Real: {
+      // A number that equals an in-range integer must hash like that integer,
+      // otherwise equal values across representations would hash differently.
+      // The integer round-trip avoids a std::modf library call
+      const auto value{this->to_real()};
+      if (value >= static_cast<Real>(std::numeric_limits<Integer>::min()) &&
+          value < static_cast<Real>(std::numeric_limits<Integer>::max())) {
+        const auto truncated{static_cast<Integer>(value)};
+        if (static_cast<Real>(truncated) == value) {
+          return 4 + (static_cast<std::uint64_t>(truncated) % 256);
+        }
+      }
+
       return 5;
+    }
     case Type::String:
       return 3 + this->byte_size();
     case Type::Array:
@@ -687,8 +781,17 @@ auto JSON::operator-=(const JSON &substractive) -> JSON & {
             return accumulator + 1 + pair.first.size() +
                    pair.second.fast_hash();
           });
-    case Type::Decimal:
-      return 8;
+    case Type::Decimal: {
+      const auto &decimal{this->to_decimal()};
+      if (decimal.is_integral()) {
+        const auto integral{decimal.to_integral()};
+        if (integral.is_int64()) {
+          return 4 + (static_cast<std::uint64_t>(integral.to_int64()) % 256);
+        }
+      }
+
+      return 5;
+    }
     default:
       assert(false);
       return 0;

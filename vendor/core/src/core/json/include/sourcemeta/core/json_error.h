@@ -50,7 +50,7 @@ public:
     return this->line_;
   }
 
-  // Get the column number of the error
+  /// Get the column number of the error
   [[nodiscard]] auto column() const noexcept -> std::uint64_t {
     return this->column_;
   }

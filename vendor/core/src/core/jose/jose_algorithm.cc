@@ -27,6 +27,12 @@ auto to_jws_algorithm(const std::string_view value) noexcept
     return JWSAlgorithm::ES512;
   } else if (value == "EdDSA") {
     return JWSAlgorithm::EdDSA;
+  } else if (value == "HS256") {
+    return JWSAlgorithm::HS256;
+  } else if (value == "HS384") {
+    return JWSAlgorithm::HS384;
+  } else if (value == "HS512") {
+    return JWSAlgorithm::HS512;
   } else {
     return std::nullopt;
   }

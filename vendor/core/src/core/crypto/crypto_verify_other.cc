@@ -7,6 +7,7 @@
 #include "crypto_helpers.h"
 
 #include <array>       // std::array
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint32_t
 #include <optional>    // std::optional, std::nullopt
@@ -15,6 +16,12 @@
 #include <utility>     // std::unreachable
 
 namespace sourcemeta::core {
+
+// The big integer capacity must hold the product of two maximum-size operands
+// plus a normalisation limb and Knuth's implicit leading-zero digit, otherwise
+// the modular reduction would index past the fixed-capacity word array
+static_assert(Bignum::capacity >= 2 * ((MAXIMUM_KEY_BYTES + 7) / 8) + 2);
+
 namespace {
 
 // The DigestInfo prefixes for the EMSA-PKCS1-v1_5 encoding, taken verbatim
@@ -368,16 +375,20 @@ auto PublicKey::operator=(PublicKey &&other) noexcept -> PublicKey & {
   return *this;
 }
 
-auto PublicKey::type() const noexcept -> Type { return internal_->kind; }
+auto PublicKey::type() const noexcept -> Type {
+  // A moved-from key holds no state, so reading its kind is a use-after-move
+  assert(internal_ != nullptr);
+  return internal_->kind;
+}
 
 auto make_rsa_public_key(const std::string_view modulus,
                          const std::string_view exponent)
     -> std::optional<PublicKey> {
   const auto stripped_modulus{strip_left(modulus, '\x00')};
   const auto stripped_exponent{strip_left(exponent, '\x00')};
-  if (stripped_modulus.empty() || stripped_exponent.empty() ||
-      stripped_modulus.size() > MAXIMUM_KEY_BYTES ||
-      stripped_exponent.size() > MAXIMUM_KEY_BYTES) {
+  if (stripped_modulus.empty() || stripped_modulus.size() > MAXIMUM_KEY_BYTES ||
+      stripped_exponent.size() > MAXIMUM_KEY_BYTES ||
+      !rsa_public_exponent_acceptable(exponent, modulus)) {
     return std::nullopt;
   }
 

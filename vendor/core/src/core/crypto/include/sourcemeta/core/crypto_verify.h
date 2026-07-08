@@ -13,15 +13,34 @@ namespace sourcemeta::core {
 
 /// @ingroup crypto
 /// The hash functions supported by signature verification.
-enum class SignatureHashFunction : std::uint8_t { SHA256, SHA384, SHA512 };
+enum class SignatureHashFunction : std::uint8_t {
+  /// The SHA-256 hash function.
+  SHA256,
+  /// The SHA-384 hash function.
+  SHA384,
+  /// The SHA-512 hash function.
+  SHA512
+};
 
 /// @ingroup crypto
 /// The NIST elliptic curves supported by signature verification.
-enum class EllipticCurve : std::uint8_t { P256, P384, P521 };
+enum class EllipticCurve : std::uint8_t {
+  /// The NIST P-256 elliptic curve.
+  P256,
+  /// The NIST P-384 elliptic curve.
+  P384,
+  /// The NIST P-521 elliptic curve.
+  P521
+};
 
 /// @ingroup crypto
 /// The Edwards curves supported by signature verification.
-enum class EdwardsCurve : std::uint8_t { Ed25519, Ed448 };
+enum class EdwardsCurve : std::uint8_t {
+  /// The Ed25519 Edwards curve.
+  Ed25519,
+  /// The Ed448 Edwards curve.
+  Ed448
+};
 
 /// @ingroup crypto
 /// A parsed public key that holds the native key, so that the same key can
@@ -42,9 +61,17 @@ enum class EdwardsCurve : std::uint8_t { Ed25519, Ed448 };
 class SOURCEMETA_CORE_CRYPTO_EXPORT PublicKey {
 public:
   /// The kind of key, which fixes the signature schemes it can verify.
-  enum class Type : std::uint8_t { RSA, EllipticCurve, Edwards };
+  enum class Type : std::uint8_t {
+    /// The RSA key type.
+    RSA,
+    /// The elliptic-curve key type.
+    EllipticCurve,
+    /// The Edwards-curve key type.
+    Edwards
+  };
 
   ~PublicKey();
+  /// Move constructor
   PublicKey(PublicKey &&other) noexcept;
   auto operator=(PublicKey &&other) noexcept -> PublicKey &;
   PublicKey(const PublicKey &) = delete;

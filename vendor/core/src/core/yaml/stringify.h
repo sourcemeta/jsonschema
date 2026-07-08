@@ -10,8 +10,6 @@
 #include <charconv> // std::to_chars
 #include <cmath>    // std::modf
 #include <cstddef>  // std::size_t
-#include <iomanip>  // std::setprecision
-#include <ios>      // std::noshowpoint, std::fixed
 #include <ostream>  // std::basic_ostream
 #include <string>   // std::string
 
@@ -392,16 +390,23 @@ inline auto write_inline_value(OutputStream &stream, const JSON &value,
       if (real == 0.0) {
         stream.write("0.0", 3);
       } else {
-        const auto flags{stream.flags()};
-        const auto precision{stream.precision()};
+        // Format with to_chars so the decimal separator is independent of the
+        // global locale and the full round-trip precision is preserved
+        std::array<char, 344> buffer{};
         double integer_part;
         if (std::modf(real, &integer_part) == 0.0) {
-          stream << std::fixed << std::setprecision(1) << real;
+          const auto result{std::to_chars(buffer.data(),
+                                          buffer.data() + buffer.size(), real,
+                                          std::chars_format::fixed)};
+          assert(result.ec == std::errc{});
+          stream.write(buffer.data(), result.ptr - buffer.data());
+          stream.write(".0", 2);
         } else {
-          stream << std::noshowpoint << real;
+          const auto result{std::to_chars(buffer.data(),
+                                          buffer.data() + buffer.size(), real)};
+          assert(result.ec == std::errc{});
+          stream.write(buffer.data(), result.ptr - buffer.data());
         }
-        stream.flags(flags);
-        stream.precision(precision);
       }
     } break;
     case JSON::Type::Decimal:

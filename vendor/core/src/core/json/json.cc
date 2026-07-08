@@ -16,7 +16,7 @@
 #include <optional>    // std::optional, std::nullopt
 #include <ostream>     // std::basic_ostream
 #include <type_traits> // std::conditional_t
-#include <utility>     // std::cmp_greater
+#include <utility>     // std::cmp_greater, std::move
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -84,6 +84,42 @@ static auto internal_parse_json(const char *&cursor, const char *end,
   return output;
 }
 
+// RFC 8259 §2: JSON-text = ws value ws. A string_view input has no continuation
+// consumer, so anything other than whitespace after the top-level value is a
+// parse error. This advances past the trailing whitespace and returns the first
+// non-whitespace character, or the end if the remainder is all whitespace
+static auto skip_trailing_whitespace(const char *cursor, const char *end)
+    -> const char * {
+  using namespace internal;
+  while (cursor != end &&
+         (*cursor == token_whitespace_tabulation<JSON::Char> ||
+          *cursor == token_whitespace_line_feed<JSON::Char> ||
+          *cursor == token_whitespace_carriage_return<JSON::Char> ||
+          *cursor == token_whitespace_space<JSON::Char>)) {
+    ++cursor;
+  }
+
+  return cursor;
+}
+
+// Compute the line and column of a position within the input, matching the
+// convention the scanner uses, so that a trailing-content error points at the
+// offending character rather than where the value happened to end
+static auto position_of(const char *begin, const char *target,
+                        std::uint64_t &line, std::uint64_t &column) -> void {
+  using namespace internal;
+  line = 1;
+  column = 1;
+  for (const char *iterator{begin}; iterator != target; ++iterator) {
+    if (*iterator == token_whitespace_line_feed<JSON::Char>) {
+      line += 1;
+      column = 1;
+    } else {
+      column += 1;
+    }
+  }
+}
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
                 std::uint64_t &line, std::uint64_t &column) -> JSON {
@@ -104,6 +140,9 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream,
 auto parse_json(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
     std::uint64_t &line, std::uint64_t &column) -> JSON {
+  // The overloads that expose the line and column are continuation-style: they
+  // parse a single value and leave the cursor for the caller to resume from,
+  // so they do not reject trailing content (see the position-less overloads)
   const char *cursor{input.empty() ? "" : input.data()};
   return internal_parse_json(cursor, cursor + input.size(), line, column, true);
 }
@@ -130,9 +169,17 @@ auto parse_json(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON {
   std::uint64_t line{1};
   std::uint64_t column{0};
-  const char *cursor{input.empty() ? "" : input.data()};
-  return internal_parse_json(cursor, cursor + input.size(), line, column,
-                             false);
+  const char *begin{input.empty() ? "" : input.data()};
+  const char *cursor{begin};
+  const char *end{cursor + input.size()};
+  auto result{internal_parse_json(cursor, end, line, column, false)};
+  const char *trailing{skip_trailing_whitespace(cursor, end)};
+  if (trailing != end) {
+    position_of(begin, trailing, line, column);
+    throw JSONParseError(line, column);
+  }
+
+  return result;
 }
 
 auto try_parse_json(
@@ -141,9 +188,11 @@ auto try_parse_json(
   std::uint64_t line{1};
   std::uint64_t column{0};
   const char *cursor{input.empty() ? "" : input.data()};
+  const char *end{cursor + input.size()};
   JSON output{nullptr};
-  if (internal_parse_json<false>(cursor, cursor + input.size(), line, column,
-                                 nullptr, false, output)) {
+  if (internal_parse_json<false>(cursor, end, line, column, nullptr, false,
+                                 output) &&
+      skip_trailing_whitespace(cursor, end) == end) {
     return output;
   }
 
@@ -179,6 +228,7 @@ auto parse_json(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input,
     std::uint64_t &line, std::uint64_t &column, JSON &output,
     const JSON::ParseCallback &callback) -> void {
+  // Continuation-style overload: see the note on the non-callback variant
   const char *cursor{input.empty() ? "" : input.data()};
   internal_parse_json<true>(cursor, cursor + input.size(), line, column,
                             callback, true, output);
@@ -206,9 +256,20 @@ auto parse_json(
     JSON &output, const JSON::ParseCallback &callback) -> void {
   std::uint64_t line{1};
   std::uint64_t column{0};
-  const char *cursor{input.empty() ? "" : input.data()};
-  internal_parse_json<true>(cursor, cursor + input.size(), line, column,
-                            callback, false, output);
+  const char *begin{input.empty() ? "" : input.data()};
+  const char *cursor{begin};
+  const char *end{cursor + input.size()};
+  // Parse into a temporary so that a trailing-content failure leaves the output
+  // untouched, matching how a malformed value fails before ever populating it
+  JSON result{nullptr};
+  internal_parse_json<true>(cursor, end, line, column, callback, false, result);
+  const char *trailing{skip_trailing_whitespace(cursor, end)};
+  if (trailing != end) {
+    position_of(begin, trailing, line, column);
+    throw JSONParseError(line, column);
+  }
+
+  output = std::move(result);
 }
 
 auto read_json(const std::filesystem::path &path, JSON &output,

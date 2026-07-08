@@ -57,6 +57,13 @@ if(PROJECT_IS_TOP_LEVEL)
   sourcemeta_enable_simd()
 endif()
 
+# Enable the sanitizers before defining any target
+if(SOURCEMETA_CORE_ADDRESS_SANITIZER)
+  sourcemeta_sanitizer(TYPE address)
+elseif(SOURCEMETA_CORE_UNDEFINED_SANITIZER)
+  sourcemeta_sanitizer(TYPE undefined)
+endif()
+
 # TODO: Turn this into a re-usable utility CMake function
 if(SOURCEMETA_CORE_INSTALL)
   include(GNUInstallDirs)
@@ -224,12 +231,6 @@ endif()
 if(SOURCEMETA_CORE_MARKDOWN)
   find_package(CMarkGFM REQUIRED)
   add_subdirectory(src/core/markdown)
-endif()
-
-if(SOURCEMETA_CORE_ADDRESS_SANITIZER)
-  sourcemeta_sanitizer(TYPE address)
-elseif(SOURCEMETA_CORE_UNDEFINED_SANITIZER)
-  sourcemeta_sanitizer(TYPE undefined)
 endif()
 
 if(SOURCEMETA_CORE_DOCS)

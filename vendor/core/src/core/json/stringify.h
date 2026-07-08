@@ -11,8 +11,6 @@
 #include <charconv>  // std::to_chars
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::int64_t
-#include <iomanip>   // std::setprecision
-#include <ios>       // std::noshowpoint, std::fixed
 #include <iterator>  // std::next, std::cbegin, std::cend, std::back_inserter
 #include <ostream>   // std::basic_ostream
 #include <sstream>   // std::ostringstream
@@ -81,11 +79,17 @@ auto stringify(
   if (value == static_cast<double>(0.0)) {
     stream.write("0.0", 3);
   } else if (is_integral) {
-    const auto flags{stream.flags()};
-    const auto precision{stream.precision()};
-    stream << std::fixed << std::setprecision(1) << value;
-    stream.flags(flags);
-    stream.precision(precision);
+    // Write the integer digits followed by an explicit ".0" to preserve the
+    // real type. Using to_chars rather than a formatted stream keeps the
+    // decimal separator independent of the global locale, which otherwise
+    // corrupts the output under a comma-decimal locale
+    std::array<char, 344> buffer{};
+    const auto result{std::to_chars(buffer.data(),
+                                    buffer.data() + buffer.size(), value,
+                                    std::chars_format::fixed)};
+    assert(result.ec == std::errc{});
+    stream.write(buffer.data(), result.ptr - buffer.data());
+    stream.write(".0", 2);
   } else {
     std::array<char, 64> buffer{};
     const auto result{

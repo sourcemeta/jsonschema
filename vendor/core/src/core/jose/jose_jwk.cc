@@ -2,7 +2,8 @@
 
 #include <sourcemeta/core/crypto.h>
 
-#include <cstddef>     // std::size_t
+#include "jose_key.h"
+
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
@@ -25,82 +26,22 @@ const auto HASH_DP{sourcemeta::core::JSON::Object::hash("dp"sv)};
 const auto HASH_DQ{sourcemeta::core::JSON::Object::hash("dq"sv)};
 const auto HASH_QI{sourcemeta::core::JSON::Object::hash("qi"sv)};
 const auto HASH_OTH{sourcemeta::core::JSON::Object::hash("oth"sv)};
+const auto HASH_K{sourcemeta::core::JSON::Object::hash("k"sv)};
 
-// The RSA algorithms only require an RSA key, each ECDSA algorithm is tied to a
-// specific curve (RFC 7518 Section 3.1), and the Edwards-curve algorithm
-// requires an octet key pair of either curve (RFC 8037 Section 3.1)
-auto algorithm_matches_key(const sourcemeta::core::JWSAlgorithm algorithm,
-                           const sourcemeta::core::JWK::Type type,
-                           const std::string_view curve) -> bool {
-  switch (algorithm) {
-    case sourcemeta::core::JWSAlgorithm::RS256:
-    case sourcemeta::core::JWSAlgorithm::RS384:
-    case sourcemeta::core::JWSAlgorithm::RS512:
-    case sourcemeta::core::JWSAlgorithm::PS256:
-    case sourcemeta::core::JWSAlgorithm::PS384:
-    case sourcemeta::core::JWSAlgorithm::PS512:
-      return type == sourcemeta::core::JWK::Type::RSA;
-    case sourcemeta::core::JWSAlgorithm::ES256:
-      return type == sourcemeta::core::JWK::Type::EllipticCurve &&
-             curve == "P-256";
-    case sourcemeta::core::JWSAlgorithm::ES384:
-      return type == sourcemeta::core::JWK::Type::EllipticCurve &&
-             curve == "P-384";
-    case sourcemeta::core::JWSAlgorithm::ES512:
-      return type == sourcemeta::core::JWK::Type::EllipticCurve &&
-             curve == "P-521";
-    case sourcemeta::core::JWSAlgorithm::EdDSA:
-      return type == sourcemeta::core::JWK::Type::OctetKeyPair;
+auto to_jwk_kind(const sourcemeta::core::JWK::Type type) noexcept
+    -> sourcemeta::core::JWKKind {
+  switch (type) {
+    case sourcemeta::core::JWK::Type::RSA:
+      return sourcemeta::core::JWKKind::RSA;
+    case sourcemeta::core::JWK::Type::EllipticCurve:
+      return sourcemeta::core::JWKKind::EllipticCurve;
+    case sourcemeta::core::JWK::Type::OctetKeyPair:
+      return sourcemeta::core::JWKKind::OctetKeyPair;
+    case sourcemeta::core::JWK::Type::Octet:
+      return sourcemeta::core::JWKKind::Octet;
   }
 
   std::unreachable();
-}
-
-// The coordinate octet length is fixed per curve (RFC 7518 Section 6.2.1.2)
-auto ec_coordinate_bytes(const std::string_view curve)
-    -> std::optional<std::size_t> {
-  if (curve == "P-256") {
-    return 32;
-  } else if (curve == "P-384") {
-    return 48;
-  } else if (curve == "P-521") {
-    return 66;
-  } else {
-    return std::nullopt;
-  }
-}
-
-// The public key octet length is fixed per Edwards curve (RFC 8032 Sections
-// 5.1.5 and 5.2.5)
-auto okp_key_bytes(const std::string_view curve) -> std::optional<std::size_t> {
-  if (curve == "Ed25519") {
-    return 32;
-  } else if (curve == "Ed448") {
-    return 57;
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Both mappings are only reached after the curve has been validated above
-auto to_elliptic_curve(const std::string_view curve) noexcept
-    -> sourcemeta::core::EllipticCurve {
-  if (curve == "P-256") {
-    return sourcemeta::core::EllipticCurve::P256;
-  } else if (curve == "P-384") {
-    return sourcemeta::core::EllipticCurve::P384;
-  } else {
-    return sourcemeta::core::EllipticCurve::P521;
-  }
-}
-
-auto to_edwards_curve(const std::string_view curve) noexcept
-    -> sourcemeta::core::EdwardsCurve {
-  if (curve == "Ed25519") {
-    return sourcemeta::core::EdwardsCurve::Ed25519;
-  } else {
-    return sourcemeta::core::EdwardsCurve::Ed448;
-  }
 }
 
 } // namespace
@@ -146,6 +87,10 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
       return false;
     }
 
+    if (!jwk_rsa_modulus_is_allowed(decoded_modulus.value())) {
+      return false;
+    }
+
     result.type_ = Type::RSA;
     parsed_key =
         make_rsa_public_key(decoded_modulus.value(), decoded_exponent.value());
@@ -165,7 +110,7 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
       return false;
     }
 
-    const auto coordinate_bytes{ec_coordinate_bytes(curve->to_string())};
+    const auto coordinate_bytes{jwk_ec_coordinate_bytes(curve->to_string())};
     if (!coordinate_bytes.has_value()) {
       return false;
     }
@@ -181,7 +126,7 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
 
     result.type_ = Type::EllipticCurve;
     result.curve_ = curve->to_string();
-    parsed_key = make_ec_public_key(to_elliptic_curve(result.curve_),
+    parsed_key = make_ec_public_key(jwk_to_elliptic_curve(result.curve_),
                                     decoded_x.value(), decoded_y.value());
   } else if (key_type_value == "OKP") {
     // A public key must not carry the private parameter (RFC 8037 Section 2)
@@ -196,7 +141,7 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
       return false;
     }
 
-    const auto key_bytes{okp_key_bytes(curve->to_string())};
+    const auto key_bytes{jwk_okp_key_bytes(curve->to_string())};
     if (!key_bytes.has_value()) {
       return false;
     }
@@ -209,8 +154,21 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
 
     result.type_ = Type::OctetKeyPair;
     result.curve_ = curve->to_string();
-    parsed_key = make_eddsa_public_key(to_edwards_curve(result.curve_),
+    parsed_key = make_eddsa_public_key(jwk_to_edwards_curve(result.curve_),
                                        decoded_public_key.value());
+  } else if (key_type_value == "oct") {
+    const auto *key_value{value.try_at("k", HASH_K)};
+    if (key_value == nullptr || !key_value->is_string()) {
+      return false;
+    }
+
+    auto decoded_key{base64url_decode(key_value->to_string())};
+    if (!decoded_key.has_value() || decoded_key.value().empty()) {
+      return false;
+    }
+
+    result.type_ = Type::Octet;
+    result.secret_ = std::move(decoded_key).value();
   } else {
     return false;
   }
@@ -235,7 +193,8 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
     // and otherwise leave it unset rather than rejecting an otherwise valid key
     const auto parsed{to_jws_algorithm(algorithm->to_string())};
     if (parsed.has_value() &&
-        algorithm_matches_key(parsed.value(), result.type_, result.curve_)) {
+        jwk_algorithm_matches_key(parsed.value(), to_jwk_kind(result.type_),
+                                  result.curve_)) {
       result.algorithm_ = parsed;
     }
   }

@@ -1,6 +1,8 @@
 #ifndef SOURCEMETA_CORE_HTTP_HELPERS_H_
 #define SOURCEMETA_CORE_HTTP_HELPERS_H_
 
+#include <sourcemeta/core/text.h>
+
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string_view> // std::string_view
@@ -14,25 +16,6 @@ inline auto http_is_ows(const char character) noexcept -> bool {
   return character == ' ' || character == '\t';
 }
 
-inline auto http_ascii_lower(const char character) noexcept -> char {
-  return (character >= 'A' && character <= 'Z')
-             ? static_cast<char>(character + ('a' - 'A'))
-             : character;
-}
-
-inline auto http_iequals_ascii(const std::string_view left,
-                               const std::string_view right) noexcept -> bool {
-  if (left.size() != right.size()) {
-    return false;
-  }
-  for (std::size_t index{0}; index < left.size(); ++index) {
-    if (http_ascii_lower(left[index]) != http_ascii_lower(right[index])) {
-      return false;
-    }
-  }
-  return true;
-}
-
 inline auto http_subview(const std::string_view value, const std::size_t offset,
                          const std::size_t length) noexcept
     -> std::string_view {
@@ -42,7 +25,7 @@ inline auto http_subview(const std::string_view value, const std::size_t offset,
 inline auto http_media_specificity(const std::string_view range,
                                    const std::string_view candidate) noexcept
     -> std::uint8_t {
-  if (http_iequals_ascii(range, candidate)) {
+  if (equals_ignore_case(range, candidate)) {
     return 3;
   }
   if (range == "*/*") {
@@ -60,10 +43,9 @@ inline auto http_media_specificity(const std::string_view range,
   if (range_slash != candidate_slash) {
     return 0;
   }
-  for (std::size_t index{0}; index < range_slash; ++index) {
-    if (http_ascii_lower(range[index]) != http_ascii_lower(candidate[index])) {
-      return 0;
-    }
+  if (!equals_ignore_case(http_subview(range, 0, range_slash),
+                          http_subview(candidate, 0, range_slash))) {
+    return 0;
   }
   return 2;
 }

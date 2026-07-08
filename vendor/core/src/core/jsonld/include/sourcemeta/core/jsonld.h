@@ -33,7 +33,12 @@ using JSONLDResolver = std::function<std::optional<JSON>(JSON::StringView)>;
 
 /// @ingroup jsonld
 /// The JSON-LD processing mode
-enum class JSONLDVersion : std::uint8_t { V1_0, V1_1 };
+enum class JSONLDVersion : std::uint8_t {
+  /// The JSON-LD 1.0 processing mode
+  V1_0,
+  /// The JSON-LD 1.1 processing mode
+  V1_1
+};
 
 /// @ingroup jsonld
 ///

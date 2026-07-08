@@ -8,10 +8,15 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer
+/// A single reference token of a JSON Pointer, holding either an object
+/// property or an array index.
 template <typename PropertyT, typename Hash> class GenericToken {
 public:
+  /// The JSON value type these tokens convert to
   using Value = JSON;
+  /// The stored type of an object property token
   using Property = PropertyT;
+  /// The stored type of an array index token
   using Index = typename Value::Array::size_type;
 
   /// This constructor creates an JSON Pointer token from a string given its

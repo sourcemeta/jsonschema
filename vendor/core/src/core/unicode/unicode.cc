@@ -225,6 +225,16 @@ auto utf8_to_wide(const std::string_view input) -> std::wstring {
   std::size_t read{0};
   while (read < input.size()) {
     const auto lead{static_cast<std::uint8_t>(input[read])};
+    // Stop on a multi-byte sequence that is truncated by the end of the input
+    // rather than reading past it
+    const std::size_t sequence{lead < 0x80    ? 1U
+                               : lead < 0xE0U ? 2U
+                               : lead < 0xF0U ? 3U
+                                              : 4U};
+    if (read + sequence > input.size()) {
+      break;
+    }
+
     if (lead < 0x80) {
       result[write++] = static_cast<wchar_t>(lead);
       read += 1;

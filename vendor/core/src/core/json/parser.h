@@ -3,6 +3,7 @@
 
 #include <sourcemeta/core/json_error.h>
 #include <sourcemeta/core/json_value.h>
+#include <sourcemeta/core/text.h>
 
 #include "grammar.h"
 
@@ -181,18 +182,11 @@ inline auto scan_string_unicode_code_point(const std::uint64_t line,
     if (cursor >= end) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    const char hex_char{*cursor++};
-    unsigned long digit;
-    if (hex_char >= '0' && hex_char <= '9') {
-      digit = static_cast<unsigned long>(hex_char - '0');
-    } else if (hex_char >= 'a' && hex_char <= 'f') {
-      digit = static_cast<unsigned long>(hex_char - 'a') + 10;
-    } else if (hex_char >= 'A' && hex_char <= 'F') {
-      digit = static_cast<unsigned long>(hex_char - 'A') + 10;
-    } else [[unlikely]] {
+    const auto digit{hex_digit_value(*cursor++)};
+    if (digit < 0) [[unlikely]] {
       throw JSONParseError(line, column);
     }
-    result = (result << 4) | digit;
+    result = (result << 4) | static_cast<unsigned long>(digit);
   }
 
   assert(result <= 0xFFFF);

@@ -5,7 +5,8 @@
 #include <sourcemeta/core/regex_export.h>
 #endif
 
-#include <cstdint>     // std::uint8_t, std::uint64_t
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
 #include <memory>      // std::shared_ptr
 #include <optional>    // std::optional
 #include <string>      // std::string
@@ -26,6 +27,7 @@
 namespace sourcemeta::core {
 
 /// @ingroup regex
+/// Matches any string that begins with a fixed prefix.
 using RegexTypePrefix = std::string;
 
 /// @ingroup regex
@@ -34,10 +36,13 @@ struct RegexTypeNonEmpty {
 };
 
 /// @ingroup regex
-using RegexTypeRange = std::pair<std::uint64_t, std::uint64_t>;
+/// Matches any string whose length falls within an inclusive range.
+using RegexTypeRange = std::pair<std::size_t, std::size_t>;
 
 /// @ingroup regex
+/// A regular expression compiled through the PCRE2 engine.
 struct RegexTypePCRE2 {
+  /// The opaque handle to the compiled expression.
   std::shared_ptr<void> code;
   auto operator==(const RegexTypePCRE2 &other) const noexcept -> bool {
     return this->code == other.code;
@@ -50,6 +55,7 @@ struct RegexTypeNoop {
 };
 
 /// @ingroup regex
+/// A compiled regular expression in one of its supported representations.
 using Regex = std::variant<RegexTypePrefix, RegexTypeNonEmpty, RegexTypeRange,
                            RegexTypePCRE2, RegexTypeNoop>;
 #if !defined(DOXYGEN)

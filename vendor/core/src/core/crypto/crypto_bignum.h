@@ -1,16 +1,21 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_BIGNUM_H_
 #define SOURCEMETA_CORE_CRYPTO_BIGNUM_H_
 
-// Fixed-capacity unsigned big integer arithmetic for the reference
-// signature verification backend. Capacity fits 4096-bit RSA operands
-// and their double-width products. Constant-time execution is not
-// required, since verification consumes only public inputs
+// Fixed-capacity unsigned big integer arithmetic for the reference signature
+// backend. Capacity fits 4096-bit RSA operands and their double-width products.
+// The verification paths consume only public inputs and stay variable time; the
+// signing paths use the constant-time layer below (fixed-width multiply,
+// Barrett reduction, masked select and inverse) on their secret operands. Only
+// the Barrett context precompute stays variable time, and it touches the public
+// modulus alone
 
 #include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
 
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint64_t
+#include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -23,6 +28,32 @@ struct Bignum {
   static constexpr std::size_t capacity{130};
   std::array<std::uint64_t, capacity> words{};
   std::size_t size{0};
+};
+
+// Overwrite the whole word buffer of a big integer that held secret material,
+// including the words past the current size that intermediate operations wrote,
+// so it does not linger in freed memory. The volatile access stops the compiler
+// from eliding the write as a dead store
+inline auto secure_zero(Bignum &value) noexcept -> void {
+  auto *pointer{reinterpret_cast<volatile unsigned char *>(value.words.data())};
+  for (std::size_t index{0}; index < sizeof(value.words); index += 1) {
+    pointer[index] = 0;
+  }
+
+  value.size = 0;
+}
+
+// Overwrite the referenced big integer when leaving the current scope, so a
+// secret value a local holds is wiped across every return path without
+// threading a manual call through each one
+struct SecureBignumScope {
+  explicit SecureBignumScope(Bignum &value) noexcept : target{value} {}
+  SecureBignumScope(const SecureBignumScope &) = delete;
+  auto operator=(const SecureBignumScope &) -> SecureBignumScope & = delete;
+  SecureBignumScope(SecureBignumScope &&) = delete;
+  auto operator=(SecureBignumScope &&) -> SecureBignumScope & = delete;
+  ~SecureBignumScope() { secure_zero(this->target); }
+  Bignum &target;
 };
 
 inline auto bignum_normalize(Bignum &value) noexcept -> void {
@@ -62,33 +93,13 @@ inline auto bignum_from_u64(const std::uint64_t value) noexcept -> Bignum {
 }
 
 inline auto bignum_from_hex(const std::string_view hex) -> Bignum {
-  const auto nibble{[](const char character) noexcept -> std::uint8_t {
-    if (character >= '0' && character <= '9') {
-      return static_cast<std::uint8_t>(character - '0');
-    } else if (character >= 'a' && character <= 'f') {
-      return static_cast<std::uint8_t>(character - 'a' + 10);
-    } else {
-      return static_cast<std::uint8_t>(character - 'A' + 10);
-    }
-  }};
-
-  std::string bytes;
-  bytes.reserve((hex.size() + 1) / 2);
-
-  // An odd length means the leading nibble forms a byte on its own, as if a
-  // zero had been prepended
-  std::size_t index{0};
-  if (hex.size() % 2 != 0) {
-    bytes.push_back(static_cast<char>(nibble(hex[0])));
-    index = 1;
+  // An odd length is decoded as if a zero nibble had been prepended
+  const auto bytes{hex_to_bytes(hex, true)};
+  if (!bytes.has_value()) {
+    return Bignum{};
   }
 
-  for (; index + 1 < hex.size(); index += 2) {
-    bytes.push_back(
-        static_cast<char>((nibble(hex[index]) << 4u) | nibble(hex[index + 1])));
-  }
-
-  return bignum_from_bytes(bytes);
+  return bignum_from_bytes(bytes.value());
 }
 
 inline auto bignum_is_zero(const Bignum &value) noexcept -> bool {
@@ -133,6 +144,16 @@ inline auto bignum_get_bit(const Bignum &value, const std::size_t bit) noexcept
   }
 
   return ((value.words[word] >> (bit % 64)) & 1u) != 0;
+}
+
+// The same read without the size-dependent early return, so the signing ladders
+// do not reveal the secret scalar's length through the branch. The bit index is
+// bounded by the public curve size, so the guard is on public data
+inline auto bignum_get_bit_fixed(const Bignum &value,
+                                 const std::size_t bit) noexcept -> bool {
+  const auto word{bit / 64};
+  return word < Bignum::capacity &&
+         ((value.words[word] >> (bit % 64)) & 1u) != 0;
 }
 
 // Assumes the result fits in the capacity
@@ -483,6 +504,277 @@ inline auto bignum_mod_inverse(const Bignum &value,
 
   return bignum_compare(first, one) == 0 ? first_coefficient
                                          : second_coefficient;
+}
+
+// A branch-free select, so a secret condition does not steer control flow. The
+// whole capacity is blended so the running size does not leak the condition
+inline auto bignum_conditional_select(const bool condition,
+                                      const Bignum &when_true,
+                                      const Bignum &when_false) noexcept
+    -> Bignum {
+  const std::uint64_t mask{std::uint64_t{0} -
+                           static_cast<std::uint64_t>(condition)};
+  Bignum result;
+  for (std::size_t index = 0; index < Bignum::capacity; ++index) {
+    result.words[index] =
+        (when_true.words[index] & mask) | (when_false.words[index] & ~mask);
+  }
+
+  const std::size_t size_mask{std::size_t{0} -
+                              static_cast<std::size_t>(condition)};
+  result.size = (when_true.size & size_mask) | (when_false.size & ~size_mask);
+  return result;
+}
+
+// Fixed-width subtraction over the given number of words, returning the final
+// borrow. It always visits every word, so its timing does not depend on where
+// the operands' significant words fall the way the size-driven routines above
+// do
+inline auto bignum_subtract_fixed(const Bignum &left, const Bignum &right,
+                                  const std::size_t words, Bignum &out) noexcept
+    -> std::uint64_t {
+  std::uint64_t borrow{0};
+  for (std::size_t index = 0; index < words; ++index) {
+    const auto left_word{left.words[index]};
+    const auto right_word{right.words[index]};
+    const auto without_right{left_word - right_word};
+    const std::uint64_t borrow_from_right{left_word < right_word ? 1u : 0u};
+    const auto result_word{without_right - borrow};
+    const std::uint64_t borrow_from_previous{without_right < borrow ? 1u : 0u};
+    out.words[index] = result_word;
+    borrow = borrow_from_right | borrow_from_previous;
+  }
+
+  out.size = words;
+  return borrow;
+}
+
+// Multiply visiting exactly the given word counts, so timing does not reveal
+// where either operand's significant words fall
+inline auto bignum_multiply_fixed(const Bignum &left, const Bignum &right,
+                                  const std::size_t left_words,
+                                  const std::size_t right_words) noexcept
+    -> Bignum {
+  Bignum result;
+  for (std::size_t left_index = 0; left_index < left_words; ++left_index) {
+    std::uint64_t carry{0};
+    for (std::size_t right_index = 0; right_index < right_words;
+         ++right_index) {
+      const auto destination{left_index + right_index};
+      const auto product{static_cast<BignumDoubleWord>(left.words[left_index]) *
+                             right.words[right_index] +
+                         result.words[destination] + carry};
+      result.words[destination] = static_cast<std::uint64_t>(product);
+      carry = static_cast<std::uint64_t>(product >> 64u);
+    }
+
+    result.words[left_index + right_words] = carry;
+  }
+
+  result.size = left_words + right_words;
+  return result;
+}
+
+// A word-granular right shift dropping the low words, and its counterpart that
+// keeps them, for the word-aligned truncations the Barrett reduction needs
+inline auto bignum_drop_low_words(const Bignum &value,
+                                  const std::size_t words) noexcept -> Bignum {
+  Bignum result;
+  for (std::size_t index = 0; index + words < Bignum::capacity; ++index) {
+    result.words[index] = value.words[index + words];
+  }
+
+  result.size = value.size > words ? value.size - words : 0;
+  return result;
+}
+
+inline auto bignum_keep_low_words(const Bignum &value,
+                                  const std::size_t words) noexcept -> Bignum {
+  Bignum result;
+  for (std::size_t index = 0; index < words; ++index) {
+    result.words[index] = value.words[index];
+  }
+
+  result.size = words;
+  return result;
+}
+
+// Quotient of a division, for building a public reduction constant only, so a
+// plain bit-by-bit long division is enough
+inline auto bignum_divide(const Bignum &numerator,
+                          const Bignum &denominator) noexcept -> Bignum {
+  Bignum quotient;
+  Bignum remainder;
+  const auto bits{bignum_bit_length(numerator)};
+  for (std::size_t index = bits; index > 0; --index) {
+    remainder = bignum_shift_left(remainder, 1);
+    if (bignum_get_bit(numerator, index - 1)) {
+      remainder.words[0] |= 1u;
+      if (remainder.size == 0) {
+        remainder.size = 1;
+      }
+    }
+
+    if (bignum_compare(remainder, denominator) >= 0) {
+      bignum_subtract_in_place(remainder, denominator);
+      quotient.words[(index - 1) / 64] |= std::uint64_t{1}
+                                          << ((index - 1) % 64);
+      if (quotient.size < ((index - 1) / 64) + 1) {
+        quotient.size = ((index - 1) / 64) + 1;
+      }
+    }
+  }
+
+  return quotient;
+}
+
+// Precomputed constants for Barrett reduction modulo a fixed modulus. Built
+// from the public modulus alone, so the setup itself need not be constant time
+struct BarrettContext {
+  Bignum modulus;
+  std::size_t words;
+  Bignum factor;
+};
+
+inline auto barrett_context(const Bignum &modulus) noexcept -> BarrettContext {
+  BarrettContext context;
+  context.modulus = modulus;
+  context.words = modulus.size;
+  const auto power{bignum_shift_left(bignum_from_u64(1), 128 * context.words)};
+  context.factor = bignum_divide(power, modulus);
+  return context;
+}
+
+// If the value is at least the modulus over the given width, subtract it. The
+// choice is a masked select rather than a branch
+inline auto bignum_conditional_subtract(const Bignum &value,
+                                        const Bignum &modulus,
+                                        const std::size_t words) noexcept
+    -> Bignum {
+  Bignum reduced;
+  const auto borrow{bignum_subtract_fixed(value, modulus, words, reduced)};
+  return bignum_conditional_select(borrow == 0, reduced, value);
+}
+
+// Reduce a value below the square of the modulus down to the modulus in
+// constant time (Handbook of Applied Cryptography Algorithm 14.42). The
+// estimate is at most two too small, so three masked subtractions always finish
+// the reduction
+inline auto barrett_reduce(const Bignum &value,
+                           const BarrettContext &context) noexcept -> Bignum {
+  const auto width{context.words};
+  const auto high{bignum_drop_low_words(value, width - 1)};
+  const auto estimate{
+      bignum_multiply_fixed(high, context.factor, width + 1, width + 1)};
+  const auto quotient{bignum_drop_low_words(estimate, width + 1)};
+  const auto value_low{bignum_keep_low_words(value, width + 1)};
+  const auto product{
+      bignum_multiply_fixed(quotient, context.modulus, width + 1, width)};
+  const auto product_low{bignum_keep_low_words(product, width + 1)};
+  Bignum remainder;
+  bignum_subtract_fixed(value_low, product_low, width + 1, remainder);
+  remainder =
+      bignum_conditional_subtract(remainder, context.modulus, width + 1);
+  remainder =
+      bignum_conditional_subtract(remainder, context.modulus, width + 1);
+  remainder =
+      bignum_conditional_subtract(remainder, context.modulus, width + 1);
+  remainder.size = width;
+  return remainder;
+}
+
+inline auto field_mod_multiply_ct(const Bignum &left, const Bignum &right,
+                                  const BarrettContext &context) noexcept
+    -> Bignum {
+  return barrett_reduce(
+      bignum_multiply_fixed(left, right, context.words, context.words),
+      context);
+}
+
+inline auto field_add_ct(const Bignum &left, const Bignum &right,
+                         const BarrettContext &context) noexcept -> Bignum {
+  const auto width{context.words};
+  Bignum sum;
+  std::uint64_t carry{0};
+  for (std::size_t index = 0; index < width; ++index) {
+    const auto total{static_cast<BignumDoubleWord>(left.words[index]) +
+                     right.words[index] + carry};
+    sum.words[index] = static_cast<std::uint64_t>(total);
+    carry = static_cast<std::uint64_t>(total >> 64u);
+  }
+
+  sum.words[width] = carry;
+  sum.size = width + 1;
+  auto reduced{bignum_conditional_subtract(sum, context.modulus, width + 1)};
+  reduced.size = width;
+  return reduced;
+}
+
+inline auto field_subtract_ct(const Bignum &left, const Bignum &right,
+                              const BarrettContext &context) noexcept
+    -> Bignum {
+  const auto width{context.words};
+  Bignum difference;
+  const auto borrow{bignum_subtract_fixed(left, right, width, difference)};
+  Bignum wrapped;
+  std::uint64_t carry{0};
+  for (std::size_t index = 0; index < width; ++index) {
+    const auto total{static_cast<BignumDoubleWord>(difference.words[index]) +
+                     context.modulus.words[index] + carry};
+    wrapped.words[index] = static_cast<std::uint64_t>(total);
+    carry = static_cast<std::uint64_t>(total >> 64u);
+  }
+
+  wrapped.size = width;
+  auto result{bignum_conditional_select(borrow != 0, wrapped, difference)};
+  result.size = width;
+  return result;
+}
+
+// Fermat inverse over the field in constant time. The exponent is the public
+// modulus minus two, so its bit pattern reveals nothing secret, and the field
+// multiplications underneath do not depend on the value being inverted. The
+// modulus must be prime
+inline auto field_inverse_ct(const Bignum &value,
+                             const BarrettContext &context) noexcept -> Bignum {
+  auto exponent{context.modulus};
+  bignum_subtract_in_place(exponent, bignum_from_u64(2));
+  Bignum result;
+  result.words[0] = 1;
+  result.size = context.words;
+  const auto base{barrett_reduce(value, context)};
+  const auto exponent_bits{bignum_bit_length(exponent)};
+  for (std::size_t index = exponent_bits; index > 0; --index) {
+    result = field_mod_multiply_ct(result, result, context);
+    if (bignum_get_bit(exponent, index - 1)) {
+      result = field_mod_multiply_ct(result, base, context);
+    }
+  }
+
+  return result;
+}
+
+// Modular exponentiation for a secret exponent (the RSA private key), in
+// constant time. Unlike the inverse above, the exponent is secret, so the
+// ladder runs a fixed number of steps fixed by the public modulus and blends
+// the per-bit multiply with a masked select rather than a branch. The modulus
+// need not be prime
+inline auto bignum_mod_exp_ct(const Bignum &base, const Bignum &exponent,
+                              const BarrettContext &context) noexcept
+    -> Bignum {
+  Bignum result;
+  result.words[0] = 1;
+  result.size = context.words;
+  const auto reduced_base{barrett_reduce(base, context)};
+  const auto exponent_bits{bignum_bit_length(context.modulus)};
+  for (std::size_t index = exponent_bits; index > 0; --index) {
+    result = field_mod_multiply_ct(result, result, context);
+    const auto product{field_mod_multiply_ct(result, reduced_base, context)};
+    result = bignum_conditional_select(
+        bignum_get_bit_fixed(exponent, index - 1), product, result);
+  }
+
+  return result;
 }
 
 inline auto bignum_to_bytes(const Bignum &value, const std::size_t length)

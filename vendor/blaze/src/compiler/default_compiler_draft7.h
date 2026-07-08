@@ -29,10 +29,47 @@ auto compiler_draft7_applicator_if(const Context &context,
             .recompose()};
     assert(context.frame.locations().contains(
         {sourcemeta::blaze::SchemaReferenceType::Static, destination}));
+
+    // If `if` compiled to nothing, the `then` children will be hoisted to the
+    // current level without the `LogicalCondition` wrapper. When the schema
+    // uses dynamic scoping, we still need a wrapper instruction that keeps the
+    // current schema resource on the evaluation path for dynamic anchor
+    // resolution, as the omitted `LogicalCondition` instruction would have
+    // otherwise done it
+    if (then_cursor == 0 && context.uses_dynamic_scopes) {
+      Instructions substeps{
+          compile(context, schema_context, relative_dynamic_context(),
+                  sourcemeta::core::empty_weak_pointer,
+                  sourcemeta::core::empty_weak_pointer, destination)};
+      if (substeps.empty()) {
+        return children;
+      }
+
+      const auto then_pointer{schema_context.relative_pointer.initial().concat(
+          make_weak_pointer(KEYWORD_THEN))};
+      const SchemaContext then_schema_context{
+          .relative_pointer = then_pointer,
+          .schema = schema_context.schema,
+          .vocabularies = schema_context.vocabularies,
+          .base = schema_context.base,
+          .is_property_name = schema_context.is_property_name};
+      return {make(
+          sourcemeta::blaze::InstructionIndex::LogicalAnd, context,
+          then_schema_context,
+          {.keyword = KEYWORD_THEN,
+           .base_schema_location = dynamic_context.base_schema_location,
+           .base_instance_location = dynamic_context.base_instance_location},
+          ValueNone{}, std::move(substeps))};
+    }
+
+    // When hoisting, the `then` children must carry the instance navigation
+    // that the omitted `LogicalCondition` wrapper would have performed
     DynamicContext new_dynamic_context{
         .keyword = KEYWORD_THEN,
         .base_schema_location = dynamic_context.base_schema_location,
-        .base_instance_location = sourcemeta::core::empty_weak_pointer};
+        .base_instance_location = then_cursor == 0
+                                      ? dynamic_context.base_instance_location
+                                      : sourcemeta::core::empty_weak_pointer};
     for (auto &&step :
          compile(context, schema_context, new_dynamic_context,
                  sourcemeta::core::empty_weak_pointer,
@@ -44,6 +81,14 @@ auto compiler_draft7_applicator_if(const Context &context,
     if (then_cursor == 0) {
       return children;
     }
+  }
+
+  // If `if` compiled to nothing, it always succeeds, so in the absence of
+  // `then`, the `else` subschema can never apply and the entire conditional
+  // is a no-op
+  if (then_cursor == 0) {
+    assert(children.empty());
+    return {};
   }
 
   // `else`

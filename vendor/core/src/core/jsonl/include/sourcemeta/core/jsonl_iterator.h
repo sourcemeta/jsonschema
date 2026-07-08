@@ -19,6 +19,7 @@ namespace sourcemeta::core {
 /// A forward iterator to parse JSON documents out of a JSON Lines stream.
 class SOURCEMETA_CORE_JSONL_EXPORT ConstJSONLIterator {
 public:
+  /// Construct an iterator over the JSON documents in a stream.
   ConstJSONLIterator(std::basic_istream<JSON::Char, JSON::CharTraits> *stream);
   ~ConstJSONLIterator();
   using iterator_category = std::forward_iterator_tag;

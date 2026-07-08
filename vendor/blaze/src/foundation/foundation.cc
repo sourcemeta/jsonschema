@@ -2,14 +2,9 @@
 
 #include "helpers.h"
 
-#include <algorithm>     // std::max, std::ranges::fold_left
 #include <cassert>       // assert
-#include <cstdint>       // std::uint64_t
-#include <limits>        // std::numeric_limits
 #include <sstream>       // std::ostringstream
 #include <string_view>   // std::string_view
-#include <type_traits>   // std::remove_reference_t
-#include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::to_underlying
 
@@ -800,30 +795,6 @@ auto sourcemeta::blaze::vocabularies(const SchemaResolver &resolver,
   }
 
   return result;
-}
-
-auto sourcemeta::blaze::schema_keyword_priority(
-    std::string_view keyword,
-    const sourcemeta::blaze::Vocabularies &vocabularies,
-    const sourcemeta::blaze::SchemaWalker &walker) -> std::uint64_t {
-  const auto &result{walker(keyword, vocabularies)};
-  const auto priority_from_dependencies{std::ranges::fold_left(
-      result.dependencies, static_cast<std::uint64_t>(0),
-      [&vocabularies, &walker](const auto accumulator,
-                               const auto &dependency) -> std::uint64_t {
-        return std::max(
-            accumulator,
-            schema_keyword_priority(dependency, vocabularies, walker) + 1);
-      })};
-  const auto priority_from_order_dependencies{std::ranges::fold_left(
-      result.order_dependencies, static_cast<std::uint64_t>(0),
-      [&vocabularies, &walker](const auto accumulator,
-                               const auto &dependency) -> std::uint64_t {
-        return std::max(
-            accumulator,
-            schema_keyword_priority(dependency, vocabularies, walker) + 1);
-      })};
-  return std::max(priority_from_dependencies, priority_from_order_dependencies);
 }
 
 static auto parse_schema_type_string(const sourcemeta::core::JSON::String &type,

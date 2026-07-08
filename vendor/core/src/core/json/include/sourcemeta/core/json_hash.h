@@ -10,6 +10,7 @@
 namespace sourcemeta::core {
 
 /// @ingroup json
+/// A hash function object for JSON values
 template <typename T> struct HashJSON {
   using hash_type = std::uint64_t;
 
@@ -21,6 +22,7 @@ template <typename T> struct HashJSON {
     }
   }
 
+  /// Check whether the given hash is a perfect hash
   [[nodiscard]]
   inline auto is_perfect(const hash_type) const noexcept -> bool {
     return false;
@@ -28,6 +30,7 @@ template <typename T> struct HashJSON {
 };
 
 /// @ingroup json
+/// A hash function object for JSON object property keys
 template <typename T> struct PropertyHashJSON {
   struct hash_type {
     using type = sourcemeta::core::uint128_t;
@@ -37,6 +40,7 @@ template <typename T> struct PropertyHashJSON {
     auto operator==(const hash_type &) const noexcept -> bool = default;
   };
 
+  /// Compute a perfect hash from raw data
   [[nodiscard]]
   inline auto perfect(const char *data, const std::size_t size) const noexcept
       -> hash_type {
@@ -211,6 +215,7 @@ template <typename T> struct PropertyHashJSON {
     }
   }
 
+  /// Check whether the given hash is a perfect hash
   [[nodiscard]]
   inline auto is_perfect(const hash_type &hash) const noexcept -> bool {
     // If there is anything written past the first byte,

@@ -109,4 +109,8 @@ auto URI::rebase_path(const std::string_view path,
   return result;
 }
 
+auto URI::normalize_path(const std::string_view path) -> std::string {
+  return sourcemeta::core::normalize_path(path);
+}
+
 } // namespace sourcemeta::core

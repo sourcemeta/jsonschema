@@ -23,19 +23,26 @@ using uint128_t = __uint128_t;
 // We keep the full implementation header-only to allow the compiler to better
 // inline
 struct uint128_t {
+  /// The lower 64 bits of the value.
   std::uint64_t low;
+  /// The upper 64 bits of the value.
   std::uint64_t high;
 
   uint128_t() noexcept : low{0}, high{0} {}
+  /// Construct from a signed integer, sign-extending negative values.
   uint128_t(int value) noexcept
       : low{static_cast<std::uint64_t>(value)},
         high{value < 0 ? UINT64_MAX : 0} {}
+  /// Construct from an unsigned integer.
   uint128_t(unsigned int value) noexcept
       : low{static_cast<std::uint64_t>(value)}, high{0} {}
+  /// Construct from a 64-bit unsigned integer.
   uint128_t(std::uint64_t value) noexcept : low{value}, high{0} {}
+  /// Construct from a 64-bit signed integer, sign-extending negative values.
   uint128_t(std::int64_t value) noexcept
       : low{static_cast<std::uint64_t>(value)},
         high{value < 0 ? UINT64_MAX : 0} {}
+  /// Construct from separate upper and lower 64-bit halves.
   uint128_t(std::uint64_t high_part, std::uint64_t low_part) noexcept
       : low{low_part}, high{high_part} {}
 
@@ -115,6 +122,10 @@ struct uint128_t {
     auto remainder_high = dividend.high % divisor;
     std::uint64_t quotient_low;
     std::uint64_t remainder;
+    // The high half of the partial dividend must stay below the divisor, or the
+    // hardware 128-by-64 division would overflow its 64-bit quotient. The
+    // remainder of the earlier division guarantees this
+    assert(remainder_high < divisor);
 #if defined(_MSC_VER)
     quotient_low = _udiv128(remainder_high, dividend.low, divisor, &remainder);
 #else
@@ -147,6 +158,10 @@ struct uint128_t {
 
     auto remainder_high = dividend.high % divisor;
     std::uint64_t remainder;
+    // The high half of the partial dividend must stay below the divisor, or the
+    // hardware 128-by-64 division would overflow its 64-bit quotient. The
+    // remainder of the earlier division guarantees this
+    assert(remainder_high < divisor);
 #if defined(_MSC_VER)
     _udiv128(remainder_high, dividend.low, divisor, &remainder);
 #else

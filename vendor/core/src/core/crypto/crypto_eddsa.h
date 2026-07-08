@@ -1,15 +1,18 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_EDDSA_H_
 #define SOURCEMETA_CORE_CRYPTO_EDDSA_H_
 
-// Edwards-curve signature verification (Ed25519 and Ed448, RFC 8032 Section 5,
-// the pure variants) for the backends without a native EdDSA primitive. Points
-// are kept in extended Edwards coordinates, so that the group law is a single
-// set of complete formulas shared by both curves. Constant time execution is
-// not required, since verification consumes only public inputs
+// Edwards-curve signatures (Ed25519 and Ed448, RFC 8032 Section 5, the pure
+// variants) for the backends without a native EdDSA primitive. Points are kept
+// in extended Edwards coordinates, so that the group law is a single set of
+// complete formulas shared by both curves. Verification consumes only public
+// inputs and stays variable time; the signing paths use the constant-time
+// scalar multiplication, inverse, and encoding below, evaluated with the
+// constant-time field layer, so they do not depend on the secret scalar
 
 #include <sourcemeta/core/crypto_sha512.h>
 
 #include "crypto_bignum.h"
+#include "crypto_helpers.h"
 #include "crypto_shake256.h"
 
 #include <cstddef>     // std::size_t
@@ -95,6 +98,66 @@ inline auto edwards_point_scalar_multiply(const Bignum &scalar,
   return result;
 }
 
+inline auto edwards_point_conditional_select(
+    const bool condition, const EdwardsPoint &when_true,
+    const EdwardsPoint &when_false) noexcept -> EdwardsPoint {
+  return {.x = bignum_conditional_select(condition, when_true.x, when_false.x),
+          .y = bignum_conditional_select(condition, when_true.y, when_false.y),
+          .z = bignum_conditional_select(condition, when_true.z, when_false.z),
+          .t = bignum_conditional_select(condition, when_true.t, when_false.t)};
+}
+
+// The same complete addition as above evaluated over the constant-time field
+// arithmetic, for the signing path where the operands derive from the secret
+// scalar
+inline auto edwards_point_add_constant_time(
+    const EdwardsPoint &left, const EdwardsPoint &right,
+    const EdwardsParameters &parameters, const BarrettContext &field) noexcept
+    -> EdwardsPoint {
+  const auto a{field_mod_multiply_ct(left.x, right.x, field)};
+  const auto b{field_mod_multiply_ct(left.y, right.y, field)};
+  const auto c{field_mod_multiply_ct(
+      field_mod_multiply_ct(parameters.coefficient_d, left.t, field), right.t,
+      field)};
+  const auto d{field_mod_multiply_ct(left.z, right.z, field)};
+  const auto e{field_subtract_ct(
+      field_mod_multiply_ct(field_add_ct(left.x, left.y, field),
+                            field_add_ct(right.x, right.y, field), field),
+      field_add_ct(a, b, field), field)};
+  const auto f{field_subtract_ct(d, c, field)};
+  const auto g{field_add_ct(d, c, field)};
+  const auto h{field_subtract_ct(
+      b, field_mod_multiply_ct(parameters.coefficient_a, a, field), field)};
+  return EdwardsPoint{.x = field_mod_multiply_ct(e, f, field),
+                      .y = field_mod_multiply_ct(g, h, field),
+                      .z = field_mod_multiply_ct(f, g, field),
+                      .t = field_mod_multiply_ct(e, h, field)};
+}
+
+// For the signing path, where the scalar is secret: a fixed-length
+// double-and-add-always ladder with a masked selection over the complete
+// Edwards formulas evaluated in constant time, so neither the per-bit branch
+// nor the field arithmetic underneath depends on the scalar
+inline auto edwards_point_scalar_multiply_constant_time(
+    const Bignum &scalar, const EdwardsPoint &point,
+    const EdwardsParameters &parameters) -> EdwardsPoint {
+  const auto field{barrett_context(parameters.prime)};
+  EdwardsPoint result{.x = Bignum{},
+                      .y = bignum_from_u64(1),
+                      .z = bignum_from_u64(1),
+                      .t = Bignum{}};
+  const auto scalar_bits{bignum_bit_length(parameters.prime)};
+  for (std::size_t index = scalar_bits; index > 0; --index) {
+    result = edwards_point_add_constant_time(result, result, parameters, field);
+    const auto sum{
+        edwards_point_add_constant_time(result, point, parameters, field)};
+    result = edwards_point_conditional_select(
+        bignum_get_bit_fixed(scalar, index - 1), sum, result);
+  }
+
+  return result;
+}
+
 // Whether two points are equal, compared without leaving projective space by
 // cross-multiplying through the Z factors
 inline auto edwards_point_equal(const EdwardsPoint &left,
@@ -104,6 +167,26 @@ inline auto edwards_point_equal(const EdwardsPoint &left,
                         bignum_mod_multiply(right.x, left.z, prime)) == 0 &&
          bignum_compare(bignum_mod_multiply(left.y, right.z, prime),
                         bignum_mod_multiply(right.y, left.z, prime)) == 0;
+}
+
+// Encode a point into the little-endian y coordinate with the low bit of x in
+// the final bit (RFC 8032 Section 5.1.2), the inverse of the point decoding
+inline auto edwards_point_encode(const EdwardsPoint &point, const Bignum &prime,
+                                 const std::size_t length) -> std::string {
+  // Only the signing path encodes points, and its projective z derives from the
+  // secret scalar, so the coordinate recovery is taken in constant time
+  const auto field{barrett_context(prime)};
+  const auto z_inverse{field_inverse_ct(point.z, field)};
+  const auto x{field_mod_multiply_ct(point.x, z_inverse, field)};
+  const auto y{field_mod_multiply_ct(point.y, z_inverse, field)};
+  const auto big_endian{bignum_to_bytes(y, length)};
+  std::string encoding{big_endian.rbegin(), big_endian.rend()};
+  if (bignum_get_bit(x, 0)) {
+    encoding.back() =
+        static_cast<char>(static_cast<std::uint8_t>(encoding.back()) | 0x80u);
+  }
+
+  return encoding;
 }
 
 // Recover an Ed25519 point from its 32-byte encoding (RFC 8032 Section 5.1.3),
@@ -287,6 +370,87 @@ inline auto edwards25519_verify(const std::string_view public_key,
   return edwards_point_equal(left, right, parameters.prime);
 }
 
+// Produce an Ed25519 signature over a message (RFC 8032 Section 5.1.6), given
+// the 32-byte secret seed
+inline auto edwards25519_sign(const std::string_view secret,
+                              const std::string_view message)
+    -> std::optional<std::string> {
+  if (secret.size() != 32) {
+    return std::nullopt;
+  }
+
+  const auto parameters{edwards25519()};
+  // The key derivation hash carries both the secret scalar and the nonce
+  // prefix, so it and everything derived from it below is wiped before
+  // returning
+  auto hashed{sha512_digest(secret)};
+  const SecureBufferScope hashed_scope{hashed.data(), hashed.size()};
+  const std::string_view digest{reinterpret_cast<const char *>(hashed.data()),
+                                hashed.size()};
+
+  // The secret scalar is the pruned first half, the prefix the second half
+  std::string scalar_bytes{digest.substr(0, 32)};
+  const SecureScope scalar_bytes_scope{scalar_bytes};
+  scalar_bytes.front() = static_cast<char>(
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xf8u);
+  scalar_bytes.back() = static_cast<char>(
+      (static_cast<std::uint8_t>(scalar_bytes.back()) & 0x7fu) | 0x40u);
+  auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
+  const SecureBignumScope scalar_a_scope{scalar_a};
+  const auto prefix{digest.substr(32)};
+
+  const auto public_key{
+      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
+                               scalar_a, parameters.base, parameters),
+                           parameters.prime, 32)};
+
+  // r = SHA-512(prefix || M) reduced, then R = [r]B
+  std::string nonce_preimage{prefix};
+  const SecureScope nonce_preimage_scope{nonce_preimage};
+  nonce_preimage.append(message);
+  auto nonce_digest{sha512_digest(nonce_preimage)};
+  const SecureBufferScope nonce_digest_scope{nonce_digest.data(),
+                                             nonce_digest.size()};
+  auto scalar_r{bignum_from_bytes_little_endian(
+      std::string_view{reinterpret_cast<const char *>(nonce_digest.data()),
+                       nonce_digest.size()})};
+  const SecureBignumScope scalar_r_scope{scalar_r};
+  bignum_reduce(scalar_r, parameters.order);
+  const auto encoded_r{
+      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
+                               scalar_r, parameters.base, parameters),
+                           parameters.prime, 32)};
+
+  // k = SHA-512(R || A || M) reduced, then S = (r + k * a) mod L. The k * a
+  // product carries the secret scalar, so it is wiped; r, k, and the resulting
+  // S are the public signature material
+  std::string challenge_preimage{encoded_r};
+  challenge_preimage.append(public_key);
+  challenge_preimage.append(message);
+  const auto challenge_digest{sha512_digest(challenge_preimage)};
+  auto scalar_k{bignum_from_bytes_little_endian(
+      std::string_view{reinterpret_cast<const char *>(challenge_digest.data()),
+                       challenge_digest.size()})};
+  bignum_reduce(scalar_k, parameters.order);
+  // The k * a product and its sum with the nonce carry the secret scalar and
+  // nonce, so both run over the constant-time field arithmetic modulo the
+  // order; k is public and r, k, and the resulting S are the public signature
+  // material
+  const auto order_field{barrett_context(parameters.order)};
+  auto scalar_a_reduced{barrett_reduce(scalar_a, order_field)};
+  const SecureBignumScope scalar_a_reduced_scope{scalar_a_reduced};
+  auto challenge_product{
+      field_mod_multiply_ct(scalar_k, scalar_a_reduced, order_field)};
+  const SecureBignumScope challenge_product_scope{challenge_product};
+  auto scalar_s{field_add_ct(scalar_r, challenge_product, order_field)};
+  bignum_normalize(scalar_s);
+
+  const auto scalar_s_big_endian{bignum_to_bytes(scalar_s, 32)};
+  std::string signature{encoded_r};
+  signature.append(scalar_s_big_endian.rbegin(), scalar_s_big_endian.rend());
+  return signature;
+}
+
 // Recover an Ed448 point from its 57-byte encoding (RFC 8032 Section 5.2.3),
 // returning no value when the encoding does not name a point on the curve
 inline auto edwards448_decode_point(const std::string_view encoding,
@@ -441,6 +605,88 @@ inline auto edwards448_verify(const std::string_view public_key,
       edwards_point_scalar_multiply(scalar_k, public_point.value(), parameters),
       parameters)};
   return edwards_point_equal(left, right, parameters.prime);
+}
+
+// Produce an Ed448 signature over a message (RFC 8032 Section 5.2.6), given the
+// 57-byte secret seed
+inline auto edwards448_sign(const std::string_view secret,
+                            const std::string_view message)
+    -> std::optional<std::string> {
+  if (secret.size() != 57) {
+    return std::nullopt;
+  }
+
+  const auto parameters{edwards448()};
+  // The key derivation hash carries both the secret scalar and the nonce
+  // prefix, so it and everything derived from it below is wiped before
+  // returning
+  auto digest{shake256(secret, 114)};
+  const SecureScope digest_scope{digest};
+
+  // The secret scalar is the pruned first half, the prefix the second half
+  std::string scalar_bytes{digest.substr(0, 57)};
+  const SecureScope scalar_bytes_scope{scalar_bytes};
+  scalar_bytes.front() = static_cast<char>(
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xfcu);
+  scalar_bytes[55] =
+      static_cast<char>(static_cast<std::uint8_t>(scalar_bytes[55]) | 0x80u);
+  scalar_bytes[56] = '\x00';
+  auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
+  const SecureBignumScope scalar_a_scope{scalar_a};
+  const auto prefix{std::string_view{digest}.substr(57)};
+
+  const auto public_key{
+      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
+                               scalar_a, parameters.base, parameters),
+                           parameters.prime, 57)};
+
+  // dom4 is "SigEd448" followed by the zero pre-hash flag and an empty context
+  std::string domain{"SigEd448"};
+  domain.push_back('\x00');
+  domain.push_back('\x00');
+
+  // r = SHAKE256(dom4 || prefix || M) reduced, then R = [r]B
+  std::string nonce_preimage{domain};
+  const SecureScope nonce_preimage_scope{nonce_preimage};
+  nonce_preimage.append(prefix);
+  nonce_preimage.append(message);
+  auto nonce_hash{shake256(nonce_preimage, 114)};
+  const SecureScope nonce_hash_scope{nonce_hash};
+  auto scalar_r{bignum_from_bytes_little_endian(nonce_hash)};
+  const SecureBignumScope scalar_r_scope{scalar_r};
+  bignum_reduce(scalar_r, parameters.order);
+  const auto encoded_r{
+      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
+                               scalar_r, parameters.base, parameters),
+                           parameters.prime, 57)};
+
+  // k = SHAKE256(dom4 || R || A || M) reduced, then S = (r + k * a) mod L. The
+  // k * a product carries the secret scalar, so it is wiped; r, k, and the
+  // resulting S are the public signature material
+  std::string challenge_preimage{domain};
+  challenge_preimage.append(encoded_r);
+  challenge_preimage.append(public_key);
+  challenge_preimage.append(message);
+  auto scalar_k{
+      bignum_from_bytes_little_endian(shake256(challenge_preimage, 114))};
+  bignum_reduce(scalar_k, parameters.order);
+  // The k * a product and its sum with the nonce carry the secret scalar and
+  // nonce, so both run over the constant-time field arithmetic modulo the
+  // order; k is public and r, k, and the resulting S are the public signature
+  // material
+  const auto order_field{barrett_context(parameters.order)};
+  auto scalar_a_reduced{barrett_reduce(scalar_a, order_field)};
+  const SecureBignumScope scalar_a_reduced_scope{scalar_a_reduced};
+  auto challenge_product{
+      field_mod_multiply_ct(scalar_k, scalar_a_reduced, order_field)};
+  const SecureBignumScope challenge_product_scope{challenge_product};
+  auto scalar_s{field_add_ct(scalar_r, challenge_product, order_field)};
+  bignum_normalize(scalar_s);
+
+  const auto scalar_s_big_endian{bignum_to_bytes(scalar_s, 57)};
+  std::string signature{encoded_r};
+  signature.append(scalar_s_big_endian.rbegin(), scalar_s_big_endian.rend());
+  return signature;
 }
 
 } // namespace sourcemeta::core

@@ -18,10 +18,13 @@ namespace sourcemeta::core {
 /// ```
 template <typename T> class FileError : public T {
 public:
+  /// Construct the error given the offending file path and the underlying
+  /// exception arguments.
   template <typename... Args>
   FileError(std::filesystem::path path, Args &&...args)
       : T{std::forward<Args>(args)...}, path_{std::move(path)} {}
 
+  /// The offending file path.
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }

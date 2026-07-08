@@ -100,6 +100,11 @@ inline constexpr auto is_ipv4_address_literal(const std::string_view value)
       return false;
     }
     octets = static_cast<std::uint8_t>(octets + 1);
+    // A valid literal has exactly four octets, so stop before the counter could
+    // wrap on a pathological run of segments
+    if (octets > 4) {
+      return false;
+    }
     if (dot == std::string_view::npos) {
       break;
     }

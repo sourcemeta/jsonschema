@@ -40,6 +40,7 @@ namespace sourcemeta::core {
 /// not derive from the standard exception hierarchy so that a broad catch block
 /// in a test does not accidentally swallow it.
 struct SOURCEMETA_CORE_TEST_EXPORT TestAbortError {
+  /// The message describing the failed expectation.
   std::string message;
 };
 
@@ -188,9 +189,12 @@ inline auto test_c_string_label(const char *const value) -> std::string_view {
 // without rejecting comparisons of non-copyable types. This aggregate only ever
 // lives for the duration of a single comparison call, so the usual hazards of
 // reference members do not apply here.
+/// A pair of operands captured by reference for one comparison.
 template <typename Left, typename Right> struct test_operands {
   // NOLINTBEGIN(cppcoreguidelines-avoid-const-or-ref-data-members)
+  /// The left-hand operand.
   const Left &left;
+  /// The right-hand operand.
   const Right &right;
   // NOLINTEND(cppcoreguidelines-avoid-const-or-ref-data-members)
 };

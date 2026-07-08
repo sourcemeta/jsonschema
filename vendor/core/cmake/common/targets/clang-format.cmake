@@ -101,6 +101,12 @@ function(sourcemeta_target_clang_format)
   file(GLOB_RECURSE SOURCEMETA_TARGET_CLANG_FORMAT_FILES
     ${SOURCEMETA_TARGET_CLANG_FORMAT_SOURCES})
 
+  # Fail fast rather than silently skipping formatting, since batching an empty
+  # file list would otherwise produce targets that do nothing but succeed
+  if(NOT SOURCEMETA_TARGET_CLANG_FORMAT_FILES)
+    message(FATAL_ERROR "The ClangFormat file globs did not match any files")
+  endif()
+
   set(CLANG_FORMAT_CONFIG "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/clang-format.json")
   if(CMAKE_SYSTEM_NAME STREQUAL "MSYS")
     # Because `clang-format` is typically a Windows `.exe`, transform the path accordingly
@@ -110,18 +116,58 @@ function(sourcemeta_target_clang_format)
 
   if(CLANG_FORMAT_BIN)
     message(STATUS "Using `clang-format` from ${CLANG_FORMAT_BIN}")
+
+    # Invoke `clang-format` over the files in batches whose combined argument
+    # length is bounded well below the operating system command-line length
+    # limit (notably the Windows `CreateProcess` limit of around 32767
+    # characters), so the command stays runnable however many sources exist and
+    # however long their paths are
+    set(SOURCEMETA_CLANG_FORMAT_BATCH_LIMIT 8000)
+    set(SOURCEMETA_CLANG_FORMAT_COMMANDS)
+    set(SOURCEMETA_CLANG_FORMAT_TEST_COMMANDS)
+    set(SOURCEMETA_CLANG_FORMAT_BATCH)
+    set(SOURCEMETA_CLANG_FORMAT_BATCH_LENGTH 0)
+    foreach(SOURCEMETA_CLANG_FORMAT_FILE IN LISTS
+        SOURCEMETA_TARGET_CLANG_FORMAT_FILES)
+      string(LENGTH "${SOURCEMETA_CLANG_FORMAT_FILE}"
+        SOURCEMETA_CLANG_FORMAT_FILE_LENGTH)
+      math(EXPR SOURCEMETA_CLANG_FORMAT_NEXT_LENGTH
+        "${SOURCEMETA_CLANG_FORMAT_BATCH_LENGTH} + ${SOURCEMETA_CLANG_FORMAT_FILE_LENGTH} + 1")
+      # Flush the current batch before it would cross the bound, keeping at
+      # least one file per batch so an unusually long path still makes progress
+      if(SOURCEMETA_CLANG_FORMAT_BATCH AND SOURCEMETA_CLANG_FORMAT_NEXT_LENGTH
+          GREATER SOURCEMETA_CLANG_FORMAT_BATCH_LIMIT)
+        list(APPEND SOURCEMETA_CLANG_FORMAT_COMMANDS
+          COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
+            -i ${SOURCEMETA_CLANG_FORMAT_BATCH})
+        list(APPEND SOURCEMETA_CLANG_FORMAT_TEST_COMMANDS
+          COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
+            --dry-run -Werror -i ${SOURCEMETA_CLANG_FORMAT_BATCH})
+        set(SOURCEMETA_CLANG_FORMAT_BATCH)
+        set(SOURCEMETA_CLANG_FORMAT_BATCH_LENGTH 0)
+      endif()
+      list(APPEND SOURCEMETA_CLANG_FORMAT_BATCH "${SOURCEMETA_CLANG_FORMAT_FILE}")
+      math(EXPR SOURCEMETA_CLANG_FORMAT_BATCH_LENGTH
+        "${SOURCEMETA_CLANG_FORMAT_BATCH_LENGTH} + ${SOURCEMETA_CLANG_FORMAT_FILE_LENGTH} + 1")
+    endforeach()
+    if(SOURCEMETA_CLANG_FORMAT_BATCH)
+      list(APPEND SOURCEMETA_CLANG_FORMAT_COMMANDS
+        COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
+          -i ${SOURCEMETA_CLANG_FORMAT_BATCH})
+      list(APPEND SOURCEMETA_CLANG_FORMAT_TEST_COMMANDS
+        COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
+          --dry-run -Werror -i ${SOURCEMETA_CLANG_FORMAT_BATCH})
+    endif()
+
     add_custom_target(clang_format
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       VERBATIM
-      COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
-        -i ${SOURCEMETA_TARGET_CLANG_FORMAT_FILES}
+      ${SOURCEMETA_CLANG_FORMAT_COMMANDS}
       COMMENT "Formatting sources using ClangFormat")
     add_custom_target(clang_format_test
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       VERBATIM
-      COMMAND "${CLANG_FORMAT_BIN}" "--style=file:${CLANG_FORMAT_CONFIG}"
-        --dry-run -Werror
-        -i ${SOURCEMETA_TARGET_CLANG_FORMAT_FILES}
+      ${SOURCEMETA_CLANG_FORMAT_TEST_COMMANDS}
       COMMENT "Checking for ClangFormat compliance")
   else()
     add_custom_target(clang_format

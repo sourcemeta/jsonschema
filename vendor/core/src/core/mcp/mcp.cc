@@ -318,13 +318,16 @@ auto mcp_make_initialize_result(const sourcemeta::core::JSON &request,
     return sourcemeta::core::jsonrpc_make_error_invalid_request(identifier);
   }
 
-  JSON::StringView requested_version{};
   const auto *protocol_version_field{
       parameters->try_at("protocolVersion", MCP_HASH_PROTOCOL_VERSION)};
-  if (protocol_version_field != nullptr &&
-      protocol_version_field->is_string()) {
-    requested_version = protocol_version_field->to_string();
+  // MCP requires protocolVersion in the initialize request, so a missing or
+  // non-string value is a malformed request rather than a version to negotiate
+  if (protocol_version_field == nullptr ||
+      !protocol_version_field->is_string()) {
+    return sourcemeta::core::jsonrpc_make_error_invalid_params(*identifier);
   }
+
+  const JSON::StringView requested_version{protocol_version_field->to_string()};
   const auto resolved{mcp_resolve_protocol_version(requested_version)};
   // MCP lifecycle, version negotiation: "If the server supports the requested
   // protocol version, it MUST respond with the same version. Otherwise, the

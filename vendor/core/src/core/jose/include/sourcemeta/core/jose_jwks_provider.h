@@ -36,7 +36,9 @@ public:
   /// the caching response header. An absent hint means no lifetime was
   /// advertised, which is distinct from an advertised lifetime of zero.
   struct FetchResult {
+    /// The raw key set bytes.
     std::string body;
+    /// The advertised freshness lifetime, absent when none was given.
     std::optional<std::chrono::seconds> max_age;
   };
 
@@ -55,17 +57,27 @@ public:
 
   /// Tunables for the caching and verification policy.
   struct Options {
+    /// The lifetime to assume when the transport advertises none.
     std::chrono::seconds fallback_ttl{std::chrono::hours{1}};
+    /// The shortest lifetime honored, clamping smaller advertised values up.
     std::chrono::seconds minimum_ttl{std::chrono::minutes{5}};
+    /// The longest lifetime honored, clamping larger advertised values down.
     std::chrono::seconds maximum_ttl{std::chrono::hours{24}};
+    /// The wait before another refetch is allowed after an unknown key
+    /// identifier.
     std::chrono::seconds unknown_kid_cooldown{std::chrono::minutes{5}};
+    /// The tolerance applied to time-based claims.
     std::chrono::seconds clock_skew{0};
   };
 
   /// Construct a provider for a concrete key set URL with an injected
-  /// transport, optionally overriding the policy and the clock.
+  /// transport, using the default policy and the system clock.
   JWKSProvider(std::string jwks_uri, Fetcher fetcher);
+  /// Construct a provider for a concrete key set URL with an injected
+  /// transport, overriding the caching and verification policy.
   JWKSProvider(std::string jwks_uri, Fetcher fetcher, Options options);
+  /// Construct a provider for a concrete key set URL with an injected
+  /// transport, overriding the policy and the clock.
   JWKSProvider(std::string jwks_uri, Fetcher fetcher, Options options,
                Clock clock);
 

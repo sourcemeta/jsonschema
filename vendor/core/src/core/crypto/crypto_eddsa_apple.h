@@ -12,4 +12,11 @@ extern "C" auto sourcemeta_core_eddsa_ed25519_verify_cryptokit(
     const unsigned char *message, std::size_t message_size,
     const unsigned char *signature, std::size_t signature_size) -> bool;
 
+// Produce an Ed25519 signature through CryptoKit, writing the 64-byte signature
+// into the output buffer. Returns false when the seed is not a valid key
+extern "C" auto sourcemeta_core_eddsa_ed25519_sign_cryptokit(
+    const unsigned char *seed, std::size_t seed_size,
+    const unsigned char *message, std::size_t message_size,
+    unsigned char *signature) -> bool;
+
 #endif

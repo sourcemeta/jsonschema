@@ -6,7 +6,8 @@
 #include <array>     // std::array
 #include <cassert>   // assert
 #include <charconv>  // std::to_chars
-#include <cmath>     // std::isfinite
+#include <cmath>     // std::isfinite, std::isnan, std::isinf, std::abs,
+                     // std::frexp, std::ldexp
 #include <cstddef>   // std::size_t
 #include <cstring>   // std::strlen
 #include <iomanip>   // std::setprecision
@@ -25,31 +26,108 @@ auto strip_trailing_zeros(std::int64_t &coefficient, std::int32_t &exponent)
     return;
   }
 
+  // The exponent is already clamped to the representable range at parse time,
+  // so a strip is only performed when the exponent can absorb the matching
+  // increment. Otherwise the increment would overflow, and dividing the
+  // coefficient without it would change the represented value
+  constexpr std::int32_t maximum{std::numeric_limits<std::int32_t>::max()};
   constexpr std::int64_t POWER_OF_10_16 = 10000000000000000LL;
-  if (coefficient % POWER_OF_10_16 == 0) {
+  if (exponent <= maximum - 16 && coefficient % POWER_OF_10_16 == 0) {
     coefficient /= POWER_OF_10_16;
     exponent += 16;
   }
 
-  if (coefficient % 100000000 == 0) {
+  if (exponent <= maximum - 8 && coefficient % 100000000 == 0) {
     coefficient /= 100000000;
     exponent += 8;
   }
 
-  if (coefficient % 10000 == 0) {
+  if (exponent <= maximum - 4 && coefficient % 10000 == 0) {
     coefficient /= 10000;
     exponent += 4;
   }
 
-  if (coefficient % 100 == 0) {
+  if (exponent <= maximum - 2 && coefficient % 100 == 0) {
     coefficient /= 100;
     exponent += 2;
   }
 
-  if (coefficient % 10 == 0) {
+  if (exponent <= maximum - 1 && coefficient % 10 == 0) {
     coefficient /= 10;
     exponent += 1;
   }
+}
+
+// Multiply a magnitude held as base-10 digits, least significant first, by a
+// small factor in place
+auto multiply_decimal_digits(std::vector<std::uint8_t> &digits,
+                             const unsigned factor) -> void {
+  unsigned carry{0};
+  for (auto &digit : digits) {
+    const unsigned product{digit * factor + carry};
+    digit = static_cast<std::uint8_t>(product % 10);
+    carry = product / 10;
+  }
+
+  while (carry > 0) {
+    digits.push_back(static_cast<std::uint8_t>(carry % 10));
+    carry /= 10;
+  }
+}
+
+// Build the exact decimal string of a finite, non-zero magnitude. Every finite
+// double is a dyadic rational, so its exact value has a finite decimal
+// expansion recovered from the integer mantissa and the binary exponent
+auto exact_magnitude_to_decimal_string(const double magnitude) -> std::string {
+  int fraction_exponent{0};
+  const double fraction{std::frexp(magnitude, &fraction_exponent)};
+  // The fraction lies in [0.5, 1), so scaling it by 2^53 yields the exact
+  // integer mantissa
+  std::uint64_t mantissa{static_cast<std::uint64_t>(std::ldexp(fraction, 53))};
+  std::int32_t binary_exponent{static_cast<std::int32_t>(fraction_exponent) -
+                               53};
+
+  // Dropping trailing zero bits keeps the following multiplications short and
+  // avoids emitting spurious trailing decimal zeros
+  while (mantissa != 0 && (mantissa & 1U) == 0) {
+    mantissa >>= 1U;
+    binary_exponent += 1;
+  }
+
+  std::vector<std::uint8_t> digits;
+  for (std::uint64_t remaining{mantissa}; remaining > 0; remaining /= 10) {
+    digits.push_back(static_cast<std::uint8_t>(remaining % 10));
+  }
+
+  std::int32_t fractional_length{0};
+  if (binary_exponent >= 0) {
+    for (std::int32_t index = 0; index < binary_exponent; index += 1) {
+      multiply_decimal_digits(digits, 2);
+    }
+  } else {
+    fractional_length = -binary_exponent;
+    for (std::int32_t index = 0; index < fractional_length; index += 1) {
+      multiply_decimal_digits(digits, 5);
+    }
+  }
+
+  std::string coefficient;
+  coefficient.reserve(digits.size());
+  for (std::size_t index = digits.size(); index > 0; index -= 1) {
+    coefficient.push_back(static_cast<char>('0' + digits[index - 1]));
+  }
+
+  if (fractional_length == 0) {
+    return coefficient;
+  }
+
+  const auto fractional{static_cast<std::size_t>(fractional_length)};
+  if (coefficient.size() > fractional) {
+    const std::size_t split{coefficient.size() - fractional};
+    return coefficient.substr(0, split) + "." + coefficient.substr(split);
+  }
+
+  return "0." + std::string(fractional - coefficient.size(), '0') + coefficient;
 }
 
 template <typename FloatingPointType>
@@ -70,14 +148,19 @@ struct ParsedDecimal {
 };
 
 auto parse_digit_payload(const char *cursor, std::size_t count)
-    -> std::int64_t {
-  // The diagnostic payload of a NaN carries no arithmetic meaning here, so a
+    -> std::optional<std::int64_t> {
+  // The diagnostic payload of a NaN is a sequence of digits, so a non-digit
+  // byte makes the whole token invalid rather than being silently accepted. A
   // payload longer than the storage saturates rather than overflowing, which
   // would otherwise be signed integer overflow (undefined behaviour)
   constexpr auto maximum{
       static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())};
   std::uint64_t payload = 0;
   for (std::size_t index = 0; index < count; index++) {
+    if (cursor[index] < '0' || cursor[index] > '9') {
+      return std::nullopt;
+    }
+
     const auto digit = static_cast<std::uint64_t>(cursor[index] - '0');
     if (payload > (maximum - digit) / 10) {
       return std::numeric_limits<std::int64_t>::max();
@@ -109,10 +192,15 @@ auto parse_special(const char *input, std::size_t length)
   if (remaining >= 3 && (cursor[0] == 'N' || cursor[0] == 'n') &&
       (cursor[1] == 'a' || cursor[1] == 'A') &&
       (cursor[2] == 'N' || cursor[2] == 'n')) {
+    const auto payload{parse_digit_payload(cursor + 3, remaining - 3)};
+    if (!payload.has_value()) {
+      return std::nullopt;
+    }
+
     result.flags = FLAG_NAN | sign_flag;
     result.exponent = 0;
     result.coefficient_high = 0;
-    result.coefficient = parse_digit_payload(cursor + 3, remaining - 3);
+    result.coefficient = payload.value();
     return result;
   }
 
@@ -120,10 +208,15 @@ auto parse_special(const char *input, std::size_t length)
       (cursor[1] == 'N' || cursor[1] == 'n') &&
       (cursor[2] == 'a' || cursor[2] == 'A') &&
       (cursor[3] == 'N' || cursor[3] == 'n')) {
+    const auto payload{parse_digit_payload(cursor + 4, remaining - 4)};
+    if (!payload.has_value()) {
+      return std::nullopt;
+    }
+
     result.flags = FLAG_NAN | FLAG_SNAN | sign_flag;
     result.exponent = 0;
     result.coefficient_high = 0;
-    result.coefficient = parse_digit_payload(cursor + 4, remaining - 4);
+    result.coefficient = payload.value();
     return result;
   }
 
@@ -469,12 +562,22 @@ Decimal::Decimal(const std::int64_t value) {
     this->coefficient_ = static_cast<std::int64_t>(absolute_value % BASE);
     this->coefficient_high_ = absolute_value / BASE;
     this->flags_ = FLAG_BIG | FLAG_SIGN | FLAG_INTEGER_LITERAL;
-  } else if (value < 0) {
-    this->coefficient_ = -value;
-    this->flags_ = FLAG_SIGN | FLAG_INTEGER_LITERAL;
+    return;
+  }
+
+  const bool negative{value < 0};
+  const auto magnitude{static_cast<std::uint64_t>(negative ? -value : value)};
+  // A magnitude beyond the compact range must use the big representation, since
+  // the compact arithmetic paths assume operands fit within it
+  if (magnitude > static_cast<std::uint64_t>(COMPACT_MAX)) {
+    this->coefficient_ = static_cast<std::int64_t>(magnitude % BASE);
+    this->coefficient_high_ = magnitude / BASE;
+    this->flags_ = static_cast<std::uint8_t>(FLAG_BIG | FLAG_INTEGER_LITERAL |
+                                             (negative ? FLAG_SIGN : 0));
   } else {
-    this->coefficient_ = value;
-    this->flags_ = FLAG_INTEGER_LITERAL;
+    this->coefficient_ = static_cast<std::int64_t>(magnitude);
+    this->flags_ = static_cast<std::uint8_t>(FLAG_INTEGER_LITERAL |
+                                             (negative ? FLAG_SIGN : 0));
   }
 }
 
@@ -557,6 +660,32 @@ auto Decimal::strict_from(const double value) -> Decimal {
   assert(result.ec == std::errc{});
   Decimal output{std::string_view{
       buffer.data(), static_cast<std::size_t>(result.ptr - buffer.data())}};
+  output.flags_ =
+      static_cast<std::uint8_t>(output.flags_ & ~FLAG_INTEGER_LITERAL);
+  return output;
+}
+
+auto Decimal::exact_from(const double value) -> Decimal {
+  if (std::isnan(value)) {
+    return Decimal::nan();
+  }
+
+  if (std::isinf(value)) {
+    return value < 0 ? Decimal::negative_infinity() : Decimal::infinity();
+  }
+
+  // The library builds without IEEE signed zeros, so a negative zero is
+  // indistinguishable from a positive zero and always yields an unsigned zero
+  if (value == 0.0) {
+    Decimal output{static_cast<std::int64_t>(0)};
+    output.flags_ =
+        static_cast<std::uint8_t>(output.flags_ & ~FLAG_INTEGER_LITERAL);
+    return output;
+  }
+
+  const std::string magnitude{
+      exact_magnitude_to_decimal_string(std::abs(value))};
+  Decimal output{value < 0.0 ? "-" + magnitude : magnitude};
   output.flags_ =
       static_cast<std::uint8_t>(output.flags_ & ~FLAG_INTEGER_LITERAL);
   return output;
@@ -679,10 +808,22 @@ auto Decimal::to_int64() const -> std::int64_t {
   }
 
   auto coefficient = this->coefficient_;
+
+  // Zero admits arbitrarily extreme exponents, which would otherwise make the
+  // scaling loops below spin for billions of iterations
+  if (coefficient == 0) {
+    return 0;
+  }
+
   auto exponent = this->exponent_;
   while (exponent > 0) {
     coefficient *= 10;
     exponent--;
+  }
+
+  while (exponent < 0) {
+    coefficient /= 10;
+    exponent++;
   }
 
   return (this->flags_ & FLAG_SIGN) ? -coefficient : coefficient;
@@ -704,12 +845,24 @@ auto Decimal::to_uint64() const -> std::uint64_t {
   }
 
   auto coefficient = this->coefficient_;
+
+  // Zero admits arbitrarily extreme exponents, which would otherwise make the
+  // scaling loops below spin for billions of iterations
+  if (coefficient == 0) {
+    return 0;
+  }
+
   auto exponent = this->exponent_;
 
   auto result = static_cast<std::uint64_t>(coefficient);
   while (exponent > 0) {
     result *= 10;
     exponent--;
+  }
+
+  while (exponent < 0) {
+    result /= 10;
+    exponent++;
   }
 
   return result;

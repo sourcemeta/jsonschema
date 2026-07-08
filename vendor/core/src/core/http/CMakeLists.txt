@@ -10,10 +10,11 @@ endif()
 
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME http
   PRIVATE_HEADERS problem.h status.h method.h message.h error.h system.h
+    aws_sigv4.h
   SOURCES helpers.h problem.cc match_accept.cc match_accept_language.cc
           negotiate_encoding.cc from_date.cc format_link.cc field_list.cc
           accept_includes_all.cc content_type_matches.cc parse_bearer.cc
-          cache_control_max_age.cc
+          cache_control_max_age.cc serialize_cookie.cc aws_sigv4.cc
           ${SOURCEMETA_CORE_HTTP_CLIENT_SOURCE})
 
 if(SOURCEMETA_CORE_INSTALL)
@@ -23,6 +24,9 @@ endif()
 target_link_libraries(sourcemeta_core_http PUBLIC sourcemeta::core::json)
 target_link_libraries(sourcemeta_core_http PUBLIC sourcemeta::core::text)
 target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::time)
+target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::dns)
+target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::crypto)
+target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::uri)
 
 if(SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL)
   find_package(CURL REQUIRED)

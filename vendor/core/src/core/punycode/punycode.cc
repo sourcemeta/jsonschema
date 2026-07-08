@@ -80,6 +80,12 @@ static constexpr auto is_basic(const char32_t code_point) -> bool {
 
 static auto punycode_encode(const std::u32string_view codepoints,
                             std::string &output) -> void {
+  // RFC 3492 Section 6.4 requires failing rather than letting the code point
+  // counters wrap on an input that does not fit a 32-bit count
+  if (codepoints.size() > std::numeric_limits<std::uint32_t>::max()) {
+    throw PunycodeError("Input is too large");
+  }
+
   std::vector<char32_t> non_basic_sorted;
   non_basic_sorted.reserve(codepoints.size());
 
@@ -172,6 +178,12 @@ static auto punycode_encode(const std::u32string_view codepoints,
 
 static auto punycode_decode(const std::string_view encoded,
                             std::u32string &decoded) -> void {
+  // RFC 3492 Section 6.4 requires failing rather than letting the output
+  // position counter wrap on an input that does not fit a 32-bit count
+  if (encoded.size() > std::numeric_limits<std::uint32_t>::max()) {
+    throw PunycodeError("Input is too large");
+  }
+
   std::uint32_t current_code_point{INITIAL_N};
   std::uint32_t insertion_index{0};
   std::uint32_t bias{INITIAL_BIAS};

@@ -697,6 +697,22 @@ function evaluateInstructionFastCallback(instruction, instance, depth, template,
   return handler(instruction, instance, depth, template, evaluator);
 }
 
+// Evaluate an entire subtree without emitting callbacks, while still
+// maintaining the schema resources stack for dynamic anchor resolution,
+// mirroring `evaluate_instruction_without_callback` from the C++ evaluator
+function evaluateInstructionWithoutCallback(instruction, instance, depth, template, evaluator) {
+  const previousDispatch = evaluateInstruction;
+  const previousCallbackMode = evaluator.callbackMode;
+  evaluateInstruction = (evaluator.trackMode || evaluator.dynamicMode)
+    ? evaluateInstructionTracked
+    : evaluateInstructionFast;
+  evaluator.callbackMode = false;
+  const result = evaluateInstruction(instruction, instance, depth, template, evaluator);
+  evaluateInstruction = previousDispatch;
+  evaluator.callbackMode = previousCallbackMode;
+  return result;
+}
+
 function evaluateInstructionTrackedCallback(instruction, instance, depth, template, evaluator) {
   if (depth > DEPTH_LIMIT) {
     throw new Error('The evaluation path depth limit was reached likely due to infinite recursion');
@@ -1551,7 +1567,7 @@ function AssertionObjectPropertiesSimple(instruction, instance, depth, template,
       continue;
     }
     if (index < children.length) {
-      if (!evaluateInstructionFast(children[index], target[name], depth + 1, template, evaluator)) {
+      if (!evaluateInstructionWithoutCallback(children[index], target[name], depth + 1, template, evaluator)) {
         if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
         return false;
       }
@@ -3455,7 +3471,10 @@ function AssertionObjectPropertiesSimple_fast(instruction, instance, depth, temp
       continue;
     }
     if (index < children.length) {
-      if (!evaluateInstructionFast(children[index], target[name], depth + 1, template, evaluator)) return false;
+      // Note that we don't hardcode the fast dispatcher here, as the fused
+      // children may require schema resource tracking for dynamic anchor
+      // resolution, which the current dispatcher takes care of
+      if (!evaluateInstruction(children[index], target[name], depth + 1, template, evaluator)) return false;
     }
   }
   return true;

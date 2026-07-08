@@ -1,9 +1,9 @@
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
 #include "normalize.h"
 
-#include <cctype>      // std::isxdigit
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional
 #include <string>      // std::string
@@ -52,8 +52,8 @@ auto validate_raw_path(const std::string_view path) -> void {
     const char character = path[index];
     if (character == '%') {
       if (index + 2 >= path.size() ||
-          !std::isxdigit(static_cast<unsigned char>(path[index + 1])) ||
-          !std::isxdigit(static_cast<unsigned char>(path[index + 2]))) {
+          sourcemeta::core::hex_digit_value(path[index + 1]) < 0 ||
+          sourcemeta::core::hex_digit_value(path[index + 2]) < 0) {
         throw sourcemeta::core::URIError{
             "You cannot set a path with an invalid percent-encoded sequence"};
       }
@@ -202,9 +202,8 @@ auto URI::append_path(std::string_view path) -> URI & {
   for (std::size_t index = 0; index < path.size(); ++index) {
     const char character = path[index];
     if (character == '%') {
-      if (index + 2 >= path.size() ||
-          !std::isxdigit(static_cast<unsigned char>(path[index + 1])) ||
-          !std::isxdigit(static_cast<unsigned char>(path[index + 2]))) {
+      if (index + 2 >= path.size() || hex_digit_value(path[index + 1]) < 0 ||
+          hex_digit_value(path[index + 2]) < 0) {
         throw URIError{
             "Cannot append a URI as a path that has an invalid percent-encoded "
             "sequence"};

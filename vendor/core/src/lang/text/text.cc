@@ -1,7 +1,6 @@
 #include <sourcemeta/core/text.h>
 
 #include <cstddef>     // std::size_t
-#include <cstdint>     // std::int8_t
 #include <filesystem>  // std::filesystem::path
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
@@ -24,18 +23,6 @@ auto to_ascii_uppercase(const char character) noexcept -> char {
   return (character >= 'a' && character <= 'z')
              ? static_cast<char>(character - ('a' - 'A'))
              : character;
-}
-
-auto hex_digit_value(const char character) noexcept -> std::int8_t {
-  if (character >= '0' && character <= '9') {
-    return static_cast<std::int8_t>(character - '0');
-  } else if (character >= 'a' && character <= 'f') {
-    return static_cast<std::int8_t>(character - 'a' + 10);
-  } else if (character >= 'A' && character <= 'F') {
-    return static_cast<std::int8_t>(character - 'A' + 10);
-  } else {
-    return -1;
-  }
 }
 
 } // namespace
@@ -174,19 +161,29 @@ auto split_once(const std::string_view input,
   return std::pair{before, after};
 }
 
-auto equals_ignore_case(const std::string_view left,
-                        const std::string_view right) noexcept -> bool {
-  if (left.size() != right.size()) {
-    return false;
-  }
+auto squeeze(const std::string_view input, const char character,
+             std::string &output) -> void {
+  bool in_run{false};
+  for (const auto value : input) {
+    if (value == character) {
+      if (!in_run) {
+        output.push_back(value);
+      }
 
-  for (std::size_t index{0}; index < left.size(); ++index) {
-    if (to_lowercase(left[index]) != to_lowercase(right[index])) {
-      return false;
+      in_run = true;
+    } else {
+      output.push_back(value);
+      in_run = false;
     }
   }
+}
 
-  return true;
+auto squeeze(const std::string_view input, const char character)
+    -> std::string {
+  std::string result;
+  result.reserve(input.size());
+  squeeze(input, character, result);
+  return result;
 }
 
 auto remove_suffix_ignore_case(const std::string_view input,

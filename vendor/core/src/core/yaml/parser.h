@@ -10,7 +10,8 @@
 #include <sourcemeta/core/yaml_roundtrip.h>
 
 #include <cassert>       // assert
-#include <cstdint>       // std::uint64_t
+#include <cstdint>       // std::uint64_t, std::int64_t
+#include <limits>        // std::numeric_limits
 #include <optional>      // std::optional
 #include <sstream>       // std::ostringstream
 #include <string>        // std::string
@@ -225,6 +226,25 @@ public:
 private:
   static constexpr std::size_t maximum_expanded_nodes{10000000};
 
+  // Cap the recursion depth of the value parser so that a deeply nested
+  // document cannot overflow the stack on attacker-controlled input. The bound
+  // is conservative so that it holds on platforms with a small default stack
+  // such as Windows, and is still far above any realistic nesting
+  static constexpr std::size_t maximum_depth{100};
+  std::size_t depth_{0};
+
+  struct DepthScope {
+    std::size_t &counter;
+    explicit DepthScope(std::size_t &value) : counter{value} {
+      this->counter += 1;
+    }
+    ~DepthScope() { this->counter -= 1; }
+    DepthScope(const DepthScope &) = delete;
+    auto operator=(const DepthScope &) -> DepthScope & = delete;
+    DepthScope(DepthScope &&) = delete;
+    auto operator=(DepthScope &&) -> DepthScope & = delete;
+  };
+
   auto count_expanded_nodes(const JSON &value) -> std::size_t {
     std::size_t total{1};
     if (value.is_array()) {
@@ -256,9 +276,24 @@ private:
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
         }
+        const auto version_start{cursor};
         while (cursor < content.size() && content[cursor] != ' ' &&
-               content[cursor] != '\t' && content[cursor] != '#') {
+               content[cursor] != '\t') {
           cursor++;
+        }
+        const auto version{
+            content.substr(version_start, cursor - version_start)};
+        // YAML 1.2.2 Section 6.8.1: the version is a major and a minor decimal
+        // number joined by a dot, so any other character (such as a comment
+        // sign without a preceding separation space) is invalid
+        const auto version_dot{version.find('.')};
+        if (version_dot == std::string_view::npos || version_dot == 0 ||
+            version_dot + 1 == version.size() ||
+            version.find_first_not_of("0123456789") != version_dot ||
+            version.find_first_not_of("0123456789", version_dot + 1) !=
+                std::string_view::npos) [[unlikely]] {
+          throw YAMLParseError{token.line, token.column,
+                               "Invalid version in %YAML directive"};
         }
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
@@ -392,6 +427,12 @@ private:
                    const std::size_t index, const std::string &property,
                    const std::uint64_t key_line = 0,
                    const std::uint64_t key_column = 0) -> JSON {
+    const DepthScope scope{this->depth_};
+    if (this->depth_ > maximum_depth) {
+      throw YAMLParseError{token.line, token.column,
+                           "Maximum nesting depth exceeded"};
+    }
+
     if (this->roundtrip_) {
       if (context == JSON::ParseContext::Property) {
         this->pointer_stack_.push_back(std::string{property});
@@ -790,11 +831,15 @@ private:
     bool has_digit{false};
     bool has_dot{false};
     bool has_exp{false};
+    bool has_exp_digit{false};
 
     for (std::size_t index = start; index < value.size(); ++index) {
       const char current{value[index]};
       if (current >= '0' && current <= '9') {
         has_digit = true;
+        if (has_exp) {
+          has_exp_digit = true;
+        }
       } else if (current == '.') {
         if (has_dot || has_exp) {
           return false;
@@ -814,7 +859,9 @@ private:
       }
     }
 
-    return has_digit;
+    // YAML 1.2.2 core schema: an exponent must carry at least one digit, so
+    // "1e" is a plain string rather than a malformed number that would throw
+    return has_digit && (!has_exp || has_exp_digit);
   }
 
   auto parse_number(const std::string_view value) -> JSON {
@@ -894,12 +941,21 @@ private:
       return JSON{Decimal{value}};
     }
 
-    const auto as_integer{static_cast<std::int64_t>(result.value())};
-    if (result.value() == static_cast<double>(as_integer)) {
-      return JSON{as_integer};
+    // Only convert to an integer when the value is within the representable
+    // range, since casting an out-of-range double to an integer is undefined
+    // behavior
+    const auto number{result.value()};
+    if (number >=
+            static_cast<double>(std::numeric_limits<std::int64_t>::min()) &&
+        number <
+            static_cast<double>(std::numeric_limits<std::int64_t>::max())) {
+      const auto as_integer{static_cast<std::int64_t>(number)};
+      if (number == static_cast<double>(as_integer)) {
+        return JSON{as_integer};
+      }
     }
 
-    return JSON{result.value()};
+    return JSON{number};
   }
 
   auto parse_flow_mapping(const Token &start_token,
@@ -1188,9 +1244,14 @@ private:
       result.push_back(std::move(value));
       element_index++;
       token = this->next_token();
-    } else if (token.has_value() &&
-               token->type == TokenType::BlockSequenceEntry &&
-               token->column == base_column) {
+    } else if (!token.has_value() ||
+               (token->type == TokenType::BlockSequenceEntry &&
+                token->column == base_column) ||
+               token->type == TokenType::StreamEnd ||
+               token->type == TokenType::DocumentEnd ||
+               token->type == TokenType::DocumentStart) {
+      // The single entry has no value on this line (a sibling entry follows or
+      // the stream or document ends), so it is a null entry rather than dropped
       result.push_back(JSON{nullptr});
       element_index++;
     }
@@ -1226,7 +1287,8 @@ private:
           (token->type == TokenType::BlockSequenceEntry &&
            token->column == base_column) ||
           token->type == TokenType::StreamEnd ||
-          token->type == TokenType::DocumentEnd) {
+          token->type == TokenType::DocumentEnd ||
+          token->type == TokenType::DocumentStart) {
         result.push_back(JSON{nullptr});
       } else {
         auto value{this->parse_value(token.value(), JSON::ParseContext::Index,

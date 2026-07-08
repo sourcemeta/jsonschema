@@ -48,50 +48,64 @@ public:
 
   // Header (RFC 7515 Section 4)
 
+  /// The signing algorithm declared in the token header, if present.
   [[nodiscard]] auto algorithm() const noexcept -> std::optional<JWSAlgorithm> {
     return this->algorithm_;
   }
 
+  /// The key identifier from the token header, if present.
   [[nodiscard]] auto key_id() const noexcept -> std::optional<std::string_view>;
 
+  /// The token type declared in the header, if present.
   [[nodiscard]] auto type() const noexcept -> std::optional<std::string_view>;
 
+  /// The decoded token header.
   [[nodiscard]] auto header() const noexcept -> const JSON & {
     return this->header_;
   }
 
   // Registered claims (RFC 7519 Section 4.1)
 
+  /// The issuer that created the token, if present.
   [[nodiscard]] auto issuer() const noexcept -> std::optional<std::string_view>;
 
+  /// The subject the token is about, if present.
   [[nodiscard]] auto subject() const noexcept
       -> std::optional<std::string_view>;
 
+  /// Whether the token is intended for the given audience.
   [[nodiscard]] auto
   has_audience(const std::string_view audience) const noexcept -> bool;
 
+  /// The time after which the token is no longer valid, if present.
   [[nodiscard]] auto expires_at() const
       -> std::optional<std::chrono::system_clock::time_point>;
 
+  /// The time before which the token is not yet valid, if present.
   [[nodiscard]] auto not_before() const
       -> std::optional<std::chrono::system_clock::time_point>;
 
+  /// The time at which the token was issued, if present.
   [[nodiscard]] auto issued_at() const
       -> std::optional<std::chrono::system_clock::time_point>;
 
+  /// The unique identifier of the token, if present.
   [[nodiscard]] auto token_id() const noexcept
       -> std::optional<std::string_view>;
 
+  /// The decoded token payload.
   [[nodiscard]] auto payload() const noexcept -> const JSON & {
     return this->payload_;
   }
 
   // The exact wire bytes the signature is computed over, never re-serialized
   // (RFC 7515 Section 5.1)
+  /// The exact wire bytes the signature is computed over.
   [[nodiscard]] auto signing_input() const noexcept -> std::string_view {
     return this->signing_input_;
   }
 
+  /// The raw token signature.
   [[nodiscard]] auto signature() const noexcept -> std::string_view {
     return this->signature_;
   }

@@ -1,10 +1,11 @@
 #include <sourcemeta/core/crypto_uuid.h>
-#include <sourcemeta/core/numeric.h> // is_hex_digit
+#include <sourcemeta/core/text.h>
 
 #include "crypto_random.h"
 
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -20,8 +21,8 @@ auto uuidv4() -> std::string {
       {false, false, false, false, true, false, true, false, true, false, true,
        false, false, false, false, false}};
 
-  std::array<unsigned char, 16> random_bytes{};
-  fill_random_bytes(random_bytes);
+  std::array<std::uint8_t, 16> bytes{};
+  fill_random_bytes(bytes);
 
   std::string result;
   result.reserve(36);
@@ -30,8 +31,8 @@ auto uuidv4() -> std::string {
       result += '-';
     }
 
-    const auto high_nibble = (random_bytes[index] >> 4u) & 0x0fu;
-    const auto low_nibble = random_bytes[index] & 0x0fu;
+    const auto high_nibble = (bytes[index] >> 4u) & 0x0fu;
+    const auto low_nibble = bytes[index] & 0x0fu;
 
     // RFC 9562 Section 5.4: version bits (48-51) must be 0b0100
     if (index == 6) {

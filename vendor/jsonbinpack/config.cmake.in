@@ -10,7 +10,7 @@ endif()
 
 include(CMakeFindDependencyMacro)
 find_dependency(Core COMPONENTS json uri jsonpointer numeric regex io)
-find_dependency(Blaze COMPONENTS foundation bundle alterschema)
+find_dependency(Blaze COMPONENTS foundation bundle alterschema canonicalizer)
 
 foreach(component ${JSONBINPACK_COMPONENTS})
   if(component STREQUAL "runtime")

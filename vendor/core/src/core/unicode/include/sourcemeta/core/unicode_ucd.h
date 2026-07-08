@@ -19,9 +19,11 @@ namespace sourcemeta::core {
 /// The joining type of a Unicode codepoint per UAX #44. See
 /// https://www.unicode.org/reports/tr44/ for the property's definition.
 enum class JoiningType : std::uint8_t {
+#if !defined(DOXYGEN)
 #define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
   SOURCEMETA_CORE_JOINING_TYPE_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
 #undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
+#endif
 };
 
 /// @ingroup unicode
@@ -55,9 +57,11 @@ enum class JoiningType : std::uint8_t {
 /// The bidirectional class of a Unicode codepoint per UAX #44. See
 /// https://www.unicode.org/reports/tr44/ for the property's definition.
 enum class BidiClass : std::uint8_t {
+#if !defined(DOXYGEN)
 #define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
   SOURCEMETA_CORE_BIDI_CLASS_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
 #undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
+#endif
 };
 
 /// @ingroup unicode
@@ -246,9 +250,11 @@ enum class BidiClass : std::uint8_t {
 /// The script of a Unicode codepoint per UAX #24. See
 /// https://www.unicode.org/reports/tr24/ for the property's definition.
 enum class UnicodeScript : std::uint8_t {
+#if !defined(DOXYGEN)
 #define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
   SOURCEMETA_CORE_UNICODE_SCRIPT_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
 #undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
+#endif
 };
 
 /// @ingroup unicode
@@ -262,9 +268,11 @@ enum class UnicodeScript : std::uint8_t {
 /// The NFC quick-check result for a Unicode codepoint per UAX #15.
 /// See https://www.unicode.org/reports/tr15/ for the property's definition.
 enum class NFCQuickCheck : std::uint8_t {
+#if !defined(DOXYGEN)
 #define SOURCEMETA_CORE_UCD_ENUM_ENTRY(name, alias) name,
   SOURCEMETA_CORE_NFC_QUICK_CHECK_LIST(SOURCEMETA_CORE_UCD_ENUM_ENTRY)
 #undef SOURCEMETA_CORE_UCD_ENUM_ENTRY
+#endif
 };
 
 } // namespace sourcemeta::core

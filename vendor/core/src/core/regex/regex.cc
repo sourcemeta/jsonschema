@@ -1,12 +1,12 @@
 #include <sourcemeta/core/regex.h>
+#include <sourcemeta/core/unicode.h>
 
 #include <pcre2.h>
 
 #include "preprocess.h"
 
-#include <cassert>      // assert
 #include <charconv>     // std::from_chars
-#include <cstdint>      // std::uint64_t
+#include <cstddef>      // std::size_t
 #include <regex>        // std::regex, std::smatch, std::regex_match
 #include <string>       // std::string
 #include <string_view>  // std::string_view
@@ -43,8 +43,8 @@ auto to_regex(const std::string_view pattern) -> std::optional<Regex> {
                        matches_range, RANGE_REGEX)) {
     const auto minimum_string = matches_range[1].str();
     const auto maximum_string = matches_range[2].str();
-    std::uint64_t minimum{};
-    std::uint64_t maximum{};
+    std::size_t minimum{};
+    std::size_t maximum{};
     const auto minimum_result =
         std::from_chars(minimum_string.data(),
                         minimum_string.data() + minimum_string.size(), minimum);
@@ -55,7 +55,12 @@ auto to_regex(const std::string_view pattern) -> std::optional<Regex> {
       return std::nullopt;
     }
 
-    assert(minimum <= maximum);
+    // ECMA-262 defines "numbers out of order in {} quantifier" as a
+    // SyntaxError, so such a pattern is not a valid regular expression
+    if (minimum > maximum) {
+      return std::nullopt;
+    }
+
     return RegexTypeRange{minimum, maximum};
   }
 
@@ -69,8 +74,10 @@ auto to_regex(const std::string_view pattern) -> std::optional<Regex> {
   pcre2_code *pcre2_regex_raw{pcre2_compile(
       reinterpret_cast<PCRE2_SPTR>(preprocessed.transformed.value().c_str()),
       preprocessed.transformed.value().size(),
-      PCRE2_UTF | PCRE2_UCP | PCRE2_NO_AUTO_CAPTURE | PCRE2_DOTALL |
-          PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK |
+      // Capturing groups are kept enabled so that ECMA-262 numbered
+      // backreferences like (a)\1 compile and match, at a small tracking cost
+      PCRE2_UTF | PCRE2_UCP | PCRE2_DOTALL | PCRE2_DOLLAR_ENDONLY |
+          PCRE2_NEVER_BACKSLASH_C | PCRE2_MATCH_INVALID_UTF |
           PCRE2_ALLOW_EMPTY_CLASS,
       &pcre2_error_code, &pcre2_error_offset, nullptr)};
 
@@ -89,9 +96,12 @@ auto matches(const Regex &regex, const std::string_view value) -> bool {
       return value.starts_with(*std::get_if<RegexTypePrefix>(&regex));
     case RegexIndex::NonEmpty:
       return !value.empty();
-    case RegexIndex::Range:
-      return value.size() >= std::get_if<RegexTypeRange>(&regex)->first &&
-             value.size() <= std::get_if<RegexTypeRange>(&regex)->second;
+    case RegexIndex::Range: {
+      // ECMA-262 "." matches a single code point, not a single byte, so the
+      // bounds are compared against the number of code points
+      const RegexTypeRange *range{std::get_if<RegexTypeRange>(&regex)};
+      return utf8_codepoint_within(value, range->first, range->second);
+    }
     case RegexIndex::PCRE2: {
       const RegexTypePCRE2 *pcre2_regex{std::get_if<RegexTypePCRE2>(&regex)};
       auto *pcre2_code_ptr{static_cast<pcre2_code *>(pcre2_regex->code.get())};
@@ -134,8 +144,10 @@ auto is_regex_ecma(const std::string_view pattern) -> bool {
   pcre2_code *pcre2_regex_raw{pcre2_compile(
       reinterpret_cast<PCRE2_SPTR>(preprocessed.transformed.value().c_str()),
       preprocessed.transformed.value().size(),
-      PCRE2_UTF | PCRE2_UCP | PCRE2_NO_AUTO_CAPTURE | PCRE2_DOTALL |
-          PCRE2_DOLLAR_ENDONLY | PCRE2_NEVER_BACKSLASH_C | PCRE2_NO_UTF_CHECK |
+      // Capturing groups are kept enabled so that ECMA-262 numbered
+      // backreferences like (a)\1 compile and match, at a small tracking cost
+      PCRE2_UTF | PCRE2_UCP | PCRE2_DOTALL | PCRE2_DOLLAR_ENDONLY |
+          PCRE2_NEVER_BACKSLASH_C | PCRE2_MATCH_INVALID_UTF |
           PCRE2_ALLOW_EMPTY_CLASS,
       &pcre2_error_code, &pcre2_error_offset, nullptr)};
 

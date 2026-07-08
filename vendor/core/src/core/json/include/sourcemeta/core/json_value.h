@@ -34,6 +34,7 @@
 namespace sourcemeta::core {
 
 /// @ingroup json
+/// This class represents a JSON document.
 class SOURCEMETA_CORE_JSON_EXPORT JSON {
 public:
   /// The character type used by the JSON document.
@@ -55,18 +56,31 @@ public:
   /// The object type used by the JSON document.
   using Object = JSONObject<String, JSON, PropertyHashJSON<JSON::String>>;
   /// The parsing phase of a JSON document.
-  enum class ParsePhase : std::uint8_t { Pre, Post };
+  enum class ParsePhase : std::uint8_t {
+    /// The phase before a value is parsed.
+    Pre,
+    /// The phase after a value is parsed.
+    Post
+  };
 
   // The enumeration indexes must stay in sync with the internal variant
   /// The different types of a JSON instance.
   enum class Type : std::uint8_t {
+    /// The JSON null type.
     Null = 0,
+    /// The JSON boolean type.
     Boolean = 1,
+    /// The JSON integer type.
     Integer = 2,
+    /// The JSON real number type.
     Real = 3,
+    /// The JSON string type.
     String = 4,
+    /// The JSON array type.
     Array = 5,
+    /// The JSON object type.
     Object = 6,
+    /// The JSON decimal type.
     Decimal = 7
   };
 
@@ -74,7 +88,14 @@ public:
   using TypeSet = std::bitset<8>;
 
   /// The context type for parse callbacks
-  enum class ParseContext : std::uint8_t { Root, Property, Index };
+  enum class ParseContext : std::uint8_t {
+    /// The root value of the document
+    Root,
+    /// An object property value
+    Property,
+    /// An array element value
+    Index
+  };
 
   /// An optional callback that can be passed to parsing functions to obtain
   /// metadata during the parsing process
@@ -122,6 +143,7 @@ public:
   explicit JSON(const int value);
 
   // On some systems, `std::int64_t` might be equal to `long`
+  /// This constructor creates a JSON document from an integer type.
   template <typename T = std::int64_t>
   explicit JSON(const long value)
     requires(!std::is_same_v<T, std::int64_t>)
@@ -250,6 +272,7 @@ public:
 
   /// Misc constructors
   JSON(const JSON &);
+  /// A move constructor.
   JSON(JSON &&) noexcept;
   auto operator=(const JSON &) -> JSON &;
   auto operator=(JSON &&) noexcept -> JSON &;
@@ -305,12 +328,25 @@ public:
    * Operators
    */
 
-  auto operator<(const JSON &other) const noexcept -> bool;
-  auto operator<=(const JSON &other) const noexcept -> bool;
-  auto operator>(const JSON &other) const noexcept -> bool;
-  auto operator>=(const JSON &other) const noexcept -> bool;
-  auto operator==(const JSON &other) const noexcept -> bool;
-  auto operator!=(const JSON &) const noexcept -> bool = default;
+  auto operator<(const JSON &other) const -> bool;
+  auto operator<=(const JSON &other) const -> bool;
+  auto operator>(const JSON &other) const -> bool;
+  auto operator>=(const JSON &other) const -> bool;
+
+  /// Compare two JSON instances for equality. Numbers compare by exact
+  /// mathematical value across the integer, real, and decimal representations,
+  /// so the same value in different forms is equal. A real compares by the
+  /// exact number its floating point form stores, which can differ from the
+  /// same digits written as a decimal. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// assert(sourcemeta::core::JSON{2} == sourcemeta::core::JSON{2.0});
+  /// ```
+  auto operator==(const JSON &other) const -> bool;
+  auto operator!=(const JSON &) const -> bool = default;
 
   /// Add two numeric JSON instances and get a new instance with the result. For
   /// example:
@@ -1330,6 +1366,7 @@ public:
   /// const auto result = document.try_at("foo");
   /// EXPECT_TRUE(result);
   /// EXPECT_EQ(result->to_integer(), 1);
+  /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   try_at(const String &key) const -> const JSON * {
     assert(this->is_object());
@@ -1362,6 +1399,7 @@ public:
   ///   document.as_object().hash("foo"));
   /// EXPECT_TRUE(result);
   /// EXPECT_EQ(result->to_integer(), 1);
+  /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
   try_at(const String &key, const typename Object::hash_type hash) const
       -> const JSON * {

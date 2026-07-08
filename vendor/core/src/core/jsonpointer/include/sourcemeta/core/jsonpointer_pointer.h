@@ -20,10 +20,15 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonpointer
+/// A sequence of reference tokens that identifies a location within a JSON
+/// document.
 template <typename PropertyT, typename Hash> class GenericPointer {
 public:
+  /// A single reference token within this pointer
   using Token = GenericToken<PropertyT, Hash>;
+  /// The JSON value type used for serialisation
   using Value = typename Token::Value;
+  /// The underlying sequence container of tokens
   using Container = std::vector<Token>;
 
   /// This constructor creates an empty JSON Pointer. For example:

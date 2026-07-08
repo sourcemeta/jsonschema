@@ -328,6 +328,7 @@ make_set(std::initializer_list<JSON::Type> types) -> JSON::TypeSet {
 
 } // namespace sourcemeta::core
 
+/// @cond
 template <> struct std::formatter<sourcemeta::core::JSON> {
   constexpr auto parse(std::format_parse_context &context)
       -> decltype(context.begin()) {
@@ -355,5 +356,6 @@ template <> struct std::formatter<sourcemeta::core::JSON::Type> {
     return std::format_to(context.out(), "{}", stream.str());
   }
 };
+/// @endcond
 
 #endif

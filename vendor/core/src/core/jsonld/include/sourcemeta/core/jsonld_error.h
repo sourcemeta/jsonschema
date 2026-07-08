@@ -27,15 +27,16 @@ namespace sourcemeta::core {
 /// pointer locates the offending position in the input document
 class SOURCEMETA_CORE_JSONLD_EXPORT JSONLDError : public std::exception {
 public:
+  /// Locate the error at an owned pointer.
   JSONLDError(const char *code, Pointer pointer)
       : code_{code}, pointer_{std::move(pointer)} {}
 
-  // Locate the error at a weak pointer, materialising an owned pointer.
+  /// Locate the error at a weak pointer, materialising an owned pointer.
   JSONLDError(const char *code, const WeakPointer &pointer)
       : code_{code}, pointer_{to_pointer(pointer)} {}
 
-  // Locate the error at a weak pointer extended with the given trailing
-  // property tokens.
+  /// Locate the error at a weak pointer extended with the given trailing
+  /// property tokens.
   JSONLDError(const char *code, const WeakPointer &pointer,
               const std::initializer_list<JSON::StringView> children)
       : code_{code}, pointer_{to_pointer(pointer)} {

@@ -42,11 +42,6 @@ enum class AlterSchemaMode : std::uint8_t {
   /// performance
   Linter,
 
-  /// Rules that surface implicit constraints and simplifies keywords that
-  /// are syntax sugar to other keywords, potentially decreasing human
-  /// readability in favor of explicitness
-  Canonicalizer,
-
   /// Rules that upgrade a JSON Schema document up to JSON Schema Draft 4
   UpgradeDraft4,
 

@@ -1,18 +1,19 @@
 #include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/unicode.h>
 #include <sourcemeta/core/uri.h>
 
 #include "escaping.h"
 #include "grammar.h"
 
-#include <array>    // std::array
-#include <cassert>  // assert
-#include <cctype>   // std::isalnum, std::isxdigit, std::isalpha, std::isdigit
-#include <charconv> // std::from_chars
-#include <cstdint>  // std::uint64_t
-#include <limits>   // std::numeric_limits
-#include <optional> // std::optional
-#include <string>   // std::string
+#include <array>        // std::array
+#include <cassert>      // assert
+#include <cctype>       // std::isalpha, std::isdigit
+#include <charconv>     // std::from_chars
+#include <cstdint>      // std::uint64_t
+#include <limits>       // std::numeric_limits
+#include <optional>     // std::optional
+#include <string>       // std::string
 #include <string_view>  // std::string_view
 #include <system_error> // std::errc
 #include <type_traits>  // std::conditional_t
@@ -32,10 +33,8 @@ auto validate_percent_encoded_utf8(const std::string_view input,
         static_cast<std::uint64_t>(position + 1)};
   }
 
-  const auto first_hex = static_cast<unsigned char>(input[position + 1]);
-  const auto second_hex = static_cast<unsigned char>(input[position + 2]);
-
-  if (!std::isxdigit(first_hex) || !std::isxdigit(second_hex)) [[unlikely]] {
+  if (hex_digit_value(input[position + 1]) < 0 ||
+      hex_digit_value(input[position + 2]) < 0) [[unlikely]] {
     throw sourcemeta::core::URIParseError{
         static_cast<std::uint64_t>(position + 1)};
   }
@@ -173,13 +172,12 @@ auto parse_ipv6(const std::string_view input,
 
     // Require 1*HEXDIG for the version
     if (position >= input.size() || input[position] == URI_CLOSE_BRACKET ||
-        !std::isxdigit(static_cast<unsigned char>(input[position])))
-        [[unlikely]] {
+        hex_digit_value(input[position]) < 0) [[unlikely]] {
       throw sourcemeta::core::URIParseError{
           static_cast<std::uint64_t>(position + 1)};
     }
     while (position < input.size() && input[position] != URI_CLOSE_BRACKET &&
-           std::isxdigit(static_cast<unsigned char>(input[position]))) {
+           hex_digit_value(input[position]) >= 0) {
       position += 1;
     }
 
@@ -209,8 +207,8 @@ auto parse_ipv6(const std::string_view input,
     // IPv6address: only HEXDIG, ":", and "." are valid
     while (position < input.size() && input[position] != URI_CLOSE_BRACKET) {
       const auto current = input[position];
-      if (!std::isxdigit(static_cast<unsigned char>(current)) &&
-          current != URI_COLON && current != URI_DOT) [[unlikely]] {
+      if (hex_digit_value(current) < 0 && current != URI_COLON &&
+          current != URI_DOT) [[unlikely]] {
         throw sourcemeta::core::URIParseError{
             static_cast<std::uint64_t>(position + 1)};
       }

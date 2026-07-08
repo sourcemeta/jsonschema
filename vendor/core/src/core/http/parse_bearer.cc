@@ -50,7 +50,7 @@ auto http_parse_bearer(const std::string_view authorization) noexcept
     return {};
   }
 
-  if (!http_iequals_ascii(http_subview(authorization, 0, scheme.size()),
+  if (!equals_ignore_case(http_subview(authorization, 0, scheme.size()),
                           scheme)) {
     return {};
   }

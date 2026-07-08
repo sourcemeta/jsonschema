@@ -18,8 +18,11 @@ namespace sourcemeta::core {
 /// assert(sourcemeta::core::HTTP_STATUS_OK.wire == "200 OK");
 /// ```
 struct HTTPStatus {
+  /// The numeric status code
   std::uint16_t code;
+  /// The reason phrase
   std::string_view phrase;
+  /// The status code and reason phrase in their wire form
   std::string_view wire;
 
   constexpr auto operator==(const HTTPStatus &) const -> bool = default;

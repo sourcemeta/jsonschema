@@ -24,12 +24,14 @@ public:
   HTMLBuffer(HTMLBuffer &&) = delete;
   auto operator=(HTMLBuffer &&) -> HTMLBuffer & = delete;
 
+  /// Reserve a number of bytes of capacity up front
   SOURCEMETA_FORCEINLINE inline auto reserve(const std::size_t bytes) -> void {
     this->buffer_.resize(bytes);
     this->cursor_ = this->buffer_.data();
     this->end_ = this->cursor_ + bytes;
   }
 
+  /// Append a single character to the buffer
   SOURCEMETA_FORCEINLINE inline auto append(const char character) -> void {
     if (!this->cursor_ || this->cursor_ >= this->end_) [[unlikely]] {
       this->grow(1);
@@ -39,6 +41,7 @@ public:
     ++this->cursor_;
   }
 
+  /// Append a sequence of characters to the buffer
   SOURCEMETA_FORCEINLINE inline auto append(const std::string_view data)
       -> void {
     const auto length{data.size()};
@@ -57,6 +60,7 @@ public:
     this->cursor_ += length;
   }
 
+  /// Get the accumulated contents of the buffer
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto str()
       -> const std::string & {
     if (this->cursor_) {
@@ -69,6 +73,7 @@ public:
     return this->buffer_;
   }
 
+  /// Write the accumulated contents to an output stream
   auto write(std::ostream &stream) -> void;
 
 private:

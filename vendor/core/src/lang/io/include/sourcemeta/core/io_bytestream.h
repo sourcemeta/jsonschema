@@ -34,6 +34,7 @@ namespace sourcemeta::core {
 /// ```
 class InputByteStream : public std::istringstream {
 public:
+  /// Construct the stream from the given byte values.
   SOURCEMETA_CORE_IO_EXPORT
   InputByteStream(std::initializer_list<std::uint8_t> bytes);
 };
@@ -52,6 +53,7 @@ public:
 /// ```
 class OutputByteStream : public std::ostringstream {
 public:
+  /// The accumulated bytes.
   SOURCEMETA_CORE_IO_EXPORT
   auto bytes() const -> std::vector<std::byte>;
 };

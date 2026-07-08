@@ -8,10 +8,18 @@
 namespace sourcemeta::core {
 
 // RFC 5321 §4.1.2 Mailbox grammar. When AllowUtf8 is true, RFC 6531 §3.3
-// extends atext, qtextSMTP, and sub-domain with UTF8-non-ascii alternatives
-template <bool AllowUtf8>
+// extends atext, qtextSMTP, and sub-domain with UTF8-non-ascii alternatives.
+// When UseUts46 is also true, the domain is validated under UTS #46 processing
+// rather than strict IDNA 2008.
+template <bool AllowUtf8, bool UseUts46 = false>
 static auto is_mailbox(const std::string_view value) -> bool {
   if (value.empty()) {
+    return false;
+  }
+
+  // RFC 5321 §4.5.3.1.3: a path is at most 256 octets including the enclosing
+  // angle brackets, so the mailbox it carries is at most 254
+  if (value.size() > 254) {
     return false;
   }
 
@@ -116,7 +124,11 @@ static auto is_mailbox(const std::string_view value) -> bool {
 
   if constexpr (AllowUtf8) {
     // RFC 6531 §3.3: sub-domain =/ U-label
-    return is_idn_hostname(domain);
+    if constexpr (UseUts46) {
+      return is_idn_hostname_uts46(domain);
+    } else {
+      return is_idn_hostname(domain);
+    }
   } else {
     // RFC 5321 §4.1.2 Domain matches is_hostname (RFC 1123 §2.1) by
     // grammar, by 63-octet label cap (RFC 1035 §2.3.4), and by
@@ -131,6 +143,10 @@ auto is_email(const std::string_view value) -> bool {
 
 auto is_idn_email(const std::string_view value) -> bool {
   return is_mailbox<true>(value);
+}
+
+auto is_idn_email_uts46(const std::string_view value) -> bool {
+  return is_mailbox<true, true>(value);
 }
 
 } // namespace sourcemeta::core

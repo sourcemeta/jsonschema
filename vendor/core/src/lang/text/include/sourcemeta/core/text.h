@@ -5,8 +5,10 @@
 #include <sourcemeta/core/text_export.h>
 #endif
 
+#include <array>       // std::array
 #include <concepts>    // std::same_as
 #include <cstddef>     // std::size_t
+#include <cstdint>     // std::int8_t
 #include <filesystem>  // std::filesystem::path
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
@@ -378,6 +380,32 @@ auto strip_right(const std::string_view input, const char character) noexcept
 
 /// @ingroup text
 ///
+/// Return the content of `input` with a single matched pair of surrounding
+/// `quote` characters removed, or `input` unchanged when it is not wrapped in
+/// that pair. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::unquote("\"abc\"", '"') == "abc");
+/// assert(sourcemeta::core::unquote("abc", '"') == "abc");
+/// assert(sourcemeta::core::unquote("\"", '"') == "\"");
+/// ```
+inline constexpr auto unquote(const std::string_view input,
+                              const char quote) noexcept -> std::string_view {
+  if (input.size() < 2 || input.front() != quote || input.back() != quote) {
+    return input;
+  }
+
+  auto inner{input};
+  inner.remove_prefix(1);
+  inner.remove_suffix(1);
+  return inner;
+}
+
+/// @ingroup text
+///
 /// Return `input` left-padded with `character` to at least `width` bytes, or
 /// a copy of `input` when it is already that long. For example:
 ///
@@ -531,6 +559,57 @@ auto join_to(std::ostream &stream, const Range &items,
 
 /// @ingroup text
 ///
+/// Decode a single hexadecimal digit into its numeric value, returning a
+/// negative value when the character is not a hexadecimal digit. Both letter
+/// cases are accepted. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::hex_digit_value('a') == 10);
+/// assert(sourcemeta::core::hex_digit_value('z') < 0);
+/// ```
+inline auto hex_digit_value(const char character) noexcept -> std::int8_t {
+  // Indexed by byte value: ASCII '0'-'9', 'A'-'F', and 'a'-'f' map to their
+  // hexadecimal value, everything else to -1
+  static constexpr std::array<std::int8_t, 256> table{
+      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,  1,  2,  3,  4,  5,
+       6,  7,  8,  9,  -1, -1, -1, -1, -1, -1, -1, 10, 11, 12, 13, 14, 15, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+       -1, -1, -1, -1}};
+  return table[static_cast<unsigned char>(character)];
+}
+
+/// @ingroup text
+///
+/// Check whether the given character is an ASCII hexadecimal digit
+/// (`'0'`-`'9'`, `'a'`-`'f'`, `'A'`-`'F'`). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_hex_digit('a'));
+/// assert(!sourcemeta::core::is_hex_digit('z'));
+/// ```
+inline auto is_hex_digit(const char character) noexcept -> bool {
+  return hex_digit_value(character) >= 0;
+}
+
+/// @ingroup text
+///
 /// Decode a hexadecimal string into its raw bytes, returning no value when
 /// the input contains a character outside the hexadecimal alphabet, or has an
 /// odd length unless `allow_odd_length` is set, in which case a leading zero
@@ -574,9 +653,114 @@ auto bytes_to_hex(const std::string_view input) -> std::string;
 /// assert(sourcemeta::core::equals_ignore_case("Hello", "hELLO"));
 /// assert(!sourcemeta::core::equals_ignore_case("foo", "bar"));
 /// ```
+///
+/// This comparison is allocation-free, as it compares the lowercase form of
+/// each character without materialising lowercased copies of its arguments.
+inline auto equals_ignore_case(const std::string_view left,
+                               const std::string_view right) noexcept -> bool {
+  if (left.size() != right.size()) {
+    return false;
+  }
+
+  for (std::size_t index{0}; index < left.size(); ++index) {
+    if (to_lowercase(left[index]) != to_lowercase(right[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// @ingroup text
+///
+/// Return whether `value` begins with `prefix` under ASCII case-insensitive
+/// comparison. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::starts_with_ignore_case("__Host-id", "__host-"));
+/// assert(!sourcemeta::core::starts_with_ignore_case("id", "__host-"));
+/// ```
+///
+/// Like the other case-insensitive comparisons, this is allocation-free.
+inline auto starts_with_ignore_case(const std::string_view value,
+                                    const std::string_view prefix) noexcept
+    -> bool {
+  if (value.size() < prefix.size()) {
+    return false;
+  }
+
+  for (std::size_t index{0}; index < prefix.size(); ++index) {
+    if (to_lowercase(value[index]) != to_lowercase(prefix[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/// @ingroup text
+///
+/// Return whether one string orders before another under ASCII case-insensitive
+/// lexicographic comparison, which is useful as a sort comparator. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::less_ignore_case("apple", "Banana"));
+/// assert(!sourcemeta::core::less_ignore_case("Banana", "apple"));
+/// ```
+///
+/// Like the equality comparison, this is allocation-free.
+inline auto less_ignore_case(const std::string_view left,
+                             const std::string_view right) noexcept -> bool {
+  const auto length{left.size() < right.size() ? left.size() : right.size()};
+  for (std::size_t index{0}; index < length; ++index) {
+    const auto left_lower{to_lowercase(left[index])};
+    const auto right_lower{to_lowercase(right[index])};
+    if (left_lower != right_lower) {
+      return left_lower < right_lower;
+    }
+  }
+
+  return left.size() < right.size();
+}
+
+/// @ingroup text
+///
+/// Collapse consecutive runs of a character into a single occurrence. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::squeeze("a//b///c", '/') == "a/b/c");
+/// ```
 SOURCEMETA_CORE_TEXT_EXPORT
-auto equals_ignore_case(const std::string_view left,
-                        const std::string_view right) noexcept -> bool;
+auto squeeze(const std::string_view input, const char character) -> std::string;
+
+/// @ingroup text
+///
+/// Collapse consecutive runs of a character into a single occurrence, appending
+/// the result to an existing string rather than allocating a new one. The
+/// output must not alias the input. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// std::string output{"path="};
+/// sourcemeta::core::squeeze("a//b", '/', output);
+/// assert(output == "path=a/b");
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto squeeze(const std::string_view input, const char character,
+             std::string &output) -> void;
 
 /// @ingroup text
 ///

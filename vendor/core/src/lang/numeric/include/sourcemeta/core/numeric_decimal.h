@@ -81,6 +81,10 @@ public:
   /// round-trip string representation, avoiding IEEE 754 precision artifacts
   [[nodiscard]] static auto strict_from(double value) -> Decimal;
 
+  /// Create a decimal that preserves the exact value stored by a double,
+  /// expanding every digit of its underlying binary representation
+  [[nodiscard]] static auto exact_from(double value) -> Decimal;
+
   /// Create a positive infinity value
   [[nodiscard]] static auto infinity() -> Decimal;
 

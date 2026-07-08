@@ -3,6 +3,7 @@
 #include <sourcemeta/core/punycode.h>
 #include <sourcemeta/core/unicode.h>
 
+#include <algorithm>   // std::ranges::lower_bound
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string, std::u32string
@@ -426,6 +427,54 @@ auto idna_is_valid_a_label(const std::string_view label) -> bool {
 
   std::u32string decoded;
   return validate_a_label_body(encoded, decoded);
+}
+
+namespace {
+
+auto mapping_status(const char32_t codepoint) noexcept -> IDNAMappingStatus {
+  if (codepoint > 0x10FFFF) {
+    return IDNAMappingStatus::Disallowed;
+  }
+  const std::size_t page{IDNA_MAPPING_STATUS_STAGE1[codepoint >> 10U]};
+  return static_cast<IDNAMappingStatus>(
+      IDNA_MAPPING_STATUS_STAGE2[(page << 10U) | (codepoint & 0x3FFU)]);
+}
+
+// The replacement sequence for a Mapped codepoint. The caller must only
+// invoke this when `mapping_status(codepoint)` is Mapped, in which case the
+// codepoint is guaranteed to be present in the index.
+auto mapping_replacement(const char32_t codepoint) noexcept
+    -> std::u32string_view {
+  const auto *const found{std::ranges::lower_bound(
+      IDNA_MAPPING_INDEX, codepoint, {}, &IDNAMappingEntry::codepoint)};
+  return std::u32string_view{IDNA_MAPPING_POOL + found->offset, found->length};
+}
+
+} // namespace
+
+auto idna_uts46_map(const std::u32string_view input) -> std::u32string {
+  std::u32string mapped;
+  mapped.reserve(input.size());
+  for (const auto codepoint : input) {
+    switch (mapping_status(codepoint)) {
+      // UTS #46 §4 step 1. Valid and (under Nontransitional Processing)
+      // deviation code points are kept unchanged. Disallowed code points are
+      // also left in place, so the later validity check rejects them rather
+      // than the mapping silently dropping the whole input.
+      case IDNAMappingStatus::Valid:
+      case IDNAMappingStatus::Deviation:
+      case IDNAMappingStatus::Disallowed:
+        mapped.push_back(codepoint);
+        break;
+      case IDNAMappingStatus::Mapped:
+        mapped.append(mapping_replacement(codepoint));
+        break;
+      case IDNAMappingStatus::Ignored:
+        break;
+    }
+  }
+
+  return nfc(mapped);
 }
 
 } // namespace sourcemeta::core

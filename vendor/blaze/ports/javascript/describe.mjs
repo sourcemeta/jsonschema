@@ -471,6 +471,12 @@ export function describe(valid, instruction, evaluatePath,
     if (keyword === '$ref') {
       return describeReference(target);
     }
+    // For the wrapper instruction we emit when hoisting `then` subschemas
+    // whose `if` condition compiles to nothing
+    if (keyword === 'then') {
+      return 'The ' + typeName(targetType) +
+        ' value was expected to validate against the given conditional';
+    }
     return '<unknown>';
   }
 

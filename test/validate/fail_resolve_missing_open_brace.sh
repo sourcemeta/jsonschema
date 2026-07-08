@@ -31,11 +31,13 @@ EOF
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --resolve "$TMP/invalid.json" 2> "$TMP/stderr.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
-test "$EXIT_CODE" = "4"
+# Other input error
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
-error: The file you provided does not represent a valid JSON Schema
+error: Failed to parse the JSON document
+  at line 2
+  at column 12
   at file path $(realpath "$TMP")/invalid.json
 EOF
 
@@ -45,12 +47,14 @@ diff "$TMP/stderr.txt" "$TMP/expected.txt"
 "$1" validate "$TMP/schema.json" "$TMP/instance.json" \
   --resolve "$TMP/invalid.json" --json > "$TMP/stdout.txt" \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
-# Schema input error
-test "$EXIT_CODE" = "4"
+# Other input error
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The file you provided does not represent a valid JSON Schema",
+  "error": "Failed to parse the JSON document",
+  "line": 2,
+  "column": 12,
   "filePath": "$(realpath "$TMP")/invalid.json"
 }
 EOF

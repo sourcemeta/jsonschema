@@ -38,6 +38,7 @@ namespace sourcemeta::core {
 /// ```
 class SOURCEMETA_CORE_HTTP_EXPORT HTTPError : public std::runtime_error {
 public:
+  /// Construct an error from the request method, URL, and a message
   HTTPError(const HTTPMethod method, std::string url,
             const std::string &message)
       : std::runtime_error{message}, method_{method}, url_{std::move(url)} {}
@@ -72,6 +73,8 @@ private:
 /// ```
 class SOURCEMETA_CORE_HTTP_EXPORT HTTPStatusError : public HTTPError {
 public:
+  /// Construct an error from the request method, URL, and the unsuccessful
+  /// response status
   HTTPStatusError(const HTTPMethod method, std::string url,
                   const HTTPStatus &status)
       : HTTPError{method, std::move(url), "Unsuccessful HTTP response"},

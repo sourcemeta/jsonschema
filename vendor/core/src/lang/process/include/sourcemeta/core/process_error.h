@@ -27,6 +27,7 @@ namespace sourcemeta::core {
 class SOURCEMETA_CORE_PROCESS_EXPORT ProcessProgramNotFoundError
     : public std::exception {
 public:
+  /// Construct the error given the offending program.
   ProcessProgramNotFoundError(const std::string_view program)
       : program_{program} {}
 
@@ -34,6 +35,7 @@ public:
     return "Could not locate the requested program";
   }
 
+  /// The offending program.
   [[nodiscard]] auto program() const noexcept -> std::string_view {
     return this->program_;
   }
@@ -46,10 +48,12 @@ private:
 /// A spawned process terminated abnormally
 class SOURCEMETA_CORE_PROCESS_EXPORT ProcessSpawnError : public std::exception {
 public:
+  /// Construct the error given the offending program and its arguments.
   ProcessSpawnError(const std::string_view program,
                     std::initializer_list<std::string_view> arguments)
       : program_{program}, arguments_{arguments.begin(), arguments.end()} {}
 
+  /// Construct the error given the offending program and its arguments.
   ProcessSpawnError(const std::string_view program,
                     std::span<const std::string_view> arguments)
       : program_{program}, arguments_{arguments.begin(), arguments.end()} {}
@@ -58,10 +62,12 @@ public:
     return "Process terminated abnormally";
   }
 
+  /// The offending program.
   [[nodiscard]] auto program() const noexcept -> std::string_view {
     return this->program_;
   }
 
+  /// The arguments the program was spawned with.
   [[nodiscard]] auto arguments() const noexcept
       -> const std::vector<std::string> & {
     return this->arguments_;

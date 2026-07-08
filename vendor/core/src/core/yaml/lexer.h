@@ -73,7 +73,10 @@ public:
     if (this->roundtrip_) {
       this->inline_comment_buffer_.reset();
     }
-    this->skip_whitespace_and_comments();
+    const bool block_indicator_separation{this->after_block_indicator_};
+    this->after_block_indicator_ = false;
+    this->separation_tab_after_indicator_ = false;
+    this->skip_whitespace_and_comments(block_indicator_separation);
     if (this->roundtrip_) {
       this->comment_reference_line_ = this->line_;
     }
@@ -119,6 +122,19 @@ public:
       }
     }
 
+    // YAML 1.2.2 Section 8.2: a flow collection nested in a block context
+    // continues on the following lines only when they are indented past that
+    // block context with spaces, since a tab never counts as indentation. The
+    // closing indicator is exempt, as it merely ends the collection rather than
+    // adding content
+    if (this->flow_level_ > 0 && this->crossed_newline_ &&
+        this->flow_base_indent_ != SIZE_MAX && this->peek() != ']' &&
+        this->peek() != '}' &&
+        this->line_leading_spaces_ <= this->flow_base_indent_) [[unlikely]] {
+      throw YAMLParseError{current_line, current_column,
+                           "Insufficient indentation in flow collection"};
+    }
+
     if (this->column_ == 1 && this->check_document_marker('-')) {
       this->advance(3);
       return Token{.type = TokenType::DocumentStart,
@@ -141,6 +157,9 @@ public:
     const char current{this->peek()};
 
     if (current == '{') {
+      if (this->flow_level_ == 0) {
+        this->flow_base_indent_ = this->block_indent_;
+      }
       this->advance(1);
       this->flow_level_++;
       return Token{.type = TokenType::MappingStart,
@@ -150,6 +169,9 @@ public:
     }
 
     if (current == '[') {
+      if (this->flow_level_ == 0) {
+        this->flow_base_indent_ = this->block_indent_;
+      }
       this->advance(1);
       this->flow_level_++;
       return Token{.type = TokenType::SequenceStart,
@@ -194,7 +216,12 @@ public:
                      .compact_separator = compact};
       }
     } else if (current == '-' && this->is_followed_by_whitespace()) {
+      if (this->separation_tab_after_indicator_) [[unlikely]] {
+        throw YAMLParseError{current_line, current_column,
+                             "Tab characters cannot be used for indentation"};
+      }
       this->advance(1);
+      this->after_block_indicator_ = true;
       return Token{.type = TokenType::BlockSequenceEntry,
                    .value = "-",
                    .line = current_line,
@@ -202,7 +229,12 @@ public:
     }
 
     if (current == '?' && this->is_followed_by_whitespace()) {
+      if (this->separation_tab_after_indicator_) [[unlikely]] {
+        throw YAMLParseError{current_line, current_column,
+                             "Tab characters cannot be used for indentation"};
+      }
       this->advance(1);
+      this->after_block_indicator_ = true;
       return Token{.type = TokenType::BlockMappingKey,
                    .value = "?",
                    .line = current_line,
@@ -210,6 +242,13 @@ public:
     }
 
     if (current == ':' && this->is_value_indicator()) {
+      // YAML 1.2.2 Section 6.1: a block mapping key establishes its
+      // indentation, which is made of spaces, so a tab in the leading
+      // whitespace of the key's line is invalid
+      if (this->flow_level_ == 0 && this->tab_in_line_indent_) [[unlikely]] {
+        throw YAMLParseError{current_line, current_column,
+                             "Tab characters cannot be used for indentation"};
+      }
       this->advance(1);
       this->last_was_quoted_scalar_ = false;
       return Token{.type = TokenType::BlockMappingValue,
@@ -348,26 +387,54 @@ private:
     }
   }
 
-  auto skip_whitespace_and_comments() -> void {
+  auto skip_whitespace_and_comments(bool block_indicator_separation = false)
+      -> void {
     bool preceded_by_whitespace{
         this->column_ == 1 ||
         (this->position_ > 0 &&
          is_whitespace(this->input_[this->position_ - 1]))};
     bool at_line_start{this->column_ == 1};
     bool blank_line{at_line_start};
+    // YAML 1.2.2 Section 6.1: indentation is made of spaces only. A tab in the
+    // leading whitespace is only invalid indentation when no space has yet
+    // established the indent; a tab that follows a space is separation
+    bool space_in_indent{false};
+    bool leading_space_run{at_line_start};
     this->tab_at_line_start_ = false;
+    this->crossed_newline_ = false;
+    this->line_leading_spaces_ = 0;
     while (this->position_ < this->input_.size()) {
       const char current{this->peek()};
 
       if (current == ' ') {
+        if (at_line_start) {
+          space_in_indent = true;
+          if (leading_space_run) {
+            this->line_leading_spaces_++;
+          }
+        }
         preceded_by_whitespace = true;
         this->advance(1);
         continue;
       }
 
       if (current == '\t') {
-        if (this->flow_level_ == 0 && at_line_start) {
+        // YAML 1.2.2 Section 8.2.1: the compact content of a block collection
+        // entry or explicit key on the same line as its indicator is indented
+        // by spaces, so a tab in that separation is invalid when the content is
+        // itself a nested block indicator
+        if (this->flow_level_ == 0 && block_indicator_separation) {
+          this->separation_tab_after_indicator_ = true;
+          this->tab_in_line_indent_ = true;
+        }
+        if (this->flow_level_ == 0 && at_line_start && !space_in_indent) {
           this->tab_at_line_start_ = true;
+        }
+        if (this->flow_level_ == 0 && at_line_start && space_in_indent) {
+          this->tab_in_line_indent_ = true;
+        }
+        if (at_line_start) {
+          leading_space_run = false;
         }
         preceded_by_whitespace = true;
         this->advance(1);
@@ -385,7 +452,14 @@ private:
         preceded_by_whitespace = true;
         at_line_start = true;
         blank_line = true;
+        space_in_indent = false;
+        block_indicator_separation = false;
         this->tab_at_line_start_ = false;
+        this->tab_in_line_indent_ = false;
+        this->separation_tab_after_indicator_ = false;
+        this->crossed_newline_ = true;
+        this->line_leading_spaces_ = 0;
+        leading_space_run = true;
         continue;
       }
 
@@ -548,10 +622,18 @@ private:
     const auto length{this->position_ - start_position};
     const auto directive_content{this->input_.substr(start_position, length)};
 
+    // YAML 1.2.2 Section 6.8: the directive name ends at the first separation
+    // space, so a longer word such as "YAMLL" is a distinct reserved directive
+    // rather than the reserved "YAML" directive with junk appended
+    const auto name_boundary{directive_content.find_first_of(" \t")};
+    const auto directive_name{directive_content.substr(
+        1, name_boundary == std::string_view::npos ? std::string_view::npos
+                                                   : name_boundary - 1)};
+
     TokenType token_type{TokenType::DirectiveReserved};
-    if (directive_content.starts_with("%YAML")) {
+    if (directive_name == "YAML") {
       token_type = TokenType::DirectiveYAML;
-    } else if (directive_content.starts_with("%TAG")) {
+    } else if (directive_name == "TAG") {
       token_type = TokenType::DirectiveTag;
     }
 
@@ -622,9 +704,12 @@ private:
 
   auto flush_flow_line(std::string &buffer, std::string &line_content,
                        std::size_t &pending_newlines, const bool first_line,
-                       const bool is_final = false) -> void {
+                       const bool is_final = false,
+                       const std::size_t protected_length = 0) -> void {
     if (!is_final) {
-      while (!line_content.empty() &&
+      // YAML 1.2.2 Section 7.3.1: only literal trailing white space folds away.
+      // A space or tab produced by an escape is content and must be preserved
+      while (line_content.size() > protected_length &&
              (line_content.back() == ' ' || line_content.back() == '\t')) {
         line_content.pop_back();
       }
@@ -654,15 +739,48 @@ private:
       this->advance(1);
     }
     pending_newlines++;
+    bool line_start{true};
+    bool space_in_indent{false};
+    bool leading_space_run{true};
+    // Only spaces count toward indentation, so the leading-space count of the
+    // final continuation line, not its column, drives the indentation check
+    std::size_t space_indent{0};
     while (this->position_ < this->input_.size()) {
       const char character{this->peek()};
-      if (character == ' ' || character == '\t') {
+      if (character == ' ') {
+        if (line_start) {
+          space_in_indent = true;
+          if (leading_space_run) {
+            space_indent++;
+          }
+        }
+        this->advance(1);
+      } else if (character == '\t') {
+        // YAML 1.2.2 Section 6.1: when a folded line must reach a block
+        // indentation, that indentation is made of spaces, so a tab before any
+        // space establishes no indentation
+        if (this->flow_level_ == 0 && this->block_indent_ != SIZE_MAX &&
+            line_start && !space_in_indent) [[unlikely]] {
+          throw YAMLParseError{this->line_, this->column_,
+                               "Tab characters cannot be used for indentation"};
+        }
+        if (line_start) {
+          leading_space_run = false;
+        }
         this->advance(1);
       } else if (character == '\n') {
         pending_newlines++;
+        line_start = true;
+        space_in_indent = false;
+        leading_space_run = true;
+        space_indent = 0;
         this->advance(1);
       } else if (character == '\r') {
         pending_newlines++;
+        line_start = true;
+        space_in_indent = false;
+        leading_space_run = true;
+        space_indent = 0;
         this->advance(1);
         if (this->peek() == '\n') {
           this->advance(1);
@@ -671,10 +789,11 @@ private:
         break;
       }
     }
-    this->validate_flow_scalar_continuation();
+    this->validate_flow_scalar_continuation(space_indent);
   }
 
-  auto validate_flow_scalar_continuation() -> void {
+  auto validate_flow_scalar_continuation(const std::size_t space_indent)
+      -> void {
     if (this->position_ >= this->input_.size()) {
       return;
     }
@@ -684,8 +803,7 @@ private:
                            "Document marker inside flow scalar"};
     }
     if (this->flow_level_ == 0 && this->block_indent_ != SIZE_MAX) {
-      const auto current_indent{static_cast<std::size_t>(this->column_ - 1)};
-      if (current_indent <= this->block_indent_) [[unlikely]] {
+      if (space_indent <= this->block_indent_) [[unlikely]] {
         throw YAMLParseError{this->line_, this->column_,
                              "Insufficient indentation in flow scalar"};
       }
@@ -734,6 +852,7 @@ private:
     std::string line_content;
     bool first_line{true};
     std::size_t pending_newlines{0};
+    std::size_t protected_length{0};
     bool found_closing_quote{false};
 
     while (this->position_ < this->input_.size()) {
@@ -807,14 +926,17 @@ private:
             case 'x':
               this->advance(1);
               line_content += this->parse_hex_escape(2);
+              protected_length = line_content.size();
               continue;
             case 'u':
               this->advance(1);
               line_content += this->parse_hex_escape(4);
+              protected_length = line_content.size();
               continue;
             case 'U':
               this->advance(1);
               line_content += this->parse_hex_escape(8);
+              protected_length = line_content.size();
               continue;
             case '\n':
             case '\r':
@@ -833,10 +955,12 @@ private:
                                    "double-quoted scalar"};
           }
           this->advance(1);
+          protected_length = line_content.size();
         }
       } else if (current == '\n' || current == '\r') {
         this->flush_flow_line(buffer, line_content, pending_newlines,
-                              first_line);
+                              first_line, false, protected_length);
+        protected_length = 0;
         first_line = false;
         this->skip_flow_scalar_line_break(current, pending_newlines);
       } else {
@@ -888,7 +1012,16 @@ private:
                            "Invalid hex escape sequence"};
     }
 
-    return codepoint_to_utf8(static_cast<char32_t>(codepoint));
+    // YAML 1.2.2 Section 5.7: an escape names a Unicode scalar value, so a
+    // surrogate or out-of-range code point is rejected rather than encoded as
+    // malformed UTF-8
+    const auto character{static_cast<char32_t>(codepoint)};
+    if (!is_valid_codepoint(character)) [[unlikely]] {
+      throw YAMLParseError{this->line_, this->column_,
+                           "Invalid Unicode escape sequence"};
+    }
+
+    return codepoint_to_utf8(character);
   }
 
   [[nodiscard]] auto calculate_parent_indentation(
@@ -951,6 +1084,7 @@ private:
 
       std::size_t max_leading_empty_indent{0};
       std::size_t current_empty_indent{0};
+      bool found_content{false};
       while (this->position_ < this->input_.size()) {
         if (this->peek() == ' ') {
           content_indent++;
@@ -964,6 +1098,7 @@ private:
           current_empty_indent = 0;
           this->advance(1);
         } else {
+          found_content = true;
           break;
         }
       }
@@ -972,11 +1107,17 @@ private:
       this->line_ = saved_line;
       this->column_ = saved_column;
 
-      if (max_leading_empty_indent > content_indent && content_indent > 0)
-          [[unlikely]] {
-        throw YAMLParseError{
-            start_line, start_column,
-            "Leading empty line has more spaces than content indentation"};
+      if (found_content) {
+        if (max_leading_empty_indent > content_indent && content_indent > 0)
+            [[unlikely]] {
+          throw YAMLParseError{
+              start_line, start_column,
+              "Leading empty line has more spaces than content indentation"};
+        }
+      } else {
+        // YAML 1.2.2 Section 8.1.1.1: with no non-empty content line the
+        // indentation level is the number of spaces on the longest line
+        content_indent = std::max(content_indent, max_leading_empty_indent);
       }
     }
 
@@ -1033,7 +1174,9 @@ private:
       }
     }
 
+    bool header_line_break{false};
     if (this->peek() == '\n' || this->peek() == '\r') {
+      header_line_break = true;
       this->advance(1);
       if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
         this->advance(1);
@@ -1067,7 +1210,31 @@ private:
         this->advance(1);
       }
 
-      if (this->peek() == '\n' || this->peek() == '\r') {
+      // YAML 1.2.2 Section 6.1: the white space of an empty block scalar line
+      // is indentation, which is made of spaces, so a tab before any space,
+      // leaving the line otherwise blank, is invalid indentation
+      if (line_indent == 0 && this->peek() == '\t') {
+        auto lookahead{this->position_};
+        while (lookahead < this->input_.size() &&
+               (this->input_[lookahead] == ' ' ||
+                this->input_[lookahead] == '\t')) {
+          lookahead++;
+        }
+        if (lookahead >= this->input_.size() ||
+            this->input_[lookahead] == '\n' || this->input_[lookahead] == '\r')
+            [[unlikely]] {
+          throw YAMLParseError{this->line_, this->column_,
+                               "Tab characters cannot be used for indentation"};
+        }
+      }
+
+      // A line that holds only white space, whether it ends with a line break
+      // or the end of input, is empty. YAML 1.2.2 Section 8.1.1.1 treats the
+      // spaces beyond the content indentation of such a line as content
+      const bool blank_line_at_input_end{this->position_ >=
+                                         this->input_.size()};
+      if (this->peek() == '\n' || this->peek() == '\r' ||
+          blank_line_at_input_end) {
         if (style == ScalarStyle::Literal) {
           if (line_indent > content_indent) {
             buffer += trailing_newlines;
@@ -1091,6 +1258,9 @@ private:
             }
             original_trailing += '\n';
           }
+        }
+        if (blank_line_at_input_end) {
+          break;
         }
         this->advance(1);
         if (this->input_[this->position_ - 1] == '\r' && this->peek() == '\n') {
@@ -1200,6 +1370,13 @@ private:
         if (original) {
           *original += original_trailing;
         }
+      }
+
+      // YAML 1.2.2 Section 8.1.1.2: keep chomping preserves the line break that
+      // ends an otherwise empty block scalar header, in both the literal and
+      // the folded styles
+      if (buffer.empty() && header_line_break) {
+        buffer += '\n';
       }
     } else if (chomping == 'c' && !buffer.empty()) {
       if (style == ScalarStyle::Literal) {
@@ -1481,6 +1658,19 @@ private:
   bool stream_ended_{false};
   bool last_was_quoted_scalar_{false};
   bool tab_at_line_start_{false};
+  bool after_block_indicator_{false};
+  bool separation_tab_after_indicator_{false};
+  bool tab_in_line_indent_{false};
+  bool crossed_newline_{false};
+  // The highest indentation a flow continuation line may share with its
+  // enclosing block, captured when the outermost flow collection opens so that
+  // inner block-indent updates do not disturb it. A continuation line must be
+  // indented with more spaces than this. SIZE_MAX means the flow is not nested
+  // in a block, so no requirement applies
+  std::size_t flow_base_indent_{SIZE_MAX};
+  // The count of leading spaces on the current line, before the first tab or
+  // non-space character. Only spaces count as YAML indentation
+  std::size_t line_leading_spaces_{0};
   bool roundtrip_{false};
   std::uint64_t comment_reference_line_{0};
   std::optional<std::string> inline_comment_buffer_;

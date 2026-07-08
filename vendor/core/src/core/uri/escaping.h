@@ -1,9 +1,11 @@
 #ifndef SOURCEMETA_CORE_URI_ESCAPING_H_
 #define SOURCEMETA_CORE_URI_ESCAPING_H_
 
+#include <sourcemeta/core/text.h>
+
 #include "grammar.h"
 
-#include <cctype>  // std::isxdigit, std::toupper
+#include <cctype>  // std::toupper
 #include <cstdint> // std::uint8_t
 #include <string>  // std::string
 
@@ -33,28 +35,21 @@ enum class URIEscapeMode : std::uint8_t {
   UserInfo
 };
 
-inline auto uri_hex_to_int(char character) -> unsigned char {
-  if (character >= '0' && character <= '9') {
-    return static_cast<unsigned char>(character - '0');
-  }
-
-  if (character >= 'A' && character <= 'F') {
-    return static_cast<unsigned char>(character - 'A' + 10);
-  }
-
-  if (character >= 'a' && character <= 'f') {
-    return static_cast<unsigned char>(character - 'a' + 10);
-  }
-
-  return 0;
+inline auto uri_percent_encode_byte(std::string &output,
+                                    const unsigned char byte) -> void {
+  const auto high{(byte >> 4) & 0x0F};
+  const auto low{byte & 0x0F};
+  output += URI_PERCENT;
+  output += static_cast<char>(high < 10 ? '0' + high : 'A' + high - 10);
+  output += static_cast<char>(low < 10 ? '0' + low : 'A' + low - 10);
 }
 
 inline auto uri_is_percent_encoded(const std::string &input,
                                    std::string::size_type position) -> bool {
   return position < input.size() && input[position] == URI_PERCENT &&
          position + 2 < input.size() &&
-         std::isxdigit(static_cast<unsigned char>(input[position + 1])) &&
-         std::isxdigit(static_cast<unsigned char>(input[position + 2]));
+         hex_digit_value(input[position + 1]) >= 0 &&
+         hex_digit_value(input[position + 2]) >= 0;
 }
 
 inline auto uri_unescape_all_inplace(std::string &input) -> void {
@@ -64,8 +59,8 @@ inline auto uri_unescape_all_inplace(std::string &input) -> void {
        read_position < input.size();) {
     if (uri_is_percent_encoded(input, read_position)) {
       const auto value = static_cast<unsigned char>(
-          (uri_hex_to_int(input[read_position + 1]) << 4) |
-          uri_hex_to_int(input[read_position + 2]));
+          (hex_digit_value(input[read_position + 1]) << 4) |
+          hex_digit_value(input[read_position + 2]));
       input[write_position++] = static_cast<char>(value);
       read_position += 3;
     } else {
@@ -83,8 +78,8 @@ inline auto uri_unescape_unreserved_inplace(std::string &input) -> void {
        read_position < input.size();) {
     if (uri_is_percent_encoded(input, read_position)) {
       const auto value = static_cast<unsigned char>(
-          (uri_hex_to_int(input[read_position + 1]) << 4) |
-          uri_hex_to_int(input[read_position + 2]));
+          (hex_digit_value(input[read_position + 1]) << 4) |
+          hex_digit_value(input[read_position + 2]));
       if (uri_is_unreserved(static_cast<char>(value))) {
         input[write_position++] = static_cast<char>(value);
       } else {
@@ -125,8 +120,8 @@ inline auto uri_unescape_if_inplace(std::string &input, Predicate should_decode)
        read_position < input.size();) {
     if (uri_is_percent_encoded(input, read_position)) {
       const auto value = static_cast<unsigned char>(
-          (uri_hex_to_int(input[read_position + 1]) << 4) |
-          uri_hex_to_int(input[read_position + 2]));
+          (hex_digit_value(input[read_position + 1]) << 4) |
+          hex_digit_value(input[read_position + 2]));
       const auto decoded = static_cast<char>(value);
 
       if (should_decode(decoded)) {

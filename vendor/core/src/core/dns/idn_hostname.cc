@@ -5,6 +5,7 @@
 #include <sourcemeta/core/unicode.h>
 
 #include <cstddef>     // std::size_t
+#include <optional>    // std::optional
 #include <string>      // std::string, std::u32string
 #include <string_view> // std::string_view, std::u32string_view
 #include <vector>      // std::vector
@@ -19,25 +20,19 @@ static constexpr auto is_idna_label_separator(const char32_t codepoint)
          codepoint == U'\uFF0E' || codepoint == U'\uFF61';
 }
 
-auto is_idn_hostname(const std::string_view value) -> bool {
-  // No conformance pass against `vendor/unicodetools/IdnaTestV2.txt` is
-  // wired here. That corpus tests UTS #46, which prepends a mapping pass
-  // we deliberately do not implement, so strict IDNA 2008 validation
-  // rejects most of its successful rows. Enabling it would require
-  // shipping a UTS #46 mapping module first.
+namespace {
 
-  if (value.empty()) {
-    return false;
-  }
-
-  const auto codepoints{utf8_to_utf32(value)};
-  if (!codepoints.has_value() || codepoints->empty()) {
+// Validate an already-decoded presentation-form domain name against the
+// IDNA 2008 rules (RFC 5890-5893). The caller is responsible for any prior
+// transformation, such as the UTS #46 mapping.
+auto validate_idn_labels(const std::u32string_view codepoints) -> bool {
+  if (codepoints.empty()) {
     return false;
   }
 
   // UTS #46 §3.1: a leading or trailing separator means an empty label
-  if (is_idna_label_separator(codepoints->front()) ||
-      is_idna_label_separator(codepoints->back())) {
+  if (is_idna_label_separator(codepoints.front()) ||
+      is_idna_label_separator(codepoints.back())) {
     return false;
   }
 
@@ -45,12 +40,12 @@ auto is_idn_hostname(const std::string_view value) -> bool {
   // RFC 1035 §3.1: presentation form ≤ 253 octets in A-label form
   std::size_t total_octets{0};
   std::size_t label_start{0};
-  for (std::size_t position = 0; position <= codepoints->size(); ++position) {
-    const bool at_end{position == codepoints->size()};
-    if (!at_end && !is_idna_label_separator((*codepoints)[position])) {
+  for (std::size_t position = 0; position <= codepoints.size(); ++position) {
+    const bool at_end{position == codepoints.size()};
+    if (!at_end && !is_idna_label_separator(codepoints[position])) {
       continue;
     }
-    const std::u32string_view label{codepoints->data() + label_start,
+    const std::u32string_view label{codepoints.data() + label_start,
                                     position - label_start};
 
     std::u32string decoded;
@@ -72,6 +67,13 @@ auto is_idn_hostname(const std::string_view value) -> bool {
         return false;
       }
     } else if (*kind == IDNALabelKind::Ascii) {
+      // RFC 5891 §4.2.3.1: a label must not contain "--" in the third and
+      // fourth positions unless it is a valid A-label (an "xn--" ACE label,
+      // which is classified as ALabel rather than Ascii). This matches the
+      // U-label path, which already rejects such labels.
+      if (label.size() >= 4 && label[2] == U'-' && label[3] == U'-') {
+        return false;
+      }
       // RFC 1123 §2.1: ASCII labels still need the LDH grammar check
       std::string ascii;
       ascii.reserve(label.size());
@@ -129,6 +131,34 @@ auto is_idn_hostname(const std::string_view value) -> bool {
   }
 
   return true;
+}
+
+} // namespace
+
+auto is_idn_hostname(const std::string_view value) -> bool {
+  // This is strict IDNA 2008 validation: the input is validated as-is, with
+  // no mapping pass. Callers that need the UTS #46 lookup behaviour (case
+  // folding, deviation handling, ignorable removal) should use
+  // `is_idn_hostname_uts46`, which is what the `vendor/unicodetools`
+  // IdnaTestV2.txt corpus exercises.
+  const auto codepoints{utf8_to_utf32(value)};
+  if (!codepoints.has_value()) {
+    return false;
+  }
+
+  return validate_idn_labels(*codepoints);
+}
+
+auto is_idn_hostname_uts46(const std::string_view value) -> bool {
+  const auto codepoints{utf8_to_utf32(value)};
+  if (!codepoints.has_value()) {
+    return false;
+  }
+
+  // UTS #46 §4 steps 1-2: map and normalise before validating. Disallowed
+  // codepoints are preserved by the mapping and rejected here by the per-label
+  // validity check.
+  return validate_idn_labels(idna_uts46_map(*codepoints));
 }
 
 } // namespace sourcemeta::core

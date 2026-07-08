@@ -3,8 +3,10 @@
 
 #include <sourcemeta/core/json.h>
 
-#include <cstddef> // std::size_t
-#include <vector>  // std::vector
+#include <algorithm> // std::reverse
+#include <cstddef>   // std::size_t, std::ptrdiff_t
+#include <utility>   // std::pair, std::move
+#include <vector>    // std::vector
 
 namespace sourcemeta::core {
 
@@ -16,6 +18,7 @@ private:
   using internal = typename std::vector<PointerT>;
 
 public:
+  /// Construct a walker over every location in a JSON document
   GenericPointerWalker(const JSON &document) {
     PointerT accumulator;
     this->walk(document, accumulator);
@@ -37,19 +40,35 @@ public:
 
 private:
   auto walk(const JSON &document, PointerT &pointer) -> void {
-    this->pointers.push_back(pointer);
-    if (document.is_array()) {
-      for (std::size_t index = 0; index < document.size(); index++) {
-        pointer.emplace_back(index);
-        this->walk(document.at(index), pointer);
-        pointer.pop_back();
+    // Traversal is iterative with an explicit stack so that a deeply nested
+    // document cannot overflow the call stack. The output ordering is
+    // unspecified either way
+    std::vector<std::pair<const JSON *, PointerT>> pending;
+    pending.emplace_back(&document, pointer);
+    while (!pending.empty()) {
+      auto entry{std::move(pending.back())};
+      pending.pop_back();
+      const JSON &node{*entry.first};
+      // Children are queued then reversed so that they are popped in their
+      // natural order, preserving the pre-order traversal of the recursive form
+      const auto start{pending.size()};
+      if (node.is_array()) {
+        for (std::size_t index = 0; index < node.size(); index++) {
+          PointerT child{entry.second};
+          child.emplace_back(index);
+          pending.emplace_back(&node.at(index), std::move(child));
+        }
+      } else if (node.is_object()) {
+        for (const auto &pair : node.as_object()) {
+          PointerT child{entry.second};
+          child.emplace_back(pair.first);
+          pending.emplace_back(&pair.second, std::move(child));
+        }
       }
-    } else if (document.is_object()) {
-      for (const auto &pair : document.as_object()) {
-        pointer.emplace_back(pair.first);
-        this->walk(pair.second, pointer);
-        pointer.pop_back();
-      }
+
+      std::reverse(pending.begin() + static_cast<std::ptrdiff_t>(start),
+                   pending.end());
+      this->pointers.push_back(std::move(entry.second));
     }
   }
 

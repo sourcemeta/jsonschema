@@ -4,7 +4,8 @@
 
 #include "jsonld_keywords.h"
 
-#include <algorithm>   // std::ranges::sort
+#include <algorithm>   // std::ranges::sort, std::ranges::none_of
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <functional>  // std::reference_wrapper, std::cref
 #include <optional>    // std::optional, std::nullopt
@@ -20,7 +21,9 @@ namespace {
 template <typename PointerT>
 auto materialize_value(const JSON &value, PointerT &pointer,
                        const JSONLDBasicAnnotationMap<PointerT> &map,
-                       std::vector<JSON> &standalone) -> std::optional<JSON>;
+                       std::vector<JSON> &standalone,
+                       const std::vector<JSONLDEdge> **matched_edges = nullptr)
+    -> std::optional<JSON>;
 
 template <typename PointerT>
 auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
@@ -189,6 +192,84 @@ auto build_collection(const JSON &value, PointerT &pointer,
   return result;
 }
 
+// The keys of an object in sorted order, so the object walk is canonical
+// regardless of the instance key order.
+auto sorted_keys(const JSON &value)
+    -> std::vector<std::reference_wrapper<const JSON::String>> {
+  std::vector<std::reference_wrapper<const JSON::String>> keys;
+  keys.reserve(value.object_size());
+  for (const auto &entry : value.as_object()) {
+    keys.push_back(std::cref(entry.first));
+  }
+  std::ranges::sort(keys, [](const auto &left, const auto &right) -> bool {
+    return left.get() < right.get();
+  });
+  return keys;
+}
+
+// The reserved @none key carries no language.
+auto language_literal(const JSON &value, const JSON::String &language,
+                      const bool none) -> JSON {
+  auto result{JSON::make_object()};
+  result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{value},
+                           KEYWORD_VALUE_HASH);
+  if (!none) {
+    result.assign_assume_new(JSON::String{KEYWORD_LANGUAGE}, JSON{language},
+                             KEYWORD_LANGUAGE_HASH);
+  }
+  return result;
+}
+
+auto build_language_collection(const JSON &value) -> JSON {
+  auto elements{JSON::make_array()};
+  for (const auto key : sorted_keys(value)) {
+    const auto &member{value.at(key.get())};
+    const bool none{key.get() == KEYWORD_NONE};
+    // A null value or array item in a language map is treated as absent
+    if (member.is_array()) {
+      for (const auto &element : member.as_array()) {
+        if (element.is_null()) {
+          continue;
+        }
+
+        assert(element.is_string());
+        elements.push_back(language_literal(element, key.get(), none));
+      }
+    } else if (!member.is_null()) {
+      assert(member.is_string());
+      elements.push_back(language_literal(member, key.get(), none));
+    }
+  }
+  return elements;
+}
+
+// The index keys carry no RDF and are dropped.
+template <typename PointerT>
+auto build_index_collection(const JSON &value, PointerT &pointer,
+                            const JSONLDBasicAnnotationMap<PointerT> &map,
+                            std::vector<JSON> &standalone) -> JSON {
+  auto elements{JSON::make_array()};
+  for (const auto key : sorted_keys(value)) {
+    push_property(pointer, key.get());
+    auto element{
+        materialize_value(value.at(key.get()), pointer, map, standalone)};
+    pointer.pop_back();
+    if (!element.has_value()) {
+      continue;
+    }
+
+    // A nested set flattens into the enclosing collection.
+    if (element->is_array()) {
+      for (auto &nested : element->as_array()) {
+        elements.push_back(std::move(nested));
+      }
+    } else {
+      elements.push_back(std::move(element.value()));
+    }
+  }
+  return elements;
+}
+
 template <typename PointerT>
 auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
                       PointerT &pointer,
@@ -237,7 +318,13 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
 template <typename PointerT>
 auto materialize_value(const JSON &value, PointerT &pointer,
                        const JSONLDBasicAnnotationMap<PointerT> &map,
-                       std::vector<JSON> &standalone) -> std::optional<JSON> {
+                       std::vector<JSON> &standalone,
+                       const std::vector<JSONLDEdge> **matched_edges)
+    -> std::optional<JSON> {
+  if (matched_edges != nullptr) {
+    *matched_edges = nullptr;
+  }
+
   if (value.is_null()) {
     return std::nullopt;
   }
@@ -259,6 +346,9 @@ auto materialize_value(const JSON &value, PointerT &pointer,
   }
 
   const auto &descriptor{iterator->second};
+  if (matched_edges != nullptr) {
+    *matched_edges = &descriptor.edges;
+  }
   if (std::holds_alternative<JSONLDNode>(descriptor.value)) {
     return materialize_node(std::get<JSONLDNode>(descriptor.value), value,
                             pointer, map, standalone);
@@ -272,10 +362,27 @@ auto materialize_value(const JSON &value, PointerT &pointer,
   }
 
   const auto &collection{std::get<JSONLDCollection>(descriptor.value)};
-  if (!value.is_array()) {
-    return std::nullopt;
+  switch (collection.container) {
+    case JSONLDContainer::List:
+    case JSONLDContainer::Set:
+      if (!value.is_array()) {
+        return std::nullopt;
+      }
+      return build_collection(value, pointer, map, standalone,
+                              collection.container == JSONLDContainer::List);
+    case JSONLDContainer::Language:
+      assert(value.is_object());
+      // A language-tagged literal cannot be the object of a reverse property.
+      assert(std::ranges::none_of(
+          descriptor.edges,
+          [](const JSONLDEdge &edge) -> bool { return edge.reverse; }));
+      return build_language_collection(value);
+    case JSONLDContainer::Index:
+      assert(value.is_object());
+      return build_index_collection(value, pointer, map, standalone);
   }
-  return build_collection(value, pointer, map, standalone, collection.ordered);
+
+  std::unreachable();
 }
 
 template <typename PointerT>
@@ -293,16 +400,14 @@ auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
 
   for (const auto key : keys) {
     push_property(pointer, key.get());
-    const auto child_iterator{map.find(pointer)};
+    const std::vector<JSONLDEdge> *edges{nullptr};
     auto child_value{materialize_value(instance_object.at(key.get()), pointer,
-                                       map, standalone)};
+                                       map, standalone, &edges)};
     pointer.pop_back();
     if (!child_value.has_value()) {
       continue;
     }
 
-    const std::vector<JSONLDEdge> *edges{
-        child_iterator == map.cend() ? nullptr : &child_iterator->second.edges};
     if (edges == nullptr || edges->empty()) {
       // Without an edge a node cannot attach to its parent, so it is asserted
       // as a standalone node in the current graph. A non-node cannot be

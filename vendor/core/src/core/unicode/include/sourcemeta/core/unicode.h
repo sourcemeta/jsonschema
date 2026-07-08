@@ -223,6 +223,85 @@ inline constexpr auto is_utf8_continuation(const unsigned char byte) -> bool {
 }
 
 /// @ingroup unicode
+/// Count the number of Unicode code points in a UTF-8 string, assuming the
+/// input is well-formed. Each code point begins at a byte that is not a
+/// continuation byte (%x80-BF per RFC 3629 Section 4). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::utf8_codepoint_count("abc") == 3);
+/// assert(sourcemeta::core::utf8_codepoint_count("caf\xc3\xa9") == 4);
+/// ```
+inline constexpr auto utf8_codepoint_count(const std::string_view input)
+    -> std::size_t {
+  std::size_t count{0};
+  for (const auto byte : input) {
+    if (!is_utf8_continuation(static_cast<unsigned char>(byte))) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+/// @ingroup unicode
+/// Check whether the number of Unicode code points in a well-formed UTF-8
+/// string is within an inclusive range, without necessarily scanning the whole
+/// string. Because a code point occupies between one and four bytes, the byte
+/// length bounds the code point count, so the extreme cases are decided in
+/// constant time and the fallback scan stops as soon as the range is exceeded.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/unicode.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::utf8_codepoint_within("abc", 1, 5));
+/// assert(!sourcemeta::core::utf8_codepoint_within("abc", 4, 5));
+/// ```
+inline constexpr auto utf8_codepoint_within(const std::string_view input,
+                                            const std::size_t minimum,
+                                            const std::size_t maximum) -> bool {
+  const auto bytes{input.size()};
+
+  // A code point is at least one byte, so the count never exceeds the byte
+  // length: fewer bytes than the minimum cannot reach it
+  if (bytes < minimum) {
+    return false;
+  }
+
+  // A code point is at most four bytes, so the count is at least the byte
+  // length divided by four (rounded up): too many bytes cannot fit the maximum
+  const auto lower_bound{(bytes + 3) / 4};
+  if (lower_bound > maximum) {
+    return false;
+  }
+
+  // If the byte length already satisfies the maximum and the rounded-up lower
+  // bound already satisfies the minimum, the count must be in range
+  if (bytes <= maximum && lower_bound >= minimum) {
+    return true;
+  }
+
+  // Otherwise count, stopping as soon as the maximum is exceeded. Reaching here
+  // implies the byte length is at most four times the maximum, so this is
+  // bounded regardless of how long the input is
+  std::size_t count{0};
+  for (const auto byte : input) {
+    if (!is_utf8_continuation(static_cast<unsigned char>(byte))) {
+      count += 1;
+      if (count > maximum) {
+        return false;
+      }
+    }
+  }
+
+  return count >= minimum;
+}
+
+/// @ingroup unicode
 /// Check whether the given codepoint is in the UTF-16 surrogate range
 /// (U+D800 to U+DFFF), which is forbidden in scalar Unicode text.
 /// For example:

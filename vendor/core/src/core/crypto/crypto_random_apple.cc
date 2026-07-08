@@ -3,12 +3,13 @@
 #include <Security/SecBase.h>   // errSecSuccess
 #include <Security/SecRandom.h> // SecRandomCopyBytes, kSecRandomDefault
 
-#include <array>     // std::array
+#include <cstdint>   // std::uint8_t
+#include <span>      // std::span
 #include <stdexcept> // std::runtime_error
 
 namespace sourcemeta::core {
 
-auto fill_random_bytes(std::array<unsigned char, 16> &bytes) -> void {
+auto fill_random_bytes(std::span<std::uint8_t> bytes) -> void {
   if (SecRandomCopyBytes(kSecRandomDefault, bytes.size(), bytes.data()) !=
       errSecSuccess) {
     throw std::runtime_error(

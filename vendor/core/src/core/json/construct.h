@@ -5,6 +5,7 @@
 #include <sourcemeta/core/json_value.h>
 
 #include <sourcemeta/core/numeric.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/unicode.h>
 
 #include "parser.h"
@@ -82,18 +83,9 @@ inline auto unescape_string(const char *data, const std::uint32_t length,
         auto parse_hex4 = [](const char *&position) -> unsigned long {
           unsigned long value{0};
           for (std::size_t index = 0; index < 4; index++) {
-            const char hex_char{*position++};
-            unsigned long digit;
-            if (hex_char >= '0' && hex_char <= '9') {
-              digit = static_cast<unsigned long>(hex_char - '0');
-            } else if (hex_char >= 'a' && hex_char <= 'f') {
-              digit = static_cast<unsigned long>(hex_char - 'a') + 10;
-            } else if (hex_char >= 'A' && hex_char <= 'F') {
-              digit = static_cast<unsigned long>(hex_char - 'A') + 10;
-            } else {
-              digit = 0;
-            }
-            value = (value << 4) | digit;
+            const auto digit{hex_digit_value(*position++)};
+            value = (value << 4) |
+                    static_cast<unsigned long>(digit < 0 ? 0 : digit);
           }
           return value;
         };

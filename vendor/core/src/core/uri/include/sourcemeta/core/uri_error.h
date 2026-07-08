@@ -23,6 +23,7 @@ namespace sourcemeta::core {
 /// An error that represents a URI parsing failure
 class SOURCEMETA_CORE_URI_EXPORT URIParseError : public std::exception {
 public:
+  /// Construct an error from the column at which parsing failed
   URIParseError(const std::uint64_t column) : column_{column} {}
 
   [[nodiscard]] auto what() const noexcept -> const char * override {
@@ -42,6 +43,7 @@ private:
 /// An error that represents a general URI error event
 class SOURCEMETA_CORE_URI_EXPORT URIError : public std::exception {
 public:
+  /// Construct an error with the given message
   URIError(const char *message) : message_{message} {}
   URIError(std::string message) = delete;
   URIError(std::string &&message) = delete;

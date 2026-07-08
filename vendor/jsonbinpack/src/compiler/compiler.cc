@@ -3,6 +3,7 @@
 #include <sourcemeta/core/numeric.h>
 
 #include <sourcemeta/blaze/alterschema.h>
+#include <sourcemeta/blaze/canonicalizer.h>
 #include <sourcemeta/core/jsonpointer.h>
 
 #include "encoding.h"
@@ -24,13 +25,8 @@ auto canonicalize(sourcemeta::core::JSON &schema,
                   const sourcemeta::blaze::SchemaWalker &walker,
                   const sourcemeta::blaze::SchemaResolver &resolver,
                   const std::string_view default_dialect) -> void {
-  sourcemeta::blaze::SchemaTransformer canonicalizer;
-  sourcemeta::blaze::add(canonicalizer,
-                         sourcemeta::blaze::AlterSchemaMode::Canonicalizer);
-  [[maybe_unused]] const auto result =
-      canonicalizer.apply(schema, walker, make_resolver(resolver),
-                          transformer_callback_noop, default_dialect);
-  assert(result.first);
+  sourcemeta::blaze::canonicalize(schema, walker, make_resolver(resolver),
+                                  default_dialect);
 }
 
 auto make_encoding(sourcemeta::core::JSON &document,
@@ -62,7 +58,8 @@ auto compile(sourcemeta::core::JSON &schema,
              const sourcemeta::blaze::SchemaWalker &walker,
              const sourcemeta::blaze::SchemaResolver &resolver,
              const std::string_view default_dialect) -> void {
-  canonicalize(schema, walker, resolver, default_dialect);
+  sourcemeta::jsonbinpack::canonicalize(schema, walker, resolver,
+                                        default_dialect);
 
   sourcemeta::blaze::SchemaTransformer mapper;
 

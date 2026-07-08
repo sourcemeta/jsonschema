@@ -25,6 +25,7 @@ namespace sourcemeta::core {
 /// An error that represents a general YAML error event
 class SOURCEMETA_CORE_YAML_EXPORT YAMLError : public std::exception {
 public:
+  /// Create a general error
   YAMLError(const char *message) : message_{message} {}
   YAMLError(std::string message) = delete;
   YAMLError(std::string &&message) = delete;
@@ -42,10 +43,12 @@ private:
 /// An error that represents a YAML parse error event
 class SOURCEMETA_CORE_YAML_EXPORT YAMLParseError : public std::exception {
 public:
+  /// Create a parsing error
   YAMLParseError(const std::uint64_t line, const std::uint64_t column)
       : line_{line}, column_{column},
         message_{"Failed to parse the YAML document"} {}
 
+  /// Create a parsing error with a custom error
   YAMLParseError(const std::uint64_t line, const std::uint64_t column,
                  const char *message)
       : line_{line}, column_{column}, message_{message} {}
@@ -60,10 +63,12 @@ public:
     return this->message_;
   }
 
+  /// Get the line number of the error
   [[nodiscard]] auto line() const noexcept -> std::uint64_t {
     return this->line_;
   }
 
+  /// Get the column number of the error
   [[nodiscard]] auto column() const noexcept -> std::uint64_t {
     return this->column_;
   }
@@ -78,6 +83,7 @@ private:
 /// An error that represents a YAML parse error occurring from parsing a file
 class SOURCEMETA_CORE_YAML_EXPORT YAMLFileParseError : public YAMLParseError {
 public:
+  /// Create a file parsing error
   YAMLFileParseError(std::filesystem::path path, const std::uint64_t line,
                      const std::uint64_t column, const char *message)
       : YAMLParseError{line, column, message}, path_{std::move(path)} {}
@@ -90,10 +96,12 @@ public:
                      const std::uint64_t column,
                      std::string_view message) = delete;
 
+  /// Create a file parsing error from a parse error
   YAMLFileParseError(std::filesystem::path path, const YAMLParseError &parent)
       : YAMLParseError{parent.line(), parent.column(), parent.what()},
         path_{std::move(path)} {}
 
+  /// Get the file path of the error
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }
@@ -107,11 +115,13 @@ private:
 class SOURCEMETA_CORE_YAML_EXPORT YAMLUnknownAnchorError
     : public YAMLParseError {
 public:
+  /// Create an unknown anchor error
   YAMLUnknownAnchorError(const std::string_view anchor_name,
                          const std::uint64_t line, const std::uint64_t column)
       : YAMLParseError{line, column, "YAML alias references undefined anchor"},
         anchor_name_{anchor_name} {}
 
+  /// Get the anchor name of the error
   [[nodiscard]] auto anchor() const noexcept -> std::string_view {
     return this->anchor_name_;
   }
@@ -127,11 +137,13 @@ private:
 class SOURCEMETA_CORE_YAML_EXPORT YAMLDuplicateKeyError
     : public YAMLParseError {
 public:
+  /// Create a duplicate key error
   YAMLDuplicateKeyError(const std::string_view key_name,
                         const std::uint64_t line, const std::uint64_t column)
       : YAMLParseError{line, column, "Duplicate key in YAML mapping"},
         key_name_{key_name} {}
 
+  /// Get the key name of the error
   [[nodiscard]] auto key() const noexcept -> std::string_view {
     return this->key_name_;
   }

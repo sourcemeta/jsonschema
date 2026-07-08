@@ -22,6 +22,7 @@ namespace sourcemeta::core {
 /// An error that represents a GZIP compression or decompression failure
 class SOURCEMETA_CORE_GZIP_EXPORT GZIPError : public std::exception {
 public:
+  /// Construct an error with the given message
   GZIPError(const char *message) : message_{message} {}
   GZIPError(std::string message) = delete;
   GZIPError(std::string &&message) = delete;

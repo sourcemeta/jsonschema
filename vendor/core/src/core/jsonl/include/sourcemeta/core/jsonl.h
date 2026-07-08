@@ -30,6 +30,7 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonl
+/// A range over the JSON documents contained in a JSON Lines stream.
 class SOURCEMETA_CORE_JSONL_EXPORT JSONL {
 public:
   /// The mode of operation for the JSONL parser
