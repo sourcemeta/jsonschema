@@ -246,6 +246,9 @@ frame_for_evaluation(sourcemeta::blaze::SchemaFrame &frame,
 
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaAnchorCollisionError>(resolution_base, error);
+  } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
+    throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaReferenceError>(
+        resolution_base, error.identifier(), error.location(), error.what());
   } catch (
       const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
     throw sourcemeta::core::FileError<

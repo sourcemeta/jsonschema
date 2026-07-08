@@ -29,3 +29,26 @@ error: Schema validation failure
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
+
+# JSON error
+echo '1' | "$1" rdf "$TMP/schema.json" - --json > "$TMP/stdout.txt" \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Test assertion failure
+test "$EXIT_CODE" = "2"
+
+cat << EOF > "$TMP/expected.txt"
+{
+  "valid": false,
+  "errors": [
+    {
+      "keywordLocation": "/type",
+      "absoluteKeywordLocation": "file://$(realpath "$TMP")/schema.json#/type",
+      "instanceLocation": "",
+      "instancePosition": [ 1, 1, 1, 1 ],
+      "error": "The value was expected to be of type string but it was of type integer"
+    }
+  ]
+}
+EOF
+
+diff "$TMP/stdout.txt" "$TMP/expected.txt"

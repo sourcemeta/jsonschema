@@ -35,6 +35,6 @@ cat << 'EOF' > "$TMP/expected.json"
 ]
 EOF
 
-cat "$TMP/schema.json" | "$1" rdf - "$TMP/instance.json" > "$TMP/output.json"
+"$1" rdf - "$TMP/instance.json" < "$TMP/schema.json" > "$TMP/output.json"
 
 diff "$TMP/output.json" "$TMP/expected.json"

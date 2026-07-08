@@ -132,7 +132,7 @@ Commands:
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
    rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
-       [--compact/-c <context.json>] [--fast/-f] [--format-assertion/-F]
+       [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
 
        Validate an instance against a schema annotated with x-jsonld-*
