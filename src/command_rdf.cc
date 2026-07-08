@@ -112,8 +112,8 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
     -> void {
   if (options.positional().size() != 2) {
     throw PositionalArgumentError{
-        "This command expects a path to a schema and a path to an\n"
-        "instance to promote to JSON-LD",
+        "This command expects a path to a schema and a path to an instance "
+        "to promote to JSON-LD",
         "jsonschema rdf path/to/schema.json path/to/instance.json"};
   }
 
