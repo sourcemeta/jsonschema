@@ -77,10 +77,7 @@ auto report_resolution_error(
       sourcemeta::core::to_string(error.instance_location)};
   if (json_output) {
     auto error_json{sourcemeta::core::JSON::make_object()};
-    error_json.assign(
-        "error", sourcemeta::core::JSON{
-                     "The schema JSON-LD annotations could not be resolved"});
-    error_json.assign("message", sourcemeta::core::JSON{error.message});
+    error_json.assign("error", sourcemeta::core::JSON{error.message});
     error_json.assign("instanceLocation",
                       sourcemeta::core::JSON{instance_location});
     error_json.assign(
@@ -92,9 +89,8 @@ auto report_resolution_error(
     return;
   }
 
-  std::cerr << "error: The schema JSON-LD annotations could not be resolved\n";
-  std::cerr << "  " << error.message << "\n";
-  std::cerr << "    at instance location \"" << instance_location << "\"";
+  std::cerr << "error: " << error.message << "\n";
+  std::cerr << "  at instance location \"" << instance_location << "\"";
   const auto position{positions.get(error.instance_location)};
   if (position.has_value()) {
     const auto [line, column, end_line, end_column] = position.value();
@@ -102,7 +98,7 @@ auto report_resolution_error(
   }
 
   std::cerr << "\n";
-  std::cerr << "    at facet \"" << facet_name(error.facet) << "\"\n";
+  std::cerr << "  at facet \"" << facet_name(error.facet) << "\"\n";
   std::cerr << "  at file path " << instance_display_path << "\n";
 }
 

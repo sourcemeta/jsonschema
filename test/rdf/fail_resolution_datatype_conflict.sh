@@ -34,10 +34,9 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema JSON-LD annotations could not be resolved
-  A JSON-LD datatype cannot be assigned more than one value
-    at instance location "/price" (line 1, column 3)
-    at facet "datatype"
+error: A JSON-LD datatype cannot be assigned more than one value
+  at instance location "/price" (line 1, column 3)
+  at facet "datatype"
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -51,8 +50,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The schema JSON-LD annotations could not be resolved",
-  "message": "A JSON-LD datatype cannot be assigned more than one value",
+  "error": "A JSON-LD datatype cannot be assigned more than one value",
   "instanceLocation": "/price",
   "facet": "datatype",
   "filePath": "$(realpath "$TMP")/instance.json"

@@ -27,10 +27,9 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema JSON-LD annotations could not be resolved
-  The value of x-jsonld-id must be an absolute IRI
-    at instance location "/name" (line 1, column 3)
-    at facet "predicate"
+error: The value of x-jsonld-id must be an absolute IRI
+  at instance location "/name" (line 1, column 3)
+  at facet "predicate"
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -44,8 +43,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The schema JSON-LD annotations could not be resolved",
-  "message": "The value of x-jsonld-id must be an absolute IRI",
+  "error": "The value of x-jsonld-id must be an absolute IRI",
   "instanceLocation": "/name",
   "facet": "predicate",
   "filePath": "$(realpath "$TMP")/instance.json"

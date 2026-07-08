@@ -31,10 +31,9 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema JSON-LD annotations could not be resolved
-  A JSON-LD type can only be assigned to an object value
-    at instance location "/name" (line 1, column 3)
-    at facet "type"
+error: A JSON-LD type can only be assigned to an object value
+  at instance location "/name" (line 1, column 3)
+  at facet "type"
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -48,8 +47,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The schema JSON-LD annotations could not be resolved",
-  "message": "A JSON-LD type can only be assigned to an object value",
+  "error": "A JSON-LD type can only be assigned to an object value",
   "instanceLocation": "/name",
   "facet": "type",
   "filePath": "$(realpath "$TMP")/instance.json"

@@ -31,10 +31,9 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema JSON-LD annotations could not be resolved
-  The value of x-jsonld-language must be a BCP 47 language tag
-    at instance location "/name" (line 1, column 3)
-    at facet "language"
+error: The value of x-jsonld-language must be a BCP 47 language tag
+  at instance location "/name" (line 1, column 3)
+  at facet "language"
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -48,8 +47,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The schema JSON-LD annotations could not be resolved",
-  "message": "The value of x-jsonld-language must be a BCP 47 language tag",
+  "error": "The value of x-jsonld-language must be a BCP 47 language tag",
   "instanceLocation": "/name",
   "facet": "language",
   "filePath": "$(realpath "$TMP")/instance.json"

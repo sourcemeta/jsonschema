@@ -29,10 +29,9 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The schema JSON-LD annotations could not be resolved
-  A JSON-LD self identity template variable must bind to a string, number, or boolean
-    at instance location "" (line 1, column 1)
-    at facet "self"
+error: A JSON-LD self identity template variable must bind to a string, number, or boolean
+  at instance location "" (line 1, column 1)
+  at facet "self"
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -46,8 +45,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The schema JSON-LD annotations could not be resolved",
-  "message": "A JSON-LD self identity template variable must bind to a string, number, or boolean",
+  "error": "A JSON-LD self identity template variable must bind to a string, number, or boolean",
   "instanceLocation": "",
   "facet": "self",
   "filePath": "$(realpath "$TMP")/instance.json"
