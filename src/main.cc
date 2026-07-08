@@ -131,6 +131,17 @@ Commands:
 
        Decode a JSON document or JSONL dataset using JSON BinPack.
 
+   rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
+       [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
+       [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+
+       Validate an instance against a schema annotated with x-jsonld-*
+       keywords and, on success, print the instance promoted to expanded
+       JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
+       post-process the output. As in `validate`, schemas compile in
+       exhaustive mode by default. Pass --fast/-f to optimise for speed at
+       the expense of validation error quality.
+
    install [<uri> <path>] [--force/-f] [--frozen/-z]
 
        Fetch and install external schema dependencies declared in
@@ -244,6 +255,16 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("meta", {"m"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::upgrade(app);
+    return EXIT_SUCCESS;
+  } else if (command == "rdf") {
+    app.flag("fast", {"f"});
+    app.flag("flatten", {"l"});
+    app.flag("format-assertion", {"F"});
+    app.option("compact", {"c"});
+    app.option("extension", {"e"});
+    app.option("ignore", {"i"});
+    app.parse(argc, argv, {.skip = 1});
+    sourcemeta::jsonschema::rdf(app);
     return EXIT_SUCCESS;
   } else if (command == "help" || command == "--help" || command == "-h") {
     std::println("JSON Schema CLI - v{}",

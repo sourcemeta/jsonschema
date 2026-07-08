@@ -73,6 +73,9 @@ inline auto load_configuration(
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error);
+    } catch (const sourcemeta::core::JSONParseError &error) {
+      throw sourcemeta::core::JSONFileParseError(configuration_path.value(),
+                                                 error);
     }
 
     assert(result.has_value());

@@ -11,7 +11,7 @@ _jsonschema() {
     previous=""
   fi
 
-  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade version help"
+  commands="validate metaschema compile test fmt lint bundle inspect encode decode codegen install upgrade rdf version help"
 
   global_options="--verbose -v --resolve -r --default-dialect -d --json -j --http -h --debug -g --header -H"
 
@@ -64,6 +64,17 @@ _jsonschema() {
     --template|-m)
       COMPREPLY=( $(compgen -f -X '!*.json' -- "${current}") )
       return 0
+      ;;
+    --compact)
+      COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      return 0
+      ;;
+    -c)
+      if [ "${command}" = "rdf" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+        return 0
+      fi
       ;;
     --target)
       COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
@@ -192,6 +203,15 @@ _jsonschema() {
       ;;
     upgrade)
       local options="--to -t"
+      if [[ ${current} == -* ]]
+      then
+        COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
+      else
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
+      fi
+      ;;
+    rdf)
+      local options="--flatten -l --compact -c --fast -f --format-assertion -F --extension -e --ignore -i"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

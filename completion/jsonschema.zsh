@@ -20,6 +20,7 @@ _jsonschema() {
     'codegen:Generate code from a JSON Schema'
     'install:Fetch and install external schema dependencies'
     'upgrade:Upgrade a schema to a newer JSON Schema dialect'
+    'rdf:Turn an instance into Linked Data / JSON-LD'
     'version:Print version information'
     'help:Print help information'
   )
@@ -151,6 +152,18 @@ _jsonschema() {
             ${global_options[@]} \
             '(--to -t)'{--to,-t}'[Target JSON Schema dialect]:dialect:(draft4 draft6 draft7 2019-09 2020-12)' \
             '1:schema file:_files -g "*.json *.yaml *.yml"'
+          ;;
+        rdf)
+          _arguments \
+            ${global_options[@]} \
+            '(--flatten -l)'{--flatten,-l}'[Flatten the JSON-LD output]' \
+            '(--compact -c)'{--compact,-c}'[Compact the JSON-LD output against a context]:context file:_files -g "*.json *.yaml *.yml"' \
+            '(--fast -f)'{--fast,-f}'[Optimise for speed]' \
+            '(--format-assertion -F)'{--format-assertion,-F}'[Compile format as an assertion]' \
+            '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
+            '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
+            '1:schema file:_files -g "*.json *.yaml *.yml"' \
+            '2:instance file:_files -g "*.json *.yaml *.yml"'
           ;;
         version|help)
           ;;

@@ -38,34 +38,34 @@ ok: $(realpath "$TMP")/instance.yaml (entry #1)
 annotation: "Test schema"
   at instance location "" (line 2, column 1)
   at evaluate path "/description"
-annotation: "foo"
-  at instance location "" (line 2, column 1)
-  at evaluate path "/properties"
 annotation: "Test"
   at instance location "" (line 2, column 1)
   at evaluate path "/title"
+annotation: "foo"
+  at instance location "" (line 2, column 1)
+  at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance.yaml (entry #2)
   matches $(realpath "$TMP")/schema.json
 annotation: "Test schema"
   at instance location "" (line 4, column 1)
   at evaluate path "/description"
-annotation: "foo"
-  at instance location "" (line 4, column 1)
-  at evaluate path "/properties"
 annotation: "Test"
   at instance location "" (line 4, column 1)
   at evaluate path "/title"
+annotation: "foo"
+  at instance location "" (line 4, column 1)
+  at evaluate path "/properties"
 ok: $(realpath "$TMP")/instance.yaml (entry #3)
   matches $(realpath "$TMP")/schema.json
 annotation: "Test schema"
   at instance location "" (line 6, column 1)
   at evaluate path "/description"
-annotation: "foo"
-  at instance location "" (line 6, column 1)
-  at evaluate path "/properties"
 annotation: "Test"
   at instance location "" (line 6, column 1)
   at evaluate path "/title"
+annotation: "foo"
+  at instance location "" (line 6, column 1)
+  at evaluate path "/properties"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

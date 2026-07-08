@@ -184,6 +184,39 @@ public:
     return this->hash;
   }
 
+  /// Check whether a JSON Pointer property token equals the given string,
+  /// comparing the precomputed hashes first and only falling back to a string
+  /// comparison when the hash is not perfect. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Pointer::Token token{"foo"};
+  /// assert(token.property_equals(
+  ///     "foo", sourcemeta::core::JSON::Object::hash("foo")));
+  /// ```
+  [[nodiscard]] auto
+  property_equals(const JSON::StringView value,
+                  const typename Hash::hash_type value_hash) const noexcept
+      -> bool {
+    assert(this->is_property());
+    assert(hasher(value.data(), value.size()) == value_hash);
+    if constexpr (requires { hasher.is_perfect(value_hash); }) {
+      // A perfect hash captures the property bytes but not its length, so
+      // two properties that differ only by trailing NUL bytes hash equal.
+      // Comparing sizes disambiguates them without the cost of a full
+      // string comparison
+      return this->hash == value_hash &&
+             (hasher.is_perfect(value_hash)
+                  ? this->to_property().size() == value.size()
+                  : this->to_property() == value);
+    } else {
+      return this->hash == value_hash && this->to_property() == value;
+    }
+  }
+
   /// Get the underlying value of a JSON Pointer object property token
   /// (non-`const` overload). For example:
   ///
@@ -251,8 +284,13 @@ public:
       return false;
     } else if (this->as_property) {
       if constexpr (requires { hasher.is_perfect(this->hash); }) {
+        // A perfect hash captures the property bytes but not its length, so
+        // two properties that differ only by trailing NUL bytes hash equal.
+        // Comparing sizes disambiguates them without the cost of a full
+        // string comparison
         if (hasher.is_perfect(this->hash) && hasher.is_perfect(other.hash)) {
-          return this->hash == other.hash;
+          return this->hash == other.hash &&
+                 this->to_property().size() == other.to_property().size();
         }
       }
 

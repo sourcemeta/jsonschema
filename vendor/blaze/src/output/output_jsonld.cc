@@ -9,7 +9,7 @@
 
 #include <algorithm>     // std::ranges::sort, std::ranges::any_of
 #include <deque>         // std::deque
-#include <functional>    // std::ref
+#include <functional>    // std::ref, std::reference_wrapper
 #include <optional>      // std::optional
 #include <sstream>       // std::ostringstream
 #include <string>        // std::string
@@ -37,56 +37,6 @@ struct Facts {
 
 using Accumulator = std::unordered_map<sourcemeta::core::WeakPointer, Facts,
                                        sourcemeta::core::WeakPointer::Hasher>;
-
-auto fill_collection(sourcemeta::core::JSONLDWeakAnnotationMap &map,
-                     const Accumulator &accumulator,
-                     const sourcemeta::core::WeakPointer &pointer,
-                     const sourcemeta::core::JSON &value) -> void;
-
-// Give an undescribed collection member a default kind so it still
-// materializes, a scalar as a literal and a nested array as an inner collection
-auto fill_element(sourcemeta::core::JSONLDWeakAnnotationMap &map,
-                  const Accumulator &accumulator,
-                  sourcemeta::core::WeakPointer element_pointer,
-                  const sourcemeta::core::JSON &element) -> void {
-  if (accumulator.contains(element_pointer)) {
-    return;
-  }
-
-  if (element.is_array()) {
-    map.emplace(
-        element_pointer,
-        sourcemeta::core::JSONLDDescriptor{
-            .edges = {}, .value = sourcemeta::core::JSONLDCollection{}});
-    fill_collection(map, accumulator, element_pointer, element);
-  } else if (!element.is_object()) {
-    map.emplace(std::move(element_pointer),
-                sourcemeta::core::JSONLDDescriptor{
-                    .edges = {}, .value = sourcemeta::core::JSONLDLiteral{}});
-  }
-}
-
-// Default the undescribed members of a collection, whether it ranges over an
-// array or over an object
-auto fill_collection(sourcemeta::core::JSONLDWeakAnnotationMap &map,
-                     const Accumulator &accumulator,
-                     const sourcemeta::core::WeakPointer &pointer,
-                     const sourcemeta::core::JSON &value) -> void {
-  if (value.is_array()) {
-    for (std::size_t index = 0; index < value.size(); index += 1) {
-      auto element_pointer{pointer};
-      element_pointer.push_back(index);
-      fill_element(map, accumulator, std::move(element_pointer),
-                   value.at(index));
-    }
-  } else {
-    for (const auto &entry : value.as_object()) {
-      auto element_pointer{pointer};
-      element_pointer.push_back(std::cref(entry.first));
-      fill_element(map, accumulator, std::move(element_pointer), entry.second);
-    }
-  }
-}
 
 auto add_edge(std::vector<sourcemeta::core::JSONLDEdge> &edges,
               const sourcemeta::core::JSON::String &predicate,
@@ -340,7 +290,8 @@ auto expand_self(const sourcemeta::core::WeakPointer &pointer,
         }
 
         if (bound->is_string()) {
-          if (bound->to_string().empty()) {
+          const auto &text{bound->to_string()};
+          if (text.empty()) {
             if (!failure.has_value()) {
               failure = facet_error(
                   pointer, sourcemeta::blaze::JSONLDFacet::Self,
@@ -351,8 +302,7 @@ auto expand_self(const sourcemeta::core::WeakPointer &pointer,
             return std::nullopt;
           }
 
-          return std::make_tuple(std::string_view{bound->to_string()},
-                                 std::nullopt, false);
+          return std::make_tuple(std::string_view{text}, std::nullopt, false);
         }
 
         // A number or boolean has no direct string, so it binds through its
@@ -400,180 +350,212 @@ auto array_of_nodes(const Accumulator &accumulator,
   return true;
 }
 
-// Turn the JSON-LD annotations into a resolved map, or the first error found.
+// The x-jsonld-* keyword names, pre-hashed for the first-pass dispatch
+using namespace std::string_view_literals;
+const auto HASH_ID{sourcemeta::core::JSON::Object::hash("x-jsonld-id"sv)};
+const auto HASH_REVERSE{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-reverse"sv)};
+const auto HASH_TYPE{sourcemeta::core::JSON::Object::hash("x-jsonld-type"sv)};
+const auto HASH_DATATYPE{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-datatype"sv)};
+const auto HASH_LANGUAGE{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-language"sv)};
+const auto HASH_DIRECTION{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-direction"sv)};
+const auto HASH_JSON{sourcemeta::core::JSON::Object::hash("x-jsonld-json"sv)};
+const auto HASH_GRAPH{sourcemeta::core::JSON::Object::hash("x-jsonld-graph"sv)};
+const auto HASH_CONTAINER{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-container"sv)};
+const auto HASH_SELF{sourcemeta::core::JSON::Object::hash("x-jsonld-self"sv)};
+
+// Turn the JSON-LD annotations into a resolved list, or the first error found.
 // The first pass groups the facts by location, the second derives each kind
 // from the value shape and validates the facts against it
 auto resolve(const sourcemeta::core::JSON &instance,
              const sourcemeta::blaze::SimpleOutput &output)
-    -> std::variant<sourcemeta::core::JSONLDWeakAnnotationMap,
+    -> std::variant<sourcemeta::core::JSONLDWeakAnnotationList,
                     sourcemeta::blaze::JSONLDResolutionError> {
   Accumulator accumulator;
+  std::vector<std::reference_wrapper<const sourcemeta::core::WeakPointer>>
+      language_containers;
 
-  for (const auto &[location, values] : output.annotations()) {
-    if (location.evaluate_path.empty()) {
+  for (const auto &entry : output.annotations()) {
+    if (entry.evaluate_path.empty()) {
       continue;
     }
 
-    const auto &keyword{location.evaluate_path.back().to_property()};
-    const auto &instance_location{location.instance_location};
+    const auto &keyword{entry.evaluate_path.back()};
+    const auto &instance_location{entry.instance_location};
+    const auto &value{entry.value};
 
-    if (keyword == "x-jsonld-id" || keyword == "x-jsonld-reverse") {
-      const bool reverse{keyword == "x-jsonld-reverse"};
-      for (const auto &value : values) {
-        if (!is_iri_value(value)) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
-              reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
-                      : "The value of x-jsonld-id must be an absolute IRI");
-        }
-
-        add_edge(accumulator[instance_location].edges, value.to_string(),
-                 reverse);
+    if (keyword.property_equals("x-jsonld-id", HASH_ID) ||
+        keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
+      const bool reverse{
+          keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)};
+      if (!is_iri_value(value)) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
+            reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
+                    : "The value of x-jsonld-id must be an absolute IRI");
       }
-    } else if (keyword == "x-jsonld-type") {
-      auto &types{accumulator[instance_location].types};
-      for (const auto &value : values) {
-        if (value.is_array()) {
-          for (const auto &element : value.as_array()) {
-            if (!is_iri_value(element)) {
-              return type_iri_error(instance_location);
-            }
 
-            add_type(types, element.to_string());
-          }
-        } else {
-          if (!is_iri_value(value)) {
+      add_edge(accumulator[instance_location].edges, value.to_string(),
+               reverse);
+    } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
+      auto &types{accumulator[instance_location].types};
+      if (value.is_array()) {
+        for (const auto &element : value.as_array()) {
+          if (!is_iri_value(element)) {
             return type_iri_error(instance_location);
           }
 
-          add_type(types, value.to_string());
+          add_type(types, element.to_string());
         }
-      }
-    } else if (keyword == "x-jsonld-datatype") {
-      for (const auto &value : values) {
+      } else {
         if (!is_iri_value(value)) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
-              "The value of x-jsonld-datatype must be an absolute IRI");
+          return type_iri_error(instance_location);
         }
 
-        auto &datatype{accumulator[instance_location].datatype};
-        if (datatype.has_value() && datatype.value() != value.to_string()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
-              "A JSON-LD datatype cannot be assigned more than one value");
-        }
-
-        datatype = value.to_string();
+        add_type(types, value.to_string());
       }
-    } else if (keyword == "x-jsonld-language") {
-      for (const auto &value : values) {
-        if (!value.is_string() ||
-            !sourcemeta::core::is_langtag(value.to_string())) {
+    } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
+      auto &datatype{accumulator[instance_location].datatype};
+      if (!is_iri_value(value)) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
+            "The value of x-jsonld-datatype must be an absolute IRI");
+      }
+
+      const auto &text{value.to_string()};
+      if (datatype.has_value() && datatype.value() != text) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
+            "A JSON-LD datatype cannot be assigned more than one value");
+      }
+
+      datatype = text;
+    } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
+      auto &language{accumulator[instance_location].language};
+      if (!value.is_string() ||
+          !sourcemeta::core::is_langtag(value.to_string())) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Language,
+            "The value of x-jsonld-language must be a BCP 47 language tag");
+      }
+
+      const auto &text{value.to_string()};
+      if (language.has_value()) {
+        // Language tags compare case-insensitively, so the first spelling is
+        // kept and only a genuinely different tag is a conflict
+        if (!sourcemeta::core::equals_ignore_case(language.value(), text)) {
           return facet_error(
               instance_location, sourcemeta::blaze::JSONLDFacet::Language,
-              "The value of x-jsonld-language must be a BCP 47 language tag");
+              "A JSON-LD language cannot be assigned more than one value");
         }
-
-        auto &language{accumulator[instance_location].language};
-        if (language.has_value()) {
-          // Language tags compare case-insensitively, so the first spelling is
-          // kept and only a genuinely different tag is a conflict
-          if (!sourcemeta::core::equals_ignore_case(language.value(),
-                                                    value.to_string())) {
-            return facet_error(
-                instance_location, sourcemeta::blaze::JSONLDFacet::Language,
-                "A JSON-LD language cannot be assigned more than one value");
-          }
-        } else {
-          language = value.to_string();
-        }
+      } else {
+        language = text;
       }
-    } else if (keyword == "x-jsonld-direction") {
-      for (const auto &value : values) {
-        const auto parsed{parse_direction(value)};
-        if (!parsed.has_value()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
-              R"(The value of x-jsonld-direction must be "ltr" or "rtl")");
-        }
-
-        auto &direction{accumulator[instance_location].direction};
-        if (direction.has_value() && direction.value() != parsed.value()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
-              "A JSON-LD direction cannot be assigned more than one value");
-        }
-
-        direction = parsed;
+    } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
+      auto &direction{accumulator[instance_location].direction};
+      const auto parsed{parse_direction(value)};
+      if (!parsed.has_value()) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
+            R"(The value of x-jsonld-direction must be "ltr" or "rtl")");
       }
-    } else if (keyword == "x-jsonld-json") {
-      for (const auto &value : values) {
-        if (!value.is_boolean()) {
-          return facet_error(instance_location,
-                             sourcemeta::blaze::JSONLDFacet::JSON,
-                             "The value of x-jsonld-json must be a boolean");
-        }
 
-        // A false value leaves the fact unset, so it must stay a no-op and not
-        // create an entry
-        if (value.to_boolean()) {
-          accumulator[instance_location].json = true;
-        }
+      if (direction.has_value() && direction.value() != parsed.value()) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
+            "A JSON-LD direction cannot be assigned more than one value");
       }
-    } else if (keyword == "x-jsonld-graph") {
-      for (const auto &value : values) {
-        if (!value.is_boolean()) {
-          return facet_error(instance_location,
-                             sourcemeta::blaze::JSONLDFacet::Graph,
-                             "The value of x-jsonld-graph must be a boolean");
-        }
 
-        if (value.to_boolean()) {
-          accumulator[instance_location].graph = true;
-        }
+      direction = parsed;
+    } else if (keyword.property_equals("x-jsonld-json", HASH_JSON)) {
+      if (!value.is_boolean()) {
+        return facet_error(instance_location,
+                           sourcemeta::blaze::JSONLDFacet::JSON,
+                           "The value of x-jsonld-json must be a boolean");
       }
-    } else if (keyword == "x-jsonld-container") {
-      for (const auto &value : values) {
-        const auto parsed{parse_container(value)};
-        if (!parsed.has_value()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Container,
-              R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")");
-        }
 
-        auto &container{accumulator[instance_location].container};
-        if (container.has_value() && container.value() != parsed.value()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Container,
-              "A JSON-LD container cannot be assigned more than one value");
-        }
-
-        container = parsed;
+      // A false value leaves the fact unset, so it must stay a no-op and not
+      // create an entry
+      if (value.to_boolean()) {
+        accumulator[instance_location].json = true;
       }
-    } else if (keyword == "x-jsonld-self") {
-      for (const auto &value : values) {
-        if (!value.is_string() ||
-            !sourcemeta::core::URITemplate::is_uritemplate(value.to_string())) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Self,
-              "The value of x-jsonld-self must be a URI Template");
-        }
+    } else if (keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
+      if (!value.is_boolean()) {
+        return facet_error(instance_location,
+                           sourcemeta::blaze::JSONLDFacet::Graph,
+                           "The value of x-jsonld-graph must be a boolean");
+      }
 
-        auto &self{accumulator[instance_location].self};
-        if (self.has_value() && self.value() != value.to_string()) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Self,
-              "A JSON-LD self identity cannot be assigned more than one value");
-        }
+      if (value.to_boolean()) {
+        accumulator[instance_location].graph = true;
+      }
+    } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
+      auto &container{accumulator[instance_location].container};
+      const auto parsed{parse_container(value)};
+      if (!parsed.has_value()) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Container,
+            R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")");
+      }
 
-        self = value.to_string();
+      if (container.has_value() && container.value() != parsed.value()) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Container,
+            "A JSON-LD container cannot be assigned more than one value");
+      }
+
+      container = parsed;
+
+      if (container == sourcemeta::core::JSONLDContainer::Language) {
+        language_containers.push_back(std::cref(instance_location));
+      }
+    } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
+      auto &self{accumulator[instance_location].self};
+      if (!value.is_string() ||
+          !sourcemeta::core::URITemplate::is_uritemplate(value.to_string())) {
+        return facet_error(instance_location,
+                           sourcemeta::blaze::JSONLDFacet::Self,
+                           "The value of x-jsonld-self must be a URI Template");
+      }
+
+      const auto &text{value.to_string()};
+      if (self.has_value() && self.value() != text) {
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Self,
+            "A JSON-LD self identity cannot be assigned more than one value");
+      }
+
+      self = text;
+    }
+  }
+
+  // A language container materializes its members directly as language-tagged
+  // strings, never consulting their descriptors, so a member cannot carry a
+  // JSON-LD annotation of its own
+  for (const auto container_location : language_containers) {
+    const auto &members{
+        sourcemeta::core::get(instance, container_location.get())};
+    if (!members.is_object()) {
+      continue;
+    }
+
+    for (const auto &entry : members.as_object()) {
+      auto member{container_location.get()};
+      member.push_back(std::cref(entry.first));
+      if (accumulator.contains(member)) {
+        return facet_error(member, sourcemeta::blaze::JSONLDFacet::Container,
+                           "A JSON-LD language container member cannot carry a "
+                           "JSON-LD annotation");
       }
     }
   }
 
-  sourcemeta::core::JSONLDWeakAnnotationMap map;
-  map.reserve(accumulator.size());
+  sourcemeta::core::JSONLDWeakAnnotationList annotations;
+  annotations.reserve(accumulator.size());
   for (auto &[pointer, facts] : accumulator) {
     std::ranges::sort(facts.edges,
                       [](const sourcemeta::core::JSONLDEdge &left,
@@ -584,22 +566,6 @@ auto resolve(const sourcemeta::core::JSON &instance,
     std::ranges::sort(facts.types);
 
     const auto &value{sourcemeta::core::get(instance, pointer)};
-
-    // A language container materializes its members directly as language-tagged
-    // strings, never consulting their descriptors, so a member cannot carry a
-    // JSON-LD annotation of its own
-    if (!pointer.empty()) {
-      auto parent{pointer};
-      parent.pop_back();
-      const auto parent_facts{accumulator.find(parent)};
-      if (parent_facts != accumulator.cend() &&
-          parent_facts->second.container ==
-              sourcemeta::core::JSONLDContainer::Language) {
-        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Container,
-                           "A JSON-LD language container member cannot carry a "
-                           "JSON-LD annotation");
-      }
-    }
 
     // A container sets the collection shape and stands alone, excluding every
     // other fact and choosing the value shape it ranges over
@@ -738,21 +704,11 @@ auto resolve(const sourcemeta::core::JSON &instance,
                                           .direction = facts.direction};
     }
 
-    map.emplace(pointer, std::move(descriptor));
-
-    // A language container reads its object members directly, but every other
-    // collection needs its undescribed members defaulted so they materialize
-    if (facts.container.has_value()) {
-      if (facts.container.value() !=
-          sourcemeta::core::JSONLDContainer::Language) {
-        fill_collection(map, accumulator, pointer, value);
-      }
-    } else if (value.is_array() && !facts.json) {
-      fill_collection(map, accumulator, pointer, value);
-    }
+    annotations.push_back(
+        {.pointer = pointer, .descriptor = std::move(descriptor)});
   }
 
-  return map;
+  return annotations;
 }
 
 } // namespace
@@ -772,9 +728,9 @@ auto jsonld(Evaluator &evaluator, const Template &schema,
     return std::get<JSONLDResolutionError>(std::move(resolved));
   }
 
-  const auto &map{
-      std::get<sourcemeta::core::JSONLDWeakAnnotationMap>(resolved)};
-  return sourcemeta::core::jsonld_materialize(instance, map);
+  const auto &annotations{
+      std::get<sourcemeta::core::JSONLDWeakAnnotationList>(resolved)};
+  return sourcemeta::core::jsonld_materialize(instance, annotations);
 }
 
 } // namespace sourcemeta::blaze

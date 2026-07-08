@@ -12,6 +12,7 @@
 #include <sourcemeta/core/http.h>
 #include <sourcemeta/core/io.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/options.h>
 #include <sourcemeta/core/yaml.h>
@@ -25,7 +26,7 @@
 #include <stdexcept>        // std::runtime_error
 #include <string>           // std::string
 #include <type_traits>      // std::is_base_of_v, std::is_same_v
-#include <utility>          // std::forward
+#include <utility>          // std::forward, std::move
 #include <vector>           // std::vector
 
 #include "exit_code.h"
@@ -230,6 +231,54 @@ public:
 private:
   std::filesystem::path path_;
   sourcemeta::core::Pointer location_;
+  std::string dialect_;
+};
+
+class RdfResolutionError : public std::runtime_error {
+public:
+  RdfResolutionError(std::string message, std::string facet,
+                     sourcemeta::core::Pointer instance_location,
+                     std::filesystem::path path)
+      : std::runtime_error{std::move(message)}, facet_{std::move(facet)},
+        instance_location_{std::move(instance_location)},
+        path_{std::move(path)} {}
+
+  [[nodiscard]] auto facet() const noexcept -> const std::string & {
+    return this->facet_;
+  }
+
+  [[nodiscard]] auto instance_location() const noexcept
+      -> const sourcemeta::core::Pointer & {
+    return this->instance_location_;
+  }
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+private:
+  std::string facet_;
+  sourcemeta::core::Pointer instance_location_;
+  std::filesystem::path path_;
+};
+
+class UnsupportedDialectRdfError : public std::runtime_error {
+public:
+  UnsupportedDialectRdfError(std::filesystem::path path, std::string dialect)
+      : std::runtime_error{"This command requires the schema to declare JSON "
+                           "Schema 2019-09 or newer"},
+        path_{std::move(path)}, dialect_{std::move(dialect)} {}
+
+  [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
+    return this->path_;
+  }
+
+  [[nodiscard]] auto identifier() const noexcept -> const std::string & {
+    return this->dialect_;
+  }
+
+private:
+  std::filesystem::path path_;
   std::string dialect_;
 };
 
@@ -515,6 +564,34 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.instance_location()
+                  } -> std::convertible_to<const sourcemeta::core::Pointer &>;
+                }) {
+    if (is_json) {
+      error_json.assign("instanceLocation",
+                        sourcemeta::core::JSON{sourcemeta::core::to_string(
+                            exception.instance_location())});
+    } else {
+      std::cerr << "  at instance location \""
+                << sourcemeta::core::to_string(exception.instance_location())
+                << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.facet()
+                  } -> std::convertible_to<const std::string &>;
+                }) {
+    if (is_json) {
+      error_json.assign("facet", sourcemeta::core::JSON{exception.facet()});
+    } else {
+      std::cerr << "  at facet \"" << exception.facet() << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
@@ -551,6 +628,21 @@ inline auto print_exception(const bool is_json, const Exception &exception)
     } else {
       std::cerr << "  at location \""
                 << sourcemeta::core::to_string(exception.location()) << "\"\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.pointer()
+                  } -> std::convertible_to<const sourcemeta::core::Pointer &>;
+                }) {
+    if (is_json) {
+      error_json.assign("location",
+                        sourcemeta::core::JSON{
+                            sourcemeta::core::to_string(exception.pointer())});
+    } else {
+      std::cerr << "  at document location \""
+                << sourcemeta::core::to_string(exception.pointer()) << "\"\n";
     }
   }
 
@@ -768,6 +860,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_NOT_SUPPORTED;
+  } catch (const PositionError<RdfResolutionError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const RdfResolutionError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_SCHEMA_INPUT_ERROR;
+  } catch (const UnsupportedDialectRdfError &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    if (!is_json) {
+      std::cerr << "\nThe x-jsonld-* keywords rely on annotation collection, "
+                   "which JSON Schema\n";
+      std::cerr << "only introduced in the 2019-09 dialect. Consider running "
+                   "the `upgrade`\n";
+      std::cerr << "command to move your schema to a newer dialect\n";
+    }
+
+    return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const InvalidLintRuleError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
@@ -900,6 +1012,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::ConfigurationParseError> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
+  } catch (
+      const sourcemeta::core::FileError<sourcemeta::core::JSONLDError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;

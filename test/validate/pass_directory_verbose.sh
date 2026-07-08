@@ -41,29 +41,29 @@ ok: $(realpath "$TMP")/instances/instance_1.json
 annotation: "Test schema"
   at instance location "" (line 1, column 1)
   at evaluate path "/description"
+annotation: "Test"
+  at instance location "" (line 1, column 1)
+  at evaluate path "/title"
 annotation: "age"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 annotation: "name"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
-annotation: "Test"
-  at instance location "" (line 1, column 1)
-  at evaluate path "/title"
 ok: $(realpath "$TMP")/instances/instance_2.json
   matches $(realpath "$TMP")/schema.json
 annotation: "Test schema"
   at instance location "" (line 1, column 1)
   at evaluate path "/description"
+annotation: "Test"
+  at instance location "" (line 1, column 1)
+  at evaluate path "/title"
 annotation: "age"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
 annotation: "name"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"
-annotation: "Test"
-  at instance location "" (line 1, column 1)
-  at evaluate path "/title"
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"

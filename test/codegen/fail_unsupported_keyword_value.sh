@@ -25,6 +25,7 @@ cat << EOF > "$TMP/expected.txt"
 error: Unsupported type value
   at keyword type
   at file path $(realpath "$TMP")/schema.json
+  at document location ""
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -39,7 +40,8 @@ cat << EOF > "$TMP/expected.txt"
 {
   "error": "Unsupported type value",
   "keyword": "type",
-  "filePath": "$(realpath "$TMP")/schema.json"
+  "filePath": "$(realpath "$TMP")/schema.json",
+  "location": ""
 }
 EOF
 
