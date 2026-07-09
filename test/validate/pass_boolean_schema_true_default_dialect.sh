@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/instance.json"
 EOF
 
 "$1" validate --default-dialect "https://json-schema.org/draft/2020-12/schema" \
-  "$TMP/schema.json" "$TMP/instance.json" 2> "$TMP/output.txt"
+  "$TMP/schema.json" "$TMP/instance.json" > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
 EOF
