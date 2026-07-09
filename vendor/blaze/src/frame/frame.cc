@@ -741,7 +741,8 @@ auto SchemaFrame::analyse(const sourcemeta::core::JSON &root,
             supports_id_anchors(entry.common.base_dialect.value()) &&
             entry.id.value().starts_with('#');
 
-        if ((!entry.common.subschema.get().defines("$ref") || !ref_overrides) &&
+        if ((!entry.common.subschema.get().is_object() ||
+             !entry.common.subschema.get().defines("$ref") || !ref_overrides) &&
             // If we are dealing with a pre-2019-09 location independent
             // identifier, we ignore it as a traditional identifier and take
             // care of it as an anchor

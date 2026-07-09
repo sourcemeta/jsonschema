@@ -448,8 +448,9 @@ auto bundle(sourcemeta::core::JSON &schema, const SchemaWalker &walker,
   // If the schema identifier is implicit, add it to the top-level of the
   // bundled schema. Otherwise, potential relative references based on this
   // implicit base URI will likely not resolve unless end users happen to
-  // know that this implicit base URI is.
-  if (!default_id.empty() &&
+  // know that this implicit base URI is. Note that boolean schemas cannot
+  // declare identifiers, so we leave those untouched
+  if (!default_id.empty() && schema.is_object() &&
       identify(schema, resolver, default_dialect).empty()) {
     reidentify(schema, default_id, resolver, default_dialect);
   }
