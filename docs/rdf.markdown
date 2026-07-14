@@ -19,7 +19,10 @@ promoted to [JSON-LD](https://www.w3.org/TR/json-ld11/), the JSON-based
 serialization of [RDF](https://www.w3.org/RDF/). The result is a
 knowledge-graph-ready document produced in a single evaluation pass, without
 maintaining a separate JSON-LD `@context` that can silently drift from the
-schema.
+schema. To learn more about the motivation and design behind this feature,
+refer to our [Fully solving JSON Schema and JSON-LD
+interoperability](https://www.sourcemeta.com/blog/json-schema-jsonld-interoperability/)
+blog post.
 
 **This command is experimental and we are actively seeking feedback to make
 this better. Please open an issue at
