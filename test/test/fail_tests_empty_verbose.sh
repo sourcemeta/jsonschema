@@ -24,7 +24,13 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" 1> "$TMP/output.txt" 2>&1
+# An empty `tests` array almost always means the author forgot to write the
+# tests. We still print NO TESTS, but exit with an error so that such test
+# suites cannot silently pass, i.e. on CI
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1 \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 $(realpath "$TMP")/test.json: NO TESTS
