@@ -44,3 +44,29 @@ cat << 'EOF' > "$TMP/expected_schema.json"
 EOF
 
 diff "$TMP/schema.json" "$TMP/expected_schema.json"
+
+"$1" lint --top-level-rule "$TMP/rule.json" --only require_id --fix --json "$TMP/schema.json" \
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Lint violation
+test "$EXIT_CODE" = "2"
+
+cat << EOF > "$TMP/expected_json.txt"
+{
+  "valid": false,
+  "health": 0,
+  "errors": [
+    {
+      "path": "$(realpath "$TMP")/schema.json",
+      "id": "require_id",
+      "message": "The root schema must declare an \$id",
+      "description": "The object value was expected to define the property \"\$id\"",
+      "schemaLocation": [],
+      "position": [ 1, 1, 3, 1 ]
+    }
+  ]
+}
+EOF
+
+diff "$TMP/output_json.txt" "$TMP/expected_json.txt"
+
+diff "$TMP/schema.json" "$TMP/expected_schema.json"

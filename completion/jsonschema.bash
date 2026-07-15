@@ -88,6 +88,9 @@ _jsonschema() {
       if [ "${command}" = "upgrade" ]
       then
         COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      elif [ "${command}" = "lint" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       else
         COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
       fi

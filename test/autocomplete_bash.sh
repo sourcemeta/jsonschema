@@ -114,6 +114,8 @@ test_completion "jsonschema validate --" "--fast" "Validate includes --fast"
 
 test_completion "jsonschema lint --" "--fix" "Lint includes --fix"
 test_completion "jsonschema lint --" "--list" "Lint includes --list"
+test_completion "jsonschema lint --" "--rule" "Lint includes --rule"
+test_completion "jsonschema lint --" "--top-level-rule" "Lint includes --top-level-rule"
 
 test_completion "jsonschema bundle --" "--without-id" "Bundle includes --without-id"
 
