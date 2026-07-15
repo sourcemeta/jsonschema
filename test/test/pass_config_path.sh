@@ -23,7 +23,13 @@ EOF
 cat << 'EOF' > "$TMP/foo/test.json"
 {
   "target": "https://example.com",
-  "tests": []
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
 }
 EOF
 
@@ -40,7 +46,8 @@ cat << EOF > "$TMP/expected.txt"
 Using extension: .json
 Using extension: .yaml
 Using extension: .yml
-$(realpath "$TMP")/foo/test.json: NO TESTS
+$(realpath "$TMP")/foo/test.json:
+  1/1 PASS First test
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

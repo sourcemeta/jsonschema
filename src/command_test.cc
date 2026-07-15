@@ -107,6 +107,7 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
 
 auto report_as_text(const sourcemeta::core::Options &options) -> void {
   bool result{true};
+  bool empty_test_suite{false};
   const auto verbose{options.contains("verbose") || options.contains("debug")};
 
   for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
@@ -202,6 +203,7 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
     }
 
     if (suite_result.total == 0) {
+      empty_test_suite = true;
       std::cout << " NO TESTS\n";
     } else if (!verbose && suite_result.passed == suite_result.total) {
       std::cout << " PASS " << suite_result.passed << "/" << suite_result.total
@@ -212,6 +214,13 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
   if (!result) {
     throw sourcemeta::jsonschema::Fail{
         sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE};
+  }
+
+  // An empty test suite likely means the author forgot to write the tests,
+  // so don't let it silently succeed
+  if (empty_test_suite) {
+    throw sourcemeta::jsonschema::Fail{
+        sourcemeta::jsonschema::EXIT_OTHER_INPUT_ERROR};
   }
 }
 
@@ -234,6 +243,7 @@ auto duration_ms(const sourcemeta::blaze::TestTimestamp &start,
 
 auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
   bool result{true};
+  bool empty_test_suite{false};
 
   const auto system_ref{std::chrono::system_clock::now()};
   const auto steady_ref{std::chrono::steady_clock::now()};
@@ -333,6 +343,10 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
     total_passed += suite_result.passed;
     total_failed += suite_result.total - suite_result.passed;
 
+    if (suite_result.total == 0) {
+      empty_test_suite = true;
+    }
+
     if (suite_result.passed != suite_result.total) {
       result = false;
     }
@@ -377,6 +391,13 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
   if (!result) {
     throw sourcemeta::jsonschema::Fail{
         sourcemeta::jsonschema::EXIT_EXPECTED_FAILURE};
+  }
+
+  // An empty test suite likely means the author forgot to write the tests,
+  // so don't let it silently succeed
+  if (empty_test_suite) {
+    throw sourcemeta::jsonschema::Fail{
+        sourcemeta::jsonschema::EXIT_OTHER_INPUT_ERROR};
   }
 }
 
