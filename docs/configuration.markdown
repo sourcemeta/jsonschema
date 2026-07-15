@@ -62,7 +62,7 @@ describes the available configuration options:
 | `resolve` | Object | A mapping of URIs to local file paths or other URIs for schema resolution remapping. Lookups are non-transitive: the value of a matching entry is the final target and is not itself looked up in `resolve` again | `{}` |
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 | `lint` | Object | Lint configuration | `{}` |
-| `lint.rules` | (String / Object)[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)). An entry may also be an object with a required `path` string property and an optional `topLevel` boolean property (defaults to `false`) that makes the rule only run against the document root | `[]` |
+| `lint.rules` | String[] / Object[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)). An entry may also be an object with a required `path` string property and an optional `topLevel` boolean property (defaults to `false`) that makes the rule only run against the document root | `[]` |
 
 Lookup Algorithm
 ----------------
