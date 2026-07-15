@@ -88,16 +88,26 @@ auto add(SchemaTransformer &bundle, const AlterSchemaMode mode) -> void;
 
 /// @ingroup alterschema
 ///
-/// A linter rule driven by a JSON Schema. Every subschema in the document
-/// under inspection is validated as a JSON instance against the provided
-/// rule schema. When a subschema does not conform, the rule fires and
-/// reports the validation errors. The rule name is extracted from the
-/// `title` keyword of the rule schema, and the rule description from the
-/// `description` keyword. The title must consist only of lowercase ASCII
-/// letters, digits, underscores, or slashes.
+/// A linter rule driven by a JSON Schema. By default, every subschema in
+/// the document under inspection is validated as a JSON instance against
+/// the provided rule schema, though a rule may be scoped to only run
+/// against the document root. When a subschema does not conform, the rule
+/// fires and reports the validation errors. The rule name is extracted
+/// from the `title` keyword of the rule schema, and the rule description
+/// from the `description` keyword. The title must consist only of
+/// lowercase ASCII letters, digits, underscores, or slashes.
 class SOURCEMETA_BLAZE_ALTERSCHEMA_EXPORT SchemaRule final
     : public SchemaTransformRule {
 public:
+  /// The locations of the schema that the rule applies to
+  enum class Scope : std::uint8_t {
+    /// Every subschema of the document under inspection
+    All,
+
+    /// Only the document root
+    TopLevel
+  };
+
   using mutates = std::false_type;
   using reframe_after_transform = std::false_type;
   SchemaRule(const sourcemeta::core::JSON &schema,
@@ -105,7 +115,8 @@ public:
              const sourcemeta::blaze::SchemaResolver &resolver,
              const Compiler &compiler,
              const std::string_view default_dialect = "",
-             const std::optional<Tweaks> &tweaks = std::nullopt);
+             const std::optional<Tweaks> &tweaks = std::nullopt,
+             const Scope scope = Scope::All);
   [[nodiscard]] auto
   condition(const sourcemeta::core::JSON &, const sourcemeta::core::JSON &,
             const sourcemeta::blaze::Vocabularies &,
@@ -117,6 +128,7 @@ public:
 
 private:
   Template template_;
+  Scope scope_;
 };
 
 #if defined(_MSC_VER)

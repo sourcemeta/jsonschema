@@ -46,7 +46,8 @@ auto sourcemeta::blaze::default_schema_compiler(
                              Known::JSON_Schema_Draft_3,
                              Known::JSON_Schema_Draft_3_Hyper,
                              Known::OpenAPI_3_1_Base,
-                             Known::OpenAPI_3_2_Base};
+                             Known::OpenAPI_3_2_Base,
+                             Known::Sourcemeta_Extension_V1};
 
   schema_context.vocabularies.throw_if_any_unsupported(
       SUPPORTED_VOCABULARIES, "Cannot compile unsupported vocabulary");

@@ -347,21 +347,6 @@ inline auto annotations_enabled(const Context &context,
   return context.mode == Mode::Exhaustive;
 }
 
-// Whether any annotation may be collected anywhere in this compilation. Drives
-// the "do not short-circuit / keep iterating" behavior of applicators like
-// `contains` so that nested annotations are reached on every instance location,
-// independently of whether the applicator's own annotation was whitelisted.
-// Exhaustive mode always keeps iterating for complete error reporting,
-// regardless of whether annotations are disabled via an empty whitelist.
-inline auto annotations_collected(const Context &context) -> bool {
-  if (context.mode == Mode::Exhaustive) {
-    return true;
-  }
-
-  return context.tweaks.annotations.has_value() &&
-         !context.tweaks.annotations.value().empty();
-}
-
 // TODO: Elevate to Core and test
 
 inline auto

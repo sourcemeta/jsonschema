@@ -8,7 +8,8 @@ jsonschema lint [schemas-or-directories...] [--http/-h] [--fix/-f]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--exclude/-x <rule-name>] [--only/-o <rule-name>] [--list/-l]
-  [--rule/-a <rule-schema>] [--format-assertion/-F]
+  [--rule/-a <rule-schema>] [--top-level-rule/-t <rule-schema>]
+  [--format-assertion/-F]
   [--default-dialect/-d <uri>] [--indentation/-n <spaces>]
 ```
 
@@ -127,8 +128,29 @@ You can pass multiple custom rules:
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
 ```
 
+If a custom rule only makes sense against the document root, register it with
+the `--top-level-rule/-t` option instead. The rule will not run against any
+other subschema. For example, create a rule that requires the document root to
+declare an `$id`:
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+```
+
+Then run:
+
+```sh
+jsonschema lint --top-level-rule require_id.json path/to/my/schema.json
+```
+
 Custom rules can also be declared in the
-[`jsonschema.json`](./configuration.markdown) configuration file.
+[`jsonschema.json`](./configuration.markdown) configuration file, where an
+object entry with `topLevel` set to `true` marks the rule as top-level only.
 
 Examples
 --------
@@ -247,6 +269,12 @@ jsonschema lint --rule path/to/my/rule.json path/to/my/schema.json
 
 ```sh
 jsonschema lint --rule rule1.json --rule rule2.json path/to/my/schema.json
+```
+
+### Lint with a custom rule that only runs against the document root
+
+```sh
+jsonschema lint --top-level-rule path/to/my/rule.json path/to/my/schema.json
 ```
 
 ### Lint with custom rules forcing every `format` to assert

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$vocabulary": {
+    "https://json-schema.org/draft/2020-12/vocab/core": true,
+    "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+    "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+    "https://json-schema.org/draft/2020-12/vocab/validation": true,
+    "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+    "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+    "https://json-schema.org/draft/2020-12/vocab/content": true,
+    "tag:sourcemeta.com,2026:extension/v1": true
+  },
+  "$dynamicAnchor": "meta",
+  "title": "Sourcemeta dialect",
+  "description": "JSON Schema 2020-12 dialect that extends the official dialect with the Sourcemeta Extension vocabulary",
+  "examples": [
+    true,
+    {
+      "type": "string",
+      "x-jsonld-id": "https://schema.org/name"
+    },
+    {
+      "type": "object",
+      "x-jsonld-type": "https://schema.org/Product",
+      "properties": {
+        "name": {
+          "type": "string",
+          "x-jsonld-id": "https://schema.org/name"
+        }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "$ref": "https://json-schema.org/draft/2020-12/schema"
+    },
+    {
+      "$ref": "vocabulary.json"
+    }
+  ]
+}

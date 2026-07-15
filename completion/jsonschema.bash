@@ -88,6 +88,9 @@ _jsonschema() {
       if [ "${command}" = "upgrade" ]
       then
         COMPREPLY=( $(compgen -W "draft4 draft6 draft7 2019-09 2020-12" -- "${current}") )
+      elif [ "${command}" = "lint" ]
+      then
+        COMPREPLY=( $(compgen -f -X '!*.json' -X '!*.yaml' -X '!*.yml' -- "${current}") )
       else
         COMPREPLY=( $(compgen -W "typescript" -- "${current}") )
       fi
@@ -142,7 +145,7 @@ _jsonschema() {
       fi
       ;;
     lint)
-      local options="--fix -f --extension -e --ignore -i --exclude -x --only -o --list -l --indentation -n"
+      local options="--fix -f --extension -e --ignore -i --exclude -x --only -o --list -l --indentation -n --rule -a --top-level-rule -t"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

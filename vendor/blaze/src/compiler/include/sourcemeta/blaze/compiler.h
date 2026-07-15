@@ -99,8 +99,9 @@ struct Tweaks {
   std::size_t target_inline_threshold{50};
   /// When set, force `format` to be compiled as an assertion
   bool format_assertion{false};
-  /// Select which keywords emit annotations in exhaustive mode. When not set,
-  /// every annotation keyword is emitted
+  /// Select which keywords emit annotations, regardless of the compilation
+  /// mode. When not set, every annotation keyword is emitted in exhaustive
+  /// mode and none in fast mode
   std::optional<std::unordered_set<sourcemeta::core::JSON::StringView>>
       annotations{};
 };
@@ -127,6 +128,8 @@ struct Context {
   const Mode mode;
   /// Whether the schema makes use of dynamic scoping
   const bool uses_dynamic_scopes;
+  /// Whether evaluating the schema may collect at least one annotation
+  const bool collects_annotations;
   /// The list of unevaluated entries and their dependencies
   const SchemaUnevaluatedEntries unevaluated;
   /// The set of tweaks for the compiler

@@ -703,6 +703,111 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "x-format-assertion" && annotation.is_boolean()) {
+      if (annotation.to_boolean()) {
+        return "A sibling `format` keyword was expected to be enforced as "
+               "an assertion";
+      }
+
+      return "A sibling `format` keyword was expected to be collected as "
+             "an annotation";
+    }
+
+    if (keyword == "x-jsonld-id" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The JSON-LD predicate was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-reverse" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The reverse JSON-LD predicate was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-type" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The JSON-LD type was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-type" && annotation.is_array()) {
+      if (annotation.empty()) {
+        return "No JSON-LD types were assigned";
+      }
+
+      std::ostringstream message;
+      message << "The JSON-LD types were ";
+      const auto &elements{annotation.as_array()};
+      for (auto iterator = elements.cbegin(); iterator != elements.cend();
+           ++iterator) {
+        if (iterator != elements.cbegin()) {
+          message << (std::next(iterator) == elements.cend() ? ", and " : ", ");
+        }
+
+        describe_stringify(*iterator, message);
+      }
+
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-datatype" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The JSON-LD datatype was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-language" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The natural language was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-direction" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The base direction was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-json" && annotation.is_boolean()) {
+      if (annotation.to_boolean()) {
+        return "The value was expected to be treated as an opaque JSON "
+               "literal";
+      }
+
+      return "The value was not expected to be treated as an opaque JSON "
+             "literal";
+    }
+
+    if (keyword == "x-jsonld-graph" && annotation.is_boolean()) {
+      if (annotation.to_boolean()) {
+        return "The value was expected to be wrapped in a JSON-LD named graph";
+      }
+
+      return "The value was not expected to be wrapped in a JSON-LD named "
+             "graph";
+    }
+
+    if (keyword == "x-jsonld-container" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The JSON-LD container was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
+    if (keyword == "x-jsonld-self" && annotation.is_string()) {
+      std::ostringstream message;
+      message << "The JSON-LD identifier template was "
+              << escape_string(annotation.to_string());
+      return message.str();
+    }
+
     std::ostringstream message;
     message << "The unrecognized keyword " << escape_string(keyword)
             << " was collected as the annotation ";

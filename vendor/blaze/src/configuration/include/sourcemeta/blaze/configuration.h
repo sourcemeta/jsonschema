@@ -69,7 +69,12 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
   std::vector<std::filesystem::path> ignore;
 
   struct Lint {
-    std::vector<std::filesystem::path> rules;
+    struct Rule {
+      std::filesystem::path path;
+      bool top_level{false};
+    };
+
+    std::vector<Rule> rules;
   };
 
   Lint lint;

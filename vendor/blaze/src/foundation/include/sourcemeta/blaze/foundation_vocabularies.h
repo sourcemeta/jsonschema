@@ -65,11 +65,13 @@ struct SOURCEMETA_BLAZE_FOUNDATION_EXPORT Vocabularies {
     // https://spec.openapis.org/oas/v3.1.0.html#fixed-fields-19
     OpenAPI_3_1_Base = 29,
     // https://spec.openapis.org/oas/v3.2.0.html#base-vocabulary
-    OpenAPI_3_2_Base = 30
+    OpenAPI_3_2_Base = 30,
+    // Sourcemeta
+    Sourcemeta_Extension_V1 = 31
   };
 
   // NOTE: Must be kept in sync with the Known enum above
-  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 31;
+  static constexpr std::size_t KNOWN_VOCABULARY_COUNT = 32;
 
   /// A vocabulary URI type that can be either a known vocabulary enum or a
   /// custom string URI

@@ -105,6 +105,8 @@ _jsonschema() {
             '(--only -o)'{--only,-o}'[Only run specific rule]:rule name:' \
             '(--list -l)'{--list,-l}'[List all enabled rules]' \
             '(--indentation -n)'{--indentation,-n}'[Specify indentation spaces]:spaces:(2 4 8)' \
+            '(--rule -a)'{--rule,-a}'[Add a custom lint rule]:rule schema:_files -g "*.json *.yaml *.yml"' \
+            '(--top-level-rule -t)'{--top-level-rule,-t}'[Add a custom lint rule that only runs against the document root]:rule schema:_files -g "*.json *.yaml *.yml"' \
             '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         bundle)

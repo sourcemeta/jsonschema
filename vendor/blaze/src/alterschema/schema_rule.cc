@@ -68,19 +68,24 @@ SchemaRule::SchemaRule(const sourcemeta::core::JSON &schema,
                        const sourcemeta::blaze::SchemaResolver &resolver,
                        const Compiler &compiler,
                        const std::string_view default_dialect,
-                       const std::optional<Tweaks> &tweaks)
+                       const std::optional<Tweaks> &tweaks, const Scope scope)
     : SchemaTransformRule{extract_title(schema), extract_description(schema)},
       template_{compile(schema, walker, resolver, compiler, Mode::Exhaustive,
-                        default_dialect, "", "", tweaks)} {};
+                        default_dialect, "", "", tweaks)},
+      scope_{scope} {};
 
-auto SchemaRule::condition(const sourcemeta::core::JSON &schema,
-                           const sourcemeta::core::JSON &,
-                           const sourcemeta::blaze::Vocabularies &,
-                           const sourcemeta::blaze::SchemaFrame &,
-                           const sourcemeta::blaze::SchemaFrame::Location &,
-                           const sourcemeta::blaze::SchemaWalker &,
-                           const sourcemeta::blaze::SchemaResolver &,
-                           const bool) const -> SchemaTransformRule::Result {
+auto SchemaRule::condition(
+    const sourcemeta::core::JSON &schema, const sourcemeta::core::JSON &,
+    const sourcemeta::blaze::Vocabularies &,
+    const sourcemeta::blaze::SchemaFrame &,
+    const sourcemeta::blaze::SchemaFrame::Location &location,
+    const sourcemeta::blaze::SchemaWalker &,
+    const sourcemeta::blaze::SchemaResolver &, const bool) const
+    -> SchemaTransformRule::Result {
+  if (this->scope_ == Scope::TopLevel && !location.pointer.empty()) {
+    return false;
+  }
+
   SimpleOutput output{schema};
   Evaluator evaluator;
   const auto result{
