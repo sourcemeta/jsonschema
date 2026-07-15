@@ -22,7 +22,7 @@ auto compiler_2020_12_applicator_prefixitems(
       })};
 
   return compiler_draft3_applicator_items_array(
-      context, schema_context, dynamic_context, annotations_collected(context),
+      context, schema_context, dynamic_context, context.collects_annotations,
       track);
 }
 
@@ -44,7 +44,7 @@ auto compiler_2020_12_applicator_items(const Context &context,
 
   return compiler_draft3_applicator_additionalitems_from_cursor(
       context, schema_context, dynamic_context, cursor,
-      annotations_collected(context),
+      context.collects_annotations,
       track && !schema_context.schema.defines("unevaluatedItems"));
 }
 
@@ -62,7 +62,7 @@ auto compiler_2020_12_applicator_contains(const Context &context,
 
   return compiler_2019_09_applicator_contains_with_options(
       context, schema_context, dynamic_context, current,
-      annotations_collected(context), track);
+      context.collects_annotations, track);
 }
 
 auto compiler_2020_12_core_dynamicref(const Context &context,

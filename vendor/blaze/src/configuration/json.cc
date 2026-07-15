@@ -105,8 +105,16 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     auto lint_object{sourcemeta::core::JSON::make_object()};
     auto rules_array{sourcemeta::core::JSON::make_array()};
     for (const auto &rule : this->lint.rules) {
-      rules_array.push_back(
-          sourcemeta::core::JSON{relative_display_path(rule, this->base_path)});
+      if (rule.top_level) {
+        auto rule_object{sourcemeta::core::JSON::make_object()};
+        rule_object.assign("path", sourcemeta::core::JSON{relative_display_path(
+                                       rule.path, this->base_path)});
+        rule_object.assign("topLevel", sourcemeta::core::JSON{true});
+        rules_array.push_back(std::move(rule_object));
+      } else {
+        rules_array.push_back(sourcemeta::core::JSON{
+            relative_display_path(rule.path, this->base_path)});
+      }
     }
 
     lint_object.assign("rules", std::move(rules_array));

@@ -200,15 +200,33 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
       std::size_t index{0};
       for (const auto &element : lint_value.at("rules").as_array()) {
         CONFIGURATION_ENSURE(
-            element.is_string(),
-            "The values in the lint rules array must be strings",
+            element.is_string() || element.is_object(),
+            "The values in the lint rules array must be strings or objects",
             sourcemeta::core::Pointer({"lint", "rules", index}));
 
-        const std::filesystem::path path{element.to_string()};
+        bool top_level{false};
+        if (element.is_object()) {
+          CONFIGURATION_ENSURE(
+              element.defines("path") && element.at("path").is_string(),
+              "The lint rule path property must be a string",
+              sourcemeta::core::Pointer({"lint", "rules", index, "path"}));
+          CONFIGURATION_ENSURE(
+              !element.defines("topLevel") ||
+                  element.at("topLevel").is_boolean(),
+              "The lint rule topLevel property must be a boolean",
+              sourcemeta::core::Pointer({"lint", "rules", index, "topLevel"}));
+          top_level = element.defines("topLevel") &&
+                      element.at("topLevel").to_boolean();
+        }
+
+        const std::filesystem::path path{element.is_string()
+                                             ? element.to_string()
+                                             : element.at("path").to_string()};
         result.lint.rules.push_back(
-            path.is_absolute()
-                ? sourcemeta::core::weakly_canonical(path)
-                : sourcemeta::core::weakly_canonical(base_path / path));
+            {.path = path.is_absolute()
+                         ? sourcemeta::core::weakly_canonical(path)
+                         : sourcemeta::core::weakly_canonical(base_path / path),
+             .top_level = top_level});
         index += 1;
       }
     }

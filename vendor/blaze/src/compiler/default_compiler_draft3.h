@@ -922,7 +922,7 @@ auto compiler_draft3_applicator_properties_with_options(
 
   if (context.mode == Mode::FastValidation) {
     if (fusion_possible && !fusion_entries.empty() &&
-        !annotations_collected(context)) {
+        !context.collects_annotations) {
       for (const auto &req : required) {
         const auto &req_name{req.first};
         bool already_tracked{false};

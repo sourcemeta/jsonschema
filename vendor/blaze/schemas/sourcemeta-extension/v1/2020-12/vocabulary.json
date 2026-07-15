@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$vocabulary": {
+    "tag:sourcemeta.com,2026:extension/v1": true
+  },
+  "$dynamicAnchor": "meta",
+  "title": "Sourcemeta Extension vocabulary",
+  "description": "Meta-schema that describes the keywords of the Sourcemeta Extension vocabulary",
+  "examples": [
+    true,
+    {
+      "x-jsonld-id": "https://schema.org/name"
+    },
+    {
+      "x-jsonld-type": "https://schema.org/Product",
+      "x-jsonld-graph": true
+    },
+    {
+      "format": "uri",
+      "x-format-assertion": true
+    }
+  ],
+  "type": [ "object", "boolean" ],
+  "properties": {
+    "x-format-assertion": {
+      "type": "boolean"
+    },
+    "x-jsonld-container": {
+      "enum": [ "@list", "@set", "@language", "@index" ]
+    },
+    "x-jsonld-datatype": {
+      "x-format-assertion": true,
+      "type": "string",
+      "format": "iri"
+    },
+    "x-jsonld-direction": {
+      "enum": [ "ltr", "rtl" ]
+    },
+    "x-jsonld-graph": {
+      "type": "boolean"
+    },
+    "x-jsonld-id": {
+      "x-format-assertion": true,
+      "type": "string",
+      "format": "iri"
+    },
+    "x-jsonld-json": {
+      "type": "boolean"
+    },
+    "x-jsonld-language": {
+      "type": "string",
+      "pattern": "^(?:[Ee][Nn]-[Gg][Bb]-[Oo][Ee][Dd]|[Ii]-(?:[Aa][Mm][Ii]|[Bb][Nn][Nn]|[Dd][Ee][Ff][Aa][Uu][Ll][Tt]|[Ee][Nn][Oo][Cc][Hh][Ii][Aa][Nn]|[Hh][Aa][Kk]|[Kk][Ll][Ii][Nn][Gg][Oo][Nn]|[Ll][Uu][Xx]|[Mm][Ii][Nn][Gg][Oo]|[Nn][Aa][Vv][Aa][Jj][Oo]|[Pp][Ww][Nn]|[Tt][Aa][Oo]|[Tt][Aa][Yy]|[Tt][Ss][Uu])|[Ss][Gg][Nn]-(?:[Bb][Ee]-[Ff][Rr]|[Bb][Ee]-[Nn][Ll]|[Cc][Hh]-[Dd][Ee])|(?:(?:[A-Za-z]{2,3}(?:-[A-Za-z]{3}){0,3}|[A-Za-z]{4,8})(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(?:-[0-9A-WY-Za-wy-z](?:-[A-Za-z0-9]{2,8})+)*(?:-[Xx](?:-[A-Za-z0-9]{1,8})+)?)|[Xx](?:-[A-Za-z0-9]{1,8})+)$"
+    },
+    "x-jsonld-reverse": {
+      "x-format-assertion": true,
+      "type": "string",
+      "format": "iri"
+    },
+    "x-jsonld-self": {
+      "x-format-assertion": true,
+      "type": "string",
+      "format": "uri-template"
+    },
+    "x-jsonld-type": {
+      "anyOf": [
+        {
+          "x-format-assertion": true,
+          "type": "string",
+          "format": "iri"
+        },
+        {
+          "type": "array",
+          "items": {
+            "x-format-assertion": true,
+            "type": "string",
+            "format": "iri"
+          }
+        }
+      ]
+    }
+  }
+}

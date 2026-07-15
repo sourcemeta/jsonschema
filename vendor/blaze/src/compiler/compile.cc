@@ -11,6 +11,7 @@
 #include <set>           // std::set
 #include <string_view>   // std::string_view
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <utility>       // std::move, std::pair
 #include <vector>        // std::vector
 
@@ -71,6 +72,53 @@ auto compile_subschema(const sourcemeta::blaze::Context &context,
   }
 
   return steps;
+}
+
+auto defines_any_whitelisted_keyword(
+    const sourcemeta::core::JSON &schema,
+    const sourcemeta::blaze::SchemaFrame &frame,
+    const sourcemeta::blaze::SchemaWalker &walker,
+    const sourcemeta::blaze::SchemaResolver &resolver,
+    const sourcemeta::blaze::SchemaFrame::Location &entrypoint_location,
+    const std::unordered_set<sourcemeta::core::JSON::StringView> &keywords)
+    -> bool {
+  std::vector<std::pair<sourcemeta::core::JSON::StringView,
+                        sourcemeta::core::JSON::Object::hash_type>>
+      hashed_keywords;
+  hashed_keywords.reserve(keywords.size());
+  for (const auto &keyword : keywords) {
+    hashed_keywords.emplace_back(keyword,
+                                 sourcemeta::core::JSON::Object::hash(keyword));
+  }
+
+  for (const auto &entry : frame.locations()) {
+    if (entry.second.type ==
+            sourcemeta::blaze::SchemaFrame::LocationType::Pointer ||
+        entry.second.type ==
+            sourcemeta::blaze::SchemaFrame::LocationType::Anchor) {
+      continue;
+    }
+
+    const auto &subschema{sourcemeta::core::get(schema, entry.second.pointer)};
+    if (!subschema.is_object()) {
+      continue;
+    }
+
+    bool defines_keyword{false};
+    for (const auto &[keyword, keyword_hash] : hashed_keywords) {
+      if (subschema.defines(keyword, keyword_hash)) {
+        defines_keyword = true;
+        break;
+      }
+    }
+
+    if (defines_keyword && frame.is_reachable(entrypoint_location, entry.second,
+                                              walker, resolver)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // TODO: Somehow move this logic up to `SchemaFrame`
@@ -173,6 +221,14 @@ auto compile(const sourcemeta::core::JSON &schema,
     throw CompilerInvalidEntryPoint{
         entrypoint, "The given entry point URI is not a valid subschema"};
   }
+
+  const bool collects_annotations{
+      mode == Mode::Exhaustive ||
+      (effective_tweaks.annotations.has_value() &&
+       !effective_tweaks.annotations.value().empty() &&
+       defines_any_whitelisted_keyword(schema, frame, walker, resolver,
+                                       entrypoint_location,
+                                       effective_tweaks.annotations.value()))};
 
   ///////////////////////////////////////////////////////////////////
   // (1) Determine all the schema resources in the schema
@@ -307,6 +363,7 @@ auto compile(const sourcemeta::core::JSON &schema,
                         .compiler = compiler,
                         .mode = mode,
                         .uses_dynamic_scopes = uses_dynamic_scopes,
+                        .collects_annotations = collects_annotations,
                         .unevaluated = std::move(unevaluated),
                         .tweaks = effective_tweaks,
                         .targets = std::move(targets_map),
