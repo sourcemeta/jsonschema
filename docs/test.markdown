@@ -44,8 +44,7 @@ as JSON files that follow a specific format:
   in turn. This is convenient for asserting that a single set of instances
   is accepted (or rejected) the same way by multiple related schemas.
 
-- `tests`: An array of tests you want to run. If this array is empty, the
-  command reports `NO TESTS` and exits with a non-zero code
+- `tests`: An array of tests you want to run.
 
 > [!TIP]
 > You can test different portions of a large schema by passing a schema URI
