@@ -1,0 +1,57 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+TMP="$(mktemp -d)"
+clean() { rm -rf "$TMP"; }
+trap clean EXIT
+
+cat << 'EOF' > "$TMP/rule_type.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every subschema must declare the type keyword",
+  "required": [ "type" ]
+}
+EOF
+
+cat << 'EOF' > "$TMP/rule_id.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+EOF
+
+cat << 'EOF' > "$TMP/jsonschema.json"
+{
+  "lint": {
+    "rules": [
+      "./rule_type.json",
+      { "path": "./rule_id.json", "topLevel": true }
+    ]
+  }
+}
+EOF
+
+cat << 'EOF' > "$TMP/schema.json"
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema",
+  "type": "object",
+  "properties": {
+    "foo": { "type": "string" }
+  }
+}
+EOF
+
+cd "$TMP"
+"$1" lint --only require_type --only require_id "$TMP/schema.json" \
+  > "$TMP/output.txt" 2>&1
+
+cat << 'EOF' > "$TMP/expected.txt"
+EOF
+
+diff "$TMP/output.txt" "$TMP/expected.txt"

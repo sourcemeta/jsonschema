@@ -148,7 +148,8 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
                       const std::filesystem::path &rule_path,
                       const std::string_view dialect,
                       const sourcemeta::blaze::SchemaResolver &custom_resolver,
-                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
+                      const std::optional<sourcemeta::blaze::Tweaks> &tweaks,
+                      const sourcemeta::blaze::SchemaRule::Scope scope)
     -> void {
   auto rule_schema{sourcemeta::core::read_yaml_or_json(rule_path)};
   if (!rule_schema.defines("description")) {
@@ -169,7 +170,7 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   try {
     bundle.add<sourcemeta::blaze::SchemaRule>(
         rule_schema, sourcemeta::blaze::schema_walker, custom_resolver,
-        sourcemeta::blaze::default_schema_compiler, dialect, tweaks);
+        sourcemeta::blaze::default_schema_compiler, dialect, tweaks, scope);
   } catch (const sourcemeta::blaze::SchemaRuleMissingNameError &error) {
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaRuleMissingNameError>(rule_path, error);
@@ -196,6 +197,31 @@ static auto load_rule(sourcemeta::blaze::SchemaTransformer &bundle,
   } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>(
         rule_path, error);
+  }
+}
+
+static auto
+load_rules_from_options(sourcemeta::blaze::SchemaTransformer &bundle,
+                        std::unordered_set<std::string> &rule_names,
+                        const sourcemeta::core::Options &options,
+                        const std::string_view option_name,
+                        const sourcemeta::blaze::SchemaRule::Scope scope)
+    -> void {
+  for (const auto &rule_path_string : options.at(option_name)) {
+    const std::filesystem::path rule_path{
+        std::filesystem::weakly_canonical(rule_path_string)};
+    sourcemeta::jsonschema::LOG_VERBOSE(options)
+        << "Loading custom rule: " << rule_path.string() << "\n";
+    const auto configuration_path{
+        sourcemeta::jsonschema::find_configuration(rule_path)};
+    const auto &configuration{sourcemeta::jsonschema::read_configuration(
+        options, configuration_path, rule_path)};
+    const auto dialect{
+        sourcemeta::jsonschema::default_dialect(options, configuration)};
+    const auto &custom_resolver{sourcemeta::jsonschema::resolver(
+        options, options.contains("http"), dialect, configuration)};
+    load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
+              sourcemeta::jsonschema::format_assertion_tweaks(options), scope);
   }
 }
 
@@ -249,29 +275,24 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
     const auto dialect{default_dialect(options, configuration)};
     const auto &custom_resolver{
         resolver(options, options.contains("http"), dialect, configuration)};
-    for (const auto &rule_path : configuration.value().lint.rules) {
+    for (const auto &rule : configuration.value().lint.rules) {
       LOG_VERBOSE(options) << "Loading custom rule from configuration: "
-                           << rule_path.string() << "\n";
-      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
-                sourcemeta::jsonschema::format_assertion_tweaks(options));
+                           << rule.path.string() << "\n";
+      load_rule(bundle, rule_names, rule.path, dialect, custom_resolver,
+                sourcemeta::jsonschema::format_assertion_tweaks(options),
+                rule.top_level ? sourcemeta::blaze::SchemaRule::Scope::TopLevel
+                               : sourcemeta::blaze::SchemaRule::Scope::All);
     }
   }
 
   if (options.contains("rule")) {
-    for (const auto &rule_path_string : options.at("rule")) {
-      const std::filesystem::path rule_path{
-          std::filesystem::weakly_canonical(rule_path_string)};
-      LOG_VERBOSE(options) << "Loading custom rule: " << rule_path.string()
-                           << "\n";
-      const auto configuration_path{find_configuration(rule_path)};
-      const auto &configuration{
-          read_configuration(options, configuration_path, rule_path)};
-      const auto dialect{default_dialect(options, configuration)};
-      const auto &custom_resolver{
-          resolver(options, options.contains("http"), dialect, configuration)};
-      load_rule(bundle, rule_names, rule_path, dialect, custom_resolver,
-                sourcemeta::jsonschema::format_assertion_tweaks(options));
-    }
+    load_rules_from_options(bundle, rule_names, options, "rule",
+                            sourcemeta::blaze::SchemaRule::Scope::All);
+  }
+
+  if (options.contains("top-level-rule")) {
+    load_rules_from_options(bundle, rule_names, options, "top-level-rule",
+                            sourcemeta::blaze::SchemaRule::Scope::TopLevel);
   }
 
   if (options.contains("only")) {

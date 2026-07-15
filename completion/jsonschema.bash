@@ -142,7 +142,7 @@ _jsonschema() {
       fi
       ;;
     lint)
-      local options="--fix -f --extension -e --ignore -i --exclude -x --only -o --list -l --indentation -n"
+      local options="--fix -f --extension -e --ignore -i --exclude -x --only -o --list -l --indentation -n --rule -a --top-level-rule -t"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )
