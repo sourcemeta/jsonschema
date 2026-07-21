@@ -135,6 +135,12 @@ function resolveTarget(instance, instanceLocation) {
   return current;
 }
 
+function instanceParent(instance, instanceLocation) {
+  if (instanceLocation === '') return undefined;
+  const lastSlash = instanceLocation.lastIndexOf('/');
+  return resolveTarget(instance, instanceLocation.slice(0, lastSlash));
+}
+
 function extractKeyword(evaluatePath) {
   if (evaluatePath === '') return '';
   const lastSlash = evaluatePath.lastIndexOf('/');
@@ -430,13 +436,20 @@ export function describe(valid, instruction, evaluatePath,
     if (keyword === 'contains') {
       return 'The constraints declared for this keyword were not satisfiable';
     }
-    if (keyword === 'additionalProperties' ||
-        keyword === 'unevaluatedProperties') {
+    // A `false` subschema declares no keyword of its own, so a property named
+    // after one of these must not be described as if it were that keyword.
+    // The instance location agrees only when it sits under an object for the
+    // property cases, or under an array for the item case
+    const parent = instanceParent(instance, instanceLocation);
+    if ((keyword === 'additionalProperties' ||
+         keyword === 'unevaluatedProperties') &&
+        parent !== undefined && parent !== null && typeof parent === 'object' &&
+        !Array.isArray(parent)) {
       const property = lastInstanceToken(instanceLocation);
       return 'The object value was not expected to define the property ' +
         escapeString(property);
     }
-    if (keyword === 'unevaluatedItems') {
+    if (keyword === 'unevaluatedItems' && Array.isArray(parent)) {
       const tokenValue = lastInstanceToken(instanceLocation);
       return 'The array value was not expected to define the item at index ' +
         tokenValue;
@@ -560,7 +573,11 @@ export function describe(valid, instruction, evaluatePath,
         'positional subschemas';
     }
 
-    if (keyword === 'title' || keyword === 'description') {
+    // Annotation values come from the schema as written, so they need not have
+    // the type their keyword expects. When they do not, the generic fallthrough
+    // below describes them instead
+    if ((keyword === 'title' || keyword === 'description') &&
+        typeof annotation === 'string') {
       let message = 'The ' + keyword + ' of the';
       if (instanceLocation === '') {
         message += ' instance';
@@ -621,7 +638,7 @@ export function describe(valid, instruction, evaluatePath,
       return message;
     }
 
-    if (keyword === 'examples') {
+    if (keyword === 'examples' && Array.isArray(annotation)) {
       let message = '';
       if (instanceLocation === '') {
         message += 'Examples of the instance';
@@ -640,7 +657,7 @@ export function describe(valid, instruction, evaluatePath,
       return message;
     }
 
-    if (keyword === 'contentEncoding') {
+    if (keyword === 'contentEncoding' && typeof annotation === 'string') {
       let message = 'The content encoding of the';
       if (instanceLocation === '') {
         message += ' instance';
@@ -651,7 +668,7 @@ export function describe(valid, instruction, evaluatePath,
       return message;
     }
 
-    if (keyword === 'contentMediaType') {
+    if (keyword === 'contentMediaType' && typeof annotation === 'string') {
       let message = 'The content media type of the';
       if (instanceLocation === '') {
         message += ' instance';

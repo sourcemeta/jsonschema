@@ -30,8 +30,11 @@ public:
   [[nodiscard]] inline auto contains(const string_type &value,
                                      const hash_type hash) const -> bool {
     if (this->hasher.is_perfect(hash)) {
+      // A perfect hash captures the key bytes but not its length, so two keys
+      // that only differ in trailing length hash the same and the size is
+      // confirmed too
       for (const auto &entry : this->data) {
-        if (entry.second == hash) {
+        if (entry.second == hash && entry.first.size() == value.size()) {
           return true;
         }
       }

@@ -64,8 +64,8 @@ public:
   [[nodiscard]] static auto from(JSON &&value) -> std::optional<JWKPrivate>;
 
   /// Parse a private key from an unencrypted PKCS#8 PEM document (RFC 5958),
-  /// returning no value on invalid input. The key identifier, algorithm, and
-  /// curve are left unset, as a PEM document carries no such metadata.
+  /// returning no value on invalid input. The key identifier and algorithm are
+  /// left unset, as a PEM document carries no such metadata.
   [[nodiscard]] static auto from_pem(const std::string_view pem)
       -> std::optional<JWKPrivate>;
 
@@ -89,7 +89,9 @@ public:
 
   // Elliptic curve keys (RFC 7518 Section 6.2) and octet key pairs (RFC 8037
   // Section 2) carry a curve name, which the elliptic curve algorithms pin to
-  // exactly one curve. It is empty for keys parsed from a PEM document
+  // exactly one curve. A key parsed from a PEM document carries it once its
+  // public part has been recovered, and it stays empty for a key that carries
+  // no curve, such as an RSA or symmetric key
   /// The curve this key is pinned to, empty when it carries none.
   [[nodiscard]] auto curve() const noexcept -> std::string_view {
     return this->curve_;
@@ -111,6 +113,16 @@ public:
     return this->secret_;
   }
 
+  /// Serialize the public part of this key as a JSON Web Key (RFC 7517),
+  /// returning no value for a symmetric key, which has no public form, or for a
+  /// key parsed from a PEM document whose public part could not be recovered.
+  [[nodiscard]] auto public_jwk() const -> std::optional<JSON>;
+
+  /// The SHA-256 JSON Web Key thumbprint of this key (RFC 7638),
+  /// base64url-encoded, returning no value for a key whose public part could
+  /// not be recovered.
+  [[nodiscard]] auto thumbprint() const -> std::optional<std::string>;
+
 private:
   JWKPrivate() = default;
   static auto parse(const JSON &value, JWKPrivate &result) -> bool;
@@ -124,6 +136,11 @@ private:
   std::string curve_;
   std::optional<PrivateKey> private_key_;
   std::string secret_;
+  std::string modulus_;
+  std::string exponent_;
+  std::string coordinate_x_;
+  std::string coordinate_y_;
+  std::string public_point_;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif

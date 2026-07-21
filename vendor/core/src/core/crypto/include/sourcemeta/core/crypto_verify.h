@@ -7,6 +7,7 @@
 
 #include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
@@ -114,6 +115,89 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT make_ec_public_key(
 auto SOURCEMETA_CORE_CRYPTO_EXPORT make_eddsa_public_key(
     const EdwardsCurve curve, const std::string_view public_key)
     -> std::optional<PublicKey>;
+
+/// @ingroup crypto
+/// The public components of an RSA key, as raw big-endian bytes in minimal
+/// form.
+struct RSAPublicComponents {
+  /// The RSA modulus.
+  std::string modulus;
+  /// The RSA public exponent.
+  std::string exponent;
+};
+
+/// @ingroup crypto
+/// The public coordinates of an elliptic curve key, each padded to the curve
+/// field width, together with the curve they belong to.
+struct ECPublicComponents {
+  /// The curve the coordinates belong to.
+  EllipticCurve curve;
+  /// The x coordinate.
+  std::string x;
+  /// The y coordinate.
+  std::string y;
+};
+
+/// @ingroup crypto
+/// The public point of an Edwards-curve key, together with the curve it
+/// belongs to.
+struct EdwardsPublicComponents {
+  /// The curve the point belongs to.
+  EdwardsCurve curve;
+  /// The encoded public point.
+  std::string point;
+};
+
+/// @ingroup crypto
+/// Extract the public components of an RSA key, returning no value when the key
+/// is not an RSA key. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto key{sourcemeta::core::make_rsa_public_key(modulus, exponent)};
+/// assert(key.has_value());
+/// const auto components{sourcemeta::core::rsa_public_components(key.value())};
+/// assert(components.has_value());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT rsa_public_components(const PublicKey &key)
+    -> std::optional<RSAPublicComponents>;
+
+/// @ingroup crypto
+/// Extract the public coordinates of an elliptic curve key, returning no value
+/// when the key is not an elliptic curve key. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto key{sourcemeta::core::make_ec_public_key(
+///     sourcemeta::core::EllipticCurve::P256, x, y)};
+/// assert(key.has_value());
+/// const auto components{sourcemeta::core::ec_public_components(key.value())};
+/// assert(components.has_value());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT ec_public_components(const PublicKey &key)
+    -> std::optional<ECPublicComponents>;
+
+/// @ingroup crypto
+/// Extract the public point of an Edwards-curve key, returning no value when
+/// the key is not an Edwards-curve key. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto key{sourcemeta::core::make_eddsa_public_key(
+///     sourcemeta::core::EdwardsCurve::Ed25519, public_key)};
+/// assert(key.has_value());
+/// const auto components{
+///     sourcemeta::core::edwards_public_components(key.value())};
+/// assert(components.has_value());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT edwards_public_components(
+    const PublicKey &key) -> std::optional<EdwardsPublicComponents>;
 
 /// @ingroup crypto
 /// Verify an RSASSA-PKCS1-v1_5 signature (RFC 8017 Section 8.2.2) over a

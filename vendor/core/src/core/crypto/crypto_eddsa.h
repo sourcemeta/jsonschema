@@ -189,6 +189,18 @@ inline auto edwards_point_encode(const EdwardsPoint &point, const Bignum &prime,
   return encoding;
 }
 
+// The public key is the encoded base point multiplied by the pruned secret
+// scalar (RFC 8032 Sections 5.1.5 and 5.2.5). The multiplication is
+// constant-time because the scalar is secret, though the resulting point is
+// public
+inline auto edwards_public_key_point(const Bignum &scalar,
+                                     const EdwardsParameters &parameters,
+                                     const std::size_t length) -> std::string {
+  return edwards_point_encode(edwards_point_scalar_multiply_constant_time(
+                                  scalar, parameters.base, parameters),
+                              parameters.prime, length);
+}
+
 // Recover an Ed25519 point from its 32-byte encoding (RFC 8032 Section 5.1.3),
 // returning no value when the encoding does not name a point on the curve
 inline auto edwards25519_decode_point(const std::string_view encoding,
@@ -370,8 +382,39 @@ inline auto edwards25519_verify(const std::string_view public_key,
   return edwards_point_equal(left, right, parameters.prime);
 }
 
-// Produce an Ed25519 signature over a message (RFC 8032 Section 5.1.6), given
-// the 32-byte secret seed
+// Prune the 32-byte secret scalar in place (RFC 8032 Section 5.1.5): "The
+// lowest three bits of the first octet are cleared, the highest bit of the last
+// octet is cleared, and the second highest bit of the last octet is set"
+inline auto edwards25519_prune_scalar(std::string &scalar_bytes) noexcept
+    -> void {
+  scalar_bytes.front() = static_cast<char>(
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xf8u);
+  scalar_bytes.back() = static_cast<char>(
+      (static_cast<std::uint8_t>(scalar_bytes.back()) & 0x7fu) | 0x40u);
+}
+
+// The Ed25519 public key derived from the 32-byte private seed, the encoded
+// point [s]B where s is the pruned first half of the seed hash (RFC 8032
+// Section 5.1.5)
+inline auto edwards25519_public_key(const std::string_view secret)
+    -> std::optional<std::string> {
+  if (secret.size() != 32) {
+    return std::nullopt;
+  }
+
+  const auto parameters{edwards25519()};
+  auto hashed{sha512_digest(secret)};
+  const SecureBufferScope hashed_scope{hashed.data(), hashed.size()};
+  const std::string_view digest{reinterpret_cast<const char *>(hashed.data()),
+                                hashed.size()};
+  std::string scalar_bytes{digest.substr(0, 32)};
+  const SecureStringScope scalar_bytes_scope{scalar_bytes};
+  edwards25519_prune_scalar(scalar_bytes);
+  auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
+  const SecureBignumScope scalar_a_scope{scalar_a};
+  return edwards_public_key_point(scalar_a, parameters, 32);
+}
+
 inline auto edwards25519_sign(const std::string_view secret,
                               const std::string_view message)
     -> std::optional<std::string> {
@@ -390,23 +433,17 @@ inline auto edwards25519_sign(const std::string_view secret,
 
   // The secret scalar is the pruned first half, the prefix the second half
   std::string scalar_bytes{digest.substr(0, 32)};
-  const SecureScope scalar_bytes_scope{scalar_bytes};
-  scalar_bytes.front() = static_cast<char>(
-      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xf8u);
-  scalar_bytes.back() = static_cast<char>(
-      (static_cast<std::uint8_t>(scalar_bytes.back()) & 0x7fu) | 0x40u);
+  const SecureStringScope scalar_bytes_scope{scalar_bytes};
+  edwards25519_prune_scalar(scalar_bytes);
   auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
   const SecureBignumScope scalar_a_scope{scalar_a};
   const auto prefix{digest.substr(32)};
 
-  const auto public_key{
-      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
-                               scalar_a, parameters.base, parameters),
-                           parameters.prime, 32)};
+  const auto public_key{edwards_public_key_point(scalar_a, parameters, 32)};
 
   // r = SHA-512(prefix || M) reduced, then R = [r]B
   std::string nonce_preimage{prefix};
-  const SecureScope nonce_preimage_scope{nonce_preimage};
+  const SecureStringScope nonce_preimage_scope{nonce_preimage};
   nonce_preimage.append(message);
   auto nonce_digest{sha512_digest(nonce_preimage)};
   const SecureBufferScope nonce_digest_scope{nonce_digest.data(),
@@ -607,8 +644,38 @@ inline auto edwards448_verify(const std::string_view public_key,
   return edwards_point_equal(left, right, parameters.prime);
 }
 
-// Produce an Ed448 signature over a message (RFC 8032 Section 5.2.6), given the
-// 57-byte secret seed
+// Prune the 57-byte secret scalar in place (RFC 8032 Section 5.2.5): "The two
+// least significant bits of the first octet are cleared, all eight bits of the
+// last octet are cleared, and the highest bit of the second to last octet is
+// set"
+inline auto edwards448_prune_scalar(std::string &scalar_bytes) noexcept
+    -> void {
+  scalar_bytes.front() = static_cast<char>(
+      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xfcu);
+  scalar_bytes[55] =
+      static_cast<char>(static_cast<std::uint8_t>(scalar_bytes[55]) | 0x80u);
+  scalar_bytes[56] = '\x00';
+}
+
+// The Ed448 public key derived from the 57-byte private seed (RFC 8032
+// Section 5.2.5)
+inline auto edwards448_public_key(const std::string_view secret)
+    -> std::optional<std::string> {
+  if (secret.size() != 57) {
+    return std::nullopt;
+  }
+
+  const auto parameters{edwards448()};
+  auto digest{shake256(secret, 114)};
+  const SecureStringScope digest_scope{digest};
+  std::string scalar_bytes{digest.substr(0, 57)};
+  const SecureStringScope scalar_bytes_scope{scalar_bytes};
+  edwards448_prune_scalar(scalar_bytes);
+  auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
+  const SecureBignumScope scalar_a_scope{scalar_a};
+  return edwards_public_key_point(scalar_a, parameters, 57);
+}
+
 inline auto edwards448_sign(const std::string_view secret,
                             const std::string_view message)
     -> std::optional<std::string> {
@@ -621,24 +688,17 @@ inline auto edwards448_sign(const std::string_view secret,
   // prefix, so it and everything derived from it below is wiped before
   // returning
   auto digest{shake256(secret, 114)};
-  const SecureScope digest_scope{digest};
+  const SecureStringScope digest_scope{digest};
 
   // The secret scalar is the pruned first half, the prefix the second half
   std::string scalar_bytes{digest.substr(0, 57)};
-  const SecureScope scalar_bytes_scope{scalar_bytes};
-  scalar_bytes.front() = static_cast<char>(
-      static_cast<std::uint8_t>(scalar_bytes.front()) & 0xfcu);
-  scalar_bytes[55] =
-      static_cast<char>(static_cast<std::uint8_t>(scalar_bytes[55]) | 0x80u);
-  scalar_bytes[56] = '\x00';
+  const SecureStringScope scalar_bytes_scope{scalar_bytes};
+  edwards448_prune_scalar(scalar_bytes);
   auto scalar_a{bignum_from_bytes_little_endian(scalar_bytes)};
   const SecureBignumScope scalar_a_scope{scalar_a};
   const auto prefix{std::string_view{digest}.substr(57)};
 
-  const auto public_key{
-      edwards_point_encode(edwards_point_scalar_multiply_constant_time(
-                               scalar_a, parameters.base, parameters),
-                           parameters.prime, 57)};
+  const auto public_key{edwards_public_key_point(scalar_a, parameters, 57)};
 
   // dom4 is "SigEd448" followed by the zero pre-hash flag and an empty context
   std::string domain{"SigEd448"};
@@ -647,11 +707,11 @@ inline auto edwards448_sign(const std::string_view secret,
 
   // r = SHAKE256(dom4 || prefix || M) reduced, then R = [r]B
   std::string nonce_preimage{domain};
-  const SecureScope nonce_preimage_scope{nonce_preimage};
+  const SecureStringScope nonce_preimage_scope{nonce_preimage};
   nonce_preimage.append(prefix);
   nonce_preimage.append(message);
   auto nonce_hash{shake256(nonce_preimage, 114)};
-  const SecureScope nonce_hash_scope{nonce_hash};
+  const SecureStringScope nonce_hash_scope{nonce_hash};
   auto scalar_r{bignum_from_bytes_little_endian(nonce_hash)};
   const SecureBignumScope scalar_r_scope{scalar_r};
   bignum_reduce(scalar_r, parameters.order);

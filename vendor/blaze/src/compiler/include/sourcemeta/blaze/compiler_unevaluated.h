@@ -22,7 +22,8 @@ namespace sourcemeta::blaze {
 struct SchemaUnevaluatedEntry {
   /// The absolute pointers of the static keyword dependencies
   std::set<sourcemeta::core::WeakPointer> static_dependencies;
-  /// The absolute pointers of the static keyword dependencies
+  /// The absolute pointers of the dynamic keyword dependencies, along with the
+  /// references that lead to them
   std::set<sourcemeta::core::WeakPointer> dynamic_dependencies;
   /// Whether the entry cannot be fully resolved, which means
   /// there might be unknown dynamic dependencies

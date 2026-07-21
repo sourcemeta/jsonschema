@@ -249,4 +249,41 @@ auto is_langtag(const std::string_view value) -> bool {
   return is_irregular_grandfathered(value);
 }
 
+auto is_canonical_langtag(const std::string_view value) -> bool {
+  // The registry maps every irregular grandfathered tag to a canonical
+  // replacement, so none of them is canonical.
+  if (!is_langtag(value) || is_irregular_grandfathered(value)) {
+    return false;
+  }
+
+  bool initial{true};
+  bool after_singleton{false};
+  std::size_t position{0};
+  while (position < value.size()) {
+    const auto subtag{subtag_at(value, position)};
+
+    // Per RFC 5646 Section 2.1.1, region subtags are uppercase and script
+    // subtags are titlecase, while every other subtag, including everything
+    // that follows a singleton, is lowercase.
+    const auto letters{is_alpha(subtag)};
+    const bool region{!initial && !after_singleton && letters &&
+                      subtag.size() == 2};
+    const bool script{!initial && !after_singleton && letters &&
+                      subtag.size() == 4};
+    for (std::size_t index{0}; index < subtag.size(); index += 1) {
+      const bool expect_uppercase{region || (script && index == 0)};
+      const bool uppercase{!is_lowercase(subtag[index])};
+      if (uppercase != expect_uppercase) {
+        return false;
+      }
+    }
+
+    initial = false;
+    after_singleton = after_singleton || subtag.size() == 1;
+    advance(value, position, subtag.size());
+  }
+
+  return true;
+}
+
 } // namespace sourcemeta::core

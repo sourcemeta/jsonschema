@@ -107,6 +107,24 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT make_rsa_private_key(
     -> std::optional<PrivateKey>;
 
 /// @ingroup crypto
+/// Derive the public key from a private key, returning no value when the public
+/// part cannot be produced. The derived key exports its components through the
+/// public component functions, so a private key parsed from a PEM document can
+/// still be rendered to a public key. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto key{sourcemeta::core::make_private_key(pem)};
+/// assert(key.has_value());
+/// const auto public_key{sourcemeta::core::derive_public_key(key.value())};
+/// assert(public_key.has_value());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT derive_public_key(const PrivateKey &key)
+    -> std::optional<PublicKey>;
+
+/// @ingroup crypto
 /// Produce an RSASSA-PKCS1-v1_5 signature (RFC 8017 Section 8.2.1) over a
 /// message, returning no value when the key is not an RSA key. For example:
 ///

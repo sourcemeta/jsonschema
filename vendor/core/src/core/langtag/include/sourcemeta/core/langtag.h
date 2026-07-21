@@ -42,6 +42,27 @@ namespace sourcemeta::core {
 SOURCEMETA_CORE_LANGTAG_EXPORT
 auto is_langtag(const std::string_view value) -> bool;
 
+/// @ingroup langtag
+/// Check whether the given string is a well-formed language tag per RFC 5646
+/// (BCP 47) that also follows the recommended casing conventions of RFC 5646
+/// Section 2.1.1: script subtags in titlecase, region subtags in uppercase,
+/// and every other subtag, including every subtag after a singleton, in
+/// lowercase. The deprecated irregular grandfathered tags are rejected, as
+/// the registry maps each of them to a canonical replacement. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/langtag.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::is_canonical_langtag("en-GB"));
+/// assert(sourcemeta::core::is_canonical_langtag("zh-Hant-HK"));
+/// assert(!sourcemeta::core::is_canonical_langtag("en-gb"));
+/// assert(!sourcemeta::core::is_canonical_langtag("EN"));
+/// ```
+SOURCEMETA_CORE_LANGTAG_EXPORT
+auto is_canonical_langtag(const std::string_view value) -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

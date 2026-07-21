@@ -647,6 +647,14 @@ class Blaze {
       if (match) entry.skip = true;
     }
   }
+
+  checkpoint() {
+    return this.evaluated.length;
+  }
+
+  rewind(checkpoint) {
+    this.evaluated.length = checkpoint;
+  }
 }
 
 function evaluateInstructionFast(instruction, instance, depth, template, evaluator) {
@@ -1646,16 +1654,21 @@ function LogicalOr(instruction, instance, depth, template, evaluator) {
   let result = false;
   if (exhaustive) {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
         result = true;
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
       }
     }
   } else {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
         result = true;
         break;
       }
+      if (evaluator.trackMode) evaluator.rewind(checkpoint);
     }
   }
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, result);
@@ -1687,6 +1700,7 @@ function LogicalXor(instruction, instance, depth, template, evaluator) {
   let hasMatched = false;
   if (children) {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
         if (hasMatched) {
           result = false;
@@ -1694,6 +1708,8 @@ function LogicalXor(instruction, instance, depth, template, evaluator) {
         } else {
           hasMatched = true;
         }
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
       }
     }
   }
@@ -1710,24 +1726,29 @@ function LogicalCondition(instruction, instance, depth, template, evaluator) {
   const children = instruction[6];
   const childrenSize = children ? children.length : 0;
 
-  let conditionEnd = childrenSize;
-  if (thenStart > 0) conditionEnd = thenStart;
-  else if (elseStart > 0) conditionEnd = elseStart;
-
   const target = resolveInstance(instance, instruction[2]);
 
+  const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
   let conditionResult = true;
-  for (let cursor = 0; cursor < conditionEnd; cursor++) {
+  for (let cursor = 0; cursor < thenStart; cursor++) {
     if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
       conditionResult = false;
       break;
     }
   }
+  if (!conditionResult && evaluator.trackMode) evaluator.rewind(checkpoint);
 
-  const consequenceStart = conditionResult ? thenStart : elseStart;
-  const consequenceEnd = (conditionResult && elseStart > 0) ? elseStart : childrenSize;
+  let consequenceStart;
+  let consequenceEnd;
+  if (conditionResult) {
+    consequenceStart = thenStart;
+    consequenceEnd = elseStart > 0 ? elseStart : childrenSize;
+  } else {
+    consequenceStart = elseStart;
+    consequenceEnd = elseStart > 0 ? childrenSize : elseStart;
+  }
 
-  if (consequenceStart > 0) {
+  if (consequenceStart < consequenceEnd) {
     if (evaluator.trackMode || evaluator.callbackMode) {
       evaluator.popPath(instruction[1].length);
     }
@@ -2147,15 +2168,16 @@ function LoopPropertiesExactlyTypeStrict(instruction, instance, depth, template,
     return false;
   }
   const value = instruction[5];
+  const names = new Set(value[1]);
   let count = 0;
   for (const key in target) {
     count++;
-    if (effectiveTypeStrictReal(target[key]) !== value[0]) {
+    if (effectiveTypeStrictReal(target[key]) !== value[0] || !names.has(key)) {
       if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
       return false;
     }
   }
-  const __result = count === value[1].length;
+  const __result = count === names.size;
   if (evaluator.callbackMode) evaluator.callbackPop(instruction, __result);
   return __result;
 };
@@ -2465,9 +2487,11 @@ function LoopItemsIntegerBoundedSized(instruction, instance, depth, template, ev
   const minimum = value[0][0];
   const maximum = value[0][1];
   const minimumSize = value[1][0];
+  const maximumSize = value[1][1];
   const target = resolveInstance(instance, instruction[2]);
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
-  if (!Array.isArray(target) || target.length < minimumSize) {
+  if (!Array.isArray(target) || target.length < minimumSize ||
+      (maximumSize !== null && maximumSize !== undefined && target.length > maximumSize)) {
     if (evaluator.callbackMode) evaluator.callbackPop(instruction, false);
     return false;
   }
@@ -2494,11 +2518,10 @@ function LoopContains(instruction, instance, depth, template, evaluator) {
   const minimum = range[0];
   const maximum = range[1];
   const isExhaustive = range[2];
-  if (minimum === 0 && target.length === 0) return true;
   if (evaluator.callbackMode) evaluator.callbackPush(instruction);
 
   const children = instruction[6];
-  let result = false;
+  let result = minimum === 0;
   let matchCount = 0;
   for (let index = 0; index < target.length; index++) {
     if (evaluator.callbackMode) evaluator.pushInstanceToken(index);
@@ -2813,11 +2836,15 @@ function LogicalOr_fast(instruction, instance, depth, template, evaluator) {
   let result = false;
   if (exhaustive) {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) result = true;
+      else if (evaluator.trackMode) evaluator.rewind(checkpoint);
     }
   } else {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) return true;
+      if (evaluator.trackMode) evaluator.rewind(checkpoint);
     }
   }
   return result;
@@ -2862,6 +2889,7 @@ function LogicalXor_fast(instruction, instance, depth, template, evaluator) {
   let hasMatched = false;
   if (children) {
     for (let index = 0; index < children.length; index++) {
+      const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
       if (evaluateInstruction(children[index], target, depth + 1, template, evaluator)) {
         if (hasMatched) {
           result = false;
@@ -2869,6 +2897,8 @@ function LogicalXor_fast(instruction, instance, depth, template, evaluator) {
         } else {
           hasMatched = true;
         }
+      } else if (evaluator.trackMode) {
+        evaluator.rewind(checkpoint);
       }
     }
   }
@@ -2965,21 +2995,27 @@ function LogicalCondition_fast(instruction, instance, depth, template, evaluator
   const elseStart = value[1];
   const children = instruction[6];
   const childrenSize = children ? children.length : 0;
-  let conditionEnd = childrenSize;
-  if (thenStart > 0) conditionEnd = thenStart;
-  else if (elseStart > 0) conditionEnd = elseStart;
   const relInstance = instruction[2];
   const target = relInstance.length === 0 ? instance : resolveInstance(instance, relInstance);
+  const checkpoint = evaluator.trackMode ? evaluator.checkpoint() : 0;
   let conditionResult = true;
-  for (let cursor = 0; cursor < conditionEnd; cursor++) {
+  for (let cursor = 0; cursor < thenStart; cursor++) {
     if (!evaluateInstruction(children[cursor], target, depth + 1, template, evaluator)) {
       conditionResult = false;
       break;
     }
   }
-  const consequenceStart = conditionResult ? thenStart : elseStart;
-  const consequenceEnd = (conditionResult && elseStart > 0) ? elseStart : childrenSize;
-  if (consequenceStart > 0) {
+  if (!conditionResult && evaluator.trackMode) evaluator.rewind(checkpoint);
+  let consequenceStart;
+  let consequenceEnd;
+  if (conditionResult) {
+    consequenceStart = thenStart;
+    consequenceEnd = elseStart > 0 ? elseStart : childrenSize;
+  } else {
+    consequenceStart = elseStart;
+    consequenceEnd = elseStart > 0 ? childrenSize : elseStart;
+  }
+  if (consequenceStart < consequenceEnd) {
     if (evaluator.trackMode) {
       evaluator.popPath(instruction[1].length);
     }
@@ -3700,12 +3736,13 @@ function LoopPropertiesExactlyTypeStrict_fast(instruction, instance, depth, temp
   const target = resolveInstance(instance, instruction[2]);
   if (!isObject(target)) return false;
   const value = instruction[5];
+  const names = new Set(value[1]);
   let count = 0;
   for (const key in target) {
     count++;
-    if (effectiveTypeStrictReal(target[key]) !== value[0]) return false;
+    if (effectiveTypeStrictReal(target[key]) !== value[0] || !names.has(key)) return false;
   }
-  return count === value[1].length;
+  return count === names.size;
 }
 
 function LoopPropertiesExactlyTypeStrictHash_fast(instruction, instance, depth, template, evaluator) {
@@ -3881,8 +3918,10 @@ function LoopItemsIntegerBoundedSized_fast(instruction, instance, depth, templat
   const minimum = value[0][0];
   const maximum = value[0][1];
   const minimumSize = value[1][0];
+  const maximumSize = value[1][1];
   const target = resolveInstance(instance, instruction[2]);
-  if (!Array.isArray(target) || target.length < minimumSize) return false;
+  if (!Array.isArray(target) || target.length < minimumSize ||
+      (maximumSize !== null && maximumSize !== undefined && target.length > maximumSize)) return false;
   for (let index = 0; index < target.length; index++) {
     const element = target[index];
     const elementType = typeof element;

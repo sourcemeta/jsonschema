@@ -50,10 +50,13 @@ This keyword has no effect on any other keyword.
 
 The keywords in this section map the instance locations that their subschemas
 successfully evaluate to nodes, literals, and edges of a JSON-LD document. A
-keyword takes effect at every instance location its subschema evaluates. When
-several subschemas annotate the same instance location, their annotations are
-merged, and a keyword that takes a single value MUST NOT be assigned two
-different values for the same location.
+keyword takes effect at every instance location its subschema evaluates,
+including across references, so annotations declared in different schemas may
+meet at the same instance location. When they do, their values are merged, and
+identical values always collapse into one, so a schema and the schemas it
+references may safely declare the same annotation. A keyword that takes a
+single value MUST NOT be assigned two different values for the same location,
+unless its own section defines how distinct values merge.
 
 #### 3.2.1. `x-jsonld-id`
 
@@ -64,7 +67,8 @@ This keyword declares the predicate IRI that connects the annotated instance
 location, as the object, to its enclosing node. It MUST NOT be applied to the
 document root, to an array element, or to a member of a location annotated
 with `x-jsonld-container`, as such locations have no enclosing node to attach
-a predicate to.
+a predicate to. Distinct values that meet at the same location merge,
+asserting the location under each declared predicate.
 
 #### 3.2.2. `x-jsonld-type`
 
@@ -72,9 +76,11 @@ The value of this keyword MUST be a string representing an absolute IRI
 [RFC3987], or an array of such strings.
 
 This keyword declares the `@type` of the node that the annotated instance
-location materializes as. Duplicate entries are collapsed, and an empty array
-declares no types. It MUST be applied to a location whose value is an object,
-unless the location is promoted to an identified node with `x-jsonld-self`.
+location materializes as. A single IRI is equivalent to an array containing
+only that IRI, values that meet at the same location merge into the union of
+the declared types, and an empty array declares no types. It MUST be applied
+to a location whose value is an object, unless the location is promoted to an
+identified node with `x-jsonld-self`.
 
 #### 3.2.3. `x-jsonld-reverse`
 
@@ -85,8 +91,8 @@ This keyword declares a reverse predicate IRI, asserting the edge with the
 annotated instance location as the subject and the enclosing node as the
 object, emitted through the JSON-LD `@reverse` keyword. The annotated location
 MUST materialize as a node or as an array of nodes, as a literal cannot be the
-subject of an edge. The placement requirements of `x-jsonld-id` also apply to
-this keyword.
+subject of an edge. The placement and merging behavior of `x-jsonld-id` also
+apply to this keyword.
 
 #### 3.2.4. `x-jsonld-datatype`
 
@@ -106,7 +112,9 @@ tag [RFC5646].
 
 This keyword declares the language of the language-tagged literal that the
 annotated instance location materializes as. It MUST be applied to a location
-whose value is a string.
+whose value is a string. Tags compare case-insensitively, so spellings that
+differ only in case are the same value, and an implementation MAY keep any of
+the declared spellings.
 
 #### 3.2.6. `x-jsonld-direction`
 

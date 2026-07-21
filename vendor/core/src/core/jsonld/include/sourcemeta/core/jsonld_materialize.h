@@ -52,7 +52,9 @@ struct JSONLDNode {
 /// JSON value, a language may carry a direction, and the JSON flag preserves an
 /// opaque JSON literal verbatim.
 struct JSONLDLiteral {
-  /// The literal datatype, defaulting to the native type of the value.
+  /// The literal datatype, defaulting to the native type of the value. An
+  /// explicit datatype carries a native number or boolean as its canonical
+  /// string lexical form.
   std::optional<JSON::String> datatype{};
   /// The language tag of the literal.
   std::optional<JSON::String> language{};

@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_HTTP_HELPERS_H_
 #define SOURCEMETA_CORE_HTTP_HELPERS_H_
 
+#include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/text.h>
 
 #include <cstddef>     // std::size_t
@@ -11,10 +12,6 @@
 // Bounds are validated by surrounding logic.
 // NOLINTBEGIN(bugprone-suspicious-stringview-data-usage)
 namespace sourcemeta::core {
-
-inline auto http_is_ows(const char character) noexcept -> bool {
-  return character == ' ' || character == '\t';
-}
 
 inline auto http_subview(const std::string_view value, const std::size_t offset,
                          const std::size_t length) noexcept
@@ -48,24 +45,6 @@ inline auto http_media_specificity(const std::string_view range,
     return 0;
   }
   return 2;
-}
-
-inline auto http_trim_trailing_ows(const std::string_view value) noexcept
-    -> std::string_view {
-  std::size_t size{value.size()};
-  while (size > 0 && http_is_ows(value[size - 1])) {
-    --size;
-  }
-  return http_subview(value, 0, size);
-}
-
-inline auto http_trim_leading_ows(const std::string_view value) noexcept
-    -> std::string_view {
-  std::size_t position{0};
-  while (position < value.size() && http_is_ows(value[position])) {
-    ++position;
-  }
-  return http_subview(value, position, value.size() - position);
 }
 
 template <typename Visitor>

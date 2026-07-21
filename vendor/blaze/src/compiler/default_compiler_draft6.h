@@ -16,6 +16,40 @@ auto compiler_draft6_validation_type(const Context &context,
                                      const DynamicContext &dynamic_context,
                                      const Instructions &current)
     -> Instructions {
+  // Every property name is a string, so inside `propertyNames` this keyword
+  // is decidable at compile time. Note that the evaluator applies such a
+  // subschema to a null placeholder and carries the name out of band, so a
+  // type assertion emitted here would test that placeholder rather than the
+  // name. The failure is emitted per name, as these instructions become the
+  // children of the loop over the keys, so an object with no properties
+  // still passes
+  if (schema_context.is_property_name) {
+    const auto types{sourcemeta::blaze::parse_schema_type(
+        schema_context.schema.at(dynamic_context.keyword))};
+    if (types.test(std::to_underlying(sourcemeta::core::JSON::Type::String))) {
+      return {};
+    }
+
+    // A set that names known types, none of them a string, can never match a
+    // property name, so every name fails
+    if (types.any()) {
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                   schema_context, dynamic_context, ValueNone{})};
+    }
+
+    // No known type was named. An empty array names nothing at all, so no name
+    // can match it, whereas an unrecognised name is an invalid but legitimate
+    // use that constrains nothing and is ignored, matching how the forms below
+    // treat both outside `propertyNames`
+    if (schema_context.schema.at(dynamic_context.keyword).is_array() &&
+        schema_context.schema.at(dynamic_context.keyword).empty()) {
+      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
+                   schema_context, dynamic_context, ValueNone{})};
+    }
+
+    return {};
+  }
+
   if (schema_context.schema.at(dynamic_context.keyword).is_string()) {
     const auto &type{
         schema_context.schema.at(dynamic_context.keyword).to_string()};
@@ -64,6 +98,11 @@ auto compiler_draft6_validation_type(const Context &context,
           unsigned_integer_property(schema_context.schema, "maxProperties")};
 
       if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum > maximum.value()) {
+          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                       context, schema_context, dynamic_context, ValueNone{})};
+        }
+
         if (maximum.has_value() && minimum == 0) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
@@ -92,8 +131,13 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
+      // A non-empty `required` rejects a non-object on its own, so the type
+      // assertion is redundant. An empty `required` asserts nothing, so the
+      // type check must stay
       if (context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("required")) {
+          schema_context.schema.defines("required") &&
+          schema_context.schema.at("required").is_array() &&
+          !schema_context.schema.at("required").empty()) {
         return {};
       }
 
@@ -101,15 +145,25 @@ auto compiler_draft6_validation_type(const Context &context,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Object)};
     } else if (type == "array") {
-      if (context.mode == Mode::FastValidation && !current.empty() &&
+      const auto minimum{
+          unsigned_integer_property(schema_context.schema, "minItems", 0)};
+      const auto maximum{
+          unsigned_integer_property(schema_context.schema, "maxItems")};
+
+      // A preceding array loop at this location already rejects a non-array,
+      // so the type assertion is redundant. The array size bounds are only
+      // redundant when there are none to enforce, as the loops other than the
+      // sized one do not check the item count. Only a loop that truly rejects
+      // a non-array qualifies: some item loops instead pass a non-array
+      // untouched, so they are deliberately excluded below
+      if (context.mode == Mode::FastValidation && minimum == 0 &&
+          !maximum.has_value() && !current.empty() &&
           (current.back().type ==
                sourcemeta::blaze::InstructionIndex::
                    LoopItemsPropertiesExactlyTypeStrictHash ||
            current.back().type ==
                sourcemeta::blaze::InstructionIndex::
                    LoopItemsPropertiesExactlyTypeStrictHash3 ||
-           current.back().type ==
-               sourcemeta::blaze::InstructionIndex::LoopItemsIntegerBounded ||
            current.back().type == sourcemeta::blaze::InstructionIndex::
                                       LoopItemsIntegerBoundedSized) &&
           current.back().relative_instance_location ==
@@ -117,12 +171,12 @@ auto compiler_draft6_validation_type(const Context &context,
         return {};
       }
 
-      const auto minimum{
-          unsigned_integer_property(schema_context.schema, "minItems", 0)};
-      const auto maximum{
-          unsigned_integer_property(schema_context.schema, "maxItems")};
-
       if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum > maximum.value()) {
+          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                       context, schema_context, dynamic_context, ValueNone{})};
+        }
+
         if (maximum.has_value() && minimum == 0) {
           return {
               make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
@@ -196,16 +250,17 @@ auto compiler_draft6_validation_type(const Context &context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
-      if (schema_context.is_property_name) {
-        return {};
-      }
-
       const auto minimum{
           unsigned_integer_property(schema_context.schema, "minLength", 0)};
       const auto maximum{
           unsigned_integer_property(schema_context.schema, "maxLength")};
 
       if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum > maximum.value()) {
+          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                       context, schema_context, dynamic_context, ValueNone{})};
+        }
+
         if (maximum.has_value() && minimum == 0) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
@@ -275,10 +330,6 @@ auto compiler_draft6_validation_type(const Context &context,
                    schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::Integer)};
     } else if (type == "string") {
-      if (schema_context.is_property_name) {
-        return {};
-      }
-
       return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrict,
                    context, schema_context, dynamic_context,
                    sourcemeta::core::JSON::Type::String)};
@@ -306,15 +357,23 @@ auto compiler_draft6_validation_type(const Context &context,
       } else if (type_string == "integer") {
         types.set(std::to_underlying(sourcemeta::core::JSON::Type::Integer));
       } else if (type_string == "string") {
-        if (schema_context.is_property_name) {
-          continue;
-        }
-
         types.set(std::to_underlying(sourcemeta::core::JSON::Type::String));
       }
     }
 
-    assert(types.any());
+    if (types.none()) {
+      // An empty array names no type at all, so no value can match it. A
+      // non-empty one that named only unrecognised types is an invalid but
+      // legitimate use of the keyword that we ignore, constraining nothing,
+      // exactly as the scalar form does for a single unrecognised name
+      if (schema_context.schema.at(dynamic_context.keyword).empty()) {
+        return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                     context, schema_context, dynamic_context, ValueNone{})};
+      }
+
+      return {};
+    }
+
     return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeAny, context,
                  schema_context, dynamic_context, types)};
   }

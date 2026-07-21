@@ -486,4 +486,41 @@ auto eddsa_verify(const PublicKey &key, const std::string_view message,
   std::unreachable();
 }
 
+auto rsa_public_components(const PublicKey &key)
+    -> std::optional<RSAPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::RSA) {
+    return std::nullopt;
+  }
+
+  return RSAPublicComponents{.modulus = internal->modulus,
+                             .exponent = internal->exponent};
+}
+
+auto ec_public_components(const PublicKey &key)
+    -> std::optional<ECPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::EllipticCurve) {
+    return std::nullopt;
+  }
+
+  const auto width{curve_field_bytes(internal->elliptic_curve)};
+  return ECPublicComponents{
+      .curve = internal->elliptic_curve,
+      .x = pad_left(internal->coordinate_x, width, '\x00'),
+      .y = pad_left(internal->coordinate_y, width, '\x00')};
+}
+
+auto edwards_public_components(const PublicKey &key)
+    -> std::optional<EdwardsPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::Edwards) {
+    return std::nullopt;
+  }
+
+  // The Edwards public point is kept in the coordinate slot on this backend
+  return EdwardsPublicComponents{.curve = internal->edwards_curve,
+                                 .point = internal->coordinate_x};
+}
+
 } // namespace sourcemeta::core

@@ -418,25 +418,46 @@ INSTRUCTION_HANDLER(AssertionDefinesExactlyStrictHash3) {
     assert(value.first.size() == 3);
     const auto &object{target.as_object()};
 
-    result =
-        object.size() == 3 && ((value.first.at(0).first == object.at(0).hash &&
-                                value.first.at(1).first == object.at(1).hash &&
-                                value.first.at(2).first == object.at(2).hash) ||
-                               (value.first.at(0).first == object.at(0).hash &&
-                                value.first.at(1).first == object.at(2).hash &&
-                                value.first.at(2).first == object.at(1).hash) ||
-                               (value.first.at(0).first == object.at(1).hash &&
-                                value.first.at(1).first == object.at(0).hash &&
-                                value.first.at(2).first == object.at(2).hash) ||
-                               (value.first.at(0).first == object.at(1).hash &&
-                                value.first.at(1).first == object.at(2).hash &&
-                                value.first.at(2).first == object.at(0).hash) ||
-                               (value.first.at(0).first == object.at(2).hash &&
-                                value.first.at(1).first == object.at(0).hash &&
-                                value.first.at(2).first == object.at(1).hash) ||
-                               (value.first.at(0).first == object.at(2).hash &&
-                                value.first.at(1).first == object.at(1).hash &&
-                                value.first.at(2).first == object.at(0).hash));
+    // A perfect hash captures the key bytes but not its length, so each
+    // pairing confirms the size alongside the hash while keeping the unrolled
+    // permutation check over the three keys
+    result = object.size() == 3 &&
+             ((value.first.at(0).first == object.at(0).hash &&
+               value.first.at(0).second.size() == object.at(0).first.size() &&
+               value.first.at(1).first == object.at(1).hash &&
+               value.first.at(1).second.size() == object.at(1).first.size() &&
+               value.first.at(2).first == object.at(2).hash &&
+               value.first.at(2).second.size() == object.at(2).first.size()) ||
+              (value.first.at(0).first == object.at(0).hash &&
+               value.first.at(0).second.size() == object.at(0).first.size() &&
+               value.first.at(1).first == object.at(2).hash &&
+               value.first.at(1).second.size() == object.at(2).first.size() &&
+               value.first.at(2).first == object.at(1).hash &&
+               value.first.at(2).second.size() == object.at(1).first.size()) ||
+              (value.first.at(0).first == object.at(1).hash &&
+               value.first.at(0).second.size() == object.at(1).first.size() &&
+               value.first.at(1).first == object.at(0).hash &&
+               value.first.at(1).second.size() == object.at(0).first.size() &&
+               value.first.at(2).first == object.at(2).hash &&
+               value.first.at(2).second.size() == object.at(2).first.size()) ||
+              (value.first.at(0).first == object.at(1).hash &&
+               value.first.at(0).second.size() == object.at(1).first.size() &&
+               value.first.at(1).first == object.at(2).hash &&
+               value.first.at(1).second.size() == object.at(2).first.size() &&
+               value.first.at(2).first == object.at(0).hash &&
+               value.first.at(2).second.size() == object.at(0).first.size()) ||
+              (value.first.at(0).first == object.at(2).hash &&
+               value.first.at(0).second.size() == object.at(2).first.size() &&
+               value.first.at(1).first == object.at(0).hash &&
+               value.first.at(1).second.size() == object.at(0).first.size() &&
+               value.first.at(2).first == object.at(1).hash &&
+               value.first.at(2).second.size() == object.at(1).first.size()) ||
+              (value.first.at(0).first == object.at(2).hash &&
+               value.first.at(0).second.size() == object.at(2).first.size() &&
+               value.first.at(1).first == object.at(1).hash &&
+               value.first.at(1).second.size() == object.at(1).first.size() &&
+               value.first.at(2).first == object.at(0).hash &&
+               value.first.at(2).second.size() == object.at(0).first.size()));
   }
 
   EVALUATE_END(AssertionDefinesExactlyStrictHash3);
@@ -1042,9 +1063,13 @@ INSTRUCTION_HANDLER(AssertionObjectPropertiesSimple) {
     for (std::size_t schema_index = 0; schema_index < schema_size;
          schema_index++) {
       const auto &schema_hash{std::get<1>(value[schema_index])};
+      // A perfect hash captures the key bytes but not its length, so its size
+      // is confirmed rather than trusting the hash match alone
       if (schema_hash == instance_hash &&
-          (property_hasher.is_perfect(instance_hash) ||
-           instance_entry.first == std::get<0>(value[schema_index]))) {
+          (property_hasher.is_perfect(instance_hash)
+               ? instance_entry.first.size() ==
+                     std::get<0>(value[schema_index]).size()
+               : instance_entry.first == std::get<0>(value[schema_index]))) {
         seen |= (static_cast<std::uint32_t>(1) << schema_index);
         if (schema_index < instruction.children.size()) {
           const auto &child{instruction.children[schema_index]};
@@ -1189,15 +1214,36 @@ INSTRUCTION_HANDLER(LogicalOr) {
   // This boolean value controls whether we should be exhaustive
   if (value) {
     for (const auto &child : instruction.children) {
+      // A branch that does not hold contributes nothing, including any
+      // evaluation it marked before failing. Only a schema that tracks
+      // evaluation can ever observe those marks
+      [[maybe_unused]] std::size_t checkpoint{0};
+      if constexpr (Track) {
+        checkpoint = context.evaluator->checkpoint();
+      }
+
       if (EVALUATE_RECURSE(child, target)) {
         result = true;
+      } else {
+        if constexpr (Track) {
+          context.evaluator->rewind(checkpoint);
+        }
       }
     }
   } else {
     for (const auto &child : instruction.children) {
+      [[maybe_unused]] std::size_t checkpoint{0};
+      if constexpr (Track) {
+        checkpoint = context.evaluator->checkpoint();
+      }
+
       if (EVALUATE_RECURSE(child, target)) {
         result = true;
         break;
+      }
+
+      if constexpr (Track) {
+        context.evaluator->rewind(checkpoint);
       }
     }
   }
@@ -1283,6 +1329,13 @@ INSTRUCTION_HANDLER(LogicalXor) {
       resolve_instance(instance, instruction.relative_instance_location)};
   const auto value{assume_value_copy<ValueBoolean>(instruction.value)};
   for (const auto &child : instruction.children) {
+    // A branch that does not hold contributes nothing, including any
+    // evaluation it marked before failing
+    [[maybe_unused]] std::size_t checkpoint{0};
+    if constexpr (Track) {
+      checkpoint = context.evaluator->checkpoint();
+    }
+
     if (EVALUATE_RECURSE(child, target)) {
       if (has_matched) [[unlikely]] {
         result = false;
@@ -1292,6 +1345,10 @@ INSTRUCTION_HANDLER(LogicalXor) {
         }
       } else {
         has_matched = true;
+      }
+    } else {
+      if constexpr (Track) {
+        context.evaluator->rewind(checkpoint);
       }
     }
   }
@@ -1310,27 +1367,46 @@ INSTRUCTION_HANDLER(LogicalCondition) {
   assert(children_size >= value.second);
   SOURCEMETA_ASSUME(children_size >= value.second);
 
-  auto condition_end{children_size};
-  if (value.first > 0) {
-    condition_end = value.first;
-  } else if (value.second > 0) {
-    condition_end = value.second;
-  }
-
+  // The condition is the leading segment [0, then start). It may be empty,
+  // for example when a `$ref` condition inlines and its jump is dropped, in
+  // which case it trivially passes and the then branch applies
   const auto &target{
       resolve_instance(instance, instruction.relative_instance_location)};
-  for (std::size_t cursor = 0; cursor < condition_end; cursor++) {
+
+  // A condition that holds does contribute the evaluation it marked, but one
+  // that does not hold contributes nothing at all
+  [[maybe_unused]] std::size_t checkpoint{0};
+  if constexpr (Track) {
+    checkpoint = context.evaluator->checkpoint();
+  }
+
+  for (std::size_t cursor = 0; cursor < value.first; cursor++) {
     if (!EVALUATE_RECURSE(instruction.children[cursor], target)) {
       result = false;
       break;
     }
   }
 
-  const auto consequence_start{result ? value.first : value.second};
-  const auto consequence_end{(result && value.second > 0) ? value.second
-                                                          : children_size};
+  if (!result) {
+    if constexpr (Track) {
+      context.evaluator->rewind(checkpoint);
+    }
+  }
+
+  // On a passing condition the then branch runs, otherwise the else branch,
+  // which is absent when it starts at zero
+  std::size_t consequence_start;
+  std::size_t consequence_end;
+  if (result) {
+    consequence_start = value.first;
+    consequence_end = value.second > 0 ? value.second : children_size;
+  } else {
+    consequence_start = value.second;
+    consequence_end = value.second > 0 ? children_size : value.second;
+  }
+
   result = true;
-  if (consequence_start > 0) {
+  if (consequence_start < consequence_end) {
     if constexpr (Track || HasCallback) {
       if (track) {
         context.evaluator->evaluate_path.pop_back(
@@ -1735,7 +1811,8 @@ INSTRUCTION_HANDLER(LoopProperties) {
 
 INSTRUCTION_HANDLER(LoopPropertiesEvaluate) {
   EVALUATE_BEGIN_NON_STRING(LoopPropertiesEvaluate, target.is_object());
-  assert(!instruction.children.empty());
+  // The subschema may compile to no children, in which case every property
+  // trivially matches and only the evaluation marking below takes effect
   result = true;
   for (const auto &entry : target.as_object()) {
     if constexpr (HasCallback) {
@@ -2004,7 +2081,11 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrict) {
     assert(!value.second.empty());
     result = true;
     for (const auto &entry : object) {
-      if (effective_type_strict_real(entry.second) != value.first)
+      // The property count already matches the required set, so confirming
+      // that every property is one of the required names is what makes the
+      // object exactly the required set, and the value must be of the type
+      if (!value.second.contains(entry.first, entry.hash) ||
+          effective_type_strict_real(entry.second) != value.first)
           [[unlikely]] {
         result = false;
         break;
@@ -2042,7 +2123,10 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
         EVALUATE_END(LoopPropertiesExactlyTypeStrictHash);
       }
 
-      if (entry.hash != value.second.first[index].first) {
+      // A hash match alone does not prove the property is required, as two
+      // distinct names can share a hash, so the name itself is confirmed
+      if (entry.hash != value.second.first[index].first ||
+          entry.first != value.second.first[index].second) {
         break;
       }
 
@@ -2055,10 +2139,16 @@ INSTRUCTION_HANDLER(LoopPropertiesExactlyTypeStrictHash) {
       // Continue where we left
       std::advance(iterator, index);
       for (; iterator != object.cend(); ++iterator) {
+        if (effective_type_strict_real(iterator->second) != value.first) {
+          result = false;
+          break;
+        }
+
         // NOLINTNEXTLINE(modernize-use-ranges)
         if (std::ranges::none_of(value.second.first,
                                  [&iterator](const auto &entry) -> bool {
-                                   return entry.first == iterator->hash;
+                                   return entry.first == iterator->hash &&
+                                          entry.second == iterator->first;
                                  })) {
           result = false;
           break;
@@ -2261,7 +2351,8 @@ INSTRUCTION_HANDLER(LoopItemsFrom) {
 
 INSTRUCTION_HANDLER(LoopItemsUnevaluated) {
   EVALUATE_BEGIN_NON_STRING(LoopItemsUnevaluated, target.is_array());
-  assert(!instruction.children.empty());
+  // The subschema may compile to no children, in which case every item
+  // trivially matches and only the evaluation marking below takes effect
   result = true;
 
   if (!context.evaluator->is_evaluated(&target)) {
@@ -2373,7 +2464,9 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
     }
 
-    // Unroll, for performance reasons, for small collections
+    // Unroll, for performance reasons, for small collections. A perfect hash
+    // captures the key bytes but not its length, so every match confirms the
+    // size alongside the hash
     if (hashes_size == 3) {
       for (const auto &entry : object) {
         if (effective_type_strict_real(entry.second) != value.first)
@@ -2381,9 +2474,15 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash != value.second.first[0].first &&
-                   entry.hash != value.second.first[1].first &&
-                   entry.hash != value.second.first[2].first) {
+        } else if (!((entry.hash == value.second.first[0].first &&
+                      entry.first.size() ==
+                          value.second.first[0].second.size()) ||
+                     (entry.hash == value.second.first[1].first &&
+                      entry.first.size() ==
+                          value.second.first[1].second.size()) ||
+                     (entry.hash == value.second.first[2].first &&
+                      entry.first.size() ==
+                          value.second.first[2].second.size()))) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
@@ -2395,8 +2494,12 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash != value.second.first[0].first &&
-                   entry.hash != value.second.first[1].first) {
+        } else if (!((entry.hash == value.second.first[0].first &&
+                      entry.first.size() ==
+                          value.second.first[0].second.size()) ||
+                     (entry.hash == value.second.first[1].first &&
+                      entry.first.size() ==
+                          value.second.first[1].second.size()))) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
         }
@@ -2404,7 +2507,9 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
     } else if (hashes_size == 1) {
       const auto &entry{*object.cbegin()};
       if (effective_type_strict_real(entry.second) != value.first ||
-          entry.hash != value.second.first[0].first) [[unlikely]] {
+          entry.hash != value.second.first[0].first ||
+          entry.first.size() != value.second.first[0].second.size())
+          [[unlikely]] {
         result = false;
         EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
       }
@@ -2416,13 +2521,16 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash) {
             [[unlikely]] {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
-        } else if (entry.hash == value.second.first[index].first) {
+        } else if (entry.hash == value.second.first[index].first &&
+                   entry.first.size() ==
+                       value.second.first[index].second.size()) {
           index += 1;
           continue;
         } else if (!std::ranges::any_of(
                        value.second.first,
                        [&entry](const auto &hash_entry) -> bool {
-                         return hash_entry.first == entry.hash;
+                         return hash_entry.first == entry.hash &&
+                                hash_entry.second.size() == entry.first.size();
                        })) {
           result = false;
           EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash);
@@ -2471,24 +2579,45 @@ INSTRUCTION_HANDLER(LoopItemsPropertiesExactlyTypeStrictHash3) {
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
     }
 
+    // A perfect hash captures the key bytes but not its length, so each
+    // pairing confirms the size alongside the hash while keeping the unrolled
+    // permutation check over the three keys
     if ((value_1.hash == value.second.first[0].first &&
+         value_1.first.size() == value.second.first[0].second.size() &&
          value_2.hash == value.second.first[1].first &&
-         value_3.hash == value.second.first[2].first) ||
+         value_2.first.size() == value.second.first[1].second.size() &&
+         value_3.hash == value.second.first[2].first &&
+         value_3.first.size() == value.second.first[2].second.size()) ||
         (value_1.hash == value.second.first[0].first &&
+         value_1.first.size() == value.second.first[0].second.size() &&
          value_2.hash == value.second.first[2].first &&
-         value_3.hash == value.second.first[1].first) ||
+         value_2.first.size() == value.second.first[2].second.size() &&
+         value_3.hash == value.second.first[1].first &&
+         value_3.first.size() == value.second.first[1].second.size()) ||
         (value_1.hash == value.second.first[1].first &&
+         value_1.first.size() == value.second.first[1].second.size() &&
          value_2.hash == value.second.first[0].first &&
-         value_3.hash == value.second.first[2].first) ||
+         value_2.first.size() == value.second.first[0].second.size() &&
+         value_3.hash == value.second.first[2].first &&
+         value_3.first.size() == value.second.first[2].second.size()) ||
         (value_1.hash == value.second.first[1].first &&
+         value_1.first.size() == value.second.first[1].second.size() &&
          value_2.hash == value.second.first[2].first &&
-         value_3.hash == value.second.first[0].first) ||
+         value_2.first.size() == value.second.first[2].second.size() &&
+         value_3.hash == value.second.first[0].first &&
+         value_3.first.size() == value.second.first[0].second.size()) ||
         (value_1.hash == value.second.first[2].first &&
+         value_1.first.size() == value.second.first[2].second.size() &&
          value_2.hash == value.second.first[0].first &&
-         value_3.hash == value.second.first[1].first) ||
+         value_2.first.size() == value.second.first[0].second.size() &&
+         value_3.hash == value.second.first[1].first &&
+         value_3.first.size() == value.second.first[1].second.size()) ||
         (value_1.hash == value.second.first[2].first &&
+         value_1.first.size() == value.second.first[2].second.size() &&
          value_2.hash == value.second.first[1].first &&
-         value_3.hash == value.second.first[0].first)) {
+         value_2.first.size() == value.second.first[1].second.size() &&
+         value_3.hash == value.second.first[0].first &&
+         value_3.first.size() == value.second.first[0].second.size())) {
       continue;
     } else {
       EVALUATE_END(LoopItemsPropertiesExactlyTypeStrictHash3);
@@ -2543,8 +2672,11 @@ INSTRUCTION_HANDLER(LoopItemsIntegerBoundedSized) {
       assume_value<ValueIntegerBoundsWithSize>(instruction.value)};
   const auto &integer_bounds{value.first};
   const auto minimum_size{std::get<0>(value.second)};
+  const auto &maximum_size{std::get<1>(value.second)};
   EVALUATE_BEGIN_NON_STRING(LoopItemsIntegerBoundedSized, true);
-  if (!target.is_array() || target.array_size() < minimum_size) {
+  if (!target.is_array() || target.array_size() < minimum_size ||
+      (maximum_size.has_value() &&
+       target.array_size() > maximum_size.value())) {
     EVALUATE_END(LoopItemsIntegerBoundedSized);
   }
 
@@ -2584,11 +2716,13 @@ INSTRUCTION_HANDLER(LoopItemsIntegerBoundedSized) {
 
 INSTRUCTION_HANDLER(LoopContains) {
   EVALUATE_BEGIN_NON_STRING(LoopContains, target.is_array());
-  assert(!instruction.children.empty());
+  // The subschema may compile to no children, in which case every array
+  // element trivially matches and the range check alone decides the result
   const auto &value{assume_value<ValueRange>(instruction.value)};
   const auto &[minimum, maximum, is_exhaustive] = value;
-  assert(!maximum.has_value() || maximum.value() >= minimum);
-  result = minimum == 0 && target.empty();
+  // Note that the range may be unsatisfiable, as `minContains` and
+  // `maxContains` are free to invert it, in which case no array matches
+  result = minimum == 0;
   auto match_count{
       std::numeric_limits<std::remove_cvref_t<decltype(minimum)>>::min()};
 

@@ -232,7 +232,15 @@ auto compile_required_assertions(const Context &context,
             types.insert(std::get<ValueType>(property.second.front().value));
           }
 
-          if (types.size() == 1) {
+          // `properties` only collapses into the fused form that also
+          // enforces these requirements when it is neither emitting
+          // annotations nor tracking evaluation, so this must mirror both of
+          // its gates. Note that we must ask that of `properties` rather than
+          // of this keyword, as evaluation tracking follows the keywords an
+          // `unevaluatedProperties` depends on, which `required` is not one of
+          if (types.size() == 1 &&
+              !annotations_enabled(context, KEYWORD_PROPERTIES) &&
+              !requires_evaluation(context, new_schema_context)) {
             // Handled in `properties`
             return {};
           }
@@ -614,8 +622,11 @@ auto compiler_draft3_applicator_properties_with_options(
   auto properties{compile_properties(context, schema_context,
                                      effective_dynamic_context, current)};
 
+  // These fused forms collapse every property into a single instruction that
+  // does not mark the properties it matches as evaluated, so under evaluation
+  // tracking we must fall through to the form that emits the markers
   if (!emit_annotation && context.mode == Mode::FastValidation &&
-      !required.empty() &&
+      !track_evaluation && !required.empty() &&
       schema_context.schema.defines("additionalProperties") &&
       schema_context.schema.at("additionalProperties").is_boolean() &&
       !schema_context.schema.at("additionalProperties").to_boolean() &&
@@ -856,15 +867,56 @@ auto compiler_draft3_applicator_properties_with_options(
         }
       }
 
-      if (fusion_possible && substeps.size() >= 2 &&
-          std::ranges::any_of(substeps, [](const auto &step) -> auto {
-            return step.type ==
-                   InstructionIndex::AssertionObjectPropertiesSimple;
-          })) {
-        std::erase_if(substeps, [](const auto &step) -> auto {
+      // A fused check rejects a non-object and enforces the presence of the
+      // properties it marks as required, but only those, and only at its own
+      // instance location. This list is flattened and may also hold checks
+      // merged in from elsewhere, as every `allOf` branch contributes to it,
+      // so we may only drop what the fusion provably covers
+      std::vector<
+          std::pair<sourcemeta::core::Pointer, std::unordered_set<std::string>>>
+          fusions;
+      if (fusion_possible && substeps.size() >= 2) {
+        for (const auto &step : substeps) {
+          if (step.type != InstructionIndex::AssertionObjectPropertiesSimple) {
+            continue;
+          }
+
+          auto match{
+              std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
+                return entry.first == step.relative_instance_location;
+              })};
+          if (match == fusions.end()) {
+            fusions.emplace_back(step.relative_instance_location,
+                                 std::unordered_set<std::string>{});
+            match = std::prev(fusions.end());
+          }
+
+          for (const auto &entry :
+               std::get<ValueObjectProperties>(step.value)) {
+            if (std::get<2>(entry)) {
+              match->second.insert(std::get<0>(entry));
+            }
+          }
+        }
+      }
+
+      if (!fusions.empty()) {
+        std::erase_if(substeps, [&fusions](const auto &step) -> auto {
+          const auto fusion{
+              std::ranges::find_if(fusions, [&step](const auto &entry) -> bool {
+                return entry.first == step.relative_instance_location;
+              })};
+          if (fusion == fusions.cend()) {
+            return false;
+          }
+
           if (step.type == InstructionIndex::AssertionDefinesAllStrict ||
               step.type == InstructionIndex::AssertionDefinesAll) {
-            return true;
+            const auto &value{std::get<ValueStringSet>(step.value)};
+            return std::ranges::all_of(
+                value, [&fusion](const auto &property) -> auto {
+                  return fusion->second.contains(property.first);
+                });
           }
 
           if ((step.type == InstructionIndex::AssertionTypeStrict ||
@@ -878,9 +930,23 @@ auto compiler_draft3_applicator_properties_with_options(
         });
       }
 
-      if (fusion_possible && substeps.size() == 1 &&
+      // Fusion re-applies the single check to every property of the enclosing
+      // loop with its instance location cleared, so a check whose meaning
+      // depends on its own instance location cannot be relocated this way. A
+      // jump into a separate target, or a check that navigates into or gates
+      // on a nested location such as the one a `properties` conditional
+      // produces, therefore falls back to unfused emission
+      const bool fusable_single{
+          substeps.size() == 1 &&
           substeps.front().type != InstructionIndex::ControlJump &&
-          substeps.front().type != InstructionIndex::ControlDynamicAnchorJump) {
+          substeps.front().type != InstructionIndex::ControlDynamicAnchorJump &&
+          substeps.front().type != InstructionIndex::ControlGroup &&
+          substeps.front().type != InstructionIndex::ControlGroupWhenDefines &&
+          substeps.front().type !=
+              InstructionIndex::ControlGroupWhenDefinesDirect &&
+          substeps.front().type != InstructionIndex::ControlGroupWhenType &&
+          substeps.front().type != InstructionIndex::ControlEvaluate};
+      if (fusion_possible && fusable_single) {
         const auto is_required{assume_object && required.contains(name)};
         auto prop{make_property(name)};
         auto fusion_child{substeps.front()};
@@ -1195,14 +1261,28 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     return {};
   }
 
-  // When `additionalProperties: false` with only `properties` (no
-  // patternProperties), and `properties` is compiled as a loop
-  // (LoopPropertiesMatchClosed), that loop already handles rejecting unknown
-  // properties, so we don't need to emit anything for `additionalProperties`
-  if (context.mode == Mode::FastValidation && children.size() == 1 &&
+  // The closed forms that the elisions below rely on are only emitted when
+  // `additionalProperties` is the boolean `false`. Testing the compiled shape
+  // alone is not enough, as other subschemas that reject everything, like an
+  // empty `enum`, also reduce to an unconditional failure without closing
+  // anything
+  const auto rejects_with_boolean_false{
+      schema_context.schema.at(dynamic_context.keyword).is_boolean() &&
+      !schema_context.schema.at(dynamic_context.keyword).to_boolean()};
+
+  // When `additionalProperties: false` sits with `properties` alone and
+  // `properties` compiles to its closed form, that form already rejects
+  // unknown properties, so `additionalProperties` need emit nothing. Both
+  // evaluation tracking and a defined `patternProperties` hold `properties`
+  // back to its non-closed form, in which case the closure must still be
+  // emitted here. An empty `patternProperties` contributes no property filters
+  // yet still counts as defined, so its mere presence, not the filters it
+  // yields, is what matters
+  if (context.mode == Mode::FastValidation && !track_evaluation &&
+      rejects_with_boolean_false && children.size() == 1 &&
       children.front().type == InstructionIndex::AssertionFail &&
-      !filter_strings.empty() && filter_prefixes.empty() &&
-      filter_regexes.empty() &&
+      !filter_strings.empty() &&
+      !schema_context.schema.defines("patternProperties") &&
       properties_as_loop(context, schema_context,
                          schema_context.schema.at("properties"))) {
     return {};
@@ -1229,9 +1309,12 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
     }
   }
 
+  // Similarly, `patternProperties` only compiles to its closed form, which
+  // rejects unmatched properties on its own, when `additionalProperties` is
+  // the boolean `false`
   if (context.mode == Mode::FastValidation && filter_strings.empty() &&
       filter_prefixes.empty() && filter_regexes.size() == 1 &&
-      !track_evaluation && !children.empty() &&
+      !track_evaluation && rejects_with_boolean_false && !children.empty() &&
       children.front().type == InstructionIndex::AssertionFail) {
     return {};
   }
@@ -1251,11 +1334,11 @@ auto compiler_draft3_applicator_additionalproperties_with_options(
                                      std::move(filter_regexes)},
                  std::move(children))};
   } else if (track_evaluation) {
-    if (children.empty()) {
-      return {make(sourcemeta::blaze::InstructionIndex::Evaluate, context,
-                   schema_context, dynamic_context, ValueNone{})};
-    }
-
+    // An unconditional marker records this instance as evaluated whatever its
+    // type, so when this schema is applied to a non-object, such as a
+    // conditional branch evaluated against an array, it would wrongly mark that
+    // array evaluated and suppress a sibling `unevaluatedItems`. An
+    // object-guarded marker only records objects, and needs no children
     return {make(sourcemeta::blaze::InstructionIndex::LoopPropertiesEvaluate,
                  context, schema_context, dynamic_context, ValueNone{},
                  std::move(children))};
@@ -1758,8 +1841,11 @@ auto compiler_draft3_validation_maxlength(const Context &context,
     return {};
   }
 
-  // We'll handle it at the type level as an optimization
+  // We'll handle it at the type level as an optimization. Note that the type
+  // compiler bails out before it reads these bounds when it is compiling a
+  // property name, so there we must still emit them ourselves
   if (context.mode == Mode::FastValidation &&
+      !schema_context.is_property_name &&
       schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() == "string") {
@@ -1792,8 +1878,11 @@ auto compiler_draft3_validation_minlength(const Context &context,
     return {};
   }
 
-  // We'll handle it at the type level as an optimization
+  // We'll handle it at the type level as an optimization. Note that the type
+  // compiler bails out before it reads these bounds when it is compiling a
+  // property name, so there we must still emit them ourselves
   if (context.mode == Mode::FastValidation &&
+      !schema_context.is_property_name &&
       schema_context.schema.defines("type") &&
       schema_context.schema.at("type").is_string() &&
       schema_context.schema.at("type").to_string() == "string") {
@@ -2092,6 +2181,12 @@ auto compiler_draft3_validation_type(const Context &context,
             unsigned_integer_property(schema_context.schema, "maxProperties")};
 
         if (context.mode == Mode::FastValidation) {
+          if (maximum.has_value() && minimum > maximum.value()) {
+            return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                         context, schema_context, dynamic_context,
+                         ValueNone{})};
+          }
+
           if (maximum.has_value() && minimum == 0) {
             return {make(
                 sourcemeta::blaze::InstructionIndex::AssertionTypeObjectUpper,
@@ -2116,8 +2211,13 @@ auto compiler_draft3_validation_type(const Context &context,
         return {};
       }
 
+      // A non-empty `required` rejects a non-object on its own, so the type
+      // assertion is redundant. An empty `required` asserts nothing, so the
+      // type check must stay
       if (!is_draft3 && context.mode == Mode::FastValidation &&
-          schema_context.schema.defines("required")) {
+          schema_context.schema.defines("required") &&
+          schema_context.schema.at("required").is_array() &&
+          !schema_context.schema.at("required").empty()) {
         return {};
       }
 
@@ -2131,6 +2231,11 @@ auto compiler_draft3_validation_type(const Context &context,
           unsigned_integer_property(schema_context.schema, "maxItems")};
 
       if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum > maximum.value()) {
+          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                       context, schema_context, dynamic_context, ValueNone{})};
+        }
+
         if (maximum.has_value() && minimum == 0) {
           return {
               make(sourcemeta::blaze::InstructionIndex::AssertionTypeArrayUpper,
@@ -2195,6 +2300,11 @@ auto compiler_draft3_validation_type(const Context &context,
           unsigned_integer_property(schema_context.schema, "maxLength")};
 
       if (context.mode == Mode::FastValidation) {
+        if (maximum.has_value() && minimum > maximum.value()) {
+          return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                       context, schema_context, dynamic_context, ValueNone{})};
+        }
+
         if (maximum.has_value() && minimum == 0) {
           return {make(
               sourcemeta::blaze::InstructionIndex::AssertionTypeStringUpper,
@@ -2286,8 +2396,16 @@ auto compiler_draft3_validation_type(const Context &context,
     }
 
     if (!types.any()) {
-      return {make(sourcemeta::blaze::InstructionIndex::AssertionFail, context,
-                   schema_context, dynamic_context, ValueNone{})};
+      // An empty array names no type at all, so no value can match it. A
+      // non-empty one that named only unrecognised types is an invalid but
+      // legitimate use of the keyword that we ignore, constraining nothing,
+      // exactly as the scalar form does for a single unrecognised name
+      if (value.empty()) {
+        return {make(sourcemeta::blaze::InstructionIndex::AssertionFail,
+                     context, schema_context, dynamic_context, ValueNone{})};
+      }
+
+      return {};
     }
 
     return {make(sourcemeta::blaze::InstructionIndex::AssertionTypeStrictAny,

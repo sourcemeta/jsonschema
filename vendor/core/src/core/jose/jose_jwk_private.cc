@@ -109,6 +109,8 @@ auto JWKPrivate::parse(const JSON &value, JWKPrivate &result) -> bool {
     }
 
     result.type_ = Type::RSA;
+    result.modulus_ = modulus.value();
+    result.exponent_ = public_exponent.value();
     parsed_key = make_rsa_private_key(modulus.value(), public_exponent.value(),
                                       private_exponent.value(), prime1.value(),
                                       prime2.value(), exponent1.value(),
@@ -140,6 +142,8 @@ auto JWKPrivate::parse(const JSON &value, JWKPrivate &result) -> bool {
 
     result.type_ = Type::EllipticCurve;
     result.curve_ = curve->to_string();
+    result.coordinate_x_ = coordinate_x.value();
+    result.coordinate_y_ = coordinate_y.value();
     parsed_key = make_ec_private_key(jwk_to_elliptic_curve(result.curve_),
                                      scalar.value(), coordinate_x.value(),
                                      coordinate_y.value());
@@ -166,6 +170,7 @@ auto JWKPrivate::parse(const JSON &value, JWKPrivate &result) -> bool {
 
     result.type_ = Type::OctetKeyPair;
     result.curve_ = curve->to_string();
+    result.public_point_ = public_key.value();
     parsed_key = make_edwards_private_key(jwk_to_edwards_curve(result.curve_),
                                           seed.value());
   } else if (key_type_value == "oct") {
@@ -215,6 +220,48 @@ auto JWKPrivate::parse(const JSON &value, JWKPrivate &result) -> bool {
   // reuses it. A key that cannot be turned into one stays null and simply fails
   // to sign
   result.private_key_ = std::move(parsed_key);
+
+  // A private JWK carries the public key beside the private key (RFC 7518
+  // Section 6.2.2, RFC 8037 Section 2). For the curve types, reject a document
+  // whose stored public part does not correspond to its private part, verified
+  // through a signature the private key produces and the public key checks. For
+  // elliptic curve keys the platform key construction additionally binds the
+  // coordinates to the scalar, closing the gap where a crafted point could
+  // satisfy one precomputed signature on a deterministic backend. RSA
+  // correspondence is not checked here, so an inconsistent RSA key instead
+  // stays null and fails to sign
+  if (result.type_ == Type::EllipticCurve ||
+      result.type_ == Type::OctetKeyPair) {
+    if (!result.private_key_.has_value()) {
+      return false;
+    }
+
+    using namespace std::string_view_literals;
+    const auto probe{"sourcemeta core JWK keypair consistency probe"sv};
+    bool consistent{false};
+    if (result.type_ == Type::EllipticCurve) {
+      const auto public_key{
+          make_ec_public_key(jwk_to_elliptic_curve(result.curve_),
+                             result.coordinate_x_, result.coordinate_y_)};
+      const auto signature{ecdsa_sign(result.private_key_.value(),
+                                      SignatureHashFunction::SHA256, probe)};
+      consistent =
+          public_key.has_value() && signature.has_value() &&
+          ecdsa_verify(public_key.value(), SignatureHashFunction::SHA256, probe,
+                       signature.value());
+    } else {
+      const auto public_key{make_eddsa_public_key(
+          jwk_to_edwards_curve(result.curve_), result.public_point_)};
+      const auto signature{eddsa_sign(result.private_key_.value(), probe)};
+      consistent = public_key.has_value() && signature.has_value() &&
+                   eddsa_verify(public_key.value(), probe, signature.value());
+    }
+
+    if (!consistent) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -252,6 +299,43 @@ auto JWKPrivate::from_pem(const std::string_view pem)
   }
 
   result.private_key_ = std::move(parsed_key);
+
+  // A PEM document carries no encoded public members, so recover them from the
+  // parsed key to support public serialization and thumbprints
+  const auto public_key{derive_public_key(result.private_key_.value())};
+  if (public_key.has_value()) {
+    switch (public_key.value().type()) {
+      case PublicKey::Type::RSA: {
+        const auto components{rsa_public_components(public_key.value())};
+        if (components.has_value()) {
+          result.modulus_ = components.value().modulus;
+          result.exponent_ = components.value().exponent;
+        }
+
+        break;
+      }
+      case PublicKey::Type::EllipticCurve: {
+        const auto components{ec_public_components(public_key.value())};
+        if (components.has_value()) {
+          result.curve_ = elliptic_curve_to_jwk(components.value().curve);
+          result.coordinate_x_ = components.value().x;
+          result.coordinate_y_ = components.value().y;
+        }
+
+        break;
+      }
+      case PublicKey::Type::Edwards: {
+        const auto components{edwards_public_components(public_key.value())};
+        if (components.has_value()) {
+          result.curve_ = edwards_curve_to_jwk(components.value().curve);
+          result.public_point_ = components.value().point;
+        }
+
+        break;
+      }
+    }
+  }
+
   return result;
 }
 

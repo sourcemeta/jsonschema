@@ -3,6 +3,7 @@
 #include <sourcemeta/core/jsonpointer.h>
 
 #include "jsonld_keywords.h"
+#include "jsonld_serialise.h"
 
 #include <algorithm> // std::ranges::sort, std::ranges::stable_sort, std::ranges::unique, std::ranges::none_of
 #include <cassert>   // assert
@@ -155,18 +156,27 @@ auto attach(JSON &node, const std::vector<JSONLDEdge> &edges, JSON value)
 auto materialize_literal(const JSONLDLiteral &descriptor, const JSON &value)
     -> JSON {
   auto result{JSON::make_object()};
-  result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{value},
-                           KEYWORD_VALUE_HASH);
   if (descriptor.json) {
+    result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{value},
+                             KEYWORD_VALUE_HASH);
     result.assign_assume_new(JSON::String{KEYWORD_TYPE}, JSON{KEYWORD_JSON},
                              KEYWORD_TYPE_HASH);
     return result;
   }
 
   if (descriptor.datatype.has_value()) {
+    auto lexical{
+        typed_literal_lexical_form(value, descriptor.datatype.value())};
+    result.assign_assume_new(
+        JSON::String{KEYWORD_VALUE},
+        lexical.has_value() ? JSON{std::move(lexical).value()} : JSON{value},
+        KEYWORD_VALUE_HASH);
     result.assign_assume_new(JSON::String{KEYWORD_TYPE},
                              JSON{descriptor.datatype.value()},
                              KEYWORD_TYPE_HASH);
+  } else {
+    result.assign_assume_new(JSON::String{KEYWORD_VALUE}, JSON{value},
+                             KEYWORD_VALUE_HASH);
   }
   if (descriptor.language.has_value()) {
     result.assign_assume_new(JSON::String{KEYWORD_LANGUAGE},

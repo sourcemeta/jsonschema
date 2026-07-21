@@ -329,20 +329,23 @@ auto describe(const bool valid, const Instruction &step,
       return "The constraints declared for this keyword were not satisfiable";
     }
 
-    if (keyword == "additionalProperties" ||
-        keyword == "unevaluatedProperties") {
+    // A `false` subschema declares no keyword of its own, so its evaluation
+    // path ends at whatever declared it, which under `properties` and its
+    // relatives is a name the author chose. A name that happens to read like
+    // one of the keywords below must not be taken for the keyword itself, so
+    // each of these only applies when the instance location agrees with it
+    if ((keyword == "additionalProperties" ||
+         keyword == "unevaluatedProperties") &&
+        !instance_location.empty() && instance_location.back().is_property()) {
       std::ostringstream message;
-      assert(!instance_location.empty());
-      assert(instance_location.back().is_property());
       message << "The object value was not expected to define the property "
               << escape_string(instance_location.back().to_property());
       return message.str();
     }
 
-    if (keyword == "unevaluatedItems") {
+    if (keyword == "unevaluatedItems" && !instance_location.empty() &&
+        instance_location.back().is_index()) {
       std::ostringstream message;
-      assert(!instance_location.empty());
-      assert(instance_location.back().is_index());
       message << "The array value was not expected to define the item at index "
               << instance_location.back().to_index();
       return message.str();
@@ -524,8 +527,10 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "title" || keyword == "description") {
-      assert(annotation.is_string());
+    // Note that these annotation values come from the schema as they are
+    // written, and nothing forces them to have the type their keyword expects
+    if ((keyword == "title" || keyword == "description") &&
+        annotation.is_string()) {
       std::ostringstream message;
       message << "The " << keyword << " of the";
       if (instance_location.empty()) {
@@ -613,8 +618,7 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "examples") {
-      assert(annotation.is_array());
+    if (keyword == "examples" && annotation.is_array()) {
       std::ostringstream message;
       if (instance_location.empty()) {
         message << "Examples of the instance";
@@ -639,8 +643,7 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "contentEncoding") {
-      assert(annotation.is_string());
+    if (keyword == "contentEncoding" && annotation.is_string()) {
       std::ostringstream message;
       message << "The content encoding of the";
       if (instance_location.empty()) {
@@ -655,8 +658,7 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "contentMediaType") {
-      assert(annotation.is_string());
+    if (keyword == "contentMediaType" && annotation.is_string()) {
       std::ostringstream message;
       message << "The content media type of the";
       if (instance_location.empty()) {
@@ -720,6 +722,10 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "x-jsonld-id" && annotation.is_null()) {
+      return "The nested JSON-LD predicates were expected to be removed";
+    }
+
     if (keyword == "x-jsonld-reverse" && annotation.is_string()) {
       std::ostringstream message;
       message << "The reverse JSON-LD predicate was "
@@ -727,11 +733,20 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "x-jsonld-reverse" && annotation.is_null()) {
+      return "The nested reverse JSON-LD predicates were expected to be "
+             "removed";
+    }
+
     if (keyword == "x-jsonld-type" && annotation.is_string()) {
       std::ostringstream message;
       message << "The JSON-LD type was "
               << escape_string(annotation.to_string());
       return message.str();
+    }
+
+    if (keyword == "x-jsonld-type" && annotation.is_null()) {
+      return "The nested JSON-LD types were expected to be removed";
     }
 
     if (keyword == "x-jsonld-type" && annotation.is_array()) {
@@ -761,11 +776,19 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "x-jsonld-datatype" && annotation.is_null()) {
+      return "The JSON-LD datatype was expected to be removed";
+    }
+
     if (keyword == "x-jsonld-language" && annotation.is_string()) {
       std::ostringstream message;
       message << "The natural language was "
               << escape_string(annotation.to_string());
       return message.str();
+    }
+
+    if (keyword == "x-jsonld-language" && annotation.is_null()) {
+      return "The natural language was expected to be removed";
     }
 
     if (keyword == "x-jsonld-direction" && annotation.is_string()) {
@@ -775,8 +798,13 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
-    if (keyword == "x-jsonld-json" && annotation.is_boolean()) {
-      if (annotation.to_boolean()) {
+    if (keyword == "x-jsonld-direction" && annotation.is_null()) {
+      return "The base direction was expected to be removed";
+    }
+
+    if (keyword == "x-jsonld-json" &&
+        (annotation.is_boolean() || annotation.is_null())) {
+      if (annotation.is_boolean() && annotation.to_boolean()) {
         return "The value was expected to be treated as an opaque JSON "
                "literal";
       }
@@ -785,8 +813,9 @@ auto describe(const bool valid, const Instruction &step,
              "literal";
     }
 
-    if (keyword == "x-jsonld-graph" && annotation.is_boolean()) {
-      if (annotation.to_boolean()) {
+    if (keyword == "x-jsonld-graph" &&
+        (annotation.is_boolean() || annotation.is_null())) {
+      if (annotation.is_boolean() && annotation.to_boolean()) {
         return "The value was expected to be wrapped in a JSON-LD named graph";
       }
 
@@ -801,11 +830,29 @@ auto describe(const bool valid, const Instruction &step,
       return message.str();
     }
 
+    if (keyword == "x-jsonld-container" && annotation.is_null()) {
+      return "The JSON-LD container was expected to be removed";
+    }
+
     if (keyword == "x-jsonld-self" && annotation.is_string()) {
       std::ostringstream message;
       message << "The JSON-LD identifier template was "
               << escape_string(annotation.to_string());
       return message.str();
+    }
+
+    if (keyword == "x-jsonld-self" && annotation.is_null()) {
+      return "The JSON-LD identifier was expected to be removed";
+    }
+
+    if (keyword == "x-jsonld-override" && annotation.is_boolean()) {
+      if (annotation.to_boolean()) {
+        return "The sibling JSON-LD annotations were expected to override "
+               "the nested annotations they shadow";
+      }
+
+      return "The sibling JSON-LD annotations were not expected to override "
+             "any other annotations";
     }
 
     std::ostringstream message;
@@ -896,12 +943,21 @@ auto describe(const bool valid, const Instruction &step,
 
   if (step.type ==
       sourcemeta::blaze::InstructionIndex::LoopPropertiesEvaluate) {
-    assert(keyword == "additionalProperties");
+    assert(keyword == "additionalProperties" ||
+           keyword == "unevaluatedProperties");
     std::ostringstream message;
     if (step.children.size() == 1 &&
         step.children.front().type == InstructionIndex::AssertionFail) {
-      message << "The object value was not expected to define additional "
-                 "properties";
+      if (keyword == "unevaluatedProperties") {
+        message << "The object value was not expected to define unevaluated "
+                   "properties";
+      } else {
+        message << "The object value was not expected to define additional "
+                   "properties";
+      }
+    } else if (keyword == "unevaluatedProperties") {
+      message << "The object properties not covered by other object "
+                 "keywords were expected to validate against this subschema";
     } else {
       message << "The object properties not covered by other adjacent object "
                  "keywords were expected to validate against this subschema";

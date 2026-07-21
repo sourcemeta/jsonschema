@@ -2,9 +2,10 @@
 
 #include <sourcemeta/blaze/foundation.h>
 
-#include <algorithm> // std::any_of, std::sort
+#include <algorithm> // std::min, std::remove_if
 #include <cassert>   // assert
-#include <iterator>  // std::back_inserter, std::make_move_iterator
+#include <iterator>  // std::make_move_iterator
+#include <ranges>    // std::views::reverse
 #include <utility>   // std::move
 
 namespace sourcemeta::blaze {
@@ -12,6 +13,22 @@ namespace sourcemeta::blaze {
 SimpleOutput::SimpleOutput(const sourcemeta::core::JSON &instance,
                            sourcemeta::core::WeakPointer base)
     : instance_{instance}, base_{std::move(base)} {}
+
+auto SimpleOutput::mask_kind(const Instruction &step) noexcept -> MaskKind {
+  switch (step.type) {
+    case InstructionIndex::LogicalOr:
+    case InstructionIndex::LogicalXor:
+      return MaskKind::Disjunction;
+    case InstructionIndex::LoopContains:
+      return MaskKind::Element;
+    case InstructionIndex::LogicalCondition:
+    case InstructionIndex::LogicalNot:
+    case InstructionIndex::LogicalNotEvaluate:
+      return MaskKind::Subschema;
+    default:
+      return MaskKind::None;
+  }
+}
 
 auto SimpleOutput::begin() const -> const_iterator {
   return this->output.begin();
@@ -37,22 +54,21 @@ auto SimpleOutput::operator()(
     return;
   }
 
-  assert(evaluate_path.back().is_property());
-
   // Fast path: passing non-annotation instructions that are not
   // closing a mask entry can be skipped entirely
   if (result && !is_annotation(step.type)) {
     if (type == EvaluationType::Pre) {
-      const auto &keyword{evaluate_path.back().to_property()};
-      if (keyword == "anyOf" || keyword == "oneOf" || keyword == "not" ||
-          keyword == "if" || keyword == "contains") {
-        this->mask.emplace_back(evaluate_path, instance_location);
+      const auto kind{mask_kind(step)};
+      if (kind != MaskKind::None) {
+        this->mask.push_back({.evaluate_path = evaluate_path,
+                              .instance_location = instance_location,
+                              .kind = kind,
+                              .annotations_mark = this->annotations_.size(),
+                              .buffered_traces = {}});
       }
     } else if (type == EvaluationType::Post && !this->mask.empty() &&
-               this->mask.back().first == evaluate_path &&
-               this->mask.back().second == instance_location) {
-      const auto mask_key{std::make_pair(evaluate_path, instance_location)};
-      this->masked_traces.erase(mask_key);
+               this->mask.back().evaluate_path == evaluate_path &&
+               this->mask.back().instance_location == instance_location) {
       this->mask.pop_back();
     }
 
@@ -76,34 +92,34 @@ auto SimpleOutput::operator()(
     return;
   }
 
-  const auto &keyword{evaluate_path.back().to_property()};
-
   if (type == EvaluationType::Pre) {
     assert(result);
     // To ease the output
-    if (keyword == "anyOf" || keyword == "oneOf" || keyword == "not" ||
-        keyword == "if" || keyword == "contains") {
-      this->mask.emplace_back(evaluate_path, instance_location);
+    const auto kind{mask_kind(step)};
+    if (kind != MaskKind::None) {
+      this->mask.push_back({.evaluate_path = evaluate_path,
+                            .instance_location = instance_location,
+                            .kind = kind,
+                            .annotations_mark = this->annotations_.size(),
+                            .buffered_traces = {}});
     }
   } else if (type == EvaluationType::Post) {
-    const auto mask_key{std::make_pair(evaluate_path, instance_location)};
-    const auto mask_it{std::ranges::find(this->mask, mask_key)};
+    const auto mask_it{std::ranges::find_if(
+        this->mask, [&](const MaskEntry &mask_entry) -> bool {
+          return mask_entry.evaluate_path == evaluate_path &&
+                 mask_entry.instance_location == instance_location;
+        })};
     if (mask_it != this->mask.end()) {
       // Present unexpected traces only when needed
-      if (!result && keyword != "not" && keyword != "if") {
-        auto buffered{this->masked_traces.find(mask_key)};
-        if (buffered != this->masked_traces.end()) {
+      if (!result && mask_it->kind != MaskKind::Subschema) {
 #ifdef __cpp_lib_containers_ranges
-          this->output.append_range(std::move(buffered->second));
+        this->output.append_range(std::move(mask_it->buffered_traces));
 #else
-          this->output.insert(this->output.end(),
-                              std::make_move_iterator(buffered->second.begin()),
-                              std::make_move_iterator(buffered->second.end()));
+        this->output.insert(
+            this->output.end(),
+            std::make_move_iterator(mask_it->buffered_traces.begin()),
+            std::make_move_iterator(mask_it->buffered_traces.end()));
 #endif
-          this->masked_traces.erase(buffered);
-        }
-      } else {
-        this->masked_traces.erase(mask_key);
       }
 
       this->mask.erase(mask_it);
@@ -115,19 +131,70 @@ auto SimpleOutput::operator()(
   }
 
   if (type == EvaluationType::Post && !this->annotations_.empty()) {
-    std::erase_if(
-        this->annotations_, [&](const AnnotationEntry &entry) -> bool {
-          return entry.evaluate_path.starts_with_initial(evaluate_path) &&
-                 entry.instance_location == instance_location;
-        });
+    // A failure inside a branching keyword discards every annotation that
+    // the failing unit collected, including the ones at instance locations
+    // below the unit's own instance location. The unit is the disjunction
+    // branch for `anyOf` and `oneOf`, the application of the subschema to
+    // the array element for `contains`, and the entire subschema for `if`
+    // and negations. A failure outside of every branching keyword cannot
+    // be absorbed, so the overall result is bound to be false, in which
+    // case no annotations may be reported at all
+    const MaskEntry *unit{nullptr};
+    for (const auto &mask_entry : std::views::reverse(this->mask)) {
+      if (evaluate_path.starts_with(mask_entry.evaluate_path) &&
+          instance_location.starts_with(mask_entry.instance_location)) {
+        unit = &mask_entry;
+        break;
+      }
+    }
+
+    if (unit) {
+      auto evaluate_prefix_size{unit->evaluate_path.size()};
+      auto instance_prefix_size{unit->instance_location.size()};
+      switch (unit->kind) {
+        case MaskKind::Disjunction:
+          evaluate_prefix_size =
+              std::min(evaluate_prefix_size + 1, evaluate_path.size());
+          break;
+        case MaskKind::Element:
+          instance_prefix_size =
+              std::min(instance_prefix_size + 1, instance_location.size());
+          break;
+        default:
+          break;
+      }
+
+      // Every annotation the failing unit collected, including the ones
+      // that the equality check below would match, sits at or beyond the
+      // mark the unit's branching keyword recorded, so older entries do
+      // not need to be scanned at all
+      assert(unit->annotations_mark <= this->annotations_.size());
+      const auto from{this->annotations_.begin() +
+                      static_cast<std::ptrdiff_t>(unit->annotations_mark)};
+      this->annotations_.erase(
+          std::remove_if(
+              from, this->annotations_.end(),
+              [&](const AnnotationEntry &entry) -> bool {
+                return (entry.evaluate_path.starts_with_initial(
+                            evaluate_path) &&
+                        entry.instance_location == instance_location) ||
+                       (entry.evaluate_path.shares_prefix(
+                            evaluate_path, evaluate_prefix_size) &&
+                        entry.instance_location.shares_prefix(
+                            instance_location, instance_prefix_size));
+              }),
+          this->annotations_.end());
+    } else {
+      this->annotations_.clear();
+    }
   }
 
-  if (keyword == "if") {
+  if (step.type == InstructionIndex::LogicalCondition) {
     return;
   } else {
-    for (const auto &mask_entry : this->mask) {
-      if (evaluate_path.starts_with(mask_entry.first)) {
-        this->masked_traces[mask_entry].push_back(
+    for (auto &mask_entry : this->mask) {
+      if (evaluate_path.starts_with(mask_entry.evaluate_path)) {
+        mask_entry.buffered_traces.push_back(
             {.message = describe(result, step, evaluate_path, instance_location,
                                  this->instance_, annotation),
              .instance_location = instance_location,

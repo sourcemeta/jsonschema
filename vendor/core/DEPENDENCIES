@@ -1,4 +1,4 @@
-vendorpull https://github.com/sourcemeta/vendorpull 1dcbac42809cf87cb5b045106b863e17ad84ba02
+vendorpull https://github.com/sourcemeta/vendorpull 89f348a97842e05aeab45d338d41fb02031fad62
 jsontestsuite https://github.com/nst/JSONTestSuite d64aefb55228d9584d3e5b2433f720ea8fd00c82
 yaml-test-suite https://github.com/yaml/yaml-test-suite data-2022-01-17
 cmark-gfm https://github.com/github/cmark-gfm 587a12bb54d95ac37241377e6ddc93ea0e45439b
@@ -12,3 +12,16 @@ unicodetools https://github.com/unicode-org/unicodetools final-17.0-20250910
 jose-cookbook https://github.com/ietf-jose/cookbook 13692b68bfc18b99557a5b1ed311fd5077bfff04
 w3c-json-ld https://github.com/w3c/json-ld-api 8654ac22b6cf4f441d2fee915ae634d36b5a8067
 aws-sig-v4-test-suite https://github.com/saibotsivad/aws-sig-v4-test-suite 38179d1173c9547a964e7f92e9308e73795534ff
+jsonpath-compliance-test-suite https://github.com/jsonpath-standard/jsonpath-compliance-test-suite 7be7c1fc28057c91e8eefaf197060fba7ed43acd
+iana-oauth/parameters.csv https://www.iana.org/assignments/oauth-parameters/parameters.csv acfe19a091a15279587e761a399704e886447eec906b19a41528cb37dc2afc35
+iana-oauth/extensions-error.csv https://www.iana.org/assignments/oauth-parameters/extensions-error.csv b49d3e1c9904667551170d12d0943ae9613751f42581f6438a4714c774d64838
+iana-oauth/token-types.csv https://www.iana.org/assignments/oauth-parameters/token-types.csv 0f62163952af053013bf5ee5158c4a09dee4ca50b0fff8e5abff87a1d9f2d163
+iana-oauth/token-type-hint.csv https://www.iana.org/assignments/oauth-parameters/token-type-hint.csv a078e9cbb7ecd64b4920bf4d163e966738594c46243823f8c39d08e47e1a03c0
+iana-oauth/token-endpoint-auth-method.csv https://www.iana.org/assignments/oauth-parameters/token-endpoint-auth-method.csv a0b93b5ac25717f45d66f3937bdcd8214f56b3c0a1b9f6a8728f0a148333a275
+iana-oauth/pkce-code-challenge-method.csv https://www.iana.org/assignments/oauth-parameters/pkce-code-challenge-method.csv e6b6f9ce315ee6fda3678be6b9f46d8d888fcb0b968f94b7731e30449c7b85e1
+iana-oauth/authorization-server-metadata.csv https://www.iana.org/assignments/oauth-parameters/authorization-server-metadata.csv ea71c8f3564e78621a9cb45c404b910190ce5f54faaf6066db1cb2168283ce43
+iana-oauth/protected-resource-metadata.csv https://www.iana.org/assignments/oauth-parameters/protected-resource-metadata.csv 2601894c565a3443a4d39c8f120e207cfeebe596ddd5410d968911e3b5d3b28a
+iana-oauth/client-metadata.csv https://www.iana.org/assignments/oauth-parameters/client-metadata.csv f885dc450ce4802ff2c81875b637c3fb5a4c8b8e26f088169e57598a4eeede96
+iana-oauth/uri.csv https://www.iana.org/assignments/oauth-parameters/uri.csv dca1a780e342845d2f3b0fe2391f12faf27217f0234933c1a399e27b55dcadec
+iana-oauth/token-introspection-response.csv https://www.iana.org/assignments/oauth-parameters/token-introspection-response.csv d1a3e84f98853b72f51ed59e99d796bf20c415a8aca13e04373c0a25bbb9b1f4
+iana-oauth/endpoint.csv https://www.iana.org/assignments/oauth-parameters/endpoint.csv 1b5d125a9cfa06ac62286e322449cf369647069a6336483f372fbd1d84ad5aca

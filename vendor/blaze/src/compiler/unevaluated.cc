@@ -54,9 +54,32 @@ auto find_adjacent_dependencies(
             frame.dereference(entry, make_weak_pointer(property.first))};
         if (reference.first == SchemaReferenceType::Static &&
             reference.second.has_value()) {
+          // Recurse into a dedicated entry so that whether this reference's
+          // target contributes any dynamic dependency can be read directly,
+          // rather than inferred from whether it grew the shared deduplicated
+          // set, which misses every reference after the first to a common
+          // target
+          SchemaUnevaluatedEntry nested;
           find_adjacent_dependencies(
               current, schema, frame, walker, resolver, keywords, root,
-              reference.second.value().get(), is_static, result);
+              reference.second.value().get(), is_static, nested);
+
+          // Whatever the target contributes gets recorded at the location of
+          // the target itself, which tells the applicators this reference sits
+          // under nothing about it. Record the reference as a dependency of
+          // its own too, so that they can still tell that reaching through it
+          // leads to one, and therefore that they cannot short-circuit. Only
+          // the dynamic dependencies are consulted that way, whereas the
+          // static ones name the keyword locations that evaluate, which a
+          // reference is not one of
+          if (!is_static && !nested.dynamic_dependencies.empty()) {
+            result.dynamic_dependencies.emplace(
+                entry.pointer.concat(make_weak_pointer(property.first)));
+          }
+
+          result.unresolved = result.unresolved || nested.unresolved;
+          result.static_dependencies.merge(nested.static_dependencies);
+          result.dynamic_dependencies.merge(nested.dynamic_dependencies);
         } else if (reference.first == SchemaReferenceType::Dynamic) {
           result.unresolved = true;
         }
