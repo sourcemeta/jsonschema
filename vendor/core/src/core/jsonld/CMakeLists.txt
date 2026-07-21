@@ -8,7 +8,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME jsonld
     jsonld_value_compaction.cc jsonld_compaction.cc
     jsonld_node_map.cc jsonld_flatten.cc
     jsonld_materialize.cc
-    jsonld_algorithms.h jsonld_keywords.h)
+    jsonld_algorithms.h jsonld_keywords.h jsonld_serialise.h)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME jsonld)

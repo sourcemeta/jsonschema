@@ -92,8 +92,9 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
     }
 
     result.type_ = Type::RSA;
-    parsed_key =
-        make_rsa_public_key(decoded_modulus.value(), decoded_exponent.value());
+    result.modulus_ = decoded_modulus.value();
+    result.exponent_ = decoded_exponent.value();
+    parsed_key = make_rsa_public_key(result.modulus_, result.exponent_);
   } else if (key_type_value == "EC") {
     // A public key must not carry the private parameter (RFC 7518 Section
     // 6.2.2)
@@ -126,8 +127,10 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
 
     result.type_ = Type::EllipticCurve;
     result.curve_ = curve->to_string();
+    result.coordinate_x_ = decoded_x.value();
+    result.coordinate_y_ = decoded_y.value();
     parsed_key = make_ec_public_key(jwk_to_elliptic_curve(result.curve_),
-                                    decoded_x.value(), decoded_y.value());
+                                    result.coordinate_x_, result.coordinate_y_);
   } else if (key_type_value == "OKP") {
     // A public key must not carry the private parameter (RFC 8037 Section 2)
     if (value.try_at("d", HASH_D) != nullptr) {
@@ -154,8 +157,9 @@ auto JWK::parse(const JSON &value, JWK &result) -> bool {
 
     result.type_ = Type::OctetKeyPair;
     result.curve_ = curve->to_string();
+    result.public_point_ = decoded_public_key.value();
     parsed_key = make_eddsa_public_key(jwk_to_edwards_curve(result.curve_),
-                                       decoded_public_key.value());
+                                       result.public_point_);
   } else if (key_type_value == "oct") {
     const auto *key_value{value.try_at("k", HASH_K)};
     if (key_value == nullptr || !key_value->is_string()) {

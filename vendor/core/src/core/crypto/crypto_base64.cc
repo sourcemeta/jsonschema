@@ -36,8 +36,9 @@ constexpr std::array<std::uint8_t, 256> BASE64_DECODE_TABLE{
 constexpr std::array<std::uint8_t, 256> BASE64URL_DECODE_TABLE{
     build_decode_table(BASE64URL_ALPHABET)};
 
+template <typename Output>
 auto encode(const std::string_view input, const std::string_view alphabet,
-            const bool padding, std::string &output) -> void {
+            const bool padding, Output &output) -> void {
   std::size_t index{0};
   while (index + 3 <= input.size()) {
     const std::uint32_t first{static_cast<std::uint8_t>(input[index])};
@@ -71,9 +72,14 @@ auto encode(const std::string_view input, const std::string_view alphabet,
   }
 }
 
-auto decode(const std::string_view input,
-            const std::array<std::uint8_t, 256> &table, const bool padding)
-    -> std::optional<std::string> {
+template <typename Output>
+auto decode_into(const std::string_view input,
+                 const std::array<std::uint8_t, 256> &table, const bool padding,
+                 Output &output) -> bool {
+  // Decoding appends to the output, so a failure after some bytes were written
+  // rolls the output back to its original length rather than leaving a partial
+  // decode in a reused buffer
+  const auto base{output.size()};
   auto data{input};
 
   if (padding) {
@@ -82,7 +88,7 @@ auto decode(const std::string_view input,
     // quantum is always completed at the end of a quantity", hence the padded
     // form must be a multiple of four characters
     if (data.size() % 4 != 0) {
-      return std::nullopt;
+      return false;
     }
 
     if (data.ends_with('=')) {
@@ -94,11 +100,10 @@ auto decode(const std::string_view input,
   }
 
   if (data.size() % 4 == 1) {
-    return std::nullopt;
+    return false;
   }
 
-  std::string output;
-  output.reserve(((data.size() / 4) * 3) + 2);
+  output.reserve(output.size() + ((data.size() / 4) * 3) + 2);
 
   std::size_t index{0};
   while (index + 4 <= data.size()) {
@@ -111,7 +116,8 @@ auto decode(const std::string_view input,
         table[static_cast<std::uint8_t>(data[index + 3])]};
     if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
         third == INVALID_SEXTET || fourth == INVALID_SEXTET) {
-      return std::nullopt;
+      output.resize(base, '\0');
+      return false;
     }
 
     const std::uint32_t group{(first << 18u) | (second << 12u) | (third << 6u) |
@@ -132,7 +138,8 @@ auto decode(const std::string_view input,
         table[static_cast<std::uint8_t>(data[index + 1])]};
     if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
         (second & 0x0Fu) != 0) {
-      return std::nullopt;
+      output.resize(base, '\0');
+      return false;
     }
 
     output.push_back(static_cast<char>((first << 2u) | (second >> 4u)));
@@ -144,7 +151,8 @@ auto decode(const std::string_view input,
         table[static_cast<std::uint8_t>(data[index + 2])]};
     if (first == INVALID_SEXTET || second == INVALID_SEXTET ||
         third == INVALID_SEXTET || (third & 0x03u) != 0) {
-      return std::nullopt;
+      output.resize(base, '\0');
+      return false;
     }
 
     output.push_back(static_cast<char>((first << 2u) | (second >> 4u)));
@@ -152,7 +160,7 @@ auto decode(const std::string_view input,
         static_cast<char>(((second & 0x0Fu) << 4u) | (third >> 2u)));
   }
 
-  return output;
+  return true;
 }
 
 } // namespace
@@ -170,8 +178,29 @@ auto base64_encode(const std::string_view input) -> std::string {
   return result;
 }
 
+auto base64_encode(const std::string_view input, SecureString &output) -> void {
+  // The input is copied first so that growing the output cannot invalidate it
+  // when the two alias the same storage
+  const SecureString input_copy{input};
+  output.reserve(output.size() + ((input_copy.size() + 2) / 3) * 4);
+  encode(std::string_view{input_copy}, BASE64_ALPHABET, true, output);
+}
+
 auto base64_decode(const std::string_view input) -> std::optional<std::string> {
-  return decode(input, BASE64_DECODE_TABLE, true);
+  std::string output;
+  if (!decode_into(input, BASE64_DECODE_TABLE, true, output)) {
+    return std::nullopt;
+  }
+
+  return output;
+}
+
+auto base64_decode(const std::string_view input, SecureString &output) -> bool {
+  // The input is copied first so that growing the output cannot invalidate it
+  // when the two alias the same storage
+  const SecureString input_copy{input};
+  return decode_into(std::string_view{input_copy}, BASE64_DECODE_TABLE, true,
+                     output);
 }
 
 auto base64url_encode(const std::string_view input, std::ostream &output)
@@ -186,9 +215,23 @@ auto base64url_encode(const std::string_view input) -> std::string {
   return result;
 }
 
+auto base64url_encode(const std::string_view input, SecureString &output)
+    -> void {
+  // The input is copied first so that growing the output cannot invalidate it
+  // when the two alias the same storage
+  const SecureString input_copy{input};
+  output.reserve(output.size() + ((input_copy.size() + 2) / 3) * 4);
+  encode(std::string_view{input_copy}, BASE64URL_ALPHABET, false, output);
+}
+
 auto base64url_decode(const std::string_view input)
     -> std::optional<std::string> {
-  return decode(input, BASE64URL_DECODE_TABLE, false);
+  std::string output;
+  if (!decode_into(input, BASE64URL_DECODE_TABLE, false, output)) {
+    return std::nullopt;
+  }
+
+  return output;
 }
 
 } // namespace sourcemeta::core

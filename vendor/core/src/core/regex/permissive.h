@@ -1,5 +1,5 @@
-#ifndef SOURCEMETA_CORE_REGEX_PREPROCESS_H_
-#define SOURCEMETA_CORE_REGEX_PREPROCESS_H_
+#ifndef SOURCEMETA_CORE_REGEX_PERMISSIVE_H_
+#define SOURCEMETA_CORE_REGEX_PERMISSIVE_H_
 
 #include <sourcemeta/core/text.h>
 
@@ -600,6 +600,30 @@ inline auto is_escaped(const std::string &pattern, std::size_t index) -> bool {
   return (count % 2) == 1;
 }
 
+// Whether the closing brace at the given position terminates a bounded
+// quantifier, as opposed to standing for a literal brace character
+inline auto closes_brace_quantifier(const std::string &pattern,
+                                    std::size_t brace_position) -> bool {
+  auto cursor{brace_position};
+  bool has_digits{false};
+  while (cursor > 0 && is_digit(pattern[cursor - 1])) {
+    has_digits = true;
+    --cursor;
+  }
+
+  if (cursor > 0 && pattern[cursor - 1] == ',') {
+    --cursor;
+    has_digits = false;
+    while (cursor > 0 && is_digit(pattern[cursor - 1])) {
+      has_digits = true;
+      --cursor;
+    }
+  }
+
+  return has_digits && cursor > 0 && pattern[cursor - 1] == '{' &&
+         !is_escaped(pattern, cursor - 1);
+}
+
 struct ShorthandExpansion {
   char escape;
   std::string_view inside_class;
@@ -632,8 +656,9 @@ inline auto find_shorthand(char escape) -> const ShorthandExpansion * {
 
 } // namespace
 
-// The result of preprocessing a regex pattern into PCRE2-compatible form.
-struct PreprocessResult {
+// The result of translating a permissive dialect pattern into
+// PCRE2-compatible form
+struct PermissiveResult {
   // True if the input pattern is strict ECMA-262.
   bool ecma_valid;
   // The PCRE2-compatible transformed pattern, if any.
@@ -667,7 +692,8 @@ inline auto exceeds_class_depth(const std::string &pattern) -> bool {
   return false;
 }
 
-inline auto preprocess_regex(const std::string &pattern) -> PreprocessResult {
+inline auto translate_permissive(const std::string &pattern)
+    -> PermissiveResult {
   if (exceeds_class_depth(pattern)) {
     return {.ecma_valid = false, .transformed = std::nullopt};
   }
@@ -704,11 +730,12 @@ inline auto preprocess_regex(const std::string &pattern) -> PreprocessResult {
       }
     }
 
-    // PCRE-only possessive quantifiers: *+ ++ ?+
+    // PCRE-only possessive quantifiers: *+ ++ ?+ {n,m}+
     if (current == '+' && position > 0 && !in_class) {
       const char prev = pattern[position - 1];
-      if ((prev == '*' || prev == '+' || prev == '?') &&
-          !is_escaped(pattern, position - 1)) {
+      if (!is_escaped(pattern, position - 1) &&
+          (prev == '*' || prev == '+' || prev == '?' ||
+           (prev == '}' && closes_brace_quantifier(pattern, position - 1)))) {
         ecma_valid = false;
       }
     }

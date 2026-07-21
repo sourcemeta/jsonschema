@@ -1,6 +1,7 @@
 #include <sourcemeta/core/crypto_verify.h>
 #include <sourcemeta/core/text.h>
 
+#include "crypto_apple.h"
 #include "crypto_der.h"
 #include "crypto_eddsa.h"
 #include "crypto_eddsa_apple.h"
@@ -370,6 +371,64 @@ auto eddsa_verify(const PublicKey &key, const std::string_view message,
   }
 
   std::unreachable();
+}
+
+auto rsa_public_components(const PublicKey &key)
+    -> std::optional<RSAPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::RSA) {
+    return std::nullopt;
+  }
+
+  const auto der{copy_external_representation(internal->key)};
+  if (!der.has_value()) {
+    return std::nullopt;
+  }
+
+  auto components{der_read_rsa_public_key(der.value())};
+  if (!components.has_value()) {
+    return std::nullopt;
+  }
+
+  return RSAPublicComponents{.modulus = std::move(components->first),
+                             .exponent = std::move(components->second)};
+}
+
+auto ec_public_components(const PublicKey &key)
+    -> std::optional<ECPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::EllipticCurve) {
+    return std::nullopt;
+  }
+
+  const auto curve{ec_curve_from_field_bytes(internal->field_bytes)};
+  if (!curve.has_value()) {
+    return std::nullopt;
+  }
+
+  // The X9.63 uncompressed point is the 0x04 lead byte followed by the two
+  // fixed-width coordinates
+  const auto point{copy_external_representation(internal->key)};
+  if (!point.has_value() || point->size() != 1 + (internal->field_bytes * 2) ||
+      point->front() != '\x04') {
+    return std::nullopt;
+  }
+
+  return ECPublicComponents{
+      .curve = curve.value(),
+      .x = point->substr(1, internal->field_bytes),
+      .y = point->substr(1 + internal->field_bytes, internal->field_bytes)};
+}
+
+auto edwards_public_components(const PublicKey &key)
+    -> std::optional<EdwardsPublicComponents> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr || internal->kind != PublicKey::Type::Edwards) {
+    return std::nullopt;
+  }
+
+  return EdwardsPublicComponents{.curve = internal->edwards_curve,
+                                 .point = internal->edwards_point};
 }
 
 } // namespace sourcemeta::core

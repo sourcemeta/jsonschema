@@ -8,7 +8,7 @@
 #include <cstddef>          // std::size_t
 #include <functional>       // std::reference_wrapper
 #include <initializer_list> // std::initializer_list
-#include <iterator>         // std::advance, std::back_inserter
+#include <iterator>         // std::advance, std::back_inserter, std::next
 #include <optional>         // std::optional
 #include <ranges>           // std::ranges::subrange
 #include <type_traits>      // std::is_same_v, std::decay_t
@@ -661,6 +661,47 @@ public:
            this->starts_with(other, tail_left) &&
            this->data[prefix_size + 1].is_property() &&
            this->data[prefix_size + 1].to_property() == tail_right;
+  }
+
+  /// Check whether two JSON Pointers are equal up to a given number of
+  /// leading tokens. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Pointer pointer{"foo", "bar", "baz"};
+  /// const sourcemeta::core::Pointer other{"foo", "bar", "qux"};
+  /// assert(pointer.shares_prefix(other, 2));
+  /// assert(!pointer.shares_prefix(other, 3));
+  /// ```
+  [[nodiscard]] auto shares_prefix(const GenericPointer<PropertyT, Hash> &other,
+                                   const size_type prefix_size) const -> bool {
+    return this->data.size() >= prefix_size &&
+           other.data.size() >= prefix_size &&
+           std::equal(this->data.cbegin(),
+                      std::next(this->data.cbegin(),
+                                static_cast<difference_type>(prefix_size)),
+                      other.data.cbegin());
+  }
+
+  /// Check whether a JSON Pointer starts with another JSON Pointer without
+  /// the two being equal. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::Pointer pointer{"foo", "bar", "baz"};
+  /// const sourcemeta::core::Pointer prefix{"foo", "bar"};
+  /// assert(pointer.starts_with_strict(prefix));
+  /// assert(!pointer.starts_with_strict(pointer));
+  /// ```
+  [[nodiscard]] auto
+  starts_with_strict(const GenericPointer<PropertyT, Hash> &other) const
+      -> bool {
+    return this->data.size() > other.data.size() &&
+           this->shares_prefix(other, other.data.size());
   }
 
   /// Check whether a JSON Pointer starts with the initial part of another JSON

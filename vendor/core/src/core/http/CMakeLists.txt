@@ -10,11 +10,12 @@ endif()
 
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME http
   PRIVATE_HEADERS problem.h status.h method.h message.h error.h system.h
-    aws_sigv4.h
+    aws_sigv4.h syntax.h
   SOURCES helpers.h problem.cc match_accept.cc match_accept_language.cc
           negotiate_encoding.cc from_date.cc format_link.cc field_list.cc
           accept_includes_all.cc content_type_matches.cc parse_bearer.cc
           cache_control_max_age.cc serialize_cookie.cc aws_sigv4.cc
+          scan_quoted_string.cc
           ${SOURCEMETA_CORE_HTTP_CLIENT_SOURCE})
 
 if(SOURCEMETA_CORE_INSTALL)

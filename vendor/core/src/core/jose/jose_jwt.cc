@@ -38,6 +38,19 @@ auto string_claim(const sourcemeta::core::JSON &object,
   return std::string_view{member->to_string()};
 }
 
+// The JSON layer preserves repeated members rather than collapsing them, so
+// uniqueness is checked here
+auto has_unique_members(const sourcemeta::core::JSON &object) -> bool {
+  std::unordered_set<std::string_view> names;
+  for (const auto &entry : object.as_object()) {
+    if (!names.emplace(entry.first).second) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 auto date_claim(const sourcemeta::core::JSON &object,
                 const sourcemeta::core::JSON::StringView name,
                 const sourcemeta::core::JSON::Object::hash_type hash)
@@ -101,14 +114,12 @@ auto JWT::parse(const std::string_view input, JWT &result) -> bool {
     return false;
   }
 
-  // RFC 7515 Section 4: the header parameter names must be unique, so a header
-  // with a duplicate is rejected, since the JSON layer preserves repeated
-  // members rather than collapsing them
-  std::unordered_set<std::string_view> header_parameters;
-  for (const auto &parameter : header_json.value().as_object()) {
-    if (!header_parameters.emplace(parameter.first).second) {
-      return false;
-    }
+  // RFC 7515 Section 4: the header parameter names must be unique, and RFC 7519
+  // Section 4: the claim names must be unique, so a duplicate in either the
+  // header or the payload is rejected (RFC 8725 Section 2.4)
+  if (!has_unique_members(header_json.value()) ||
+      !has_unique_members(payload_json.value())) {
+    return false;
   }
 
   // The algorithm header parameter is required and must be a string (RFC 7515

@@ -10,7 +10,7 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/schema.json"
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "foo"
+  "type": 1
 }
 EOF
 
@@ -19,10 +19,8 @@ EOF
 # Not supported
 test "$EXIT_CODE" = "3"
 
-# TODO: This error message is pretty bad. Can we do better somehow?
-
 cat << EOF > "$TMP/expected.txt"
-error: Unsupported type value
+error: Expected a string value
   at keyword type
   at file path $(realpath "$TMP")/schema.json
   at document location ""
@@ -38,7 +36,7 @@ test "$EXIT_CODE" = "3"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "Unsupported type value",
+  "error": "Expected a string value",
   "keyword": "type",
   "filePath": "$(realpath "$TMP")/schema.json",
   "location": ""

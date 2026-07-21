@@ -1,5 +1,5 @@
 sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME regex
-  SOURCES regex.cc preprocess.h)
+  SOURCES regex.cc iregexp.h permissive.h)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME regex)

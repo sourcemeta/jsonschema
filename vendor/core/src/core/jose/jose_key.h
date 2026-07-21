@@ -90,6 +90,37 @@ inline auto jwk_to_edwards_curve(const std::string_view curve) noexcept
   }
 }
 
+// The JWK curve name each elliptic curve carries (RFC 7518 Section 6.2.1.1),
+// the reverse of the parsing mapping, so a key built without a curve name can
+// recover it from the parsed material
+inline auto elliptic_curve_to_jwk(const EllipticCurve curve) noexcept
+    -> std::string_view {
+  switch (curve) {
+    case EllipticCurve::P256:
+      return "P-256";
+    case EllipticCurve::P384:
+      return "P-384";
+    case EllipticCurve::P521:
+      return "P-521";
+  }
+
+  std::unreachable();
+}
+
+// The JWK curve name each Edwards curve carries (RFC 8037 Section 2), the
+// reverse of the parsing mapping
+inline auto edwards_curve_to_jwk(const EdwardsCurve curve) noexcept
+    -> std::string_view {
+  switch (curve) {
+    case EdwardsCurve::Ed25519:
+      return "Ed25519";
+    case EdwardsCurve::Ed448:
+      return "Ed448";
+  }
+
+  std::unreachable();
+}
+
 // The RSA algorithms only require an RSA key, each ECDSA algorithm is tied to a
 // specific curve (RFC 7518 Section 3.1), and the Edwards-curve algorithm
 // requires an octet key pair of either curve (RFC 8037 Section 3.1)

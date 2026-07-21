@@ -61,6 +61,38 @@ SOURCEMETA_CORE_JOSE_EXPORT
 auto to_jws_algorithm(const std::string_view value) noexcept
     -> std::optional<JWSAlgorithm>;
 
+/// @ingroup jose
+/// Map a JSON Web Signature algorithm to its `alg` value, the inverse of
+/// parsing (RFC 7515 Section 4.1.1). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jose.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::jws_algorithm_name(
+///            sourcemeta::core::JWSAlgorithm::ES256) == "ES256");
+/// ```
+SOURCEMETA_CORE_JOSE_EXPORT
+auto jws_algorithm_name(const JWSAlgorithm algorithm) noexcept
+    -> std::string_view;
+
+/// @ingroup jose
+/// Whether an algorithm is an asymmetric digital signature algorithm rather
+/// than a symmetric message authentication code (RFC 7518 Section 3.1). For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jose.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::jws_algorithm_is_asymmetric(
+///            sourcemeta::core::JWSAlgorithm::ES256));
+/// assert(!sourcemeta::core::jws_algorithm_is_asymmetric(
+///            sourcemeta::core::JWSAlgorithm::HS256));
+/// ```
+SOURCEMETA_CORE_JOSE_EXPORT
+auto jws_algorithm_is_asymmetric(const JWSAlgorithm algorithm) noexcept -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

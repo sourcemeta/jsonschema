@@ -11,6 +11,7 @@
 #include <iterator>   // std::distance
 #include <optional>   // std::optional
 #include <regex>      // std::regex, std::regex_match, std::smatch
+#include <stdexcept>  // std::out_of_range
 #include <utility>    // std::declval, std::move
 
 namespace sourcemeta::blaze {
@@ -159,14 +160,24 @@ inline auto rephrase(const Context &context, const InstructionIndex type,
           .extra_index = extra_index};
 }
 
+// Note that the size keywords that let the type level fuse their bound accept
+// any integral number, including reals with no fractional part like `2.0`, so
+// this must recognise those too or the fused bound would be silently dropped
 inline auto
 unsigned_integer_property(const sourcemeta::core::JSON &document,
                           const sourcemeta::core::JSON::String &property)
     -> std::optional<std::size_t> {
-  if (document.defines(property) && document.at(property).is_integer()) {
-    const auto value{document.at(property).to_integer()};
-    assert(value >= 0);
-    return static_cast<std::size_t>(value);
+  if (document.defines(property) && document.at(property).is_integral()) {
+    // A real or decimal may spell an integer too large to represent, and such a
+    // bound sits so far beyond any instance that we ignore it, just as a
+    // non-integral bound is ignored, rather than let the conversion raise
+    try {
+      const auto value{document.at(property).as_integer()};
+      assert(value >= 0);
+      return static_cast<std::size_t>(value);
+    } catch (const std::out_of_range &) {
+      return std::nullopt;
+    }
   }
 
   return std::nullopt;

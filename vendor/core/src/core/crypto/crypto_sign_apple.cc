@@ -1,6 +1,8 @@
 #include <sourcemeta/core/crypto_sign.h>
 #include <sourcemeta/core/text.h>
 
+#include "crypto_apple.h"
+#include "crypto_der.h"
 #include "crypto_eddsa.h"
 #include "crypto_eddsa_apple.h"
 #include "crypto_helpers.h"
@@ -292,7 +294,7 @@ auto make_private_key(const std::string_view pem) -> std::optional<PrivateKey> {
   }
 
   // The decoded PKCS#8 holds the whole private key, so it is wiped on return
-  const SecureScope der_scope{der.value()};
+  const SecureStringScope der_scope{der.value()};
   const auto parsed{parse_pkcs8(der.value())};
   if (!parsed.has_value()) {
     return std::nullopt;
@@ -456,6 +458,66 @@ auto eddsa_sign(const PrivateKey &key, const std::string_view message)
     }
     case EdwardsCurve::Ed448:
       return edwards448_sign(internal->edwards_seed, message);
+  }
+
+  std::unreachable();
+}
+
+auto derive_public_key(const PrivateKey &key) -> std::optional<PublicKey> {
+  const auto *internal{key.internal()};
+  if (internal == nullptr) {
+    return std::nullopt;
+  }
+
+  switch (internal->kind) {
+    case PrivateKey::Type::RSA: {
+      auto *public_key{SecKeyCopyPublicKey(internal->key)};
+      if (public_key == nullptr) {
+        return std::nullopt;
+      }
+
+      const auto der{copy_external_representation(public_key)};
+      CFRelease(public_key);
+      if (!der.has_value()) {
+        return std::nullopt;
+      }
+
+      const auto components{der_read_rsa_public_key(der.value())};
+      if (!components.has_value()) {
+        return std::nullopt;
+      }
+
+      return make_rsa_public_key(components->first, components->second);
+    }
+    case PrivateKey::Type::EllipticCurve: {
+      auto *public_key{SecKeyCopyPublicKey(internal->key)};
+      if (public_key == nullptr) {
+        return std::nullopt;
+      }
+
+      const auto point{copy_external_representation(public_key)};
+      CFRelease(public_key);
+      const auto curve{ec_curve_from_field_bytes(internal->field_bytes)};
+      if (!point.has_value() || !curve.has_value() ||
+          point->size() != 1 + (internal->field_bytes * 2) ||
+          point->front() != '\x04') {
+        return std::nullopt;
+      }
+
+      return make_ec_public_key(
+          curve.value(), point->substr(1, internal->field_bytes),
+          point->substr(1 + internal->field_bytes, internal->field_bytes));
+    }
+    case PrivateKey::Type::Edwards: {
+      const auto point{internal->edwards_curve == EdwardsCurve::Ed25519
+                           ? edwards25519_public_key(internal->edwards_seed)
+                           : edwards448_public_key(internal->edwards_seed)};
+      if (!point.has_value()) {
+        return std::nullopt;
+      }
+
+      return make_eddsa_public_key(internal->edwards_curve, point.value());
+    }
   }
 
   std::unreachable();

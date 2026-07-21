@@ -13,6 +13,6 @@ target_link_libraries(sourcemeta_core_uri
 target_link_libraries(sourcemeta_core_uri
   PRIVATE sourcemeta::core::ip)
 target_link_libraries(sourcemeta_core_uri
-  PRIVATE sourcemeta::core::text)
+  PUBLIC sourcemeta::core::text)
 target_link_libraries(sourcemeta_core_uri
   PRIVATE sourcemeta::core::unicode)

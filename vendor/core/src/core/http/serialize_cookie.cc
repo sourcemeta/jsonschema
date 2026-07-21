@@ -1,6 +1,5 @@
 #include <sourcemeta/core/dns.h>
 #include <sourcemeta/core/http.h>
-#include <sourcemeta/core/text.h>
 
 #include <array>       // std::array
 #include <charconv>    // std::to_chars
@@ -13,31 +12,6 @@
 #include <utility>     // std::unreachable
 
 namespace {
-
-auto is_token_character(const char character) noexcept -> bool {
-  // RFC 9110 §5.6.2: tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" /
-  // "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
-  switch (character) {
-    case '!':
-    case '#':
-    case '$':
-    case '%':
-    case '&':
-    case '\'':
-    case '*':
-    case '+':
-    case '-':
-    case '.':
-    case '^':
-    case '_':
-    case '`':
-    case '|':
-    case '~':
-      return true;
-    default:
-      return sourcemeta::core::is_alphanum(character);
-  }
-}
 
 auto is_cookie_octet(const char character) noexcept -> bool {
   // RFC 6265 §4.1.1: cookie-octet = %x21 / %x23-2B / %x2D-3A / %x3C-5B /
@@ -55,20 +29,6 @@ auto is_attribute_octet(const char character) noexcept -> bool {
   // control characters, DEL, and any non-ASCII byte
   const auto value{static_cast<unsigned char>(character)};
   return value >= 0x20 && value <= 0x7E && character != ';';
-}
-
-auto is_token(const std::string_view value) noexcept -> bool {
-  if (value.empty()) {
-    return false;
-  }
-
-  for (const auto character : value) {
-    if (!is_token_character(character)) {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 auto is_cookie_value(const std::string_view value) noexcept -> bool {
@@ -160,7 +120,8 @@ auto required_size(const sourcemeta::core::HTTPCookie &cookie,
 namespace sourcemeta::core {
 
 auto http_cookie_valid(const HTTPCookie &cookie) -> bool {
-  if (!is_token(cookie.name) || !is_cookie_value(cookie.value)) {
+  if (!sourcemeta::core::http_is_token(cookie.name) ||
+      !is_cookie_value(cookie.value)) {
     return false;
   }
 

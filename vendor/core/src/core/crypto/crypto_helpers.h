@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_HELPERS_H_
 #define SOURCEMETA_CORE_CRYPTO_HELPERS_H_
 
+#include <sourcemeta/core/crypto_secure.h>
 #include <sourcemeta/core/crypto_sha256.h>
 #include <sourcemeta/core/crypto_sha384.h>
 #include <sourcemeta/core/crypto_sha512.h>
@@ -9,6 +10,7 @@
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t
+#include <optional>    // std::optional, std::nullopt
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::unreachable
@@ -18,41 +20,6 @@ namespace sourcemeta::core {
 // The largest RSA key any backend accepts, so that every backend agrees on
 // the range of valid key sizes
 inline constexpr std::size_t MAXIMUM_KEY_BYTES{512};
-
-// Overwrite a buffer that held secret material so it does not linger in freed
-// memory. The volatile access stops the compiler from eliding the write as a
-// dead store
-inline auto secure_zero(void *const data, const std::size_t size) noexcept
-    -> void {
-  if (data == nullptr) {
-    return;
-  }
-
-  auto *pointer{static_cast<volatile unsigned char *>(data)};
-  for (std::size_t index{0}; index < size; index += 1) {
-    pointer[index] = 0;
-  }
-}
-
-inline auto secure_zero(std::string &value) noexcept -> void {
-  secure_zero(value.data(), value.size());
-}
-
-// Overwrite the referenced buffer when leaving the current scope, so secret
-// material a local holds is wiped across every return path without threading a
-// manual call through each one. It clears the buffer the string owns at scope
-// exit, so a reassignment or a growth that reallocates before then can still
-// leave an earlier copy in freed memory, a residual that a wiping allocator
-// would be needed to close
-struct SecureScope {
-  explicit SecureScope(std::string &value) noexcept : target{value} {}
-  SecureScope(const SecureScope &) = delete;
-  auto operator=(const SecureScope &) -> SecureScope & = delete;
-  SecureScope(SecureScope &&) = delete;
-  auto operator=(SecureScope &&) -> SecureScope & = delete;
-  ~SecureScope() { secure_zero(this->target); }
-  std::string &target;
-};
 
 // The same guard for a raw buffer, so a secret that a fixed-size digest array
 // holds is wiped when leaving the current scope
@@ -146,6 +113,22 @@ inline auto curve_field_bytes(const EllipticCurve curve) noexcept
   std::unreachable();
 }
 
+// The inverse mapping, identifying the curve from its field width, so a backend
+// that reports a key only by coordinate size resolves it the same way
+inline auto ec_curve_from_field_bytes(const std::size_t field_bytes) noexcept
+    -> std::optional<EllipticCurve> {
+  switch (field_bytes) {
+    case 32:
+      return EllipticCurve::P256;
+    case 48:
+      return EllipticCurve::P384;
+    case 66:
+      return EllipticCurve::P521;
+    default:
+      return std::nullopt;
+  }
+}
+
 // The group order of each NIST prime curve as big-endian octets (FIPS 186-4
 // Appendix D.1.2), so a private scalar can be range-checked against it
 inline auto curve_order_bytes(const EllipticCurve curve) -> std::string {
@@ -178,7 +161,7 @@ inline auto ec_private_scalar_in_range(const std::string_view scalar,
   const auto width{curve_field_bytes(curve)};
   std::string folded(width, '\x00');
   // The buffer holds a copy of the secret scalar, so it is wiped on return
-  const SecureScope folded_scope{folded};
+  const SecureStringScope folded_scope{folded};
   std::uint8_t overflow{0};
   for (std::size_t index = 0; index < scalar.size(); ++index) {
     const auto byte{
@@ -244,6 +227,33 @@ inline auto digest_message(const SignatureHashFunction hash,
     }
     case SignatureHashFunction::SHA512: {
       const auto digest{sha512_digest(message)};
+      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+    }
+  }
+
+  std::unreachable();
+}
+
+// The same digest returned in wiping storage, for the secret-bearing hashing of
+// the deterministic nonce generator, where the message and the result derive
+// from the private key
+inline auto secure_digest_message(const SignatureHashFunction hash,
+                                  const std::string_view message)
+    -> SecureString {
+  switch (hash) {
+    case SignatureHashFunction::SHA256: {
+      auto digest{sha256_digest(message)};
+      const SecureBufferScope digest_scope{digest.data(), digest.size()};
+      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+    }
+    case SignatureHashFunction::SHA384: {
+      auto digest{sha384_digest(message)};
+      const SecureBufferScope digest_scope{digest.data(), digest.size()};
+      return {reinterpret_cast<const char *>(digest.data()), digest.size()};
+    }
+    case SignatureHashFunction::SHA512: {
+      auto digest{sha512_digest(message)};
+      const SecureBufferScope digest_scope{digest.data(), digest.size()};
       return {reinterpret_cast<const char *>(digest.data()), digest.size()};
     }
   }

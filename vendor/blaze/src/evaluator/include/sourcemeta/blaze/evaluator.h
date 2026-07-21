@@ -243,6 +243,20 @@ public:
     }
   }
 
+  // A subschema that ends up failing must not contribute any of the marks it
+  // made along the way, so a disjunction records the length here before each
+  // branch and truncates back to it when the branch does not hold. Marks are
+  // only ever appended, never inserted earlier, so everything a branch adds
+  // sits past the recorded length and nothing from outside it can be lost
+  [[nodiscard]] auto checkpoint() const -> std::size_t {
+    return this->evaluated_.size();
+  }
+
+  auto rewind(const std::size_t checkpoint) -> void {
+    assert(checkpoint <= this->evaluated_.size());
+    this->evaluated_.resize(checkpoint);
+  }
+
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251 4275)
 #endif

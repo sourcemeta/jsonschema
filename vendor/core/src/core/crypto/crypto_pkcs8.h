@@ -43,7 +43,7 @@ inline auto pem_to_der(const std::string_view pem)
   }
 
   // The base64 body carries the whole private key, so it is wiped once decoded
-  const SecureScope base64_scope{base64};
+  const SecureStringScope base64_scope{base64};
   return base64_decode(base64);
 }
 

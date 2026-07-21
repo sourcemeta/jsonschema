@@ -366,6 +366,7 @@ auto apply(const std::vector<Rule> &rules, sourcemeta::core::JSON &schema,
 #include "rules/unevaluated_properties_to_additional_properties.h"
 #include "rules/unknown_keywords_prefix.h"
 #include "rules/unknown_local_ref.h"
+#include "rules/unknown_type_names.h"
 #include "rules/unnecessary_allof_ref_wrapper_draft.h"
 #include "rules/unnecessary_extends_ref_wrapper.h"
 #include "rules/unsatisfiable_drop_validation.h"
@@ -405,6 +406,7 @@ auto canonicalize(sourcemeta::core::JSON &schema,
   rules.push_back(make_rule<AllOfMergeCompatibleBranches>());
   rules.push_back(make_rule<TypeInheritInPlace>());
   rules.push_back(make_rule<TypeUnionImplicit>());
+  rules.push_back(make_rule<UnknownTypeNames>());
   rules.push_back(make_rule<TypeArrayToAnyOf>());
   rules.push_back(make_rule<DefinitionsToDefs>());
   rules.push_back(make_rule<ContentMediaTypeWithoutEncoding>());
