@@ -10,84 +10,102 @@
 
 namespace {
 constexpr std::size_t TAG_BYTES{16};
+
+auto cipher_for_key(const std::size_t key_size) -> const EVP_CIPHER * {
+  switch (key_size) {
+    case 16:
+      return EVP_aes_128_gcm();
+    case 24:
+      return EVP_aes_192_gcm();
+    case 32:
+      return EVP_aes_256_gcm();
+    default:
+      return nullptr;
+  }
+}
 } // namespace
 
 namespace sourcemeta::core {
 
-auto aes_256_gcm_encrypt(const std::string_view key,
-                         const std::string_view nonce,
-                         const std::string_view plaintext)
-    -> std::optional<std::string> {
+auto aes_gcm_seal(const std::string_view key, const std::string_view iv,
+                  const std::string_view associated_data,
+                  const std::string_view plaintext)
+    -> std::optional<AESGCMCiphertext> {
+  const auto *const cipher{cipher_for_key(key.size())};
   auto *context{EVP_CIPHER_CTX_new()};
-  if (context == nullptr) {
+  if (cipher == nullptr || context == nullptr) {
+    EVP_CIPHER_CTX_free(context);
     return std::nullopt;
   }
 
-  std::optional<std::string> result;
-  std::string ciphertext(plaintext.size(), '\x00');
-  std::string tag(TAG_BYTES, '\x00');
+  std::optional<AESGCMCiphertext> result;
+  // A single buffer holds the ciphertext followed by its 16-byte tag
+  std::string data(plaintext.size() + TAG_BYTES, '\x00');
+  auto *const output{reinterpret_cast<unsigned char *>(data.data())};
   int length{0};
   int final_length{0};
-  if (EVP_EncryptInit_ex(context, EVP_aes_256_gcm(), nullptr, nullptr,
-                         nullptr) == 1 &&
+  int associated_length{0};
+  if (EVP_EncryptInit_ex(context, cipher, nullptr, nullptr, nullptr) == 1 &&
       EVP_CIPHER_CTX_ctrl(context, EVP_CTRL_GCM_SET_IVLEN,
-                          static_cast<int>(nonce.size()), nullptr) == 1 &&
-      EVP_EncryptInit_ex(
-          context, nullptr, nullptr,
-          reinterpret_cast<const unsigned char *>(key.data()),
-          reinterpret_cast<const unsigned char *>(nonce.data())) == 1 &&
+                          static_cast<int>(iv.size()), nullptr) == 1 &&
+      EVP_EncryptInit_ex(context, nullptr, nullptr,
+                         reinterpret_cast<const unsigned char *>(key.data()),
+                         reinterpret_cast<const unsigned char *>(iv.data())) ==
+          1 &&
+      (associated_data.empty() ||
+       EVP_EncryptUpdate(
+           context, nullptr, &associated_length,
+           reinterpret_cast<const unsigned char *>(associated_data.data()),
+           static_cast<int>(associated_data.size())) == 1) &&
       (plaintext.empty() ||
        EVP_EncryptUpdate(
-           context, reinterpret_cast<unsigned char *>(ciphertext.data()),
-           &length, reinterpret_cast<const unsigned char *>(plaintext.data()),
+           context, output, &length,
+           reinterpret_cast<const unsigned char *>(plaintext.data()),
            static_cast<int>(plaintext.size())) == 1) &&
-      EVP_EncryptFinal_ex(context,
-                          reinterpret_cast<unsigned char *>(ciphertext.data()) +
-                              length,
-                          &final_length) == 1 &&
+      EVP_EncryptFinal_ex(context, output + length, &final_length) == 1 &&
       EVP_CIPHER_CTX_ctrl(context, EVP_CTRL_GCM_GET_TAG,
                           static_cast<int>(TAG_BYTES),
-                          reinterpret_cast<unsigned char *>(tag.data())) == 1) {
-    ciphertext.append(tag);
-    result = std::move(ciphertext);
+                          output + plaintext.size()) == 1) {
+    result = AESGCMCiphertext{.data = std::move(data)};
   }
 
   EVP_CIPHER_CTX_free(context);
   return result;
 }
 
-auto aes_256_gcm_decrypt(const std::string_view key,
-                         const std::string_view nonce,
-                         const std::string_view ciphertext)
+auto aes_gcm_open(const std::string_view key, const std::string_view iv,
+                  const std::string_view associated_data,
+                  const std::string_view ciphertext, const std::string_view tag)
     -> std::optional<std::string> {
-  if (ciphertext.size() < TAG_BYTES) {
-    return std::nullopt;
-  }
-
-  const auto message{ciphertext.substr(0, ciphertext.size() - TAG_BYTES)};
-  const auto tag{ciphertext.substr(ciphertext.size() - TAG_BYTES)};
+  const auto *const cipher{cipher_for_key(key.size())};
   auto *context{EVP_CIPHER_CTX_new()};
-  if (context == nullptr) {
+  if (cipher == nullptr || context == nullptr) {
+    EVP_CIPHER_CTX_free(context);
     return std::nullopt;
   }
 
   std::optional<std::string> result;
-  std::string plaintext(message.size(), '\x00');
+  std::string plaintext(ciphertext.size(), '\x00');
   int length{0};
   int final_length{0};
-  if (EVP_DecryptInit_ex(context, EVP_aes_256_gcm(), nullptr, nullptr,
-                         nullptr) == 1 &&
+  int associated_length{0};
+  if (EVP_DecryptInit_ex(context, cipher, nullptr, nullptr, nullptr) == 1 &&
       EVP_CIPHER_CTX_ctrl(context, EVP_CTRL_GCM_SET_IVLEN,
-                          static_cast<int>(nonce.size()), nullptr) == 1 &&
-      EVP_DecryptInit_ex(
-          context, nullptr, nullptr,
-          reinterpret_cast<const unsigned char *>(key.data()),
-          reinterpret_cast<const unsigned char *>(nonce.data())) == 1 &&
-      (message.empty() ||
+                          static_cast<int>(iv.size()), nullptr) == 1 &&
+      EVP_DecryptInit_ex(context, nullptr, nullptr,
+                         reinterpret_cast<const unsigned char *>(key.data()),
+                         reinterpret_cast<const unsigned char *>(iv.data())) ==
+          1 &&
+      (associated_data.empty() ||
+       EVP_DecryptUpdate(
+           context, nullptr, &associated_length,
+           reinterpret_cast<const unsigned char *>(associated_data.data()),
+           static_cast<int>(associated_data.size())) == 1) &&
+      (ciphertext.empty() ||
        EVP_DecryptUpdate(
            context, reinterpret_cast<unsigned char *>(plaintext.data()),
-           &length, reinterpret_cast<const unsigned char *>(message.data()),
-           static_cast<int>(message.size())) == 1) &&
+           &length, reinterpret_cast<const unsigned char *>(ciphertext.data()),
+           static_cast<int>(ciphertext.size())) == 1) &&
       EVP_CIPHER_CTX_ctrl(
           context, EVP_CTRL_GCM_SET_TAG, static_cast<int>(TAG_BYTES),
           const_cast<unsigned char *>(

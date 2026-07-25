@@ -919,6 +919,28 @@ JSON::defines_any(std::initializer_list<JSON::String> keys) const -> bool {
   return true;
 }
 
+[[nodiscard]] auto JSON::unique_keys() const -> bool {
+  assert(this->is_object());
+  const auto &entries{this->data_object.data};
+  const auto size{entries.size()};
+
+  // Objects of 0 or 1 member have unique keys by definition
+  if (size <= 1) {
+    return true;
+  }
+
+  for (std::size_t index = 0; index < size; index++) {
+    for (std::size_t subindex = index + 1; subindex < size; subindex++) {
+      if (entries[subindex].key_equals(entries[index].first,
+                                       entries[index].hash)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 auto JSON::push_back(const JSON &value) -> void {
   assert(this->is_array());
   return this->data_array.data.push_back(value);

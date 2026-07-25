@@ -3,19 +3,18 @@
 #include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/langtag.h>
-#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/uritemplate.h>
 
 #include <algorithm>     // std::ranges::sort, std::ranges::any_of
-#include <deque>         // std::deque
+#include <cassert>       // assert
 #include <functional>    // std::ref, std::reference_wrapper
 #include <optional>      // std::optional
-#include <sstream>       // std::ostringstream
 #include <string>        // std::string
 #include <string_view>   // std::string_view
 #include <tuple>         // std::tie, std::make_tuple
 #include <unordered_map> // std::unordered_map
+#include <unordered_set> // std::unordered_set
 #include <utility>       // std::move
 #include <variant>       // std::variant, std::get, std::holds_alternative
 #include <vector>        // std::vector
@@ -65,6 +64,19 @@ auto add_type(std::vector<sourcemeta::core::JSON::String> &types,
 // Whether an annotation value is usable as an absolute IRI
 auto is_iri_value(const sourcemeta::core::JSON &value) -> bool {
   return value.is_string() && sourcemeta::core::URI::is_iri(value.to_string());
+}
+
+using DirtyLocations =
+    std::unordered_set<sourcemeta::core::WeakPointer,
+                       sourcemeta::core::WeakPointer::Hasher>;
+
+// Forget the streamed facts of a location whose annotations cannot be
+// resolved by simple agreement, handing it over to the override-aware slow
+// path
+auto demote(Accumulator &accumulator, DirtyLocations &dirty,
+            const sourcemeta::core::WeakPointer &location) -> void {
+  accumulator.erase(location);
+  dirty.insert(location);
 }
 
 auto type_iri_error(const sourcemeta::core::WeakPointer &instance_location)
@@ -153,10 +165,10 @@ auto container_placement_error(
   if (container == sourcemeta::core::JSONLDContainer::Language) {
     for (const auto &entry : value.as_object()) {
       if (entry.first != "@none" &&
-          !sourcemeta::core::is_langtag(entry.first)) {
-        return facet_error(
-            pointer, sourcemeta::blaze::JSONLDFacet::Container,
-            "A JSON-LD language container requires BCP 47 language tag keys");
+          !sourcemeta::core::is_canonical_langtag(entry.first)) {
+        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Container,
+                           "A JSON-LD language container requires canonical "
+                           "BCP 47 language tag keys");
       }
 
       // A null member, or a null item in an array member, is treated as absent
@@ -255,20 +267,18 @@ auto literal_error(const sourcemeta::core::WeakPointer &pointer,
 
 // Expand an x-jsonld-self URI Template into a concrete identifier. An object
 // binds each variable to the member of that name, and a scalar binds the
-// reserved variable this to its own value. A string binds directly and any
-// other scalar binds through its JSON stringification, whereas an object,
-// array, absent, or null value cannot bind. A binding that is not usable, or a
-// result that is not an absolute IRI, is a fail-loud resolution error
+// reserved variable this to its own value. Only a non-empty string can bind,
+// and a binding that is not usable, or a result that is not an absolute IRI,
+// is a fail-loud resolution error
 auto expand_self(const sourcemeta::core::WeakPointer &pointer,
                  const sourcemeta::core::JSON::String &pattern,
                  const sourcemeta::core::JSON &value)
     -> std::variant<sourcemeta::core::JSON::String,
                     sourcemeta::blaze::JSONLDResolutionError> {
   std::optional<sourcemeta::blaze::JSONLDResolutionError> failure;
-  std::deque<std::string> stringified;
   const sourcemeta::core::URITemplate uri_template{pattern};
   auto expanded{uri_template.expand(
-      [&value, &pointer, &failure, &stringified](
+      [&value, &pointer, &failure](
           const std::string_view name) -> sourcemeta::core::URITemplateValue {
         const sourcemeta::core::JSON *bound{nullptr};
         if (value.is_object()) {
@@ -277,41 +287,30 @@ auto expand_self(const sourcemeta::core::WeakPointer &pointer,
           bound = &value;
         }
 
-        if (bound == nullptr || bound->is_object() || bound->is_array() ||
-            bound->is_null()) {
+        if (bound == nullptr || !bound->is_string()) {
           if (!failure.has_value()) {
             failure = facet_error(
                 pointer, sourcemeta::blaze::JSONLDFacet::Self,
                 "A JSON-LD self identity template variable must bind to a "
-                "string, number, or boolean");
+                "string");
           }
 
           return std::nullopt;
         }
 
-        if (bound->is_string()) {
-          const auto &text{bound->to_string()};
-          if (text.empty()) {
-            if (!failure.has_value()) {
-              failure = facet_error(
-                  pointer, sourcemeta::blaze::JSONLDFacet::Self,
-                  "A JSON-LD self identity template variable cannot bind to an "
-                  "empty string");
-            }
-
-            return std::nullopt;
+        const auto &text{bound->to_string()};
+        if (text.empty()) {
+          if (!failure.has_value()) {
+            failure = facet_error(
+                pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                "A JSON-LD self identity template variable cannot bind to an "
+                "empty string");
           }
 
-          return std::make_tuple(std::string_view{text}, std::nullopt, false);
+          return std::nullopt;
         }
 
-        // A number or boolean has no direct string, so it binds through its
-        // compact JSON form, kept alive for the duration of the expansion
-        std::ostringstream stream;
-        sourcemeta::core::stringify(*bound, stream);
-        stringified.push_back(stream.str());
-        return std::make_tuple(std::string_view{stringified.back()},
-                               std::nullopt, false);
+        return std::make_tuple(std::string_view{text}, std::nullopt, false);
       })};
 
   if (failure.has_value()) {
@@ -350,6 +349,225 @@ auto array_of_nodes(const Accumulator &accumulator,
   return true;
 }
 
+// Whether the first annotation's schema object encloses the second's, which
+// is the outer-to-inner relation that x-jsonld-override shadows along. Both
+// arguments are full evaluate paths whose trailing token is the keyword, so
+// the relation holds when the first path's parent strictly prefixes the
+// second's
+auto encloses(const sourcemeta::core::WeakPointer &outer,
+              const sourcemeta::core::WeakPointer &inner) -> bool {
+  return outer.size() < inner.size() && inner.starts_with_initial(outer);
+}
+
+// A collected keyword value pending resolution, paired with the evaluate
+// path of the annotation that carried it
+struct Candidate {
+  const sourcemeta::core::JSON *value;
+  const sourcemeta::core::WeakPointer *path;
+  bool marked{false};
+};
+
+// The candidates gathered at one instance location before resolution, plus
+// the evaluate paths of the x-jsonld-override annotations that evaluated to
+// true at that location
+struct Pending {
+  std::vector<Candidate> ids;
+  std::vector<Candidate> reverses;
+  std::vector<Candidate> types;
+  std::vector<Candidate> datatypes;
+  std::vector<Candidate> languages;
+  std::vector<Candidate> directions;
+  std::vector<Candidate> jsons;
+  std::vector<Candidate> graphs;
+  std::vector<Candidate> containers;
+  std::vector<Candidate> selves;
+  std::vector<const sourcemeta::core::WeakPointer *> marks;
+
+  [[nodiscard]] auto annotated() const -> bool {
+    return !this->ids.empty() || !this->reverses.empty() ||
+           !this->types.empty() || !this->datatypes.empty() ||
+           !this->languages.empty() || !this->directions.empty() ||
+           !this->jsons.empty() || !this->graphs.empty() ||
+           !this->containers.empty() || !this->selves.empty();
+  }
+};
+
+using PendingMap = std::unordered_map<sourcemeta::core::WeakPointer, Pending,
+                                      sourcemeta::core::WeakPointer::Hasher>;
+
+// Whether the annotation at the given evaluate path shares its schema object
+// with one of its location's x-jsonld-override marks
+auto marked_by(const std::vector<const sourcemeta::core::WeakPointer *> &marks,
+               const sourcemeta::core::WeakPointer &path) -> bool {
+  for (const auto *mark : marks) {
+    if (mark->size() == path.size() && path.starts_with_initial(*mark)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// A null that no override mark licenses declares nothing, as if the keyword
+// were absent
+auto unmarked_null(const Candidate &candidate) -> bool {
+  return candidate.value->is_null() && !candidate.marked;
+}
+
+// Attach the location's override marks to a facet's candidates and drop the
+// nulls that no mark licenses. This cannot happen at collection time, as the
+// sibling mark may be collected in any order relative to the null
+auto prepare(std::vector<Candidate> &candidates,
+             const std::vector<const sourcemeta::core::WeakPointer *> &marks)
+    -> void {
+  for (auto &candidate : candidates) {
+    candidate.marked = marked_by(marks, *candidate.path);
+  }
+
+  std::erase_if(candidates, unmarked_null);
+}
+
+// The comparable form of a single-valued candidate, where an absent result
+// stands for a tombstone
+using NormalizedKey = std::optional<sourcemeta::core::JSON::String>;
+
+auto key_exact(const sourcemeta::core::JSON &value) -> NormalizedKey {
+  if (value.is_null()) {
+    return std::nullopt;
+  }
+
+  return value.to_string();
+}
+
+// Only true booleans survive collection, so a tombstone normalizes to the
+// absent state exactly like every other facet
+auto key_boolean(const sourcemeta::core::JSON &value) -> NormalizedKey {
+  if (value.is_null()) {
+    return std::nullopt;
+  }
+
+  return sourcemeta::core::JSON::String{"true"};
+}
+
+// The resolution of a single-valued facet at one instance location. An
+// absent winner without a conflict means the facet resolves to its absent
+// state, either because no candidate exists or because a tombstone won
+struct Election {
+  const Candidate *winner{nullptr};
+  bool conflict{false};
+};
+
+// Resolve a single-valued facet: shadowed values are discarded, identical
+// survivors deduplicate, and more than one distinct surviving value is a
+// conflict. The evaluate path comparisons only happen when the candidates
+// genuinely diverge
+auto elect(const std::vector<Candidate> &candidates,
+           NormalizedKey (*const key)(const sourcemeta::core::JSON &))
+    -> Election {
+  if (candidates.empty()) {
+    return {};
+  }
+
+  std::vector<NormalizedKey> keys;
+  keys.reserve(candidates.size());
+  bool divergent{false};
+  for (const auto &candidate : candidates) {
+    keys.push_back(key(*candidate.value));
+    divergent = divergent || keys.back() != keys.front();
+  }
+
+  std::vector<std::size_t> survivors;
+  survivors.reserve(candidates.size());
+  if (divergent) {
+    for (std::size_t index = 0; index < candidates.size(); index += 1) {
+      bool shadowed{false};
+      for (std::size_t other = 0; other < candidates.size(); other += 1) {
+        if (candidates[other].marked && keys[other] != keys[index] &&
+            encloses(*candidates[other].path, *candidates[index].path)) {
+          shadowed = true;
+          break;
+        }
+      }
+
+      if (!shadowed) {
+        survivors.push_back(index);
+      }
+    }
+  } else {
+    for (std::size_t index = 0; index < candidates.size(); index += 1) {
+      survivors.push_back(index);
+    }
+  }
+
+  // Enclosure is a strict relation, so the candidate with the shortest
+  // evaluate path can never be shadowed
+  assert(!survivors.empty());
+  const auto &elected{keys[survivors.front()]};
+  for (const auto index : survivors) {
+    if (keys[index] != elected) {
+      return {.winner = nullptr, .conflict = true};
+    }
+  }
+
+  if (!elected.has_value()) {
+    return {};
+  }
+
+  // Every survivor carries the elected key, and equal keys mean equal
+  // values, so any survivor serves as the winner
+  return {.winner = &candidates[survivors.front()], .conflict = false};
+}
+
+// A false boolean never enters resolution, as the absent state it restates
+// already is false, so removal only ever spells null
+auto false_boolean(const Candidate &candidate) -> bool {
+  return candidate.value->is_boolean() && !candidate.value->to_boolean();
+}
+
+// Whether an additive candidate is removed by a sibling tombstone, which
+// happens when the tombstone's schema object encloses the candidate's
+auto removed_by_tombstone(const std::vector<Candidate> &candidates,
+                          const Candidate &candidate) -> bool {
+  for (const auto &tombstone : candidates) {
+    if (tombstone.value->is_null() &&
+        encloses(*tombstone.path, *candidate.path)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+auto resolve_edges(const std::vector<Candidate> &candidates, const bool reverse,
+                   std::vector<sourcemeta::core::JSONLDEdge> &edges) -> void {
+  for (const auto &candidate : candidates) {
+    if (candidate.value->is_null() ||
+        removed_by_tombstone(candidates, candidate)) {
+      continue;
+    }
+
+    add_edge(edges, candidate.value->to_string(), reverse);
+  }
+}
+
+auto resolve_types(const std::vector<Candidate> &candidates,
+                   std::vector<sourcemeta::core::JSON::String> &types) -> void {
+  for (const auto &candidate : candidates) {
+    if (candidate.value->is_null() ||
+        removed_by_tombstone(candidates, candidate)) {
+      continue;
+    }
+
+    if (candidate.value->is_array()) {
+      for (const auto &element : candidate.value->as_array()) {
+        add_type(types, element.to_string());
+      }
+    } else {
+      add_type(types, candidate.value->to_string());
+    }
+  }
+}
+
 // The x-jsonld-* keyword names, pre-hashed for the first-pass dispatch
 using namespace std::string_view_literals;
 const auto HASH_ID{sourcemeta::core::JSON::Object::hash("x-jsonld-id"sv)};
@@ -367,17 +585,58 @@ const auto HASH_GRAPH{sourcemeta::core::JSON::Object::hash("x-jsonld-graph"sv)};
 const auto HASH_CONTAINER{
     sourcemeta::core::JSON::Object::hash("x-jsonld-container"sv)};
 const auto HASH_SELF{sourcemeta::core::JSON::Object::hash("x-jsonld-self"sv)};
+const auto HASH_OVERRIDE{
+    sourcemeta::core::JSON::Object::hash("x-jsonld-override"sv)};
+
+// Gather an already-validated annotation into its location's pending
+// candidates for the override-aware slow path
+auto collect(const sourcemeta::blaze::SimpleOutput::AnnotationEntry &entry,
+             Pending &pending) -> void {
+  const auto &keyword{entry.evaluate_path.back()};
+  const Candidate candidate{.value = &entry.value,
+                            .path = &entry.evaluate_path};
+
+  if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
+    if (entry.value.to_boolean()) {
+      pending.marks.push_back(&entry.evaluate_path);
+    }
+  } else if (keyword.property_equals("x-jsonld-id", HASH_ID)) {
+    pending.ids.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
+    pending.reverses.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
+    pending.types.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
+    pending.datatypes.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
+    pending.languages.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
+    pending.directions.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-json", HASH_JSON)) {
+    pending.jsons.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
+    pending.graphs.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
+    pending.containers.push_back(candidate);
+  } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
+    pending.selves.push_back(candidate);
+  }
+}
 
 // Turn the JSON-LD annotations into a resolved list, or the first error found.
-// The first pass groups the facts by location, the second derives each kind
-// from the value shape and validates the facts against it
+// The first pass validates every annotation and streams agreeing values
+// straight into the accumulator, demoting a location to the slow path the
+// moment a null or a genuinely diverging value arrives. The slow path
+// collects the demoted locations' candidates and resolves each facet,
+// shadowing through x-jsonld-override when the candidates genuinely conflict.
+// The last pass derives each kind from the value shape and validates the
+// facts against it
 auto resolve(const sourcemeta::core::JSON &instance,
              const sourcemeta::blaze::SimpleOutput &output)
     -> std::variant<sourcemeta::core::JSONLDWeakAnnotationList,
                     sourcemeta::blaze::JSONLDResolutionError> {
   Accumulator accumulator;
-  std::vector<std::reference_wrapper<const sourcemeta::core::WeakPointer>>
-      language_containers;
+  DirtyLocations dirty;
 
   for (const auto &entry : output.annotations()) {
     if (entry.evaluate_path.empty()) {
@@ -388,163 +647,299 @@ auto resolve(const sourcemeta::core::JSON &instance,
     const auto &instance_location{entry.instance_location};
     const auto &value{entry.value};
 
-    if (keyword.property_equals("x-jsonld-id", HASH_ID) ||
-        keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
+    if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
+      if (!value.is_boolean()) {
+        return facet_error(instance_location,
+                           sourcemeta::blaze::JSONLDFacet::Override,
+                           "The value of x-jsonld-override must be a boolean");
+      }
+
+      // A mark only matters when it shadows a diverging value or licenses a
+      // null or a false, and each of those demotes the location on its own,
+      // so the slow path recollects the mark whenever it can act. A future
+      // keyword whose mark changes agreeing resolutions must demote here
+    } else if (keyword.property_equals("x-jsonld-id", HASH_ID) ||
+               keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)) {
       const bool reverse{
           keyword.property_equals("x-jsonld-reverse", HASH_REVERSE)};
-      if (!is_iri_value(value)) {
+      if (!value.is_null() && !is_iri_value(value)) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
             reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
                     : "The value of x-jsonld-id must be an absolute IRI");
       }
 
-      add_edge(accumulator[instance_location].edges, value.to_string(),
-               reverse);
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        add_edge(accumulator[instance_location].edges, value.to_string(),
+                 reverse);
+      }
     } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
-      auto &types{accumulator[instance_location].types};
       if (value.is_array()) {
         for (const auto &element : value.as_array()) {
           if (!is_iri_value(element)) {
             return type_iri_error(instance_location);
           }
-
-          add_type(types, element.to_string());
         }
-      } else {
-        if (!is_iri_value(value)) {
-          return type_iri_error(instance_location);
-        }
+      } else if (!value.is_null() && !is_iri_value(value)) {
+        return type_iri_error(instance_location);
+      }
 
-        add_type(types, value.to_string());
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &types{accumulator[instance_location].types};
+        if (value.is_array()) {
+          for (const auto &element : value.as_array()) {
+            add_type(types, element.to_string());
+          }
+        } else {
+          add_type(types, value.to_string());
+        }
       }
     } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
-      auto &datatype{accumulator[instance_location].datatype};
-      if (!is_iri_value(value)) {
+      if (!value.is_null() && !is_iri_value(value)) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
             "The value of x-jsonld-datatype must be an absolute IRI");
       }
 
-      const auto &text{value.to_string()};
-      if (datatype.has_value() && datatype.value() != text) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
-            "A JSON-LD datatype cannot be assigned more than one value");
-      }
-
-      datatype = text;
-    } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
-      auto &language{accumulator[instance_location].language};
-      if (!value.is_string() ||
-          !sourcemeta::core::is_langtag(value.to_string())) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Language,
-            "The value of x-jsonld-language must be a BCP 47 language tag");
-      }
-
-      const auto &text{value.to_string()};
-      if (language.has_value()) {
-        // Language tags compare case-insensitively, so the first spelling is
-        // kept and only a genuinely different tag is a conflict
-        if (!sourcemeta::core::equals_ignore_case(language.value(), text)) {
-          return facet_error(
-              instance_location, sourcemeta::blaze::JSONLDFacet::Language,
-              "A JSON-LD language cannot be assigned more than one value");
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        const auto &text{value.to_string()};
+        if (facts.datatype.has_value() && facts.datatype.value() != text) {
+          demote(accumulator, dirty, instance_location);
+        } else {
+          facts.datatype = text;
         }
-      } else {
-        language = text;
+      }
+    } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
+      if (!value.is_null() &&
+          (!value.is_string() ||
+           !sourcemeta::core::is_canonical_langtag(value.to_string()))) {
+        return facet_error(instance_location,
+                           sourcemeta::blaze::JSONLDFacet::Language,
+                           "The value of x-jsonld-language must be a "
+                           "canonical BCP 47 language tag");
+      }
+
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        const auto &text{value.to_string()};
+        if (facts.language.has_value() && facts.language.value() != text) {
+          demote(accumulator, dirty, instance_location);
+        } else {
+          facts.language = text;
+        }
       }
     } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
-      auto &direction{accumulator[instance_location].direction};
-      const auto parsed{parse_direction(value)};
-      if (!parsed.has_value()) {
+      const auto direction{parse_direction(value)};
+      if (!value.is_null() && !direction.has_value()) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
             R"(The value of x-jsonld-direction must be "ltr" or "rtl")");
       }
 
-      if (direction.has_value() && direction.value() != parsed.value()) {
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        if (facts.direction.has_value() && facts.direction != direction) {
+          demote(accumulator, dirty, instance_location);
+        } else {
+          facts.direction = direction;
+        }
+      }
+    } else if (keyword.property_equals("x-jsonld-json", HASH_JSON) ||
+               keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
+      const bool graph{keyword.property_equals("x-jsonld-graph", HASH_GRAPH)};
+      if (!value.is_null() && !value.is_boolean()) {
         return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
-            "A JSON-LD direction cannot be assigned more than one value");
+            instance_location,
+            graph ? sourcemeta::blaze::JSONLDFacet::Graph
+                  : sourcemeta::blaze::JSONLDFacet::JSON,
+            graph ? "The value of x-jsonld-graph must be a boolean"
+                  : "The value of x-jsonld-json must be a boolean");
       }
 
-      direction = parsed;
-    } else if (keyword.property_equals("x-jsonld-json", HASH_JSON)) {
-      if (!value.is_boolean()) {
-        return facet_error(instance_location,
-                           sourcemeta::blaze::JSONLDFacet::JSON,
-                           "The value of x-jsonld-json must be a boolean");
-      }
-
-      // A false value leaves the fact unset, so it must stay a no-op and not
-      // create an entry
-      if (value.to_boolean()) {
-        accumulator[instance_location].json = true;
-      }
-    } else if (keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
-      if (!value.is_boolean()) {
-        return facet_error(instance_location,
-                           sourcemeta::blaze::JSONLDFacet::Graph,
-                           "The value of x-jsonld-graph must be a boolean");
-      }
-
-      if (value.to_boolean()) {
-        accumulator[instance_location].graph = true;
+      // A false declares nothing anywhere, as the absent state it restates
+      // already is false, so removal only ever spells null
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (value.to_boolean() && !dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        if (graph) {
+          facts.graph = true;
+        } else {
+          facts.json = true;
+        }
       }
     } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
-      auto &container{accumulator[instance_location].container};
-      const auto parsed{parse_container(value)};
-      if (!parsed.has_value()) {
+      const auto container{parse_container(value)};
+      if (!value.is_null() && !container.has_value()) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Container,
             R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")");
       }
 
-      if (container.has_value() && container.value() != parsed.value()) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Container,
-            "A JSON-LD container cannot be assigned more than one value");
-      }
-
-      container = parsed;
-
-      if (container == sourcemeta::core::JSONLDContainer::Language) {
-        language_containers.push_back(std::cref(instance_location));
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        if (facts.container.has_value() && facts.container != container) {
+          demote(accumulator, dirty, instance_location);
+        } else {
+          facts.container = container;
+        }
       }
     } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
-      auto &self{accumulator[instance_location].self};
-      if (!value.is_string() ||
-          !sourcemeta::core::URITemplate::is_uritemplate(value.to_string())) {
+      if (!value.is_null() &&
+          (!value.is_string() ||
+           !sourcemeta::core::URITemplate::is_uritemplate(value.to_string()))) {
         return facet_error(instance_location,
                            sourcemeta::blaze::JSONLDFacet::Self,
                            "The value of x-jsonld-self must be a URI Template");
       }
 
-      const auto &text{value.to_string()};
-      if (self.has_value() && self.value() != text) {
-        return facet_error(
-            instance_location, sourcemeta::blaze::JSONLDFacet::Self,
-            "A JSON-LD self identity cannot be assigned more than one value");
+      if (value.is_null()) {
+        demote(accumulator, dirty, instance_location);
+      } else if (!dirty.contains(instance_location)) {
+        auto &facts{accumulator[instance_location]};
+        const auto &text{value.to_string()};
+        if (facts.self.has_value() && facts.self.value() != text) {
+          demote(accumulator, dirty, instance_location);
+        } else {
+          facts.self = text;
+        }
+      }
+    }
+  }
+
+  PendingMap pending;
+  if (!dirty.empty()) {
+    pending.reserve(dirty.size());
+    for (const auto &entry : output.annotations()) {
+      if (entry.evaluate_path.empty() ||
+          !dirty.contains(entry.instance_location)) {
+        continue;
       }
 
-      self = text;
+      collect(entry, pending[entry.instance_location]);
     }
+  }
+
+  for (auto &[location, entry] : pending) {
+    prepare(entry.ids, entry.marks);
+    prepare(entry.reverses, entry.marks);
+    prepare(entry.types, entry.marks);
+    prepare(entry.datatypes, entry.marks);
+    prepare(entry.languages, entry.marks);
+    prepare(entry.directions, entry.marks);
+    prepare(entry.jsons, entry.marks);
+    prepare(entry.graphs, entry.marks);
+    prepare(entry.containers, entry.marks);
+    prepare(entry.selves, entry.marks);
+
+    std::erase_if(entry.jsons, false_boolean);
+    std::erase_if(entry.graphs, false_boolean);
+
+    if (!entry.annotated()) {
+      continue;
+    }
+
+    Facts facts;
+    resolve_edges(entry.ids, false, facts.edges);
+    resolve_edges(entry.reverses, true, facts.edges);
+    resolve_types(entry.types, facts.types);
+
+    const auto datatype{elect(entry.datatypes, key_exact)};
+    if (datatype.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Datatype,
+          "A JSON-LD datatype cannot be assigned more than one value");
+    } else if (datatype.winner != nullptr) {
+      facts.datatype = datatype.winner->value->to_string();
+    }
+
+    const auto language{elect(entry.languages, key_exact)};
+    if (language.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Language,
+          "A JSON-LD language cannot be assigned more than one value");
+    } else if (language.winner != nullptr) {
+      facts.language = language.winner->value->to_string();
+    }
+
+    const auto direction{elect(entry.directions, key_exact)};
+    if (direction.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Direction,
+          "A JSON-LD direction cannot be assigned more than one value");
+    } else if (direction.winner != nullptr) {
+      facts.direction = parse_direction(*direction.winner->value);
+    }
+
+    const auto json{elect(entry.jsons, key_boolean)};
+    if (json.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::JSON,
+          "A JSON-LD JSON literal flag cannot be assigned more than one "
+          "value");
+    } else if (json.winner != nullptr) {
+      facts.json = true;
+    }
+
+    const auto graph{elect(entry.graphs, key_boolean)};
+    if (graph.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Graph,
+          "A JSON-LD graph flag cannot be assigned more than one value");
+    } else if (graph.winner != nullptr) {
+      facts.graph = true;
+    }
+
+    const auto container{elect(entry.containers, key_exact)};
+    if (container.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Container,
+          "A JSON-LD container cannot be assigned more than one value");
+    } else if (container.winner != nullptr) {
+      facts.container = parse_container(*container.winner->value);
+    }
+
+    const auto self{elect(entry.selves, key_exact)};
+    if (self.conflict) {
+      return facet_error(
+          location, sourcemeta::blaze::JSONLDFacet::Self,
+          "A JSON-LD self identity cannot be assigned more than one value");
+    } else if (self.winner != nullptr) {
+      facts.self = self.winner->value->to_string();
+    }
+
+    accumulator.emplace(location, std::move(facts));
   }
 
   // A language container materializes its members directly as language-tagged
   // strings, never consulting their descriptors, so a member cannot carry a
   // JSON-LD annotation of its own
-  for (const auto container_location : language_containers) {
-    const auto &members{
-        sourcemeta::core::get(instance, container_location.get())};
+  for (const auto &[container_location, container_facts] : accumulator) {
+    if (container_facts.container !=
+        sourcemeta::core::JSONLDContainer::Language) {
+      continue;
+    }
+
+    const auto &members{sourcemeta::core::get(instance, container_location)};
     if (!members.is_object()) {
       continue;
     }
 
     for (const auto &entry : members.as_object()) {
-      auto member{container_location.get()};
+      auto member{container_location};
       member.push_back(std::cref(entry.first));
       if (accumulator.contains(member)) {
         return facet_error(member, sourcemeta::blaze::JSONLDFacet::Container,

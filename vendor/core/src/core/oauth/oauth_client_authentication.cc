@@ -5,7 +5,6 @@
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_decode.h"
-#include "oauth_encode.h"
 
 #include <cstddef>     // std::size_t
 #include <string_view> // std::string_view
@@ -53,13 +52,13 @@ auto oauth_client_secret_basic(const std::string_view client_id,
 auto oauth_client_secret_post(const std::string_view client_id,
                               const std::string_view client_secret,
                               SecureString &sink) -> void {
-  oauth_append_form_parameter(sink, "client_id", client_id);
-  oauth_append_form_parameter(sink, "client_secret", client_secret);
+  URI::append_query_parameter(sink, "client_id", client_id);
+  URI::append_query_parameter(sink, "client_secret", client_secret);
 }
 
 auto oauth_client_id_only(const std::string_view client_id, SecureString &sink)
     -> void {
-  oauth_append_form_parameter(sink, "client_id", client_id);
+  URI::append_query_parameter(sink, "client_id", client_id);
 }
 
 auto oauth_parse_client_authentication(const std::string_view authorization,

@@ -86,6 +86,21 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT make_ec_private_key(
     -> std::optional<PrivateKey>;
 
 /// @ingroup crypto
+/// Generate a new random elliptic curve private key on the given curve,
+/// returning no value when the platform cannot produce one. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto key{sourcemeta::core::generate_ec_private_key(
+///     sourcemeta::core::EllipticCurve::P256)};
+/// assert(key.has_value());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT
+generate_ec_private_key(const EllipticCurve curve) -> std::optional<PrivateKey>;
+
+/// @ingroup crypto
 /// Parse an Edwards-curve private key from its raw seed, returning no value
 /// when the seed is the wrong length for the curve.
 auto SOURCEMETA_CORE_CRYPTO_EXPORT

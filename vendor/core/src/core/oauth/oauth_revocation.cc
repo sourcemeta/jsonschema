@@ -5,7 +5,6 @@
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_decode.h"
-#include "oauth_encode.h"
 
 #include <functional>  // std::function
 #include <string_view> // std::string_view
@@ -35,9 +34,9 @@ auto assign_lookup_scalar(const std::string_view value, SecureString &storage,
 auto oauth_build_revocation_request(const std::string_view token,
                                     const std::string_view token_type_hint,
                                     SecureString &sink) -> void {
-  oauth_append_form_parameter(sink, "token", token);
+  URI::append_query_parameter(sink, "token", token);
   if (!token_type_hint.empty()) {
-    oauth_append_form_parameter(sink, "token_type_hint", token_type_hint);
+    URI::append_query_parameter(sink, "token_type_hint", token_type_hint);
   }
 }
 

@@ -36,6 +36,7 @@ new vocabulary published under a new major version with a new URI.
 | [`x-jsonld-graph`](#328-x-jsonld-graph) | A boolean | Object subschemas |
 | [`x-jsonld-container`](#329-x-jsonld-container) | `@list`, `@set`, `@language`, or `@index` | Array or object property subschemas |
 | [`x-jsonld-self`](#3210-x-jsonld-self) | A URI Template | Scalar or object subschemas |
+| [`x-jsonld-override`](#3211-x-jsonld-override) | A boolean | Any subschema |
 
 ### 3.1. `x-format-assertion`
 
@@ -56,7 +57,8 @@ meet at the same instance location. When they do, their values are merged, and
 identical values always collapse into one, so a schema and the schemas it
 references may safely declare the same annotation. A keyword that takes a
 single value MUST NOT be assigned two different values for the same location,
-unless its own section defines how distinct values merge.
+unless its own section defines how distinct values merge, or
+[`x-jsonld-override`](#3211-x-jsonld-override) discards all but one of them.
 
 #### 3.2.1. `x-jsonld-id`
 
@@ -73,7 +75,7 @@ asserting the location under each declared predicate.
 #### 3.2.2. `x-jsonld-type`
 
 The value of this keyword MUST be a string representing an absolute IRI
-[RFC3987], or an array of such strings.
+[RFC3987], or an array of unique such strings.
 
 This keyword declares the `@type` of the node that the annotated instance
 location materializes as. A single IRI is equivalent to an array containing
@@ -107,14 +109,14 @@ or `x-jsonld-direction` at the same location.
 
 #### 3.2.5. `x-jsonld-language`
 
-The value of this keyword MUST be a string representing a well-formed language
-tag [RFC5646].
+The value of this keyword MUST be a string representing a well-formed
+language tag in the canonical formatting of [RFC5646], with script subtags in
+titlecase, region subtags in uppercase, and every other subtag in lowercase.
 
 This keyword declares the language of the language-tagged literal that the
 annotated instance location materializes as. It MUST be applied to a location
-whose value is a string. Tags compare case-insensitively, so spellings that
-differ only in case are the same value, and an implementation MAY keep any of
-the declared spellings.
+whose value is a string. Tags compare exactly as written, which the canonical
+formatting makes safe, as one language can no longer spell two values.
 
 #### 3.2.6. `x-jsonld-direction`
 
@@ -152,8 +154,9 @@ This keyword declares the container semantics of the annotated instance
 location. The `@list` and `@set` containers range over an array value,
 asserting an ordered RDF list and an unordered set respectively. The
 `@language` container ranges over an object value, asserting language-tagged
-literals. Its keys MUST be well-formed language tags [RFC5646], except for the
-reserved key `@none` which asserts a literal with no language, and its members
+literals. Its keys MUST be well-formed language tags in the canonical
+formatting of [RFC5646], except for the reserved key `@none` which asserts a
+literal with no language, and its members
 MUST be strings, arrays of strings, or `null`, where `null` entries are
 ignored. The `@index` container ranges over an object value whose keys carry
 no RDF meaning. This keyword MUST NOT be combined with any keyword of this
@@ -169,11 +172,40 @@ This keyword mints the identifier of the node that the annotated instance
 location materializes as, giving an object its `@id` or promoting a scalar to
 an identified node. An object binds each template variable to the member of
 that name, and a scalar binds the reserved variable `this` to its own value.
-Every binding MUST be a non-empty string, a number, or a boolean, and the
-expanded template MUST be an absolute IRI [RFC3987]. The location value MUST
+Every binding MUST be a non-empty string, and the expanded template MUST be
+an absolute IRI [RFC3987]. The location value MUST
 NOT be an array, and the keyword MUST NOT be combined with
 `x-jsonld-datatype`, `x-jsonld-language`, or `x-jsonld-direction` at the same
 location.
+
+#### 3.2.11. `x-jsonld-override`
+
+The value of this keyword MUST be a boolean.
+
+When the value is `true`, the keywords of this vocabulary declared in the
+same schema object override the different values that reach the same instance
+location from subschemas evaluated beneath that object, such as through a
+sibling reference or any other applicator the object composes. Overridden
+values are discarded before the single-value requirement of this section is
+enforced, and values reaching the location from anywhere else are unaffected,
+so an annotation can never override the schema objects that compose it. When
+the value is `false` or the keyword is absent, the schema object declares no
+overrides.
+
+Within an override-marked schema object, every keyword of this vocabulary
+also accepts `null`, which removes instead of declaring:
+
+- A `null` for `x-jsonld-datatype`, `x-jsonld-language`, `x-jsonld-direction`,
+  `x-jsonld-container`, `x-jsonld-self`, `x-jsonld-json`, or `x-jsonld-graph`
+  overrides like any other value and restores the behavior the location has
+  when the keyword is absent.
+- A `null` for `x-jsonld-id`, `x-jsonld-reverse`, or `x-jsonld-type` removes
+  every value of that keyword reaching the location from beneath the object,
+  while values from anywhere else are kept. These keywords otherwise
+  accumulate, and their non-null values are unaffected by overriding.
+
+Outside an override-marked schema object, a `null` value for any keyword of
+this vocabulary declares nothing, and resolves as if the keyword were absent.
 
 4. References
 -------------

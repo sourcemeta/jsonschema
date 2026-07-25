@@ -17,9 +17,9 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_AUD{JSON::Object::hash("aud"sv)};
-const auto HASH_CNF{JSON::Object::hash("cnf"sv)};
-const auto HASH_JKT{JSON::Object::hash("jkt"sv)};
+constexpr auto HASH_AUD{JSON::Object::hash("aud"sv)};
+constexpr auto HASH_CNF{JSON::Object::hash("cnf"sv)};
+constexpr auto HASH_JKT{JSON::Object::hash("jkt"sv)};
 
 auto oauth_skip_ows(const std::string_view value, std::size_t position) noexcept
     -> std::size_t {

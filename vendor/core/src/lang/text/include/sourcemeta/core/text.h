@@ -479,6 +479,26 @@ auto split_once(const std::string_view input,
 
 /// @ingroup text
 ///
+/// Split `input` at the last occurrence of `delimiter`, returning the
+/// parts before and after it. Return `std::nullopt` when the delimiter is
+/// absent. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/text.h>
+/// #include <cassert>
+///
+/// const auto parts{sourcemeta::core::rsplit_once("a.b.c", '.')};
+/// assert(parts.has_value());
+/// assert(parts->first == "a.b");
+/// assert(parts->second == "c");
+/// assert(!sourcemeta::core::rsplit_once("no separator", '.').has_value());
+/// ```
+SOURCEMETA_CORE_TEXT_EXPORT
+auto rsplit_once(const std::string_view input, const char delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>>;
+
+/// @ingroup text
+///
 /// Iterate the parts of `input` separated by `delimiter`, invoking
 /// `callback` with each part. For example:
 ///

@@ -834,6 +834,39 @@ public:
     }
   }
 
+  /// Append a percent-encoded name and value pair to a query, form body, or
+  /// fragment under construction (RFC 3986 Section 2.1), joining it to any
+  /// preceding pair. The caller writes the opening character of a fresh
+  /// parameter list, the "?" of a query unless overridden through the opener,
+  /// and the sink must not alias the name or value. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  /// #include <string>
+  ///
+  /// std::string query{"https://example.com/authorize?"};
+  /// sourcemeta::core::URI::append_query_parameter(query, "response_type",
+  ///                                               "code");
+  /// sourcemeta::core::URI::append_query_parameter(query, "scope",
+  ///                                               "openid profile");
+  /// assert(query ==
+  ///        "https://example.com/authorize?response_type=code"
+  ///        "&scope=openid%20profile");
+  /// ```
+  template <typename Output>
+  static auto append_query_parameter(Output &sink, const std::string_view name,
+                                     const std::string_view value,
+                                     const char opener = '?') -> void {
+    if (!sink.empty() && sink.back() != opener && sink.back() != '&') {
+      sink.push_back('&');
+    }
+
+    URI::escape(name, sink);
+    sink.push_back('=');
+    URI::escape(value, sink);
+  }
+
   /// Percent-decode every escape sequence in a string per RFC 3986, leaving
   /// malformed sequences untouched. For example:
   ///

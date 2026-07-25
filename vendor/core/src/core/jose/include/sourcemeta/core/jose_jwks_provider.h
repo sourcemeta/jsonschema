@@ -66,8 +66,8 @@ public:
     /// The wait before another refetch is allowed after an unknown key
     /// identifier.
     std::chrono::seconds unknown_kid_cooldown{std::chrono::minutes{5}};
-    /// The tolerance applied to time-based claims.
-    std::chrono::seconds clock_skew{0};
+    /// The tolerance applied to time-based claims, uniform or per claim.
+    JWTClockSkew clock_skew{};
   };
 
   /// Construct a provider for a concrete key set URL with an injected
@@ -103,7 +103,30 @@ public:
          const std::optional<std::string_view> expected_type = std::nullopt)
       -> std::optional<JWTVerificationError>;
 
+  /// Verify a token exactly as the other overload does, additionally exposing
+  /// the clock reading the verification ran at, so that a caller performing
+  /// its own time checks on the same token, such as an issued-at age or an
+  /// authentication-time freshness window, shares the verifier's clock rather
+  /// than injecting a second, independently read one.
+  [[nodiscard]] auto
+  verify(const JWT &token,
+         const std::span<const JWSAlgorithm> allowed_algorithms,
+         const std::string_view expected_issuer,
+         const std::string_view expected_audience,
+         const std::optional<std::string_view> expected_subject,
+         const std::optional<std::string_view> expected_type,
+         std::chrono::system_clock::time_point &resolved_now)
+      -> std::optional<JWTVerificationError>;
+
 private:
+  auto verify_at(const JWT &token,
+                 const std::span<const JWSAlgorithm> allowed_algorithms,
+                 const std::string_view expected_issuer,
+                 const std::string_view expected_audience,
+                 const std::optional<std::string_view> expected_subject,
+                 const std::optional<std::string_view> expected_type,
+                 const std::chrono::system_clock::time_point now)
+      -> std::optional<JWTVerificationError>;
   auto fetch_and_install_locked(std::chrono::system_clock::time_point now)
       -> bool;
   auto refresh_locked(std::chrono::system_clock::time_point now)

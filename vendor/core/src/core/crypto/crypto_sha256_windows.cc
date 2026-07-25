@@ -6,15 +6,17 @@
 
 #include <bcrypt.h> // BCrypt*, BCRYPT_*
 
-#include <array>     // std::array
-#include <cstddef>   // std::size_t
-#include <cstdint>   // std::uint8_t
-#include <limits>    // std::numeric_limits
-#include <stdexcept> // std::runtime_error
+#include "crypto_windows.h"
+
+#include <array>       // std::array
+#include <cstdint>     // std::uint8_t
+#include <span>        // std::span
+#include <stdexcept>   // std::runtime_error
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
-auto sha256_digest(const std::string_view input)
+auto sha256_digest(const std::span<const std::string_view> input)
     -> std::array<std::uint8_t, 32> {
   BCRYPT_ALG_HANDLE algorithm{nullptr};
   if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
@@ -29,21 +31,9 @@ auto sha256_digest(const std::string_view input)
     throw std::runtime_error("Could not create the CNG SHA-256 hash");
   }
 
-  // The data interface is not const-qualified but never writes through
-  // the pointer, and it takes a 32-bit length, so larger inputs must be
-  // fed in chunks
-  auto *remaining_data{
-      reinterpret_cast<unsigned char *>(const_cast<char *>(input.data()))};
-  auto remaining_size{input.size()};
-  constexpr std::size_t maximum_chunk{std::numeric_limits<ULONG>::max()};
   auto success{true};
-  while (remaining_size > 0 && success) {
-    const auto chunk_size{remaining_size > maximum_chunk ? maximum_chunk
-                                                         : remaining_size};
-    success = BCRYPT_SUCCESS(BCryptHashData(hash, remaining_data,
-                                            static_cast<ULONG>(chunk_size), 0));
-    remaining_data += chunk_size;
-    remaining_size -= chunk_size;
+  for (const auto part : input) {
+    success = success && hash_data_chunked(hash, part);
   }
 
   std::array<std::uint8_t, 32> digest{};
@@ -59,6 +49,11 @@ auto sha256_digest(const std::string_view input)
   }
 
   return digest;
+}
+
+auto sha256_digest(const std::string_view input)
+    -> std::array<std::uint8_t, 32> {
+  return sha256_digest(std::span<const std::string_view>{&input, 1});
 }
 
 } // namespace sourcemeta::core

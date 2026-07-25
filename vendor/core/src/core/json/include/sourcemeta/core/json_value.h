@@ -24,6 +24,7 @@
 #include <limits>           // std::numeric_limits
 #include <memory>           // std::allocator
 #include <set>              // std::set
+#include <span>             // std::span
 #include <sstream>          // std::basic_istringstream
 #include <stdexcept>        // std::out_of_range
 #include <string>           // std::basic_string, std::char_traits
@@ -1668,6 +1669,70 @@ public:
   /// ```
   [[nodiscard]] auto contains(const StringView element) const -> bool;
 
+  /// This method checks, given a pre-calculated hash, whether an array-valued
+  /// object member contains a string, returning false when the member is absent
+  /// or is not such an array. The instance must be an object. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json(R"JSON({ "tags": [ "a", "b" ] })JSON");
+  /// assert(document.array_member_contains("tags",
+  ///   document.as_object().hash("tags"), "b"));
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  array_member_contains(const StringView key,
+                        const typename Object::hash_type hash,
+                        const StringView value) const -> bool {
+    assert(this->is_object());
+    const auto *member{this->try_at(key, hash)};
+    return member != nullptr && member->is_array() && member->contains(value);
+  }
+
+  /// This method checks whether an array-valued object member contains a
+  /// string. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json(R"JSON({ "tags": [ "a", "b" ] })JSON");
+  /// assert(document.array_member_contains("tags", "b"));
+  /// ```
+  [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto
+  array_member_contains(const StringView key, const StringView value) const
+      -> bool {
+    return this->array_member_contains(key, Object::hash(key), value);
+  }
+
+  /// This method checks whether this value is an array whose every element is a
+  /// string. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const sourcemeta::core::JSON document =
+  ///   sourcemeta::core::parse_json(R"JSON([ "a", "b" ])JSON");
+  /// assert(document.is_array_of_strings());
+  /// ```
+  [[nodiscard]] auto is_array_of_strings() const -> bool {
+    if (!this->is_array()) {
+      return false;
+    }
+
+    for (const auto &element : this->as_array()) {
+      if (!element.is_string()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   /// This method checks if a JSON string includes a given substring. For
   /// example:
   ///
@@ -1706,6 +1771,19 @@ public:
   /// assert(document.unique());
   /// ```
   [[nodiscard]] auto unique() const -> bool;
+
+  /// This method checks if a JSON object does not name any key more than once.
+  /// The parser preserves repeated members rather than collapsing them, so this
+  /// detects a document whose object named a key twice. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const auto document{sourcemeta::core::parse_json(R"({ "foo": 1 })")};
+  /// assert(document.unique_keys());
+  /// ```
+  [[nodiscard]] auto unique_keys() const -> bool;
 
   /*
    * Write operations
@@ -1946,6 +2024,95 @@ public:
   /// inserted value
   auto assign_assume_new(String &&key, JSON &&value, Object::hash_type hash)
       -> JSON &;
+
+  /// This method assigns a string object member with a pre-computed hash unless
+  /// the value is empty, in which case the member is left absent, assuming the
+  /// key is new. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// document.assign_if_nonempty("foo", document.as_object().hash("foo"),
+  ///                             "bar");
+  /// assert(document.at("foo").to_string() == "bar");
+  /// ```
+  SOURCEMETA_FORCEINLINE inline auto
+  assign_if_nonempty(const StringView key,
+                     const typename Object::hash_type hash,
+                     const StringView value) -> void {
+    if (!value.empty()) {
+      this->assign_assume_new(String{key}, JSON{value}, hash);
+    }
+  }
+
+  /// This method assigns a string object member unless the value is empty, in
+  /// which case the member is left absent, assuming the key is new. For
+  /// example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// document.assign_if_nonempty("foo", "bar");
+  /// assert(document.at("foo").to_string() == "bar");
+  /// ```
+  SOURCEMETA_FORCEINLINE inline auto assign_if_nonempty(const StringView key,
+                                                        const StringView value)
+      -> void {
+    this->assign_if_nonempty(key, Object::hash(key), value);
+  }
+
+  /// This method assigns an array-of-strings object member with a pre-computed
+  /// hash unless the array is empty, in which case the member is left absent,
+  /// assuming the key is new. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <array>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// const std::array<std::string_view, 2> values{{"a", "b"}};
+  /// document.assign_if_nonempty("foo", document.as_object().hash("foo"),
+  ///                             values);
+  /// assert(document.at("foo").size() == 2);
+  /// ```
+  auto assign_if_nonempty(const StringView key,
+                          const typename Object::hash_type hash,
+                          const std::span<const StringView> values) -> void {
+    if (values.empty()) {
+      return;
+    }
+
+    auto array{JSON::make_array()};
+    for (const auto value : values) {
+      array.push_back(JSON{value});
+    }
+
+    this->assign_assume_new(String{key}, std::move(array), hash);
+  }
+
+  /// This method assigns an array-of-strings object member unless the array is
+  /// empty, in which case the member is left absent, assuming the key is new.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <array>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::JSON document = sourcemeta::core::JSON::make_object();
+  /// const std::array<std::string_view, 2> values{{"a", "b"}};
+  /// document.assign_if_nonempty("foo", values);
+  /// assert(document.at("foo").size() == 2);
+  /// ```
+  auto assign_if_nonempty(const StringView key,
+                          const std::span<const StringView> values) -> void {
+    this->assign_if_nonempty(key, Object::hash(key), values);
+  }
 
   /// This method deletes an object key. For example:
   ///

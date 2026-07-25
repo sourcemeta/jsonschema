@@ -5,7 +5,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME oauth
     assertion.h registration.h
   SOURCES oauth_error.cc oauth_pkce.cc oauth_bearer.cc oauth_syntax.h
     oauth_random.cc oauth_authorization.cc oauth_authorization_parse.h
-    oauth_encode.h oauth_decode.h
+    oauth_decode.h
     oauth_json.h oauth_token.cc oauth_client_authentication.cc
     oauth_transaction.cc oauth_metadata.cc oauth_metadata_provider.cc
     oauth_ttl.h oauth_token_exchange.cc oauth_revocation.cc
@@ -24,6 +24,8 @@ target_link_libraries(sourcemeta_core_oauth
   PRIVATE sourcemeta::core::uri)
 target_link_libraries(sourcemeta_core_oauth
   PRIVATE sourcemeta::core::text)
+target_link_libraries(sourcemeta_core_oauth
+  PRIVATE sourcemeta::core::html)
 
 if(SOURCEMETA_CORE_INSTALL)
   sourcemeta_library_install(NAMESPACE sourcemeta PROJECT core NAME oauth)

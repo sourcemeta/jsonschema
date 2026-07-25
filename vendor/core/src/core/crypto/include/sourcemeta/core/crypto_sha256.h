@@ -8,6 +8,7 @@
 #include <array>       // std::array
 #include <cstdint>     // std::uint8_t
 #include <ostream>     // std::ostream
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -53,6 +54,23 @@ auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256(const std::string_view input)
 /// ```
 auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256_digest(const std::string_view input)
     -> std::array<std::uint8_t, 32>;
+
+/// @ingroup crypto
+/// Hash a sequence of string parts using SHA-256 as if they were a single
+/// concatenated input, returning the raw digest bytes. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <array>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// const std::array<std::string_view, 2> parts{{"foo ", "bar"}};
+/// const auto digest{sourcemeta::core::sha256_digest(parts)};
+/// assert(digest.size() == 32);
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT sha256_digest(
+    std::span<const std::string_view> input) -> std::array<std::uint8_t, 32>;
 
 } // namespace sourcemeta::core
 

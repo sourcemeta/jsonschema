@@ -71,6 +71,21 @@ public:
   /// input.
   [[nodiscard]] static auto from(JSON &&value) -> std::optional<JWK>;
 
+  /// Build a symmetric octet key (RFC 7518 Section 6.4) directly from raw
+  /// secret octets, taken as-is rather than base64url-decoded, so a caller
+  /// holding a shared secret does not assemble and re-parse an `oct` JSON Web
+  /// Key. The minimum secret size each symmetric algorithm demands is enforced
+  /// where the key is used, not here. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jose.h>
+  /// #include <cassert>
+  ///
+  /// const auto key{sourcemeta::core::JWK::from_octets("my-shared-secret")};
+  /// assert(key.type() == sourcemeta::core::JWK::Type::Octet);
+  /// ```
+  [[nodiscard]] static auto from_octets(const std::string_view secret) -> JWK;
+
   /// The family of key material this key holds.
   [[nodiscard]] auto type() const noexcept -> Type { return this->type_; }
 

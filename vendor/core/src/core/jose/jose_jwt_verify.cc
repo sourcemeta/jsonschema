@@ -1,7 +1,5 @@
 #include <sourcemeta/core/jose_verify.h>
 
-#include <sourcemeta/core/text.h>
-
 #include <algorithm>   // std::ranges::find
 #include <chrono>      // std::chrono::seconds, std::chrono::system_clock
 #include <optional>    // std::optional, std::nullopt
@@ -10,24 +8,6 @@
 #include <utility>     // std::unreachable
 
 namespace {
-
-// RFC 7519 Section 5.1: "a recipient using the media type value MUST treat it
-// as if `application/` were prepended to any `typ` value not containing a `/`".
-// Removing an explicit `application/` prefix, when nothing else in the value
-// contains a slash, lets the compact `at+jwt` form and the full
-// `application/at+jwt` form compare equal
-auto strip_application_prefix(const std::string_view value)
-    -> std::string_view {
-  constexpr std::string_view prefix{"application/"};
-  if (value.size() > prefix.size() &&
-      sourcemeta::core::equals_ignore_case(value.substr(0, prefix.size()),
-                                           prefix) &&
-      value.find('/', prefix.size()) == std::string_view::npos) {
-    return value.substr(prefix.size());
-  }
-
-  return value;
-}
 
 auto to_verification_error(const sourcemeta::core::JWTClaimError error)
     -> sourcemeta::core::JWTVerificationError {
@@ -60,7 +40,7 @@ auto jwt_verify(const JWT &token, const JWKS &keys,
                 const std::string_view expected_issuer,
                 const std::string_view expected_audience,
                 const std::chrono::system_clock::time_point now,
-                const std::chrono::seconds clock_skew,
+                const JWTClockSkew clock_skew,
                 const std::optional<std::string_view> expected_subject,
                 const std::optional<std::string_view> expected_type)
     -> std::optional<JWTVerificationError> {
@@ -104,13 +84,8 @@ auto jwt_verify(const JWT &token, const JWKS &keys,
 
   // The type is a header concern checked only on an authenticated token, which
   // is how the access token profile is enforced (RFC 9068 Section 2.1)
-  if (expected_type.has_value()) {
-    const auto type{token.type()};
-    if (!type.has_value() ||
-        !equals_ignore_case(strip_application_prefix(type.value()),
-                            strip_application_prefix(expected_type.value()))) {
-      return JWTVerificationError::Type;
-    }
+  if (expected_type.has_value() && !token.has_type(expected_type.value())) {
+    return JWTVerificationError::Type;
   }
 
   const auto claim_error{jwt_check_claims(token, expected_issuer,

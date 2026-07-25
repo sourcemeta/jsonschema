@@ -21,6 +21,17 @@ namespace sourcemeta::core {
 // the range of valid key sizes
 inline constexpr std::size_t MAXIMUM_KEY_BYTES{512};
 
+// Append a 32-bit integer in big-endian (network) order, the encoding that the
+// mask generation function of RFC 8017 and the Concat KDF of RFC 7518 use for
+// their counters and length fields
+inline auto append_big_endian_uint32(std::string &target,
+                                     const std::uint32_t value) -> void {
+  target.push_back(static_cast<char>((value >> 24u) & 0xffu));
+  target.push_back(static_cast<char>((value >> 16u) & 0xffu));
+  target.push_back(static_cast<char>((value >> 8u) & 0xffu));
+  target.push_back(static_cast<char>(value & 0xffu));
+}
+
 // The same guard for a raw buffer, so a secret that a fixed-size digest array
 // holds is wiped when leaving the current scope
 struct SecureBufferScope {
@@ -108,6 +119,23 @@ inline auto curve_field_bytes(const EllipticCurve curve) noexcept
       return 48;
     case EllipticCurve::P521:
       return 66;
+  }
+
+  std::unreachable();
+}
+
+// The order bit length of each curve, which the platform key generators take as
+// the requested key size. It is not the field width in bits, since P-521 has a
+// 521-bit order that does not fill its 66 octets
+inline auto curve_bit_length(const EllipticCurve curve) noexcept
+    -> std::size_t {
+  switch (curve) {
+    case EllipticCurve::P256:
+      return 256;
+    case EllipticCurve::P384:
+      return 384;
+    case EllipticCurve::P521:
+      return 521;
   }
 
   std::unreachable();

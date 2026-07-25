@@ -7,11 +7,13 @@
 namespace {
 using namespace std::string_view_literals;
 
-const auto HTTP_HASH_TYPE{sourcemeta::core::JSON::Object::hash("type"sv)};
-const auto HTTP_HASH_TITLE{sourcemeta::core::JSON::Object::hash("title"sv)};
-const auto HTTP_HASH_STATUS{sourcemeta::core::JSON::Object::hash("status"sv)};
-const auto HTTP_HASH_DETAIL{sourcemeta::core::JSON::Object::hash("detail"sv)};
-const auto HTTP_HASH_INSTANCE{
+constexpr auto HTTP_HASH_TYPE{sourcemeta::core::JSON::Object::hash("type"sv)};
+constexpr auto HTTP_HASH_TITLE{sourcemeta::core::JSON::Object::hash("title"sv)};
+constexpr auto HTTP_HASH_STATUS{
+    sourcemeta::core::JSON::Object::hash("status"sv)};
+constexpr auto HTTP_HASH_DETAIL{
+    sourcemeta::core::JSON::Object::hash("detail"sv)};
+constexpr auto HTTP_HASH_INSTANCE{
     sourcemeta::core::JSON::Object::hash("instance"sv)};
 
 } // namespace

@@ -10,19 +10,22 @@
 namespace {
 using namespace std::string_view_literals;
 
-const auto JSONRPC_HASH_ID{sourcemeta::core::JSON::Object::hash("id"sv)};
-const auto JSONRPC_HASH_JSONRPC{
+constexpr auto JSONRPC_HASH_ID{sourcemeta::core::JSON::Object::hash("id"sv)};
+constexpr auto JSONRPC_HASH_JSONRPC{
     sourcemeta::core::JSON::Object::hash("jsonrpc"sv)};
-const auto JSONRPC_HASH_METHOD{
+constexpr auto JSONRPC_HASH_METHOD{
     sourcemeta::core::JSON::Object::hash("method"sv)};
-const auto JSONRPC_HASH_RESULT{
+constexpr auto JSONRPC_HASH_RESULT{
     sourcemeta::core::JSON::Object::hash("result"sv)};
-const auto JSONRPC_HASH_ERROR{sourcemeta::core::JSON::Object::hash("error"sv)};
-const auto JSONRPC_HASH_CODE{sourcemeta::core::JSON::Object::hash("code"sv)};
-const auto JSONRPC_HASH_MESSAGE{
+constexpr auto JSONRPC_HASH_ERROR{
+    sourcemeta::core::JSON::Object::hash("error"sv)};
+constexpr auto JSONRPC_HASH_CODE{
+    sourcemeta::core::JSON::Object::hash("code"sv)};
+constexpr auto JSONRPC_HASH_MESSAGE{
     sourcemeta::core::JSON::Object::hash("message"sv)};
-const auto JSONRPC_HASH_DATA{sourcemeta::core::JSON::Object::hash("data"sv)};
-const auto JSONRPC_HASH_PARAMS{
+constexpr auto JSONRPC_HASH_DATA{
+    sourcemeta::core::JSON::Object::hash("data"sv)};
+constexpr auto JSONRPC_HASH_PARAMS{
     sourcemeta::core::JSON::Object::hash("params"sv)};
 
 } // namespace

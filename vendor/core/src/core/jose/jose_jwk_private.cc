@@ -12,22 +12,22 @@
 namespace {
 using namespace std::string_view_literals;
 
-const auto HASH_KTY{sourcemeta::core::JSON::Object::hash("kty"sv)};
-const auto HASH_N{sourcemeta::core::JSON::Object::hash("n"sv)};
-const auto HASH_E{sourcemeta::core::JSON::Object::hash("e"sv)};
-const auto HASH_D{sourcemeta::core::JSON::Object::hash("d"sv)};
-const auto HASH_P{sourcemeta::core::JSON::Object::hash("p"sv)};
-const auto HASH_Q{sourcemeta::core::JSON::Object::hash("q"sv)};
-const auto HASH_DP{sourcemeta::core::JSON::Object::hash("dp"sv)};
-const auto HASH_DQ{sourcemeta::core::JSON::Object::hash("dq"sv)};
-const auto HASH_QI{sourcemeta::core::JSON::Object::hash("qi"sv)};
-const auto HASH_OTH{sourcemeta::core::JSON::Object::hash("oth"sv)};
-const auto HASH_K{sourcemeta::core::JSON::Object::hash("k"sv)};
-const auto HASH_CRV{sourcemeta::core::JSON::Object::hash("crv"sv)};
-const auto HASH_X{sourcemeta::core::JSON::Object::hash("x"sv)};
-const auto HASH_Y{sourcemeta::core::JSON::Object::hash("y"sv)};
-const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
-const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
+constexpr auto HASH_KTY{sourcemeta::core::JSON::Object::hash("kty"sv)};
+constexpr auto HASH_N{sourcemeta::core::JSON::Object::hash("n"sv)};
+constexpr auto HASH_E{sourcemeta::core::JSON::Object::hash("e"sv)};
+constexpr auto HASH_D{sourcemeta::core::JSON::Object::hash("d"sv)};
+constexpr auto HASH_P{sourcemeta::core::JSON::Object::hash("p"sv)};
+constexpr auto HASH_Q{sourcemeta::core::JSON::Object::hash("q"sv)};
+constexpr auto HASH_DP{sourcemeta::core::JSON::Object::hash("dp"sv)};
+constexpr auto HASH_DQ{sourcemeta::core::JSON::Object::hash("dq"sv)};
+constexpr auto HASH_QI{sourcemeta::core::JSON::Object::hash("qi"sv)};
+constexpr auto HASH_OTH{sourcemeta::core::JSON::Object::hash("oth"sv)};
+constexpr auto HASH_K{sourcemeta::core::JSON::Object::hash("k"sv)};
+constexpr auto HASH_CRV{sourcemeta::core::JSON::Object::hash("crv"sv)};
+constexpr auto HASH_X{sourcemeta::core::JSON::Object::hash("x"sv)};
+constexpr auto HASH_Y{sourcemeta::core::JSON::Object::hash("y"sv)};
+constexpr auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
+constexpr auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
 
 // A required string member decoded from base64url, empty when the member is
 // missing, of the wrong type, malformed, or decodes to nothing
@@ -276,6 +276,13 @@ auto JWKPrivate::from(const JSON &value) -> std::optional<JWKPrivate> {
 
 auto JWKPrivate::from(JSON &&value) -> std::optional<JWKPrivate> {
   return from(value);
+}
+
+auto JWKPrivate::from_octets(const std::string_view secret) -> JWKPrivate {
+  JWKPrivate result;
+  result.type_ = Type::Octet;
+  result.secret_ = secret;
+  return result;
 }
 
 auto JWKPrivate::from_pem(const std::string_view pem)

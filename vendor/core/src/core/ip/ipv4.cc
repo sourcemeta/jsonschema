@@ -1,10 +1,11 @@
 #include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/text.h>
+
+#include "ip_helpers.h"
+
+#include <optional> // std::optional, std::nullopt
 
 namespace sourcemeta::core {
-
-static constexpr auto is_digit(const char character) -> bool {
-  return character >= '0' && character <= '9';
-}
 
 auto is_ipv4(const std::string_view address) -> bool {
   if (address.empty()) {
@@ -51,6 +52,15 @@ auto is_ipv4(const std::string_view address) -> bool {
   }
 
   return position == address.size();
+}
+
+auto ipv4_classify(const std::string_view address)
+    -> std::optional<IPAddressClass> {
+  if (!is_ipv4(address)) {
+    return std::nullopt;
+  }
+
+  return ipv4_classify_octets(ipv4_octets(address));
 }
 
 } // namespace sourcemeta::core

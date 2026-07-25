@@ -7,7 +7,7 @@
 namespace {
 using namespace std::string_view_literals;
 
-const auto HASH_KEYS{sourcemeta::core::JSON::Object::hash("keys"sv)};
+constexpr auto HASH_KEYS{sourcemeta::core::JSON::Object::hash("keys"sv)};
 
 } // namespace
 

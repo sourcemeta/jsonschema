@@ -40,6 +40,15 @@ public:
   }
 };
 
+/// @ingroup jose
+/// An error that occurs when parsing an invalid JSON Web Encryption object.
+class SOURCEMETA_CORE_JOSE_EXPORT JWEParseError : public std::exception {
+public:
+  [[nodiscard]] auto what() const noexcept -> const char * override {
+    return "The input is not a valid JSON Web Encryption object";
+  }
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

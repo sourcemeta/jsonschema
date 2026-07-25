@@ -31,7 +31,7 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: The value of x-jsonld-language must be a BCP 47 language tag
+error: The value of x-jsonld-language must be a canonical BCP 47 language tag
   at line 1
   at column 3
   at instance location "/name"
@@ -49,7 +49,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "The value of x-jsonld-language must be a BCP 47 language tag",
+  "error": "The value of x-jsonld-language must be a canonical BCP 47 language tag",
   "line": 1,
   "column": 3,
   "instanceLocation": "/name",

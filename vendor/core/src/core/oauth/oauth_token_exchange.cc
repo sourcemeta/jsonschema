@@ -2,8 +2,8 @@
 
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/uri.h>
 
-#include "oauth_encode.h"
 #include "oauth_json.h"
 
 #include <optional>    // std::optional, std::nullopt
@@ -16,13 +16,14 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_ISSUED_TOKEN_TYPE{JSON::Object::hash("issued_token_type"sv)};
+constexpr auto HASH_ISSUED_TOKEN_TYPE{
+    JSON::Object::hash("issued_token_type"sv)};
 
 auto oauth_append_repeated(SecureString &sink, const std::string_view name,
                            const std::span<const std::string_view> values)
     -> void {
   for (const auto value : values) {
-    oauth_append_form_parameter(sink, name, value);
+    URI::append_query_parameter(sink, name, value);
   }
 }
 
@@ -43,24 +44,24 @@ auto oauth_build_token_request_exchange(
     return false;
   }
 
-  oauth_append_form_parameter(
+  URI::append_query_parameter(
       sink, "grant_type", "urn:ietf:params:oauth:grant-type:token-exchange");
-  oauth_append_form_parameter(sink, "subject_token", request.subject_token);
-  oauth_append_form_parameter(sink, "subject_token_type",
+  URI::append_query_parameter(sink, "subject_token", request.subject_token);
+  URI::append_query_parameter(sink, "subject_token_type",
                               request.subject_token_type);
   if (!request.actor_token.empty()) {
-    oauth_append_form_parameter(sink, "actor_token", request.actor_token);
-    oauth_append_form_parameter(sink, "actor_token_type",
+    URI::append_query_parameter(sink, "actor_token", request.actor_token);
+    URI::append_query_parameter(sink, "actor_token_type",
                                 request.actor_token_type);
   }
 
   if (!request.requested_token_type.empty()) {
-    oauth_append_form_parameter(sink, "requested_token_type",
+    URI::append_query_parameter(sink, "requested_token_type",
                                 request.requested_token_type);
   }
 
   if (!request.scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", request.scope);
+    URI::append_query_parameter(sink, "scope", request.scope);
   }
 
   // RFC 8693 Section 2.1 and RFC 8707 Section 2: each audience and resource is

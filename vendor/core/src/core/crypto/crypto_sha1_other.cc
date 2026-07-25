@@ -1,10 +1,13 @@
 #include <sourcemeta/core/crypto_sha1.h>
 #include <sourcemeta/core/text.h>
 
+#include "crypto_sha1_other.h"
+
 #include <array>   // std::array
 #include <cstddef> // std::size_t
-#include <cstdint> // std::uint32_t, std::uint64_t
+#include <cstdint> // std::uint8_t, std::uint32_t, std::uint64_t
 #include <cstring> // std::memcpy
+#include <string>  // std::string
 
 namespace {
 
@@ -95,7 +98,7 @@ inline auto sha1_process_block(const unsigned char *block,
 
 namespace sourcemeta::core {
 
-auto sha1(const std::string_view input) -> std::string {
+auto sha1_digest(const std::string_view input) -> std::array<std::uint8_t, 20> {
   // Initial hash values (RFC 3174 Section 6.1)
   std::array<std::uint32_t, 5> state{};
   state[0] = 0x67452301U;
@@ -146,14 +149,19 @@ auto sha1(const std::string_view input) -> std::string {
     sha1_process_block(final_block.data() + 64u, state);
   }
 
-  std::array<unsigned char, 20> digest{};
+  std::array<std::uint8_t, 20> digest{};
   for (std::uint64_t state_index = 0u; state_index < 5u; ++state_index) {
     for (std::uint64_t byte_index = 0u; byte_index < 4u; ++byte_index) {
-      digest[(state_index * 4u) + byte_index] = static_cast<unsigned char>(
+      digest[(state_index * 4u) + byte_index] = static_cast<std::uint8_t>(
           (state[state_index] >> (8u * (3u - byte_index))) & 0xffu);
     }
   }
 
+  return digest;
+}
+
+auto sha1(const std::string_view input) -> std::string {
+  const auto digest{sha1_digest(input)};
   return bytes_to_hex(
       {reinterpret_cast<const char *>(digest.data()), digest.size()});
 }

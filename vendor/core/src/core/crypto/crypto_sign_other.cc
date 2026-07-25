@@ -6,13 +6,17 @@
 #include "crypto_ecc.h"
 #include "crypto_eddsa.h"
 #include "crypto_helpers.h"
+#include "crypto_other.h"
 #include "crypto_pkcs8.h"
+#include "crypto_random.h"
 
 #include <array>       // std::array
 #include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint32_t
+#include <exception>   // std::exception
 #include <optional>    // std::optional, std::nullopt
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
@@ -80,10 +84,7 @@ auto mask_generation(const SignatureHashFunction hash,
   std::uint32_t counter{0};
   while (result.size() < length) {
     std::string block{seed};
-    block.push_back(static_cast<char>((counter >> 24u) & 0xffu));
-    block.push_back(static_cast<char>((counter >> 16u) & 0xffu));
-    block.push_back(static_cast<char>((counter >> 8u) & 0xffu));
-    block.push_back(static_cast<char>(counter & 0xffu));
+    append_big_endian_uint32(block, counter);
     result.append(digest_message(hash, block));
     counter += 1;
   }
@@ -381,26 +382,6 @@ auto ec_public_from_scalar(const EllipticCurve curve,
 
 } // namespace
 
-// The reference backend parses the key material into big integers inside each
-// signature, so the parsed key simply holds the raw material
-struct PrivateKey::Internal {
-  PrivateKey::Type kind;
-  std::string modulus;
-  std::string public_exponent;
-  std::string private_exponent;
-  std::string scalar;
-  EllipticCurve elliptic_curve;
-  std::string edwards_seed;
-  EdwardsCurve edwards_curve;
-  bool rsa_pss_restricted{false};
-  // The public coordinates, kept so the public key can be recovered without
-  // recomputing the point from the scalar. A key parsed from a PEM document,
-  // which carries only the scalar on this backend, recomputes them at parse
-  // time, so they are populated for every elliptic curve private key
-  std::string coordinate_x;
-  std::string coordinate_y;
-};
-
 PrivateKey::PrivateKey(Internal *internal) noexcept : internal_{internal} {}
 
 PrivateKey::~PrivateKey() {
@@ -623,6 +604,48 @@ auto make_ec_private_key(const EllipticCurve curve,
                                .edwards_curve = {},
                                .coordinate_x = expected.first,
                                .coordinate_y = expected.second}};
+}
+
+auto generate_ec_private_key(const EllipticCurve curve)
+    -> std::optional<PrivateKey> {
+  const auto parameters{to_curve_parameters(curve)};
+  const auto order_bits{bignum_bit_length(parameters.order)};
+  const auto width{curve_field_bytes(curve)};
+  const auto excess_bits{(width * 8u) - order_bits};
+
+  // Rejection sampling into [1, order). Masking the surplus high bits keeps the
+  // retry rate low even for P-521, whose order fills only 521 of its 528 bits
+  std::string scalar(width, '\x00');
+  const SecureStringScope scalar_scope{scalar};
+  Bignum scalar_number;
+  const SecureBignumScope scalar_number_scope{scalar_number};
+  do {
+    try {
+      fill_random_bytes(std::span<std::uint8_t>{
+          reinterpret_cast<std::uint8_t *>(scalar.data()), width});
+    } catch (const std::exception &) {
+      return std::nullopt;
+    }
+
+    scalar[0] =
+        static_cast<char>(static_cast<std::uint8_t>(scalar[0]) &
+                          static_cast<std::uint8_t>(0xffu >> excess_bits));
+    scalar_number = bignum_from_bytes(scalar);
+  } while (bignum_is_zero(scalar_number) ||
+           bignum_compare(scalar_number, parameters.order) >= 0);
+
+  const auto point{ec_public_from_scalar(curve, scalar)};
+  return PrivateKey{
+      new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
+                               .modulus = {},
+                               .public_exponent = {},
+                               .private_exponent = {},
+                               .scalar = scalar,
+                               .elliptic_curve = curve,
+                               .edwards_seed = {},
+                               .edwards_curve = {},
+                               .coordinate_x = point.first,
+                               .coordinate_y = point.second}};
 }
 
 auto make_edwards_private_key(const EdwardsCurve curve,
