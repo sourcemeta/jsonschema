@@ -2,8 +2,8 @@
 
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/uri.h>
 
-#include "oauth_encode.h"
 #include "oauth_json.h"
 
 #include <chrono>      // std::chrono::seconds
@@ -16,26 +16,26 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_ACTIVE{JSON::Object::hash("active"sv)};
-const auto HASH_SCOPE{JSON::Object::hash("scope"sv)};
-const auto HASH_CLIENT_ID{JSON::Object::hash("client_id"sv)};
-const auto HASH_USERNAME{JSON::Object::hash("username"sv)};
-const auto HASH_TOKEN_TYPE{JSON::Object::hash("token_type"sv)};
-const auto HASH_SUB{JSON::Object::hash("sub"sv)};
-const auto HASH_ISS{JSON::Object::hash("iss"sv)};
-const auto HASH_JTI{JSON::Object::hash("jti"sv)};
-const auto HASH_EXP{JSON::Object::hash("exp"sv)};
-const auto HASH_IAT{JSON::Object::hash("iat"sv)};
-const auto HASH_NBF{JSON::Object::hash("nbf"sv)};
+constexpr auto HASH_ACTIVE{JSON::Object::hash("active"sv)};
+constexpr auto HASH_SCOPE{JSON::Object::hash("scope"sv)};
+constexpr auto HASH_CLIENT_ID{JSON::Object::hash("client_id"sv)};
+constexpr auto HASH_USERNAME{JSON::Object::hash("username"sv)};
+constexpr auto HASH_TOKEN_TYPE{JSON::Object::hash("token_type"sv)};
+constexpr auto HASH_SUB{JSON::Object::hash("sub"sv)};
+constexpr auto HASH_ISS{JSON::Object::hash("iss"sv)};
+constexpr auto HASH_JTI{JSON::Object::hash("jti"sv)};
+constexpr auto HASH_EXP{JSON::Object::hash("exp"sv)};
+constexpr auto HASH_IAT{JSON::Object::hash("iat"sv)};
+constexpr auto HASH_NBF{JSON::Object::hash("nbf"sv)};
 
 } // namespace
 
 auto oauth_build_introspection_request(const std::string_view token,
                                        const std::string_view token_type_hint,
                                        SecureString &sink) -> void {
-  oauth_append_form_parameter(sink, "token", token);
+  URI::append_query_parameter(sink, "token", token);
   if (!token_type_hint.empty()) {
-    oauth_append_form_parameter(sink, "token_type_hint", token_type_hint);
+    URI::append_query_parameter(sink, "token_type_hint", token_type_hint);
   }
 }
 

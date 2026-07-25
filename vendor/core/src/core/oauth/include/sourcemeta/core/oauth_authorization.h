@@ -7,7 +7,9 @@
 
 #include <sourcemeta/core/oauth_profile.h>
 
+#include <cstdint>     // std::uint8_t
 #include <functional>  // std::function
+#include <optional>    // std::optional
 #include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -73,11 +75,12 @@ struct OAuthAuthorizationRequest {
   std::string_view request_uri;
   /// The JWK thumbprint of the DPoP proof public key (RFC 9449 Section 10).
   std::string_view dpop_jkt;
-  /// The response type, a space-delimited set the authorization URL builder
-  /// forces to `code` while the pushed request builder honors an override,
-  /// surfaced on parse so a server can tell a missing value from one it does
-  /// not understand (RFC 6749 Section 3.1.1). It is placed after the older
-  /// members so an existing positional initializer keeps populating them.
+  /// The response type, a space-delimited set that defaults to `code` when
+  /// unset and is otherwise honored by the authorization URL and pushed request
+  /// builders alike, surfaced on parse so a server can tell a missing value
+  /// from one it does not understand (RFC 6749 Section 3.1.1). It is placed
+  /// after the older members so an existing positional initializer keeps
+  /// populating them.
   std::string_view response_type;
   /// The repeatable resource indicators, each an absolute URI without a
   /// fragment (RFC 8707 Section 2).
@@ -89,11 +92,11 @@ struct OAuthAuthorizationRequest {
 
 /// @ingroup oauth
 /// Build an authorization request URL by appending the query to the endpoint
-/// (RFC 6749 Section 4.1.1). The `response_type` is always `code`, since the
-/// implicit grant is not represented, every value is percent-escaped, an
-/// existing query on the endpoint is honored, and the code challenge method is
-/// emitted only when a challenge is present. The sink is appended to and never
-/// cleared. For example:
+/// (RFC 6749 Section 4.1.1). The `response_type` defaults to `code` and is
+/// honored when set, every value is percent-escaped, an existing query on the
+/// endpoint is honored, and the code challenge method is emitted only when a
+/// challenge is present. The sink is appended to and never cleared. For
+/// example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/oauth.h>
@@ -292,6 +295,176 @@ SOURCEMETA_CORE_OAUTH_EXPORT
 auto oauth_build_authorization_error_redirect(
     const std::string_view redirect_uri,
     const OAuthAuthorizationResponse &response, std::string &sink) -> bool;
+
+/// @ingroup oauth
+/// The mechanism used for returning authorization response parameters from
+/// the authorization endpoint (OAuth 2.0 Multiple Response Types Section 2.1,
+/// OAuth 2.0 Form Post Response Mode Section 2).
+enum class OAuthResponseMode : std::uint8_t {
+  /// Parameters are "encoded in the query string added to the redirect_uri
+  /// when redirecting back to the Client" (OAuth 2.0 Multiple Response Types
+  /// Section 2.1).
+  Query,
+  /// Parameters are "encoded in the fragment added to the redirect_uri when
+  /// redirecting back to the Client" (OAuth 2.0 Multiple Response Types
+  /// Section 2.1).
+  Fragment,
+  /// Parameters are "encoded as HTML form values that are auto-submitted in
+  /// the User Agent" with the HTTP POST method (OAuth 2.0 Form Post Response
+  /// Mode Section 2).
+  FormPost
+};
+
+/// @ingroup oauth
+/// Look up the default response mode of a response type (OAuth 2.0 Multiple
+/// Response Types Sections 2.1, 3, 4, and 5), returning no value unless the
+/// response type is registered. The response type "is compared as a
+/// space-delimited list of values in which the order of values does not
+/// matter" (Section 1.2). The lookup covers every registered response type,
+/// including token-bearing ones whose successful response this module does
+/// not encode, since requests are still built and response modes still
+/// negotiated for them. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+///
+/// const auto mode{sourcemeta::core::oauth_default_response_mode("code")};
+/// assert(mode.has_value());
+/// assert(mode.value() == sourcemeta::core::OAuthResponseMode::Query);
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_default_response_mode(const std::string_view response_type)
+    -> std::optional<OAuthResponseMode>;
+
+/// @ingroup oauth
+/// Check whether a response mode may encode the response of a response type,
+/// as "in no case should a set of Authorization Response parameters whose
+/// default Response Mode is the fragment encoding be encoded using the query
+/// encoding" (OAuth 2.0 Multiple Response Types Section 7). An unknown
+/// response type allows no mode. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+///
+/// assert(!sourcemeta::core::oauth_is_response_mode_allowed(
+///     "id_token", sourcemeta::core::OAuthResponseMode::Query));
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_is_response_mode_allowed(const std::string_view response_type,
+                                    const OAuthResponseMode mode) -> bool;
+
+/// @ingroup oauth
+/// Build a successful authorization redirect at the authorization server in
+/// the given response mode, encoding the parameters in the query (RFC 6749
+/// Section 4.1.2) or in the fragment (OAuth 2.0 Multiple Response Types
+/// Section 2.1) of the client's redirection endpoint, returning whether it was
+/// produced. The form post mode produces no value, as it emits an HTML page
+/// rather than a redirect. Every other behavior matches the query-only
+/// builder. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// sourcemeta::core::OAuthAuthorizationResponse response;
+/// response.code = "SplxlOBeZQQYbYS6WxSbIA";
+/// std::string url;
+/// assert(sourcemeta::core::oauth_build_authorization_redirect(
+///     "https://client.example/cb", response,
+///     sourcemeta::core::OAuthResponseMode::Fragment, url));
+/// assert(url == "https://client.example/cb#code=SplxlOBeZQQYbYS6WxSbIA");
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_build_authorization_redirect(
+    const std::string_view redirect_uri,
+    const OAuthAuthorizationResponse &response, const OAuthResponseMode mode,
+    std::string &sink) -> bool;
+
+/// @ingroup oauth
+/// Build a failed authorization redirect at the authorization server in the
+/// given response mode (RFC 6749 Section 4.1.2.1, OAuth 2.0 Multiple Response
+/// Types Section 2.1), returning whether it was produced. The form post mode
+/// produces no value, as it emits an HTML page rather than a redirect. Every
+/// other behavior matches the query-only builder. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// sourcemeta::core::OAuthAuthorizationResponse response;
+/// response.error = "access_denied";
+/// std::string url;
+/// assert(sourcemeta::core::oauth_build_authorization_error_redirect(
+///     "https://client.example/cb", response,
+///     sourcemeta::core::OAuthResponseMode::Fragment, url));
+/// assert(url == "https://client.example/cb#error=access_denied");
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_build_authorization_error_redirect(
+    const std::string_view redirect_uri,
+    const OAuthAuthorizationResponse &response, const OAuthResponseMode mode,
+    std::string &sink) -> bool;
+
+/// @ingroup oauth
+/// Build the auto-submitting HTML page of a successful authorization response
+/// in the form post response mode (OAuth 2.0 Form Post Response Mode
+/// Section 2), returning whether it was produced. The action of the form is
+/// the client's redirection endpoint, the response parameters are the hidden
+/// form values, and the page carries the given title, with the same validation
+/// as the redirect builder. The redirect URI, the response fields, and the
+/// title must not alias the sink. When serving the page, the authorization
+/// server "MUST instruct the User Agent (and any intermediaries) not to store
+/// or reuse the content of the response". For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// sourcemeta::core::OAuthAuthorizationResponse response;
+/// response.code = "SplxlOBeZQQYbYS6WxSbIA";
+/// std::string page;
+/// assert(sourcemeta::core::oauth_build_authorization_form_post(
+///     "https://client.example/cb", response, page));
+/// assert(page.find("<form method=\"post\"") != std::string::npos);
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_build_authorization_form_post(
+    const std::string_view redirect_uri,
+    const OAuthAuthorizationResponse &response, std::string &sink,
+    const std::string_view title = "Submit This Form") -> bool;
+
+/// @ingroup oauth
+/// Build the auto-submitting HTML page of a failed authorization response in
+/// the form post response mode (OAuth 2.0 Form Post Response Mode Section 2,
+/// RFC 6749 Section 4.1.2.1), returning whether it was produced, with the same
+/// validation as the error redirect builder and the page carrying the given
+/// title. The redirect URI, the response fields, and the title must not alias
+/// the sink. When serving the page, the authorization server "MUST instruct
+/// the User Agent (and any intermediaries) not to store or reuse the content
+/// of the response". For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+/// #include <string>
+///
+/// sourcemeta::core::OAuthAuthorizationResponse response;
+/// response.error = "access_denied";
+/// std::string page;
+/// assert(sourcemeta::core::oauth_build_authorization_error_form_post(
+///     "https://client.example/cb", response, page));
+/// assert(page.find("access_denied") != std::string::npos);
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_build_authorization_error_form_post(
+    const std::string_view redirect_uri,
+    const OAuthAuthorizationResponse &response, std::string &sink,
+    const std::string_view title = "Submit This Form") -> bool;
 
 } // namespace sourcemeta::core
 

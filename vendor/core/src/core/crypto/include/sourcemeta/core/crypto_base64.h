@@ -7,8 +7,10 @@
 
 #include <sourcemeta/core/crypto_secure.h>
 
+#include <cstdint>     // std::uint8_t
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -119,6 +121,20 @@ base64url_encode(const std::string_view input, std::ostream &output) -> void;
 /// ```
 auto SOURCEMETA_CORE_CRYPTO_EXPORT
 base64url_encode(const std::string_view input) -> std::string;
+
+/// @ingroup crypto
+/// Encode raw bytes using unpadded Base64url (RFC 4648 Section 5), for a byte
+/// buffer such as a hash digest rather than a character string. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/crypto.h>
+/// #include <cassert>
+///
+/// const auto digest{sourcemeta::core::sha256_digest("fo")};
+/// assert(!sourcemeta::core::base64url_encode(digest).empty());
+/// ```
+auto SOURCEMETA_CORE_CRYPTO_EXPORT
+base64url_encode(std::span<const std::uint8_t> input) -> std::string;
 
 /// @ingroup crypto
 /// Append the unpadded Base64url encoding (RFC 4648 Section 5) of a byte

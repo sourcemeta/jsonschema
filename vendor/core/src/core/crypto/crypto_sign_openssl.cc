@@ -21,21 +21,6 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
 
-namespace sourcemeta::core {
-
-// The parsed key keeps the native handle alive so that many signatures are
-// produced without rebuilding it
-struct PrivateKey::Internal {
-  PrivateKey::Type kind;
-  EVP_PKEY *key;
-  // The field width for the elliptic curve raw signature encoding
-  std::size_t field_bytes;
-  // Set for an id-RSASSA-PSS key, which is refused for PKCS1v15 signing
-  bool rsa_pss_restricted{false};
-};
-
-} // namespace sourcemeta::core
-
 namespace {
 
 auto to_message_digest(
@@ -349,6 +334,19 @@ auto make_ec_private_key(const EllipticCurve curve,
   }
 
   auto *key{native_ec_private_key(curve, scalar, coordinate_x, coordinate_y)};
+  if (key == nullptr) {
+    return std::nullopt;
+  }
+
+  return PrivateKey{
+      new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
+                               .key = key,
+                               .field_bytes = curve_field_bytes(curve)}};
+}
+
+auto generate_ec_private_key(const EllipticCurve curve)
+    -> std::optional<PrivateKey> {
+  auto *key{EVP_EC_gen(to_group_name(curve))};
   if (key == nullptr) {
     return std::nullopt;
   }

@@ -59,6 +59,11 @@ public:
   /// The token type declared in the header, if present.
   [[nodiscard]] auto type() const noexcept -> std::optional<std::string_view>;
 
+  /// Whether the token declares the given type, treating a subtype without a
+  /// slash as `application/`-prefixed and comparing case-insensitively (RFC
+  /// 7519 Section 5.1, RFC 7515 Section 4.1.9).
+  [[nodiscard]] auto has_type(const std::string_view media_type) const -> bool;
+
   /// The decoded token header.
   [[nodiscard]] auto header() const noexcept -> const JSON & {
     return this->header_;

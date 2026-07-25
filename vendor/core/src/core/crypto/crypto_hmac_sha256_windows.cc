@@ -7,16 +7,19 @@
 
 #include <bcrypt.h> // BCrypt*, BCRYPT_*
 
-#include <array>     // std::array
-#include <cstddef>   // std::size_t
-#include <cstdint>   // std::uint8_t
-#include <limits>    // std::numeric_limits
-#include <stdexcept> // std::runtime_error
+#include "crypto_windows.h"
+
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
+#include <span>        // std::span
+#include <stdexcept>   // std::runtime_error
+#include <string_view> // std::string_view
 
 namespace sourcemeta::core {
 
 auto hmac_sha256_digest(const std::string_view key,
-                        const std::string_view message)
+                        const std::span<const std::string_view> message)
     -> std::array<std::uint8_t, 32> {
   // A key longer than the block size is hashed first (RFC 2104 Section 2),
   // which also keeps the key length within the CNG length parameter. The
@@ -48,21 +51,9 @@ auto hmac_sha256_digest(const std::string_view key,
     throw std::runtime_error("Could not create the CNG HMAC-SHA256 hash");
   }
 
-  // The data interface is not const-qualified but never writes through
-  // the pointer, and it takes a 32-bit length, so larger inputs must be
-  // fed in chunks
-  auto *remaining_data{
-      reinterpret_cast<unsigned char *>(const_cast<char *>(message.data()))};
-  auto remaining_size{message.size()};
-  constexpr std::size_t maximum_chunk{std::numeric_limits<ULONG>::max()};
   auto success{true};
-  while (remaining_size > 0 && success) {
-    const auto chunk_size{remaining_size > maximum_chunk ? maximum_chunk
-                                                         : remaining_size};
-    success = BCRYPT_SUCCESS(BCryptHashData(hash, remaining_data,
-                                            static_cast<ULONG>(chunk_size), 0));
-    remaining_data += chunk_size;
-    remaining_size -= chunk_size;
+  for (const auto part : message) {
+    success = success && hash_data_chunked(hash, part);
   }
 
   std::array<std::uint8_t, 32> digest{};
@@ -78,6 +69,13 @@ auto hmac_sha256_digest(const std::string_view key,
   }
 
   return digest;
+}
+
+auto hmac_sha256_digest(const std::string_view key,
+                        const std::string_view message)
+    -> std::array<std::uint8_t, 32> {
+  return hmac_sha256_digest(key,
+                            std::span<const std::string_view>{&message, 1});
 }
 
 } // namespace sourcemeta::core

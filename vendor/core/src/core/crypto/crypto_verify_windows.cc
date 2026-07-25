@@ -22,23 +22,6 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
 
-namespace sourcemeta::core {
-
-// The parsed key keeps both the algorithm provider and the imported key handle
-// alive for reuse. The Edwards curves have no CNG primitive, so they keep the
-// raw encoded point and verify through the reference implementation
-struct PublicKey::Internal {
-  PublicKey::Type kind;
-  BCRYPT_ALG_HANDLE algorithm;
-  BCRYPT_KEY_HANDLE key;
-  std::size_t field_bytes;
-  std::string modulus;
-  std::string edwards_point;
-  EdwardsCurve edwards_curve;
-};
-
-} // namespace sourcemeta::core
-
 namespace {
 
 auto to_cng_algorithm(

@@ -27,13 +27,13 @@ public final class SourcemetaCoreEd25519: NSObject {
   }
 }
 
-// AES-256 in Galois/Counter Mode, which the Apple Security framework does not
+// AES in Galois/Counter Mode, which the Apple Security framework does not
 // expose through its C API either. CryptoKit provides it since macOS 10.15
 @objc(SourcemetaCoreAESGCM)
 public final class SourcemetaCoreAESGCM: NSObject {
-  @objc public static func seal(key: Data, nonce: Data,
-                                plaintext: Data) -> Data? {
-    guard key.count == 32 else {
+  @objc public static func seal(key: Data, nonce: Data, plaintext: Data,
+                                associatedData: Data) -> Data? {
+    guard key.count == 16 || key.count == 24 || key.count == 32 else {
       return nil
     }
 
@@ -43,7 +43,7 @@ public final class SourcemetaCoreAESGCM: NSObject {
 
     guard let box = try? AES.GCM.seal(
         plaintext, using: SymmetricKey(data: key),
-        nonce: sealingNonce) else {
+        nonce: sealingNonce, authenticating: associatedData) else {
       return nil
     }
 
@@ -51,8 +51,8 @@ public final class SourcemetaCoreAESGCM: NSObject {
   }
 
   @objc public static func open(key: Data, nonce: Data, ciphertext: Data,
-                                tag: Data) -> Data? {
-    guard key.count == 32 else {
+                                tag: Data, associatedData: Data) -> Data? {
+    guard key.count == 16 || key.count == 24 || key.count == 32 else {
       return nil
     }
 
@@ -62,6 +62,7 @@ public final class SourcemetaCoreAESGCM: NSObject {
       return nil
     }
 
-    return try? AES.GCM.open(box, using: SymmetricKey(data: key))
+    return try? AES.GCM.open(
+        box, using: SymmetricKey(data: key), authenticating: associatedData)
   }
 }

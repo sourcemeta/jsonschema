@@ -29,7 +29,7 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: A JSON-LD self identity template variable must bind to a string, number, or boolean
+error: A JSON-LD self identity template variable must bind to a string
   at line 1
   at column 1
   at instance location ""
@@ -47,7 +47,7 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "A JSON-LD self identity template variable must bind to a string, number, or boolean",
+  "error": "A JSON-LD self identity template variable must bind to a string",
   "line": 1,
   "column": 1,
   "instanceLocation": "",

@@ -11,8 +11,8 @@
 namespace {
 using namespace std::string_view_literals;
 
-const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
-const auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit"sv)};
+constexpr auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
+constexpr auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit"sv)};
 
 auto compact(const sourcemeta::core::JSON &document) -> std::string {
   std::ostringstream stream;

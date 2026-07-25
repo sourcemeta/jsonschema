@@ -5,6 +5,7 @@
 #include "crypto_ecc.h"
 #include "crypto_eddsa.h"
 #include "crypto_helpers.h"
+#include "crypto_other.h"
 
 #include <array>       // std::array
 #include <cassert>     // assert
@@ -87,10 +88,7 @@ auto mask_generation(const SignatureHashFunction hash,
   std::uint32_t counter{0};
   while (result.size() < length) {
     std::string block{seed};
-    block.push_back(static_cast<char>((counter >> 24u) & 0xffu));
-    block.push_back(static_cast<char>((counter >> 16u) & 0xffu));
-    block.push_back(static_cast<char>((counter >> 8u) & 0xffu));
-    block.push_back(static_cast<char>(counter & 0xffu));
+    append_big_endian_uint32(block, counter);
     result.append(digest_message(hash, block));
     counter += 1;
   }
@@ -343,19 +341,6 @@ auto verify_ecdsa(const EllipticCurve curve, const SignatureHashFunction hash,
 }
 
 } // namespace
-
-// The reference backend parses the key material into big integers inside each
-// verification, which is cheap next to the modular arithmetic, so the parsed
-// key simply holds the raw material
-struct PublicKey::Internal {
-  PublicKey::Type kind;
-  std::string modulus;
-  std::string exponent;
-  std::string coordinate_x;
-  std::string coordinate_y;
-  EllipticCurve elliptic_curve;
-  EdwardsCurve edwards_curve;
-};
 
 PublicKey::PublicKey(Internal *internal) noexcept : internal_{internal} {}
 

@@ -7,8 +7,7 @@
 #include <sourcemeta/core/jose_verify.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/oauth_random.h>
-
-#include "oauth_encode.h"
+#include <sourcemeta/core/uri.h>
 
 #include <algorithm>   // std::ranges::find_if, std::clamp
 #include <chrono>      // std::chrono::seconds, std::chrono::duration_cast
@@ -24,14 +23,14 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_ALG{JSON::Object::hash("alg"sv)};
-const auto HASH_KID{JSON::Object::hash("kid"sv)};
-const auto HASH_ISS{JSON::Object::hash("iss"sv)};
-const auto HASH_SUB{JSON::Object::hash("sub"sv)};
-const auto HASH_AUD{JSON::Object::hash("aud"sv)};
-const auto HASH_EXP{JSON::Object::hash("exp"sv)};
-const auto HASH_IAT{JSON::Object::hash("iat"sv)};
-const auto HASH_JTI{JSON::Object::hash("jti"sv)};
+constexpr auto HASH_ALG{JSON::Object::hash("alg"sv)};
+constexpr auto HASH_KID{JSON::Object::hash("kid"sv)};
+constexpr auto HASH_ISS{JSON::Object::hash("iss"sv)};
+constexpr auto HASH_SUB{JSON::Object::hash("sub"sv)};
+constexpr auto HASH_AUD{JSON::Object::hash("aud"sv)};
+constexpr auto HASH_EXP{JSON::Object::hash("exp"sv)};
+constexpr auto HASH_IAT{JSON::Object::hash("iat"sv)};
+constexpr auto HASH_JTI{JSON::Object::hash("jti"sv)};
 
 auto to_epoch_seconds(const std::chrono::system_clock::time_point point)
     -> std::int64_t {
@@ -142,9 +141,13 @@ auto verify_assertion(
       const auto skew{std::clamp(options.clock_skew,
                                  std::chrono::seconds::zero(),
                                  std::chrono::seconds{31556952})};
-      const auto remaining{std::chrono::duration_cast<std::chrono::seconds>(
-                               expiration.value() - now) +
-                           skew};
+      // The remaining lifetime is rounded up to the next whole second so the
+      // stored entry never expires before the sub-second interval during which
+      // the assertion itself is still accepted, which a truncating cast would
+      // collapse to zero in the final fractional second
+      const auto remaining{
+          std::chrono::ceil<std::chrono::seconds>(expiration.value() - now) +
+          skew};
       const auto window{remaining > std::chrono::seconds{0}
                             ? remaining
                             : std::chrono::seconds{0}};
@@ -208,18 +211,18 @@ auto oauth_build_client_assertion(
 
 auto oauth_client_assertion(const std::string_view assertion,
                             SecureString &sink) -> void {
-  oauth_append_form_parameter(sink, "client_assertion_type",
+  URI::append_query_parameter(sink, "client_assertion_type",
                               OAUTH_CLIENT_ASSERTION_TYPE_JWT_BEARER);
-  oauth_append_form_parameter(sink, "client_assertion", assertion);
+  URI::append_query_parameter(sink, "client_assertion", assertion);
 }
 
 auto oauth_build_token_request_jwt_bearer(const std::string_view assertion,
                                           const std::string_view scope,
                                           SecureString &sink) -> void {
-  oauth_append_form_parameter(sink, "grant_type", OAUTH_GRANT_TYPE_JWT_BEARER);
-  oauth_append_form_parameter(sink, "assertion", assertion);
+  URI::append_query_parameter(sink, "grant_type", OAUTH_GRANT_TYPE_JWT_BEARER);
+  URI::append_query_parameter(sink, "assertion", assertion);
   if (!scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", scope);
+    URI::append_query_parameter(sink, "scope", scope);
   }
 }
 

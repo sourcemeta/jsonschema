@@ -3,8 +3,8 @@
 #include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/text.h>
+#include <sourcemeta/core/uri.h>
 
-#include "oauth_encode.h"
 #include "oauth_json.h"
 
 #include <array>       // std::array
@@ -29,13 +29,13 @@ using namespace std::literals::string_view_literals;
 constexpr std::string_view USER_CODE_ALPHABET{"BCDFGHJKLMNPQRSTVWXZ"};
 constexpr std::chrono::seconds DEFAULT_INTERVAL{5};
 
-const auto HASH_DEVICE_CODE{JSON::Object::hash("device_code"sv)};
-const auto HASH_USER_CODE{JSON::Object::hash("user_code"sv)};
-const auto HASH_VERIFICATION_URI{JSON::Object::hash("verification_uri"sv)};
-const auto HASH_VERIFICATION_URI_COMPLETE{
+constexpr auto HASH_DEVICE_CODE{JSON::Object::hash("device_code"sv)};
+constexpr auto HASH_USER_CODE{JSON::Object::hash("user_code"sv)};
+constexpr auto HASH_VERIFICATION_URI{JSON::Object::hash("verification_uri"sv)};
+constexpr auto HASH_VERIFICATION_URI_COMPLETE{
     JSON::Object::hash("verification_uri_complete"sv)};
-const auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
-const auto HASH_INTERVAL{JSON::Object::hash("interval"sv)};
+constexpr auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
+constexpr auto HASH_INTERVAL{JSON::Object::hash("interval"sv)};
 
 auto normalize_user_code(const std::string_view value) -> SecureString {
   SecureString result;
@@ -63,15 +63,15 @@ auto oauth_build_device_authorization_request(
     const std::span<const OAuthParameter> resources, std::string &sink)
     -> void {
   if (!client_id.empty()) {
-    oauth_append_form_parameter(sink, "client_id", client_id);
+    URI::append_query_parameter(sink, "client_id", client_id);
   }
 
   if (!scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", scope);
+    URI::append_query_parameter(sink, "scope", scope);
   }
 
   for (const auto &resource : resources) {
-    oauth_append_form_parameter(sink, resource.name, resource.value);
+    URI::append_query_parameter(sink, resource.name, resource.value);
   }
 }
 
@@ -79,11 +79,11 @@ auto oauth_build_token_request_device(
     const std::string_view device_code,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  oauth_append_form_parameter(sink, "grant_type",
+  URI::append_query_parameter(sink, "grant_type",
                               "urn:ietf:params:oauth:grant-type:device_code");
-  oauth_append_form_parameter(sink, "device_code", device_code);
+  URI::append_query_parameter(sink, "device_code", device_code);
   for (const auto &resource : resources) {
-    oauth_append_form_parameter(sink, resource.name, resource.value);
+    URI::append_query_parameter(sink, resource.name, resource.value);
   }
 }
 

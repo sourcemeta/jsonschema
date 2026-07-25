@@ -35,29 +35,35 @@ inline constexpr JSON::StringView KEYWORD_VOCAB{"@vocab"};
 
 // Precomputed object-key hashes for each keyword, so that object access never
 // has to recompute them.
-inline const auto KEYWORD_BASE_HASH{JSON::Object::hash(KEYWORD_BASE)};
-inline const auto KEYWORD_CONTAINER_HASH{JSON::Object::hash(KEYWORD_CONTAINER)};
-inline const auto KEYWORD_CONTEXT_HASH{JSON::Object::hash(KEYWORD_CONTEXT)};
-inline const auto KEYWORD_DIRECTION_HASH{JSON::Object::hash(KEYWORD_DIRECTION)};
-inline const auto KEYWORD_GRAPH_HASH{JSON::Object::hash(KEYWORD_GRAPH)};
-inline const auto KEYWORD_ID_HASH{JSON::Object::hash(KEYWORD_ID)};
-inline const auto KEYWORD_IMPORT_HASH{JSON::Object::hash(KEYWORD_IMPORT)};
-inline const auto KEYWORD_INCLUDED_HASH{JSON::Object::hash(KEYWORD_INCLUDED)};
-inline const auto KEYWORD_INDEX_HASH{JSON::Object::hash(KEYWORD_INDEX)};
-inline const auto KEYWORD_JSON_HASH{JSON::Object::hash(KEYWORD_JSON)};
-inline const auto KEYWORD_LANGUAGE_HASH{JSON::Object::hash(KEYWORD_LANGUAGE)};
-inline const auto KEYWORD_LIST_HASH{JSON::Object::hash(KEYWORD_LIST)};
-inline const auto KEYWORD_NEST_HASH{JSON::Object::hash(KEYWORD_NEST)};
-inline const auto KEYWORD_NONE_HASH{JSON::Object::hash(KEYWORD_NONE)};
-inline const auto KEYWORD_PREFIX_HASH{JSON::Object::hash(KEYWORD_PREFIX)};
-inline const auto KEYWORD_PROPAGATE_HASH{JSON::Object::hash(KEYWORD_PROPAGATE)};
-inline const auto KEYWORD_PROTECTED_HASH{JSON::Object::hash(KEYWORD_PROTECTED)};
-inline const auto KEYWORD_REVERSE_HASH{JSON::Object::hash(KEYWORD_REVERSE)};
-inline const auto KEYWORD_SET_HASH{JSON::Object::hash(KEYWORD_SET)};
-inline const auto KEYWORD_TYPE_HASH{JSON::Object::hash(KEYWORD_TYPE)};
-inline const auto KEYWORD_VALUE_HASH{JSON::Object::hash(KEYWORD_VALUE)};
-inline const auto KEYWORD_VERSION_HASH{JSON::Object::hash(KEYWORD_VERSION)};
-inline const auto KEYWORD_VOCAB_HASH{JSON::Object::hash(KEYWORD_VOCAB)};
+inline constexpr auto KEYWORD_BASE_HASH{JSON::Object::hash(KEYWORD_BASE)};
+inline constexpr auto KEYWORD_CONTAINER_HASH{
+    JSON::Object::hash(KEYWORD_CONTAINER)};
+inline constexpr auto KEYWORD_CONTEXT_HASH{JSON::Object::hash(KEYWORD_CONTEXT)};
+inline constexpr auto KEYWORD_DIRECTION_HASH{
+    JSON::Object::hash(KEYWORD_DIRECTION)};
+inline constexpr auto KEYWORD_GRAPH_HASH{JSON::Object::hash(KEYWORD_GRAPH)};
+inline constexpr auto KEYWORD_ID_HASH{JSON::Object::hash(KEYWORD_ID)};
+inline constexpr auto KEYWORD_IMPORT_HASH{JSON::Object::hash(KEYWORD_IMPORT)};
+inline constexpr auto KEYWORD_INCLUDED_HASH{
+    JSON::Object::hash(KEYWORD_INCLUDED)};
+inline constexpr auto KEYWORD_INDEX_HASH{JSON::Object::hash(KEYWORD_INDEX)};
+inline constexpr auto KEYWORD_JSON_HASH{JSON::Object::hash(KEYWORD_JSON)};
+inline constexpr auto KEYWORD_LANGUAGE_HASH{
+    JSON::Object::hash(KEYWORD_LANGUAGE)};
+inline constexpr auto KEYWORD_LIST_HASH{JSON::Object::hash(KEYWORD_LIST)};
+inline constexpr auto KEYWORD_NEST_HASH{JSON::Object::hash(KEYWORD_NEST)};
+inline constexpr auto KEYWORD_NONE_HASH{JSON::Object::hash(KEYWORD_NONE)};
+inline constexpr auto KEYWORD_PREFIX_HASH{JSON::Object::hash(KEYWORD_PREFIX)};
+inline constexpr auto KEYWORD_PROPAGATE_HASH{
+    JSON::Object::hash(KEYWORD_PROPAGATE)};
+inline constexpr auto KEYWORD_PROTECTED_HASH{
+    JSON::Object::hash(KEYWORD_PROTECTED)};
+inline constexpr auto KEYWORD_REVERSE_HASH{JSON::Object::hash(KEYWORD_REVERSE)};
+inline constexpr auto KEYWORD_SET_HASH{JSON::Object::hash(KEYWORD_SET)};
+inline constexpr auto KEYWORD_TYPE_HASH{JSON::Object::hash(KEYWORD_TYPE)};
+inline constexpr auto KEYWORD_VALUE_HASH{JSON::Object::hash(KEYWORD_VALUE)};
+inline constexpr auto KEYWORD_VERSION_HASH{JSON::Object::hash(KEYWORD_VERSION)};
+inline constexpr auto KEYWORD_VOCAB_HASH{JSON::Object::hash(KEYWORD_VOCAB)};
 
 // Markers used internally by inverse context creation, term selection, and node
 // map generation. These are not JSON-LD document keywords: @default is the name
@@ -66,8 +72,8 @@ inline const auto KEYWORD_VOCAB_HASH{JSON::Object::hash(KEYWORD_VOCAB)};
 inline constexpr JSON::StringView KEYWORD_ANY{"@any"};
 inline constexpr JSON::StringView KEYWORD_DEFAULT{"@default"};
 inline constexpr JSON::StringView KEYWORD_NULL{"@null"};
-inline const auto KEYWORD_ANY_HASH{JSON::Object::hash(KEYWORD_ANY)};
-inline const auto KEYWORD_DEFAULT_HASH{JSON::Object::hash(KEYWORD_DEFAULT)};
+inline constexpr auto KEYWORD_ANY_HASH{JSON::Object::hash(KEYWORD_ANY)};
+inline constexpr auto KEYWORD_DEFAULT_HASH{JSON::Object::hash(KEYWORD_DEFAULT)};
 
 // A stable owned copy of the @context keyword, suitable as a JSON Pointer
 // token. (A namespace-scope JSON::String constant would trip clang-tidy's

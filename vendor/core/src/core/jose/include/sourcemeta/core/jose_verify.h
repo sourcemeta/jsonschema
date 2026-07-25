@@ -39,6 +39,47 @@ enum class JWTClaimError : std::uint8_t {
 };
 
 /// @ingroup jose
+/// A tolerance for clock disagreement between the token issuer and the
+/// verifier, carried per time-based claim so that, for example, a deployment
+/// can forgive a small expiration overshoot without also accepting tokens
+/// issued in the future. A plain seconds value converts to a uniform
+/// tolerance across every claim. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jose.h>
+/// #include <chrono>
+///
+/// const sourcemeta::core::JWTClockSkew uniform{std::chrono::seconds{30}};
+/// const sourcemeta::core::JWTClockSkew per_claim{
+///     std::chrono::seconds{60}, std::chrono::seconds{30},
+///     std::chrono::seconds{0}};
+/// ```
+struct JWTClockSkew {
+  /// Apply no tolerance to any time-based claim.
+  JWTClockSkew() noexcept = default;
+
+  // The conversion is deliberately implicit so that a caller holding a single
+  // uniform tolerance can keep passing plain seconds
+  /// Apply the same tolerance to every time-based claim.
+  JWTClockSkew(const std::chrono::seconds uniform) noexcept
+      : expiration{uniform}, not_before{uniform}, issued_at{uniform} {}
+
+  /// Apply a distinct tolerance to each time-based claim.
+  JWTClockSkew(const std::chrono::seconds expiration_tolerance,
+               const std::chrono::seconds not_before_tolerance,
+               const std::chrono::seconds issued_at_tolerance) noexcept
+      : expiration{expiration_tolerance}, not_before{not_before_tolerance},
+        issued_at{issued_at_tolerance} {}
+
+  /// The tolerance applied to the expiration time claim.
+  std::chrono::seconds expiration{0};
+  /// The tolerance applied to the not-before time claim.
+  std::chrono::seconds not_before{0};
+  /// The tolerance applied to the issued-at time claim.
+  std::chrono::seconds issued_at{0};
+};
+
+/// @ingroup jose
 /// Validate the registered claims of a JSON Web Token against the expected
 /// issuer and audience at a given time, returning the first failing check or no
 /// value when every check passes. The expiration claim is required (RFC 9068
@@ -62,13 +103,12 @@ enum class JWTClaimError : std::uint8_t {
 /// assert(!error.has_value());
 /// ```
 SOURCEMETA_CORE_JOSE_EXPORT
-auto jwt_check_claims(
-    const JWT &token, const std::string_view expected_issuer,
-    const std::string_view expected_audience,
-    const std::chrono::system_clock::time_point now,
-    const std::chrono::seconds clock_skew = std::chrono::seconds{0},
-    const std::optional<std::string_view> expected_subject = std::nullopt)
-    -> std::optional<JWTClaimError>;
+auto jwt_check_claims(const JWT &token, const std::string_view expected_issuer,
+                      const std::string_view expected_audience,
+                      const std::chrono::system_clock::time_point now,
+                      const JWTClockSkew clock_skew = {},
+                      const std::optional<std::string_view> expected_subject =
+                          std::nullopt) -> std::optional<JWTClaimError>;
 
 /// @ingroup jose
 /// Verify a JSON Web Signature given its algorithm, its signing input, and its
@@ -184,7 +224,7 @@ auto jwt_verify(
     const std::string_view expected_issuer,
     const std::string_view expected_audience,
     const std::chrono::system_clock::time_point now,
-    const std::chrono::seconds clock_skew = std::chrono::seconds{0},
+    const JWTClockSkew clock_skew = {},
     const std::optional<std::string_view> expected_subject = std::nullopt,
     const std::optional<std::string_view> expected_type = std::nullopt)
     -> std::optional<JWTVerificationError>;

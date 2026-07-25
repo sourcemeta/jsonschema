@@ -63,12 +63,13 @@ Schema, so annotated schemas remain valid for every other tool.
 | `x-jsonld-type` | An absolute IRI or array of absolute IRIs | object or reference subschema | The node `@type` |
 | `x-jsonld-reverse` | An absolute IRI | property subschema | A reverse predicate IRI, emitting `@reverse` edges |
 | `x-jsonld-datatype` | An absolute IRI | scalar subschema | A typed literal datatype IRI, such as `http://www.w3.org/2001/XMLSchema#date` |
-| `x-jsonld-language` | A [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag | string subschema | The language of language-tagged literals |
+| `x-jsonld-language` | A canonical [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag | string subschema | The language of language-tagged literals |
 | `x-jsonld-direction` | `ltr` or `rtl` | string subschema | The base direction for internationalised literals |
 | `x-jsonld-json` | A boolean | any subschema | Treat the value as an opaque `@json` literal |
 | `x-jsonld-graph` | A boolean | object subschema | Wrap the node's edges in a named `@graph` |
 | `x-jsonld-container` | `@list`, `@set`, `@language`, or `@index` | array or object property subschema | The container semantics of the property |
 | `x-jsonld-self` | An [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI template | scalar or object subschema | Mint the node `@id` from instance values, such as `https://www.iso.org/iso-4217/{this}` |
+| `x-jsonld-override` | A boolean | any subschema | Give the schema object's own `x-jsonld-*` values precedence over conflicting ones from subschemas beneath it, such as a sibling `$ref` |
 
 For example, consider the following product catalog schema, which validates
 products and maps them to [schema.org](https://schema.org) at the same time:

@@ -4,27 +4,26 @@
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/time.h>
 
-#include <chrono>        // std::chrono::duration, std::chrono::system_clock
-#include <optional>      // std::optional, std::nullopt
-#include <stdexcept>     // std::out_of_range
-#include <string_view>   // std::string_view
-#include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
+#include <chrono>      // std::chrono::duration, std::chrono::system_clock
+#include <optional>    // std::optional, std::nullopt
+#include <stdexcept>   // std::out_of_range
+#include <string_view> // std::string_view
+#include <utility>     // std::move
 
 namespace {
 using namespace std::string_view_literals;
 
-const auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
-const auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit"sv)};
-const auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
-const auto HASH_TYP{sourcemeta::core::JSON::Object::hash("typ"sv)};
-const auto HASH_ISS{sourcemeta::core::JSON::Object::hash("iss"sv)};
-const auto HASH_SUB{sourcemeta::core::JSON::Object::hash("sub"sv)};
-const auto HASH_AUD{sourcemeta::core::JSON::Object::hash("aud"sv)};
-const auto HASH_EXP{sourcemeta::core::JSON::Object::hash("exp"sv)};
-const auto HASH_NBF{sourcemeta::core::JSON::Object::hash("nbf"sv)};
-const auto HASH_IAT{sourcemeta::core::JSON::Object::hash("iat"sv)};
-const auto HASH_JTI{sourcemeta::core::JSON::Object::hash("jti"sv)};
+constexpr auto HASH_ALG{sourcemeta::core::JSON::Object::hash("alg"sv)};
+constexpr auto HASH_CRIT{sourcemeta::core::JSON::Object::hash("crit"sv)};
+constexpr auto HASH_KID{sourcemeta::core::JSON::Object::hash("kid"sv)};
+constexpr auto HASH_TYP{sourcemeta::core::JSON::Object::hash("typ"sv)};
+constexpr auto HASH_ISS{sourcemeta::core::JSON::Object::hash("iss"sv)};
+constexpr auto HASH_SUB{sourcemeta::core::JSON::Object::hash("sub"sv)};
+constexpr auto HASH_AUD{sourcemeta::core::JSON::Object::hash("aud"sv)};
+constexpr auto HASH_EXP{sourcemeta::core::JSON::Object::hash("exp"sv)};
+constexpr auto HASH_NBF{sourcemeta::core::JSON::Object::hash("nbf"sv)};
+constexpr auto HASH_IAT{sourcemeta::core::JSON::Object::hash("iat"sv)};
+constexpr auto HASH_JTI{sourcemeta::core::JSON::Object::hash("jti"sv)};
 
 auto string_claim(const sourcemeta::core::JSON &object,
                   const sourcemeta::core::JSON::StringView name,
@@ -38,17 +37,20 @@ auto string_claim(const sourcemeta::core::JSON &object,
   return std::string_view{member->to_string()};
 }
 
-// The JSON layer preserves repeated members rather than collapsing them, so
-// uniqueness is checked here
-auto has_unique_members(const sourcemeta::core::JSON &object) -> bool {
-  std::unordered_set<std::string_view> names;
-  for (const auto &entry : object.as_object()) {
-    if (!names.emplace(entry.first).second) {
-      return false;
-    }
+// RFC 7519 Section 5.1: a "typ" value not containing a slash is treated as if
+// "application/" were prepended, so the compact and prefixed forms compare
+// equal, and RFC 7515 Section 4.1.9 makes the media type case-insensitive
+auto strip_application_prefix(const std::string_view value)
+    -> std::string_view {
+  constexpr std::string_view prefix{"application/"};
+  if (value.size() > prefix.size() &&
+      sourcemeta::core::equals_ignore_case(value.substr(0, prefix.size()),
+                                           prefix) &&
+      value.find('/', prefix.size()) == std::string_view::npos) {
+    return value.substr(prefix.size());
   }
 
-  return true;
+  return value;
 }
 
 auto date_claim(const sourcemeta::core::JSON &object,
@@ -117,8 +119,8 @@ auto JWT::parse(const std::string_view input, JWT &result) -> bool {
   // RFC 7515 Section 4: the header parameter names must be unique, and RFC 7519
   // Section 4: the claim names must be unique, so a duplicate in either the
   // header or the payload is rejected (RFC 8725 Section 2.4)
-  if (!has_unique_members(header_json.value()) ||
-      !has_unique_members(payload_json.value())) {
+  if (!header_json.value().unique_keys() ||
+      !payload_json.value().unique_keys()) {
     return false;
   }
 
@@ -165,6 +167,13 @@ auto JWT::key_id() const noexcept -> std::optional<std::string_view> {
 
 auto JWT::type() const noexcept -> std::optional<std::string_view> {
   return string_claim(this->header_, "typ", HASH_TYP);
+}
+
+auto JWT::has_type(const std::string_view media_type) const -> bool {
+  const auto value{this->type()};
+  return value.has_value() &&
+         equals_ignore_case(strip_application_prefix(value.value()),
+                            strip_application_prefix(media_type));
 }
 
 auto JWT::issuer() const noexcept -> std::optional<std::string_view> {

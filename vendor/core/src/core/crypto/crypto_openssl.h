@@ -1,9 +1,11 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_OPENSSL_H_
 #define SOURCEMETA_CORE_CRYPTO_OPENSSL_H_
 
-// OpenSSL key export helpers shared by the signing and verification backends,
-// so the provider parameter handling and the curve mapping stay single-sourced
+// The OpenSSL key internals and the export helpers shared across the OpenSSL
+// backends, so the parsed key layout, the provider parameter handling, and the
+// curve mapping stay single-sourced
 
+#include <sourcemeta/core/crypto_sign.h>
 #include <sourcemeta/core/crypto_verify.h>
 
 #include <openssl/bn.h>         // BIGNUM, BN_*
@@ -17,6 +19,27 @@
 #include <string_view> // std::string_view
 
 namespace sourcemeta::core {
+
+// The parsed key keeps the native handle alive so that many operations reuse it
+struct PublicKey::Internal {
+  PublicKey::Type kind;
+  EVP_PKEY *key;
+  // The stripped modulus, kept for the RSA signature range check
+  std::string modulus;
+  // The field width for the elliptic curve signature size check
+  std::size_t field_bytes;
+  // The expected signature length for the Edwards curve
+  std::size_t signature_bytes;
+};
+
+struct PrivateKey::Internal {
+  PrivateKey::Type kind;
+  EVP_PKEY *key;
+  // The field width for the elliptic curve raw signature encoding
+  std::size_t field_bytes;
+  // Set for an id-RSASSA-PSS key, which is refused for PKCS1v15 signing
+  bool rsa_pss_restricted{false};
+};
 
 // The platform reports the curve under its canonical name rather than the JWK
 // alias the key was built with, so both are accepted

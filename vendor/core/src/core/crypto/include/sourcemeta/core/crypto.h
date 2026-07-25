@@ -16,13 +16,17 @@
 /// #include <sourcemeta/core/crypto.h>
 /// ```
 
+#include <sourcemeta/core/crypto_aes_cbc_hmac.h>
 #include <sourcemeta/core/crypto_aes_gcm.h>
+#include <sourcemeta/core/crypto_aes_kw.h>
 #include <sourcemeta/core/crypto_base64.h>
 #include <sourcemeta/core/crypto_crc32.h>
+#include <sourcemeta/core/crypto_ecdh.h>
 #include <sourcemeta/core/crypto_fnv128.h>
 #include <sourcemeta/core/crypto_hmac_sha256.h>
 #include <sourcemeta/core/crypto_hmac_sha384.h>
 #include <sourcemeta/core/crypto_hmac_sha512.h>
+#include <sourcemeta/core/crypto_rsa_oaep.h>
 #include <sourcemeta/core/crypto_secure.h>
 #include <sourcemeta/core/crypto_sha1.h>
 #include <sourcemeta/core/crypto_sha256.h>

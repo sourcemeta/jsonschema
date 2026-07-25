@@ -178,20 +178,21 @@ public:
   // the `Key`-accepting overload as before.
 
   /// Compute a hash for a key
-  [[nodiscard]] static inline auto hash(const Key &key) noexcept -> hash_type {
+  [[nodiscard]] static constexpr auto hash(const Key &key) noexcept
+      -> hash_type {
     return hasher(key);
   }
 
   /// Compute a hash for a key
   template <typename T>
     requires std::same_as<std::remove_cvref_t<T>, KeyView>
-  [[nodiscard]] static inline auto hash(T key) noexcept -> hash_type {
+  [[nodiscard]] static constexpr auto hash(T key) noexcept -> hash_type {
     return hasher(key.data(), key.size());
   }
 
   /// Compute a hash from raw data
-  [[nodiscard]] static inline auto hash(const char *raw_data,
-                                        const std::size_t raw_size) noexcept
+  [[nodiscard]] static constexpr auto hash(const char *raw_data,
+                                           const std::size_t raw_size) noexcept
       -> hash_type {
     return hasher(raw_data, raw_size);
   }

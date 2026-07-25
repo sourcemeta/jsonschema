@@ -7,7 +7,6 @@
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_authorization_parse.h"
-#include "oauth_encode.h"
 #include "oauth_json.h"
 
 #include <chrono>      // std::chrono::seconds
@@ -23,8 +22,8 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_REQUEST_URI{JSON::Object::hash("request_uri"sv)};
-const auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
+constexpr auto HASH_REQUEST_URI{JSON::Object::hash("request_uri"sv)};
+constexpr auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
 
 // RFC 9126 Section 2.2: the recommended request URI form, a URN whose final
 // segment is the random reference
@@ -38,34 +37,34 @@ auto oauth_build_par_request(const OAuthAuthorizationRequest &request,
   // RFC 6749 Section 4.1.1: the authorization code flow is the response type
   // this builder assumes when the request names none, and the client may
   // override it
-  oauth_append_form_parameter(sink, "response_type",
+  URI::append_query_parameter(sink, "response_type",
                               request.response_type.empty()
                                   ? std::string_view{"code"}
                                   : request.response_type);
   if (!request.redirect_uri.empty()) {
-    oauth_append_form_parameter(sink, "redirect_uri", request.redirect_uri);
+    URI::append_query_parameter(sink, "redirect_uri", request.redirect_uri);
   }
 
   if (!request.scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", request.scope);
+    URI::append_query_parameter(sink, "scope", request.scope);
   }
 
   if (!request.state.empty()) {
-    oauth_append_form_parameter(sink, "state", request.state);
+    URI::append_query_parameter(sink, "state", request.state);
   }
 
   if (!request.code_challenge.empty()) {
-    oauth_append_form_parameter(sink, "code_challenge", request.code_challenge);
+    URI::append_query_parameter(sink, "code_challenge", request.code_challenge);
     // RFC 7636 Section 4.3: the method qualifies a challenge, so it is omitted
     // when no challenge is present
     if (!request.code_challenge_method.empty()) {
-      oauth_append_form_parameter(sink, "code_challenge_method",
+      URI::append_query_parameter(sink, "code_challenge_method",
                                   request.code_challenge_method);
     }
   }
 
   if (!request.dpop_jkt.empty()) {
-    oauth_append_form_parameter(sink, "dpop_jkt", request.dpop_jkt);
+    URI::append_query_parameter(sink, "dpop_jkt", request.dpop_jkt);
   }
 
   // RFC 9126 Section 2.1: a pushed request MUST NOT provide request_uri, so it
@@ -73,13 +72,13 @@ auto oauth_build_par_request(const OAuthAuthorizationRequest &request,
   // parameters rather than the dedicated field
   for (const auto &resource : request.resources) {
     if (resource.name != "request_uri") {
-      oauth_append_form_parameter(sink, resource.name, resource.value);
+      URI::append_query_parameter(sink, resource.name, resource.value);
     }
   }
 
   for (const auto &parameter : request.extra) {
     if (parameter.name != "request_uri") {
-      oauth_append_form_parameter(sink, parameter.name, parameter.value);
+      URI::append_query_parameter(sink, parameter.name, parameter.value);
     }
   }
 }

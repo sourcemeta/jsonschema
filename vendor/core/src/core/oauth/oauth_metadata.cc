@@ -19,41 +19,41 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_ISSUER{JSON::Object::hash("issuer"sv)};
-const auto HASH_AUTHORIZATION_ENDPOINT{
+constexpr auto HASH_ISSUER{JSON::Object::hash("issuer"sv)};
+constexpr auto HASH_AUTHORIZATION_ENDPOINT{
     JSON::Object::hash("authorization_endpoint"sv)};
-const auto HASH_TOKEN_ENDPOINT{JSON::Object::hash("token_endpoint"sv)};
-const auto HASH_REGISTRATION_ENDPOINT{
+constexpr auto HASH_TOKEN_ENDPOINT{JSON::Object::hash("token_endpoint"sv)};
+constexpr auto HASH_REGISTRATION_ENDPOINT{
     JSON::Object::hash("registration_endpoint"sv)};
-const auto HASH_PAR_ENDPOINT{
+constexpr auto HASH_PAR_ENDPOINT{
     JSON::Object::hash("pushed_authorization_request_endpoint"sv)};
-const auto HASH_REQUIRE_PAR{
+constexpr auto HASH_REQUIRE_PAR{
     JSON::Object::hash("require_pushed_authorization_requests"sv)};
-const auto HASH_REVOCATION_ENDPOINT{
+constexpr auto HASH_REVOCATION_ENDPOINT{
     JSON::Object::hash("revocation_endpoint"sv)};
-const auto HASH_INTROSPECTION_ENDPOINT{
+constexpr auto HASH_INTROSPECTION_ENDPOINT{
     JSON::Object::hash("introspection_endpoint"sv)};
-const auto HASH_JWKS_URI{JSON::Object::hash("jwks_uri"sv)};
-const auto HASH_RESPONSE_TYPES{
+constexpr auto HASH_JWKS_URI{JSON::Object::hash("jwks_uri"sv)};
+constexpr auto HASH_RESPONSE_TYPES{
     JSON::Object::hash("response_types_supported"sv)};
-const auto HASH_GRANT_TYPES{JSON::Object::hash("grant_types_supported"sv)};
-const auto HASH_CODE_CHALLENGE_METHODS{
+constexpr auto HASH_GRANT_TYPES{JSON::Object::hash("grant_types_supported"sv)};
+constexpr auto HASH_CODE_CHALLENGE_METHODS{
     JSON::Object::hash("code_challenge_methods_supported"sv)};
-const auto HASH_TOKEN_AUTH_METHODS{
+constexpr auto HASH_TOKEN_AUTH_METHODS{
     JSON::Object::hash("token_endpoint_auth_methods_supported"sv)};
-const auto HASH_TOKEN_AUTH_ALGS{
+constexpr auto HASH_TOKEN_AUTH_ALGS{
     JSON::Object::hash("token_endpoint_auth_signing_alg_values_supported"sv)};
-const auto HASH_ISS_SUPPORTED{
+constexpr auto HASH_ISS_SUPPORTED{
     JSON::Object::hash("authorization_response_iss_parameter_supported"sv)};
-const auto HASH_RESOURCE{JSON::Object::hash("resource"sv)};
-const auto HASH_AUTHORIZATION_SERVERS{
+constexpr auto HASH_RESOURCE{JSON::Object::hash("resource"sv)};
+constexpr auto HASH_AUTHORIZATION_SERVERS{
     JSON::Object::hash("authorization_servers"sv)};
-const auto HASH_BEARER_METHODS{
+constexpr auto HASH_BEARER_METHODS{
     JSON::Object::hash("bearer_methods_supported"sv)};
-const auto HASH_SCOPES_SUPPORTED{JSON::Object::hash("scopes_supported"sv)};
-const auto HASH_DPOP_BOUND_REQUIRED{
+constexpr auto HASH_SCOPES_SUPPORTED{JSON::Object::hash("scopes_supported"sv)};
+constexpr auto HASH_DPOP_BOUND_REQUIRED{
     JSON::Object::hash("dpop_bound_access_tokens_required"sv)};
-const auto HASH_RESOURCE_SIGNING_ALGS{
+constexpr auto HASH_RESOURCE_SIGNING_ALGS{
     JSON::Object::hash("resource_signing_alg_values_supported"sv)};
 
 auto string_member(const JSON &data, const JSON::StringView name,
@@ -69,17 +69,6 @@ auto string_member(const JSON &data, const JSON::StringView name,
   }
 
   return std::string_view{member->to_string()};
-}
-
-auto array_member_contains(const JSON &data, const JSON::StringView name,
-                           const JSON::Object::hash_type hash,
-                           const JSON::StringView value) -> bool {
-  if (!data.is_object()) {
-    return false;
-  }
-
-  const auto *member{data.try_at(name, hash)};
-  return member != nullptr && member->is_array() && member->contains(value);
 }
 
 auto validated_server_metadata(JSON &&data, const std::string_view issuer)
@@ -113,10 +102,11 @@ auto validated_server_metadata(JSON &&data, const std::string_view issuer)
   // RFC 8414 Section 2: a signing algorithm list is REQUIRED alongside the JWT
   // authentication methods, "none" MUST NOT appear in it, and Section 3.2
   // forbids a zero-element array, so an empty list is also invalid
-  if (array_member_contains(data, "token_endpoint_auth_methods_supported"sv,
-                            HASH_TOKEN_AUTH_METHODS, "private_key_jwt") ||
-      array_member_contains(data, "token_endpoint_auth_methods_supported"sv,
-                            HASH_TOKEN_AUTH_METHODS, "client_secret_jwt")) {
+  if (data.array_member_contains("token_endpoint_auth_methods_supported"sv,
+                                 HASH_TOKEN_AUTH_METHODS, "private_key_jwt") ||
+      data.array_member_contains("token_endpoint_auth_methods_supported"sv,
+                                 HASH_TOKEN_AUTH_METHODS,
+                                 "client_secret_jwt")) {
     const auto *algorithms{
         data.try_at("token_endpoint_auth_signing_alg_values_supported"sv,
                     HASH_TOKEN_AUTH_ALGS)};
@@ -330,8 +320,8 @@ auto OAuthServerMetadata::authorization_response_iss_parameter_supported() const
 
 auto OAuthServerMetadata::supports_response_type(
     const std::string_view value) const -> bool {
-  return array_member_contains(this->data_, "response_types_supported"sv,
-                               HASH_RESPONSE_TYPES, value);
+  return this->data_.array_member_contains("response_types_supported"sv,
+                                           HASH_RESPONSE_TYPES, value);
 }
 
 auto OAuthServerMetadata::supports_grant_type(
@@ -353,9 +343,8 @@ auto OAuthServerMetadata::supports_code_challenge_method(
     const std::string_view value) const -> bool {
   // RFC 8414 Section 2: an omitted list means PKCE is not supported, so there
   // is no default to fall back to
-  return array_member_contains(this->data_,
-                               "code_challenge_methods_supported"sv,
-                               HASH_CODE_CHALLENGE_METHODS, value);
+  return this->data_.array_member_contains("code_challenge_methods_supported"sv,
+                                           HASH_CODE_CHALLENGE_METHODS, value);
 }
 
 auto OAuthServerMetadata::supports_token_endpoint_auth_method(
@@ -415,8 +404,8 @@ auto OAuthResourceMetadata::first_authorization_server() const
 
 auto OAuthResourceMetadata::supports_authorization_server(
     const std::string_view value) const -> bool {
-  return array_member_contains(this->data_, "authorization_servers"sv,
-                               HASH_AUTHORIZATION_SERVERS, value);
+  return this->data_.array_member_contains("authorization_servers"sv,
+                                           HASH_AUTHORIZATION_SERVERS, value);
 }
 
 auto OAuthResourceMetadata::jwks_uri() const
@@ -426,14 +415,14 @@ auto OAuthResourceMetadata::jwks_uri() const
 
 auto OAuthResourceMetadata::supports_bearer_method(
     const std::string_view value) const -> bool {
-  return array_member_contains(this->data_, "bearer_methods_supported"sv,
-                               HASH_BEARER_METHODS, value);
+  return this->data_.array_member_contains("bearer_methods_supported"sv,
+                                           HASH_BEARER_METHODS, value);
 }
 
 auto OAuthResourceMetadata::supports_scope(const std::string_view value) const
     -> bool {
-  return array_member_contains(this->data_, "scopes_supported"sv,
-                               HASH_SCOPES_SUPPORTED, value);
+  return this->data_.array_member_contains("scopes_supported"sv,
+                                           HASH_SCOPES_SUPPORTED, value);
 }
 
 auto OAuthResourceMetadata::dpop_bound_access_tokens_required() const -> bool {
@@ -449,32 +438,6 @@ auto OAuthResourceMetadata::dpop_bound_access_tokens_required() const -> bool {
 auto OAuthResourceMetadata::data() const -> const JSON & { return this->data_; }
 
 namespace {
-
-auto assign_scalar_member(JSON &object, const JSON::StringView name,
-                          const JSON::Object::hash_type hash,
-                          const std::string_view value) -> void {
-  if (!value.empty()) {
-    object.assign_assume_new(std::string{name}, JSON{value}, hash);
-  }
-}
-
-auto assign_array_member(JSON &object, const JSON::StringView name,
-                         const JSON::Object::hash_type hash,
-                         const std::span<const std::string_view> values)
-    -> void {
-  // RFC 8414 Section 3.2: "Claims with zero elements MUST be omitted", so an
-  // empty list is not emitted
-  if (values.empty()) {
-    return;
-  }
-
-  auto array{JSON::make_array()};
-  for (const auto value : values) {
-    array.push_back(JSON{value});
-  }
-
-  object.assign_assume_new(std::string{name}, std::move(array), hash);
-}
 
 auto span_contains(const std::span<const std::string_view> values,
                    const std::string_view target) -> bool {
@@ -547,34 +510,33 @@ auto oauth_make_server_metadata(const OAuthServerMetadataConfig &config)
 
   auto document{JSON::make_object()};
   document.assign_assume_new("issuer", JSON{config.issuer}, HASH_ISSUER);
-  assign_scalar_member(document, "authorization_endpoint",
-                       HASH_AUTHORIZATION_ENDPOINT,
-                       config.authorization_endpoint);
-  assign_scalar_member(document, "token_endpoint", HASH_TOKEN_ENDPOINT,
-                       config.token_endpoint);
-  assign_scalar_member(document, "registration_endpoint",
-                       HASH_REGISTRATION_ENDPOINT,
-                       config.registration_endpoint);
-  assign_scalar_member(document, "pushed_authorization_request_endpoint",
-                       HASH_PAR_ENDPOINT,
-                       config.pushed_authorization_request_endpoint);
-  assign_scalar_member(document, "jwks_uri", HASH_JWKS_URI, config.jwks_uri);
-  assign_array_member(document, "response_types_supported", HASH_RESPONSE_TYPES,
-                      config.response_types_supported);
-  assign_array_member(document, "grant_types_supported", HASH_GRANT_TYPES,
-                      config.grant_types_supported);
-  assign_array_member(document, "code_challenge_methods_supported",
-                      HASH_CODE_CHALLENGE_METHODS,
-                      config.code_challenge_methods_supported);
-  assign_array_member(document, "token_endpoint_auth_methods_supported",
-                      HASH_TOKEN_AUTH_METHODS,
-                      config.token_endpoint_auth_methods_supported);
-  assign_array_member(document,
-                      "token_endpoint_auth_signing_alg_values_supported",
-                      HASH_TOKEN_AUTH_ALGS,
-                      config.token_endpoint_auth_signing_alg_values_supported);
-  assign_array_member(document, "scopes_supported", HASH_SCOPES_SUPPORTED,
-                      config.scopes_supported);
+  document.assign_if_nonempty("authorization_endpoint",
+                              HASH_AUTHORIZATION_ENDPOINT,
+                              config.authorization_endpoint);
+  document.assign_if_nonempty("token_endpoint", HASH_TOKEN_ENDPOINT,
+                              config.token_endpoint);
+  document.assign_if_nonempty("registration_endpoint",
+                              HASH_REGISTRATION_ENDPOINT,
+                              config.registration_endpoint);
+  document.assign_if_nonempty("pushed_authorization_request_endpoint",
+                              HASH_PAR_ENDPOINT,
+                              config.pushed_authorization_request_endpoint);
+  document.assign_if_nonempty("jwks_uri", HASH_JWKS_URI, config.jwks_uri);
+  document.assign_if_nonempty("response_types_supported", HASH_RESPONSE_TYPES,
+                              config.response_types_supported);
+  document.assign_if_nonempty("grant_types_supported", HASH_GRANT_TYPES,
+                              config.grant_types_supported);
+  document.assign_if_nonempty("code_challenge_methods_supported",
+                              HASH_CODE_CHALLENGE_METHODS,
+                              config.code_challenge_methods_supported);
+  document.assign_if_nonempty("token_endpoint_auth_methods_supported",
+                              HASH_TOKEN_AUTH_METHODS,
+                              config.token_endpoint_auth_methods_supported);
+  document.assign_if_nonempty(
+      "token_endpoint_auth_signing_alg_values_supported", HASH_TOKEN_AUTH_ALGS,
+      config.token_endpoint_auth_signing_alg_values_supported);
+  document.assign_if_nonempty("scopes_supported", HASH_SCOPES_SUPPORTED,
+                              config.scopes_supported);
   // RFC 9126 Section 5: the default is false, so the flag is emitted only when
   // the server requires pushed authorization requests
   if (config.require_pushed_authorization_requests) {

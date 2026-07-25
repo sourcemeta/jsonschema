@@ -5,7 +5,6 @@
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_decode.h"
-#include "oauth_encode.h"
 
 #include <chrono>      // std::chrono::seconds
 #include <cstddef>     // std::size_t
@@ -21,14 +20,15 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_ACCESS_TOKEN{JSON::Object::hash("access_token"sv)};
-const auto HASH_TOKEN_TYPE{JSON::Object::hash("token_type"sv)};
-const auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
-const auto HASH_REFRESH_TOKEN{JSON::Object::hash("refresh_token"sv)};
-const auto HASH_SCOPE{JSON::Object::hash("scope"sv)};
-const auto HASH_ERROR{JSON::Object::hash("error"sv)};
-const auto HASH_ERROR_DESCRIPTION{JSON::Object::hash("error_description"sv)};
-const auto HASH_ERROR_URI{JSON::Object::hash("error_uri"sv)};
+constexpr auto HASH_ACCESS_TOKEN{JSON::Object::hash("access_token"sv)};
+constexpr auto HASH_TOKEN_TYPE{JSON::Object::hash("token_type"sv)};
+constexpr auto HASH_EXPIRES_IN{JSON::Object::hash("expires_in"sv)};
+constexpr auto HASH_REFRESH_TOKEN{JSON::Object::hash("refresh_token"sv)};
+constexpr auto HASH_SCOPE{JSON::Object::hash("scope"sv)};
+constexpr auto HASH_ERROR{JSON::Object::hash("error"sv)};
+constexpr auto HASH_ERROR_DESCRIPTION{
+    JSON::Object::hash("error_description"sv)};
+constexpr auto HASH_ERROR_URI{JSON::Object::hash("error_uri"sv)};
 
 auto string_member(const JSON &data, const JSON::StringView name,
                    const JSON::Object::hash_type hash)
@@ -49,7 +49,7 @@ auto oauth_append_resources(SecureString &sink,
                             const std::span<const OAuthParameter> resources)
     -> void {
   for (const auto &resource : resources) {
-    oauth_append_form_parameter(sink, resource.name, resource.value);
+    URI::append_query_parameter(sink, resource.name, resource.value);
   }
 }
 
@@ -79,14 +79,14 @@ auto oauth_build_token_request_code(
     const std::string_view code_verifier,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  oauth_append_form_parameter(sink, "grant_type", "authorization_code");
-  oauth_append_form_parameter(sink, "code", code);
+  URI::append_query_parameter(sink, "grant_type", "authorization_code");
+  URI::append_query_parameter(sink, "code", code);
   if (!redirect_uri.empty()) {
-    oauth_append_form_parameter(sink, "redirect_uri", redirect_uri);
+    URI::append_query_parameter(sink, "redirect_uri", redirect_uri);
   }
 
   if (!code_verifier.empty()) {
-    oauth_append_form_parameter(sink, "code_verifier", code_verifier);
+    URI::append_query_parameter(sink, "code_verifier", code_verifier);
   }
 
   oauth_append_resources(sink, resources);
@@ -96,10 +96,10 @@ auto oauth_build_token_request_refresh(
     const std::string_view refresh_token, const std::string_view scope,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  oauth_append_form_parameter(sink, "grant_type", "refresh_token");
-  oauth_append_form_parameter(sink, "refresh_token", refresh_token);
+  URI::append_query_parameter(sink, "grant_type", "refresh_token");
+  URI::append_query_parameter(sink, "refresh_token", refresh_token);
   if (!scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", scope);
+    URI::append_query_parameter(sink, "scope", scope);
   }
 
   oauth_append_resources(sink, resources);
@@ -109,9 +109,9 @@ auto oauth_build_token_request_client_credentials(
     const std::string_view scope,
     const std::span<const OAuthParameter> resources, SecureString &sink)
     -> void {
-  oauth_append_form_parameter(sink, "grant_type", "client_credentials");
+  URI::append_query_parameter(sink, "grant_type", "client_credentials");
   if (!scope.empty()) {
-    oauth_append_form_parameter(sink, "scope", scope);
+    URI::append_query_parameter(sink, "scope", scope);
   }
 
   oauth_append_resources(sink, resources);

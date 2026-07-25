@@ -5,6 +5,7 @@
 #include <cstdint>     // std::uint8_t, std::uint32_t
 #include <optional>    // std::optional, std::nullopt
 #include <ostream>     // std::ostream
+#include <span>        // std::span
 #include <string>      // std::string
 #include <string_view> // std::string_view
 
@@ -213,6 +214,18 @@ auto base64url_encode(const std::string_view input) -> std::string {
   result.reserve(((input.size() + 2) / 3) * 4);
   encode(input, BASE64URL_ALPHABET, false, result);
   return result;
+}
+
+auto base64url_encode(const std::span<const std::uint8_t> input)
+    -> std::string {
+  // An empty span may carry a null pointer, which some standard libraries
+  // reject when constructing a string view even for a zero length
+  if (input.empty()) {
+    return {};
+  }
+
+  return base64url_encode(std::string_view{
+      reinterpret_cast<const char *>(input.data()), input.size()});
 }
 
 auto base64url_encode(const std::string_view input, SecureString &output)

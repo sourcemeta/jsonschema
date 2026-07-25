@@ -18,23 +18,6 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
 
-namespace sourcemeta::core {
-
-// The parsed key keeps the native handle alive so that many signatures verify
-// without rebuilding it
-struct PublicKey::Internal {
-  PublicKey::Type kind;
-  EVP_PKEY *key;
-  // The stripped modulus, kept for the RSA signature range check
-  std::string modulus;
-  // The field width for the elliptic curve signature size check
-  std::size_t field_bytes;
-  // The expected signature length for the Edwards curve
-  std::size_t signature_bytes;
-};
-
-} // namespace sourcemeta::core
-
 namespace {
 
 auto to_message_digest(

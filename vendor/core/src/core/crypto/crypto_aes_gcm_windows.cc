@@ -32,17 +32,17 @@ auto as_buffer(const wchar_t *const value) -> PUCHAR {
 
 namespace sourcemeta::core {
 
-auto aes_256_gcm_encrypt(const std::string_view key,
-                         const std::string_view nonce,
-                         const std::string_view plaintext)
-    -> std::optional<std::string> {
+auto aes_gcm_seal(const std::string_view key, const std::string_view iv,
+                  const std::string_view associated_data,
+                  const std::string_view plaintext)
+    -> std::optional<AESGCMCiphertext> {
   BCRYPT_ALG_HANDLE algorithm{nullptr};
   if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
           &algorithm, BCRYPT_AES_ALGORITHM, nullptr, 0))) {
     return std::nullopt;
   }
 
-  std::optional<std::string> result;
+  std::optional<AESGCMCiphertext> result;
   BCRYPT_KEY_HANDLE key_handle{nullptr};
   if (BCRYPT_SUCCESS(BCryptSetProperty(algorithm, BCRYPT_CHAINING_MODE,
                                        as_buffer(BCRYPT_CHAIN_MODE_GCM),
@@ -50,23 +50,25 @@ auto aes_256_gcm_encrypt(const std::string_view key,
       BCRYPT_SUCCESS(BCryptGenerateSymmetricKey(
           algorithm, &key_handle, nullptr, 0, as_buffer(key),
           static_cast<ULONG>(key.size()), 0))) {
+    // A single buffer holds the ciphertext followed by its 16-byte tag, which
+    // the mode info writes into at the offset past the ciphertext
+    std::string data(plaintext.size() + TAG_BYTES, '\x00');
     BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO info;
     BCRYPT_INIT_AUTH_MODE_INFO(info);
-    info.pbNonce = as_buffer(nonce);
-    info.cbNonce = static_cast<ULONG>(nonce.size());
-    std::string tag(TAG_BYTES, '\x00');
-    info.pbTag = as_buffer(tag);
+    info.pbNonce = as_buffer(iv);
+    info.cbNonce = static_cast<ULONG>(iv.size());
+    info.pbAuthData = as_buffer(associated_data);
+    info.cbAuthData = static_cast<ULONG>(associated_data.size());
+    info.pbTag = as_buffer(data) + plaintext.size();
     info.cbTag = static_cast<ULONG>(TAG_BYTES);
 
-    std::string ciphertext(plaintext.size(), '\x00');
     ULONG written{0};
     if (BCRYPT_SUCCESS(BCryptEncrypt(key_handle, as_buffer(plaintext),
                                      static_cast<ULONG>(plaintext.size()),
-                                     &info, nullptr, 0, as_buffer(ciphertext),
-                                     static_cast<ULONG>(ciphertext.size()),
+                                     &info, nullptr, 0, as_buffer(data),
+                                     static_cast<ULONG>(plaintext.size()),
                                      &written, 0))) {
-      ciphertext.append(tag);
-      result = std::move(ciphertext);
+      result = AESGCMCiphertext{.data = std::move(data)};
     }
 
     BCryptDestroyKey(key_handle);
@@ -76,16 +78,10 @@ auto aes_256_gcm_encrypt(const std::string_view key,
   return result;
 }
 
-auto aes_256_gcm_decrypt(const std::string_view key,
-                         const std::string_view nonce,
-                         const std::string_view ciphertext)
+auto aes_gcm_open(const std::string_view key, const std::string_view iv,
+                  const std::string_view associated_data,
+                  const std::string_view ciphertext, const std::string_view tag)
     -> std::optional<std::string> {
-  if (ciphertext.size() < TAG_BYTES) {
-    return std::nullopt;
-  }
-
-  const auto message{ciphertext.substr(0, ciphertext.size() - TAG_BYTES)};
-  auto tag{std::string{ciphertext.substr(ciphertext.size() - TAG_BYTES)}};
   BCRYPT_ALG_HANDLE algorithm{nullptr};
   if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
           &algorithm, BCRYPT_AES_ALGORITHM, nullptr, 0))) {
@@ -102,18 +98,21 @@ auto aes_256_gcm_decrypt(const std::string_view key,
           static_cast<ULONG>(key.size()), 0))) {
     BCRYPT_AUTHENTICATED_CIPHER_MODE_INFO info;
     BCRYPT_INIT_AUTH_MODE_INFO(info);
-    info.pbNonce = as_buffer(nonce);
-    info.cbNonce = static_cast<ULONG>(nonce.size());
+    info.pbNonce = as_buffer(iv);
+    info.cbNonce = static_cast<ULONG>(iv.size());
+    info.pbAuthData = as_buffer(associated_data);
+    info.cbAuthData = static_cast<ULONG>(associated_data.size());
     info.pbTag = as_buffer(tag);
-    info.cbTag = static_cast<ULONG>(TAG_BYTES);
+    info.cbTag = static_cast<ULONG>(tag.size());
 
-    std::string plaintext(message.size(), '\x00');
+    std::string plaintext(ciphertext.size(), '\x00');
     ULONG written{0};
     // Reports a tag mismatch through the status, so a tampered message fails
-    if (BCRYPT_SUCCESS(BCryptDecrypt(
-            key_handle, as_buffer(message), static_cast<ULONG>(message.size()),
-            &info, nullptr, 0, as_buffer(plaintext),
-            static_cast<ULONG>(plaintext.size()), &written, 0))) {
+    if (BCRYPT_SUCCESS(BCryptDecrypt(key_handle, as_buffer(ciphertext),
+                                     static_cast<ULONG>(ciphertext.size()),
+                                     &info, nullptr, 0, as_buffer(plaintext),
+                                     static_cast<ULONG>(plaintext.size()),
+                                     &written, 0))) {
       result = std::move(plaintext);
     }
 

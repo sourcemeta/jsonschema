@@ -24,23 +24,6 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
 
-namespace sourcemeta::core {
-
-// The parsed key keeps both the algorithm provider and the imported key handle
-// alive for reuse. The Edwards curves have no CNG primitive, so they keep the
-// raw seed and sign through the reference implementation
-struct PrivateKey::Internal {
-  PrivateKey::Type kind;
-  BCRYPT_ALG_HANDLE algorithm;
-  BCRYPT_KEY_HANDLE key;
-  std::size_t field_bytes;
-  std::string edwards_seed;
-  EdwardsCurve edwards_curve;
-  bool rsa_pss_restricted{false};
-};
-
-} // namespace sourcemeta::core
-
 namespace {
 
 auto to_cng_algorithm(
@@ -445,6 +428,35 @@ auto make_ec_private_key(const EllipticCurve curve,
                                .algorithm = pair.algorithm,
                                .key = pair.key,
                                .field_bytes = field_bytes,
+                               .edwards_seed = {},
+                               .edwards_curve = {}}};
+}
+
+auto generate_ec_private_key(const EllipticCurve curve)
+    -> std::optional<PrivateKey> {
+  BCRYPT_ALG_HANDLE algorithm{nullptr};
+  if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
+          &algorithm, to_ecdsa_algorithm(curve), nullptr, 0))) {
+    return std::nullopt;
+  }
+
+  BCRYPT_KEY_HANDLE key{nullptr};
+  if (!BCRYPT_SUCCESS(BCryptGenerateKeyPair(
+          algorithm, &key, static_cast<ULONG>(curve_bit_length(curve)), 0)) ||
+      !BCRYPT_SUCCESS(BCryptFinalizeKeyPair(key, 0))) {
+    if (key != nullptr) {
+      BCryptDestroyKey(key);
+    }
+
+    BCryptCloseAlgorithmProvider(algorithm, 0);
+    return std::nullopt;
+  }
+
+  return PrivateKey{
+      new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
+                               .algorithm = algorithm,
+                               .key = key,
+                               .field_bytes = curve_field_bytes(curve),
                                .edwards_seed = {},
                                .edwards_curve = {}}};
 }

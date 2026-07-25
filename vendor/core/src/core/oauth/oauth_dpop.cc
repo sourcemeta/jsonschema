@@ -29,27 +29,27 @@ namespace {
 
 using namespace std::literals::string_view_literals;
 
-const auto HASH_TYP{JSON::Object::hash("typ"sv)};
-const auto HASH_ALG{JSON::Object::hash("alg"sv)};
-const auto HASH_JWK{JSON::Object::hash("jwk"sv)};
-const auto HASH_JTI{JSON::Object::hash("jti"sv)};
-const auto HASH_HTM{JSON::Object::hash("htm"sv)};
-const auto HASH_HTU{JSON::Object::hash("htu"sv)};
-const auto HASH_IAT{JSON::Object::hash("iat"sv)};
-const auto HASH_ATH{JSON::Object::hash("ath"sv)};
-const auto HASH_NONCE{JSON::Object::hash("nonce"sv)};
-const auto HASH_JKT{JSON::Object::hash("jkt"sv)};
+constexpr auto HASH_TYP{JSON::Object::hash("typ"sv)};
+constexpr auto HASH_ALG{JSON::Object::hash("alg"sv)};
+constexpr auto HASH_JWK{JSON::Object::hash("jwk"sv)};
+constexpr auto HASH_JTI{JSON::Object::hash("jti"sv)};
+constexpr auto HASH_HTM{JSON::Object::hash("htm"sv)};
+constexpr auto HASH_HTU{JSON::Object::hash("htu"sv)};
+constexpr auto HASH_IAT{JSON::Object::hash("iat"sv)};
+constexpr auto HASH_ATH{JSON::Object::hash("ath"sv)};
+constexpr auto HASH_NONCE{JSON::Object::hash("nonce"sv)};
+constexpr auto HASH_JKT{JSON::Object::hash("jkt"sv)};
 
 // The private JSON Web Key members whose presence marks a private key (RFC 7518
 // Sections 6.2.2 and 6.3.2, RFC 8037 Section 2, RFC 7518 Section 6.4)
-const auto HASH_D{JSON::Object::hash("d"sv)};
-const auto HASH_P{JSON::Object::hash("p"sv)};
-const auto HASH_Q{JSON::Object::hash("q"sv)};
-const auto HASH_DP{JSON::Object::hash("dp"sv)};
-const auto HASH_DQ{JSON::Object::hash("dq"sv)};
-const auto HASH_QI{JSON::Object::hash("qi"sv)};
-const auto HASH_OTH{JSON::Object::hash("oth"sv)};
-const auto HASH_K{JSON::Object::hash("k"sv)};
+constexpr auto HASH_D{JSON::Object::hash("d"sv)};
+constexpr auto HASH_P{JSON::Object::hash("p"sv)};
+constexpr auto HASH_Q{JSON::Object::hash("q"sv)};
+constexpr auto HASH_DP{JSON::Object::hash("dp"sv)};
+constexpr auto HASH_DQ{JSON::Object::hash("dq"sv)};
+constexpr auto HASH_QI{JSON::Object::hash("qi"sv)};
+constexpr auto HASH_OTH{JSON::Object::hash("oth"sv)};
+constexpr auto HASH_K{JSON::Object::hash("k"sv)};
 
 // RFC 9449 Section 4.2: the HTTP target URI without query and fragment, with
 // the syntax and scheme normalization Section 4.3 recommends applied so the
@@ -245,9 +245,9 @@ auto oauth_dpop_verify(const std::string_view proof,
 
   const auto &parsed{token.value()};
 
-  // Check 4: the token type is dpop+jwt
-  const auto type{parsed.type()};
-  if (!type.has_value() || type.value() != "dpop+jwt") {
+  // Check 4: the token type is dpop+jwt, comparing the media type as RFC 7515
+  // Section 4.1.9 requires (case-insensitive, application/ prefix optional)
+  if (!parsed.has_type("dpop+jwt")) {
     return OAuthDPoPError::UnexpectedType;
   }
 

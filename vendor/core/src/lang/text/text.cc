@@ -144,6 +144,19 @@ auto split_once(const std::string_view input, const char delimiter) noexcept
   return std::pair{before, after};
 }
 
+auto rsplit_once(const std::string_view input, const char delimiter) noexcept
+    -> std::optional<std::pair<std::string_view, std::string_view>> {
+  const auto position{input.rfind(delimiter)};
+  if (position == std::string_view::npos) {
+    return std::nullopt;
+  }
+  std::string_view before{input};
+  before.remove_suffix(input.size() - position);
+  std::string_view after{input};
+  after.remove_prefix(position + 1);
+  return std::pair{before, after};
+}
+
 auto split_once(const std::string_view input,
                 const std::string_view delimiter) noexcept
     -> std::optional<std::pair<std::string_view, std::string_view>> {

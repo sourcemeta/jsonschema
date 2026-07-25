@@ -19,22 +19,6 @@
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::unreachable
 
-namespace sourcemeta::core {
-
-// The parsed key keeps the platform key object alive for reuse. The Edwards
-// curves have no Security framework primitive, so they keep the raw seed and
-// sign through CryptoKit or the reference implementation
-struct PrivateKey::Internal {
-  PrivateKey::Type kind;
-  SecKeyRef key;
-  std::size_t field_bytes;
-  std::string edwards_seed;
-  EdwardsCurve edwards_curve;
-  bool rsa_pss_restricted{false};
-};
-
-} // namespace sourcemeta::core
-
 namespace {
 
 auto to_sec_key_pkcs1_v15_algorithm(
@@ -369,6 +353,41 @@ auto make_ec_private_key(const EllipticCurve curve,
       new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
                                .key = key,
                                .field_bytes = field_bytes,
+                               .edwards_seed = {},
+                               .edwards_curve = {}}};
+}
+
+auto generate_ec_private_key(const EllipticCurve curve)
+    -> std::optional<PrivateKey> {
+  const int bits{static_cast<int>(curve_bit_length(curve))};
+  auto size{CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &bits)};
+  if (size == nullptr) {
+    return std::nullopt;
+  }
+
+  std::array<const void *, 2> attribute_keys{
+      {kSecAttrKeyType, kSecAttrKeySizeInBits}};
+  std::array<const void *, 2> attribute_values{
+      {kSecAttrKeyTypeECSECPrimeRandom, size}};
+  auto attributes{CFDictionaryCreate(
+      kCFAllocatorDefault, attribute_keys.data(), attribute_values.data(),
+      static_cast<CFIndex>(attribute_keys.size()),
+      &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)};
+  CFRelease(size);
+  if (attributes == nullptr) {
+    return std::nullopt;
+  }
+
+  auto *key{SecKeyCreateRandomKey(attributes, nullptr)};
+  CFRelease(attributes);
+  if (key == nullptr) {
+    return std::nullopt;
+  }
+
+  return PrivateKey{
+      new PrivateKey::Internal{.kind = PrivateKey::Type::EllipticCurve,
+                               .key = key,
+                               .field_bytes = curve_field_bytes(curve),
                                .edwards_seed = {},
                                .edwards_curve = {}}};
 }

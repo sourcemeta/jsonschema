@@ -1,9 +1,12 @@
 #ifndef SOURCEMETA_CORE_CRYPTO_APPLE_H_
 #define SOURCEMETA_CORE_CRYPTO_APPLE_H_
 
-// Security-framework key export helpers shared by the Apple signing and
-// verification backends, so the external representation handling stays
-// single-sourced
+// The Apple key internals and the Security-framework export helper shared
+// across the Apple backends, so the parsed key layout and the external
+// representation handling stay single-sourced
+
+#include <sourcemeta/core/crypto_sign.h>
+#include <sourcemeta/core/crypto_verify.h>
 
 #include <CoreFoundation/CoreFoundation.h> // CF*, kCF*
 #include <Security/Security.h>             // Sec*, kSec*
@@ -13,6 +16,27 @@
 #include <string>   // std::string
 
 namespace sourcemeta::core {
+
+// The parsed key keeps the platform key object alive for reuse. The Edwards
+// curves have no Security framework primitive, so they keep the raw seed or
+// point and operate through CryptoKit or the reference implementation
+struct PublicKey::Internal {
+  PublicKey::Type kind;
+  SecKeyRef key;
+  std::string modulus;
+  std::size_t field_bytes;
+  std::string edwards_point;
+  EdwardsCurve edwards_curve;
+};
+
+struct PrivateKey::Internal {
+  PrivateKey::Type kind;
+  SecKeyRef key;
+  std::size_t field_bytes;
+  std::string edwards_seed;
+  EdwardsCurve edwards_curve;
+  bool rsa_pss_restricted{false};
+};
 
 // Copy the platform's external representation of a key, the PKCS#1 structure
 // for RSA and the X9.63 uncompressed point for elliptic curve keys

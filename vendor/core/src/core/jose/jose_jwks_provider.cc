@@ -129,8 +129,33 @@ auto JWKSProvider::verify(
     const std::optional<std::string_view> expected_subject,
     const std::optional<std::string_view> expected_type)
     -> std::optional<JWTVerificationError> {
-  const auto now{this->clock_()};
+  return this->verify_at(token, allowed_algorithms, expected_issuer,
+                         expected_audience, expected_subject, expected_type,
+                         this->clock_());
+}
 
+auto JWKSProvider::verify(
+    const JWT &token, const std::span<const JWSAlgorithm> allowed_algorithms,
+    const std::string_view expected_issuer,
+    const std::string_view expected_audience,
+    const std::optional<std::string_view> expected_subject,
+    const std::optional<std::string_view> expected_type,
+    std::chrono::system_clock::time_point &resolved_now)
+    -> std::optional<JWTVerificationError> {
+  resolved_now = this->clock_();
+  return this->verify_at(token, allowed_algorithms, expected_issuer,
+                         expected_audience, expected_subject, expected_type,
+                         resolved_now);
+}
+
+auto JWKSProvider::verify_at(
+    const JWT &token, const std::span<const JWSAlgorithm> allowed_algorithms,
+    const std::string_view expected_issuer,
+    const std::string_view expected_audience,
+    const std::optional<std::string_view> expected_subject,
+    const std::optional<std::string_view> expected_type,
+    const std::chrono::system_clock::time_point now)
+    -> std::optional<JWTVerificationError> {
   std::shared_ptr<const JWKS> snapshot;
   {
     const std::scoped_lock lock{this->mutex_};

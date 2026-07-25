@@ -2,18 +2,17 @@
 
 #include <CommonCrypto/CommonDigest.h> // CC_SHA256*, CC_LONG
 
-#include <array>   // std::array
-#include <cstddef> // std::size_t
-#include <cstdint> // std::uint8_t
-#include <limits>  // std::numeric_limits
+#include <array>       // std::array
+#include <cstddef>     // std::size_t
+#include <cstdint>     // std::uint8_t
+#include <limits>      // std::numeric_limits
+#include <span>        // std::span
+#include <string_view> // std::string_view
 
-namespace sourcemeta::core {
+namespace {
 
-auto sha256_digest(const std::string_view input)
-    -> std::array<std::uint8_t, 32> {
-  CC_SHA256_CTX context;
-  CC_SHA256_Init(&context);
-
+auto sha256_update(CC_SHA256_CTX &context, const std::string_view input)
+    -> void {
   // The platform update interface takes a 32-bit length, so larger
   // inputs must be fed in chunks
   const auto *remaining_data{input.data()};
@@ -27,10 +26,29 @@ auto sha256_digest(const std::string_view input)
     remaining_data += chunk_size;
     remaining_size -= chunk_size;
   }
+}
+
+} // namespace
+
+namespace sourcemeta::core {
+
+auto sha256_digest(const std::span<const std::string_view> input)
+    -> std::array<std::uint8_t, 32> {
+  CC_SHA256_CTX context;
+  CC_SHA256_Init(&context);
+
+  for (const auto part : input) {
+    sha256_update(context, part);
+  }
 
   std::array<std::uint8_t, CC_SHA256_DIGEST_LENGTH> digest{};
   CC_SHA256_Final(digest.data(), &context);
   return digest;
+}
+
+auto sha256_digest(const std::string_view input)
+    -> std::array<std::uint8_t, 32> {
+  return sha256_digest(std::span<const std::string_view>{&input, 1});
 }
 
 } // namespace sourcemeta::core
