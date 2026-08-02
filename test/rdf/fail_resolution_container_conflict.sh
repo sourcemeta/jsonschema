@@ -40,6 +40,8 @@ error: A JSON-LD container cannot be assigned more than one value
   at column 3
   at instance location "/tags"
   at facet "container"
+  at schema location file://$(realpath "$TMP")/schema.json#/properties/tags/allOf/0/x-jsonld-container
+  at conflicting schema location file://$(realpath "$TMP")/schema.json#/properties/tags/allOf/1/x-jsonld-container
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -58,6 +60,8 @@ cat << EOF > "$TMP/expected.txt"
   "column": 3,
   "instanceLocation": "/tags",
   "facet": "container",
+  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/tags/allOf/0/x-jsonld-container",
+  "conflictingSchemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/tags/allOf/1/x-jsonld-container",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF

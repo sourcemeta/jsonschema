@@ -23,6 +23,7 @@
 #include <functional>       // std::function
 #include <initializer_list> // std::initializer_list
 #include <iostream>         // std::cout, std::cerr
+#include <optional>         // std::optional
 #include <stdexcept>        // std::runtime_error
 #include <string>           // std::string
 #include <type_traits>      // std::is_base_of_v, std::is_same_v
@@ -238,9 +239,15 @@ class RdfResolutionError : public std::runtime_error {
 public:
   RdfResolutionError(std::string message, std::string facet,
                      sourcemeta::core::Pointer instance_location,
+                     std::string schema_location,
+                     std::optional<std::string> conflicting_schema_location,
+                     std::optional<std::string> inert_override_location,
                      std::filesystem::path path)
       : std::runtime_error{std::move(message)}, facet_{std::move(facet)},
         instance_location_{std::move(instance_location)},
+        schema_location_{std::move(schema_location)},
+        conflicting_schema_location_{std::move(conflicting_schema_location)},
+        inert_override_location_{std::move(inert_override_location)},
         path_{std::move(path)} {}
 
   [[nodiscard]] auto facet() const noexcept -> const std::string & {
@@ -252,6 +259,20 @@ public:
     return this->instance_location_;
   }
 
+  [[nodiscard]] auto schema_location() const noexcept -> const std::string & {
+    return this->schema_location_;
+  }
+
+  [[nodiscard]] auto conflicting_schema_location() const noexcept
+      -> const std::optional<std::string> & {
+    return this->conflicting_schema_location_;
+  }
+
+  [[nodiscard]] auto inert_override_location() const noexcept
+      -> const std::optional<std::string> & {
+    return this->inert_override_location_;
+  }
+
   [[nodiscard]] auto path() const noexcept -> const std::filesystem::path & {
     return this->path_;
   }
@@ -259,6 +280,9 @@ public:
 private:
   std::string facet_;
   sourcemeta::core::Pointer instance_location_;
+  std::string schema_location_;
+  std::optional<std::string> conflicting_schema_location_;
+  std::optional<std::string> inert_override_location_;
   std::filesystem::path path_;
 };
 
@@ -592,6 +616,54 @@ inline auto print_exception(const bool is_json, const Exception &exception)
 
   if constexpr (requires(const Exception &current) {
                   {
+                    current.schema_location()
+                  } -> std::convertible_to<const std::string &>;
+                }) {
+    if (is_json) {
+      error_json.assign("schemaLocation",
+                        sourcemeta::core::JSON{exception.schema_location()});
+    } else {
+      std::cerr << "  at schema location " << exception.schema_location()
+                << "\n";
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.conflicting_schema_location()
+                  } -> std::convertible_to<const std::optional<std::string> &>;
+                }) {
+    const auto &conflicting_location{exception.conflicting_schema_location()};
+    if (conflicting_location.has_value()) {
+      if (is_json) {
+        error_json.assign("conflictingSchemaLocation",
+                          sourcemeta::core::JSON{conflicting_location.value()});
+      } else {
+        std::cerr << "  at conflicting schema location "
+                  << conflicting_location.value() << "\n";
+      }
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
+                    current.inert_override_location()
+                  } -> std::convertible_to<const std::optional<std::string> &>;
+                }) {
+    const auto &override_location{exception.inert_override_location()};
+    if (override_location.has_value()) {
+      if (is_json) {
+        error_json.assign("inertOverrideLocation",
+                          sourcemeta::core::JSON{override_location.value()});
+      } else {
+        std::cerr << "  at inert override location "
+                  << override_location.value() << "\n";
+      }
+    }
+  }
+
+  if constexpr (requires(const Exception &current) {
+                  {
                     current.path()
                   } -> std::convertible_to<std::filesystem::path>;
                 }) {
@@ -863,10 +935,26 @@ inline auto try_catch(const sourcemeta::core::Options &options,
   } catch (const PositionError<RdfResolutionError> &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    if (!is_json && error.inert_override_location().has_value()) {
+      std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
+                   "not enclose the\n";
+      std::cerr << "conflicting annotation. Move the reference inside the "
+                   "overriding object\n";
+      std::cerr << "for the override to take effect\n";
+    }
+
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const RdfResolutionError &error) {
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
+    if (!is_json && error.inert_override_location().has_value()) {
+      std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
+                   "not enclose the\n";
+      std::cerr << "conflicting annotation. Move the reference inside the "
+                   "overriding object\n";
+      std::cerr << "for the override to take effect\n";
+    }
+
     return EXIT_SCHEMA_INPUT_ERROR;
   } catch (const UnsupportedDialectRdfError &error) {
     const auto is_json{options.contains("json")};

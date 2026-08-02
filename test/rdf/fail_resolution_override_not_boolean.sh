@@ -15,7 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
     "name": {
       "type": "string",
       "x-jsonld-id": "https://schema.org/name",
-      "x-jsonld-type": "https://schema.org/Text"
+      "x-jsonld-override": "yes"
     }
   }
 }
@@ -31,12 +31,12 @@ EOF
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
-error: A JSON-LD type can only be assigned to an object value
+error: The value of x-jsonld-override must be a boolean
   at line 1
   at column 3
   at instance location "/name"
-  at facet "type"
-  at schema location file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-type
+  at facet "override"
+  at schema location file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-override
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -50,12 +50,12 @@ test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
 {
-  "error": "A JSON-LD type can only be assigned to an object value",
+  "error": "The value of x-jsonld-override must be a boolean",
   "line": 1,
   "column": 3,
   "instanceLocation": "/name",
-  "facet": "type",
-  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-type",
+  "facet": "override",
+  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-override",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF

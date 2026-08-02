@@ -71,6 +71,30 @@ Schema, so annotated schemas remain valid for every other tool.
 | `x-jsonld-self` | An [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI template | scalar or object subschema | Mint the node `@id` from instance values, such as `https://www.iso.org/iso-4217/{this}` |
 | `x-jsonld-override` | A boolean | any subschema | Give the schema object's own `x-jsonld-*` values precedence over conflicting ones from subschemas beneath it, such as a sibling `$ref` |
 
+The guarantee this command makes is syntactic: if resolution succeeds, the
+output is well-formed JSON-LD. Resolution errors enforce only what that
+guarantee needs, such as keyword value grammar, annotation placement, and
+single-value consistency, and every error cites the schema location of the
+offending annotation. The command does not judge whether the IRIs, datatypes,
+and language tags you declare make semantic sense. A schema can declare a
+datatype whose lexical space its values never fit, or a misspelled ontology
+term, and the command emits the annotations faithfully as written. That
+correctness is on you as the schema author. In the future, we plan to provide
+lint rules that catch more of these mistakes statically at design time, where
+they belong, instead of paying for the checks on every promotion.
+
+> [!NOTE]
+> As a deliberate deviation from JSON-LD 1.1, language tags must be written in
+> canonical BCP 47 form, both as `x-jsonld-language` values and as the map
+> keys of an `@language` container in instance data. For example, `en-US` is
+> accepted while `en-us` is rejected. This keeps language tag equality a plain
+> cheap string comparison everywhere in the engine.
+
+The variables of an `x-jsonld-self` URI template are matched verbatim against
+instance property names, so a variable like `{+meta.slug}` binds a property
+literally named `meta.slug`. There is no dotted path traversal into nested
+objects.
+
 For example, consider the following product catalog schema, which validates
 products and maps them to [schema.org](https://schema.org) at the same time:
 

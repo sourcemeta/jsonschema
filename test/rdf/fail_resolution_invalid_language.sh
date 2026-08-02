@@ -36,6 +36,7 @@ error: The value of x-jsonld-language must be a canonical BCP 47 language tag
   at column 3
   at instance location "/name"
   at facet "language"
+  at schema location file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-language
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -54,6 +55,7 @@ cat << EOF > "$TMP/expected.txt"
   "column": 3,
   "instanceLocation": "/name",
   "facet": "language",
+  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-language",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF

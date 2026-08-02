@@ -16,7 +16,10 @@ cat << 'EOF' > "$TMP/schema.json"
       "type": "number",
       "x-jsonld-id": "https://schema.org/price",
       "allOf": [
-        { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#decimal" },
+        {
+          "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#decimal",
+          "x-jsonld-override": true
+        },
         { "x-jsonld-datatype": "http://www.w3.org/2001/XMLSchema#double" }
       ]
     }
@@ -41,7 +44,12 @@ error: A JSON-LD datatype cannot be assigned more than one value
   at facet "datatype"
   at schema location file://$(realpath "$TMP")/schema.json#/properties/price/allOf/0/x-jsonld-datatype
   at conflicting schema location file://$(realpath "$TMP")/schema.json#/properties/price/allOf/1/x-jsonld-datatype
+  at inert override location file://$(realpath "$TMP")/schema.json#/properties/price/allOf/0/x-jsonld-override
   at file path $(realpath "$TMP")/instance.json
+
+The x-jsonld-override mark was ignored because it does not enclose the
+conflicting annotation. Move the reference inside the overriding object
+for the override to take effect
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -61,6 +69,7 @@ cat << EOF > "$TMP/expected.txt"
   "facet": "datatype",
   "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/price/allOf/0/x-jsonld-datatype",
   "conflictingSchemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/price/allOf/1/x-jsonld-datatype",
+  "inertOverrideLocation": "file://$(realpath "$TMP")/schema.json#/properties/price/allOf/0/x-jsonld-override",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF

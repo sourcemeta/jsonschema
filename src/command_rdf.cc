@@ -47,6 +47,8 @@ auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
       return "container";
     case sourcemeta::blaze::JSONLDFacet::Self:
       return "self";
+    case sourcemeta::blaze::JSONLDFacet::Override:
+      return "override";
     default:
       std::unreachable();
   }
@@ -189,13 +191,20 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
           std::move(error.message),
           std::string{facet_name(error.facet)},
           std::move(error.instance_location),
+          std::move(error.schema_location),
+          std::move(error.conflicting_schema_location),
+          std::move(error.inert_override_location),
           instance_from_stdin ? stdin_path() : instance_path};
     }
 
-    throw RdfResolutionError{
-        std::move(error.message), std::string{facet_name(error.facet)},
-        std::move(error.instance_location),
-        instance_from_stdin ? stdin_path() : instance_path};
+    throw RdfResolutionError{std::move(error.message),
+                             std::string{facet_name(error.facet)},
+                             std::move(error.instance_location),
+                             std::move(error.schema_location),
+                             std::move(error.conflicting_schema_location),
+                             std::move(error.inert_override_location),
+                             instance_from_stdin ? stdin_path()
+                                                 : instance_path};
   }
 
   auto document{std::get<sourcemeta::core::JSON>(std::move(outcome))};
