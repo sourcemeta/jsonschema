@@ -3,7 +3,7 @@
 # Flag categories handled here:
 #   - Diagnostics (-W...): always on, every config
 #   - Language semantics (-fwrapv, -fstrict-aliasing, -fno-rtti on GCC): always on
-#   - Optimization-related (loop unrolling, vectorization, fast-math relaxations):
+#   - Optimization-related (loop unrolling, vectorization):
 #     gated to non-Debug configs because they have no effect at -O0 but still
 #     cost Clang/GCC pipeline time
 #
@@ -59,15 +59,13 @@ function(sourcemeta_add_default_options visibility target)
       # See https://users.cs.utah.edu/~regehr/papers/overflow12.pdf
       # See https://www.postgresql.org/message-id/1689.1134422394@sss.pgh.pa.us
       -fwrapv
-      # Fast-math relaxations relax IEEE conformance (errno after math.h,
-      # signed-zero handling, reassociation), so they affect observable
-      # behavior and must apply to every config to keep Debug and Release
-      # semantics aligned
+      # Fast-math relaxations, applied to every config to keep Debug and
+      # Release semantics aligned. Signed zeros and reassociation stay at
+      # their IEEE defaults: the sign of zero is observable in serialised
+      # output, and GCC disables reassociation without -fno-signed-zeros
       -fno-math-errno
       -fno-trapping-math
-      -fno-signed-zeros
       -freciprocal-math
-      -fassociative-math
 
       # Optimization-only: emitted only when not building Debug. At -O0 these
       # run analyses that never reach codegen, costing build time for no

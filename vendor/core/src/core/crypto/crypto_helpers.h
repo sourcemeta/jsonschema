@@ -80,14 +80,21 @@ inline auto octets_below_fixed(const std::string_view value,
   return borrow == 1;
 }
 
-// Whether a signature representative, as a big-endian integer, is strictly
-// less than the modulus. RFC 8017 Section 5.2.2 requires this range check, so
-// that an unreduced signature, which an attacker forges by adding the modulus
-// without changing the modular exponentiation result, is rejected
-inline auto rsa_signature_in_range(const std::string_view signature,
-                                   const std::string_view modulus) noexcept
+// Whether a signature is a well-formed representative for the modulus. RFC 8017
+// Section 8.2.2 step 1 and Section 8.1.2 step 1: "If the length of the
+// signature S is not k octets, output "invalid signature" and stop". The length
+// is checked because the range comparison reads both operands as bare integers,
+// so a signature that merely dropped a leading zero octet would denote the same
+// value and verify, giving a second encoding of one signature. Section 5.2.2
+// then requires the range check, so that an unreduced signature, which an
+// attacker forges by adding the modulus without changing the modular
+// exponentiation result, is rejected. The modulus is stripped for the length so
+// that a stored ASN.1 sign octet cannot inflate k
+inline auto rsa_signature_acceptable(const std::string_view signature,
+                                     const std::string_view modulus) noexcept
     -> bool {
-  return octets_below(signature, modulus);
+  return signature.size() == strip_left(modulus, '\x00').size() &&
+         octets_below(signature, modulus);
 }
 
 // Whether an RSA public exponent is acceptable for the modulus: odd and in the

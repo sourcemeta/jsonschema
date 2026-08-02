@@ -300,13 +300,28 @@ auto idna_is_valid_u_label(const std::u32string_view label) -> bool {
     }
   }
 
-  // RFC 5890 §2.3.2.1: the corresponding A-label (the "xn--" prefix plus the
-  // Punycode-encoded body) must not exceed 63 octets
-  try {
-    if (4 + utf32_to_punycode(label).size() > MAXIMUM_LABEL_OCTETS) {
+  // RFC 5890 §2.3.2.1: the 63-octet limit is a property of "a label in A-label
+  // form". A label whose codepoints are all ASCII stays in that form and is
+  // measured by its own octet length, whereas a label carrying a non-ASCII
+  // codepoint is measured by its A-label form (the "xn--" prefix plus the
+  // Punycode-encoded body)
+  bool has_non_ascii{false};
+  for (const auto codepoint : label) {
+    if (codepoint > 0x7F) {
+      has_non_ascii = true;
+      break;
+    }
+  }
+
+  if (has_non_ascii) {
+    try {
+      if (4 + utf32_to_punycode(label).size() > MAXIMUM_LABEL_OCTETS) {
+        return false;
+      }
+    } catch (const PunycodeError &) {
       return false;
     }
-  } catch (const PunycodeError &) {
+  } else if (label.size() > MAXIMUM_LABEL_OCTETS) {
     return false;
   }
 

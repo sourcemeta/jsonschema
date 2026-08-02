@@ -1,6 +1,7 @@
 #ifndef SOURCEMETA_CORE_HTTP_MESSAGE_H_
 #define SOURCEMETA_CORE_HTTP_MESSAGE_H_
 
+#include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/text.h>
 
 #include <concepts>    // std::convertible_to, std::invocable
@@ -112,6 +113,13 @@ inline auto http_parse_headers(const std::string_view input, Callback callback)
         line.remove_suffix(1);
       }
 
+      // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value
+      // MUST either reject the message or replace each of those characters
+      // with SP", so a continuation carrying a bare one is discarded
+      if (http_field_line_has_forbidden_byte(line)) {
+        continue;
+      }
+
       callback(std::string_view{}, line);
       continue;
     }
@@ -141,6 +149,15 @@ inline auto http_parse_headers(const std::string_view input, Callback callback)
       value.remove_suffix(1);
     }
 
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP",
+    // so a field line whose name or value carries a bare one that survived the
+    // split on the line terminator is discarded
+    if (http_field_line_has_forbidden_byte(name) ||
+        http_field_line_has_forbidden_byte(value)) {
+      continue;
+    }
+
     callback(name, value);
   }
 }
@@ -151,21 +168,26 @@ inline auto http_parse_headers(const std::string_view input, Callback callback)
 /// with the name and value. A request cookie header carries only names and
 /// values, never attributes. Surrounding whitespace is trimmed, values are
 /// otherwise reported verbatim, and pairs that lack a `=` or have an empty name
-/// are skipped. For example:
+/// are skipped. Neither argument allocates, as both are borrowed from the
+/// input, so anything the callback keeps must not outlive it. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/http.h>
 /// #include <cassert>
 /// #include <string_view>
 ///
-/// std::string_view last_value;
+/// std::size_t count{0};
 /// sourcemeta::core::http_parse_cookies(
 ///     "session=abc; theme=dark",
-///     [&last_value](const std::string_view, const std::string_view value) {
-///       last_value = value;
+///     [&count](const std::string_view, const std::string_view) {
+///       count += 1;
 ///     });
-/// assert(last_value == "dark");
+/// assert(count == 2);
 /// ```
+///
+/// A header may carry several cookies under one name, so a callback that
+/// assigns to a single variable keeps whichever happens to come last. Use
+/// `http_cookie_values` to look one up by name.
 template <typename Callback>
   requires std::invocable<Callback, std::string_view, std::string_view>
 inline auto http_parse_cookies(const std::string_view input, Callback callback)
@@ -199,9 +221,8 @@ inline auto http_parse_cookies(const std::string_view input, Callback callback)
 /// @ingroup http
 /// Parse the value of an RFC 6265 §4.2 `Cookie` request header, given without
 /// the field name, into any container of name and value pairs. The names and
-/// values are forwarded as views that borrow from `input`, so a container of
-/// `std::string_view` pairs collects them without copying, while a container of
-/// `std::string` pairs owns them. For example:
+/// values are borrowed from `input` rather than copied, so a container of views
+/// must not outlive it, while an owning container may. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/http.h>
@@ -226,6 +247,49 @@ inline auto http_parse_cookies(const std::string_view input, Container &cookies)
                      [&cookies](const std::string_view name,
                                 const std::string_view value) -> void {
                        cookies.emplace_back(name, value);
+                     });
+}
+
+/// @ingroup http
+/// Collect every value carried under the given cookie name, in the order the
+/// header presents them. A request may carry several cookies with one name,
+/// since a parent domain and the host itself can each set one and RFC 6265
+/// §4.2.2 notes the server "cannot determine from the Cookie header alone [...]
+/// for which hosts the cookie is valid". That section also warns that servers
+/// "SHOULD NOT rely upon the order in which these cookies appear", so a caller
+/// verifying a signed cookie tries every value rather than any single one.
+/// Naming a cookie with the RFC 6265bis §4.1.3.2 `__Host-` prefix prevents the
+/// collision at the source.
+///
+/// The values are borrowed from `input` rather than copied, so a container of
+/// views must not outlive it, while an owning container may. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+/// #include <string_view>
+/// #include <vector>
+///
+/// std::vector<std::string_view> values;
+/// sourcemeta::core::http_cookie_values("session=abc; theme=dark; session=xyz",
+///                                      "session", values);
+/// assert(values.size() == 2);
+/// assert(values.at(0) == "abc");
+/// assert(values.at(1) == "xyz");
+/// ```
+template <typename Container>
+  requires requires(Container container, std::string_view entry) {
+    container.emplace_back(entry);
+  }
+inline auto http_cookie_values(const std::string_view input,
+                               const std::string_view name, Container &values)
+    -> void {
+  http_parse_cookies(input,
+                     [&name, &values](const std::string_view cookie,
+                                      const std::string_view value) -> void {
+                       if (cookie == name) {
+                         values.emplace_back(value);
+                       }
                      });
 }
 
@@ -302,18 +366,57 @@ template <typename Headers>
 inline auto http_serialize_headers(const Headers &headers) -> std::string {
   std::size_t total_size{0};
   for (const auto &[name, value] : headers) {
+    // A field dropped for a forbidden byte contributes no bytes, so the reserve
+    // is sized from only the fields that are actually emitted
+    if (http_field_line_has_forbidden_byte(name)) {
+      continue;
+    }
     // Account for the colon, the space, and the trailing CRLF
-    total_size += name.size() + value.size() + 4;
+    if constexpr (requires { value.bytes(); }) {
+      if (http_field_line_has_forbidden_byte(value.bytes())) {
+        continue;
+      }
+      total_size += name.size() + value.bytes().size() + 4;
+    } else {
+      if (http_field_line_has_forbidden_byte(value)) {
+        continue;
+      }
+      total_size += name.size() + value.size() + 4;
+    }
   }
 
   std::string result;
   result.reserve(total_size);
   for (const auto &[name, value] : headers) {
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP
+    // before further processing or forwarding of that message", so a field
+    // whose name carries one is dropped rather than written to the wire as a
+    // header-injection defense
+    if (http_field_line_has_forbidden_byte(name)) {
+      continue;
+    }
+
     // RFC 9112 §5.1 notes that "a single SP preceding the field line
     // value is preferred for consistent readability by humans"
-    result += name;
-    result += ": ";
-    result += value;
+    if constexpr (requires { value.bytes(); }) {
+      if (http_field_line_has_forbidden_byte(value.bytes())) {
+        continue;
+      }
+
+      result += name;
+      result += ": ";
+      result += value.bytes();
+    } else {
+      if (http_field_line_has_forbidden_byte(value)) {
+        continue;
+      }
+
+      result += name;
+      result += ": ";
+      result += value;
+    }
+
     result += "\r\n";
   }
 

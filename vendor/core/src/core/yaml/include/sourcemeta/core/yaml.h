@@ -30,7 +30,8 @@ namespace sourcemeta::core {
 /// @ingroup yaml
 ///
 /// Create a JSON document from a C++ standard input stream that represents a
-/// YAML document. For example:
+/// YAML document. The input must be UTF-8, optionally preceded by a UTF-8 byte
+/// order mark, as UTF-16 and UTF-32 input are not supported. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -49,7 +50,8 @@ auto parse_yaml(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 /// @ingroup yaml
 ///
 /// Create a JSON document from a C++ standard input stream that represents a
-/// YAML document. For example:
+/// YAML document. The input must be UTF-8, optionally preceded by a UTF-8 byte
+/// order mark, as UTF-16 and UTF-32 input are not supported. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>
@@ -68,8 +70,9 @@ auto parse_yaml(const JSON::String &input) -> JSON;
 
 /// @ingroup yaml
 ///
-/// Read a JSON document from a file location that represents a YAML file. For
-/// example:
+/// Read a JSON document from a file location that represents a YAML file. The
+/// file must be UTF-8, optionally preceded by a UTF-8 byte order mark, as
+/// UTF-16 and UTF-32 input are not supported. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

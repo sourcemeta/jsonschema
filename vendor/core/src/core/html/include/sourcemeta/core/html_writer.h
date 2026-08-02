@@ -66,7 +66,12 @@ public:
     return *this;
   }
 
-  /// Write HTML-escaped text content
+  /// Write HTML-escaped text content. The single-argument element shorthand
+  /// routes through this and therefore also escapes. The HTML serialization
+  /// emits the content of a raw-text element literally, so escaping its content
+  /// would corrupt it. This writer does not special-case content by element, so
+  /// the content of a raw-text element must be written unescaped rather than as
+  /// escaped text, and it must not contain that element's closing-tag sequence.
   SOURCEMETA_FORCEINLINE inline auto text(std::string_view content)
       -> HTMLWriter & {
     this->flush_open_tag();
@@ -74,7 +79,8 @@ public:
     return *this;
   }
 
-  /// Write raw HTML content (not escaped)
+  /// Write content without HTML-escaping. This is how the content of a raw-text
+  /// element is emitted, since escaped text would corrupt it.
   SOURCEMETA_FORCEINLINE inline auto raw(std::string_view content)
       -> HTMLWriter & {
     this->flush_open_tag();

@@ -53,10 +53,12 @@ auto oidc_userinfo_matches_subject(const JSON &userinfo,
 /// @ingroup oidc
 /// Verify a signed UserInfo response and its subject, returning the claims or
 /// no value when the signature does not verify under a pinned algorithm, the
-/// subject does not match the ID Token subject, or a present `iss` or `aud`
-/// does not identify this provider and client (OpenID Connect Core 1.0
-/// Section 5.3.2). Checking `aud` binds the response to this client, preventing
-/// one minted for another client from being accepted here. For example:
+/// subject does not match the ID Token subject, or `iss` or `aud` is missing or
+/// does not identify this provider and client. A signed response MUST carry
+/// `iss` and `aud` (OpenID Connect Core 1.0 Section 5.3.2, errata set 2), so a
+/// signed response lacking either is rejected. Checking `aud` binds the
+/// response to this client, preventing one minted for another client from being
+/// accepted here. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/oidc.h>

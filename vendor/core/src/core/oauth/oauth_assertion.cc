@@ -137,7 +137,9 @@ auto verify_assertion(
     if (identifier.has_value() && expiration.has_value()) {
       // The skew is clamped to the same non-negative bounded range the claim
       // check applies, so a negative value cannot shorten the window below the
-      // acceptance window and a large one cannot overflow the store's expiry
+      // acceptance window. The window as a whole is still attacker-influenced,
+      // since the remaining lifetime comes from the token's own expiration, so
+      // the store saturates rather than trusting it to fit
       const auto skew{std::clamp(options.clock_skew,
                                  std::chrono::seconds::zero(),
                                  std::chrono::seconds{31556952})};

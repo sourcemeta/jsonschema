@@ -766,8 +766,8 @@ auto squeeze(const std::string_view input, const char character) -> std::string;
 /// @ingroup text
 ///
 /// Collapse consecutive runs of a character into a single occurrence, appending
-/// the result to an existing string rather than allocating a new one. The
-/// output must not alias the input. For example:
+/// the result to a string like output sink rather than allocating a new
+/// string. The output must not alias the input. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/text.h>
@@ -778,9 +778,23 @@ auto squeeze(const std::string_view input, const char character) -> std::string;
 /// sourcemeta::core::squeeze("a//b", '/', output);
 /// assert(output == "path=a/b");
 /// ```
-SOURCEMETA_CORE_TEXT_EXPORT
-auto squeeze(const std::string_view input, const char character,
-             std::string &output) -> void;
+template <typename Output>
+auto squeeze(const std::string_view input, const char character, Output &output)
+    -> void {
+  bool in_run{false};
+  for (const auto value : input) {
+    if (value == character) {
+      if (!in_run) {
+        output.push_back(value);
+      }
+
+      in_run = true;
+    } else {
+      output.push_back(value);
+      in_run = false;
+    }
+  }
+}
 
 /// @ingroup text
 ///

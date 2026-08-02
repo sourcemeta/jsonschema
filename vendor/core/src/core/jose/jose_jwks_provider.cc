@@ -134,6 +134,20 @@ auto JWKSProvider::verify(
                          this->clock_());
 }
 
+auto JWKSProvider::verify_access_token(
+    const JWT &token, const std::span<const JWSAlgorithm> allowed_algorithms,
+    const std::string_view expected_issuer,
+    const std::string_view expected_audience,
+    const std::optional<std::string_view> expected_subject)
+    -> std::optional<JWTVerificationError> {
+  // RFC 9068 Section 2.1: "it is RECOMMENDED that the "application/" prefix be
+  // omitted. Therefore, the "typ" value used SHOULD be "at+jwt"". The
+  // comparison accepts either spelling, so pinning the short one satisfies
+  // Section 4
+  return this->verify(token, allowed_algorithms, expected_issuer,
+                      expected_audience, expected_subject, "at+jwt");
+}
+
 auto JWKSProvider::verify(
     const JWT &token, const std::span<const JWSAlgorithm> allowed_algorithms,
     const std::string_view expected_issuer,

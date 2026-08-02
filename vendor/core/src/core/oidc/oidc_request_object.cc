@@ -18,6 +18,7 @@ using namespace std::literals::string_view_literals;
 
 constexpr auto HASH_ALG{JSON::Object::hash("alg"sv)};
 constexpr auto HASH_ISS{JSON::Object::hash("iss"sv)};
+constexpr auto HASH_AUD{JSON::Object::hash("aud"sv)};
 
 } // namespace
 
@@ -53,17 +54,23 @@ auto oidc_verify_request_object(
     return std::nullopt;
   }
 
-  // OpenID Connect Core 1.0 Section 6.1: the request object is issued by the
-  // client and addressed to the OpenID Provider, so iss and aud are REQUIRED
-  // and must match the client and the provider respectively
+  // OpenID Connect Core 1.0 Section 6.1: "If signed, the Request Object SHOULD
+  // contain the Claims iss (issuer) and aud (audience) as members", and "The
+  // aud value SHOULD be or include the OP's Issuer Identifier URL". The
+  // audience binds the object to this provider, so a signed object without it
+  // could be replayed to a different provider. That replay risk is closed by
+  // requiring a present aud that includes the provider here, even though the
+  // base specification phrases the claim as a recommendation. The issuer stays
+  // a recommendation and is validated as the client only when present
   const auto &payload{token.payload()};
   const auto *issuer{payload.try_at("iss"sv, HASH_ISS)};
-  if (issuer == nullptr || !issuer->is_string() ||
-      issuer->to_string() != client_id) {
+  if (issuer != nullptr &&
+      (!issuer->is_string() || issuer->to_string() != client_id)) {
     return std::nullopt;
   }
 
-  if (!token.has_audience(provider_issuer)) {
+  const auto *audience{payload.try_at("aud"sv, HASH_AUD)};
+  if (audience == nullptr || !token.has_audience(provider_issuer)) {
     return std::nullopt;
   }
 

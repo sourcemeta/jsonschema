@@ -1270,7 +1270,8 @@ public:
   ///
   /// const sourcemeta::core::JSON my_string{
   ///   sourcemeta::core::parse_json("\"\\uD83D\\uDCA9\"")};
-  /// assert(my_string.size() == 2);
+  /// assert(my_string.size() == 1);
+  /// assert(my_string.byte_size() == 4);
   /// ```
   [[nodiscard]] SOURCEMETA_FORCEINLINE inline auto byte_size() const
       -> std::size_t {

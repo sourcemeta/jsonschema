@@ -8,6 +8,7 @@
 #include <sourcemeta/core/jose_verify.h>
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/oauth_random.h>
+#include <sourcemeta/core/time.h>
 
 #include "oauth_json.h"
 #include "oauth_syntax.h"
@@ -322,8 +323,8 @@ auto oauth_dpop_verify(const std::string_view proof,
   }
 
   // Check 11: the creation time is within the acceptable window
-  if (issued.value() < now - options.past_window ||
-      issued.value() > now + options.future_window) {
+  if (issued.value() < clock_shift_backward(now, options.past_window) ||
+      issued.value() > clock_shift_forward(now, options.future_window)) {
     return OAuthDPoPError::Expired;
   }
 
@@ -403,7 +404,8 @@ auto OAuthDPoPReplayStore::check_and_insert(
     return false;
   }
 
-  this->entries_.push_back(Entry{.digest = digest, .expiry = now + window});
+  this->entries_.push_back(
+      Entry{.digest = digest, .expiry = clock_shift_forward(now, window)});
   return true;
 }
 

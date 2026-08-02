@@ -22,16 +22,65 @@ constexpr auto HASH_HREF{JSON::Object::hash("href"sv)};
 constexpr std::string_view ISSUER_RELATION{
     "http://openid.net/specs/connect/1.0/issuer"};
 
+// OpenID Connect Discovery 1.0 Section 2.1: an explicit scheme such as acct or
+// https suppresses normalization. A bare "host:port" such as "example.com:8080"
+// is listed as scheme-less input, so a colon that begins a port rather than an
+// opaque or hierarchical part is not treated as a scheme delimiter (RFC 3986
+// Section 3.1: "scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )")
+auto identifier_has_scheme(const std::string_view identifier) -> bool {
+  const auto delimiter{identifier.find_first_of(":/?#@")};
+  if (delimiter == std::string_view::npos || identifier[delimiter] != ':') {
+    return false;
+  }
+
+  const auto candidate{identifier.substr(0, delimiter)};
+  if (candidate.empty() || !is_alpha(candidate.front())) {
+    return false;
+  }
+
+  for (const auto character : candidate) {
+    if (!is_alphanum(character) && character != '+' && character != '-' &&
+        character != '.') {
+      return false;
+    }
+  }
+
+  // A colon that begins an all-digit port up to the next component delimiter is
+  // the "host:port" shape rather than a scheme, so only that shape overrides
+  // the RFC 3986 scheme detection
+  const auto rest{identifier.substr(delimiter + 1)};
+  const auto port{rest.substr(0, rest.find_first_of("/?#"))};
+  if (port.empty()) {
+    return true;
+  }
+
+  for (const auto character : port) {
+    if (!is_digit(character)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// OpenID Connect Discovery 1.0 Section 2.1: "If the userinfo and host
+// components are present and all of the scheme, path, query, port, and fragment
+// components are absent, the acct scheme is assumed". A scheme-less input is
+// read as "[ userinfo "@" ] host [ ":" port ]", so this shape carries an "@"
+// and none of the port, path, query, or fragment delimiters
+auto identifier_is_acct_shaped(const std::string_view identifier) -> bool {
+  return identifier.find('@') != std::string_view::npos &&
+         identifier.find_first_of(":/?#") == std::string_view::npos;
+}
+
 // OpenID Connect Discovery 1.0 Section 2: an issuer identifier is an https URL
-// with a host and no query or fragment. RFC 3986 Section 3.1 makes the scheme
-// case-insensitive
+// with a host and no query or fragment
 auto is_issuer_identifier(const std::string_view value) -> bool {
   try {
     const URI uri{value};
-    return uri.scheme().has_value() &&
-           equals_ignore_case(uri.scheme().value(), "https") &&
-           uri.host().has_value() && !uri.host().value().empty() &&
-           !uri.query().has_value() && !uri.fragment().has_value();
+    return uri.is_https() && uri.host().has_value() &&
+           !uri.host().value().empty() && !uri.query().has_value() &&
+           !uri.fragment().has_value();
   } catch (const URIParseError &) {
     return false;
   }
@@ -57,17 +106,26 @@ auto oidc_webfinger_request(const std::string_view identifier)
     -> std::optional<OIDCWebFingerRequest> {
   OIDCWebFingerRequest request;
 
-  // OpenID Connect Discovery 1.0 Section 2.1: an acct URI or a URL is kept, a
-  // bare user@host becomes an acct URI, and any other input is an https URL
-  if (identifier.starts_with("acct:") ||
-      identifier.find("://") != std::string_view::npos) {
+  // OpenID Connect Discovery 1.0 Section 2.1: an input that already carries a
+  // scheme is kept, a scheme-less userinfo-and-host-only input takes the acct
+  // scheme, and "For all other inputs without a scheme component, the https
+  // scheme is assumed"
+  if (identifier_has_scheme(identifier)) {
     request.resource = identifier;
-  } else if (identifier.find('@') != std::string_view::npos) {
+  } else if (identifier_is_acct_shaped(identifier)) {
     request.resource = "acct:";
     request.resource.append(identifier);
   } else {
     request.resource = "https://";
     request.resource.append(identifier);
+  }
+
+  // OpenID Connect Discovery 1.0 Section 2.1: "If the resulting URI contains a
+  // fragment component, it MUST be stripped off, together with the fragment
+  // delimiter character"
+  const auto fragment{request.resource.find('#')};
+  if (fragment != std::string::npos) {
+    request.resource.erase(fragment);
   }
 
   // OpenID Connect Discovery 1.0 Section 2.1: the host is the domain after the
@@ -76,7 +134,9 @@ auto oidc_webfinger_request(const std::string_view identifier)
   // host, but a URL resource is parsed rather than scanned by hand. The host is
   // copied out because the parsed URI does not outlive this scope
   std::string host;
-  if (request.resource.starts_with("acct:")) {
+  // RFC 3986 Section 3.1: a scheme is case-insensitive, so an acct resource is
+  // recognized regardless of the case the caller used
+  if (starts_with_ignore_case(request.resource, "acct:")) {
     const auto account{
         rsplit_once(std::string_view{request.resource}.substr(5), '@')};
     if (!account.has_value()) {
@@ -88,11 +148,9 @@ auto oidc_webfinger_request(const std::string_view identifier)
     try {
       const URI resource{request.resource};
       // OpenID Connect Discovery 1.0 Section 2.1: a URL resource uses the https
-      // scheme and carries a host, so a non-https URL identifier is rejected.
-      // RFC 3986 Section 3.1 makes the scheme case-insensitive
-      if (!resource.scheme().has_value() ||
-          !equals_ignore_case(resource.scheme().value(), "https") ||
-          !resource.host().has_value() || resource.host().value().empty()) {
+      // scheme and carries a host, so a non-https URL identifier is rejected
+      if (!resource.is_https() || !resource.host().has_value() ||
+          resource.host().value().empty()) {
         return std::nullopt;
       }
 

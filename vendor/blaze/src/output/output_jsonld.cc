@@ -6,22 +6,27 @@
 #include <sourcemeta/core/uri.h>
 #include <sourcemeta/core/uritemplate.h>
 
-#include <algorithm>     // std::ranges::sort, std::ranges::any_of
-#include <cassert>       // assert
-#include <functional>    // std::ref, std::reference_wrapper
-#include <optional>      // std::optional
-#include <string>        // std::string
-#include <string_view>   // std::string_view
-#include <tuple>         // std::tie, std::make_tuple
-#include <unordered_map> // std::unordered_map
-#include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
-#include <variant>       // std::variant, std::get, std::holds_alternative
-#include <vector>        // std::vector
+#include <algorithm>        // std::ranges::sort, std::ranges::any_of
+#include <cassert>          // assert
+#include <functional>       // std::ref, std::reference_wrapper
+#include <initializer_list> // std::initializer_list
+#include <optional>         // std::optional
+#include <string>           // std::string
+#include <string_view>      // std::string_view
+#include <tuple>            // std::tie, std::make_tuple
+#include <unordered_map>    // std::unordered_map
+#include <unordered_set>    // std::unordered_set
+#include <utility>          // std::move
+#include <variant>          // std::variant, std::get, std::holds_alternative
+#include <vector>           // std::vector
 
 namespace {
 
-// The facts gathered at one instance location before its kind is known
+// The facts gathered at one instance location before its kind is known. Each
+// facet remembers the schema location of the annotation that last changed it,
+// never of a redundant duplicate, so a later error about the facet can cite
+// its origin. The origins are plain pointers into the collected annotation
+// entries, so carrying them costs no allocation
 struct Facts {
   std::vector<sourcemeta::core::JSONLDEdge> edges;
   std::vector<sourcemeta::core::JSON::String> types;
@@ -32,6 +37,16 @@ struct Facts {
   std::optional<sourcemeta::core::JSON::String> self;
   bool json{false};
   bool graph{false};
+  const std::string *edges_origin{nullptr};
+  const std::string *reverse_origin{nullptr};
+  const std::string *types_origin{nullptr};
+  const std::string *datatype_origin{nullptr};
+  const std::string *language_origin{nullptr};
+  const std::string *direction_origin{nullptr};
+  const std::string *container_origin{nullptr};
+  const std::string *self_origin{nullptr};
+  const std::string *json_origin{nullptr};
+  const std::string *graph_origin{nullptr};
 };
 
 using Accumulator = std::unordered_map<sourcemeta::core::WeakPointer, Facts,
@@ -39,7 +54,7 @@ using Accumulator = std::unordered_map<sourcemeta::core::WeakPointer, Facts,
 
 auto add_edge(std::vector<sourcemeta::core::JSONLDEdge> &edges,
               const sourcemeta::core::JSON::String &predicate,
-              const bool reverse) -> void {
+              const bool reverse) -> bool {
   const auto exists{std::ranges::any_of(
       edges,
       [&predicate, reverse](const sourcemeta::core::JSONLDEdge &edge) -> bool {
@@ -48,10 +63,12 @@ auto add_edge(std::vector<sourcemeta::core::JSONLDEdge> &edges,
   if (!exists) {
     edges.push_back({.predicate = predicate, .reverse = reverse});
   }
+
+  return !exists;
 }
 
 auto add_type(std::vector<sourcemeta::core::JSON::String> &types,
-              const sourcemeta::core::JSON::String &type) -> void {
+              const sourcemeta::core::JSON::String &type) -> bool {
   const auto exists{std::ranges::any_of(
       types, [&type](const sourcemeta::core::JSON::String &existing) -> bool {
         return existing == type;
@@ -59,6 +76,8 @@ auto add_type(std::vector<sourcemeta::core::JSON::String> &types,
   if (!exists) {
     types.push_back(type);
   }
+
+  return !exists;
 }
 
 // Whether an annotation value is usable as an absolute IRI
@@ -79,20 +98,43 @@ auto demote(Accumulator &accumulator, DirtyLocations &dirty,
   dirty.insert(location);
 }
 
-auto type_iri_error(const sourcemeta::core::WeakPointer &instance_location)
+// The first present schema origin among an error's counterpart annotations.
+// Only runs on the error path
+auto first_origin(std::initializer_list<const std::string *> pointers)
+    -> std::optional<std::string> {
+  for (const auto *origin : pointers) {
+    if (origin != nullptr) {
+      return *origin;
+    }
+  }
+
+  return std::nullopt;
+}
+
+auto type_iri_error(const sourcemeta::core::WeakPointer &instance_location,
+                    const std::string &origin)
     -> sourcemeta::blaze::JSONLDResolutionError {
   return {.instance_location = sourcemeta::core::to_pointer(instance_location),
           .facet = sourcemeta::blaze::JSONLDFacet::Type,
-          .message = "The value of x-jsonld-type must be an absolute IRI"};
+          .message = "The value of x-jsonld-type must be an absolute IRI",
+          .schema_location = origin,
+          .conflicting_schema_location = std::nullopt,
+          .inert_override_location = std::nullopt};
 }
 
-auto facet_error(const sourcemeta::core::WeakPointer &instance_location,
-                 const sourcemeta::blaze::JSONLDFacet facet,
-                 std::string message)
+auto facet_error(
+    const sourcemeta::core::WeakPointer &instance_location,
+    const sourcemeta::blaze::JSONLDFacet facet, std::string message,
+    std::string schema_location,
+    std::optional<std::string> conflicting_schema_location = std::nullopt,
+    std::optional<std::string> inert_override_location = std::nullopt)
     -> sourcemeta::blaze::JSONLDResolutionError {
   return {.instance_location = sourcemeta::core::to_pointer(instance_location),
           .facet = facet,
-          .message = std::move(message)};
+          .message = std::move(message),
+          .schema_location = std::move(schema_location),
+          .conflicting_schema_location = std::move(conflicting_schema_location),
+          .inert_override_location = std::move(inert_override_location)};
 }
 
 auto parse_direction(const sourcemeta::core::JSON &value)
@@ -141,7 +183,7 @@ auto parse_container(const sourcemeta::core::JSON &value)
 auto container_placement_error(
     const sourcemeta::core::WeakPointer &pointer,
     const sourcemeta::core::JSONLDContainer container,
-    const sourcemeta::core::JSON &value)
+    const sourcemeta::core::JSON &value, const std::string &origin)
     -> std::optional<sourcemeta::blaze::JSONLDResolutionError> {
   if (container == sourcemeta::core::JSONLDContainer::List ||
       container == sourcemeta::core::JSONLDContainer::Set) {
@@ -149,7 +191,8 @@ auto container_placement_error(
       return facet_error(
           pointer, sourcemeta::blaze::JSONLDFacet::Container,
           "A JSON-LD list or set container can only be assigned to an array "
-          "value");
+          "value",
+          origin);
     }
 
     return std::nullopt;
@@ -159,7 +202,8 @@ auto container_placement_error(
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Container,
         "A JSON-LD language or index container can only be assigned to an "
-        "object value");
+        "object value",
+        origin);
   }
 
   if (container == sourcemeta::core::JSONLDContainer::Language) {
@@ -168,7 +212,8 @@ auto container_placement_error(
           !sourcemeta::core::is_canonical_langtag(entry.first)) {
         return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Container,
                            "A JSON-LD language container requires canonical "
-                           "BCP 47 language tag keys");
+                           "BCP 47 language tag keys",
+                           origin);
       }
 
       // A null member, or a null item in an array member, is treated as absent
@@ -183,7 +228,8 @@ auto container_placement_error(
       if (!usable) {
         return facet_error(
             pointer, sourcemeta::blaze::JSONLDFacet::Container,
-            "A JSON-LD language container requires string or null members");
+            "A JSON-LD language container requires string or null members",
+            origin);
       }
     }
   }
@@ -202,13 +248,15 @@ auto placement_error(const sourcemeta::core::WeakPointer &pointer,
     if (!facts.types.empty() && !facts.self.has_value()) {
       return facet_error(
           pointer, sourcemeta::blaze::JSONLDFacet::Type,
-          "A JSON-LD type can only be assigned to an object value");
+          "A JSON-LD type can only be assigned to an object value",
+          *facts.types_origin);
     }
 
     if (facts.graph) {
       return facet_error(
           pointer, sourcemeta::blaze::JSONLDFacet::Graph,
-          "A JSON-LD graph flag can only be assigned to an object value");
+          "A JSON-LD graph flag can only be assigned to an object value",
+          *facts.graph_origin);
     }
   }
 
@@ -219,19 +267,22 @@ auto placement_error(const sourcemeta::core::WeakPointer &pointer,
   if (facts.datatype.has_value()) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Datatype,
-        "A JSON-LD datatype can only be assigned to a scalar value");
+        "A JSON-LD datatype can only be assigned to a scalar value",
+        *facts.datatype_origin);
   }
 
   if (facts.language.has_value()) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Language,
-        "A JSON-LD language can only be assigned to a scalar value");
+        "A JSON-LD language can only be assigned to a scalar value",
+        *facts.language_origin);
   }
 
   if (facts.direction.has_value()) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Direction,
-        "A JSON-LD direction can only be assigned to a scalar value");
+        "A JSON-LD direction can only be assigned to a scalar value",
+        *facts.direction_origin);
   }
 
   return std::nullopt;
@@ -247,19 +298,23 @@ auto literal_error(const sourcemeta::core::WeakPointer &pointer,
       (facts.language.has_value() || facts.direction.has_value())) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Datatype,
-        "A JSON-LD datatype cannot carry a language or direction");
+        "A JSON-LD datatype cannot carry a language or direction",
+        *facts.datatype_origin,
+        first_origin({facts.language_origin, facts.direction_origin}));
   }
 
   if (facts.language.has_value() && !value.is_string()) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Language,
-        "A JSON-LD language can only be assigned to a string value");
+        "A JSON-LD language can only be assigned to a string value",
+        *facts.language_origin);
   }
 
   if (facts.direction.has_value() && !value.is_string()) {
     return facet_error(
         pointer, sourcemeta::blaze::JSONLDFacet::Direction,
-        "A JSON-LD direction can only be assigned to a string value");
+        "A JSON-LD direction can only be assigned to a string value",
+        *facts.direction_origin);
   }
 
   return std::nullopt;
@@ -269,16 +324,19 @@ auto literal_error(const sourcemeta::core::WeakPointer &pointer,
 // binds each variable to the member of that name, and a scalar binds the
 // reserved variable this to its own value. Only a non-empty string can bind,
 // and a binding that is not usable, or a result that is not an absolute IRI,
-// is a fail-loud resolution error
+// is a fail-loud resolution error. Expansion runs in IRI mode so that
+// internationalized characters flowing through a template mint the same raw
+// term that constant identities emit, as RDF compares IRIs by simple string
+// comparison (RDF 1.1 Concepts Section 3.2)
 auto expand_self(const sourcemeta::core::WeakPointer &pointer,
                  const sourcemeta::core::JSON::String &pattern,
-                 const sourcemeta::core::JSON &value)
+                 const sourcemeta::core::JSON &value, const std::string &origin)
     -> std::variant<sourcemeta::core::JSON::String,
                     sourcemeta::blaze::JSONLDResolutionError> {
   std::optional<sourcemeta::blaze::JSONLDResolutionError> failure;
   const sourcemeta::core::URITemplate uri_template{pattern};
   auto expanded{uri_template.expand(
-      [&value, &pointer, &failure](
+      [&value, &pointer, &failure, &origin](
           const std::string_view name) -> sourcemeta::core::URITemplateValue {
         const sourcemeta::core::JSON *bound{nullptr};
         if (value.is_object()) {
@@ -287,12 +345,37 @@ auto expand_self(const sourcemeta::core::WeakPointer &pointer,
           bound = &value;
         }
 
-        if (bound == nullptr || !bound->is_string()) {
+        if (bound == nullptr) {
           if (!failure.has_value()) {
             failure = facet_error(
                 pointer, sourcemeta::blaze::JSONLDFacet::Self,
-                "A JSON-LD self identity template variable must bind to a "
-                "string");
+                "A JSON-LD self identity template variable must bind to an "
+                "instance value",
+                origin);
+          }
+
+          return std::nullopt;
+        }
+
+        if (bound->is_null()) {
+          if (!failure.has_value()) {
+            failure = facet_error(
+                pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                "A JSON-LD self identity template variable cannot bind to a "
+                "null value",
+                origin);
+          }
+
+          return std::nullopt;
+        }
+
+        if (!bound->is_string()) {
+          if (!failure.has_value()) {
+            failure = facet_error(
+                pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                "A JSON-LD self identity template variable can only bind to a "
+                "string value",
+                origin);
           }
 
           return std::nullopt;
@@ -304,23 +387,25 @@ auto expand_self(const sourcemeta::core::WeakPointer &pointer,
             failure = facet_error(
                 pointer, sourcemeta::blaze::JSONLDFacet::Self,
                 "A JSON-LD self identity template variable cannot bind to an "
-                "empty string");
+                "empty string",
+                origin);
           }
 
           return std::nullopt;
         }
 
         return std::make_tuple(std::string_view{text}, std::nullopt, false);
-      })};
+      },
+      sourcemeta::core::URITemplateExpansionMode::IRI)};
 
   if (failure.has_value()) {
     return failure.value();
   }
 
   if (!sourcemeta::core::URI::is_iri(expanded)) {
-    return facet_error(
-        pointer, sourcemeta::blaze::JSONLDFacet::Self,
-        "A JSON-LD self identity must expand to an absolute IRI");
+    return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                       "A JSON-LD self identity must expand to an absolute IRI",
+                       origin);
   }
 
   return sourcemeta::core::JSON::String{std::move(expanded)};
@@ -359,17 +444,25 @@ auto encloses(const sourcemeta::core::WeakPointer &outer,
   return outer.size() < inner.size() && inner.starts_with_initial(outer);
 }
 
+// An x-jsonld-override annotation that evaluated to true at a location,
+// paired with the schema location of the mark itself for error citations
+struct Mark {
+  const sourcemeta::core::WeakPointer *path;
+  const std::string *origin;
+};
+
 // A collected keyword value pending resolution, paired with the evaluate
-// path of the annotation that carried it
+// path and schema origin of the annotation that carried it, plus the
+// override mark sharing its schema object, if any
 struct Candidate {
   const sourcemeta::core::JSON *value;
   const sourcemeta::core::WeakPointer *path;
-  bool marked{false};
+  const std::string *origin;
+  const Mark *mark{nullptr};
 };
 
 // The candidates gathered at one instance location before resolution, plus
-// the evaluate paths of the x-jsonld-override annotations that evaluated to
-// true at that location
+// the x-jsonld-override annotations that evaluated to true at that location
 struct Pending {
   std::vector<Candidate> ids;
   std::vector<Candidate> reverses;
@@ -381,7 +474,7 @@ struct Pending {
   std::vector<Candidate> graphs;
   std::vector<Candidate> containers;
   std::vector<Candidate> selves;
-  std::vector<const sourcemeta::core::WeakPointer *> marks;
+  std::vector<Mark> marks;
 
   [[nodiscard]] auto annotated() const -> bool {
     return !this->ids.empty() || !this->reverses.empty() ||
@@ -395,33 +488,33 @@ struct Pending {
 using PendingMap = std::unordered_map<sourcemeta::core::WeakPointer, Pending,
                                       sourcemeta::core::WeakPointer::Hasher>;
 
-// Whether the annotation at the given evaluate path shares its schema object
-// with one of its location's x-jsonld-override marks
-auto marked_by(const std::vector<const sourcemeta::core::WeakPointer *> &marks,
-               const sourcemeta::core::WeakPointer &path) -> bool {
-  for (const auto *mark : marks) {
-    if (mark->size() == path.size() && path.starts_with_initial(*mark)) {
-      return true;
+// The x-jsonld-override mark sharing its schema object with the annotation
+// at the given evaluate path, if any
+auto find_mark(const std::vector<Mark> &marks,
+               const sourcemeta::core::WeakPointer &path) -> const Mark * {
+  for (const auto &mark : marks) {
+    if (mark.path->size() == path.size() &&
+        path.starts_with_initial(*mark.path)) {
+      return &mark;
     }
   }
 
-  return false;
+  return nullptr;
 }
 
 // A null that no override mark licenses declares nothing, as if the keyword
 // were absent
 auto unmarked_null(const Candidate &candidate) -> bool {
-  return candidate.value->is_null() && !candidate.marked;
+  return candidate.value->is_null() && candidate.mark == nullptr;
 }
 
 // Attach the location's override marks to a facet's candidates and drop the
 // nulls that no mark licenses. This cannot happen at collection time, as the
 // sibling mark may be collected in any order relative to the null
-auto prepare(std::vector<Candidate> &candidates,
-             const std::vector<const sourcemeta::core::WeakPointer *> &marks)
+auto prepare(std::vector<Candidate> &candidates, const std::vector<Mark> &marks)
     -> void {
   for (auto &candidate : candidates) {
-    candidate.marked = marked_by(marks, *candidate.path);
+    candidate.mark = find_mark(marks, *candidate.path);
   }
 
   std::erase_if(candidates, unmarked_null);
@@ -451,10 +544,14 @@ auto key_boolean(const sourcemeta::core::JSON &value) -> NormalizedKey {
 
 // The resolution of a single-valued facet at one instance location. An
 // absent winner without a conflict means the facet resolves to its absent
-// state, either because no candidate exists or because a tombstone won
+// state, either because no candidate exists or because a tombstone won. A
+// conflict is witnessed by its first diverging pair of surviving candidates,
+// mirroring the fail-first semantics of resolution errors
 struct Election {
   const Candidate *winner{nullptr};
   bool conflict{false};
+  const Candidate *first{nullptr};
+  const Candidate *second{nullptr};
 };
 
 // Resolve a single-valued facet: shadowed values are discarded, identical
@@ -482,7 +579,7 @@ auto elect(const std::vector<Candidate> &candidates,
     for (std::size_t index = 0; index < candidates.size(); index += 1) {
       bool shadowed{false};
       for (std::size_t other = 0; other < candidates.size(); other += 1) {
-        if (candidates[other].marked && keys[other] != keys[index] &&
+        if (candidates[other].mark != nullptr && keys[other] != keys[index] &&
             encloses(*candidates[other].path, *candidates[index].path)) {
           shadowed = true;
           break;
@@ -505,7 +602,10 @@ auto elect(const std::vector<Candidate> &candidates,
   const auto &elected{keys[survivors.front()]};
   for (const auto index : survivors) {
     if (keys[index] != elected) {
-      return {.winner = nullptr, .conflict = true};
+      return {.winner = nullptr,
+              .conflict = true,
+              .first = &candidates[survivors.front()],
+              .second = &candidates[index]};
     }
   }
 
@@ -515,7 +615,27 @@ auto elect(const std::vector<Candidate> &candidates,
 
   // Every survivor carries the elected key, and equal keys mean equal
   // values, so any survivor serves as the winner
-  return {.winner = &candidates[survivors.front()], .conflict = false};
+  return {.winner = &candidates[survivors.front()],
+          .conflict = false,
+          .first = nullptr,
+          .second = nullptr};
+}
+
+// The error for a facet whose surviving candidates diverge, citing the
+// witnessing pair. A surviving marked candidate failed to shadow the
+// diverging competitor it does not enclose, so its mark is cited as inert
+auto conflict_error(const sourcemeta::core::WeakPointer &instance_location,
+                    const sourcemeta::blaze::JSONLDFacet facet,
+                    std::string message, const Election &election)
+    -> sourcemeta::blaze::JSONLDResolutionError {
+  const auto *marked{election.first->mark != nullptr    ? election.first
+                     : election.second->mark != nullptr ? election.second
+                                                        : nullptr};
+  return facet_error(instance_location, facet, std::move(message),
+                     *election.first->origin, *election.second->origin,
+                     marked == nullptr
+                         ? std::nullopt
+                         : std::optional<std::string>{*marked->mark->origin});
 }
 
 // A false boolean never enters resolution, as the absent state it restates
@@ -539,19 +659,24 @@ auto removed_by_tombstone(const std::vector<Candidate> &candidates,
 }
 
 auto resolve_edges(const std::vector<Candidate> &candidates, const bool reverse,
-                   std::vector<sourcemeta::core::JSONLDEdge> &edges) -> void {
+                   Facts &facts) -> void {
   for (const auto &candidate : candidates) {
     if (candidate.value->is_null() ||
         removed_by_tombstone(candidates, candidate)) {
       continue;
     }
 
-    add_edge(edges, candidate.value->to_string(), reverse);
+    if (add_edge(facts.edges, candidate.value->to_string(), reverse)) {
+      facts.edges_origin = candidate.origin;
+      if (reverse) {
+        facts.reverse_origin = candidate.origin;
+      }
+    }
   }
 }
 
-auto resolve_types(const std::vector<Candidate> &candidates,
-                   std::vector<sourcemeta::core::JSON::String> &types) -> void {
+auto resolve_types(const std::vector<Candidate> &candidates, Facts &facts)
+    -> void {
   for (const auto &candidate : candidates) {
     if (candidate.value->is_null() ||
         removed_by_tombstone(candidates, candidate)) {
@@ -559,11 +684,16 @@ auto resolve_types(const std::vector<Candidate> &candidates,
     }
 
     if (candidate.value->is_array()) {
+      bool contributed{false};
       for (const auto &element : candidate.value->as_array()) {
-        add_type(types, element.to_string());
+        contributed = add_type(facts.types, element.to_string()) || contributed;
       }
-    } else {
-      add_type(types, candidate.value->to_string());
+
+      if (contributed) {
+        facts.types_origin = candidate.origin;
+      }
+    } else if (add_type(facts.types, candidate.value->to_string())) {
+      facts.types_origin = candidate.origin;
     }
   }
 }
@@ -594,11 +724,13 @@ auto collect(const sourcemeta::blaze::SimpleOutput::AnnotationEntry &entry,
              Pending &pending) -> void {
   const auto &keyword{entry.evaluate_path.back()};
   const Candidate candidate{.value = &entry.value,
-                            .path = &entry.evaluate_path};
+                            .path = &entry.evaluate_path,
+                            .origin = &entry.schema_location.get()};
 
   if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
     if (entry.value.to_boolean()) {
-      pending.marks.push_back(&entry.evaluate_path);
+      pending.marks.push_back({.path = &entry.evaluate_path,
+                               .origin = &entry.schema_location.get()});
     }
   } else if (keyword.property_equals("x-jsonld-id", HASH_ID)) {
     pending.ids.push_back(candidate);
@@ -646,12 +778,13 @@ auto resolve(const sourcemeta::core::JSON &instance,
     const auto &keyword{entry.evaluate_path.back()};
     const auto &instance_location{entry.instance_location};
     const auto &value{entry.value};
+    const auto *const origin{&entry.schema_location.get()};
 
     if (keyword.property_equals("x-jsonld-override", HASH_OVERRIDE)) {
       if (!value.is_boolean()) {
-        return facet_error(instance_location,
-                           sourcemeta::blaze::JSONLDFacet::Override,
-                           "The value of x-jsonld-override must be a boolean");
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Override,
+            "The value of x-jsonld-override must be a boolean", *origin);
       }
 
       // A mark only matters when it shadows a diverging value or licenses a
@@ -666,43 +799,55 @@ auto resolve(const sourcemeta::core::JSON &instance,
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Predicate,
             reverse ? "The value of x-jsonld-reverse must be an absolute IRI"
-                    : "The value of x-jsonld-id must be an absolute IRI");
+                    : "The value of x-jsonld-id must be an absolute IRI",
+            *origin);
       }
 
       if (value.is_null()) {
         demote(accumulator, dirty, instance_location);
       } else if (!dirty.contains(instance_location)) {
-        add_edge(accumulator[instance_location].edges, value.to_string(),
-                 reverse);
+        auto &facts{accumulator[instance_location]};
+        if (add_edge(facts.edges, value.to_string(), reverse)) {
+          facts.edges_origin = origin;
+          if (reverse) {
+            facts.reverse_origin = origin;
+          }
+        }
       }
     } else if (keyword.property_equals("x-jsonld-type", HASH_TYPE)) {
       if (value.is_array()) {
         for (const auto &element : value.as_array()) {
           if (!is_iri_value(element)) {
-            return type_iri_error(instance_location);
+            return type_iri_error(instance_location, *origin);
           }
         }
       } else if (!value.is_null() && !is_iri_value(value)) {
-        return type_iri_error(instance_location);
+        return type_iri_error(instance_location, *origin);
       }
 
       if (value.is_null()) {
         demote(accumulator, dirty, instance_location);
       } else if (!dirty.contains(instance_location)) {
-        auto &types{accumulator[instance_location].types};
+        auto &facts{accumulator[instance_location]};
         if (value.is_array()) {
+          bool contributed{false};
           for (const auto &element : value.as_array()) {
-            add_type(types, element.to_string());
+            contributed =
+                add_type(facts.types, element.to_string()) || contributed;
           }
-        } else {
-          add_type(types, value.to_string());
+
+          if (contributed) {
+            facts.types_origin = origin;
+          }
+        } else if (add_type(facts.types, value.to_string())) {
+          facts.types_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-datatype", HASH_DATATYPE)) {
       if (!value.is_null() && !is_iri_value(value)) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Datatype,
-            "The value of x-jsonld-datatype must be an absolute IRI");
+            "The value of x-jsonld-datatype must be an absolute IRI", *origin);
       }
 
       if (value.is_null()) {
@@ -712,8 +857,9 @@ auto resolve(const sourcemeta::core::JSON &instance,
         const auto &text{value.to_string()};
         if (facts.datatype.has_value() && facts.datatype.value() != text) {
           demote(accumulator, dirty, instance_location);
-        } else {
+        } else if (!facts.datatype.has_value()) {
           facts.datatype = text;
+          facts.datatype_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-language", HASH_LANGUAGE)) {
@@ -723,7 +869,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
         return facet_error(instance_location,
                            sourcemeta::blaze::JSONLDFacet::Language,
                            "The value of x-jsonld-language must be a "
-                           "canonical BCP 47 language tag");
+                           "canonical BCP 47 language tag",
+                           *origin);
       }
 
       if (value.is_null()) {
@@ -733,8 +880,9 @@ auto resolve(const sourcemeta::core::JSON &instance,
         const auto &text{value.to_string()};
         if (facts.language.has_value() && facts.language.value() != text) {
           demote(accumulator, dirty, instance_location);
-        } else {
+        } else if (!facts.language.has_value()) {
           facts.language = text;
+          facts.language_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-direction", HASH_DIRECTION)) {
@@ -742,7 +890,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
       if (!value.is_null() && !direction.has_value()) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Direction,
-            R"(The value of x-jsonld-direction must be "ltr" or "rtl")");
+            R"(The value of x-jsonld-direction must be "ltr" or "rtl")",
+            *origin);
       }
 
       if (value.is_null()) {
@@ -751,20 +900,22 @@ auto resolve(const sourcemeta::core::JSON &instance,
         auto &facts{accumulator[instance_location]};
         if (facts.direction.has_value() && facts.direction != direction) {
           demote(accumulator, dirty, instance_location);
-        } else {
+        } else if (!facts.direction.has_value()) {
           facts.direction = direction;
+          facts.direction_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-json", HASH_JSON) ||
                keyword.property_equals("x-jsonld-graph", HASH_GRAPH)) {
       const bool graph{keyword.property_equals("x-jsonld-graph", HASH_GRAPH)};
       if (!value.is_null() && !value.is_boolean()) {
-        return facet_error(
-            instance_location,
-            graph ? sourcemeta::blaze::JSONLDFacet::Graph
-                  : sourcemeta::blaze::JSONLDFacet::JSON,
-            graph ? "The value of x-jsonld-graph must be a boolean"
-                  : "The value of x-jsonld-json must be a boolean");
+        return facet_error(instance_location,
+                           graph ? sourcemeta::blaze::JSONLDFacet::Graph
+                                 : sourcemeta::blaze::JSONLDFacet::JSON,
+                           graph
+                               ? "The value of x-jsonld-graph must be a boolean"
+                               : "The value of x-jsonld-json must be a boolean",
+                           *origin);
       }
 
       // A false declares nothing anywhere, as the absent state it restates
@@ -774,9 +925,13 @@ auto resolve(const sourcemeta::core::JSON &instance,
       } else if (value.to_boolean() && !dirty.contains(instance_location)) {
         auto &facts{accumulator[instance_location]};
         if (graph) {
-          facts.graph = true;
-        } else {
+          if (!facts.graph) {
+            facts.graph = true;
+            facts.graph_origin = origin;
+          }
+        } else if (!facts.json) {
           facts.json = true;
+          facts.json_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-container", HASH_CONTAINER)) {
@@ -784,7 +939,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
       if (!value.is_null() && !container.has_value()) {
         return facet_error(
             instance_location, sourcemeta::blaze::JSONLDFacet::Container,
-            R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")");
+            R"(The value of x-jsonld-container must be "@list", "@set", "@language", or "@index")",
+            *origin);
       }
 
       if (value.is_null()) {
@@ -793,17 +949,18 @@ auto resolve(const sourcemeta::core::JSON &instance,
         auto &facts{accumulator[instance_location]};
         if (facts.container.has_value() && facts.container != container) {
           demote(accumulator, dirty, instance_location);
-        } else {
+        } else if (!facts.container.has_value()) {
           facts.container = container;
+          facts.container_origin = origin;
         }
       }
     } else if (keyword.property_equals("x-jsonld-self", HASH_SELF)) {
       if (!value.is_null() &&
           (!value.is_string() ||
            !sourcemeta::core::URITemplate::is_uritemplate(value.to_string()))) {
-        return facet_error(instance_location,
-                           sourcemeta::blaze::JSONLDFacet::Self,
-                           "The value of x-jsonld-self must be a URI Template");
+        return facet_error(
+            instance_location, sourcemeta::blaze::JSONLDFacet::Self,
+            "The value of x-jsonld-self must be a URI Template", *origin);
       }
 
       if (value.is_null()) {
@@ -813,8 +970,9 @@ auto resolve(const sourcemeta::core::JSON &instance,
         const auto &text{value.to_string()};
         if (facts.self.has_value() && facts.self.value() != text) {
           demote(accumulator, dirty, instance_location);
-        } else {
+        } else if (!facts.self.has_value()) {
           facts.self = text;
+          facts.self_origin = origin;
         }
       }
     }
@@ -853,72 +1011,85 @@ auto resolve(const sourcemeta::core::JSON &instance,
     }
 
     Facts facts;
-    resolve_edges(entry.ids, false, facts.edges);
-    resolve_edges(entry.reverses, true, facts.edges);
-    resolve_types(entry.types, facts.types);
+    resolve_edges(entry.ids, false, facts);
+    resolve_edges(entry.reverses, true, facts);
+    resolve_types(entry.types, facts);
 
     const auto datatype{elect(entry.datatypes, key_exact)};
     if (datatype.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Datatype,
-          "A JSON-LD datatype cannot be assigned more than one value");
+          "A JSON-LD datatype cannot be assigned more than one value",
+          datatype);
     } else if (datatype.winner != nullptr) {
       facts.datatype = datatype.winner->value->to_string();
+      facts.datatype_origin = datatype.winner->origin;
     }
 
     const auto language{elect(entry.languages, key_exact)};
     if (language.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Language,
-          "A JSON-LD language cannot be assigned more than one value");
+          "A JSON-LD language cannot be assigned more than one value",
+          language);
     } else if (language.winner != nullptr) {
       facts.language = language.winner->value->to_string();
+      facts.language_origin = language.winner->origin;
     }
 
     const auto direction{elect(entry.directions, key_exact)};
     if (direction.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Direction,
-          "A JSON-LD direction cannot be assigned more than one value");
+          "A JSON-LD direction cannot be assigned more than one value",
+          direction);
     } else if (direction.winner != nullptr) {
       facts.direction = parse_direction(*direction.winner->value);
+      facts.direction_origin = direction.winner->origin;
     }
 
     const auto json{elect(entry.jsons, key_boolean)};
     if (json.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::JSON,
           "A JSON-LD JSON literal flag cannot be assigned more than one "
-          "value");
+          "value",
+          json);
     } else if (json.winner != nullptr) {
       facts.json = true;
+      facts.json_origin = json.winner->origin;
     }
 
     const auto graph{elect(entry.graphs, key_boolean)};
     if (graph.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Graph,
-          "A JSON-LD graph flag cannot be assigned more than one value");
+          "A JSON-LD graph flag cannot be assigned more than one value", graph);
     } else if (graph.winner != nullptr) {
       facts.graph = true;
+      facts.graph_origin = graph.winner->origin;
     }
 
     const auto container{elect(entry.containers, key_exact)};
     if (container.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Container,
-          "A JSON-LD container cannot be assigned more than one value");
+          "A JSON-LD container cannot be assigned more than one value",
+          container);
     } else if (container.winner != nullptr) {
       facts.container = parse_container(*container.winner->value);
+      facts.container_origin = container.winner->origin;
     }
 
     const auto self{elect(entry.selves, key_exact)};
     if (self.conflict) {
-      return facet_error(
+      return conflict_error(
           location, sourcemeta::blaze::JSONLDFacet::Self,
-          "A JSON-LD self identity cannot be assigned more than one value");
+          "A JSON-LD self identity cannot be assigned more than one value",
+          self);
     } else if (self.winner != nullptr) {
       facts.self = self.winner->value->to_string();
+      facts.self_origin = self.winner->origin;
     }
 
     accumulator.emplace(location, std::move(facts));
@@ -941,10 +1112,26 @@ auto resolve(const sourcemeta::core::JSON &instance,
     for (const auto &entry : members.as_object()) {
       auto member{container_location};
       member.push_back(std::cref(entry.first));
-      if (accumulator.contains(member)) {
-        return facet_error(member, sourcemeta::blaze::JSONLDFacet::Container,
-                           "A JSON-LD language container member cannot carry a "
-                           "JSON-LD annotation");
+      const auto member_facts{accumulator.find(member)};
+      if (member_facts != accumulator.cend()) {
+        const auto &offender{member_facts->second};
+        // The null gate applies to members too: a null member is treated as
+        // absent, so its annotations declare nothing, except a JSON literal,
+        // where the null is the data itself
+        if (entry.second.is_null() && !offender.json) {
+          continue;
+        }
+
+        return facet_error(
+            member, sourcemeta::blaze::JSONLDFacet::Container,
+            "A JSON-LD language container member cannot carry a "
+            "JSON-LD annotation",
+            *container_facts.container_origin,
+            first_origin({offender.edges_origin, offender.types_origin,
+                          offender.datatype_origin, offender.language_origin,
+                          offender.direction_origin, offender.container_origin,
+                          offender.self_origin, offender.json_origin,
+                          offender.graph_origin}));
       }
     }
   }
@@ -952,6 +1139,16 @@ auto resolve(const sourcemeta::core::JSON &instance,
   sourcemeta::core::JSONLDWeakAnnotationList annotations;
   annotations.reserve(accumulator.size());
   for (auto &[pointer, facts] : accumulator) {
+    const auto &value{sourcemeta::core::get(instance, pointer)};
+
+    // A null value is treated as if its entry were absent, and an absent
+    // entry has no node and no annotations, so every fact at the location
+    // drops before any placement check, except a JSON literal, where the
+    // null is the data itself
+    if (value.is_null() && !facts.json) {
+      continue;
+    }
+
     std::ranges::sort(facts.edges,
                       [](const sourcemeta::core::JSONLDEdge &left,
                          const sourcemeta::core::JSONLDEdge &right) -> bool {
@@ -960,21 +1157,26 @@ auto resolve(const sourcemeta::core::JSON &instance,
                       });
     std::ranges::sort(facts.types);
 
-    const auto &value{sourcemeta::core::get(instance, pointer)};
-
     // A container sets the collection shape and stands alone, excluding every
     // other fact and choosing the value shape it ranges over
     if (facts.container.has_value()) {
       if (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
           facts.language.has_value() || facts.direction.has_value() ||
           facts.json || facts.self.has_value()) {
-        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Container,
-                           "A JSON-LD container cannot be combined with any "
-                           "other JSON-LD annotation");
+        return facet_error(
+            pointer, sourcemeta::blaze::JSONLDFacet::Container,
+            "A JSON-LD container can only be combined with "
+            "predicate annotations",
+            *facts.container_origin,
+            first_origin({facts.types_origin, facts.graph_origin,
+                          facts.datatype_origin, facts.language_origin,
+                          facts.direction_origin, facts.json_origin,
+                          facts.self_origin}));
       }
 
-      if (const auto error{container_placement_error(
-              pointer, facts.container.value(), value)};
+      if (const auto error{
+              container_placement_error(pointer, facts.container.value(), value,
+                                        *facts.container_origin)};
           error.has_value()) {
         return error.value();
       }
@@ -986,9 +1188,14 @@ auto resolve(const sourcemeta::core::JSON &instance,
         (!facts.types.empty() || facts.graph || facts.datatype.has_value() ||
          facts.language.has_value() || facts.direction.has_value() ||
          facts.self.has_value())) {
-      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::JSON,
-                         "A JSON-LD JSON literal cannot be combined with any "
-                         "other JSON-LD annotation");
+      return facet_error(
+          pointer, sourcemeta::blaze::JSONLDFacet::JSON,
+          "A JSON-LD JSON literal can only be combined with "
+          "predicate annotations",
+          *facts.json_origin,
+          first_origin({facts.types_origin, facts.graph_origin,
+                        facts.datatype_origin, facts.language_origin,
+                        facts.direction_origin, facts.self_origin}));
     }
 
     // A self identity mints an @id, promoting a scalar to a reference and
@@ -997,15 +1204,20 @@ auto resolve(const sourcemeta::core::JSON &instance,
     if (facts.self.has_value()) {
       if (facts.datatype.has_value() || facts.language.has_value() ||
           facts.direction.has_value()) {
-        return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
-                           "A JSON-LD self identity cannot carry a datatype, "
-                           "language, or direction");
+        return facet_error(
+            pointer, sourcemeta::blaze::JSONLDFacet::Self,
+            "A JSON-LD self identity cannot carry a datatype, "
+            "language, or direction",
+            *facts.self_origin,
+            first_origin({facts.datatype_origin, facts.language_origin,
+                          facts.direction_origin}));
       }
 
       if (value.is_array()) {
         return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
                            "A JSON-LD self identity can only be assigned to an "
-                           "object or scalar value");
+                           "object or scalar value",
+                           *facts.self_origin);
       }
     }
 
@@ -1028,7 +1240,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
           pointer.empty()
               ? "A JSON-LD predicate cannot be assigned to the document root"
-              : "A JSON-LD predicate cannot be assigned to an array element");
+              : "A JSON-LD predicate cannot be assigned to an array element",
+          *facts.edges_origin);
     }
 
     // A container member belongs to a collection, not a node, so it has no
@@ -1041,7 +1254,8 @@ auto resolve(const sourcemeta::core::JSON &instance,
           parent_facts->second.container.has_value()) {
         return facet_error(
             pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
-            "A JSON-LD predicate cannot be assigned to a container member");
+            "A JSON-LD predicate cannot be assigned to a container member",
+            *facts.edges_origin, *parent_facts->second.container_origin);
       }
     }
 
@@ -1058,13 +1272,15 @@ auto resolve(const sourcemeta::core::JSON &instance,
       if (!points_to_node) {
         return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Predicate,
                            "A JSON-LD reverse predicate can only point to a "
-                           "node or an array of nodes");
+                           "node or an array of nodes",
+                           *facts.reverse_origin);
       }
     }
 
     std::optional<sourcemeta::core::JSON::String> identifier;
     if (facts.self.has_value()) {
-      auto expanded{expand_self(pointer, facts.self.value(), value)};
+      auto expanded{
+          expand_self(pointer, facts.self.value(), value, *facts.self_origin)};
       if (std::holds_alternative<sourcemeta::blaze::JSONLDResolutionError>(
               expanded)) {
         return std::get<sourcemeta::blaze::JSONLDResolutionError>(

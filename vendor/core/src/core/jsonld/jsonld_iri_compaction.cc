@@ -111,9 +111,10 @@ auto compact_iri(const ActiveContext &active_context,
       type_language_value = KEYWORD_REVERSE;
       containers.emplace_back(KEYWORD_SET);
       containers.emplace_back(KEYWORD_NONE);
-      // A reverse value that is a node without an explicit index may still
-      // match a reverse term that declares an index container.
-      if (!has_index) {
+      // JSON-LD 1.1 API Section 6.2.3: the @index and @index@set candidates are
+      // added only when the processing mode is not json-ld-1.0 and the value
+      // carries no @index entry
+      if (!active_context.processing_1_0 && !has_index) {
         containers.emplace_back(KEYWORD_INDEX);
         containers.emplace_back(JSON::String{KEYWORD_INDEX} +
                                 JSON::String{KEYWORD_SET});
@@ -121,19 +122,37 @@ auto compact_iri(const ActiveContext &active_context,
     } else if (is_graph) {
       const JSON::String graph{KEYWORD_GRAPH};
       const JSON::String set{KEYWORD_SET};
-      // A graph object may match any graph container the term declares, mapping
-      // by @id or @index when present and by @none otherwise.
-      containers.emplace_back(graph + JSON::String{KEYWORD_ID});
-      containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
-      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
-      containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
+      const bool has_id{value->defines(KEYWORD_ID, KEYWORD_ID_HASH)};
+      // Container preference for a graph object: the @graph@index and @graph@id
+      // variants rank first only when the value carries the matching entry,
+      // otherwise the plain graph containers rank ahead of them (JSON-LD 1.1
+      // API Section 6.2.3)
+      if (has_index) {
+        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
+        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
+      }
+      if (has_id) {
+        containers.emplace_back(graph + JSON::String{KEYWORD_ID});
+        containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
+      }
       containers.emplace_back(graph);
       containers.emplace_back(graph + set);
-      if (has_index) {
-        containers.emplace_back(KEYWORD_INDEX);
-        containers.emplace_back(JSON::String{KEYWORD_INDEX} + set);
-      }
       containers.emplace_back(KEYWORD_SET);
+      if (!has_index) {
+        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX});
+        containers.emplace_back(graph + JSON::String{KEYWORD_INDEX} + set);
+      }
+      if (!has_id) {
+        containers.emplace_back(graph + JSON::String{KEYWORD_ID});
+        containers.emplace_back(graph + JSON::String{KEYWORD_ID} + set);
+      }
+      containers.emplace_back(KEYWORD_INDEX);
+      containers.emplace_back(JSON::String{KEYWORD_INDEX} + set);
+      // The graph-object candidate list ends with @none as a last resort, after
+      // every graph container above, so a graph object still compacts against a
+      // term with no container mapping when the active context defines no
+      // graph-container term for its property (W3C JSON-LD 1.1 compaction suite
+      // cases 0090 through 0094)
       containers.emplace_back(KEYWORD_NONE);
       type_language = KEYWORD_TYPE;
       type_language_value = KEYWORD_ID;
@@ -239,33 +258,42 @@ auto compact_iri(const ActiveContext &active_context,
       }
       containers.emplace_back(KEYWORD_SET);
       containers.emplace_back(KEYWORD_NONE);
-      if (!has_index) {
+      // A value with no @index entry may also match an @index container, but
+      // never under the 1.0 processing mode (JSON-LD 1.1 API Section 6.2.3)
+      if (!active_context.processing_1_0 && !has_index) {
         containers.emplace_back(KEYWORD_INDEX);
         containers.emplace_back(JSON::String{KEYWORD_INDEX} +
                                 JSON::String{KEYWORD_SET});
       }
-      // A value object carrying only @value also matches a language container
-      // term as a last resort, after a no-container term has been considered.
-      if (value->object_size() == 1) {
+      // JSON-LD 1.1 API Section 6.2.3: a value object carrying only @value also
+      // matches a language container term as a last resort, but only when the
+      // processing mode is not json-ld-1.0
+      if (!active_context.processing_1_0 && value->object_size() == 1) {
         containers.emplace_back(KEYWORD_LANGUAGE);
         containers.emplace_back(language_set);
       }
     } else {
       type_language = KEYWORD_TYPE;
       type_language_value = KEYWORD_ID;
+      // Container preference for a node reference or null: the @id and @type
+      // containers first, then a plain @set, then no container, and an @index
+      // container last (JSON-LD 1.1 API Section 6.2.3)
       containers.emplace_back(KEYWORD_ID);
       containers.emplace_back(JSON::String{KEYWORD_ID} +
                               JSON::String{KEYWORD_SET});
       containers.emplace_back(KEYWORD_TYPE);
-      // The inverse context stores container keys sorted, so @set precedes
-      // @type.
       containers.emplace_back(JSON::String{KEYWORD_SET} +
                               JSON::String{KEYWORD_TYPE});
-      containers.emplace_back(KEYWORD_INDEX);
-      containers.emplace_back(JSON::String{KEYWORD_INDEX} +
-                              JSON::String{KEYWORD_SET});
       containers.emplace_back(KEYWORD_SET);
       containers.emplace_back(KEYWORD_NONE);
+      // JSON-LD 1.1 API Section 6.2.3: the @index and @index@set candidates are
+      // added only when the processing mode is not json-ld-1.0 and the value
+      // carries no @index entry
+      if (!active_context.processing_1_0 && !has_index) {
+        containers.emplace_back(KEYWORD_INDEX);
+        containers.emplace_back(JSON::String{KEYWORD_INDEX} +
+                                JSON::String{KEYWORD_SET});
+      }
     }
 
     std::vector<JSON::String> preferred;
@@ -294,8 +322,12 @@ auto compact_iri(const ActiveContext &active_context,
         }
       }
     } else if (value == nullptr) {
-      // A bare vocabulary reference may match a term that coerces @id or
-      // @vocab.
+      // For a bare value the preferred list is the type or language value
+      // followed by @none (JSON-LD 1.1 API Section 6.2.3). The @vocab candidate
+      // is not literally listed there for this case, but it is load-bearing:
+      // the W3C compaction suite case 0114 regresses without it, so a bare
+      // vocabulary reference must also be allowed to match a term coercing
+      // @vocab, exactly as the @none candidate is required for the graph branch
       preferred.emplace_back(KEYWORD_ID);
       preferred.emplace_back(KEYWORD_VOCAB);
       preferred.emplace_back(KEYWORD_NONE);

@@ -2,6 +2,7 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/oauth_error.h>
+#include <sourcemeta/core/oauth_metadata.h>
 
 #include "oauth_json.h"
 #include "oauth_syntax.h"
@@ -103,6 +104,23 @@ auto validated_client_metadata(JSON &&data) -> JSON {
   if ((grant_types != nullptr && !grant_types->is_array_of_strings()) ||
       (response_types != nullptr && !response_types->is_array_of_strings()) ||
       (auth_method != nullptr && !auth_method->is_string())) {
+    throw OAuthRegistrationParseError{};
+  }
+
+  // RFC 7592 Section 2: "The client configuration endpoint MUST be protected by
+  // a transport-layer security mechanism", and the client "MUST use its
+  // registration access token in all calls to this endpoint as an OAuth 2.0
+  // Bearer Token", so a cleartext location here would carry that credential in
+  // the clear. This record is read in both directions, but Section 2.2 keeps a
+  // request from carrying the member at all, since an update "MUST NOT include
+  // the "registration_access_token", "registration_client_uri",
+  // "client_secret_expires_at", or "client_id_issued_at" fields", so validating
+  // it cannot reject a well-formed request
+  const auto *management_uri{
+      data.try_at("registration_client_uri"sv, HASH_REGISTRATION_CLIENT_URI)};
+  if (management_uri != nullptr &&
+      (!management_uri->is_string() ||
+       !oauth_is_endpoint_url(management_uri->to_string()))) {
     throw OAuthRegistrationParseError{};
   }
 
@@ -430,9 +448,11 @@ auto oauth_make_registration_response(
   }
 
   // RFC 7592 Section 3: the registration management location is a fully
-  // qualified URL
+  // qualified URL, and Section 2 requires the endpoint it names to be protected
+  // by a transport-layer security mechanism, so the same predicate the parse
+  // path applies is used here
   if (!result.registration_client_uri.empty() &&
-      !oauth_try_parse_uri(result.registration_client_uri).has_value()) {
+      !oauth_is_endpoint_url(result.registration_client_uri)) {
     return std::nullopt;
   }
 

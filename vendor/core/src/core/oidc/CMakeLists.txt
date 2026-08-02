@@ -4,8 +4,8 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME oidc
     request_object.h logout.h encryption.h profile.h
   SOURCES oidc_error.cc oidc_metadata.cc oidc_discovery.cc oidc_hash.cc
     oidc_id_token.cc oidc_authentication.cc oidc_claims.cc oidc_userinfo.cc
-    oidc_registration.cc oidc_subject.cc oidc_verify.h oidc_request_object.cc
-    oidc_logout.cc oidc_encryption.cc)
+    oidc_registration.cc oidc_subject.cc oidc_verify.h
+    oidc_request_object.cc oidc_logout.cc oidc_encryption.cc)
 
 target_link_libraries(sourcemeta_core_oidc
   PUBLIC sourcemeta::core::json)

@@ -89,11 +89,26 @@ inline auto append_percent_encoded(std::string &output, const char character)
   output += HEX_DIGITS[byte & 0x0F];
 }
 
-inline auto percent_encode(std::string &output, const std::string_view input)
-    -> void {
+// In the IRI mode, the bytes of internationalized characters pass through
+// rather than becoming percent encoded triplets. This is an extension beyond
+// RFC 6570, whose result always takes the URI syntax (Section 1.1: "Although
+// the URI syntax is used for the result, the template string is allowed to
+// contain the broader set of characters that can be found in
+// Internationalized Resource Identifier (IRI) references"). Nothing is ever
+// decoded, and whether the passed through codepoints are valid in an IRI is
+// left to the caller
+inline auto passes_through_unencoded(const char character,
+                                     const URITemplateExpansionMode mode)
+    -> bool {
+  return mode == URITemplateExpansionMode::IRI &&
+         static_cast<unsigned char>(character) >= 0x80;
+}
+
+inline auto percent_encode(std::string &output, const std::string_view input,
+                           const URITemplateExpansionMode mode) -> void {
   output.reserve(output.size() + input.size() * 3);
   for (const char character : input) {
-    if (is_unreserved(character)) {
+    if (is_unreserved(character) || passes_through_unencoded(character, mode)) {
       output += character;
     } else {
       append_percent_encoded(output, character);
@@ -102,11 +117,14 @@ inline auto percent_encode(std::string &output, const std::string_view input)
 }
 
 inline auto percent_encode_reserved(std::string &output,
-                                    const std::string_view input) -> void {
+                                    const std::string_view input,
+                                    const URITemplateExpansionMode mode)
+    -> void {
   output.reserve(output.size() + input.size() * 3);
   for (std::size_t index = 0; index < input.size(); ++index) {
     const char character = input[index];
     if (is_unreserved(character) || is_reserved(character) ||
+        passes_through_unencoded(character, mode) ||
         (character == '%' && index + 2 < input.size() &&
          is_hex_digit(input[index + 1]) && is_hex_digit(input[index + 2]))) {
       output += character;
@@ -117,11 +135,12 @@ inline auto percent_encode_reserved(std::string &output,
 }
 
 template <typename T>
-inline auto encode(std::string &output, const std::string_view input) -> void {
+inline auto encode(std::string &output, const std::string_view input,
+                   const URITemplateExpansionMode mode) -> void {
   if constexpr (T::allow_reserved) {
-    percent_encode_reserved(output, input);
+    percent_encode_reserved(output, input, mode);
   } else {
-    percent_encode(output, input);
+    percent_encode(output, input, mode);
   }
 }
 
@@ -399,7 +418,8 @@ template <typename T>
 auto expand_expression(
     std::string &result,
     const std::vector<URITemplateVariableSpecification> &variables,
-    const std::function<URITemplateValue(std::string_view)> &callback) -> void {
+    const std::function<URITemplateValue(std::string_view)> &callback,
+    const URITemplateExpansionMode mode) -> void {
   bool first_var = true;
 
   for (const auto &variable : variables) {
@@ -435,14 +455,14 @@ auto expand_expression(
         }
 
         if (object_key.has_value()) {
-          encode<T>(result, object_key.value());
+          encode<T>(result, object_key.value(), mode);
           if (actual_value.empty()) {
             if constexpr (has_empty_suffix<T>::value) {
               result += T::empty_suffix;
             }
           } else {
             result += '=';
-            encode<T>(result, actual_value);
+            encode<T>(result, actual_value, mode);
           }
         } else if constexpr (T::named) {
           result += variable.name;
@@ -452,10 +472,10 @@ auto expand_expression(
             }
           } else {
             result += '=';
-            encode<T>(result, actual_value);
+            encode<T>(result, actual_value, mode);
           }
         } else {
-          encode<T>(result, actual_value);
+          encode<T>(result, actual_value, mode);
         }
       } else {
         // An associative-array pair always contributes its key, so it is never
@@ -476,10 +496,10 @@ auto expand_expression(
 
         if (!first_value || !value_empty || has_more) {
           if (object_key.has_value()) {
-            encode<T>(result, object_key.value());
+            encode<T>(result, object_key.value(), mode);
             result += ',';
           }
-          encode<T>(result, actual_value);
+          encode<T>(result, actual_value, mode);
         }
       }
 

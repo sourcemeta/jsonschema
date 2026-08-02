@@ -37,6 +37,7 @@ inline auto ipv4_classify_octets(const std::array<std::uint8_t, 4> &octets)
   const auto first{octets[0]};
   const auto second{octets[1]};
   const auto third{octets[2]};
+  const auto fourth{octets[3]};
 
   // RFC 1122 Section 3.2.1.3: "this host on this network", 0.0.0.0/8
   if (first == 0) {
@@ -62,6 +63,14 @@ inline auto ipv4_classify_octets(const std::array<std::uint8_t, 4> &octets)
   // RFC 3927 Section 2.1: link-local, 169.254.0.0/16
   if (first == 169 && second == 254) {
     return IPAddressClass::LinkLocal;
+  }
+
+  // RFC 7723 Section 4.1 and RFC 8155: the anycast addresses 192.0.0.9 and
+  // 192.0.0.10 are registered as globally reachable, carved out of the
+  // surrounding not-globally-reachable 192.0.0.0/24 block that follows
+  if (first == 192 && second == 0 && third == 0 &&
+      (fourth == 9 || fourth == 10)) {
+    return IPAddressClass::Public;
   }
 
   // RFC 6890, RFC 5737, and RFC 2544: special-purpose ranges that are not

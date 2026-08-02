@@ -61,19 +61,20 @@ auto oidc_verify_userinfo(
     return std::nullopt;
   }
 
-  // OpenID Connect Core 1.0 Section 5.3.2: a signed response SHOULD carry iss
-  // and aud, so when present the iss must be this provider and the aud must
-  // include this client, which stops a response minted for another client from
-  // being accepted here. The raw members are inspected so a present but
-  // non-string claim fails closed rather than being read as absent
+  // OpenID Connect Core 1.0 errata set 2 Section 5.3.2: "If signed, the
+  // UserInfo Response ... MUST contain the Claims iss (issuer) and aud
+  // (audience) as members". So a signed response is rejected when either is
+  // absent, the iss must be this provider, and the aud must include this
+  // client, which stops a response minted for another client from being
+  // accepted here
   const auto *issuer{token.payload().try_at("iss"sv, HASH_ISS)};
-  if (issuer != nullptr &&
-      (!issuer->is_string() || issuer->to_string() != expected_issuer)) {
+  if (issuer == nullptr || !issuer->is_string() ||
+      issuer->to_string() != expected_issuer) {
     return std::nullopt;
   }
 
   const auto *audience{token.payload().try_at("aud"sv, HASH_AUD)};
-  if (audience != nullptr && !token.has_audience(expected_client_id)) {
+  if (audience == nullptr || !token.has_audience(expected_client_id)) {
     return std::nullopt;
   }
 

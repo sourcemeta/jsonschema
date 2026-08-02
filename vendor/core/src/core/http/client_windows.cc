@@ -189,11 +189,16 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
   WinHttpSetOption(request_handle.get(), WINHTTP_OPTION_DECOMPRESSION,
                    &decompression, sizeof(decompression));
 
-  auto serialized_headers{http_serialize_headers(this->headers_)};
+  // The possibly secret header lines are appended last, so this buffer never
+  // grows once it holds a secret, which would leave the previous storage in
+  // freed memory without a wipe
+  std::string serialized_headers;
+  const SecureStringScope serialized_headers_scope{serialized_headers};
   LPVOID body_data{WINHTTP_NO_REQUEST_DATA};
   DWORD body_size{0};
   if (this->body_.has_value()) {
-    if (this->body_.value().data.size() > std::numeric_limits<DWORD>::max()) {
+    if (this->body_.value().bytes().size() >
+        std::numeric_limits<DWORD>::max()) {
       throw HTTPError{this->method_, this->url_,
                       "The request body is too large"};
     }
@@ -201,20 +206,26 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
     serialized_headers += "Content-Type: ";
     serialized_headers += this->body_.value().content_type;
     serialized_headers += "\r\n";
-    body_data = const_cast<char *>(this->body_.value().data.data());
-    body_size = static_cast<DWORD>(this->body_.value().data.size());
+    body_data = const_cast<char *>(this->body_.value().bytes().data());
+    body_size = static_cast<DWORD>(this->body_.value().bytes().size());
   }
 
-  const auto request_headers{
-      sourcemeta::core::utf8_to_wide(serialized_headers)};
+  {
+    auto header_lines{http_serialize_headers(this->headers_)};
+    const SecureStringScope header_lines_scope{header_lines};
+    serialized_headers += header_lines;
+  }
 
-  if (!WinHttpSendRequest(
-          request_handle.get(),
-          request_headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS
-                                  : request_headers.c_str(),
-          request_headers.empty() ? 0
-                                  : static_cast<DWORD>(request_headers.size()),
-          body_data, body_size, body_size, 0)) {
+  auto request_headers{sourcemeta::core::utf8_to_wide(serialized_headers)};
+
+  const auto sent{WinHttpSendRequest(
+      request_handle.get(),
+      request_headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS
+                              : request_headers.c_str(),
+      request_headers.empty() ? 0 : static_cast<DWORD>(request_headers.size()),
+      body_data, body_size, body_size, 0)};
+  secure_zero(request_headers.data(), request_headers.size() * sizeof(wchar_t));
+  if (!sent) {
     throw HTTPError{this->method_, this->url_,
                     "Failed to send the HTTP request"};
   }

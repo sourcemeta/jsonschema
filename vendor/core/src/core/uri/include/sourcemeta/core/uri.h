@@ -137,6 +137,30 @@ public:
   /// ```
   [[nodiscard]] auto is_file() const -> bool;
 
+  /// Check if the URI has the `http` scheme (RFC 9110 Section 4.2.1),
+  /// accepting any scheme case (RFC 3986 Section 3.1). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"http://www.sourcemeta.com"};
+  /// assert(uri.is_http());
+  /// ```
+  [[nodiscard]] auto is_http() const -> bool;
+
+  /// Check if the URI has the `https` scheme (RFC 9110 Section 4.2.2),
+  /// accepting any scheme case (RFC 3986 Section 3.1). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"https://www.sourcemeta.com"};
+  /// assert(uri.is_https());
+  /// ```
+  [[nodiscard]] auto is_https() const -> bool;
+
   /// Check if the URI only consists of a fragment. For example:
   ///
   /// ```cpp
@@ -180,6 +204,40 @@ public:
   /// assert(uri.is_ipv6());
   /// ```
   [[nodiscard]] auto is_ipv6() const -> bool;
+
+  /// Check if the host is a loopback IP literal, any address in `127.0.0.0/8`
+  /// (RFC 1122 Section 3.2.1.3), `::1` (RFC 4291 Section 2.5.3), or an
+  /// IPv4-mapped or IPv4-compatible IPv6 address embedding a `127.0.0.0/8`
+  /// address (RFC 4291 Section 2.5.5). The name `localhost` is deliberately
+  /// not a loopback host, as it usually resolves to one but that is a
+  /// different claim (RFC 8252 Section 8.3). For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"http://127.0.0.1:8000"};
+  /// assert(uri.is_loopback());
+  /// sourcemeta::core::URI name{"http://localhost:8000"};
+  /// assert(!name.is_loopback());
+  /// ```
+  [[nodiscard]] auto is_loopback() const -> bool;
+
+  /// Check if the host is the special-use domain name `localhost` or a name
+  /// falling within it, such as `foo.localhost`, in any case and with or
+  /// without the trailing dot of the absolute form (RFC 6761 Section 6.3). A
+  /// loopback IP literal is not a localhost name. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/uri.h>
+  /// #include <cassert>
+  ///
+  /// sourcemeta::core::URI uri{"http://localhost:8000"};
+  /// assert(uri.is_localhost());
+  /// sourcemeta::core::URI address{"http://127.0.0.1:8000"};
+  /// assert(!address.is_localhost());
+  /// ```
+  [[nodiscard]] auto is_localhost() const -> bool;
 
   /// Check if the URI corresponds to the empty URI. For example:
   ///

@@ -26,7 +26,12 @@ namespace sourcemeta::core {
 
 auto jwt_sign(const JSON &header, const JSON &payload, const JWKPrivate &key)
     -> std::optional<std::string> {
-  if (!header.is_object() || !payload.is_object()) {
+  // Header parameter names and claim names must each be unique, so a producer
+  // does not emit an object carrying duplicates (RFC 7515 Section 4 "The Header
+  // Parameter names within the JOSE Header MUST be unique" and RFC 7519 Section
+  // 4 "The Claim Names within a JWT Claims Set MUST be unique")
+  if (!header.is_object() || !payload.is_object() || !header.unique_keys() ||
+      !payload.unique_keys()) {
     return std::nullopt;
   }
 

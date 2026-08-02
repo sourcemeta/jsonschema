@@ -153,10 +153,11 @@ auto oidc_authorization_url(const std::string_view authorization_endpoint,
 /// into the result, returning whether it is well formed (OpenID Connect Core
 /// 1.0 Section 3.1.2.1). The `client_id`, `redirect_uri`, and `response_type`
 /// are REQUIRED, the scope must contain `openid`, a `none` prompt must appear
-/// alone, `offline_access` cannot pair with a `none` prompt, the
-/// `response_type` is limited by the profile, and `OIDCProfile::Strict`
-/// requires a `code_challenge` with the `S256` method (PKCE), the same checks
-/// the builder applies. Each recognized value is form-decoded, borrowing from
+/// alone, an `offline_access` scope that cannot yield a refresh token, such as
+/// one paired with a `none` prompt, is dropped rather than rejected (OpenID
+/// Connect Core 1.0 Section 11), the `response_type` is limited by the profile,
+/// and `OIDCProfile::Strict` requires a `code_challenge` with the `S256` method
+/// (PKCE). Each recognized value is form-decoded, borrowing from
 /// the input when it carries no escape and otherwise from the storage arena,
 /// which the caller owns and reuses across parses. The result is reset first,
 /// then borrows from the input and the storage, so both must outlive it. For

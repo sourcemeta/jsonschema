@@ -194,6 +194,11 @@ public:
     this->buffer_.reserve(capacity);
   }
 
+  /// The number of bytes that can be held before growing the storage.
+  [[nodiscard]] auto capacity() const noexcept -> size_type {
+    return this->buffer_.capacity();
+  }
+
   /// Resize to the given number of bytes, padding new ones with the given
   /// value.
   auto resize(const size_type count, const char value) -> void {
@@ -249,7 +254,18 @@ public:
 
   /// A view over the held bytes.
   [[nodiscard]] operator std::string_view() const noexcept {
+    // An empty buffer may expose a null data pointer, so a default view is
+    // returned rather than constructing one from a possibly-null pointer
+    if (this->buffer_.empty()) {
+      return {};
+    }
+
     return {this->buffer_.data(), this->buffer_.size()};
+  }
+
+  /// A pointer to the held bytes, valid until the next mutation.
+  [[nodiscard]] auto data() const noexcept -> const char * {
+    return this->buffer_.data();
   }
 
   /// Whether the held bytes equal the given view.

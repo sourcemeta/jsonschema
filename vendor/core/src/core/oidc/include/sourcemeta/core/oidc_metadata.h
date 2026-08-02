@@ -52,9 +52,42 @@ public:
   /// throwing when it is invalid. The document is moved in.
   OIDCProviderMetadata(JSON &&data, const std::string_view issuer);
 
+  /// Apply the OpenID Connect layer to a document already parsed and validated
+  /// as OAuth authorization server metadata, throwing when the OpenID Connect
+  /// requirements are not met. The document is moved in and the OAuth checks
+  /// are not repeated.
+  explicit OIDCProviderMetadata(OAuthServerMetadata &&oauth);
+
   /// Construct and validate a metadata document for an expected issuer,
   /// returning no value when it is invalid. The document is moved in.
   [[nodiscard]] static auto from(JSON &&data, const std::string_view issuer)
+      -> std::optional<OIDCProviderMetadata>;
+
+  /// Apply the OpenID Connect layer to a document already parsed and validated
+  /// as OAuth authorization server metadata, returning no value when the
+  /// OpenID Connect requirements are not met. This is what a caching resolver
+  /// hands back, so lifting it costs no reparse and no repeated OAuth
+  /// validation. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/oidc.h>
+  /// #include <cassert>
+  ///
+  /// auto document{sourcemeta::core::parse_json(R"JSON({
+  ///   "issuer":"https://example.com",
+  ///   "jwks_uri":"https://example.com/jwks",
+  ///   "response_types_supported":[ "code" ],
+  ///   "subject_types_supported":[ "public" ],
+  ///   "id_token_signing_alg_values_supported":[ "RS256" ]
+  /// })JSON")};
+  /// auto oauth{sourcemeta::core::OAuthServerMetadata::from(
+  ///     std::move(document), "https://example.com")};
+  /// assert(oauth.has_value());
+  /// const auto metadata{
+  ///     sourcemeta::core::OIDCProviderMetadata::from(std::move(oauth).value())};
+  /// assert(metadata.has_value());
+  /// ```
+  [[nodiscard]] static auto from(OAuthServerMetadata &&oauth)
       -> std::optional<OIDCProviderMetadata>;
 
   /// The issuer identifier (OpenID Connect Discovery 1.0 Section 3).
@@ -103,6 +136,13 @@ public:
   /// Whether a response type is supported (OpenID Connect Discovery 1.0
   /// Section 3).
   [[nodiscard]] auto supports_response_type(const std::string_view value) const
+      -> bool;
+
+  /// Whether a token endpoint authentication method is supported, defaulting
+  /// to `client_secret_basic` when absent (OpenID Connect Discovery 1.0
+  /// Section 3).
+  [[nodiscard]] auto
+  supports_token_endpoint_auth_method(const std::string_view value) const
       -> bool;
 
   /// Whether a scope is supported (OpenID Connect Discovery 1.0 Section 3).

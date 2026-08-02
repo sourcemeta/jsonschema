@@ -11,7 +11,6 @@
 
 #include <cassert>       // assert
 #include <cstdint>       // std::uint64_t, std::int64_t
-#include <limits>        // std::numeric_limits
 #include <optional>      // std::optional
 #include <sstream>       // std::ostringstream
 #include <string>        // std::string
@@ -102,6 +101,7 @@ public:
       throw YAMLParseError{1, 1, "Empty YAML document"};
     } else if (token->type == TokenType::DocumentEnd) {
       while (token.has_value() && token->type == TokenType::DocumentEnd) {
+        this->document_ended_ = true;
         token = this->lexer_->next();
       }
       if (!token.has_value() || token->type == TokenType::StreamEnd)
@@ -135,6 +135,7 @@ public:
       }
     }
     while (token.has_value() && token->type == TokenType::DocumentEnd) {
+      this->document_ended_ = true;
       if (this->roundtrip_) {
         this->roundtrip_->pre_end_comments =
             this->lexer_->take_preceding_comments();
@@ -176,9 +177,17 @@ public:
 
   auto validate_end_of_stream() -> void {
     auto token{this->next_token()};
-    bool saw_document_end{false};
+    // The preceding parse already consumed a document, so its end marker, if
+    // any, is not among the tokens seen here. YAML 1.2.2 Section 6.8.2: tag
+    // directives are local to one document, so crossing that boundary begins a
+    // fresh directive scope.
+    bool saw_document_end{this->document_ended_};
+    if (saw_document_end) {
+      this->tag_directives_.clear();
+    }
     while (token.has_value() && token->type == TokenType::DocumentEnd) {
       saw_document_end = true;
+      this->tag_directives_.clear();
       token = this->next_token();
     }
     if (!token.has_value() || token->type == TokenType::StreamEnd) {
@@ -186,7 +195,6 @@ public:
     }
     while (token.has_value() && token->type != TokenType::StreamEnd) {
       if (token->type == TokenType::DocumentStart) {
-        this->tag_directives_.clear();
         token = this->next_token();
         if (!token.has_value() || token->type == TokenType::StreamEnd) {
           return;
@@ -218,6 +226,9 @@ public:
       token = this->next_token();
       while (token.has_value() && token->type == TokenType::DocumentEnd) {
         saw_document_end = true;
+        // YAML 1.2.2 Section 6.8.2: the next document begins with an empty
+        // directive scope
+        this->tag_directives_.clear();
         token = this->next_token();
       }
     }
@@ -295,6 +306,13 @@ private:
           throw YAMLParseError{token.line, token.column,
                                "Invalid version in %YAML directive"};
         }
+        // YAML 1.2.2 Section 6.8.1: a document that names a higher major
+        // version than this processor supports must be rejected
+        const auto major{version.substr(0, version_dot)};
+        if (major.size() > 1 || major.front() > '1') [[unlikely]] {
+          throw YAMLParseError{token.line, token.column,
+                               "Unsupported major version in %YAML directive"};
+        }
         while (cursor < content.size() &&
                (content[cursor] == ' ' || content[cursor] == '\t')) {
           cursor++;
@@ -330,6 +348,13 @@ private:
         const auto prefix{
             std::string{content.substr(prefix_start, cursor - prefix_start)}};
         if (!handle.empty() && !prefix.empty()) {
+          // YAML 1.2.2 Section 6.8.2: a handle may carry at most one tag
+          // directive in a document, even when both give the same prefix
+          if (this->tag_directives_.contains(handle)) [[unlikely]] {
+            throw YAMLParseError{
+                token.line, token.column,
+                "Duplicate %TAG directive for the same handle"};
+          }
           this->tag_directives_.insert_or_assign(handle, prefix);
         }
       }
@@ -365,6 +390,10 @@ private:
           return iterator->second +
                  std::string{raw_tag.substr(second_bang + 1)};
         }
+        // YAML 1.2.2 Section 6.8.2.1: a named tag handle must be associated
+        // with a prefix by a tag directive, so an undefined handle is an error
+        throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
+                             "Undefined tag handle"};
       }
     }
 
@@ -410,8 +439,18 @@ private:
                : token.column;
   }
 
-  [[nodiscard]] auto json_to_key_string(const JSON &value) const
+  [[nodiscard]] auto json_to_key_string(const JSON &value,
+                                        const std::uint64_t key_line,
+                                        const std::uint64_t key_column) const
       -> std::string {
+    // RFC 8259 Section 4: an object member name is a string, so a mapping key
+    // that resolves to a collection cannot be represented as JSON. PyYAML
+    // raises on the unhashable key and js-yaml rejects the complex key, so a
+    // collection key is rejected rather than silently stringified
+    if (value.is_array() || value.is_object()) [[unlikely]] {
+      throw YAMLParseError{key_line, key_column,
+                           "Mapping key cannot be a collection"};
+    }
     if (value.is_string()) {
       return value.to_string();
     }
@@ -421,6 +460,23 @@ private:
     std::ostringstream stream;
     stream << value;
     return stream.str();
+  }
+
+  auto resolve_scalar_key(const Token &token,
+                          const std::optional<std::string> &tag = std::nullopt)
+      -> std::string {
+    // Round-trip mode preserves the original key text, so it is not resolved
+    if (this->roundtrip_) {
+      return std::string{token.value};
+    }
+    // Resolve a scalar key to its typed value and stringify it, so that keys
+    // such as 0x1 and 1 collapse to the same member name, keeping key handling
+    // consistent with values and alias keys. An explicit tag is honored the
+    // same way it would be for a scalar value, so a string-tagged key keeps its
+    // literal text
+    const auto value{
+        this->interpret_scalar(token.value, token.scalar_style, tag)};
+    return this->json_to_key_string(value, token.line, token.column);
   }
 
   auto parse_value(const Token &token, const JSON::ParseContext context,
@@ -620,7 +676,7 @@ private:
           }
           result = this->parse_block_mapping_from_first_key(
               current_token, context, index, property, key_line, key_column,
-              node_start_column);
+              node_start_column, tag);
         } else {
           if (anchor_count > 1) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
@@ -662,14 +718,15 @@ private:
             throw YAMLUnknownAnchorError{alias_name, current_token.line,
                                          current_token.column};
           }
-          const auto key_string{
-              this->json_to_key_string(iterator->second.value)};
+          const auto key_string{this->json_to_key_string(iterator->second.value,
+                                                         current_token.line,
+                                                         current_token.column)};
           Token key_token{current_token};
           key_token.type = TokenType::Scalar;
           key_token.value = key_string;
           result = this->parse_block_mapping_from_first_key(
               key_token, context, index, property, key_line, key_column,
-              node_start_column);
+              node_start_column, std::nullopt, true);
         } else {
           if (anchor_name.has_value()) [[unlikely]] {
             throw YAMLParseError{current_token.line, current_token.column,
@@ -746,6 +803,14 @@ private:
     return result;
   }
 
+  [[nodiscard]] static auto is_special_float(const std::string_view value)
+      -> bool {
+    return value == ".inf" || value == ".Inf" || value == ".INF" ||
+           value == "+.inf" || value == "+.Inf" || value == "+.INF" ||
+           value == "-.inf" || value == "-.Inf" || value == "-.INF" ||
+           value == ".nan" || value == ".NaN" || value == ".NAN";
+  }
+
   auto interpret_scalar(const std::string_view value, const ScalarStyle style,
                         const std::optional<std::string> &tag) -> JSON {
     if (tag.has_value()) {
@@ -766,6 +831,16 @@ private:
         return this->parse_integer(value);
       }
       if (tag_value == "tag:yaml.org,2002:float") {
+        // RFC 8259 Section 6: Infinity and NaN are not permitted in JSON, so an
+        // explicitly floated infinity or not-a-number has no JSON
+        // representation. Round-trip mode preserves the original text instead
+        if (is_special_float(value)) [[unlikely]] {
+          if (!this->roundtrip_) {
+            throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
+                                 "Infinity and NaN are not permitted"};
+          }
+          return JSON{value};
+        }
         return this->parse_float(value);
       }
       return JSON{value};
@@ -791,10 +866,15 @@ private:
       return JSON{false};
     }
 
-    if (value == ".inf" || value == ".Inf" || value == ".INF" ||
-        value == "+.inf" || value == "+.Inf" || value == "+.INF" ||
-        value == "-.inf" || value == "-.Inf" || value == "-.INF" ||
-        value == ".nan" || value == ".NaN" || value == ".NAN") {
+    if (is_special_float(value)) {
+      // RFC 8259 Section 6: numeric values that cannot be represented in the
+      // JSON grammar, such as Infinity and NaN, are not permitted, so a YAML
+      // infinity or not-a-number float has no JSON representation. Round-trip
+      // mode preserves the original text instead, so it keeps the string
+      if (!this->roundtrip_) [[unlikely]] {
+        throw YAMLParseError{this->lexer_->line(), this->lexer_->column(),
+                             "Infinity and NaN are not permitted"};
+      }
       return JSON{value};
     }
 
@@ -819,11 +899,11 @@ private:
       }
     }
 
-    if (value.size() > start + 1 && value[start] == '0') {
-      if (value[start + 1] == 'x' || value[start + 1] == 'X') {
-        return true;
-      }
-      if (value[start + 1] == 'o' || value[start + 1] == 'O') {
+    // YAML 1.2.2 Section 10.3.2: the hexadecimal and octal integer forms carry
+    // no sign and use a lowercase indicator, so a preceding sign or an
+    // uppercase indicator makes the value a plain string rather than an integer
+    if (start == 0 && value.size() > 1 && value[0] == '0') {
+      if (value[1] == 'x' || value[1] == 'o') {
         return true;
       }
     }
@@ -866,12 +946,14 @@ private:
 
   auto parse_number(const std::string_view value) -> JSON {
     const std::size_t prefix{(value[0] == '-' || value[0] == '+') ? 1u : 0u};
-    if (value.size() > prefix + 1 && value[prefix] == '0') {
-      const char indicator{value[prefix + 1]};
-      if (indicator == 'x' || indicator == 'X') {
+    // YAML 1.2.2 Section 10.3.2: the hexadecimal and octal integer forms carry
+    // no sign and use a lowercase indicator
+    if (prefix == 0 && value.size() > 1 && value[0] == '0') {
+      const char indicator{value[1]};
+      if (indicator == 'x') {
         return this->parse_base_integer(value, 16);
       }
-      if (indicator == 'o' || indicator == 'O') {
+      if (indicator == 'o') {
         return this->parse_base_integer(value, 8);
       }
     }
@@ -910,11 +992,11 @@ private:
 
   auto parse_base_integer(const std::string_view value, const int base)
       -> JSON {
-    const bool negative{value[0] == '-'};
-    const std::size_t start{(value[0] == '-' || value[0] == '+') ? 3u : 2u};
-    const auto result{to_int64_t(std::string{value.substr(start)}, base)};
+    // YAML 1.2.2 Section 10.3.2: the base indicator is two characters and no
+    // sign precedes it, so parsing starts at the third character
+    const auto result{to_int64_t(std::string{value.substr(2)}, base)};
     if (result.has_value()) {
-      return JSON{negative ? -result.value() : result.value()};
+      return JSON{result.value()};
     }
     return JSON{value};
   }
@@ -941,21 +1023,10 @@ private:
       return JSON{Decimal{value}};
     }
 
-    // Only convert to an integer when the value is within the representable
-    // range, since casting an out-of-range double to an integer is undefined
-    // behavior
-    const auto number{result.value()};
-    if (number >=
-            static_cast<double>(std::numeric_limits<std::int64_t>::min()) &&
-        number <
-            static_cast<double>(std::numeric_limits<std::int64_t>::max())) {
-      const auto as_integer{static_cast<std::int64_t>(number)};
-      if (number == static_cast<double>(as_integer)) {
-        return JSON{as_integer};
-      }
-    }
-
-    return JSON{number};
+    // YAML 1.2.2 Section 10.3.2 tags a dotted or explicitly floated value as a
+    // float, so an integral-valued float stays a real rather than collapsing to
+    // an integer, matching the JSON parser where a dotted literal is a real
+    return JSON{result.value()};
   }
 
   auto parse_flow_mapping(const Token &start_token,
@@ -1006,7 +1077,7 @@ private:
           key = "";
         }
       } else if (key_token.type == TokenType::Scalar) {
-        key = std::string{key_token.value};
+        key = this->resolve_scalar_key(key_token, key_tag);
         this->record_key_scalar_style(key, key_token.scalar_style,
                                       key_token.quoted_original);
       } else [[unlikely]] {
@@ -1148,14 +1219,16 @@ private:
 
         std::string key_string;
         if (token->type == TokenType::Scalar) {
-          key_string = std::string{token->value};
+          key_string = this->resolve_scalar_key(token.value());
           token = this->next_token();
         } else {
-          // For non-scalar keys, parse the value and stringify
+          const auto explicit_key_line{token->line};
+          const auto explicit_key_column{token->column};
           auto key_value{this->parse_value(token.value(),
                                            JSON::ParseContext::Index,
                                            element_index, empty_property_)};
-          key_string = this->json_to_key_string(key_value);
+          key_string = this->json_to_key_string(key_value, explicit_key_line,
+                                                explicit_key_column);
           token = this->next_token();
         }
 
@@ -1349,7 +1422,11 @@ private:
         token = next.value();
       }
 
+      std::optional<std::string> key_tag;
       while (token.type == TokenType::Tag || token.type == TokenType::Anchor) {
+        if (token.type == TokenType::Tag) {
+          key_tag = this->resolve_tag(token.value);
+        }
         auto next{this->next_token()};
         assert(next.has_value());
         token = next.value();
@@ -1357,6 +1434,16 @@ private:
 
       if (token.type != TokenType::Scalar &&
           token.type != TokenType::BlockMappingValue) {
+        // RFC 8259 Section 4: an object member name is a string, so an explicit
+        // mapping key that is itself a collection cannot be represented as
+        // JSON. PyYAML raises on the unhashable key and js-yaml rejects the
+        // complex key, so such a key is rejected rather than silently dropped
+        if (token.type == TokenType::SequenceStart ||
+            token.type == TokenType::MappingStart ||
+            token.type == TokenType::BlockSequenceEntry) [[unlikely]] {
+          throw YAMLParseError{token.line, token.column,
+                               "Mapping key cannot be a collection"};
+        }
         if (token.type == TokenType::DocumentEnd ||
             token.type == TokenType::DocumentStart) {
           this->pending_tokens_.push_back(token);
@@ -1365,11 +1452,13 @@ private:
       }
 
       std::string key;
+      bool key_present{false};
       std::uint64_t current_key_line{0};
       std::uint64_t current_key_column{0};
 
       if (token.type == TokenType::Scalar) {
-        key = token.value;
+        key = this->resolve_scalar_key(token, key_tag);
+        key_present = true;
         current_key_line = token.line;
         current_key_column = token.column;
 
@@ -1404,9 +1493,14 @@ private:
           continue;
         }
 
+        // In round-trip mode the key text is kept raw, so a null-like key such
+        // as ~ stays non-empty and the historical empty-string sentinel still
+        // marks the absence of a key. In conversion mode a null-like key
+        // resolves to an empty string, so a dedicated flag marks its presence
+        const bool key_absent{this->roundtrip_ ? key.empty() : !key_present};
         if (next->type == TokenType::BlockMappingValue ||
             next->type == TokenType::BlockMappingKey) {
-          if (key.empty() && next->type == TokenType::BlockMappingKey) {
+          if (key_absent && next->type == TokenType::BlockMappingKey) {
             token = next.value();
             continue;
           }
@@ -1415,8 +1509,8 @@ private:
           continue;
         }
 
-        if (key.empty() && next->type == TokenType::Scalar) {
-          key = next->value;
+        if (key_absent && next->type == TokenType::Scalar) {
+          key = this->resolve_scalar_key(next.value());
           if (seen_keys.contains(key)) [[unlikely]] {
             throw YAMLDuplicateKeyError{key, next->line, next->column};
           }
@@ -1529,7 +1623,9 @@ private:
       const std::size_t index, const std::string &property,
       const std::uint64_t parent_key_line = 0,
       const std::uint64_t parent_key_column = 0,
-      const std::uint64_t node_start_column = 0) -> JSON {
+      const std::uint64_t node_start_column = 0,
+      const std::optional<std::string> &key_tag = std::nullopt,
+      const bool key_pre_resolved = false) -> JSON {
     this->invoke_callback(
         JSON::ParsePhase::Pre, JSON::Type::Object,
         this->effective_line(key_token, context, parent_key_line),
@@ -1543,7 +1639,11 @@ private:
 
     this->detect_indent_width(parent_key_column, base_column);
 
-    std::string key{key_token.value};
+    // An alias key arrives already stringified from its anchor value, so it
+    // must not be resolved a second time
+    std::string key{key_pre_resolved
+                        ? std::string{key_token.value}
+                        : this->resolve_scalar_key(key_token, key_tag)};
     std::uint64_t key_line{key_token.line};
     std::uint64_t key_column{key_token.column};
     const auto first_key_line{key_token.line};
@@ -1625,7 +1725,7 @@ private:
           continue;
         }
 
-        key = next->value;
+        key = this->resolve_scalar_key(next.value());
         key_line = next->line;
         key_column = next->column;
         this->record_key_scalar_style(key, next->scalar_style,
@@ -1673,6 +1773,7 @@ private:
       }
 
       auto effective_column{next->column};
+      std::optional<std::string> subsequent_key_tag;
 
       if (next->type == TokenType::Anchor) {
         next = this->next_token();
@@ -1682,6 +1783,7 @@ private:
       }
 
       if (next->type == TokenType::Tag) {
+        subsequent_key_tag = this->resolve_tag(next->value);
         next = this->next_token();
         if (!next.has_value() || next->type != TokenType::Scalar) {
           continue;
@@ -1697,7 +1799,8 @@ private:
         if (iterator == this->anchors_.end()) [[unlikely]] {
           throw YAMLUnknownAnchorError{alias_name, next->line, next->column};
         }
-        key = this->json_to_key_string(iterator->second.value);
+        key = this->json_to_key_string(iterator->second.value, next->line,
+                                       next->column);
         key_line = next->line;
         key_column = next->column;
 
@@ -1748,7 +1851,7 @@ private:
       }
 
       this->record_inline_comment_for_key(key);
-      key = next->value;
+      key = this->resolve_scalar_key(next.value(), subsequent_key_tag);
       key_line = next->line;
       key_column = next->column;
       this->record_key_scalar_style(key, next->scalar_style,
@@ -2054,6 +2157,10 @@ private:
   std::optional<std::size_t> pending_token_position_;
   std::unordered_map<std::string, std::string> tag_directives_;
   std::uint64_t document_start_line_{0};
+  // Whether the document parsed by the most recent call ended with an explicit
+  // document end marker, so a subsequent stream validation knows a document
+  // boundary was already crossed
+  bool document_ended_{false};
 };
 
 } // namespace sourcemeta::core::yaml

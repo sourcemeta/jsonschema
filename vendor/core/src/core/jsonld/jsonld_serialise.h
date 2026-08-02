@@ -8,6 +8,7 @@
 #include <array>     // std::array
 #include <cassert>   // assert
 #include <charconv>  // std::to_chars, std::from_chars, std::chars_format
+#include <cmath>     // std::signbit
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::int32_t
 #include <optional>  // std::optional, std::nullopt
@@ -41,11 +42,13 @@ inline auto is_floating_point_datatype(const JSON::StringView datatype)
 // "rounded to 15 digits after the decimal point" with trailing zeros dropped
 // down to a single digit after the required decimal point, the exponent
 // carries no plus sign or leading zeros, and "the canonical representation
-// for zero is 0.0E0". The form is assembled in the conversion buffer itself
+// for zero is 0.0E0". The value space distinguishes the two zeros, and the
+// canonical mapping returns "'-0.0E0' when f is negativeZero" (XSD 1.1 Part
+// 2 Section 3.3.5). The form is assembled in the conversion buffer itself
 // so the function performs at most a single allocation
 inline auto scientific_lexical_form(const double value) -> JSON::String {
   if (value == 0.0) {
-    return "0.0E0";
+    return std::signbit(value) ? "-0.0E0" : "0.0E0";
   }
 
   std::array<char, 32> buffer{};

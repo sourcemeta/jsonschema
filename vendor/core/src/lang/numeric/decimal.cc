@@ -7,7 +7,7 @@
 #include <cassert>   // assert
 #include <charconv>  // std::to_chars
 #include <cmath>     // std::isfinite, std::isnan, std::isinf, std::abs,
-                     // std::frexp, std::ldexp
+                     // std::frexp, std::ldexp, std::signbit
 #include <cstddef>   // std::size_t
 #include <cstring>   // std::strlen
 #include <iomanip>   // std::setprecision
@@ -674,10 +674,13 @@ auto Decimal::exact_from(const double value) -> Decimal {
     return value < 0 ? Decimal::negative_infinity() : Decimal::infinity();
   }
 
-  // The library builds without IEEE signed zeros, so a negative zero is
-  // indistinguishable from a positive zero and always yields an unsigned zero
+  // The decimal representation carries a dedicated sign, so a negative zero
+  // converts to a signed zero and the conversion is lossless
   if (value == 0.0) {
     Decimal output{static_cast<std::int64_t>(0)};
+    if (std::signbit(value)) {
+      output.flags_ = static_cast<std::uint8_t>(output.flags_ | FLAG_SIGN);
+    }
     output.flags_ =
         static_cast<std::uint8_t>(output.flags_ & ~FLAG_INTEGER_LITERAL);
     return output;

@@ -5,9 +5,11 @@
 #include <sourcemeta/core/http_export.h>
 #endif
 
+#include <sourcemeta/core/crypto.h>
 #include <sourcemeta/core/http_aws_sigv4.h>
 #include <sourcemeta/core/http_method.h>
 #include <sourcemeta/core/http_status.h>
+#include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/text.h>
 
 #include <chrono>      // std::chrono::milliseconds, std::chrono::seconds
@@ -17,6 +19,7 @@
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <utility>     // std::move, std::pair
+#include <variant>     // std::variant, std::visit
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -44,9 +47,10 @@ struct HTTPResponse {
   /// The response status code
   HTTPStatus status{};
   /// The response headers, with names normalised to lowercase. Repeated
-  /// headers are preserved as separate entries, except on backends that fold
-  /// them into a single comma-separated entry, which is semantically
-  /// equivalent per RFC 9110
+  /// headers are preserved as separate entries, though some backends fold them
+  /// into a single comma-separated entry, which is lossy and incorrect for a
+  /// `Set-Cookie` header that "cannot be combined into a single field value"
+  /// (RFC 9110 §5.3)
   std::vector<std::pair<std::string, std::string>> headers;
   /// The response body, owned by this result
   std::string body;
@@ -123,9 +127,55 @@ public:
     return *this;
   }
 
-  /// Add a request header. Repeated names are permitted
+  /// A request header value, holding ordinary storage for a plain value and
+  /// wiping storage for one set from a secret
+  struct HeaderValue {
+    /// The held bytes. A plain value carries no secret and keeps the ordinary
+    /// string storage, while a value set from wiping storage stays in it, so
+    /// the common request pays nothing and a secret one is never retained in
+    /// an ordinary string
+    std::variant<std::string, SecureString> data;
+
+    /// Get a view of the held bytes
+    [[nodiscard]] auto bytes() const -> std::string_view {
+      return std::visit(
+          [](const auto &value) -> std::string_view { return value; },
+          this->data);
+    }
+  };
+
+  /// Add a request header. Repeated names are permitted. A name or value
+  /// carrying a carriage return, line feed, or NUL is refused, leaving the
+  /// request unchanged
   auto header(std::string name, std::string value) -> HTTPSystemRequest & {
-    this->headers_.emplace_back(std::move(name), std::move(value));
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP",
+    // so a header carrying one is not added as a header-injection defense
+    if (http_field_line_has_forbidden_byte(name) ||
+        http_field_line_has_forbidden_byte(value)) {
+      return *this;
+    }
+
+    this->headers_.emplace_back(std::move(name),
+                                HeaderValue{.data = std::move(value)});
+    return *this;
+  }
+
+  /// Add a request header from wiping storage. The value is held in the wiping
+  /// storage so a secret it carries, such as a client credential, is never
+  /// retained in an ordinary string, and the transient serialisation a backend
+  /// builds at send time is wiped
+  auto header(std::string name, SecureString value) -> HTTPSystemRequest & {
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP",
+    // so a header carrying one is not added as a header-injection defense
+    if (http_field_line_has_forbidden_byte(name) ||
+        http_field_line_has_forbidden_byte(value)) {
+      return *this;
+    }
+
+    this->headers_.emplace_back(std::move(name),
+                                HeaderValue{.data = std::move(value)});
     return *this;
   }
 
@@ -144,7 +194,7 @@ public:
       -> std::optional<std::string_view> {
     for (const auto &[key, value] : this->headers_) {
       if (equals_ignore_case(key, name)) {
-        return value;
+        return value.bytes();
       }
     }
 
@@ -156,8 +206,38 @@ public:
     return this->headers_;
   }
 
-  /// Set the request body, sent along with the given `Content-Type` header
+  /// Set the request body, sent along with the given `Content-Type` header. A
+  /// content type carrying a carriage return, line feed, or NUL is refused,
+  /// leaving the request unchanged
   auto body(std::string data, std::string content_type) -> HTTPSystemRequest & {
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP",
+    // so a content type carrying one is refused, since a backend writes it
+    // straight into the Content-Type field on the wire
+    if (http_field_line_has_forbidden_byte(content_type)) {
+      return *this;
+    }
+
+    this->body_ =
+        Body{.data = std::move(data), .content_type = std::move(content_type)};
+    return *this;
+  }
+
+  /// Set the request body from wiping storage, sent along with the given
+  /// `Content-Type` header. The body is held in the wiping storage so a secret
+  /// it carries, such as a client secret or PKCE code verifier, is never copied
+  /// into an ordinary string. A content type carrying a carriage return, line
+  /// feed, or NUL is refused, leaving the request unchanged
+  auto body(SecureString data, std::string content_type)
+      -> HTTPSystemRequest & {
+    // RFC 9110 §5.5: "a recipient of CR, LF, or NUL within a field value MUST
+    // either reject the message or replace each of those characters with SP",
+    // so a content type carrying one is refused, since a backend writes it
+    // straight into the Content-Type field on the wire
+    if (http_field_line_has_forbidden_byte(content_type)) {
+      return *this;
+    }
+
     this->body_ =
         Body{.data = std::move(data), .content_type = std::move(content_type)};
     return *this;
@@ -219,18 +299,30 @@ public:
       -> HTTPSystemRequest &;
 
   /// Perform the request. A failure to obtain a response is reported as an
-  /// error, while unsuccessful status codes are returned on the result
+  /// error, while unsuccessful status codes are returned on the result. This
+  /// blocks the calling thread until the response arrives or a timeout elapses,
+  /// so it must not run on an event loop or any other thread serving unrelated
+  /// work.
   [[nodiscard]] auto send() const -> HTTPResponse;
 
 private:
   struct Body {
-    std::string data;
+    // A plain body carries no secret and keeps the ordinary string storage,
+    // while a body set from wiping storage stays in it, so the common request
+    // pays nothing and a secret one is never copied into an ordinary string
+    std::variant<std::string, SecureString> data;
     std::string content_type;
+
+    [[nodiscard]] auto bytes() const -> std::string_view {
+      return std::visit(
+          [](const auto &value) -> std::string_view { return value; },
+          this->data);
+    }
   };
 
   std::string url_;
   HTTPMethod method_;
-  std::vector<std::pair<std::string, std::string>> headers_;
+  std::vector<std::pair<std::string, HeaderValue>> headers_;
   std::optional<Body> body_;
   bool follow_redirects_{true};
   std::size_t maximum_redirects_{20};

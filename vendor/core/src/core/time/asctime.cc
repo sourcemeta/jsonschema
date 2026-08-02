@@ -13,7 +13,9 @@
 #include <string_view> // std::string_view
 
 namespace {
-constexpr auto FORMAT_ASCTIME_OUTPUT{"%a %b %e %H:%M:%S %Y"};
+// The year is rendered separately so it is always four digits (RFC 9110
+// §5.6.7: "year = 4DIGIT"), which "%Y" does not guarantee for a year below 1000
+constexpr auto FORMAT_ASCTIME_OUTPUT_BEFORE_YEAR{"%a %b %e %H:%M:%S "};
 constexpr auto FORMAT_ASCTIME_NORMALISED_INPUT{"%a %b %d %H:%M:%S %Y"};
 } // namespace
 
@@ -24,7 +26,8 @@ auto to_asctime(const std::chrono::system_clock::time_point time)
   const auto parts{time_point_to_broken_down(time)};
   std::ostringstream stream;
   stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT);
+  stream << std::put_time(&parts, FORMAT_ASCTIME_OUTPUT_BEFORE_YEAR)
+         << format_four_digit_year(parts.tm_year + 1900);
   return stream.str();
 }
 

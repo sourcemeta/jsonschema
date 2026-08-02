@@ -37,6 +37,20 @@ public:
   /// ```
   GenericToken(const Property &value) : GenericToken{value, hasher(value)} {}
 
+  /// This constructor creates an JSON Pointer token by taking ownership of a
+  /// string. For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/jsonpointer.h>
+  /// #include <cassert>
+  ///
+  /// std::string name{"foo"};
+  /// const sourcemeta::core::Pointer::Token token{std::move(name)};
+  /// ```
+  GenericToken(Property &&value)
+      : as_property{true}, property{std::move(value)}, hash{hasher(property)},
+        index{0} {}
+
   /// This constructor creates an JSON Pointer token from a string. For
   /// example:
   ///

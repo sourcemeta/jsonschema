@@ -67,7 +67,18 @@ struct Token {
 class Lexer {
 public:
   Lexer(const std::string_view input, const bool roundtrip_mode = false)
-      : input_{input}, roundtrip_{roundtrip_mode} {}
+      : input_{strip_byte_order_mark(input)},
+        bom_length_{input.size() - this->input_.size()},
+        roundtrip_{roundtrip_mode} {
+    this->validate_characters();
+  }
+
+  // The number of leading bytes consumed by a stripped byte order mark, so a
+  // caller reading from a stream can map a consumed count back to the original
+  // input offset
+  [[nodiscard]] auto bom_length() const noexcept -> std::size_t {
+    return this->bom_length_;
+  }
 
   auto next() -> std::optional<Token> {
     if (this->roundtrip_) {
@@ -352,6 +363,61 @@ public:
   }
 
 private:
+  // YAML 1.2.2 Section 5.2: a stream may begin with a byte order mark that
+  // selects the character encoding. Only the UTF-8 encoding is supported here,
+  // so its byte order mark is skipped before lexing
+  [[nodiscard]] static auto
+  strip_byte_order_mark(const std::string_view input) noexcept
+      -> std::string_view {
+    if (input.size() >= 3 && static_cast<unsigned char>(input[0]) == 0xEF &&
+        static_cast<unsigned char>(input[1]) == 0xBB &&
+        static_cast<unsigned char>(input[2]) == 0xBF) {
+      return std::string_view{input.data() + 3, input.size() - 3};
+    }
+    return input;
+  }
+
+  // YAML 1.2.2 Section 5.1: the JSON-compatible production is "nb-json ::= x09
+  // | [x20-x10FFFF]", and every character in the stream is built on it, so a C0
+  // control other than tab, line feed, and carriage return is never allowed in
+  // any context, including inside a quoted scalar. The narrower printable set
+  // excludes further code points such as the delete character, the high control
+  // block, and the two permanently unassigned code points, but only outside
+  // quoted scalars, so that context-specific restriction is left to the
+  // per-context scanners rather than enforced by this whole-stream pass
+  [[nodiscard]] static auto
+  is_disallowed_control(const char32_t codepoint) noexcept -> bool {
+    return codepoint <= 0x1F && codepoint != 0x09 && codepoint != 0x0A &&
+           codepoint != 0x0D;
+  }
+
+  auto validate_characters() const -> void {
+    std::uint64_t line{1};
+    std::uint64_t column{1};
+    std::size_t position{0};
+    while (position < this->input_.size()) {
+      const auto decoded{utf8_decode(this->input_, position)};
+      // YAML 1.2.2 Section 5.2: a stream is a sequence of characters in one of
+      // the supported encodings, so a byte sequence that does not decode is not
+      // a well-formed stream
+      if (!decoded.has_value()) [[unlikely]] {
+        throw YAMLParseError{line, column,
+                             "Invalid UTF-8 sequence in YAML stream"};
+      }
+      if (is_disallowed_control(decoded->first)) [[unlikely]] {
+        throw YAMLParseError{line, column,
+                             "Control character not allowed in YAML stream"};
+      }
+      if (decoded->first == '\n') {
+        line++;
+        column = 1;
+      } else {
+        column++;
+      }
+      position += decoded->second;
+    }
+  }
+
   [[nodiscard]] static auto is_whitespace(const char character) noexcept
       -> bool {
     return character == ' ' || character == '\t' || character == '\n' ||
@@ -1650,6 +1716,7 @@ private:
   }
 
   std::string_view input_;
+  std::size_t bom_length_{0};
   std::size_t position_{0};
   std::uint64_t line_{1};
   std::uint64_t column_{1};

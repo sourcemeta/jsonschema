@@ -234,6 +234,28 @@ auto ipv6_classify(const std::string_view address)
     return IPAddressClass::UniqueLocal;
   }
 
+  // RFC 6052 Section 2.1: the NAT64 well-known prefix 64:ff9b::/96 embeds an
+  // IPv4 address in its low 32 bits. The IANA IPv6 Special-Purpose Address
+  // Registry marks the prefix as globally reachable, but classifying it as
+  // Public unconditionally would be a request-forgery hole because the embedded
+  // address can be loopback or private, so 64:ff9b::7f00:1 embeds 127.0.0.1. It
+  // is instead classified as its embedded IPv4 address, like the other
+  // IPv4-embedding forms handled above, so such an address cannot bypass a
+  // check
+  if (bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xff &&
+      bytes[3] == 0x9b && bytes[4] == 0 && bytes[5] == 0 && bytes[6] == 0 &&
+      bytes[7] == 0 && bytes[8] == 0 && bytes[9] == 0 && bytes[10] == 0 &&
+      bytes[11] == 0) {
+    return ipv4_classify_octets(embedded);
+  }
+
+  // RFC 8215 Section 3: the NAT64 local-use prefix 64:ff9b:1::/48 is a distinct
+  // block reserved for local NAT64 deployments and is not globally reachable
+  if (bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xff &&
+      bytes[3] == 0x9b && bytes[4] == 0x00 && bytes[5] == 0x01) {
+    return IPAddressClass::Reserved;
+  }
+
   // RFC 4291 Section 2.4: only global unicast, 2000::/3, is globally reachable,
   // so every other prefix, including the IETF-reserved 0000::/8, is not
   if ((bytes[0] & 0xe0) != 0x20) {

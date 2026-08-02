@@ -53,15 +53,16 @@ auto sorted_headers(
   return entries;
 }
 
-auto append_lowercased(std::string &output, const std::string_view name)
-    -> void {
+template <typename Output>
+auto append_lowercased(Output &output, const std::string_view name) -> void {
   for (const auto character : name) {
     output.push_back(sourcemeta::core::to_lowercase(character));
   }
 }
 
+template <typename Output>
 auto append_canonical_headers(
-    std::string &output,
+    Output &output,
     const std::vector<std::pair<std::string_view, std::string_view>> &entries)
     -> void {
   std::size_t index{0};
@@ -85,8 +86,9 @@ auto append_canonical_headers(
   }
 }
 
+template <typename Output>
 auto append_signed_headers(
-    std::string &output,
+    Output &output,
     const std::vector<std::pair<std::string_view, std::string_view>> &entries)
     -> void {
   std::string_view previous;
@@ -106,7 +108,8 @@ auto append_signed_headers(
   }
 }
 
-auto append_canonical_uri(std::string &output, std::string_view path,
+template <typename Output>
+auto append_canonical_uri(Output &output, std::string_view path,
                           const bool normalize) -> void {
   std::string normalized;
   if (normalize) {
@@ -139,7 +142,8 @@ auto append_canonical_uri(std::string &output, std::string_view path,
   }
 }
 
-auto append_canonical_query(std::string &output, const std::string_view query)
+template <typename Output>
+auto append_canonical_query(Output &output, const std::string_view query)
     -> void {
   if (query.empty()) {
     return;
@@ -182,7 +186,10 @@ auto http_aws_sigv4_canonical_request(
         headers,
     const std::string_view payload_hash, const bool normalize) -> std::string {
   const auto entries{sorted_headers(headers)};
-  std::string result;
+  // A signed header value may live in wiping storage, so the assembly happens
+  // in wiping storage as well, keeping every intermediate growth buffer out
+  // of ordinary freed memory. The single returned copy is the caller's to wipe
+  SecureString result;
   result.append(method);
   result.push_back('\n');
   append_canonical_uri(result, path, normalize);
@@ -194,7 +201,7 @@ auto http_aws_sigv4_canonical_request(
   append_signed_headers(result, entries);
   result.push_back('\n');
   result.append(payload_hash);
-  return result;
+  return std::string{std::string_view{result}};
 }
 
 auto http_aws_sigv4_signed_headers(
@@ -287,9 +294,9 @@ auto HTTPSystemRequest::sign_aws_sigv4(
 
   const auto amz_date{to_iso8601_basic(moment)};
   const std::string_view date{std::string_view{amz_date}.substr(0, 8)};
-  const auto payload_hash{sha256(
-      this->body_.has_value() ? std::string_view{this->body_.value().data}
-                              : std::string_view{})};
+  const auto payload_hash{sha256(this->body_.has_value()
+                                     ? this->body_.value().bytes()
+                                     : std::string_view{})};
 
   // Drop any signing headers left over from a previous signature so that
   // re-signing replaces them rather than appending duplicates
@@ -314,12 +321,15 @@ auto HTTPSystemRequest::sign_aws_sigv4(
   }
 
   for (const auto &[name, value] : this->headers_) {
-    headers.emplace_back(name, value);
+    headers.emplace_back(name, value.bytes());
   }
 
-  const auto canonical{http_aws_sigv4_canonical_request(
+  // The canonical request spells out every signed header value, which may
+  // include one held in wiping storage, so it is wiped once consumed
+  auto canonical{http_aws_sigv4_canonical_request(
       http_method_string(this->method_), path, query, headers, payload_hash,
       service != "s3")};
+  const SecureStringScope canonical_scope{canonical};
   const auto scope{http_aws_sigv4_credential_scope(date, region, service)};
   const auto string_to_sign{
       http_aws_sigv4_string_to_sign(amz_date, scope, canonical)};

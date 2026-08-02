@@ -68,6 +68,35 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
     return std::nullopt;
   }
 
+  // OpenID Connect Core 1.0 Section 3.1.3.7 step 3: "The ID Token MUST be
+  // rejected if the ID Token does not list the Client as a valid audience, or
+  // if it contains additional audiences not trusted by the Client". The base
+  // verification already confirmed the client is a listed audience, so here
+  // every other audience must be one the caller has marked as trusted. With an
+  // empty trusted set any audience beyond the client is rejected, the strict
+  // default. A single-string audience carries no additional audience, so it is
+  // unaffected
+  if (audience != nullptr && audience->is_array()) {
+    for (const auto &element : audience->as_array()) {
+      const auto &value{element.to_string()};
+      if (value == client_id) {
+        continue;
+      }
+
+      bool trusted{false};
+      for (const auto candidate : options.trusted_audiences) {
+        if (candidate == value) {
+          trusted = true;
+          break;
+        }
+      }
+
+      if (!trusted) {
+        return std::nullopt;
+      }
+    }
+  }
+
   const bool multiple_audiences{audience != nullptr && audience->is_array() &&
                                 audience->size() > 1};
   const auto *authorized_party{payload.try_at("azp"sv, HASH_AZP)};
@@ -103,7 +132,8 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
   // OpenID Connect Core 1.0 Section 3.1.3.7 step 10: the optional issued-at age
   // policy
   if (options.maximum_issued_at_age.has_value() &&
-      now - issued_at.value() > options.maximum_issued_at_age.value()) {
+      issued_at.value() <
+          clock_shift_backward(now, options.maximum_issued_at_age.value())) {
     return std::nullopt;
   }
 
@@ -150,8 +180,9 @@ auto oidc_id_token_checks(const JWT &token, const std::string_view issuer,
     // An authentication time in the future has not happened yet, so it cannot
     // satisfy a freshness window and is rejected before the age comparison
     if (!authentication_time.has_value() || authentication_time.value() > now ||
-        now - authentication_time.value() >
-            options.maximum_authentication_age.value()) {
+        authentication_time.value() <
+            clock_shift_backward(now,
+                                 options.maximum_authentication_age.value())) {
       return std::nullopt;
     }
   }
@@ -234,7 +265,8 @@ auto oidc_validate_id_token(
   // audience, expiration, not-before, and issued-at (OpenID Connect Core 1.0
   // Section 3.1.3.7 steps 6 through 9)
   const auto error{jwt_verify(token, keys, allowed_algorithms, issuer,
-                              client_id, now, clock_skew)};
+                              client_id, now, clock_skew, std::nullopt,
+                              std::nullopt)};
   if (error.has_value()) {
     return std::nullopt;
   }

@@ -136,7 +136,7 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
       for (const auto &[name, value] : this->headers_) {
         // Repeated headers are folded into a single comma-separated field
         // line, which is semantically equivalent per RFC 9110
-        [url_request addValue:to_nsstring(value)
+        [url_request addValue:to_nsstring(value.bytes())
             forHTTPHeaderField:to_nsstring(name)];
       }
 
@@ -144,8 +144,8 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
         [url_request setValue:to_nsstring(this->body_.value().content_type)
             forHTTPHeaderField:@"Content-Type"];
         url_request.HTTPBody =
-            [NSData dataWithBytes:this->body_.value().data.data()
-                           length:this->body_.value().data.size()];
+            [NSData dataWithBytes:this->body_.value().bytes().data()
+                           length:this->body_.value().bytes().size()];
       }
 
       NSURLSessionConfiguration *configuration{

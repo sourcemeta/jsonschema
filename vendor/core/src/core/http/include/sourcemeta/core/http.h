@@ -104,9 +104,11 @@ auto http_content_type_matches(const std::string_view content_type_header,
 
 /// @ingroup http
 /// Pick the best language-tag candidate against an `Accept-Language` header
-/// per RFC 9110 §12.5.4 using the RFC 4647 §3.4 Lookup scheme. Returns an
-/// empty value when no candidate is acceptable. The returned view borrows from
-/// `candidates`. For example:
+/// per RFC 9110 §12.5.4, which lets an implementation choose its matching
+/// scheme. This uses a q-aware Basic-Filtering-style scheme (RFC 4647 §3.3.1,
+/// the scheme RFC 9110 §12.5.4 points to) that also honors `q=0` exclusions.
+/// Returns an empty value when no candidate is acceptable. The returned view
+/// borrows from `candidates`. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/http.h>

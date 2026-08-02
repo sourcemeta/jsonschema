@@ -11,11 +11,12 @@
 #include <sourcemeta/blaze/evaluator.h>
 #include <sourcemeta/blaze/output_simple.h>
 
-#include <array>   // std::array
-#include <cstdint> // std::uint8_t
-#include <string>  // std::string
-#include <variant> // std::variant
-#include <vector>  // std::vector
+#include <array>    // std::array
+#include <cstdint>  // std::uint8_t
+#include <optional> // std::optional
+#include <string>   // std::string
+#include <variant>  // std::variant
+#include <vector>   // std::vector
 
 namespace sourcemeta::blaze {
 
@@ -52,6 +53,14 @@ struct JSONLDResolutionError {
   sourcemeta::core::Pointer instance_location;
   JSONLDFacet facet;
   std::string message;
+  /// The schema location of the annotation the error is about
+  std::string schema_location;
+  /// The schema location of the annotation that the first one collides with,
+  /// on errors involving a diverging or incompatible pair
+  std::optional<std::string> conflicting_schema_location;
+  /// The schema location of an x-jsonld-override mark that could not shadow
+  /// the conflicting annotation it does not enclose
+  std::optional<std::string> inert_override_location;
 };
 
 /// @ingroup output
