@@ -32,6 +32,7 @@ error: The value of x-jsonld-id must be an absolute IRI
   at column 3
   at instance location "/name"
   at facet "predicate"
+  at schema location file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-id
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -50,6 +51,7 @@ cat << EOF > "$TMP/expected.txt"
   "column": 3,
   "instanceLocation": "/name",
   "facet": "predicate",
+  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/properties/name/x-jsonld-id",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF

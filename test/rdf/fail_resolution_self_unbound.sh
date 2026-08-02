@@ -34,6 +34,7 @@ error: A JSON-LD self identity template variable must bind to an instance value
   at column 1
   at instance location ""
   at facet "self"
+  at schema location file://$(realpath "$TMP")/schema.json#/x-jsonld-self
   at file path $(realpath "$TMP")/instance.json
 EOF
 
@@ -52,6 +53,7 @@ cat << EOF > "$TMP/expected.txt"
   "column": 1,
   "instanceLocation": "",
   "facet": "self",
+  "schemaLocation": "file://$(realpath "$TMP")/schema.json#/x-jsonld-self",
   "filePath": "$(realpath "$TMP")/instance.json"
 }
 EOF
