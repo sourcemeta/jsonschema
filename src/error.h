@@ -938,9 +938,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     if (!is_json && error.inert_override_location().has_value()) {
       std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
                    "not enclose the\n";
-      std::cerr << "conflicting annotation. Move the reference inside the "
-                   "overriding object\n";
-      std::cerr << "for the override to take effect\n";
+      std::cerr << "conflicting annotation. Move the conflicting annotation, "
+                   "or the reference\n";
+      std::cerr << "that brings it in, inside the overriding object for the "
+                   "override to\n";
+      std::cerr << "take effect\n";
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;
@@ -950,9 +952,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     if (!is_json && error.inert_override_location().has_value()) {
       std::cerr << "\nThe x-jsonld-override mark was ignored because it does "
                    "not enclose the\n";
-      std::cerr << "conflicting annotation. Move the reference inside the "
-                   "overriding object\n";
-      std::cerr << "for the override to take effect\n";
+      std::cerr << "conflicting annotation. Move the conflicting annotation, "
+                   "or the reference\n";
+      std::cerr << "that brings it in, inside the overriding object for the "
+                   "override to\n";
+      std::cerr << "take effect\n";
     }
 
     return EXIT_SCHEMA_INPUT_ERROR;

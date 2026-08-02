@@ -48,8 +48,9 @@ error: A JSON-LD datatype cannot be assigned more than one value
   at file path $(realpath "$TMP")/instance.json
 
 The x-jsonld-override mark was ignored because it does not enclose the
-conflicting annotation. Move the reference inside the overriding object
-for the override to take effect
+conflicting annotation. Move the conflicting annotation, or the reference
+that brings it in, inside the overriding object for the override to
+take effect
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
