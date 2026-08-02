@@ -16,7 +16,10 @@
 namespace sourcemeta::core {
 
 /// @ingroup jsonl
-/// A forward iterator to parse JSON documents out of a JSON Lines stream.
+/// A forward iterator to parse JSON documents out of a JSON Lines stream. Blank
+/// and whitespace-only lines are skipped rather than treated as errors, as JSON
+/// Lines is a convention rather than a formal specification and tolerating
+/// stray blank lines is friendlier to real-world input.
 class SOURCEMETA_CORE_JSONL_EXPORT ConstJSONLIterator {
 public:
   /// Construct an iterator over the JSON documents in a stream.

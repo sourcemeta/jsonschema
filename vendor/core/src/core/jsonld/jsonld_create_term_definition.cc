@@ -340,6 +340,11 @@ auto create_term_definition(ExpansionState &state,
     if (const auto *container_entry{
             value.try_at(KEYWORD_CONTAINER, KEYWORD_CONTAINER_HASH)}) {
       const auto &container{*container_entry};
+      // A reverse property accepts only an @set, @index, or null container, and
+      // a null container leaves no container mapping (JSON-LD 1.1 API Section
+      // 4.2)
+      const bool reverse_null_container{definition.reverse &&
+                                        container.is_null()};
       if (container.is_array()) {
         // Array containers are a 1.1 feature.
         if (state.processing_1_0) {
@@ -379,7 +384,7 @@ auto create_term_definition(ExpansionState &state,
                             {KEYWORD_CONTAINER});
         }
         definition.container.push_back(container_string);
-      } else {
+      } else if (!reverse_null_container) {
         throw JSONLDError("Invalid container mapping", term_pointer,
                           {KEYWORD_CONTAINER});
       }
@@ -419,7 +424,7 @@ auto create_term_definition(ExpansionState &state,
       // single keyword, or @graph with exactly one of @id or @index optionally
       // with @set, or @set combined with any of @index, @graph, @id, @type, or
       // @language.
-      if (definition.container.size() != 1) {
+      if (!reverse_null_container && definition.container.size() != 1) {
         const bool graph_form{
             container_graph && (container_id != container_index) &&
             !container_list && !container_type && !container_language};
@@ -503,8 +508,12 @@ auto create_term_definition(ExpansionState &state,
       definition.context_base = state.context_resolution_base();
     }
 
+    // The @reverse step of Create Term Definition sets the term definition and
+    // returns before any @prefix processing, so a reverse property never takes
+    // a prefix flag. (JSON-LD 1.1 API Section 4.2)
     if (const auto *prefix_entry{
-            value.try_at(KEYWORD_PREFIX, KEYWORD_PREFIX_HASH)}) {
+            value.try_at(KEYWORD_PREFIX, KEYWORD_PREFIX_HASH)};
+        prefix_entry != nullptr && !definition.reverse) {
       if (state.processing_1_0 || term.find(':') != JSON::String::npos ||
           term.find('/') != JSON::String::npos) {
         throw JSONLDError("Invalid term definition", term_pointer,

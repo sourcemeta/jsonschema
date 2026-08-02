@@ -1,12 +1,12 @@
 #include <sourcemeta/core/oauth_authorization.h>
 
 #include <sourcemeta/core/html.h>
+#include <sourcemeta/core/oauth_metadata.h>
 #include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_authorization_parse.h"
 #include "oauth_decode.h"
-#include "oauth_syntax.h"
 
 #include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt

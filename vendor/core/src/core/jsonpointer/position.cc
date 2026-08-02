@@ -2,7 +2,9 @@
 #include <sourcemeta/core/jsonpointer.h>
 
 #include <algorithm>   // std::count_if
+#include <array>       // std::array
 #include <cassert>     // assert
+#include <charconv>    // std::to_chars
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint64_t
 #include <optional>    // std::optional
@@ -114,9 +116,23 @@ auto PointerPositionTracker::get(const Pointer &pointer) const
       const auto &children{this->trie[node].index_children};
       const auto iterator{children.find(token.to_index())};
       if (iterator == children.end()) {
-        return std::nullopt;
+        // If the currently referenced value is a JSON object, the new
+        // referenced value is the object member with the name identified by the
+        // reference token.
+        // See https://www.rfc-editor.org/rfc/rfc6901#section-4
+        const auto &properties{this->trie[node].property_children};
+        std::array<char, 20> buffer{};
+        const auto [end_pointer, error_code] = std::to_chars(
+            buffer.data(), buffer.data() + buffer.size(), token.to_index());
+        const auto property_iterator{
+            properties.find(std::string_view{buffer.data(), end_pointer})};
+        if (property_iterator == properties.end()) {
+          return std::nullopt;
+        }
+        node = property_iterator->second;
+      } else {
+        node = iterator->second;
       }
-      node = iterator->second;
     }
   }
 

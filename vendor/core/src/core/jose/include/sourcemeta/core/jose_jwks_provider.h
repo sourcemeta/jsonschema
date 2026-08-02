@@ -67,6 +67,9 @@ public:
     /// identifier.
     std::chrono::seconds unknown_kid_cooldown{std::chrono::minutes{5}};
     /// The tolerance applied to time-based claims, uniform or per claim.
+    /// Unlike the other fields, the default is zero tolerance, so set it
+    /// deliberately when validating tokens minted by a clock that is not
+    /// your own.
     JWTClockSkew clock_skew{};
   };
 
@@ -92,15 +95,33 @@ public:
   /// keys as needed. Returns no value when the token is fully valid, otherwise
   /// the first failing step. The current time and the clock skew tolerance are
   /// the provider's own concern, so a caller supplies only what identifies the
-  /// token: an optional expected subject and an optional expected type for the
-  /// access token profile.
+  /// token: the expected subject, or no value to accept any, and the expected
+  /// `typ` header, or no value to accept any.
+  ///
+  /// Neither is defaulted. RFC 9068 Section 4 requires a resource server to
+  /// "verify that the `typ` header value is `at+jwt` or `application/at+jwt`
+  /// and reject tokens carrying any other value", and Section 5 explains that
+  /// this is what keeps an OpenID Connect ID Token from being accepted as an
+  /// access token. A default of no value would make skipping that check the
+  /// thing a caller gets for writing less, so the decision is spelled at the
+  /// call site instead. Prefer `verify_access_token` when the token is an
+  /// access token.
   [[nodiscard]] auto
   verify(const JWT &token,
          const std::span<const JWSAlgorithm> allowed_algorithms,
          const std::string_view expected_issuer,
          const std::string_view expected_audience,
-         const std::optional<std::string_view> expected_subject = std::nullopt,
-         const std::optional<std::string_view> expected_type = std::nullopt)
+         const std::optional<std::string_view> expected_subject,
+         const std::optional<std::string_view> expected_type)
+      -> std::optional<JWTVerificationError>;
+
+  /// Verify a token as an RFC 9068 JWT access token, pinning the `typ` header
+  /// to `at+jwt` so the profile's Section 4 requirement cannot be omitted.
+  [[nodiscard]] auto verify_access_token(
+      const JWT &token, const std::span<const JWSAlgorithm> allowed_algorithms,
+      const std::string_view expected_issuer,
+      const std::string_view expected_audience,
+      const std::optional<std::string_view> expected_subject = std::nullopt)
       -> std::optional<JWTVerificationError>;
 
   /// Verify a token exactly as the other overload does, additionally exposing

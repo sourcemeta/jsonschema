@@ -53,6 +53,13 @@ namespace sourcemeta::core {
 /// ```
 ///
 /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
+///
+/// A string escape that denotes a lone surrogate, such as `"\uDEAD"`, is
+/// rejected. RFC 8259 Section 8.2 considers such input grammar-conforming, but
+/// a lone surrogate cannot be represented in valid UTF-8, and every string this
+/// parser produces is valid UTF-8. Rejecting it is a deliberate exercise of the
+/// RFC 8259 Section 9 allowance that an implementation may set limits on the
+/// character contents of strings.
 SOURCEMETA_CORE_JSON_EXPORT
 auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
     -> JSON;
@@ -72,6 +79,13 @@ auto parse_json(std::basic_istream<JSON::Char, JSON::CharTraits> &stream)
 /// ```
 ///
 /// If parsing fails, sourcemeta::core::JSONParseError will be thrown.
+///
+/// A string escape that denotes a lone surrogate, such as `"\uDEAD"`, is
+/// rejected. RFC 8259 Section 8.2 considers such input grammar-conforming, but
+/// a lone surrogate cannot be represented in valid UTF-8, and every string this
+/// parser produces is valid UTF-8. Rejecting it is a deliberate exercise of the
+/// RFC 8259 Section 9 allowance that an implementation may set limits on the
+/// character contents of strings.
 SOURCEMETA_CORE_JSON_EXPORT
 auto parse_json(
     const std::basic_string_view<JSON::Char, JSON::CharTraits> input) -> JSON;

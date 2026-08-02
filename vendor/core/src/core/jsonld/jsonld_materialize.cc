@@ -12,7 +12,7 @@
 #include <optional>    // std::optional, std::nullopt
 #include <type_traits> // std::is_same_v
 #include <utility>     // std::move, std::unreachable
-#include <variant>     // std::holds_alternative, std::get
+#include <variant>     // std::get, std::get_if
 #include <vector>      // std::vector
 
 namespace sourcemeta::core {
@@ -64,7 +64,8 @@ auto fill_node(JSON &node, const JSON &instance_object, PointerT &pointer,
 template <typename PointerT>
 auto materialize_member(const JSON &value, PointerT &pointer,
                         const AnnotationRange<PointerT> &range,
-                        std::vector<JSON> &standalone) -> std::optional<JSON>;
+                        std::vector<JSON> &standalone, const bool ordered)
+    -> std::optional<JSON>;
 
 // Append an object key to the pointer, copying it for an owning pointer and
 // taking a non-owning view for a weak pointer.
@@ -215,7 +216,7 @@ auto build_collection(const JSON &value, PointerT &pointer,
     pointer.push_back(index);
     auto element{materialize_member(value.at(index), pointer,
                                     child_range(iterator, range.end, pointer),
-                                    standalone)};
+                                    standalone, ordered)};
     pointer.pop_back();
     if (!element.has_value()) {
       continue;
@@ -292,7 +293,18 @@ auto build_language_collection(const JSON &value) -> JSON {
   return elements;
 }
 
-// The index keys carry no RDF and are dropped.
+auto assign_index(JSON &element, const JSON::String &index) -> void {
+  if (!element.defines(KEYWORD_INDEX, KEYWORD_INDEX_HASH)) {
+    element.assign_assume_new(JSON::String{KEYWORD_INDEX}, JSON{index},
+                              KEYWORD_INDEX_HASH);
+  }
+}
+
+// Each index map key is retained on its expanded members unless the key is
+// the reserved @none (JSON-LD 1.1 API Section 5.1.2: "if container mapping
+// includes @index, item does not have an entry @index, and expanded index is
+// not @none, add the key-value pair (@index-index) to item"). Only the final
+// deserialization to RDF discards the keys.
 template <typename PointerT>
 auto build_index_collection(const JSON &value, PointerT &pointer,
                             const AnnotationRange<PointerT> &range,
@@ -303,18 +315,26 @@ auto build_index_collection(const JSON &value, PointerT &pointer,
     push_property(pointer, key.get());
     auto element{materialize_member(value.at(key.get()), pointer,
                                     child_range(iterator, range.end, pointer),
-                                    standalone)};
+                                    standalone, false)};
     pointer.pop_back();
     if (!element.has_value()) {
       continue;
     }
 
+    const bool none{key.get() == KEYWORD_NONE};
+
     // A nested set flattens into the enclosing collection.
     if (element->is_array()) {
       for (auto &nested : element->as_array()) {
+        if (!none) {
+          assign_index(nested, key.get());
+        }
         elements.push_back(std::move(nested));
       }
     } else {
+      if (!none) {
+        assign_index(element.value(), key.get());
+      }
       elements.push_back(std::move(element.value()));
     }
   }
@@ -322,13 +342,17 @@ auto build_index_collection(const JSON &value, PointerT &pointer,
 }
 
 // An undescribed collection member still materializes with a default kind, a
-// scalar as a plain literal and a nested array as an unordered collection.
-// An undescribed object member keeps the anonymous node treatment of any
-// other position.
+// scalar as a plain literal and a nested array as a collection of the
+// enclosing kind, so that arrays nested in a list are themselves lists
+// (JSON-LD 1.1 API Section 5.1.2: "If the container mapping of active
+// property includes @list, and expanded item is an array, set expanded item
+// to a new map containing the entry @list"). An undescribed object member
+// keeps the anonymous node treatment of any other position.
 template <typename PointerT>
 auto materialize_member(const JSON &value, PointerT &pointer,
                         const AnnotationRange<PointerT> &range,
-                        std::vector<JSON> &standalone) -> std::optional<JSON> {
+                        std::vector<JSON> &standalone, const bool ordered)
+    -> std::optional<JSON> {
   const auto described{range.begin != range.end &&
                        (*range.begin)->pointer.size() == pointer.size()};
   if (described || value.is_object()) {
@@ -340,7 +364,7 @@ auto materialize_member(const JSON &value, PointerT &pointer,
   }
 
   if (value.is_array()) {
-    return build_collection(value, pointer, range, standalone, false);
+    return build_collection(value, pointer, range, standalone, ordered);
   }
 
   return materialize_literal(JSONLDLiteral{}, value);
@@ -378,8 +402,13 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
     if (inner.object_size() > (descriptor.id.has_value() ? 1 : 0)) {
       graph.push_back(std::move(inner));
     }
+    // The free-floating drop applies inside a named graph just like at the
+    // top level (JSON-LD 1.1 API Section 5.1.2: "If active property is null
+    // or @graph, drop free-floating values").
     for (auto &extra : graph_nodes) {
-      graph.push_back(std::move(extra));
+      if (!extra.empty()) {
+        graph.push_back(std::move(extra));
+      }
     }
     node.assign_assume_new(JSON::String{KEYWORD_GRAPH}, std::move(graph),
                            KEYWORD_GRAPH_HASH);
@@ -398,10 +427,6 @@ auto materialize_value(const JSON &value, PointerT &pointer,
     -> std::optional<JSON> {
   if (matched_edges != nullptr) {
     *matched_edges = nullptr;
-  }
-
-  if (value.is_null()) {
-    return std::nullopt;
   }
 
   // Every annotation in the range extends the current position, so one of
@@ -423,20 +448,31 @@ auto materialize_value(const JSON &value, PointerT &pointer,
   }
 
   const auto &descriptor{(*range.begin)->descriptor};
+  const auto *literal_descriptor{std::get_if<JSONLDLiteral>(&descriptor.value)};
+
+  // A null value is treated as if its entry were absent, except under a JSON
+  // literal, where the null is the data itself (JSON-LD 1.1 API Section
+  // 5.1.2: "If the result's @type entry is @json, then the @value entry may
+  // contain any value, and is treated as a JSON literal").
+  if (value.is_null() &&
+      (literal_descriptor == nullptr || !literal_descriptor->json)) {
+    return std::nullopt;
+  }
+
   range.begin += 1;
   if (matched_edges != nullptr) {
     *matched_edges = &descriptor.edges;
   }
-  if (std::holds_alternative<JSONLDNode>(descriptor.value)) {
-    return materialize_node(std::get<JSONLDNode>(descriptor.value), value,
-                            pointer, range, standalone);
+  if (const auto *node_descriptor{std::get_if<JSONLDNode>(&descriptor.value)}) {
+    return materialize_node(*node_descriptor, value, pointer, range,
+                            standalone);
   }
-  if (std::holds_alternative<JSONLDLiteral>(descriptor.value)) {
-    return materialize_literal(std::get<JSONLDLiteral>(descriptor.value),
-                               value);
+  if (literal_descriptor != nullptr) {
+    return materialize_literal(*literal_descriptor, value);
   }
-  if (std::holds_alternative<JSONLDReference>(descriptor.value)) {
-    return materialize_reference(std::get<JSONLDReference>(descriptor.value));
+  if (const auto *reference_descriptor{
+          std::get_if<JSONLDReference>(&descriptor.value)}) {
+    return materialize_reference(*reference_descriptor);
   }
 
   const auto &collection{std::get<JSONLDCollection>(descriptor.value)};
@@ -531,20 +567,25 @@ auto materialize_root(const JSON &instance,
   if (root.has_value()) {
     // The default graph may only hold node objects. A top-level value or list
     // object, whether the root itself or an element of a root set, carries no
-    // triples and is dropped.
+    // triples and is dropped. An empty top-level node object is free-floating
+    // and is dropped as well (JSON-LD 1.1 API Section 5.1.2: "If result is a
+    // map which is empty, or contains only the entries @value or @list, set
+    // result to null").
     if (root->is_array()) {
       for (auto &element : root->as_array()) {
-        if (is_node_object(element)) {
+        if (is_node_object(element) && !element.empty()) {
           result.push_back(std::move(element));
         }
       }
-    } else if (is_node_object(root.value())) {
+    } else if (is_node_object(root.value()) && !root->empty()) {
       result.push_back(std::move(root.value()));
     }
   }
 
   for (auto &node : standalone) {
-    result.push_back(std::move(node));
+    if (!node.empty()) {
+      result.push_back(std::move(node));
+    }
   }
 
   return result;

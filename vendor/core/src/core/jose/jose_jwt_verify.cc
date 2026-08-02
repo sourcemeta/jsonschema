@@ -44,8 +44,10 @@ auto jwt_verify(const JWT &token, const JWKS &keys,
                 const std::optional<std::string_view> expected_subject,
                 const std::optional<std::string_view> expected_type)
     -> std::optional<JWTVerificationError> {
-  // The algorithm allow-list is enforced before any key is touched, per step 3
-  // of the Sourcemeta One validation algorithm
+  // RFC 8725 Section 3.1: "Libraries MUST enable the caller to specify a
+  // supported set of algorithms and MUST NOT use any other algorithms when
+  // performing cryptographic operations", so the allow-list is enforced before
+  // any key is touched
   const auto algorithm{token.algorithm()};
   if (!algorithm.has_value() ||
       std::ranges::find(allowed_algorithms, algorithm.value()) ==

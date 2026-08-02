@@ -60,6 +60,63 @@ auto oauth_well_known_url(const std::string_view identifier,
                           const OAuthWellKnownKind kind, std::string &sink)
     -> bool;
 
+/// @ingroup oauth
+/// Whether a URL is usable as an endpoint a client sends requests to: the https
+/// scheme, compared case-insensitively per RFC 3986 Section 3.1, a non-empty
+/// host, and no fragment, which RFC 6749 Section 3.1 forbids on an endpoint. A
+/// query is permitted. This is the rule the metadata parsers apply, named for
+/// the endpoint case rather than as a general https test, since the fragment
+/// prohibition comes from the endpoint specifications and does not hold of
+/// https URLs at large. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::oauth_is_endpoint_url("https://example.com/token"));
+/// assert(!sourcemeta::core::oauth_is_endpoint_url("http://example.com/token"));
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_is_endpoint_url(const std::string_view value) -> bool;
+
+/// @ingroup oauth
+/// Whether a value is a valid protected resource identifier: the `https`
+/// scheme by exact code points, a non-empty host, and no fragment, a query
+/// tolerated (RFC 9728 Section 1.2, RFC 8707 Section 2). This is the rule the
+/// resource metadata builder and parser apply, so a caller assembling a
+/// document can pre-filter with it. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::oauth_is_resource_identifier(
+///     "https://api.example.com/mcp?tenant=1"));
+/// assert(!sourcemeta::core::oauth_is_resource_identifier(
+///     "http://api.example.com/mcp"));
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_is_resource_identifier(const std::string_view value) -> bool;
+
+/// @ingroup oauth
+/// Whether a value is a valid authorization server issuer identifier: the
+/// `https` scheme by exact code points, a non-empty host, and no query or
+/// fragment (RFC 8414 Section 2). This is the rule the metadata builders
+/// apply to `issuer` and to `authorization_servers` entries, so a caller
+/// assembling a document can pre-filter with it. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::oauth_is_issuer_identifier(
+///     "https://auth.example.com/tenant"));
+/// assert(!sourcemeta::core::oauth_is_issuer_identifier(
+///     "https://auth.example.com/?tenant=1"));
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_is_issuer_identifier(const std::string_view value) -> bool;
+
 #if defined(_MSC_VER)
 #pragma warning(disable : 4251)
 #endif
@@ -117,6 +174,10 @@ public:
   [[nodiscard]] auto registration_endpoint() const
       -> std::optional<std::string_view>;
 
+  /// The device authorization endpoint (RFC 8628 Section 4).
+  [[nodiscard]] auto device_authorization_endpoint() const
+      -> std::optional<std::string_view>;
+
   /// The token revocation endpoint (RFC 8414 Section 2).
   [[nodiscard]] auto revocation_endpoint() const
       -> std::optional<std::string_view>;
@@ -163,6 +224,11 @@ public:
   supports_token_endpoint_auth_method(const std::string_view value) const
       -> bool;
 
+  /// Whether a protected resource is listed as usable with this authorization
+  /// server (RFC 9728 Section 4).
+  [[nodiscard]] auto
+  supports_protected_resource(const std::string_view value) const -> bool;
+
   /// The underlying document, for reaching members without a typed accessor.
   [[nodiscard]] auto data() const -> const JSON &;
 
@@ -179,9 +245,10 @@ private:
 /// well-known URL was derived from, or, for the `WWW-Authenticate`
 /// `resource_metadata` flow, the URL the request was made to (the Section 3.3
 /// second check). Only the plain JSON members are read, so a `signed_metadata`
-/// statement (RFC 9728 Section 2.2) is not processed. A string accessor returns
-/// a view into the owned document, valid for the lifetime of this object. For
-/// example:
+/// statement is not processed, which RFC 9728 Section 2.2 permits by making
+/// its precedence conditional on a consumer that "supports signed metadata".
+/// A string accessor returns a view into the owned document, valid for the
+/// lifetime of this object. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/oauth.h>
@@ -239,6 +306,43 @@ public:
   /// false when absent (RFC 9728 Section 2).
   [[nodiscard]] auto dpop_bound_access_tokens_required() const -> bool;
 
+  /// The human-readable name of the resource without a language tag (RFC 9728
+  /// Section 2), reaching a language-tagged variant through the underlying
+  /// document.
+  [[nodiscard]] auto resource_name() const -> std::optional<std::string_view>;
+
+  /// The developer documentation page location (RFC 9728 Section 2).
+  [[nodiscard]] auto resource_documentation() const
+      -> std::optional<std::string_view>;
+
+  /// The data usage policy page location (RFC 9728 Section 2).
+  [[nodiscard]] auto resource_policy_uri() const
+      -> std::optional<std::string_view>;
+
+  /// The terms of service page location (RFC 9728 Section 2).
+  [[nodiscard]] auto resource_tos_uri() const
+      -> std::optional<std::string_view>;
+
+  /// Whether the resource supports mutual-TLS certificate-bound access tokens,
+  /// defaulting to false when absent (RFC 9728 Section 2).
+  [[nodiscard]] auto tls_client_certificate_bound_access_tokens() const -> bool;
+
+  /// Whether a JWS algorithm is listed for signing resource responses
+  /// (RFC 9728 Section 2).
+  [[nodiscard]] auto
+  supports_resource_signing_alg(const std::string_view value) const -> bool;
+
+  /// Whether a JWS algorithm is listed for validating DPoP proofs (RFC 9728
+  /// Section 2).
+  [[nodiscard]] auto
+  supports_dpop_signing_alg(const std::string_view value) const -> bool;
+
+  /// Whether an authorization details type is listed for the resource
+  /// (RFC 9728 Section 2).
+  [[nodiscard]] auto
+  supports_authorization_details_type(const std::string_view value) const
+      -> bool;
+
   /// The underlying document, for reaching members without a typed accessor
   /// such as the internationalized names.
   [[nodiscard]] auto data() const -> const JSON &;
@@ -291,6 +395,9 @@ struct OAuthServerMetadataConfig {
   /// authorization request endpoint, emitted only when true (RFC 9126
   /// Section 5).
   bool require_pushed_authorization_requests{false};
+  /// The protected resources usable with this authorization server, each a
+  /// valid resource identifier (RFC 9728 Section 4).
+  std::span<const std::string_view> protected_resources;
 };
 
 /// @ingroup oauth
@@ -322,6 +429,87 @@ struct OAuthServerMetadataConfig {
 /// ```
 SOURCEMETA_CORE_OAUTH_EXPORT
 auto oauth_make_server_metadata(const OAuthServerMetadataConfig &config)
+    -> std::optional<JSON>;
+
+/// @ingroup oauth
+/// The configuration a protected resource publishes as its metadata (RFC 9728
+/// Section 2), each field a non-owning view. An empty scalar and a
+/// zero-element array are omitted, since RFC 9728 Section 3.2 forbids a
+/// zero-element array in the response. The one exception is the bearer method
+/// list, whose engaged empty state is emitted as an empty array, the form
+/// RFC 9728 Section 2 gives for a resource that supports no bearer method,
+/// distinct from the unspecified absent state.
+struct OAuthResourceMetadataConfig {
+  /// The resource identifier (RFC 9728 Section 2), REQUIRED.
+  std::string_view resource;
+  /// The authorization server issuer identifiers that can issue tokens for the
+  /// resource (RFC 9728 Section 2).
+  std::span<const std::string_view> authorization_servers;
+  /// The JWK Set document location for the resource's own keys (RFC 9728
+  /// Section 2).
+  std::string_view jwks_uri;
+  /// The scopes used in authorization requests for the resource (RFC 9728
+  /// Section 2).
+  std::span<const std::string_view> scopes_supported;
+  /// The supported bearer token presentation methods (RFC 9728 Section 2),
+  /// where no value omits the member and an engaged empty list advertises that
+  /// no bearer method is supported.
+  std::optional<std::span<const std::string_view>> bearer_methods_supported;
+  /// The supported JWS algorithms for signing resource responses (RFC 9728
+  /// Section 2), which must exclude `none`.
+  std::span<const std::string_view> resource_signing_alg_values_supported;
+  /// The human-readable name of the resource without a language tag (RFC 9728
+  /// Sections 2 and 2.1), a language-tagged variant assigned by the caller on
+  /// the returned document.
+  std::string_view resource_name;
+  /// The developer documentation page location (RFC 9728 Section 2).
+  std::string_view resource_documentation;
+  /// The data usage policy page location (RFC 9728 Section 2).
+  std::string_view resource_policy_uri;
+  /// The terms of service page location (RFC 9728 Section 2).
+  std::string_view resource_tos_uri;
+  /// Whether the resource supports mutual-TLS certificate-bound access tokens,
+  /// emitted only when true since the default when absent is false (RFC 9728
+  /// Section 2).
+  bool tls_client_certificate_bound_access_tokens{false};
+  /// The supported authorization details types (RFC 9728 Section 2).
+  std::span<const std::string_view> authorization_details_types_supported;
+  /// The supported JWS algorithms for validating DPoP proofs (RFC 9728
+  /// Section 2), which must exclude `none` and the MAC algorithms a proof may
+  /// never use (RFC 9449 Section 4.2).
+  std::span<const std::string_view> dpop_signing_alg_values_supported;
+  /// Whether the resource requires DPoP-bound access tokens, emitted only when
+  /// true since the default when absent is false (RFC 9728 Section 2).
+  bool dpop_bound_access_tokens_required{false};
+};
+
+/// @ingroup oauth
+/// Build a protected resource metadata document for the well-known endpoint
+/// (RFC 9728 Section 2), returning no value when the document would be
+/// unusable: the resource is not a valid resource identifier, an authorization
+/// server entry is not a valid issuer identifier, the JWK Set location is not
+/// a valid https URL, a human-readable page location is not a URL, the
+/// resource signing algorithm list contains `none`, or the DPoP algorithm
+/// list contains `none` or a MAC algorithm. Every produced document parses
+/// back through its own consumer for the same resource. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <array>
+/// #include <cassert>
+/// #include <string_view>
+///
+/// const std::array<std::string_view, 1> servers{{"https://auth.example.com"}};
+/// sourcemeta::core::OAuthResourceMetadataConfig config;
+/// config.resource = "https://api.example.com";
+/// config.authorization_servers = servers;
+/// const auto document{sourcemeta::core::oauth_make_resource_metadata(config)};
+/// assert(document.has_value());
+/// assert(document.value().at("resource").to_string() ==
+///        "https://api.example.com");
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_make_resource_metadata(const OAuthResourceMetadataConfig &config)
     -> std::optional<JSON>;
 
 } // namespace sourcemeta::core

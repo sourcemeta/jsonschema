@@ -69,6 +69,14 @@ auto rsa_oaep_decrypt(const PrivateKey &key, const RSAOAEPHash hash,
     return std::nullopt;
   }
 
+  // RFC 8017 Section 7.1.2: "If the length of the ciphertext C is not k octets,
+  // output "decryption error" and stop". The framework reads the ciphertext as
+  // a raw integer, so an input with a dropped or added leading zero would
+  // otherwise decrypt as the same value
+  if (ciphertext.size() != SecKeyGetBlockSize(internal->key)) {
+    return std::nullopt;
+  }
+
   auto ciphertext_data{make_data(ciphertext)};
   if (ciphertext_data == nullptr) {
     return std::nullopt;

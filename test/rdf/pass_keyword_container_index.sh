@@ -32,10 +32,12 @@ cat << 'EOF' > "$TMP/expected.json"
   {
     "https://schema.org/data": [
       {
-        "@value": "foo"
+        "@value": "foo",
+        "@index": "a"
       },
       {
-        "@value": "bar"
+        "@value": "bar",
+        "@index": "b"
       }
     ]
   }

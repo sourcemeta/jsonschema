@@ -16,9 +16,9 @@ namespace sourcemeta::core {
 /// HTML character escaping implementation per HTML Living Standard.
 /// See: https://html.spec.whatwg.org/multipage/parsing.html#escapingString
 ///
-/// This function escapes the five HTML special characters in-place: the
-/// ampersand, less-than sign, greater-than sign, double quote, and apostrophe
-/// each become their corresponding HTML entity.
+/// This function escapes the five HTML special characters in-place, the
+/// ampersand, less-than sign, greater-than sign, double quote, and apostrophe,
+/// along with the no-break space, each becoming its corresponding HTML entity.
 ///
 /// For example:
 ///
@@ -35,12 +35,14 @@ auto html_escape(std::string &text) -> void;
 
 /// @ingroup html
 /// Append the HTML-escaped form of `input` directly to `output`,
-/// without allocating a temporary string.
+/// without allocating a temporary string. The input must not reference the
+/// output, since appending to the output may relocate its storage.
 SOURCEMETA_CORE_HTML_EXPORT
 auto html_escape_append(std::string &output, std::string_view input) -> void;
 
 /// @ingroup html
-/// Append the HTML-escaped form of `input` directly to a buffer.
+/// Append the HTML-escaped form of `input` directly to a buffer. The input must
+/// not reference the buffer, since appending to it may relocate its storage.
 SOURCEMETA_CORE_HTML_EXPORT
 auto html_escape_append(HTMLBuffer &output, std::string_view input) -> void;
 

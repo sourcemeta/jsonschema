@@ -17,9 +17,12 @@
 
 /// @defgroup jsonl JSONL
 /// @brief A JSON Lines (https://jsonlines.org) implementation with iterator
-/// support. Each line in a JSONL stream must be a complete, valid JSON value.
-/// Lines are separated by newline characters (U+000A). Multi-line JSON values
-/// are not supported, as per the JSONL specification.
+/// support. Every non-empty line in a JSONL stream is a complete, valid JSON
+/// value, and lines are separated by newline characters (U+000A). Multi-line
+/// JSON values are not supported, as per the JSONL specification. Blank and
+/// whitespace-only lines are skipped rather than treated as errors. JSON Lines
+/// is a convention rather than a formal specification, so tolerating stray
+/// blank lines is friendlier to real-world input.
 ///
 /// This functionality is included as follows:
 ///

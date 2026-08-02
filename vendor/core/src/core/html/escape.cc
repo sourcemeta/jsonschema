@@ -9,8 +9,20 @@ auto html_escape(std::string &text) -> void {
 
   // First pass: count how much space we need
   std::size_t required_size{0};
-  for (char character : text) {
-    switch (character) {
+  for (std::string::size_type position{0}; position < text.size();
+       position += 1) {
+    // The no-break space is replaced by its named entity, so its two UTF-8
+    // bytes become six output bytes (HTML Living Standard "escaping a string"
+    // step 2)
+    if (static_cast<unsigned char>(text[position]) == 0xC2 &&
+        position + 1 < text.size() &&
+        static_cast<unsigned char>(text[position + 1]) == 0xA0) {
+      required_size += 6; // &nbsp;
+      position += 1;
+      continue;
+    }
+
+    switch (text[position]) {
       case '&':
         required_size += 5; // &amp;
         break;
@@ -43,6 +55,24 @@ auto html_escape(std::string &text) -> void {
 
         while (read_position > 0) {
           --read_position;
+
+          // The no-break space (its two trailing UTF-8 bytes seen back to
+          // front) is replaced by its named entity (HTML Living Standard
+          // "escaping a string" step 2)
+          if (static_cast<unsigned char>(buffer[read_position]) == 0xA0 &&
+              read_position > 0 &&
+              static_cast<unsigned char>(buffer[read_position - 1]) == 0xC2) {
+            --read_position;
+            write_position -= 6;
+            buffer[write_position] = '&';
+            buffer[write_position + 1] = 'n';
+            buffer[write_position + 2] = 'b';
+            buffer[write_position + 3] = 's';
+            buffer[write_position + 4] = 'p';
+            buffer[write_position + 5] = ';';
+            continue;
+          }
+
           const auto character = buffer[read_position];
 
           switch (character) {
@@ -96,8 +126,17 @@ auto html_escape(std::string &text) -> void {
 }
 
 static auto needs_escape(const std::string_view input) -> bool {
-  for (const char character : input) {
-    switch (character) {
+  for (std::string_view::size_type position{0}; position < input.size();
+       position += 1) {
+    // The no-break space also requires escaping (HTML Living Standard "escaping
+    // a string" step 2)
+    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
+        position + 1 < input.size() &&
+        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
+      return true;
+    }
+
+    switch (input[position]) {
       case '&':
       case '<':
       case '>':
@@ -119,8 +158,19 @@ auto html_escape_append(std::string &output, const std::string_view input)
     return;
   }
 
-  for (const char character : input) {
-    switch (character) {
+  for (std::string_view::size_type position{0}; position < input.size();
+       position += 1) {
+    // The no-break space is replaced by its named entity (HTML Living Standard
+    // "escaping a string" step 2)
+    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
+        position + 1 < input.size() &&
+        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
+      output += "&nbsp;";
+      position += 1;
+      continue;
+    }
+
+    switch (input[position]) {
       case '&':
         output += "&amp;";
         break;
@@ -137,7 +187,7 @@ auto html_escape_append(std::string &output, const std::string_view input)
         output += "&#39;";
         break;
       default:
-        output += character;
+        output += input[position];
     }
   }
 }
@@ -149,8 +199,19 @@ auto html_escape_append(HTMLBuffer &output, const std::string_view input)
     return;
   }
 
-  for (const char character : input) {
-    switch (character) {
+  for (std::string_view::size_type position{0}; position < input.size();
+       position += 1) {
+    // The no-break space is replaced by its named entity (HTML Living Standard
+    // "escaping a string" step 2)
+    if (static_cast<unsigned char>(input[position]) == 0xC2 &&
+        position + 1 < input.size() &&
+        static_cast<unsigned char>(input[position + 1]) == 0xA0) {
+      output.append("&nbsp;");
+      position += 1;
+      continue;
+    }
+
+    switch (input[position]) {
       case '&':
         output.append("&amp;");
         break;
@@ -167,7 +228,7 @@ auto html_escape_append(HTMLBuffer &output, const std::string_view input)
         output.append("&#39;");
         break;
       default:
-        output.append(character);
+        output.append(input[position]);
     }
   }
 }

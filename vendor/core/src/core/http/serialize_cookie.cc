@@ -133,9 +133,12 @@ auto http_cookie_valid(const HTTPCookie &cookie) -> bool {
     return false;
   }
 
-  // RFC 6265bis §4.1.1 defines the max age attribute value as one or more
-  // digits, so a negative expiry cannot be serialised. Zero or a positive value
-  // is valid, and zero is the canonical way to expire a cookie
+  // RFC 6265 §4.1.1 grammar is "non-zero-digit *DIGIT", which technically
+  // excludes 0, but RFC 6265 §5.2.2 defines the expire-now semantics of a
+  // delta-seconds value less than or equal to 0, and Max-Age=0 is the universal
+  // idiom every user agent honors to delete a cookie immediately (Max-Age=1 is
+  // not equivalent, as it delays expiry by one second). Only a negative expiry
+  // is rejected here, since it cannot be serialised
   if (cookie.max_age.has_value() && cookie.max_age->count() < 0) {
     return false;
   }

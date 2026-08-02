@@ -15,6 +15,7 @@
 #include <string>       // std::string
 #include <system_error> // std::errc
 #include <type_traits>  // std::conditional_t
+#include <utility>      // std::move
 
 namespace sourcemeta::core::internal {
 template <typename CharT, typename Traits,
@@ -28,18 +29,31 @@ reset(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream)
 
 template <typename CharT, typename Traits,
           template <typename T> typename Allocator>
-inline auto
-parse_index(std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
-            const std::uint64_t column) -> std::size_t {
-  const auto input = stream.str();
+inline auto emplace_index_or_property(
+    Pointer &result,
+    std::basic_stringstream<CharT, Traits, Allocator<CharT>> &stream,
+    const std::uint64_t column) -> void {
+  auto input = stream.str();
   std::size_t index_value{};
-  const auto result =
+  const auto conversion =
       std::from_chars(input.data(), input.data() + input.size(), index_value);
-  if (result.ec != std::errc{}) [[unlikely]] {
+  // RFC 6901 Section 3 treats any reference token as a valid pointer, and
+  // RFC 6901 Section 4 only interprets a token as an array index when its
+  // numeric value fits the representation of an index. An all-digit token whose
+  // value exceeds the platform index type still names a valid object member, so
+  // it becomes a property token that resolves against an object and yields
+  // not-found against an array. This keeps a huge index parseable, matching the
+  // check-only path, rather than reporting a parse error
+  if (conversion.ec == std::errc::result_out_of_range) [[unlikely]] {
+    result.emplace_back(std::move(input));
+    return;
+  }
+
+  if (conversion.ec != std::errc{}) [[unlikely]] {
     throw PointerParseError(column);
   }
 
-  return index_value;
+  result.emplace_back(index_value);
 }
 
 } // namespace sourcemeta::core::internal
@@ -139,7 +153,7 @@ parse_token_index_end:
     column += 1;
     stream.ignore();
     if constexpr (!CheckOnly) {
-      result.emplace_back(internal::parse_index(string, column));
+      internal::emplace_index_or_property(result, string, column);
       internal::reset(string);
     }
     goto done;
@@ -150,7 +164,7 @@ parse_token_index_end:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
-        result.emplace_back(internal::parse_index(string, column));
+        internal::emplace_index_or_property(result, string, column);
         internal::reset(string);
       }
       goto parse_token_content;
@@ -164,7 +178,7 @@ parse_token_index_rest_any:
     column += 1;
     stream.ignore();
     if constexpr (!CheckOnly) {
-      result.emplace_back(internal::parse_index(string, column));
+      internal::emplace_index_or_property(result, string, column);
       internal::reset(string);
     }
     goto done;
@@ -175,7 +189,7 @@ parse_token_index_rest_any:
       column += 1;
       stream.ignore();
       if constexpr (!CheckOnly) {
-        result.emplace_back(internal::parse_index(string, column));
+        internal::emplace_index_or_property(result, string, column);
         internal::reset(string);
       }
       goto parse_token_content;

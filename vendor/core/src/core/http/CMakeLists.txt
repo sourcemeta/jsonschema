@@ -26,7 +26,7 @@ target_link_libraries(sourcemeta_core_http PUBLIC sourcemeta::core::json)
 target_link_libraries(sourcemeta_core_http PUBLIC sourcemeta::core::text)
 target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::time)
 target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::dns)
-target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::crypto)
+target_link_libraries(sourcemeta_core_http PUBLIC sourcemeta::core::crypto)
 target_link_libraries(sourcemeta_core_http PRIVATE sourcemeta::core::uri)
 
 if(SOURCEMETA_CORE_HTTP_USE_SYSTEM_CURL)

@@ -6,6 +6,7 @@
 
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint16_t
+#include <cstring>     // std::strlen
 #include <optional>    // std::optional
 #include <string>      // std::string
 #include <string_view> // std::string_view
@@ -33,7 +34,10 @@ using CURLoption = int;
 using CURLINFO = int;
 using curl_off_t = long long;
 
-struct curl_slist;
+struct curl_slist {
+  char *data;
+  curl_slist *next;
+};
 
 auto curl_global_init(long flags) -> CURLcode;
 auto curl_easy_init() -> CURL *;
@@ -62,6 +66,7 @@ constexpr CURLoption CURLOPT_WRITEFUNCTION{20011};   // FUNCTIONPOINT + 11
 constexpr CURLoption CURLOPT_WRITEDATA{10001};       // CBPOINT + 1
 constexpr CURLoption CURLOPT_HEADERFUNCTION{20079};  // FUNCTIONPOINT + 79
 constexpr CURLoption CURLOPT_HEADERDATA{10029};      // CBPOINT + 29
+constexpr CURLoption CURLOPT_POST{47};               // LONG + 47
 constexpr CURLoption CURLOPT_POSTFIELDSIZE_LARGE{30120}; // OFF_T + 120
 constexpr CURLoption CURLOPT_POSTFIELDS{10015};          // OBJECTPOINT + 15
 constexpr CURLoption CURLOPT_HTTPHEADER{10023};          // SLISTPOINT + 23
@@ -122,6 +127,15 @@ public:
   explicit CurlHeaderList(const CurlApi &api) : api_{api} {}
   ~CurlHeaderList() {
     if (this->list_) {
+      // libcurl duplicates every appended line and does not clear its copy
+      // on release, so wipe each one first to keep a secret header value
+      // out of freed memory
+      for (auto *entry{this->list_}; entry; entry = entry->next) {
+        if (entry->data) {
+          sourcemeta::core::secure_zero(entry->data, std::strlen(entry->data));
+        }
+      }
+
       this->api_.slist_free_all(this->list_);
     }
   }
@@ -349,14 +363,19 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
 
   CurlHeaderList header_list{api};
   for (const auto &[name, value] : this->headers_) {
-    std::string line{name};
+    // Reserve the whole line up front, so appending a possibly secret value
+    // can never reallocate storage that is wiped only at scope exit
+    std::string line;
+    line.reserve(name.size() + value.bytes().size() + 2);
+    const SecureStringScope line_scope{line};
+    line += name;
     // The semicolon form is how cURL distinguishes a header with an
     // empty value from a header to suppress
-    if (value.empty()) {
+    if (value.bytes().empty()) {
       line += ";";
     } else {
       line += ": ";
-      line += value;
+      line += value.bytes();
     }
 
     header_list.append(line);
@@ -366,10 +385,19 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
     std::string content_type_line{"Content-Type: "};
     content_type_line += this->body_.value().content_type;
     header_list.append(content_type_line);
-    api.easy_setopt(handle.get(), CURLOPT_POSTFIELDSIZE_LARGE,
-                    static_cast<curl_off_t>(this->body_.value().data.size()));
+    api.easy_setopt(
+        handle.get(), CURLOPT_POSTFIELDSIZE_LARGE,
+        static_cast<curl_off_t>(this->body_.value().bytes().size()));
     api.easy_setopt(handle.get(), CURLOPT_POSTFIELDS,
-                    this->body_.value().data.data());
+                    this->body_.value().bytes().data());
+  } else if (this->method_ == HTTPMethod::POST &&
+             !this->header("Content-Type").has_value()) {
+    // A bodyless POST carries no representation, so libcurl's default
+    // Content-Type of application/x-www-form-urlencoded, added when the POST
+    // data is set, is unsolicited. It is suppressed unless the caller supplied
+    // a Content-Type, matching the other backends. The bare-colon form removes
+    // an internally generated header
+    header_list.append("Content-Type:");
   }
 
   if (header_list.get()) {
@@ -379,6 +407,22 @@ auto HTTPSystemRequest::send() const -> HTTPResponse {
   const std::string method{http_method_string(this->method_)};
   if (this->method_ == HTTPMethod::HEAD) {
     api.easy_setopt(handle.get(), CURLOPT_NOBODY, 1L);
+  } else if (this->method_ == HTTPMethod::POST) {
+    // RFC 9110 §15.4.4: a 303 (See Other) redirect makes the user agent
+    // retrieve the target with GET. Marking the request as a POST with
+    // CURLOPT_POST, instead of pinning the verb with CURLOPT_CUSTOMREQUEST,
+    // lets libcurl apply its default 301/302/303 POST-to-GET transition while
+    // still preserving the method on 307/308, matching the NSURLSession and
+    // WinHTTP backends. CURLOPT_CUSTOMREQUEST would override that transition
+    // and wrongly keep POST across a 303
+    api.easy_setopt(handle.get(), CURLOPT_POST, 1L);
+    if (!this->body_.has_value()) {
+      // A bodyless POST must still pin an empty body, otherwise libcurl reads
+      // the POST data from its default input source
+      api.easy_setopt(handle.get(), CURLOPT_POSTFIELDSIZE_LARGE,
+                      static_cast<curl_off_t>(0));
+      api.easy_setopt(handle.get(), CURLOPT_POSTFIELDS, "");
+    }
   } else if (this->method_ != HTTPMethod::GET || this->body_.has_value()) {
     api.easy_setopt(handle.get(), CURLOPT_CUSTOMREQUEST, method.c_str());
   }

@@ -41,6 +41,10 @@ struct ActiveContext {
   std::shared_ptr<ActiveContext> previous;
   // Whether compaction may relativise absolute IRIs against the base IRI.
   bool compact_to_relative{true};
+  // Whether the document is processed under the JSON-LD 1.0 processing mode,
+  // which the compaction container selection consults without access to the
+  // expansion state.
+  bool processing_1_0{false};
 };
 
 // The mutable state shared by the expansion algorithms for the duration of a

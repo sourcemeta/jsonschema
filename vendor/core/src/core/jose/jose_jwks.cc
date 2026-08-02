@@ -33,8 +33,11 @@ auto JWKS::parse(const JSON &value, JWKS &result) -> bool {
     }
   }
 
-  // An empty set, or one whose keys all failed to parse, is not usable
-  return !result.keys_.empty();
+  // RFC 7517 Section 5: the keys member is a required array with no minimum
+  // size, so an empty set is valid. Having no usable key is a verification-time
+  // outcome, not a parse error, so a successfully parsed set is accepted here
+  // even when it carries zero keys
+  return true;
 }
 
 JWKS::JWKS(const JSON &value) {

@@ -3,7 +3,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/oauth.h>
 #include <sourcemeta/core/oidc_error.h>
-#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include <chrono>      // std::chrono::seconds
@@ -33,6 +32,7 @@ constexpr auto HASH_USERINFO_SIGNED_ALG{
 constexpr auto HASH_DEFAULT_MAX_AGE{JSON::Object::hash("default_max_age"sv)};
 constexpr auto HASH_REQUIRE_AUTH_TIME{
     JSON::Object::hash("require_auth_time"sv)};
+constexpr auto HASH_JWKS_URI{JSON::Object::hash("jwks_uri"sv)};
 constexpr auto HASH_INITIATE_LOGIN_URI{
     JSON::Object::hash("initiate_login_uri"sv)};
 constexpr auto HASH_POST_LOGOUT_REDIRECT_URIS{
@@ -71,11 +71,38 @@ auto is_absolute_uri_without_fragment(const std::string_view value) -> bool {
 auto is_https_url_with_host(const std::string_view value) -> bool {
   try {
     const URI uri{value};
-    // RFC 3986 Section 3.1: the scheme is case-insensitive, so an uppercase or
-    // mixed-case HTTPS is still https
-    return uri.scheme().has_value() &&
-           equals_ignore_case(uri.scheme().value(), "https") &&
-           uri.host().has_value() && !uri.host().value().empty();
+    return uri.is_https() && uri.host().has_value() &&
+           !uri.host().value().empty();
+  } catch (const URIParseError &) {
+    return false;
+  }
+}
+
+// OpenID Connect Dynamic Client Registration 1.0 Section 2: a web client using
+// the implicit grant "MUST only register URLs using the https scheme as
+// redirect_uris" and "they MUST NOT use localhost as the hostname"
+auto is_web_implicit_redirect_uri(const std::string_view value) -> bool {
+  try {
+    const URI uri{value};
+    return uri.is_https() && uri.host().has_value() &&
+           !uri.host().value().empty() && !uri.is_localhost();
+  } catch (const URIParseError &) {
+    return false;
+  }
+}
+
+// OpenID Connect Dynamic Client Registration 1.0 Section 2: a native client
+// "MUST only register redirect_uris using custom URI schemes or loopback URLs
+// using the http scheme", where a loopback URL names localhost or an IP
+// loopback literal
+auto is_native_redirect_uri(const std::string_view value) -> bool {
+  try {
+    const URI uri{value};
+    if (uri.is_http()) {
+      return uri.is_loopback() || uri.is_localhost();
+    }
+
+    return uri.scheme().has_value() && !uri.is_https();
   } catch (const URIParseError &) {
     return false;
   }
@@ -114,6 +141,33 @@ auto validate_client_metadata(const OAuthClientMetadata &oauth) -> void {
     throw OIDCRegistrationParseError{};
   }
 
+  // OpenID Connect Dynamic Client Registration 1.0 Section 2: "The
+  // Authorization Server MUST verify that all the registered redirect_uris
+  // conform to these constraints". A native client is bound to custom-scheme or
+  // http loopback callbacks, while a web client using the implicit grant is
+  // bound to https callbacks that are not localhost. The default application
+  // type is web, and a web client that does not use the implicit grant carries
+  // no such restriction
+  const auto application_type{
+      string_member(data, "application_type"sv, HASH_APPLICATION_TYPE)
+          .value_or("web"sv)};
+  // OpenID Connect Dynamic Client Registration 1.0 Section 2 defines only the
+  // web and native application types, so an unknown value is rejected rather
+  // than defaulted and left unrestricted
+  if (application_type != "web"sv && application_type != "native"sv) {
+    throw OIDCRegistrationParseError{};
+  }
+  const bool native{application_type == "native"sv};
+  if (native || oauth.supports_grant_type("implicit"sv)) {
+    for (const auto &element : redirect_uris->as_array()) {
+      const std::string_view redirect_uri{element.to_string()};
+      if (native ? !is_native_redirect_uri(redirect_uri)
+                 : !is_web_implicit_redirect_uri(redirect_uri)) {
+        throw OIDCRegistrationParseError{};
+      }
+    }
+  }
+
   const auto *max_age{data.try_at("default_max_age"sv, HASH_DEFAULT_MAX_AGE)};
   if (max_age != nullptr &&
       (!max_age->is_integer() || max_age->to_integer() < 0)) {
@@ -140,6 +194,20 @@ auto validate_client_metadata(const OAuthClientMetadata &oauth) -> void {
       data.try_at("sector_identifier_uri"sv, HASH_SECTOR_IDENTIFIER_URI)};
   if (sector != nullptr &&
       (!sector->is_string() || !is_https_url_with_host(sector->to_string()))) {
+    throw OIDCRegistrationParseError{};
+  }
+
+  // OpenID Connect Dynamic Client Registration 1.0 Section 2: the jwks_uri is a
+  // "URL for the Client's JWK Set document, which MUST use the https scheme".
+  // The provider fetches it to obtain the keys that authenticate the client, so
+  // over cleartext an attacker substitutes them and impersonates the client.
+  // Note that request_uris carries the neighbouring rule conditionally, "unless
+  // the target Request Object is signed in a way that is verifiable by the OP",
+  // which is not knowable here, so it is deliberately left unchecked
+  const auto *client_keys{data.try_at("jwks_uri"sv, HASH_JWKS_URI)};
+  if (client_keys != nullptr &&
+      (!client_keys->is_string() ||
+       !is_https_url_with_host(client_keys->to_string()))) {
     throw OIDCRegistrationParseError{};
   }
 

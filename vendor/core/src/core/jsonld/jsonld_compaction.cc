@@ -54,6 +54,20 @@ auto add_value(JSON &result, const JSON::String &key, JSON &&value,
   existing.push_back(std::move(value));
 }
 
+// A value object carrying a JSON literal whose value is null.
+auto is_json_literal_null(const JSON &element) -> bool {
+  if (!element.is_object()) {
+    return false;
+  }
+  const auto *const contents{element.try_at(KEYWORD_VALUE, KEYWORD_VALUE_HASH)};
+  if (contents == nullptr || !contents->is_null()) {
+    return false;
+  }
+  const auto *const type{element.try_at(KEYWORD_TYPE, KEYWORD_TYPE_HASH)};
+  return type != nullptr && type->is_string() &&
+         type->to_string() == KEYWORD_JSON;
+}
+
 // The object a property is written into: the result itself, or a nesting
 // container when the term carries an @nest mapping.
 auto nest_target(JSON &result, const TermDefinition *const definition,
@@ -106,7 +120,12 @@ auto compact(ExpansionState &state, const ActiveContext &active_context,
     for (const auto &item : element.as_array()) {
       auto compacted{compact(state, active_context, inverse_context,
                              active_property, item, compact_arrays)};
-      if (!compacted.is_null()) {
+      // A JSON literal holding null compacts to a bare null under a term
+      // coerced to @json, and that null is data rather than absence, so it
+      // survives even though the algorithm otherwise drops null items
+      // (JSON-LD 1.1 API Section 6.1.2: "If compacted item is not null, then
+      // append it to result"). Dropping it would silently lose the literal.
+      if (!compacted.is_null() || is_json_literal_null(item)) {
         result.push_back(std::move(compacted));
       }
     }

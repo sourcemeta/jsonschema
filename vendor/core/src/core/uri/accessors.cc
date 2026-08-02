@@ -1,4 +1,5 @@
 #include <sourcemeta/core/ip.h>
+#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include <cstdint>     // std::uint32_t
@@ -35,6 +36,19 @@ auto URI::is_file() const -> bool {
   return scheme.has_value() && scheme.value() == "file";
 }
 
+// RFC 3986 Section 3.1: "an implementation should accept uppercase letters as
+// equivalent to lowercase in scheme names"
+
+auto URI::is_http() const -> bool {
+  const auto scheme{this->scheme()};
+  return scheme.has_value() && equals_ignore_case(scheme.value(), "http");
+}
+
+auto URI::is_https() const -> bool {
+  const auto scheme{this->scheme()};
+  return scheme.has_value() && equals_ignore_case(scheme.value(), "https");
+}
+
 auto URI::is_ipv4() const -> bool {
   return this->host_.has_value() &&
          sourcemeta::core::is_ipv4(this->host_.value());
@@ -43,6 +57,43 @@ auto URI::is_ipv4() const -> bool {
 auto URI::is_ipv6() const -> bool {
   return this->host_.has_value() &&
          sourcemeta::core::is_ipv6(this->host_.value());
+}
+
+auto URI::is_loopback() const -> bool {
+  if (!this->host_.has_value()) {
+    return false;
+  }
+
+  return ipv4_classify(this->host_.value()) == IPAddressClass::Loopback ||
+         ipv6_classify(this->host_.value()) == IPAddressClass::Loopback;
+}
+
+auto URI::is_localhost() const -> bool {
+  // RFC 3986 Section 3.2.2 separates an IP literal from a registered name, and
+  // only the latter can be a domain name, so a bracketed host such as an
+  // IPvFuture ending in the reserved labels does not qualify
+  if (!this->host_.has_value() || this->ip_literal_) {
+    return false;
+  }
+
+  // RFC 6761 Section 6.3 reserves "The domain 'localhost.' and any names
+  // falling within '.localhost.'", where the trailing dot marks the absolute
+  // form of a name that compares case-insensitively (RFC 4343 Section 2)
+  std::string_view host{this->host_.value()};
+  if (host.ends_with('.')) {
+    host.remove_suffix(1);
+  }
+
+  constexpr std::string_view name{"localhost"};
+  if (host.size() < name.size()) {
+    return false;
+  }
+
+  if (host.size() > name.size() && host[host.size() - name.size() - 1] != '.') {
+    return false;
+  }
+
+  return equals_ignore_case(host.substr(host.size() - name.size()), name);
 }
 
 auto URI::is_fragment_only() const -> bool {

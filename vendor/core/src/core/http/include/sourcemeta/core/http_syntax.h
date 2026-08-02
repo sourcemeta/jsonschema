@@ -181,6 +181,34 @@ inline auto http_encode_quoted_string(const std::string_view value,
 }
 
 /// @ingroup http
+/// Whether a field name or value carries a byte that must never appear on a
+/// field line, a carriage return, a line feed, or a NUL (RFC 9110
+/// Section 5.5). For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/http.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::http_field_line_has_forbidden_byte("a\r\nb"));
+/// assert(!sourcemeta::core::http_field_line_has_forbidden_byte("plain"));
+/// ```
+inline auto
+http_field_line_has_forbidden_byte(const std::string_view value) noexcept
+    -> bool {
+  // RFC 9110 Section 5.5: "a recipient of CR, LF, or NUL within a field value
+  // MUST either reject the message or replace each of those characters with SP
+  // before further processing or forwarding of that message", so a field
+  // carrying one is refused as a header-injection defense
+  for (const auto character : value) {
+    if (character == '\r' || character == '\n' || character == '\0') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/// @ingroup http
 /// The view with any leading optional whitespace removed (RFC 9110
 /// Section 5.6.3). For example:
 ///

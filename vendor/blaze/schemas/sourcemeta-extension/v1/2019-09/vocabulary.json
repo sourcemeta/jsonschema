@@ -38,8 +38,12 @@
           "type": "null"
         },
         {
+          "$comment": "A literal has the langString datatype exactly when it carries a language tag, which only x-jsonld-language declares",
           "x-format-assertion": true,
           "type": "string",
+          "not": {
+            "const": "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"
+          },
           "format": "iri"
         }
       ]

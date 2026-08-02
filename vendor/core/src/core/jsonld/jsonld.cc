@@ -49,6 +49,7 @@ auto initialise_expansion(const JSONLDResolver &resolver,
                           ActiveContext &active_context) -> void {
   state.resolver = &resolver;
   state.processing_1_0 = version == JSONLDVersion::V1_0;
+  active_context.processing_1_0 = state.processing_1_0;
   if (!base_iri.empty()) {
     active_context.base = JSON::String{base_iri};
     state.document_base = JSON::String{base_iri};

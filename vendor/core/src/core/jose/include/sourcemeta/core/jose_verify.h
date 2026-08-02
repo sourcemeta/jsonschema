@@ -80,6 +80,32 @@ struct JWTClockSkew {
 };
 
 /// @ingroup jose
+/// Reduce a caller-supplied clock skew to the grace period token validation
+/// honours, one mean Gregorian year, treating a negative tolerance as none.
+/// Every path that validates a token applies this, so the same tolerance means
+/// the same thing whichever one runs. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jose.h>
+/// #include <chrono>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::jwt_bounded_clock_skew(
+///            std::chrono::seconds{30}) == std::chrono::seconds{30});
+/// assert(sourcemeta::core::jwt_bounded_clock_skew(
+///            std::chrono::seconds{-30}) == std::chrono::seconds{0});
+/// ```
+inline auto jwt_bounded_clock_skew(const std::chrono::seconds skew) noexcept
+    -> std::chrono::seconds {
+  // A mean Gregorian year, the widest grace period any deployment plausibly
+  // needs, so an extreme value cannot widen the acceptance window without bound
+  constexpr std::chrono::seconds maximum{31556952};
+  return skew < std::chrono::seconds::zero() ? std::chrono::seconds::zero()
+         : skew > maximum                    ? maximum
+                                             : skew;
+}
+
+/// @ingroup jose
 /// Validate the registered claims of a JSON Web Token against the expected
 /// issuer and audience at a given time, returning the first failing check or no
 /// value when every check passes. The expiration claim is required (RFC 9068
@@ -202,6 +228,7 @@ enum class JWTVerificationError : std::uint8_t {
 /// #include <array>
 /// #include <cassert>
 /// #include <chrono>
+/// #include <optional>
 /// #include <string>
 ///
 /// const std::string input{
@@ -214,19 +241,19 @@ enum class JWTVerificationError : std::uint8_t {
 /// const std::array allowed{sourcemeta::core::JWSAlgorithm::RS256};
 /// const auto error{sourcemeta::core::jwt_verify(
 ///     token.value(), keys.value(), allowed, "acme", "client",
-///     std::chrono::system_clock::from_time_t(1500000000))};
+///     std::chrono::system_clock::from_time_t(1500000000), {}, std::nullopt,
+///     std::nullopt)};
 /// assert(error.has_value());
 /// ```
 SOURCEMETA_CORE_JOSE_EXPORT
-auto jwt_verify(
-    const JWT &token, const JWKS &keys,
-    const std::span<const JWSAlgorithm> allowed_algorithms,
-    const std::string_view expected_issuer,
-    const std::string_view expected_audience,
-    const std::chrono::system_clock::time_point now,
-    const JWTClockSkew clock_skew = {},
-    const std::optional<std::string_view> expected_subject = std::nullopt,
-    const std::optional<std::string_view> expected_type = std::nullopt)
+auto jwt_verify(const JWT &token, const JWKS &keys,
+                const std::span<const JWSAlgorithm> allowed_algorithms,
+                const std::string_view expected_issuer,
+                const std::string_view expected_audience,
+                const std::chrono::system_clock::time_point now,
+                const JWTClockSkew clock_skew,
+                const std::optional<std::string_view> expected_subject,
+                const std::optional<std::string_view> expected_type)
     -> std::optional<JWTVerificationError>;
 
 } // namespace sourcemeta::core

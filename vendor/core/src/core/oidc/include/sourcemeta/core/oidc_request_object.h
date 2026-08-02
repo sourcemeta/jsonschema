@@ -58,9 +58,12 @@ auto oidc_build_request_object(const JSON &parameters, const JWKPrivate &key,
 
 /// @ingroup oidc
 /// Verify a request object and return its parameters, or no value when the
-/// signature does not verify under a pinned algorithm, the issuer is not the
-/// client, or the audience is not the OpenID Provider (OpenID Connect Core 1.0
-/// Section 6.3). For example:
+/// signature does not verify under a pinned algorithm, the issuer is present
+/// but is not the client, or the audience is missing or does not include the
+/// OpenID Provider (OpenID Connect Core 1.0 Section 6.1 and Section 6.3). A
+/// signed request object must carry an `aud` that includes the provider,
+/// binding it to this provider so it cannot be replayed to another one. For
+/// example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/oidc.h>

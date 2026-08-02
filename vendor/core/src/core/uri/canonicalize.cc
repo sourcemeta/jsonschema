@@ -154,6 +154,11 @@ auto URI::canonicalize() -> URI & {
   if (this->host_.has_value()) {
     normalize_component(this->host_.value(), this->iri_);
     sourcemeta::core::to_lowercase(this->host_.value());
+    // The case fold above also lowercases the digits inside percent-encoding
+    // triplets, so the triplet hex is normalised back to uppercase last (RFC
+    // 3986 Section 6.2.2.1 "the hexadecimal digits within a percent-encoding
+    // triplet [...] should be normalized to use uppercase letters")
+    uri_normalize_percent_encoding_inplace(this->host_.value());
   }
 
   // Remove default ports (80 for http, 443 for https)

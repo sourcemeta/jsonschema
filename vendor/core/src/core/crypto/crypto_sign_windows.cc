@@ -119,12 +119,19 @@ auto native_rsa_private_key(const std::string_view rsa_private_key) -> KeyPair {
       return {.algorithm = nullptr, .key = nullptr};
     }
 
-    field = sourcemeta::core::strip_left(element->content, '\x00');
+    // Decoded as a canonical non-negative DER INTEGER rather than merely having
+    // its leading zeros stripped, so a value whose leading octet sets the high
+    // bit, which X.690 Section 8.3 makes negative, cannot be read as a large
+    // positive one
+    const auto value{sourcemeta::core::der_unsigned_integer(element->content)};
     // Every field feeds a blob length or padding width, so oversize input is
     // rejected before it drives a cast or an allocation
-    if (field.size() > sourcemeta::core::MAXIMUM_KEY_BYTES) {
+    if (!value.has_value() ||
+        value.value().size() > sourcemeta::core::MAXIMUM_KEY_BYTES) {
       return {.algorithm = nullptr, .key = nullptr};
     }
+
+    field = value.value();
 
     rest = element->rest;
   }

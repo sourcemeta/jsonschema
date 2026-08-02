@@ -53,6 +53,15 @@ inline auto oauth_form_decode_into(const std::string_view value,
 inline auto oauth_form_decode_into_secure(const std::string_view value,
                                           SecureString &arena,
                                           std::string_view &result) -> bool {
+  // The same reservation contract the borrowing variant enforces, checked the
+  // same way. The assert catches a violation loudly under test, and the guard
+  // fails closed rather than dangle a view into the arena holding the secrets
+  // if the contract is ever broken in a release build
+  assert(arena.capacity() - arena.size() >= value.size());
+  if (arena.capacity() - arena.size() < value.size()) {
+    return false;
+  }
+
   const auto base{arena.size()};
   if (!URI::unescape_form(value, arena)) {
     return false;

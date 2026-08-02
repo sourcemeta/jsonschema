@@ -298,7 +298,7 @@ auto rsassa_pkcs1_v15_verify(const PublicKey &key,
                              const std::string_view signature) -> bool {
   const auto *internal{key.internal()};
   if (internal == nullptr || internal->kind != PublicKey::Type::RSA ||
-      !rsa_signature_in_range(signature, internal->modulus)) {
+      !rsa_signature_acceptable(signature, internal->modulus)) {
     return false;
   }
 
@@ -311,7 +311,7 @@ auto rsassa_pss_verify(const PublicKey &key, const SignatureHashFunction hash,
                        const std::string_view signature) -> bool {
   const auto *internal{key.internal()};
   if (internal == nullptr || internal->kind != PublicKey::Type::RSA ||
-      !rsa_signature_in_range(signature, internal->modulus)) {
+      !rsa_signature_acceptable(signature, internal->modulus)) {
     return false;
   }
 

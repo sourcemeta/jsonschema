@@ -27,18 +27,24 @@ auto http_match_accept(const std::string_view accept_header,
   std::size_t order{0};
   for (const auto candidate : candidates) {
     assert(!candidate.empty());
-    [[maybe_unused]] const auto candidate_slash{candidate.find('/')};
+    // RFC 9110 §12.5.1: a candidate may itself carry media-type parameters
+    // (`text/plain;format=flowed`), so the type and its parameters are split
+    // apart to be matched against each media range separately
+    const auto [candidate_type, candidate_parameters] =
+        http_split_entry(candidate);
+    [[maybe_unused]] const auto candidate_slash{candidate_type.find('/')};
     assert(candidate_slash != std::string_view::npos);
     assert(candidate_slash > 0);
-    assert(candidate_slash < candidate.size() - 1);
-    assert(candidate.find_first_of(" \t,;*") == std::string_view::npos);
+    assert(candidate_slash < candidate_type.size() - 1);
+    assert(candidate_type.find_first_of(" \t,;*") == std::string_view::npos);
     float candidate_quality{0.0f};
     std::uint8_t candidate_specificity{0};
-    http_for_each_accept_entry(
+    http_for_each_media_range(
         accept_header,
-        [&](const std::string_view value, const float quality) -> void {
-          const std::uint8_t specificity{
-              http_media_specificity(value, candidate)};
+        [&](const std::string_view value, const std::string_view parameters,
+            const float quality) -> void {
+          const std::uint8_t specificity{http_media_range_specificity(
+              value, parameters, candidate_type, candidate_parameters)};
           if (specificity == 0) {
             return;
           }

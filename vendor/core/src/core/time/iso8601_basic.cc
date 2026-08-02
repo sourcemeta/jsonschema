@@ -14,7 +14,10 @@
 #include <string_view> // std::string_view
 
 namespace {
-constexpr auto FORMAT_ISO8601_BASIC{"%Y%m%dT%H%M%SZ"};
+// The year is rendered separately so it is always four digits, as the basic
+// format is fixed width (ISO 8601-1 §5.4.2.1), which "%Y" does not guarantee
+// for a year below 1000
+constexpr auto FORMAT_ISO8601_BASIC_AFTER_YEAR{"%m%dT%H%M%SZ"};
 
 auto all_digits(const std::string_view value, const std::size_t offset,
                 const std::size_t length) -> bool {
@@ -44,7 +47,8 @@ auto to_iso8601_basic(const std::chrono::system_clock::time_point time)
   const auto parts{time_point_to_broken_down(time)};
   std::ostringstream stream;
   stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_ISO8601_BASIC);
+  stream << format_four_digit_year(parts.tm_year + 1900)
+         << std::put_time(&parts, FORMAT_ISO8601_BASIC_AFTER_YEAR);
   return stream.str();
 }
 

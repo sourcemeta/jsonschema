@@ -3,7 +3,6 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/oauth.h>
 #include <sourcemeta/core/oidc_error.h>
-#include <sourcemeta/core/text.h>
 #include <sourcemeta/core/uri.h>
 
 #include <optional>    // std::optional, std::nullopt
@@ -80,6 +79,37 @@ auto is_required_string_array(const JSON *member) -> bool {
   return member != nullptr && member->is_array_of_strings() && !member->empty();
 }
 
+auto is_https_url(const std::string_view value) -> bool {
+  // OpenID Connect Discovery 1.0 Section 3: every advertised endpoint is a URL
+  // using the https scheme
+  try {
+    const URI uri{value};
+    // Section 3 enumerates what an endpoint may carry as "port, path, and query
+    // parameter components", so a fragment is refused as outside that list
+    // rather than because it could not be dereferenced, which would be the
+    // wrong reason for the two endpoints a user agent loads
+    return uri.is_https() && uri.host().has_value() &&
+           !uri.host().value().empty() && !uri.fragment().has_value();
+  } catch (const URIParseError &) {
+    return false;
+  }
+}
+
+// A member that is present but is not a valid https URL fails the parse rather
+// than being ignored, since an accessor would otherwise report a malformed
+// member as an absent one
+auto validate_endpoint(const JSON &data, const JSON::StringView name,
+                       const JSON::Object::hash_type hash) -> void {
+  const auto *member{data.try_at(name, hash)};
+  if (member == nullptr) {
+    return;
+  }
+
+  if (!member->is_string() || !is_https_url(member->to_string())) {
+    throw OIDCMetadataParseError{};
+  }
+}
+
 auto validate_provider_metadata(const OAuthServerMetadata &oauth) -> void {
   const auto &data{oauth.data()};
 
@@ -109,23 +139,17 @@ auto validate_provider_metadata(const OAuthServerMetadata &oauth) -> void {
       !id_token_algs->contains("RS256")) {
     throw OIDCMetadataParseError{};
   }
-}
 
-auto is_https_url(const std::string_view value) -> bool {
-  // OpenID Connect Discovery 1.0 Section 3: every advertised endpoint is a URL
-  // using the https scheme
-  try {
-    const URI uri{value};
-    // A fragment is never sent in an HTTP request, so an endpoint carrying one
-    // would advertise a location clients cannot reach and is rejected. RFC 3986
-    // Section 3.1 makes the scheme case-insensitive
-    return uri.scheme().has_value() &&
-           equals_ignore_case(uri.scheme().value(), "https") &&
-           uri.host().has_value() && !uri.host().value().empty() &&
-           !uri.fragment().has_value();
-  } catch (const URIParseError &) {
-    return false;
-  }
+  // The endpoints the OAuth layer does not know about. OpenID Connect Discovery
+  // 1.0 Section 3 on userinfo_endpoint, OpenID Connect RP-Initiated Logout 1.0
+  // Section 2.1 on end_session_endpoint, and OpenID Connect Session Management
+  // 1.0 Section 3.3 on check_session_iframe all carry the same requirement:
+  // "This URL MUST use the https scheme and MAY contain port, path, and query
+  // parameter components". The endpoints shared with OAuth are already covered
+  // when that document is validated, which happens before this runs
+  validate_endpoint(data, "userinfo_endpoint"sv, HASH_USERINFO_ENDPOINT);
+  validate_endpoint(data, "end_session_endpoint"sv, HASH_END_SESSION_ENDPOINT);
+  validate_endpoint(data, "check_session_iframe"sv, HASH_CHECK_SESSION_IFRAME);
 }
 
 } // namespace
@@ -134,6 +158,22 @@ OIDCProviderMetadata::OIDCProviderMetadata(JSON &&data,
                                            const std::string_view issuer)
     : oauth_{std::move(data), issuer} {
   validate_provider_metadata(this->oauth_);
+}
+
+OIDCProviderMetadata::OIDCProviderMetadata(OAuthServerMetadata &&oauth)
+    : oauth_{std::move(oauth)} {
+  validate_provider_metadata(this->oauth_);
+}
+
+auto OIDCProviderMetadata::from(OAuthServerMetadata &&oauth)
+    -> std::optional<OIDCProviderMetadata> {
+  // The OAuth layer validated itself on the way in, so only the OpenID Connect
+  // requirements can fail here
+  try {
+    return OIDCProviderMetadata{std::move(oauth)};
+  } catch (const OIDCMetadataParseError &) {
+    return std::nullopt;
+  }
 }
 
 auto OIDCProviderMetadata::from(JSON &&data, const std::string_view issuer)
@@ -204,6 +244,11 @@ auto OIDCProviderMetadata::supports_id_token_signing_alg(
 auto OIDCProviderMetadata::supports_response_type(
     const std::string_view value) const -> bool {
   return this->oauth_.supports_response_type(value);
+}
+
+auto OIDCProviderMetadata::supports_token_endpoint_auth_method(
+    const std::string_view value) const -> bool {
+  return this->oauth_.supports_token_endpoint_auth_method(value);
 }
 
 auto OIDCProviderMetadata::supports_scope(const std::string_view value) const

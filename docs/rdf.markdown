@@ -62,7 +62,7 @@ Schema, so annotated schemas remain valid for every other tool.
 | `x-jsonld-id` | An absolute IRI | property subschema | The predicate IRI the property maps to |
 | `x-jsonld-type` | An absolute IRI or array of absolute IRIs | object or reference subschema | The node `@type` |
 | `x-jsonld-reverse` | An absolute IRI | property subschema | A reverse predicate IRI, emitting `@reverse` edges |
-| `x-jsonld-datatype` | An absolute IRI | scalar subschema | A typed literal datatype IRI, such as `http://www.w3.org/2001/XMLSchema#date` |
+| `x-jsonld-datatype` | An absolute IRI other than `rdf:langString` | scalar subschema | A typed literal datatype IRI, such as `http://www.w3.org/2001/XMLSchema#date`. Language-tagged literals are produced with `x-jsonld-language` instead |
 | `x-jsonld-language` | A canonical [BCP 47](https://www.rfc-editor.org/info/bcp47) language tag | string subschema | The language of language-tagged literals |
 | `x-jsonld-direction` | `ltr` or `rtl` | string subschema | The base direction for internationalised literals |
 | `x-jsonld-json` | A boolean | any subschema | Treat the value as an opaque `@json` literal |

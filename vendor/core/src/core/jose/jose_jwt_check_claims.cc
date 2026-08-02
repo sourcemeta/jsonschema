@@ -1,6 +1,7 @@
 #include <sourcemeta/core/jose_verify.h>
 
-#include <algorithm>   // std::clamp
+#include <sourcemeta/core/time.h>
+
 #include <chrono>      // std::chrono::seconds, std::chrono::system_clock
 #include <optional>    // std::optional, std::nullopt
 #include <string_view> // std::string_view
@@ -11,32 +12,19 @@ using Clock = std::chrono::system_clock;
 
 // The skew is applied to the server clock rather than the attacker-controlled
 // claim, so a NumericDate near the representable bound cannot overflow the
-// comparison (the two forms are otherwise equivalent). The skew is also
-// clamped to a non-negative, bounded grace period and the shift saturates, so
-// an extreme caller-supplied clock or skew stays well-defined too
-auto skew_ticks(const std::chrono::seconds skew) -> Clock::duration {
-  return std::chrono::duration_cast<Clock::duration>(std::clamp(
-      skew, std::chrono::seconds::zero(), std::chrono::seconds{31556952}));
-}
-
+// comparison (the two forms are otherwise equivalent). The shift itself
+// saturates, and the skew is bounded first, so an extreme caller-supplied clock
+// or skew stays well-defined too
 auto shift_backward(const Clock::time_point now,
                     const std::chrono::seconds skew) -> Clock::time_point {
-  const auto ticks{skew_ticks(skew)};
-  if (now.time_since_epoch() < Clock::duration::min() + ticks) {
-    return Clock::time_point{Clock::duration::min()};
-  }
-
-  return now - ticks;
+  return sourcemeta::core::clock_shift_backward(
+      now, sourcemeta::core::jwt_bounded_clock_skew(skew));
 }
 
 auto shift_forward(const Clock::time_point now, const std::chrono::seconds skew)
     -> Clock::time_point {
-  const auto ticks{skew_ticks(skew)};
-  if (now.time_since_epoch() > Clock::duration::max() - ticks) {
-    return Clock::time_point{Clock::duration::max()};
-  }
-
-  return now + ticks;
+  return sourcemeta::core::clock_shift_forward(
+      now, sourcemeta::core::jwt_bounded_clock_skew(skew));
 }
 
 } // namespace

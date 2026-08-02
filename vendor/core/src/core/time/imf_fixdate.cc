@@ -14,7 +14,11 @@
 
 namespace {
 constexpr auto FORMAT_IMF_FIXDATE{"%a, %d %b %Y %H:%M:%S GMT"};
-}
+// The year is rendered separately so it is always four digits (RFC 9110
+// §5.6.7: "year = 4DIGIT"), which "%Y" does not guarantee for a year below 1000
+constexpr auto FORMAT_IMF_FIXDATE_BEFORE_YEAR{"%a, %d %b "};
+constexpr auto FORMAT_IMF_FIXDATE_AFTER_YEAR{" %H:%M:%S GMT"};
+} // namespace
 
 namespace sourcemeta::core {
 
@@ -23,7 +27,9 @@ auto to_imf_fixdate(const std::chrono::system_clock::time_point time)
   const auto parts{time_point_to_broken_down(time)};
   std::ostringstream stream;
   stream.imbue(std::locale::classic());
-  stream << std::put_time(&parts, FORMAT_IMF_FIXDATE);
+  stream << std::put_time(&parts, FORMAT_IMF_FIXDATE_BEFORE_YEAR)
+         << format_four_digit_year(parts.tm_year + 1900)
+         << std::put_time(&parts, FORMAT_IMF_FIXDATE_AFTER_YEAR);
   return stream.str();
 }
 
