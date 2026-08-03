@@ -32,6 +32,28 @@
     "x-jsonld-container": {
       "enum": [ "@list", "@set", "@language", "@index", null ]
     },
+    "x-jsonld-constants": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Node types and identifiers have their own keywords, so a fragment key cannot be a JSON-LD keyword or the rdf:type predicate",
+            "x-format-assertion": true,
+            "not": {
+              "const": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+            },
+            "pattern": "^[^@]",
+            "format": "iri"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/constants-entry"
+          }
+        }
+      ]
+    },
     "x-jsonld-datatype": {
       "anyOf": [
         {
@@ -75,8 +97,7 @@
           "type": "null"
         },
         {
-          "type": "string",
-          "pattern": "^(?:(?:[a-z]{2,3}(?:-[a-z]{3}){0,3}|[a-z]{4,8})(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*(?:-[0-9a-wy-z](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?|x(?:-[a-z0-9]{1,8})+)$"
+          "$ref": "#/$defs/language-tag"
         }
       ]
     },
@@ -125,6 +146,91 @@
             "type": "string",
             "format": "iri"
           }
+        }
+      ]
+    },
+    "x-jsonld-value": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$comment": "The rdf:type predicate would mint type edges to literals, and node types are declared with x-jsonld-type",
+          "x-format-assertion": true,
+          "type": "string",
+          "not": {
+            "const": "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+          },
+          "format": "iri"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "language-tag": {
+      "type": "string",
+      "pattern": "^(?:(?:[a-z]{2,3}(?:-[a-z]{3}){0,3}|[a-z]{4,8})(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*(?:-[0-9a-wy-z](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?|x(?:-[a-z0-9]{1,8})+)$"
+    },
+    "constants-entry": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/constants-term"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/constants-term"
+          }
+        }
+      ]
+    },
+    "constants-term": {
+      "anyOf": [
+        {
+          "type": [ "string", "number", "boolean" ]
+        },
+        {
+          "type": "object",
+          "required": [ "@id" ],
+          "properties": {
+            "@id": {
+              "x-format-assertion": true,
+              "type": "string",
+              "format": "iri"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "@value" ],
+          "properties": {
+            "@value": {
+              "type": [ "string", "number", "boolean" ]
+            },
+            "@type": {
+              "x-format-assertion": true,
+              "type": "string",
+              "format": "iri"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [ "@value", "@language" ],
+          "properties": {
+            "@value": {
+              "type": "string"
+            },
+            "@language": {
+              "$ref": "#/$defs/language-tag"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     }

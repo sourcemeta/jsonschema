@@ -1,5 +1,5 @@
 #include <sourcemeta/core/json.h>
-#include <sourcemeta/core/text.h>
+#include <sourcemeta/core/langtag.h>
 
 #include "jsonld_algorithms.h"
 #include "jsonld_keywords.h"
@@ -10,13 +10,6 @@
 namespace sourcemeta::core {
 
 namespace {
-
-// The text module only lowercases in place, so this returns a lowercased copy.
-auto lowercase(const JSON::StringView value) -> JSON::String {
-  JSON::String result{value};
-  to_lowercase(result);
-  return result;
-}
 
 auto container_includes(const TermDefinition *const definition,
                         const JSON::StringView keyword) -> bool {
@@ -94,8 +87,10 @@ auto compact_value(const ActiveContext &active_context,
       const bool language_matches{
           value.defines(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
               ? (language.has_value() &&
-                 lowercase(value.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
-                               .to_string()) == lowercase(language.value()))
+                 langtag_equals(
+                     value.at(KEYWORD_LANGUAGE, KEYWORD_LANGUAGE_HASH)
+                         .to_string(),
+                     language.value()))
               : !language.has_value()};
       const bool direction_matches{
           value.defines(KEYWORD_DIRECTION, KEYWORD_DIRECTION_HASH)

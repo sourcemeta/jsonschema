@@ -37,6 +37,8 @@ new vocabulary published under a new major version with a new URI.
 | [`x-jsonld-container`](#329-x-jsonld-container) | `@list`, `@set`, `@language`, or `@index` | Array or object property subschemas |
 | [`x-jsonld-self`](#3210-x-jsonld-self) | A URI Template | Scalar or object subschemas |
 | [`x-jsonld-override`](#3211-x-jsonld-override) | A boolean | Any subschema |
+| [`x-jsonld-value`](#3212-x-jsonld-value) | An absolute IRI | Scalar subschemas |
+| [`x-jsonld-constants`](#3213-x-jsonld-constants) | An expanded-form fragment | Object or promoted scalar subschemas |
 
 ### 3.1. `x-format-assertion`
 
@@ -81,8 +83,8 @@ This keyword declares the `@type` of the node that the annotated instance
 location materializes as. A single IRI is equivalent to an array containing
 only that IRI, values that meet at the same location merge into the union of
 the declared types, and an empty array declares no types. It MUST be applied
-to a location whose value is an object, unless the location is promoted to an
-identified node with `x-jsonld-self`.
+to a location whose value is an object, unless the location is promoted to a
+node with `x-jsonld-self` or `x-jsonld-value`.
 
 #### 3.2.3. `x-jsonld-reverse`
 
@@ -206,16 +208,75 @@ Within an override-marked schema object, every keyword of this vocabulary
 also accepts `null`, which removes instead of declaring:
 
 - A `null` for `x-jsonld-datatype`, `x-jsonld-language`, `x-jsonld-direction`,
-  `x-jsonld-container`, `x-jsonld-self`, `x-jsonld-json`, or `x-jsonld-graph`
-  overrides like any other value and restores the behavior the location has
-  when the keyword is absent.
-- A `null` for `x-jsonld-id`, `x-jsonld-reverse`, or `x-jsonld-type` removes
-  every value of that keyword reaching the location from beneath the object,
-  while values from anywhere else are kept. These keywords otherwise
-  accumulate, and their non-null values are unaffected by overriding.
+  `x-jsonld-container`, `x-jsonld-self`, `x-jsonld-json`, `x-jsonld-graph`,
+  or `x-jsonld-value` overrides like any other value and restores the
+  behavior the location has when the keyword is absent. Removing a promotion
+  requires tombstoning `x-jsonld-value`, `x-jsonld-type`, and
+  `x-jsonld-constants` together, as a lone `x-jsonld-value` tombstone
+  strands the other two facets into placement errors.
+- A `null` for `x-jsonld-id`, `x-jsonld-reverse`, `x-jsonld-type`, or
+  `x-jsonld-constants` removes every value of that keyword reaching the
+  location from beneath the object, while values from anywhere else are
+  kept. These keywords otherwise accumulate, and their non-null values are
+  unaffected by overriding. A `null` member inside an `x-jsonld-constants`
+  fragment removes that one key's entries reaching the location from
+  beneath the object, and is only legal inside an override-marked schema
+  object.
 
 Outside an override-marked schema object, a `null` value for any keyword of
 this vocabulary declares nothing, and resolves as if the keyword were absent.
+
+#### 3.2.12. `x-jsonld-value`
+
+The value of this keyword MUST be a string representing an absolute IRI
+[RFC3987], and MUST NOT be the IRI
+`http://www.w3.org/1999/02/22-rdf-syntax-ns#type`, as node types are
+declared with `x-jsonld-type`.
+
+This keyword promotes the annotated scalar instance location into a node
+that carries the scalar as a literal under the declared predicate, with the
+native JSON value preserved. It MUST be applied to a location whose value is
+a scalar. `x-jsonld-type` becomes legal on the promoted location, typing the
+promoted node, and `x-jsonld-self` names it. A promoted node with no
+incoming predicate and no self identity is omitted entirely, and a `null`
+value at a promoted location materializes nothing, as constant properties
+never appear without the scalar that legitimizes them.
+
+When this keyword fuses with `x-jsonld-datatype`, `x-jsonld-language`,
+`x-jsonld-direction`, or `x-jsonld-self` at the same location, those
+keywords follow the scalar into the promoted node, typing or tagging the
+inner literal or naming the node. That reshaping requires consent: the
+other keyword MUST be declared in the same schema object as this keyword,
+or this keyword MUST be declared in an override-marked schema object whose
+subschemas declare the other keyword. Any other fusion is an error. This
+keyword MUST NOT be combined with `x-jsonld-json`, `x-jsonld-graph`, or
+`x-jsonld-container` at the same location.
+
+#### 3.2.13. `x-jsonld-constants`
+
+The value of this keyword MUST be an object representing a fragment of an
+expanded-form JSON-LD node object. Its keys MUST be absolute predicate IRIs
+[RFC3987], and MUST NOT be JSON-LD keywords nor the IRI
+`http://www.w3.org/1999/02/22-rdf-syntax-ns#type`, as node types and node
+identifiers have their own keywords. Its members MUST be expanded-form
+terms, or arrays of them: a bare string, number, or boolean is a literal, a
+bare string never an IRI, an object with a single `@id` member holding an
+absolute IRI is a node reference, and an object with a mandatory non-null
+scalar `@value` member and at most one of an `@type` member holding an
+absolute IRI or an `@language` member holding a canonical language tag in
+the formatting of [RFC5646] is a literal in explicit form. An empty array
+member asserts nothing, and the empty fragment is valid.
+
+This keyword merges constant properties into the node that the annotated
+instance location materializes as. Each entry is an ordinary edge whose
+object is fixed by the schema, indistinguishable in the output from
+instance-derived edges. It MUST be applied to a location whose value is an
+object, or to a scalar location promoted by `x-jsonld-value` or
+`x-jsonld-self`. Fragments that meet at the same location merge: entries
+union by key, and the terms under one key union and deduplicate after
+normalization to canonical expanded form, so a term and its singleton array
+spelling are one value. On a location whose edges are asserted inside a
+named `@graph`, constant properties land on the inner subject.
 
 4. References
 -------------

@@ -70,6 +70,8 @@ Schema, so annotated schemas remain valid for every other tool.
 | `x-jsonld-container` | `@list`, `@set`, `@language`, or `@index` | array or object property subschema | The container semantics of the property |
 | `x-jsonld-self` | An [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI template | scalar or object subschema | Mint the node `@id` from instance values, such as `https://www.iso.org/iso-4217/{this}` |
 | `x-jsonld-override` | A boolean | any subschema | Give the schema object's own `x-jsonld-*` values precedence over conflicting ones from subschemas beneath it, such as a sibling `$ref` |
+| `x-jsonld-value` | An absolute IRI | scalar subschema | Promote the scalar to a node that carries it as a literal under the declared predicate |
+| `x-jsonld-constants` | An expanded-form node object fragment | object or promoted scalar subschema | Constant properties, fixed by the schema, merged into the node |
 
 The guarantee this command makes is syntactic: if resolution succeeds, the
 output is well-formed JSON-LD. Resolution errors enforce only what that
@@ -85,10 +87,11 @@ they belong, instead of paying for the checks on every promotion.
 
 > [!NOTE]
 > As a deliberate deviation from JSON-LD 1.1, language tags must be written in
-> canonical BCP 47 form, both as `x-jsonld-language` values and as the map
-> keys of an `@language` container in instance data. For example, `en-US` is
-> accepted while `en-us` is rejected. This keeps language tag equality a plain
-> cheap string comparison everywhere in the engine.
+> canonical BCP 47 form, as `x-jsonld-language` values, as the map keys of an
+> `@language` container in instance data, and as `@language` members of
+> `x-jsonld-constants` literals. For example, `en-US` is accepted while
+> `en-us` is rejected. This keeps language tag equality a plain cheap string
+> comparison everywhere in the engine.
 
 The variables of an `x-jsonld-self` URI template are matched verbatim against
 instance property names, so a variable like `{+meta.slug}` binds a property
@@ -124,6 +127,15 @@ products and maps them to [schema.org](https://schema.org) at the same time:
       "x-jsonld-container": "@list",
       "items": { "type": "string" }
     },
+    "weight": {
+      "type": "number",
+      "x-jsonld-id": "https://schema.org/weight",
+      "x-jsonld-value": "https://schema.org/value",
+      "x-jsonld-type": "https://schema.org/QuantitativeValue",
+      "x-jsonld-constants": {
+        "https://schema.org/unitCode": "KGM"
+      }
+    },
     "manufacturer": {
       "type": "object",
       "x-jsonld-id": "https://schema.org/manufacturer",
@@ -152,6 +164,7 @@ Also consider a JSON instance called `instance.json` that looks like this:
   "name": "Vacuum Robot",
   "releaseDate": "2026-01-15",
   "keywords": [ "vacuum", "robot" ],
+  "weight": 2.5,
   "manufacturer": {
     "name": "ACME",
     "url": "https://acme.example.com"
@@ -186,10 +199,23 @@ JSON-LD form, would look like this:
     "https://schema.org/releaseDate": [
       { "@value": "2026-01-15", "@type": "http://www.w3.org/2001/XMLSchema#date" }
     ],
-    "https://schema.org/sku": [ { "@value": "ABC-123" } ]
+    "https://schema.org/sku": [ { "@value": "ABC-123" } ],
+    "https://schema.org/weight": [
+      {
+        "@type": [ "https://schema.org/QuantitativeValue" ],
+        "https://schema.org/value": [ { "@value": 2.5 } ],
+        "https://schema.org/unitCode": [ { "@value": "KGM" } ]
+      }
+    ]
   }
 ]
 ```
+
+Note how the scalar `weight` was promoted to a node of its own:
+`x-jsonld-value` carries the number as a literal under the declared
+predicate, `x-jsonld-type` types the promoted node, and `x-jsonld-constants`
+merges constant properties, such as the measurement unit, that have no
+counterpart in the instance.
 
 To instead produce the idiomatic compacted JSON-LD consumed by search engines
 and JSON-LD-aware clients, provide a context file such as this `context.json`:
@@ -226,6 +252,11 @@ The resulting document would look like this:
   "name": "Vacuum Robot",
   "releaseDate": "2026-01-15",
   "sku": "ABC-123",
+  "weight": {
+    "@type": "QuantitativeValue",
+    "value": 2.5,
+    "unitCode": "KGM"
+  },
   "@context": {
     "@vocab": "https://schema.org/",
     "xsd": "http://www.w3.org/2001/XMLSchema#",

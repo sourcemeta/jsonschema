@@ -45,6 +45,10 @@ struct JSONLDNode {
   std::vector<JSON::String> types{};
   /// Whether the node's descendants are asserted in the named graph it denotes.
   bool graph{false};
+  /// Constant properties merged into the node, as a canonical fragment of
+  /// predicate to term array whose entries are all non-empty term arrays,
+  /// never null removal entries. May be empty.
+  JSON constants{JSON::make_object()};
 };
 
 /// @ingroup jsonld
@@ -71,6 +75,31 @@ struct JSONLDReference {
   JSON::String id{};
   /// The types of the promoted node.
   std::vector<JSON::String> types{};
+  /// Constant properties merged into the node, as a canonical fragment of
+  /// predicate to term array whose entries are all non-empty term arrays,
+  /// never null removal entries. May be empty.
+  JSON constants{JSON::make_object()};
+};
+
+/// @ingroup jsonld
+/// A scalar promoted to a node that carries the scalar as a literal under a
+/// value predicate, plus constant properties. A null value at a promoted
+/// position materializes nothing, as constant properties never appear
+/// without the scalar that legitimizes them.
+struct JSONLDPromotion {
+  /// The node identifier, absent for a fresh blank node.
+  std::optional<JSON::String> id{};
+  /// The types of the promoted node.
+  std::vector<JSON::String> types{};
+  /// The predicate that carries the scalar.
+  JSON::String value{};
+  /// The literal facets of the carried scalar. The opaque JSON literal facet
+  /// does not apply to a promoted scalar and must stay unset.
+  JSONLDLiteral literal{};
+  /// Constant properties merged into the node, as a canonical fragment of
+  /// predicate to term array whose entries are all non-empty term arrays,
+  /// never null removal entries. May be empty.
+  JSON constants{JSON::make_object()};
 };
 
 /// @ingroup jsonld
@@ -104,7 +133,8 @@ struct JSONLDDescriptor {
   /// How the position connects to its parent.
   std::vector<JSONLDEdge> edges{};
   /// What the position is.
-  std::variant<JSONLDNode, JSONLDLiteral, JSONLDReference, JSONLDCollection>
+  std::variant<JSONLDNode, JSONLDLiteral, JSONLDReference, JSONLDCollection,
+               JSONLDPromotion>
       value{};
 };
 
@@ -208,6 +238,33 @@ auto jsonld_materialize(const JSON &instance,
 SOURCEMETA_CORE_JSONLD_EXPORT
 auto jsonld_materialize(const JSON &instance,
                         const JSONLDWeakAnnotationList &annotations) -> JSON;
+
+/// @ingroup jsonld
+///
+/// Validate a fragment of constant node properties written in a restricted
+/// expanded form and return its canonical form: keys sorted, bare scalars
+/// and single terms wrapped into term arrays, duplicate terms removed, and
+/// native numbers or booleans paired with an explicit datatype rewritten to
+/// their canonical string lexical form. A grammar violation throws. A null
+/// entry passes through untouched as the caller's removal channel, so a
+/// canonical fragment only becomes usable as descriptor constants once the
+/// caller resolves removals and strips the null entries. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/jsonld.h>
+///
+/// #include <cassert>
+///
+/// const auto fragment{sourcemeta::core::parse_json(R"({
+///   "https://example.com/unit": { "@id": "https://example.com/metre" }
+/// })")};
+///
+/// const auto canonical{
+///     sourcemeta::core::jsonld_canonicalize_fragment(fragment)};
+/// assert(canonical.at("https://example.com/unit").is_array());
+/// ```
+SOURCEMETA_CORE_JSONLD_EXPORT
+auto jsonld_canonicalize_fragment(const JSON &fragment) -> JSON;
 
 } // namespace sourcemeta::core
 

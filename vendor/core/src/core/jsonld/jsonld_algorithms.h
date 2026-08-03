@@ -5,14 +5,23 @@
 #include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 
-#include <cstddef>    // std::size_t
-#include <functional> // std::less
-#include <map>        // std::map
-#include <memory>     // std::shared_ptr
-#include <optional>   // std::optional
-#include <vector>     // std::vector
+#include <cstddef>     // std::size_t
+#include <functional>  // std::less
+#include <map>         // std::map
+#include <memory>      // std::shared_ptr
+#include <optional>    // std::optional
+#include <string_view> // std::string_view
+#include <vector>      // std::vector
 
 namespace sourcemeta::core {
+
+// A blank node identifier begins with "_:" (JSON-LD 1.1 Section 3.5). A
+// label-less "_:" still counts, so that processing algorithms relabel every
+// blank-flavored identifier instead of leaking one as an IRI. Expanded form
+// validation additionally requires a label and keeps its own stricter check.
+inline auto is_blank_node(const std::string_view value) -> bool {
+  return value.starts_with("_:");
+}
 
 struct TermDefinition {
   std::optional<JSON::String> iri;

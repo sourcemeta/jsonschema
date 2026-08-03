@@ -5,7 +5,7 @@
 #include "jsonld_keywords.h"
 #include "jsonld_serialise.h"
 
-#include <algorithm> // std::ranges::sort, std::ranges::stable_sort, std::ranges::unique, std::ranges::none_of
+#include <algorithm> // std::ranges::sort, std::ranges::stable_sort, std::ranges::unique, std::ranges::none_of, std::ranges::find
 #include <cassert>   // assert
 #include <cstddef>   // std::size_t
 #include <functional>  // std::reference_wrapper, std::cref
@@ -154,6 +154,44 @@ auto attach(JSON &node, const std::vector<JSONLDEdge> &edges, JSON value)
   attach_one(node, edges.back(), std::move(value));
 }
 
+// The keys of an object in sorted order, so the object walk is canonical
+// regardless of the instance key order.
+auto sorted_keys(const JSON &value)
+    -> std::vector<std::reference_wrapper<const JSON::String>> {
+  std::vector<std::reference_wrapper<const JSON::String>> keys;
+  keys.reserve(value.object_size());
+  for (const auto &entry : value.as_object()) {
+    keys.push_back(std::cref(entry.first));
+  }
+  std::ranges::sort(keys, [](const auto &left, const auto &right) -> bool {
+    return left.get() < right.get();
+  });
+  return keys;
+}
+
+// Merge canonical constant properties into a node, unioning terms under each
+// predicate without duplicates. Keys are iterated in sorted order so the
+// emitted property order does not depend on how the caller assembled the map
+auto merge_constants(JSON &node, const JSON &constants) -> void {
+  assert(constants.is_object());
+  if (constants.empty()) {
+    return;
+  }
+
+  for (const auto key : sorted_keys(constants)) {
+    const auto &terms{constants.at(key.get())};
+    assert(terms.is_array());
+    assert(!terms.empty());
+    auto &target{property_target(node, key.get())};
+    for (const auto &term : terms.as_array()) {
+      if (std::ranges::find(target.as_array(), term) ==
+          target.as_array().cend()) {
+        target.push_back(JSON{term});
+      }
+    }
+  }
+}
+
 auto materialize_literal(const JSONLDLiteral &descriptor, const JSON &value)
     -> JSON {
   auto result{JSON::make_object()};
@@ -202,7 +240,30 @@ auto materialize_reference(const JSONLDReference &descriptor) -> JSON {
                              types_to_array(descriptor.types),
                              KEYWORD_TYPE_HASH);
   }
+  merge_constants(result, descriptor.constants);
   return result;
+}
+
+auto materialize_promotion(const JSONLDPromotion &descriptor, const JSON &value)
+    -> JSON {
+  assert(!value.is_object());
+  assert(!value.is_array());
+  assert(!descriptor.literal.json);
+  auto node{JSON::make_object()};
+  if (descriptor.id.has_value()) {
+    node.assign_assume_new(JSON::String{KEYWORD_ID},
+                           JSON{descriptor.id.value()}, KEYWORD_ID_HASH);
+  }
+  if (!descriptor.types.empty()) {
+    node.assign_assume_new(JSON::String{KEYWORD_TYPE},
+                           types_to_array(descriptor.types), KEYWORD_TYPE_HASH);
+  }
+
+  auto terms{JSON::make_array()};
+  terms.push_back(materialize_literal(descriptor.literal, value));
+  node.assign_assume_new(JSON::String{descriptor.value}, std::move(terms));
+  merge_constants(node, descriptor.constants);
+  return node;
 }
 
 template <typename PointerT>
@@ -240,21 +301,6 @@ auto build_collection(const JSON &value, PointerT &pointer,
   result.assign_assume_new(JSON::String{KEYWORD_LIST}, std::move(elements),
                            KEYWORD_LIST_HASH);
   return result;
-}
-
-// The keys of an object in sorted order, so the object walk is canonical
-// regardless of the instance key order.
-auto sorted_keys(const JSON &value)
-    -> std::vector<std::reference_wrapper<const JSON::String>> {
-  std::vector<std::reference_wrapper<const JSON::String>> keys;
-  keys.reserve(value.object_size());
-  for (const auto &entry : value.as_object()) {
-    keys.push_back(std::cref(entry.first));
-  }
-  std::ranges::sort(keys, [](const auto &left, const auto &right) -> bool {
-    return left.get() < right.get();
-  });
-  return keys;
 }
 
 // The reserved @none key carries no language.
@@ -385,11 +431,13 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
   }
 
   if (!value.is_object()) {
+    merge_constants(node, descriptor.constants);
     return node;
   }
 
   // A graph node asserts its members in the named graph it identifies, with the
-  // members carried by a subject node that shares its identifier.
+  // members carried by a subject node that shares its identifier. Constant
+  // properties belong to the subject inside the graph, never to the wrapper.
   if (descriptor.graph) {
     auto inner{JSON::make_object()};
     if (descriptor.id.has_value()) {
@@ -398,6 +446,7 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
     }
     std::vector<JSON> graph_nodes;
     fill_node(inner, value, pointer, range, graph_nodes);
+    merge_constants(inner, descriptor.constants);
     auto graph{JSON::make_array()};
     if (inner.object_size() > (descriptor.id.has_value() ? 1 : 0)) {
       graph.push_back(std::move(inner));
@@ -416,6 +465,7 @@ auto materialize_node(const JSONLDNode &descriptor, const JSON &value,
   }
 
   fill_node(node, value, pointer, range, standalone);
+  merge_constants(node, descriptor.constants);
   return node;
 }
 
@@ -473,6 +523,21 @@ auto materialize_value(const JSON &value, PointerT &pointer,
   if (const auto *reference_descriptor{
           std::get_if<JSONLDReference>(&descriptor.value)}) {
     return materialize_reference(*reference_descriptor);
+  }
+
+  if (const auto *promotion_descriptor{
+          std::get_if<JSONLDPromotion>(&descriptor.value)}) {
+    // A schema-manufactured node with no name and no edge is not asserted,
+    // so an unreferenced scalar cannot pollute the graph with anonymous
+    // subjects. A collection member is exempt, as it attaches positionally
+    // through the collection's own edge and dropping it would silently
+    // shorten the collection
+    const bool member_position{matched_edges == nullptr && !pointer.empty()};
+    if (!promotion_descriptor->id.has_value() && descriptor.edges.empty() &&
+        !member_position) {
+      return std::nullopt;
+    }
+    return materialize_promotion(*promotion_descriptor, value);
   }
 
   const auto &collection{std::get<JSONLDCollection>(descriptor.value)};
