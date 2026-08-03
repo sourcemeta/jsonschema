@@ -77,7 +77,7 @@ cat << EOF > "$TMP/expected.json"
         "line": 4,
         "retries": 0,
         "flaky": false,
-        "trace": "error: RDF expansion mismatch\n  expected:\n    []\n  but got:\n    [\n      {\n        \"https://schema.org/name\": [\n          {\n            \"@value\": \"Ada\"\n          }\n        ]\n      }\n    ]\n"
+        "trace": "error: RDF expansion mismatch\n  at line 8\n  at column 7\n  at file path $(realpath "$TMP")/test.json\n  at location \"/tests/0/rdf\"\n\n[\n  {\n    \"https://schema.org/name\": [\n      {\n        \"@value\": \"Ada\"\n      }\n    ]\n  }\n]\n"
       }
     ]
   }

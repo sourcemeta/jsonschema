@@ -48,28 +48,21 @@ $(realpath "$TMP")/test.json:
   1/1 FAIL Wrong expectation
 
 error: RDF expansion mismatch
-  expected:
-    [
+  at line 8
+  at column 7
+  at file path $(realpath "$TMP")/test.json
+  at location "/tests/0/rdf"
+
+[
+  {
+    "@type": [ "https://schema.org/Person" ],
+    "https://schema.org/name": [
       {
-        "@type": [ "https://schema.org/Person" ],
-        "https://schema.org/name": [
-          {
-            "@value": "Grace"
-          }
-        ]
+        "@value": "Ada"
       }
     ]
-  but got:
-    [
-      {
-        "@type": [ "https://schema.org/Person" ],
-        "https://schema.org/name": [
-          {
-            "@value": "Ada"
-          }
-        ]
-      }
-    ]
+  }
+]
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -24,23 +24,8 @@
 
 namespace {
 
-auto print_json_indented(const sourcemeta::core::JSON &document,
-                         const std::string_view indent, std::ostream &stream)
-    -> void {
-  std::ostringstream buffer;
-  sourcemeta::core::prettify(document, buffer);
-  stream << indent;
-  for (const auto character : buffer.view()) {
-    stream << character;
-    if (character == '\n') {
-      stream << indent;
-    }
-  }
-
-  stream << "\n";
-}
-
-auto print_rdf_failure(const sourcemeta::blaze::TestCase &test_case,
+auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
+                       const std::size_t test_index,
                        const sourcemeta::blaze::TestOutcome &outcome,
                        std::ostream &stream) -> void {
   if (outcome.rdf_error.has_value()) {
@@ -69,11 +54,24 @@ auto print_rdf_failure(const sourcemeta::blaze::TestCase &test_case,
       stream << "take effect\n";
     }
   } else {
+    auto location{sourcemeta::core::Pointer{"tests", test_index, "rdf"}};
+    auto position{entry.positions.get(location)};
+    if (!position.has_value()) {
+      location = sourcemeta::core::Pointer{"tests", test_index, "rdfPath"};
+      position = entry.positions.get(location);
+    }
+
     stream << "error: RDF expansion mismatch\n";
-    stream << "  expected:\n";
-    print_json_indented(test_case.rdf.value(), "    ", stream);
-    stream << "  but got:\n";
-    print_json_indented(outcome.rdf.value(), "    ", stream);
+    if (position.has_value()) {
+      stream << "  at line " << std::get<0>(position.value()) << "\n";
+      stream << "  at column " << std::get<1>(position.value()) << "\n";
+    }
+
+    stream << "  at file path " << entry.resolution_base.string() << "\n";
+    stream << "  at location \"" << sourcemeta::core::to_string(location)
+           << "\"\n\n";
+    sourcemeta::core::prettify(outcome.rdf.value(), stream);
+    stream << "\n";
   }
 }
 
@@ -257,7 +255,8 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
             emit_target_header();
             std::cout << entry_indent << index << "/" << total << " FAIL "
                       << description << "\n\n";
-            print_rdf_failure(test_case, outcome, std::cout);
+            print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                              outcome, std::cout);
 
             if (index != total && verbose) {
               std::cout << "\n";
@@ -339,7 +338,7 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
     const auto file_path{entry.first};
 
     const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &target, std::size_t,
+        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
             std::size_t, const sourcemeta::blaze::TestCase &test_case,
             const sourcemeta::blaze::TestOutcome &outcome,
             sourcemeta::blaze::TestTimestamp start,
@@ -398,7 +397,8 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
                                  sourcemeta::core::JSON{trace_stream.str()});
             } else {
               std::ostringstream trace_stream;
-              print_rdf_failure(test_case, outcome, trace_stream);
+              print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                                outcome, trace_stream);
               test_object.assign("trace",
                                  sourcemeta::core::JSON{trace_stream.str()});
             }
