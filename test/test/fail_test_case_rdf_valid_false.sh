@@ -37,3 +37,21 @@ Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.ma
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+# JSON error
+"$1" test "$TMP/test.json" --json > "$TMP/output.json" 2>&1 \
+  && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6"
+
+cat << EOF > "$TMP/expected.json"
+{
+  "error": "Test case documents may only set the \`rdf\` or \`rdfPath\` property when the \`valid\` property is set to true",
+  "line": 4,
+  "column": 5,
+  "filePath": "$(realpath "$TMP")/test.json",
+  "location": "/tests/0"
+}
+EOF
+
+diff "$TMP/output.json" "$TMP/expected.json"
