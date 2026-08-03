@@ -9,6 +9,7 @@
 
 #include <sourcemeta/blaze/compiler.h>
 #include <sourcemeta/blaze/evaluator.h>
+#include <sourcemeta/blaze/output.h>
 
 #include <sourcemeta/blaze/foundation.h>
 #include <sourcemeta/core/json.h>
@@ -51,6 +52,8 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestCase {
   bool valid;
   /// The test data to validate
   sourcemeta::core::JSON data;
+  /// The expected promotion of the test data to expanded-form JSON-LD
+  std::optional<sourcemeta::core::JSON> rdf;
   /// The position tracker for error reporting on the data
   sourcemeta::core::PointerPositionTracker tracker;
   /// The position of this test case in the test suite file
@@ -67,6 +70,27 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestCase {
         const sourcemeta::core::Pointer &location,
         const sourcemeta::core::PointerPositionTracker::Position &position)
       -> TestCase;
+};
+
+/// @ingroup test
+/// Represents the outcome of evaluating a single test case against a target
+struct SOURCEMETA_BLAZE_TEST_EXPORT TestOutcome {
+// See
+// https://learn.microsoft.com/en-us/cpp/error-messages/compiler-warnings/compiler-warning-level-1-c4251?view=msvc-170
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251)
+#endif
+  /// Whether the test case passed overall
+  bool passed;
+  /// The actual validity outcome of the test data against the target
+  bool valid;
+  /// The actual expansion, when RDF promotion ran and succeeded
+  std::optional<sourcemeta::core::JSON> rdf;
+  /// The resolution error, when RDF promotion failed
+  std::optional<JSONLDResolutionError> rdf_error;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251)
+#endif
 };
 
 /// @ingroup test
@@ -108,7 +132,7 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   // TODO(C++23): Use std::move_only_function when available in libc++
   using Callback = std::function<void(
       const sourcemeta::core::JSON::String &target, std::size_t index,
-      std::size_t total, const TestCase &test_case, bool actual,
+      std::size_t total, const TestCase &test_case, const TestOutcome &outcome,
       TestTimestamp start, TestTimestamp end)>;
 
   /// Run all test cases in the suite, invoking the callback for each.
@@ -150,12 +174,13 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   /// const auto result{suite.run(
   ///     [](const sourcemeta::core::JSON::String &target,
   ///        std::size_t index, std::size_t total,
-  ///        const sourcemeta::blaze::TestCase &test_case, bool actual,
+  ///        const sourcemeta::blaze::TestCase &test_case,
+  ///        const sourcemeta::blaze::TestOutcome &outcome,
   ///        sourcemeta::blaze::TestTimestamp start,
   ///        sourcemeta::blaze::TestTimestamp end) {
   ///       std::cout << target << " " << index << "/" << total << ": "
   ///                 << test_case.description << " - "
-  ///                 << (test_case.valid == actual ? "PASS" : "FAIL")
+  ///                 << (outcome.passed ? "PASS" : "FAIL")
   ///                 << "\n";
   ///     })};
   ///
