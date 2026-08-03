@@ -14,10 +14,6 @@ namespace sourcemeta::core {
 
 namespace {
 
-auto is_blank_node(const JSON::StringView value) -> bool {
-  return value.starts_with("_:");
-}
-
 // Append a value to the property array of node, creating the array as needed.
 auto append_value(JSON &node, const JSON::StringView property, JSON value)
     -> void {

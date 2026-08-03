@@ -49,6 +49,10 @@ auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
       return "self";
     case sourcemeta::blaze::JSONLDFacet::Override:
       return "override";
+    case sourcemeta::blaze::JSONLDFacet::ValuePredicate:
+      return "value";
+    case sourcemeta::blaze::JSONLDFacet::Constants:
+      return "constants";
     default:
       std::unreachable();
   }

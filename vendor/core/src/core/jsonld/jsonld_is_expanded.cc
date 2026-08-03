@@ -15,7 +15,8 @@ namespace sourcemeta::core {
 namespace {
 
 // A blank node identifier is the prefix "_:" followed by a label (JSON-LD 1.1
-// Section 3.5).
+// Section 3.5). Validation requires the label, unlike the processing helper,
+// as a label-less "_:" identifies nothing.
 auto is_blank_node(const std::string_view value) -> bool {
   return value.size() > 2 && value.starts_with("_:");
 }

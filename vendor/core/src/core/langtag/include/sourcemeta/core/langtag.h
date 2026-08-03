@@ -63,6 +63,24 @@ auto is_langtag(const std::string_view value) -> bool;
 SOURCEMETA_CORE_LANGTAG_EXPORT
 auto is_canonical_langtag(const std::string_view value) -> bool;
 
+/// @ingroup langtag
+/// Check whether two language tags are equal per RFC 5646 (BCP 47) Section
+/// 2.1.1, which treats tags and their subtags as case insensitive. The
+/// comparison is allocation-free and does not validate its arguments. For
+/// example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/langtag.h>
+///
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::langtag_equals("en-US", "en-us"));
+/// assert(!sourcemeta::core::langtag_equals("en", "fr"));
+/// ```
+SOURCEMETA_CORE_LANGTAG_EXPORT
+auto langtag_equals(const std::string_view left, const std::string_view right)
+    -> bool;
+
 } // namespace sourcemeta::core
 
 #endif

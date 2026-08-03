@@ -60,6 +60,27 @@ private:
   Pointer pointer_;
 };
 
+/// @ingroup jsonld
+/// An error that represents a constants fragment grammar violation. The
+/// message states the violated fragment rule, the key names the offending
+/// fragment entry, and the pointer locates the offending value inside the
+/// fragment
+class SOURCEMETA_CORE_JSONLD_EXPORT JSONLDFragmentError : public JSONLDError {
+public:
+  /// Locate the error at a fragment entry.
+  JSONLDFragmentError(const char *code, Pointer pointer, JSON::String key)
+      : JSONLDError{code, std::move(pointer)}, key_{std::move(key)} {}
+
+  /// Get the key of the fragment entry that caused the error, empty when the
+  /// fragment itself is malformed
+  [[nodiscard]] auto key() const noexcept -> const JSON::String & {
+    return this->key_;
+  }
+
+private:
+  JSON::String key_;
+};
+
 #if defined(_MSC_VER)
 #pragma warning(default : 4251 4275)
 #endif

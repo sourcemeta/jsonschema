@@ -249,6 +249,13 @@ auto is_langtag(const std::string_view value) -> bool {
   return is_irregular_grandfathered(value);
 }
 
+auto langtag_equals(const std::string_view left, const std::string_view right)
+    -> bool {
+  // Language tags and their subtags, including private use and extensions,
+  // are to be treated as case insensitive (RFC 5646 Section 2.1.1)
+  return equals_ignore_case(left, right);
+}
+
 auto is_canonical_langtag(const std::string_view value) -> bool {
   // The registry maps every irregular grandfathered tag to a canonical
   // replacement, so none of them is canonical.
