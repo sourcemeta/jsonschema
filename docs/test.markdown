@@ -176,35 +176,6 @@ jsonschema test --ignore dist
 jsonschema test --extension .test.json
 ```
 
-### Run a single test definition that asserts on JSON-LD promotion
-
-Given a schema annotated with the `x-jsonld-*` keywords of the
-[`rdf`](./rdf.markdown) command, a test suite may assert on the expanded
-form JSON-LD promotion of its valid instances:
-
-```json
-{
-  "target": "https://example.com/person",
-  "tests": [
-    {
-      "description": "Promotes to schema.org",
-      "valid": true,
-      "data": { "name": "Ada" },
-      "rdf": [
-        {
-          "@type": [ "https://schema.org/Person" ],
-          "https://schema.org/name": [ { "@value": "Ada" } ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-```sh
-jsonschema test path/to/test.json --resolve path/to/schema.json
-```
-
 ### Run a single test definition enabling HTTP resolution
 
 ```sh
