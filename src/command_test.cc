@@ -30,7 +30,20 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
                        std::ostream &stream) -> void {
   if (outcome.rdf_error.has_value()) {
     const auto &error{outcome.rdf_error.value()};
+    auto position{entry.positions.get(
+        sourcemeta::core::Pointer{"tests", test_index, "data"}.concat(
+            error.instance_location))};
+    if (!position.has_value()) {
+      position = entry.positions.get(
+          sourcemeta::core::Pointer{"tests", test_index, "dataPath"});
+    }
+
     stream << "error: " << error.message << "\n";
+    if (position.has_value()) {
+      stream << "  at line " << std::get<0>(position.value()) << "\n";
+      stream << "  at column " << std::get<1>(position.value()) << "\n";
+    }
+
     stream << "  at instance location \""
            << sourcemeta::core::to_string(error.instance_location) << "\"\n";
     stream << "  at facet \"" << sourcemeta::jsonschema::facet_name(error.facet)
@@ -45,6 +58,11 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
     if (error.inert_override_location.has_value()) {
       stream << "  at inert override location "
              << error.inert_override_location.value() << "\n";
+    }
+
+    stream << "  at file path " << entry.resolution_base.string() << "\n";
+
+    if (error.inert_override_location.has_value()) {
       stream << "\nThe x-jsonld-override mark was ignored because it does not "
                 "enclose the\n";
       stream << "conflicting annotation. Move the conflicting annotation, or "

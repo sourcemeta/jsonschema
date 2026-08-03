@@ -82,7 +82,7 @@ cat << EOF > "$TMP/expected.json"
         "line": 4,
         "retries": 0,
         "flaky": false,
-        "trace": "error: A JSON-LD datatype cannot be assigned more than one value\n  at instance location \"/x\"\n  at facet \"datatype\"\n  at schema location https://example.com#/properties/x/allOf/0/x-jsonld-datatype\n  at conflicting schema location https://example.com#/properties/x/allOf/1/x-jsonld-datatype\n"
+        "trace": "error: A JSON-LD datatype cannot be assigned more than one value\n  at line 7\n  at column 17\n  at instance location \"/x\"\n  at facet \"datatype\"\n  at schema location https://example.com#/properties/x/allOf/0/x-jsonld-datatype\n  at conflicting schema location https://example.com#/properties/x/allOf/1/x-jsonld-datatype\n  at file path $(realpath "$TMP")/test.json\n"
       }
     ]
   }
