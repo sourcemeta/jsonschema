@@ -3,6 +3,7 @@
 #include <sourcemeta/blaze/test.h>
 
 #include <sourcemeta/core/json.h>
+#include <sourcemeta/core/jsonpointer.h>
 
 #include <algorithm>   // std::find, std::distance
 #include <chrono>      // std::chrono
@@ -22,6 +23,59 @@
 #include "utils.h"
 
 namespace {
+
+auto print_json_indented(const sourcemeta::core::JSON &document,
+                         const std::string_view indent, std::ostream &stream)
+    -> void {
+  std::ostringstream buffer;
+  sourcemeta::core::prettify(document, buffer);
+  stream << indent;
+  for (const auto character : buffer.view()) {
+    stream << character;
+    if (character == '\n') {
+      stream << indent;
+    }
+  }
+
+  stream << "\n";
+}
+
+auto print_rdf_failure(const sourcemeta::blaze::TestCase &test_case,
+                       const sourcemeta::blaze::TestOutcome &outcome,
+                       std::ostream &stream) -> void {
+  if (outcome.rdf_error.has_value()) {
+    const auto &error{outcome.rdf_error.value()};
+    stream << "error: " << error.message << "\n";
+    stream << "  at instance location \""
+           << sourcemeta::core::to_string(error.instance_location) << "\"\n";
+    stream << "  at facet \"" << sourcemeta::jsonschema::facet_name(error.facet)
+           << "\"\n";
+    stream << "  at schema location " << error.schema_location << "\n";
+
+    if (error.conflicting_schema_location.has_value()) {
+      stream << "  at conflicting schema location "
+             << error.conflicting_schema_location.value() << "\n";
+    }
+
+    if (error.inert_override_location.has_value()) {
+      stream << "  at inert override location "
+             << error.inert_override_location.value() << "\n";
+      stream << "\nThe x-jsonld-override mark was ignored because it does not "
+                "enclose the\n";
+      stream << "conflicting annotation. Move the conflicting annotation, or "
+                "the reference\n";
+      stream << "that brings it in, inside the overriding object for the "
+                "override to\n";
+      stream << "take effect\n";
+    }
+  } else {
+    stream << "error: RDF expansion mismatch\n";
+    stream << "  expected:\n";
+    print_json_indented(test_case.rdf.value(), "    ", stream);
+    stream << "  but got:\n";
+    print_json_indented(outcome.rdf.value(), "    ", stream);
+  }
+}
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::blaze::SchemaResolver &schema_resolver,
@@ -133,7 +187,8 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
     const auto suite_result{test_suite.run(
         [&](const sourcemeta::core::JSON::String &target, std::size_t index,
             std::size_t total, const sourcemeta::blaze::TestCase &test_case,
-            bool actual, sourcemeta::blaze::TestTimestamp,
+            const sourcemeta::blaze::TestOutcome &outcome,
+            sourcemeta::blaze::TestTimestamp,
             sourcemeta::blaze::TestTimestamp) {
           if (verbose && index == 1) {
             std::cout << "\n";
@@ -154,13 +209,13 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
                                       ? "<no description>"
                                       : test_case.description};
 
-          if (test_case.valid == actual) {
+          if (outcome.passed) {
             if (verbose) {
               emit_target_header();
               std::cout << entry_indent << index << "/" << total << " PASS "
                         << description << "\n";
             }
-          } else if (!test_case.valid && actual) {
+          } else if (!test_case.valid && outcome.valid) {
             if (!verbose) {
               std::cout << "\n";
             }
@@ -172,7 +227,7 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
             if (index != total && verbose) {
               std::cout << "\n";
             }
-          } else {
+          } else if (!outcome.valid) {
             const std::string ref{"$ref"};
             sourcemeta::blaze::SimpleOutput output{test_case.data,
                                                    {std::cref(ref)}};
@@ -191,6 +246,18 @@ auto report_as_text(const sourcemeta::core::Options &options) -> void {
             std::cout << entry_indent << index << "/" << total << " FAIL "
                       << description << "\n\n";
             sourcemeta::jsonschema::print(output, test_case.tracker, std::cout);
+
+            if (index != total && verbose) {
+              std::cout << "\n";
+            }
+          } else {
+            if (!verbose) {
+              std::cout << "\n";
+            }
+            emit_target_header();
+            std::cout << entry_indent << index << "/" << total << " FAIL "
+                      << description << "\n\n";
+            print_rdf_failure(test_case, outcome, std::cout);
 
             if (index != total && verbose) {
               std::cout << "\n";
@@ -274,7 +341,8 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
     const auto suite_result{test_suite.run(
         [&](const sourcemeta::core::JSON::String &target, std::size_t,
             std::size_t, const sourcemeta::blaze::TestCase &test_case,
-            bool actual, sourcemeta::blaze::TestTimestamp start,
+            const sourcemeta::blaze::TestOutcome &outcome,
+            sourcemeta::blaze::TestTimestamp start,
             sourcemeta::blaze::TestTimestamp end) {
           auto test_object{sourcemeta::core::JSON::make_object()};
 
@@ -283,9 +351,9 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
                                : test_case.description};
           test_object.assign("name", sourcemeta::core::JSON{name});
 
-          const bool passed{test_case.valid == actual};
           test_object.assign(
-              "status", sourcemeta::core::JSON{passed ? "passed" : "failed"});
+              "status",
+              sourcemeta::core::JSON{outcome.passed ? "passed" : "failed"});
 
           test_object.assign("duration",
                              sourcemeta::core::JSON{duration_ms(start, end)});
@@ -307,12 +375,12 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
           test_object.assign("threadId",
                              sourcemeta::core::JSON{thread_id_stream.str()});
 
-          if (!passed) {
-            if (!test_case.valid && actual) {
+          if (!outcome.passed) {
+            if (!test_case.valid && outcome.valid) {
               test_object.assign("message",
                                  sourcemeta::core::JSON{"Passed but was "
                                                         "expected to fail"});
-            } else {
+            } else if (!outcome.valid) {
               std::ostringstream trace_stream;
               const std::string ref{"$ref"};
               sourcemeta::blaze::SimpleOutput output{test_case.data,
@@ -326,6 +394,11 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
                   std::ref(output));
               sourcemeta::jsonschema::print(output, test_case.tracker,
                                             trace_stream);
+              test_object.assign("trace",
+                                 sourcemeta::core::JSON{trace_stream.str()});
+            } else {
+              std::ostringstream trace_stream;
+              print_rdf_failure(test_case, outcome, trace_stream);
               test_object.assign("trace",
                                  sourcemeta::core::JSON{trace_stream.str()});
             }

@@ -337,6 +337,38 @@ inline auto compile_for_evaluation(
   }
 }
 
+inline auto facet_name(const sourcemeta::blaze::JSONLDFacet facet)
+    -> std::string_view {
+  switch (facet) {
+    case sourcemeta::blaze::JSONLDFacet::Type:
+      return "type";
+    case sourcemeta::blaze::JSONLDFacet::Predicate:
+      return "predicate";
+    case sourcemeta::blaze::JSONLDFacet::Datatype:
+      return "datatype";
+    case sourcemeta::blaze::JSONLDFacet::Language:
+      return "language";
+    case sourcemeta::blaze::JSONLDFacet::Direction:
+      return "direction";
+    case sourcemeta::blaze::JSONLDFacet::Graph:
+      return "graph";
+    case sourcemeta::blaze::JSONLDFacet::JSON:
+      return "json";
+    case sourcemeta::blaze::JSONLDFacet::Container:
+      return "container";
+    case sourcemeta::blaze::JSONLDFacet::Self:
+      return "self";
+    case sourcemeta::blaze::JSONLDFacet::Override:
+      return "override";
+    case sourcemeta::blaze::JSONLDFacet::ValuePredicate:
+      return "value";
+    case sourcemeta::blaze::JSONLDFacet::Constants:
+      return "constants";
+    default:
+      std::unreachable();
+  }
+}
+
 template <typename Entries>
 inline auto print(const Entries &output,
                   const sourcemeta::core::PointerPositionTracker &tracker,

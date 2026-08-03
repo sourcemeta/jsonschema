@@ -23,3 +23,5 @@ target_link_libraries(sourcemeta_blaze_test PUBLIC
   sourcemeta::blaze::compiler)
 target_link_libraries(sourcemeta_blaze_test PUBLIC
   sourcemeta::blaze::evaluator)
+target_link_libraries(sourcemeta_blaze_test PUBLIC
+  sourcemeta::blaze::output)

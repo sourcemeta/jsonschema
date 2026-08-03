@@ -67,6 +67,24 @@ And either of the following properties, but not both:
 - `dataPath`: The instance that you want to test against the target schema,
   loaded from an external file instead
 
+Additionally, if the schema under test is annotated with the `x-jsonld-*`
+keywords of the [`rdf`](./rdf.markdown) command, a test that sets `valid` to
+`true` may declare either of the following properties, but not both, to also
+assert on the promotion of the instance to JSON-LD:
+
+- `rdf`: The expected promotion of the instance to JSON-LD in [expanded
+  form](https://www.w3.org/TR/json-ld11/#expanded-document-form), which is
+  always an array
+- `rdfPath`: The expected promotion of the instance to JSON-LD in expanded
+  form, loaded from an external file instead
+
+The comparison takes place against the canonical expanded form, so a
+convenient way to author the expectation is to run the
+[`rdf`](./rdf.markdown) command and copy its output. Note that unlike that
+command, the test runner does not reject schemas whose base dialect predates
+JSON Schema 2019-09. The `x-jsonld-*` keywords of older schemas do not emit
+annotations, so their instances always promote to the empty array `[]`.
+
 For example, here is a minimal test suite that expects an object with two
 properties (`foo` and `bar`) to successfully validate against the target schema
 `https://example.com/my-schema-id`:
@@ -156,6 +174,35 @@ jsonschema test --ignore dist
 
 ```sh
 jsonschema test --extension .test.json
+```
+
+### Run a single test definition that asserts on JSON-LD promotion
+
+Given a schema annotated with the `x-jsonld-*` keywords of the
+[`rdf`](./rdf.markdown) command, a test suite may assert on the expanded
+form JSON-LD promotion of its valid instances:
+
+```json
+{
+  "target": "https://example.com/person",
+  "tests": [
+    {
+      "description": "Promotes to schema.org",
+      "valid": true,
+      "data": { "name": "Ada" },
+      "rdf": [
+        {
+          "@type": [ "https://schema.org/Person" ],
+          "https://schema.org/name": [ { "@value": "Ada" } ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+```sh
+jsonschema test path/to/test.json --resolve path/to/schema.json
 ```
 
 ### Run a single test definition enabling HTTP resolution
