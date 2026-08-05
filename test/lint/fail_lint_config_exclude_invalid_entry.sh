@@ -10,7 +10,7 @@ trap clean EXIT
 cat << 'EOF' > "$TMP/jsonschema.json"
 {
   "lint": {
-    "rules": [ 1 ]
+    "exclude": [ 1 ]
   }
 }
 EOF
@@ -29,11 +29,11 @@ cd "$TMP"
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
-error: The values in the lint rules array must be strings or objects
+error: The values in the lint exclude array must be strings
   at line 3
-  at column 16
+  at column 18
   at file path $(realpath "$TMP")/jsonschema.json
-  at location "/lint/rules/0"
+  at location "/lint/exclude/0"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
@@ -46,11 +46,11 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected_json.txt"
 {
-  "error": "The values in the lint rules array must be strings or objects",
+  "error": "The values in the lint exclude array must be strings",
   "line": 3,
-  "column": 16,
+  "column": 18,
   "filePath": "$(realpath "$TMP")/jsonschema.json",
-  "location": "/lint/rules/0"
+  "location": "/lint/exclude/0"
 }
 EOF
 

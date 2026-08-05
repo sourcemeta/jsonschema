@@ -75,6 +75,7 @@ struct SOURCEMETA_BLAZE_CONFIGURATION_EXPORT Configuration {
     };
 
     std::vector<Rule> rules;
+    std::unordered_set<sourcemeta::core::JSON::String> exclude;
   };
 
   Lint lint;

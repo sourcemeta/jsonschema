@@ -369,6 +369,15 @@ auto bundle_schema(sourcemeta::core::JSON &root,
                           : sourcemeta::core::JSON::String{remote_id}};
 
     if (remote.value().is_object()) {
+      // Otherwise the embedded resource would be re-interpreted under the
+      // dialect of the schema it gets embedded into, which can differ from
+      // the default dialect that the remote was resolved with
+      if (!remote.value().defines("$schema")) {
+        remote.value().assign("$schema",
+                              sourcemeta::core::JSON{sourcemeta::blaze::dialect(
+                                  remote.value(), default_dialect)});
+      }
+
       sourcemeta::blaze::reidentify(remote.value(), effective_id,
                                     remote_base_dialect.value());
     }

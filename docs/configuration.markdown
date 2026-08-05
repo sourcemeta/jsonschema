@@ -36,7 +36,8 @@ The `jsonschema.json` file format looks like this:
     "rules": [
       "./rules/require_type.json",
       { "path": "./rules/require_id.json", "topLevel": true }
-    ]
+    ],
+    "exclude": [ "enum_with_type" ]
   }
 }
 ```
@@ -63,6 +64,7 @@ describes the available configuration options:
 | `dependencies` | Object | A mapping of URIs to relative file paths for external schema dependencies to install (see [`jsonschema install`](./install.markdown)) | `{}` |
 | `lint` | Object | Lint configuration | `{}` |
 | `lint.rules` | String[] / Object[] | Paths to custom lint rule schemas relative to `jsonschema.json` (see [lint](./lint.markdown)). An entry may also be an object with a required `path` string property and an optional `topLevel` boolean property (defaults to `false`) that makes the rule only run against the document root | `[]` |
+| `lint.exclude` | String[] | Names of lint rules (built-in or custom) to disable, equivalent to the `--exclude/-x` command-line option (see [lint](./lint.markdown)). Names that don't correspond to any rule are ignored. This property has no effect when the `--only/-o` command-line option is passed | `[]` |
 
 Lookup Algorithm
 ----------------

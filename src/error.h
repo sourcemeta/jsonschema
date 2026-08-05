@@ -1102,6 +1102,11 @@ inline auto try_catch(const sourcemeta::core::Options &options,
     const auto is_json{options.contains("json")};
     print_exception(is_json, error);
     return EXIT_OTHER_INPUT_ERROR;
+  } catch (const PositionError<sourcemeta::core::FileError<
+               sourcemeta::blaze::ConfigurationParseError>> &error) {
+    const auto is_json{options.contains("json")};
+    print_exception(is_json, error);
+    return EXIT_OTHER_INPUT_ERROR;
   } catch (const sourcemeta::core::FileError<
            sourcemeta::blaze::ConfigurationParseError> &error) {
     const auto is_json{options.contains("json")};

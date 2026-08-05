@@ -101,23 +101,41 @@ auto Configuration::to_json() const -> sourcemeta::core::JSON {
     result.assign("ignore", std::move(ignore_array));
   }
 
-  if (!this->lint.rules.empty()) {
+  if (!this->lint.rules.empty() || !this->lint.exclude.empty()) {
     auto lint_object{sourcemeta::core::JSON::make_object()};
-    auto rules_array{sourcemeta::core::JSON::make_array()};
-    for (const auto &rule : this->lint.rules) {
-      if (rule.top_level) {
-        auto rule_object{sourcemeta::core::JSON::make_object()};
-        rule_object.assign("path", sourcemeta::core::JSON{relative_display_path(
-                                       rule.path, this->base_path)});
-        rule_object.assign("topLevel", sourcemeta::core::JSON{true});
-        rules_array.push_back(std::move(rule_object));
-      } else {
-        rules_array.push_back(sourcemeta::core::JSON{
-            relative_display_path(rule.path, this->base_path)});
+
+    if (!this->lint.rules.empty()) {
+      auto rules_array{sourcemeta::core::JSON::make_array()};
+      for (const auto &rule : this->lint.rules) {
+        if (rule.top_level) {
+          auto rule_object{sourcemeta::core::JSON::make_object()};
+          rule_object.assign(
+              "path", sourcemeta::core::JSON{
+                          relative_display_path(rule.path, this->base_path)});
+          rule_object.assign("topLevel", sourcemeta::core::JSON{true});
+          rules_array.push_back(std::move(rule_object));
+        } else {
+          rules_array.push_back(sourcemeta::core::JSON{
+              relative_display_path(rule.path, this->base_path)});
+        }
       }
+
+      lint_object.assign("rules", std::move(rules_array));
     }
 
-    lint_object.assign("rules", std::move(rules_array));
+    if (!this->lint.exclude.empty()) {
+      auto exclude_array{sourcemeta::core::JSON::make_array()};
+      // Sort for deterministic output
+      std::vector<std::string> sorted_exclude{this->lint.exclude.cbegin(),
+                                              this->lint.exclude.cend()};
+      std::ranges::sort(sorted_exclude);
+      for (const auto &entry : sorted_exclude) {
+        exclude_array.push_back(sourcemeta::core::JSON{entry});
+      }
+
+      lint_object.assign("exclude", std::move(exclude_array));
+    }
+
     result.assign("lint", std::move(lint_object));
   }
 
