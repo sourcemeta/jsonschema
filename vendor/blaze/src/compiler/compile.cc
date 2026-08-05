@@ -422,7 +422,13 @@ auto compile(const sourcemeta::core::JSON &schema,
     const auto &[index, reference_pointer] = target_info;
     const auto location{context.frame.traverse(destination_uri)};
     if (!location.has_value()) [[unlikely]] {
-      assert(reference_pointer != nullptr);
+      // The entrypoint and standalone dynamic anchors are registered as
+      // targets without an originating reference pointer
+      if (reference_pointer == nullptr) {
+        throw CompilerReferenceTargetNotSchemaError(
+            destination_uri, sourcemeta::core::Pointer{});
+      }
+
       throw CompilerReferenceTargetNotSchemaError(
           destination_uri, to_pointer(*reference_pointer));
     }
