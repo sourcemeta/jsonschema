@@ -30,6 +30,8 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The values in the lint exclude array must be strings
+  at line 3
+  at column 18
   at file path $(realpath "$TMP")/jsonschema.json
   at location "/lint/exclude/0"
 EOF
@@ -45,6 +47,8 @@ test "$EXIT_CODE" = "6"
 cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "The values in the lint exclude array must be strings",
+  "line": 3,
+  "column": 18,
   "filePath": "$(realpath "$TMP")/jsonschema.json",
   "location": "/lint/exclude/0"
 }

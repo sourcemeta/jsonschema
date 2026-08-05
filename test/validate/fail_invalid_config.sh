@@ -30,8 +30,27 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The defaultDialect property must be a string
+  at line 2
+  at column 3
   at file path $(realpath "$TMP")/jsonschema.json
   at location "/defaultDialect"
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"
+
+"$1" validate --json "$TMP/schema.json" "$TMP/instance.json" \
+  > "$TMP/output_json.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
+# Other input error
+test "$EXIT_CODE" = "6"
+
+cat << EOF > "$TMP/expected_json.txt"
+{
+  "error": "The defaultDialect property must be a string",
+  "line": 2,
+  "column": 3,
+  "filePath": "$(realpath "$TMP")/jsonschema.json",
+  "location": "/defaultDialect"
+}
+EOF
+
+diff "$TMP/output_json.txt" "$TMP/expected_json.txt"

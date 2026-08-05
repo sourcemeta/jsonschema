@@ -30,6 +30,8 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The values in the lint rules array must be strings or objects
+  at line 3
+  at column 16
   at file path $(realpath "$TMP")/jsonschema.json
   at location "/lint/rules/0"
 EOF
@@ -45,6 +47,8 @@ test "$EXIT_CODE" = "6"
 cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "The values in the lint rules array must be strings or objects",
+  "line": 3,
+  "column": 16,
   "filePath": "$(realpath "$TMP")/jsonschema.json",
   "location": "/lint/rules/0"
 }

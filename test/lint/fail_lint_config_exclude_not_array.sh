@@ -30,6 +30,8 @@ test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
 error: The lint exclude property must be an array
+  at line 3
+  at column 5
   at file path $(realpath "$TMP")/jsonschema.json
   at location "/lint/exclude"
 EOF
@@ -45,6 +47,8 @@ test "$EXIT_CODE" = "6"
 cat << EOF > "$TMP/expected_json.txt"
 {
   "error": "The lint exclude property must be an array",
+  "line": 3,
+  "column": 5,
   "filePath": "$(realpath "$TMP")/jsonschema.json",
   "location": "/lint/exclude"
 }

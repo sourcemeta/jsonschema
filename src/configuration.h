@@ -70,6 +70,14 @@ inline auto load_configuration(
       result = sourcemeta::blaze::Configuration::from_json(
           config_json, configuration_path.value().parent_path());
     } catch (const sourcemeta::blaze::ConfigurationParseError &error) {
+      const auto position{positions.get(error.location())};
+      if (position.has_value()) {
+        throw PositionError<sourcemeta::core::FileError<
+            sourcemeta::blaze::ConfigurationParseError>>(
+            std::get<0>(position.value()), std::get<1>(position.value()),
+            configuration_path.value(), error);
+      }
+
       throw sourcemeta::core::FileError<
           sourcemeta::blaze::ConfigurationParseError>(
           configuration_path.value(), error);
