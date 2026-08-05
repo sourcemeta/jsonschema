@@ -5,6 +5,7 @@
 #include <sourcemeta/core/text.h>
 
 #include <cstdint>     // std::uint8_t, std::uint16_t
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 namespace {
@@ -167,6 +168,70 @@ inline auto is_address_literal(const std::string_view domain) -> bool {
     return is_ipv4_address_literal(inner);
   }
   return is_general_address_literal(inner);
+}
+
+// RFC 3986 §2.1: "For consistency, URI producers and normalizers should use
+// uppercase hexadecimal digits for all percent-encodings"
+inline auto percent_encode(const unsigned char byte, std::string &output)
+    -> void {
+  constexpr std::string_view hexadecimal{"0123456789ABCDEF"};
+  output.push_back('%');
+  output.push_back(hexadecimal[byte >> 4U]);
+  output.push_back(hexadecimal[byte & 0x0FU]);
+}
+
+// RFC 6068 §2: within addr-spec, the characters that cannot appear in a URI,
+// plus "%", the gen-delims other than "@" and ":", and the sub-delims "&",
+// ";", and "=" all MUST be percent-encoded. Erratum 7919 would lift the
+// sub-delims mandate, but the §6.1 example encodes "Mike&family" as
+// "Mike%26family", so the canonical spelling keeps encoding them. The "," is
+// encoded as well because the "to" production takes it as the address list
+// separator, and "@" inside quoted content is encoded following the §6.2
+// example "%22not%40me%22"
+inline constexpr auto is_mailto_verbatim(const char character) -> bool {
+  switch (character) {
+    case '!':
+    case '$':
+    case '\'':
+    case '(':
+    case ')':
+    case '*':
+    case '+':
+    case '-':
+    case '.':
+    case ':':
+    case '_':
+    case '~':
+      return true;
+    default:
+      return sourcemeta::core::is_alphanum(character);
+  }
+}
+
+// RFC 7565 §7: userpart consists of unreserved, sub-delims, and pct-encoded,
+// so those two literal sets pass through and every other octet is
+// percent-encoded, as the §4 example does for "juliet@capulet.example"
+inline constexpr auto is_acct_userpart_verbatim(const char character) -> bool {
+  switch (character) {
+    case '!':
+    case '$':
+    case '&':
+    case '\'':
+    case '(':
+    case ')':
+    case '*':
+    case '+':
+    case ',':
+    case '-':
+    case '.':
+    case ';':
+    case '=':
+    case '_':
+    case '~':
+      return true;
+    default:
+      return sourcemeta::core::is_alphanum(character);
+  }
 }
 
 } // namespace

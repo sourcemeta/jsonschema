@@ -8,6 +8,7 @@
 #include <sourcemeta/core/json.h>
 
 #include <functional>  // std::function
+#include <optional>    // std::optional
 #include <span>        // std::span
 #include <string_view> // std::string_view
 
@@ -30,9 +31,9 @@ auto oidc_is_standard_claim(const std::string_view name) noexcept -> bool;
 /// @ingroup oidc
 /// Invoke the callback with each standard claim that the space-delimited scopes
 /// request (OpenID Connect Core 1.0 Section 5.4). The `openid` scope maps to
-/// `sub`, and `profile`, `email`, `address`, and `phone` map to their claim
-/// sets. A claim requested by more than one scope is reported once. For
-/// example:
+/// `sub`, which is always returned (Section 5.3.2), and `profile`, `email`,
+/// `address`, and `phone` map to their claim sets. A claim requested by more
+/// than one scope is reported once. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/oidc.h>
@@ -49,6 +50,23 @@ SOURCEMETA_CORE_OIDC_EXPORT
 auto oidc_scope_to_claims(const std::string_view scopes,
                           const std::function<void(std::string_view)> &on_claim)
     -> void;
+
+/// @ingroup oidc
+/// The standard scope that requests a claim, or no value when no
+/// claim-requesting scope carries it (OpenID Connect Core 1.0 Section 5.4). The
+/// `sub` claim maps to `openid`, which always returns it (Section 5.3.2), and a
+/// scope name is never invented from a non-standard claim name. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oidc.h>
+/// #include <cassert>
+///
+/// assert(sourcemeta::core::oidc_claim_to_scope("email").value() == "email");
+/// assert(!sourcemeta::core::oidc_claim_to_scope("groups").has_value());
+/// ```
+SOURCEMETA_CORE_OIDC_EXPORT
+auto oidc_claim_to_scope(const std::string_view claim) noexcept
+    -> std::optional<std::string_view>;
 
 /// @ingroup oidc
 /// A claim requested through the `claims` request parameter (OpenID Connect
@@ -167,6 +185,26 @@ auto oidc_claims_parameter_accepts(const JSON &claims,
                                    const std::string_view target,
                                    const std::string_view claim,
                                    const JSON &value) -> bool;
+
+/// @ingroup oidc
+/// Whether an individual claim request permits a value, where the request is
+/// the member value a `claims` request parameter maps a claim name to (OpenID
+/// Connect Core 1.0 Section 5.5.1). A `null` request or one with neither a
+/// `value` nor a `values` constraint permits any value, comparison is JSON
+/// equality over the whole value, and `essential` has no effect. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oidc.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+///
+/// const auto request{sourcemeta::core::parse_json(
+///     R"JSON({ "values": [ "gold", "silver" ] })JSON")};
+/// assert(sourcemeta::core::oidc_claim_request_accepts(
+///     request, sourcemeta::core::JSON{"gold"}));
+/// ```
+SOURCEMETA_CORE_OIDC_EXPORT
+auto oidc_claim_request_accepts(const JSON &request, const JSON &value) -> bool;
 
 } // namespace sourcemeta::core
 

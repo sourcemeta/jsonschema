@@ -4,6 +4,7 @@ sourcemeta_library(NAMESPACE sourcemeta PROJECT core NAME oauth
     token_exchange.h revocation.h introspection.h device.h dpop.h par.h
     assertion.h registration.h
   SOURCES oauth_error.cc oauth_pkce.cc oauth_bearer.cc oauth_syntax.h
+    oauth_scope.h
     oauth_random.cc oauth_authorization.cc oauth_authorization_parse.h
     oauth_decode.h
     oauth_json.h oauth_token.cc oauth_client_authentication.cc

@@ -4,6 +4,8 @@
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/text.h>
 
+#include "oauth_scope.h"
+
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional, std::nullopt
@@ -20,6 +22,7 @@ using namespace std::literals::string_view_literals;
 constexpr auto HASH_AUD{JSON::Object::hash("aud"sv)};
 constexpr auto HASH_CNF{JSON::Object::hash("cnf"sv)};
 constexpr auto HASH_JKT{JSON::Object::hash("jkt"sv)};
+constexpr auto HASH_SCOPE{JSON::Object::hash("scope"sv)};
 
 auto oauth_skip_ows(const std::string_view value, std::size_t position) noexcept
     -> std::size_t {
@@ -240,6 +243,19 @@ auto oauth_has_audience(const JSON &claims, const std::string_view audience)
   }
 
   return member->is_array() && member->contains(audience);
+}
+
+auto oauth_has_scope(const JSON &claims, const std::string_view value) -> bool {
+  if (!claims.is_object()) {
+    return false;
+  }
+
+  // RFC 9068 Section 2.2.3 and RFC 7662 Section 2.2: the scope claim is a
+  // single JSON string carrying the RFC 6749 Section 3.3 scope syntax, so any
+  // other shape grants nothing
+  const auto *member{claims.try_at("scope"sv, HASH_SCOPE)};
+  return member != nullptr && member->is_string() &&
+         oauth_scope_contains(member->to_string(), value);
 }
 
 auto oauth_is_dpop_bound(const JSON &claims) -> bool {

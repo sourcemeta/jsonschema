@@ -16,6 +16,8 @@ target_link_libraries(sourcemeta_blaze_output PUBLIC
 target_link_libraries(sourcemeta_blaze_output PUBLIC
   sourcemeta::core::jsonpointer)
 target_link_libraries(sourcemeta_blaze_output PRIVATE
+  sourcemeta::core::email)
+target_link_libraries(sourcemeta_blaze_output PRIVATE
   sourcemeta::core::jsonld)
 target_link_libraries(sourcemeta_blaze_output PRIVATE
   sourcemeta::core::langtag)

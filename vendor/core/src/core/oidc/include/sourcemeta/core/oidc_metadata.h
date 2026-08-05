@@ -151,6 +151,10 @@ public:
   /// Whether a claim is supported (OpenID Connect Discovery 1.0 Section 3).
   [[nodiscard]] auto supports_claim(const std::string_view value) const -> bool;
 
+  /// Whether the `claims` request parameter is supported, absent meaning false
+  /// (OpenID Connect Discovery 1.0 Section 3).
+  [[nodiscard]] auto supports_claims_parameter() const -> bool;
+
   /// The underlying OAuth authorization server metadata this document is a
   /// superset of, for reaching the OAuth typed accessors.
   [[nodiscard]] auto oauth() const -> const OAuthServerMetadata &;

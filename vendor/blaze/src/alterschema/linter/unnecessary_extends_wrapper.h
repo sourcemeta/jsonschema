@@ -35,7 +35,8 @@ public:
 
     const auto *parent_type_value{schema.try_at("type")};
     const JSON::TypeSet parent_types{
-        parent_type_value && is_known_type_form(*parent_type_value)
+        parent_type_value &&
+                IS_KNOWN_TYPE_FORM(*parent_type_value, vocabularies)
             ? parse_schema_type(*parent_type_value)
             : JSON::TypeSet{}};
 
@@ -131,18 +132,5 @@ public:
         extends_prefix.concat(Pointer{relative.at(0), keyword})};
     const Pointer new_prefix{current.concat(keyword)};
     return target.rebase(old_prefix, new_prefix);
-  }
-
-private:
-  static auto is_known_type_form(const sourcemeta::core::JSON &type) -> bool {
-    if (type.is_string()) {
-      return type.to_string() != "any";
-    }
-    if (!type.is_array()) {
-      return false;
-    }
-    return std::ranges::all_of(type.as_array(), [](const auto &entry) -> auto {
-      return entry.is_string() && entry.to_string() != "any";
-    });
   }
 };
