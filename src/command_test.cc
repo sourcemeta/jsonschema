@@ -6,6 +6,13 @@
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/parallel.h>
 
+// The parallel module includes windows.h, which defines DELETE as a macro
+// that would otherwise break parsing the HTTPMethod enumeration that the
+// resolver transitively includes below
+#if defined(_WIN32)
+#undef DELETE
+#endif
+
 #include <algorithm> // std::find, std::distance, std::min, std::max
 #include <atomic>    // std::atomic
 #include <chrono>    // std::chrono
