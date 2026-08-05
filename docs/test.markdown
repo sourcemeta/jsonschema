@@ -11,6 +11,7 @@ jsonschema test [schemas-or-directories...]
   [--resolve/-r <schemas-or-directories> ...]
   [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
   [--default-dialect/-d <uri>] [--json/-j] [--format-assertion/-F]
+  [--jobs/-J <count>]
 ```
 
 Schemas are code. As such, you should run an automated unit testing suite
@@ -26,6 +27,14 @@ suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite).
 Pass `--json` to output results in [CTRF (Common Test Report
 Format)](https://ctrf.io), a standardized JSON format for test results that
 integrates with CI/CD tools and test result dashboards.
+
+Test suites run in parallel, defaulting to as many jobs as there are CPU
+cores. Use `--jobs/-J` to control the level of parallelism. Note that when
+running more than one job, suites report in completion order rather than in
+input order. Pass `--jobs 1` to run suites serially in input order. Peak
+memory usage grows with the number of jobs, as each job holds a compiled
+schema in memory. Keep in mind that when combined with `--verbose` or
+`--debug`, log lines from concurrent jobs may interleave on standard error.
 
 Writing tests
 -------------

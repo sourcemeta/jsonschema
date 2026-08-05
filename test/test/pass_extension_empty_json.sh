@@ -59,7 +59,7 @@ cat << 'EOF' > "$TMP/tests/ignored.json"
 }
 EOF
 
-"$1" test "$TMP/tests" --resolve "$TMP/schemas" --extension '' --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/tests" --resolve "$TMP/schemas" --extension '' --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
 warning: Matching files with no extension

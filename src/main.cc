@@ -73,9 +73,13 @@ Commands:
 
    test [schemas-or-directories...] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
+        [--jobs/-J <count>]
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
+       Suites run in parallel, defaulting to as many jobs as CPU cores,
+       reporting in completion order. Pass --jobs/-J to control the level
+       of parallelism, where --jobs 1 runs serially in input order.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
@@ -231,6 +235,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
+    app.option("jobs", {"J"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::test(app);
     return EXIT_SUCCESS;
