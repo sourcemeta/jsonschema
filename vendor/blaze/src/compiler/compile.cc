@@ -421,7 +421,12 @@ auto compile(const sourcemeta::core::JSON &schema,
         destination;
     const auto &[index, reference_pointer] = target_info;
     const auto location{context.frame.traverse(destination_uri)};
-    assert(location.has_value());
+    if (!location.has_value()) [[unlikely]] {
+      assert(reference_pointer != nullptr);
+      throw CompilerReferenceTargetNotSchemaError(
+          destination_uri, to_pointer(*reference_pointer));
+    }
+
     const auto &entry{location->get()};
 
     if (entry.type != sourcemeta::blaze::SchemaFrame::LocationType::Subschema &&

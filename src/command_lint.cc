@@ -240,6 +240,7 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   }
 
   std::unordered_set<std::string> seen_configurations;
+  std::unordered_set<sourcemeta::core::JSON::String> configuration_excludes;
   std::vector<std::filesystem::path> input_paths;
   if (options.positional().empty()) {
     input_paths.emplace_back(std::filesystem::current_path());
@@ -267,8 +268,14 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
 
     seen_configurations.emplace(canonical_configuration_path);
     const auto &configuration{read_configuration(options, configuration_path)};
-    if (!configuration.has_value() ||
-        configuration.value().lint.rules.empty()) {
+    if (!configuration.has_value()) {
+      continue;
+    }
+
+    configuration_excludes.insert(configuration.value().lint.exclude.cbegin(),
+                                  configuration.value().lint.exclude.cend());
+
+    if (configuration.value().lint.rules.empty()) {
       continue;
     }
 
@@ -320,6 +327,18 @@ auto sourcemeta::jsonschema::lint(const sourcemeta::core::Options &options)
   } else if (options.contains("exclude")) {
     disable_lint_rules(bundle, options, options.at("exclude").cbegin(),
                        options.at("exclude").cend());
+  }
+
+  if (!options.contains("only") && !configuration_excludes.empty()) {
+    std::vector<sourcemeta::core::JSON::String> sorted_excludes{
+        configuration_excludes.cbegin(), configuration_excludes.cend()};
+    std::sort(sorted_excludes.begin(), sorted_excludes.end());
+    for (const auto &exclude : sorted_excludes) {
+      if (bundle.remove(exclude)) {
+        LOG_VERBOSE(options)
+            << "Disabling rule from configuration: " << exclude << "\n";
+      }
+    }
   }
 
   if (options.contains("list")) {

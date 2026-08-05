@@ -54,10 +54,12 @@ them.
 Disabling Rules
 ---------------
 
-While you can disable rules globally using the `--exclude/-x` option, you may
-want to disable specific rules for individual subschemas. To do this, add the
-`x-lint-exclude` keyword to the subschema, set to either a rule name or an
-array of rule names to exclude.
+You can disable rules globally using the `--exclude/-x` option or the
+`lint.exclude` property of the `jsonschema.json` configuration file (see
+[configuration](./configuration.markdown)). You may also want to disable
+specific rules for individual subschemas. To do this, add the `x-lint-exclude`
+keyword to the subschema, set to either a rule name or an array of rule names
+to exclude.
 
 For example, if you intentionally want to use `type` alongside `enum` in a
 specific property, you can disable the `enum_with_type` rule for just that

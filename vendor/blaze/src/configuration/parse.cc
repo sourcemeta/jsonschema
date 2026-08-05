@@ -230,6 +230,24 @@ auto Configuration::from_json(const sourcemeta::core::JSON &value,
         index += 1;
       }
     }
+
+    CONFIGURATION_ENSURE(!lint_value.defines("exclude") ||
+                             lint_value.at("exclude").is_array(),
+                         "The lint exclude property must be an array",
+                         sourcemeta::core::Pointer({"lint", "exclude"}));
+
+    if (lint_value.defines("exclude")) {
+      std::size_t index{0};
+      for (const auto &element : lint_value.at("exclude").as_array()) {
+        CONFIGURATION_ENSURE(
+            element.is_string(),
+            "The values in the lint exclude array must be strings",
+            sourcemeta::core::Pointer({"lint", "exclude", index}));
+
+        result.lint.exclude.emplace(element.to_string());
+        index += 1;
+      }
+    }
   }
 
   CONFIGURATION_ENSURE(!value.defines("ignore") ||
