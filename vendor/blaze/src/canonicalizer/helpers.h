@@ -18,6 +18,35 @@ inline auto IS_IN_PLACE_APPLICATOR(const SchemaKeywordType type) -> bool {
 // reference to the pointer of the ancestor where the match callback returned
 // true, or nullopt if no match was found or the traversal predicate stopped
 // the walk.
+// Whether a `type` value only consists of simple type names that can be
+// parsed into a complete set of instance types. Draft 0 to Draft 3 unions
+// may contain subschemas or `any`, in which case the parsed set is an
+// under-approximation that cannot be trusted. Later dialects do not give
+// such forms any meaning, so the parsed set stands
+inline auto IS_KNOWN_TYPE_FORM(const sourcemeta::core::JSON &type,
+                               const Vocabularies &vocabularies) -> bool {
+  if (!vocabularies.contains_any(
+          {Vocabularies::Known::JSON_Schema_Draft_0,
+           Vocabularies::Known::JSON_Schema_Draft_0_Hyper,
+           Vocabularies::Known::JSON_Schema_Draft_1,
+           Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
+           Vocabularies::Known::JSON_Schema_Draft_2,
+           Vocabularies::Known::JSON_Schema_Draft_2_Hyper,
+           Vocabularies::Known::JSON_Schema_Draft_3,
+           Vocabularies::Known::JSON_Schema_Draft_3_Hyper})) {
+    return true;
+  }
+  if (type.is_string()) {
+    return type.to_string() != "any";
+  }
+  if (!type.is_array()) {
+    return false;
+  }
+  return std::ranges::all_of(type.as_array(), [](const auto &entry) -> auto {
+    return entry.is_string() && entry.to_string() != "any";
+  });
+}
+
 template <typename TraversePredicate, typename MatchCallback>
 auto WALK_UP(const sourcemeta::core::JSON &root, const SchemaFrame &frame,
              const SchemaFrame::Location &location, const SchemaWalker &walker,

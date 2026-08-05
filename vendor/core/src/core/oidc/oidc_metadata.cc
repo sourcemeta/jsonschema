@@ -263,6 +263,16 @@ auto OIDCProviderMetadata::supports_claim(const std::string_view value) const
       "claims_supported"sv, HASH_CLAIMS_SUPPORTED, value);
 }
 
+auto OIDCProviderMetadata::supports_claims_parameter() const -> bool {
+  // OpenID Connect Discovery 1.0 Section 3: "If omitted, the default value is
+  // false", and that default is what tells a relying party to fall back to
+  // requesting claims through scope values instead of a parameter the
+  // provider would ignore
+  const auto *member{this->oauth_.data().try_at("claims_parameter_supported"sv,
+                                                HASH_CLAIMS_PARAMETER)};
+  return member != nullptr && member->is_boolean() && member->to_boolean();
+}
+
 auto OIDCProviderMetadata::oauth() const -> const OAuthServerMetadata & {
   return this->oauth_;
 }

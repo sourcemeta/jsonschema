@@ -29,6 +29,7 @@ public:
          Vocabularies::Known::JSON_Schema_Draft_2,
          Vocabularies::Known::JSON_Schema_Draft_1,
          Vocabularies::Known::JSON_Schema_Draft_0}));
+    ONLY_CONTINUE_IF(IS_KNOWN_TYPE_FORM(schema.at("type"), vocabularies));
     const auto parent_types{parse_schema_type(schema.at("type"))};
     ONLY_CONTINUE_IF(parent_types.any());
 
@@ -51,7 +52,7 @@ public:
             continue;
           }
           const auto *branch_type{branch.try_at("type")};
-          if (!branch_type) {
+          if (!branch_type || !IS_KNOWN_TYPE_FORM(*branch_type, vocabularies)) {
             continue;
           }
 
@@ -68,7 +69,7 @@ public:
           continue;
         }
         const auto *branch_type{entry.second.try_at("type")};
-        if (!branch_type) {
+        if (!branch_type || !IS_KNOWN_TYPE_FORM(*branch_type, vocabularies)) {
           continue;
         }
 

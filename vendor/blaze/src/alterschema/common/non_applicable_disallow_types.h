@@ -28,7 +28,7 @@ public:
 
     const auto *parent_type_value{schema.try_at("type")};
     ONLY_CONTINUE_IF(parent_type_value &&
-                     is_known_type_form(*parent_type_value));
+                     IS_KNOWN_TYPE_FORM(*parent_type_value, vocabularies));
 
     const auto parent_types{parse_schema_type(*parent_type_value)};
     ONLY_CONTINUE_IF(parent_types.any());
@@ -41,7 +41,7 @@ public:
         entry_types = parse_schema_type(entry);
       } else if (entry.is_object()) {
         const auto *entry_type{entry.try_at("type")};
-        if (entry_type && is_known_type_form(*entry_type)) {
+        if (entry_type && IS_KNOWN_TYPE_FORM(*entry_type, vocabularies)) {
           entry_types = parse_schema_type(*entry_type);
         }
       }
@@ -81,18 +81,5 @@ public:
     } else {
       schema.assign("disallow", std::move(new_disallow));
     }
-  }
-
-private:
-  static auto is_known_type_form(const sourcemeta::core::JSON &type) -> bool {
-    if (type.is_string()) {
-      return type.to_string() != "any";
-    }
-    if (!type.is_array()) {
-      return false;
-    }
-    return std::ranges::all_of(type.as_array(), [](const auto &entry) -> auto {
-      return entry.is_string() && entry.to_string() != "any";
-    });
   }
 };

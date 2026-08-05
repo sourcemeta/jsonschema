@@ -28,7 +28,8 @@ public:
                             Vocabularies::Known::JSON_Schema_Draft_1_Hyper,
                             Vocabularies::Known::JSON_Schema_Draft_0,
                             Vocabularies::Known::JSON_Schema_Draft_0_Hyper}) &&
-                               type_value
+                               type_value &&
+                               IS_KNOWN_TYPE_FORM(*type_value, vocabularies)
                            ? parse_schema_type(*type_value)
                            : sourcemeta::core::JSON::TypeSet{}};
 

@@ -68,7 +68,7 @@ Schema, so annotated schemas remain valid for every other tool.
 | `x-jsonld-json` | A boolean | any subschema | Treat the value as an opaque `@json` literal |
 | `x-jsonld-graph` | A boolean | object subschema | Wrap the node's edges in a named `@graph` |
 | `x-jsonld-container` | `@list`, `@set`, `@language`, or `@index` | array or object property subschema | The container semantics of the property |
-| `x-jsonld-self` | An [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI template | scalar or object subschema | Mint the node `@id` from instance values, such as `https://www.iso.org/iso-4217/{this}` |
+| `x-jsonld-self` | An [RFC 6570](https://www.rfc-editor.org/rfc/rfc6570) URI template or a scheme identity name | scalar or object subschema | Mint the node `@id` from instance values, such as `https://www.iso.org/iso-4217/{this}` or `mailto` |
 | `x-jsonld-override` | A boolean | any subschema | Give the schema object's own `x-jsonld-*` values precedence over conflicting ones from subschemas beneath it, such as a sibling `$ref` |
 | `x-jsonld-value` | An absolute IRI | scalar subschema | Promote the scalar to a node that carries it as a literal under the declared predicate |
 | `x-jsonld-constants` | An expanded-form node object fragment | object or promoted scalar subschema | Constant properties, fixed by the schema, merged into the node |
@@ -97,6 +97,19 @@ The variables of an `x-jsonld-self` URI template are matched verbatim against
 instance property names, so a variable like `{+meta.slug}` binds a property
 literally named `meta.slug`. There is no dotted path traversal into nested
 objects.
+
+Instead of a URI template, `x-jsonld-self` also accepts a scheme identity
+name, which mints the canonical IRI that identifies the string value itself
+in the named scheme. The engine owns the whole recipe, both the
+transformation of the raw value and the single blessed IRI spelling, so an
+identifier minted from instance data compares equal, as RDF requires, to the
+same identity spelled anywhere else. A value outside the source grammar of
+the named scheme is a resolution error. The supported names are:
+
+| Name | Source Grammar | Minted Identity |
+|------|----------------|-----------------|
+| `mailto` | An [RFC 5321](https://www.rfc-editor.org/rfc/rfc5321) `Mailbox`, such as `gorby%kremvax@example.com` | Its [RFC 6068](https://www.rfc-editor.org/rfc/rfc6068) `mailto` IRI, such as `mailto:gorby%25kremvax@example.com`, with reserved characters percent encoded and the domain name lowercased |
+| `acct` | An [RFC 7565](https://www.rfc-editor.org/rfc/rfc7565) `user@host` account, such as `juliet@capulet.example@shoppingsite.example` | Its `acct` IRI, such as `acct:juliet%40capulet.example@shoppingsite.example`, with reserved characters in the user part percent encoded and the host lowercased |
 
 For example, consider the following product catalog schema, which validates
 products and maps them to [schema.org](https://schema.org) at the same time:

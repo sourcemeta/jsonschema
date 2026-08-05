@@ -5,10 +5,13 @@
 #include <sourcemeta/core/email_export.h>
 #endif
 
+#include <optional>    // std::optional
+#include <string>      // std::string
 #include <string_view> // std::string_view
 
 /// @defgroup email Email
-/// @brief E-mail address validation per RFC 5321 and RFC 6531.
+/// @brief E-mail address validation per RFC 5321 and RFC 6531, plus
+/// canonical account identity IRIs per RFC 6068 and RFC 7565.
 ///
 /// This functionality is included as follows:
 ///
@@ -100,6 +103,54 @@ auto is_idn_email(const std::string_view value) -> bool;
 /// ```
 SOURCEMETA_CORE_EMAIL_EXPORT
 auto is_idn_email_uts46(const std::string_view value) -> bool;
+
+/// @ingroup email
+/// Produce the canonical RFC 6068 `mailto` IRI that identifies the given
+/// RFC 5321 `Mailbox`, with no result when the input is not one. The domain
+/// name is lowercased, the RFC 3986 Section 6.2.3 scheme-based case
+/// normalization that names this very scheme in its example, while the local
+/// part is case sensitive per RFC 5321 Section 2.4 and an address literal is
+/// not a DNS name, so both keep their spelling. For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/email.h>
+///
+/// #include <cassert>
+///
+/// const auto iri{sourcemeta::core::mailto_iri("gorby%kremvax@example.com")};
+/// assert(iri.has_value());
+/// assert(iri.value() == "mailto:gorby%25kremvax@example.com");
+/// ```
+SOURCEMETA_CORE_EMAIL_EXPORT
+auto mailto_iri(const std::string_view value) -> std::optional<std::string>;
+
+/// @ingroup email
+/// Produce the canonical RFC 7565 `acct` IRI that identifies the given
+/// `user@host` account, with no result when the input is not one. The host is
+/// lowercased, as RFC 7565 Section 4 compares these IRIs under RFC 3986
+/// Section 6.2.2.1 case normalization, while the account name keeps its case.
+///
+/// The account name is limited to the printable ASCII repertoire of the
+/// PRECIS IdentifierClass (RFC 7564 Section 9.11) and the host to an ASCII
+/// DNS name, so internationalized forms yield no result. This restriction is
+/// deliberate and may be lifted later without re-minting any identity this
+/// function already produces.
+///
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/email.h>
+///
+/// #include <cassert>
+///
+/// const auto iri{sourcemeta::core::acct_iri(
+///     "juliet@capulet.example@shoppingsite.example")};
+/// assert(iri.has_value());
+/// assert(iri.value() ==
+///        "acct:juliet%40capulet.example@shoppingsite.example");
+/// ```
+SOURCEMETA_CORE_EMAIL_EXPORT
+auto acct_iri(const std::string_view value) -> std::optional<std::string>;
 
 } // namespace sourcemeta::core
 

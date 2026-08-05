@@ -1,5 +1,6 @@
 #include <sourcemeta/blaze/output_jsonld.h>
 
+#include <sourcemeta/core/email.h>
 #include <sourcemeta/core/jsonld.h>
 #include <sourcemeta/core/jsonpointer.h>
 #include <sourcemeta/core/langtag.h>
@@ -458,12 +459,36 @@ auto literal_error(const sourcemeta::core::WeakPointer &pointer,
 // is a fail-loud resolution error. Expansion runs in IRI mode so that
 // internationalized characters flowing through a template mint the same raw
 // term that constant identities emit, as RDF compares IRIs by simple string
-// comparison (RDF 1.1 Concepts Section 3.2)
+// comparison (RDF 1.1 Concepts Section 3.2). A scheme identity name bypasses
+// expansion entirely, minting the canonical IRI of the string value in the
+// named scheme, where an input outside the scheme's source grammar is a
+// fail-loud resolution error
 auto expand_self(const sourcemeta::core::WeakPointer &pointer,
                  const sourcemeta::core::JSON::String &pattern,
                  const sourcemeta::core::JSON &value, const std::string &origin)
     -> std::variant<sourcemeta::core::JSON::String,
                     sourcemeta::blaze::JSONLDResolutionError> {
+  if (pattern == "mailto" || pattern == "acct") {
+    if (!value.is_string()) {
+      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                         "A JSON-LD self identity scheme can only be assigned "
+                         "to a string value",
+                         origin);
+    }
+
+    auto identity{pattern == "mailto"
+                      ? sourcemeta::core::mailto_iri(value.to_string())
+                      : sourcemeta::core::acct_iri(value.to_string())};
+    if (!identity.has_value()) {
+      return facet_error(pointer, sourcemeta::blaze::JSONLDFacet::Self,
+                         "A JSON-LD self identity value is outside the domain "
+                         "of its scheme",
+                         origin);
+    }
+
+    return sourcemeta::core::JSON::String{std::move(identity.value())};
+  }
+
   std::optional<sourcemeta::blaze::JSONLDResolutionError> failure;
   const sourcemeta::core::URITemplate uri_template{pattern};
   auto expanded{uri_template.expand(

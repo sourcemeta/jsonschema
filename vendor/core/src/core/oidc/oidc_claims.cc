@@ -5,6 +5,7 @@
 #include <array>       // std::array
 #include <cstddef>     // std::size_t
 #include <functional>  // std::function
+#include <optional>    // std::optional, std::nullopt
 #include <span>        // std::span
 #include <string_view> // std::string_view
 
@@ -63,6 +64,17 @@ auto emit_claims(const std::span<const std::string_view> claims,
   for (const auto claim : claims) {
     on_claim(claim);
   }
+}
+
+auto claim_set_contains(const std::span<const std::string_view> claims,
+                        const std::string_view claim) noexcept -> bool {
+  for (const auto candidate : claims) {
+    if (candidate == claim) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // OpenID Connect Core 1.0 Section 5.5.1: a claim request is null in the default
@@ -130,13 +142,7 @@ auto claim_specification(const JSON &claims, const std::string_view target,
 } // namespace
 
 auto oidc_is_standard_claim(const std::string_view name) noexcept -> bool {
-  for (const auto claim : STANDARD_CLAIMS) {
-    if (claim == name) {
-      return true;
-    }
-  }
-
-  return false;
+  return claim_set_contains(STANDARD_CLAIMS, name);
 }
 
 auto oidc_scope_to_claims(const std::string_view scopes,
@@ -173,9 +179,10 @@ auto oidc_scope_to_claims(const std::string_view scopes,
     position = space + 1;
   }
 
-  // OpenID Connect Core 1.0 Section 5.4: openid yields sub, and each profile
-  // scope yields its claim set. The standard scopes are disjoint, so a claim is
-  // reported at most once
+  // OpenID Connect Core 1.0 Section 5.4: each claim-requesting scope yields
+  // its claim set, and openid yields sub, which is always returned
+  // (Section 5.3.2). The scope claim sets are disjoint, so a claim is reported
+  // at most once
   if (has_openid) {
     on_claim("sub");
   }
@@ -195,6 +202,38 @@ auto oidc_scope_to_claims(const std::string_view scopes,
   if (has_phone) {
     emit_claims(PHONE_CLAIMS, on_claim);
   }
+}
+
+auto oidc_claim_to_scope(const std::string_view claim) noexcept
+    -> std::optional<std::string_view> {
+  // OpenID Connect Core 1.0 Section 5.3.2: "The sub (subject) Claim MUST
+  // always be returned in the UserInfo Response", so the openid scope itself
+  // is what requests it
+  if (claim == "sub") {
+    return "openid";
+  }
+
+  if (claim_set_contains(PROFILE_CLAIMS, claim)) {
+    return "profile";
+  }
+
+  if (claim_set_contains(EMAIL_CLAIMS, claim)) {
+    return "email";
+  }
+
+  if (claim_set_contains(ADDRESS_CLAIMS, claim)) {
+    return "address";
+  }
+
+  if (claim_set_contains(PHONE_CLAIMS, claim)) {
+    return "phone";
+  }
+
+  // OpenID Connect Core 1.0 Section 5.4 defines no other claim-requesting
+  // scope, and a scope name is never invented from a claim name, since a
+  // server may reject a request carrying an unknown scope as invalid_scope
+  // (RFC 6749 Section 4.1.2.1)
+  return std::nullopt;
 }
 
 auto oidc_build_claims_parameter(
@@ -241,20 +280,16 @@ auto oidc_claims_parameter_value(const JSON &claims,
   return specification->try_at("value"sv, HASH_VALUE);
 }
 
-auto oidc_claims_parameter_accepts(const JSON &claims,
-                                   const std::string_view target,
-                                   const std::string_view claim,
-                                   const JSON &value) -> bool {
-  // OpenID Connect Core 1.0 Section 5.5: only a null or object entry is a valid
-  // request, so an absent or malformed one permits nothing
-  const auto *specification{claim_specification(claims, target, claim)};
-  if (specification == nullptr ||
-      !(specification->is_null() || specification->is_object())) {
+auto oidc_claim_request_accepts(const JSON &request, const JSON &value)
+    -> bool {
+  // OpenID Connect Core 1.0 Section 5.5.1: only a null or object request is
+  // valid, so a malformed one permits nothing
+  if (!(request.is_null() || request.is_object())) {
     return false;
   }
 
   // A null request carries no value constraint, so it permits any value
-  if (specification->is_null()) {
+  if (request.is_null()) {
     return true;
   }
 
@@ -262,8 +297,8 @@ auto oidc_claims_parameter_accepts(const JSON &claims,
   // values a set of acceptable ones, so a request carrying neither is
   // unconstrained, and a present but malformed values constraint permits
   // nothing rather than silently opening the request up
-  const auto *requested_value{specification->try_at("value"sv, HASH_VALUE)};
-  const auto *requested_values{specification->try_at("values"sv, HASH_VALUES)};
+  const auto *requested_value{request.try_at("value"sv, HASH_VALUE)};
+  const auto *requested_values{request.try_at("values"sv, HASH_VALUES)};
   if (requested_value == nullptr && requested_values == nullptr) {
     return true;
   }
@@ -281,6 +316,18 @@ auto oidc_claims_parameter_accepts(const JSON &claims,
   }
 
   return false;
+}
+
+auto oidc_claims_parameter_accepts(const JSON &claims,
+                                   const std::string_view target,
+                                   const std::string_view claim,
+                                   const JSON &value) -> bool {
+  // An unrequested claim permits nothing, and what a present request permits
+  // is a single question with a single answer, shared with the predicate that
+  // takes the request directly
+  const auto *specification{claim_specification(claims, target, claim)};
+  return specification != nullptr &&
+         oidc_claim_request_accepts(*specification, value);
 }
 
 } // namespace sourcemeta::core

@@ -137,6 +137,27 @@ auto oauth_has_audience(const JSON &claims, const std::string_view audience)
     -> bool;
 
 /// @ingroup oauth
+/// Whether a set of access token claims grants a scope, so that a resource
+/// server admits only a caller whose token carries it (RFC 6749 Section 3.3,
+/// RFC 9068 Section 2.2.3, RFC 7662 Section 2.2). The claims are the payload
+/// of a JWT access token or an introspection response, and the `scope` claim
+/// is a single string of space-delimited case-sensitive tokens compared whole
+/// and by code points, with no normalization. An empty scope never matches.
+/// For example:
+///
+/// ```cpp
+/// #include <sourcemeta/core/oauth.h>
+/// #include <sourcemeta/core/json.h>
+/// #include <cassert>
+///
+/// const auto claims{
+///     sourcemeta::core::parse_json(R"JSON({"scope":"read write"})JSON")};
+/// assert(sourcemeta::core::oauth_has_scope(claims, "read"));
+/// ```
+SOURCEMETA_CORE_OAUTH_EXPORT
+auto oauth_has_scope(const JSON &claims, const std::string_view value) -> bool;
+
+/// @ingroup oauth
 /// Whether a set of access token claims carries the DPoP confirmation that
 /// binds the token to a proof-of-possession key, namely a `jkt` JWK thumbprint
 /// (RFC 9449 Section 6.1). A resource server that receives such a token under

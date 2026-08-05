@@ -5,9 +5,9 @@
 #include <sourcemeta/core/uri.h>
 
 #include "oauth_decode.h"
+#include "oauth_scope.h"
 
 #include <chrono>      // std::chrono::seconds
-#include <cstddef>     // std::size_t
 #include <cstdint>     // std::int64_t
 #include <functional>  // std::function
 #include <optional>    // std::optional, std::nullopt
@@ -164,31 +164,7 @@ auto OAuthTokenResponse::scope() const -> std::optional<std::string_view> {
 
 auto OAuthTokenResponse::has_scope(const std::string_view value) const -> bool {
   const auto granted{this->scope()};
-  if (!granted.has_value() || value.empty()) {
-    return false;
-  }
-
-  // RFC 6749 Section 3.3: scope is a space-delimited, unordered set of tokens,
-  // scanned without allocation
-  const auto text{granted.value()};
-  std::size_t position{0};
-  while (position < text.size()) {
-    const auto next{text.find(' ', position)};
-    const auto token{text.substr(position, next == std::string_view::npos
-                                               ? std::string_view::npos
-                                               : next - position)};
-    if (token == value) {
-      return true;
-    }
-
-    if (next == std::string_view::npos) {
-      break;
-    }
-
-    position = next + 1;
-  }
-
-  return false;
+  return granted.has_value() && oauth_scope_contains(granted.value(), value);
 }
 
 auto OAuthTokenResponse::data() const -> const JSON & { return *this->data_; }
