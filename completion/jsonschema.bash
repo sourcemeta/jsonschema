@@ -127,7 +127,7 @@ _jsonschema() {
       fi
       ;;
     test)
-      local options="--extension -e --ignore -i"
+      local options="--extension -e --ignore -i --jobs -J"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

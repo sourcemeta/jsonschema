@@ -495,6 +495,13 @@ add_jsonschema_test_unix(test/fail_stdin_invalid_json)
 add_jsonschema_test_unix(test/fail_stdin_not_object)
 add_jsonschema_test_unix(test/fail_stdin_test_failure)
 add_jsonschema_test_unix(test/fail_invalid_header)
+add_jsonschema_test_unix(test/fail_invalid_jobs)
+add_jsonschema_test_unix(test/pass_multi_jobs)
+add_jsonschema_test_unix(test/fail_multi_jobs)
+add_jsonschema_test_unix(test/fail_tests_empty_jobs)
+add_jsonschema_test_unix(test/pass_multi_jobs_json)
+add_jsonschema_test_unix(test/pass_multi_jobs_two_configurations)
+add_jsonschema_test_unix(test/fail_multi_jobs_parse_error)
 add_jsonschema_test_unix(test/pass_bundled_metaschema)
 
 # Bundle
