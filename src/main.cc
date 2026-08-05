@@ -77,9 +77,6 @@ Commands:
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
-       Suites run in parallel, defaulting to as many jobs as CPU cores,
-       reporting in completion order. Pass --jobs/-J to control the level
-       of parallelism, where --jobs 1 runs serially in input order.
 
    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
