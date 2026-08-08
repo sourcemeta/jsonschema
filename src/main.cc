@@ -73,6 +73,7 @@ Commands:
 
    test [schemas-or-directories...] [--extension/-e <extension>]
         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
+        [--jobs/-J <count>]
 
        Run a set of unit tests against a schema.
        Pass --json/-j to output results in CTRF format (https://ctrf.io).
@@ -231,6 +232,7 @@ auto jsonschema_main(const std::string &program, const std::string &command,
     app.flag("format-assertion", {"F"});
     app.option("extension", {"e"});
     app.option("ignore", {"i"});
+    app.option("jobs", {"J"});
     app.parse(argc, argv, {.skip = 1});
     sourcemeta::jsonschema::test(app);
     return EXIT_SUCCESS;
