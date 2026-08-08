@@ -284,7 +284,9 @@ License
 -------
 
 This project is released under the terms of the [GNU Affero General Public
-License v3.0](./LICENSE).
+License v3.0](./LICENSE). By contributing to this project, you agree to our
+organisation-wide [contribution
+guidelines](https://github.com/sourcemeta/.github/blob/main/CONTRIBUTING.md).
 
 **A note for enterprises:** Using the JSON Schema CLI as a tool during local
 development or as part of your CI/CD pipelines does not trigger the AGPL
