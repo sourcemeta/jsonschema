@@ -136,8 +136,11 @@ auto URI::userinfo() const -> std::optional<std::string_view> {
 }
 
 auto URI::has_same_authority(const URI &other) const noexcept -> bool {
+  // RFC 3986 Section 3.2.2 wraps an IP literal in brackets and writes every
+  // other host bare, so a host that reads the same either way still names a
+  // different authority depending on which form it takes
   return this->userinfo_ == other.userinfo_ && this->host_ == other.host_ &&
-         this->port_ == other.port_;
+         this->port_ == other.port_ && this->ip_literal_ == other.ip_literal_;
 }
 
 } // namespace sourcemeta::core

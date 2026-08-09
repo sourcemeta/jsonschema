@@ -8,6 +8,7 @@
 
 #include <algorithm> // std::min
 #include <array>     // std::array
+#include <cassert>   // assert
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::uint8_t, std::uint16_t
 #include <cstring>   // std::memcpy
@@ -213,7 +214,10 @@ private:
           }
           all_lengths[index++] = 0;
         }
-      } else if (symbol == 18) {
+      } else {
+        // The code length tree is built over a 19 symbol alphabet, so its
+        // decoder can never hand back anything past symbol 18
+        assert(symbol == 18);
         const auto repeats{this->reader_->read_bits(7) + 11};
         for (std::size_t step = 0; step < repeats; ++step) {
           if (index >= all_lengths.size()) {
@@ -221,8 +225,6 @@ private:
           }
           all_lengths[index++] = 0;
         }
-      } else {
-        throw GZIPError{"Invalid code length symbol"};
       }
     }
 

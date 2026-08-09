@@ -780,7 +780,7 @@ private:
                     const std::uint64_t key_line = 0,
                     const std::uint64_t key_column = 0) -> JSON {
     JSON result{this->interpret_scalar(token.value, token.scalar_style, tag)};
-    this->record_scalar_style(token);
+    this->record_scalar_style(token, result);
 
     this->invoke_callback(JSON::ParsePhase::Pre, result.type(),
                           this->effective_line(token, context, key_line),
@@ -2037,7 +2037,7 @@ private:
     this->roundtrip_->styles[this->pointer_stack_].collection = style;
   }
 
-  auto record_scalar_style(const Token &token) -> void {
+  auto record_scalar_style(const Token &token, const JSON &value) -> void {
     if (!this->roundtrip_) {
       return;
     }
@@ -2052,17 +2052,20 @@ private:
         } else {
           node_style.plain_content = std::string{token.value};
         }
+        node_style.content_value = value;
         break;
       case ScalarStyle::SingleQuoted:
         node_style.scalar = YAMLRoundTrip::ScalarStyle::SingleQuoted;
         if (!token.quoted_original.empty()) {
           node_style.quoted_content = std::string{token.quoted_original};
+          node_style.content_value = value;
         }
         break;
       case ScalarStyle::DoubleQuoted:
         node_style.scalar = YAMLRoundTrip::ScalarStyle::DoubleQuoted;
         if (!token.quoted_original.empty()) {
           node_style.quoted_content = std::string{token.quoted_original};
+          node_style.content_value = value;
         }
         break;
       case ScalarStyle::Literal:
@@ -2092,6 +2095,7 @@ private:
 
       if (!token.block_original.empty()) {
         node_style.block_content = std::string{token.block_original};
+        node_style.content_value = value;
       }
 
       auto block_comment{this->lexer_->take_block_scalar_comment()};

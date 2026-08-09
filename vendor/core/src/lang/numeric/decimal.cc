@@ -877,6 +877,13 @@ auto Decimal::to_uint32() const -> std::uint32_t {
 }
 
 auto Decimal::to_float() const -> float {
+  // IEEE 754-2019 section 6.2 requires an operation that signals an invalid
+  // operation exception and delivers a floating point result to deliver a
+  // quiet NaN, which is the case when converting a signaling NaN
+  if (this->is_nan()) {
+    return std::numeric_limits<float>::quiet_NaN();
+  }
+
   try {
     return std::stof(this->to_scientific_string());
   } catch (const std::out_of_range &) {
@@ -885,6 +892,13 @@ auto Decimal::to_float() const -> float {
 }
 
 auto Decimal::to_double() const -> double {
+  // IEEE 754-2019 section 6.2 requires an operation that signals an invalid
+  // operation exception and delivers a floating point result to deliver a
+  // quiet NaN, which is the case when converting a signaling NaN
+  if (this->is_nan()) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
   try {
     return std::stod(this->to_scientific_string());
   } catch (const std::out_of_range &) {
@@ -1103,17 +1117,24 @@ auto Decimal::divisible_by(const Decimal &divisor) const -> bool {
     return static_cast<std::uint64_t>(remaining % divisor_value) == 0;
   }
 
+  Decimal dividend_magnitude{*this};
+  dividend_magnitude.flags_ =
+      static_cast<std::uint8_t>(dividend_magnitude.flags_ & ~FLAG_SIGN);
+  Decimal divisor_magnitude{divisor};
+  divisor_magnitude.flags_ =
+      static_cast<std::uint8_t>(divisor_magnitude.flags_ & ~FLAG_SIGN);
+  if (dividend_magnitude < divisor_magnitude) {
+    return false;
+  }
+
   auto dividend_big = coefficient_as_big(this->coefficient_,
                                          this->coefficient_high_, this->flags_);
   auto divisor_big = coefficient_as_big(
       divisor.coefficient_, divisor.coefficient_high_, divisor.flags_);
 
-  BigCoefficient::align_exponents(dividend_big, divisor_big, this->exponent_,
-                                  divisor.exponent_);
-
-  auto [quotient, remainder] = dividend_big.divide_modulo(divisor_big);
-
-  return remainder.is_zero();
+  auto exponent_difference =
+      static_cast<std::int64_t>(this->exponent_) - divisor.exponent_;
+  return dividend_big.modulo_scaled(divisor_big, exponent_difference).is_zero();
 }
 
 auto Decimal::same_quantum(const Decimal &other) const -> bool {
@@ -1791,8 +1812,6 @@ auto Decimal::operator+=(const Decimal &other) -> Decimal & {
     store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
                      std::move(result_big), result_negative);
     this->exponent_ = result_exponent;
-    round_to_precision(this->coefficient_, this->coefficient_high_,
-                       this->exponent_, this->flags_);
     return *this;
   }
 
@@ -1993,52 +2012,37 @@ auto Decimal::operator%=(const Decimal &other) -> Decimal & {
     return *this;
   }
 
-  Decimal quotient{*this};
-  quotient /= other;
-
-  if (quotient.is_finite() && !quotient.is_zero()) {
-    if (quotient.exponent_ < 0) {
-      if (quotient.flags_ & FLAG_BIG) {
-        auto digit_string = coefficient_to_digit_string(
-            quotient.coefficient_, quotient.coefficient_high_, quotient.flags_);
-        auto number_of_digits = static_cast<std::int32_t>(digit_string.size());
-        auto digits_to_remove = -quotient.exponent_;
-        if (digits_to_remove >= number_of_digits) {
-          quotient = Decimal{};
-        } else {
-          auto integer_string = digit_string.substr(
-              0, static_cast<std::size_t>(number_of_digits - digits_to_remove));
-          auto old_sign =
-              static_cast<std::uint8_t>(quotient.flags_ & FLAG_SIGN);
-          // The assignment below releases the current coefficient, so freeing
-          // it explicitly here as well would free the same allocation twice
-          quotient = Decimal{integer_string};
-          quotient.flags_ =
-              static_cast<std::uint8_t>(quotient.flags_ | old_sign);
-        }
-
-      } else {
-        auto coefficient = quotient.coefficient_;
-        auto exponent = quotient.exponent_;
-        while (exponent < 0 && coefficient > 0) {
-          coefficient /= 10;
-          exponent++;
-        }
-
-        if (exponent < 0) {
-          quotient = Decimal{};
-        } else {
-          quotient.coefficient_ = coefficient;
-          quotient.exponent_ = exponent;
-        }
-      }
-    }
+  // The General Decimal Arithmetic Specification defines remainder as "the
+  // residue of the dividend after the operation of calculating integer
+  // division" and states that "the sign of the result, if non-zero, is the
+  // same as that of the original dividend", so the result is derived from
+  // the exact big integer division rather than from rounded arithmetic
+  Decimal dividend_magnitude{*this};
+  dividend_magnitude.flags_ =
+      static_cast<std::uint8_t>(dividend_magnitude.flags_ & ~FLAG_SIGN);
+  Decimal divisor_magnitude{other};
+  divisor_magnitude.flags_ =
+      static_cast<std::uint8_t>(divisor_magnitude.flags_ & ~FLAG_SIGN);
+  if (dividend_magnitude < divisor_magnitude) {
+    return *this;
   }
 
-  Decimal product{quotient};
-  product *= other;
-  *this -= product;
+  bool result_negative = (this->flags_ & FLAG_SIGN) != 0;
+  auto result_exponent = std::min(this->exponent_, other.exponent_);
 
+  auto dividend_big = coefficient_as_big(this->coefficient_,
+                                         this->coefficient_high_, this->flags_);
+  auto divisor_big = coefficient_as_big(other.coefficient_,
+                                        other.coefficient_high_, other.flags_);
+
+  auto exponent_difference =
+      static_cast<std::int64_t>(this->exponent_) - other.exponent_;
+  auto remainder = dividend_big.modulo_scaled(divisor_big, exponent_difference);
+
+  free_big_coefficient(this->coefficient_, this->flags_);
+  store_big_result(this->coefficient_, this->coefficient_high_, this->flags_,
+                   std::move(remainder), result_negative);
+  this->exponent_ = result_exponent;
   return *this;
 }
 

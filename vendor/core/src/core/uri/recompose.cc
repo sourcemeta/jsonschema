@@ -144,25 +144,15 @@ auto append_disambiguated_path(std::string &output,
     const auto first_segment_length{first_slash == std::string_view::npos
                                         ? path_value.size()
                                         : first_slash};
-    const auto first_segment{path_value.substr(0, first_segment_length)};
-    if (first_segment.find(':') != std::string_view::npos) {
-      std::string encoded;
-      encoded.reserve(first_segment_length + 4);
-      for (const char character : first_segment) {
-        if (character == ':') {
-          encoded += "%3A";
-        } else {
-          encoded += character;
-        }
-      }
-
-      escape_component_to_string(output, encoded, URIEscapeMode::Path, iri);
-      if (first_slash != std::string_view::npos) {
-        escape_component_to_string(output, path_value.substr(first_slash),
-                                   URIEscapeMode::Path, iri);
-      }
-
-      return;
+    // RFC 3986 Section 4.2: "A path segment that contains a colon character
+    // cannot be used as the first segment of a relative-path reference, as it
+    // would be mistaken for a scheme name. Such a segment must be preceded by
+    // a dot-segment". Percent encoding the colon would avoid the same misparse
+    // but would name a different path, since Section 6.2.2.2 only equates
+    // percent-encoded unreserved characters
+    if (path_value.substr(0, first_segment_length).find(':') !=
+        std::string_view::npos) {
+      output += "./";
     }
   }
 

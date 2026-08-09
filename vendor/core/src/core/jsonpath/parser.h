@@ -460,10 +460,8 @@ private:
   // member-name-shorthand = name-first *name-char
   auto parse_shorthand_name() -> JSONPath::SelectorName {
     JSON::String name;
-    if (this->at_end()) {
-      this->fail();
-    }
-
+    // Every caller rejects a query that ends right before a shorthand name
+    assert(!this->at_end());
     const auto first{static_cast<unsigned char>(this->peek())};
     if (first == '_' || is_alpha(static_cast<char>(first))) {
       name += static_cast<char>(first);
@@ -641,36 +639,33 @@ private:
   }
 
   // comparison-op = "==" / "!=" / "<=" / ">=" / "<" / ">"
+  // Callers look ahead for a full comparison operator before parsing one, so
+  // the first character is one of the four operator openers, and an equals
+  // sign always follows an exclamation mark or another equals sign
   auto parse_comparison_operator() -> JSONPath::FilterComparisonOperator {
     const char character{this->peek()};
     if (character == '=' || character == '!') {
       this->position_ += 1;
-      if (this->at_end() || this->peek() != '=') {
-        this->fail();
-      }
-
+      assert(!this->at_end() && this->peek() == '=');
       this->position_ += 1;
       return character == '=' ? JSONPath::FilterComparisonOperator::Equal
                               : JSONPath::FilterComparisonOperator::NotEqual;
     }
 
-    if (character == '<' || character == '>') {
+    assert(character == '<' || character == '>');
+    this->position_ += 1;
+    const bool inclusive{!this->at_end() && this->peek() == '='};
+    if (inclusive) {
       this->position_ += 1;
-      const bool inclusive{!this->at_end() && this->peek() == '='};
-      if (inclusive) {
-        this->position_ += 1;
-      }
-
-      if (character == '<') {
-        return inclusive ? JSONPath::FilterComparisonOperator::LessEqual
-                         : JSONPath::FilterComparisonOperator::Less;
-      }
-
-      return inclusive ? JSONPath::FilterComparisonOperator::GreaterEqual
-                       : JSONPath::FilterComparisonOperator::Greater;
     }
 
-    this->fail();
+    if (character == '<') {
+      return inclusive ? JSONPath::FilterComparisonOperator::LessEqual
+                       : JSONPath::FilterComparisonOperator::Less;
+    }
+
+    return inclusive ? JSONPath::FilterComparisonOperator::GreaterEqual
+                     : JSONPath::FilterComparisonOperator::Greater;
   }
 
   auto parse_comparison_or_test() -> JSONPath::FilterExpression {

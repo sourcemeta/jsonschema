@@ -4,6 +4,7 @@
 #include "escaping.h"
 #include "normalize.h"
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <optional>    // std::optional
 #include <string>      // std::string
@@ -15,10 +16,8 @@ namespace {
 auto apply_leading_slash_transform(std::optional<std::string> parsed_path,
                                    const bool needs_leading_slash)
     -> std::optional<std::string> {
-  if (!parsed_path.has_value()) {
-    return parsed_path;
-  }
-
+  // Every caller wraps a concrete string into the optional
+  assert(parsed_path.has_value());
   const auto &path_value = parsed_path.value();
 
   if (needs_leading_slash) {

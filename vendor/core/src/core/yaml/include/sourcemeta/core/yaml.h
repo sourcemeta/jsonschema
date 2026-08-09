@@ -184,7 +184,10 @@ auto parse_yaml(const JSON::String &input, YAMLRoundTrip &roundtrip,
 /// @ingroup yaml
 ///
 /// Stringify a JSON document as YAML, using round-trip metadata collected
-/// during parsing to preserve the original formatting. For example:
+/// during parsing to preserve the original formatting. The document may be
+/// modified in between, in which case the nodes that changed are written from
+/// the document, keeping their original presentation style where that style
+/// can still express them. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/json.h>

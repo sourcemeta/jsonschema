@@ -78,6 +78,9 @@ public:
     std::optional<std::string> plain_content;
     /// The original quoted scalar content
     std::optional<std::string> quoted_content;
+    /// The value the recorded original content was captured from, so that such
+    /// content is only reproduced while the document still holds that value
+    std::optional<JSON> content_value;
     /// The anchor name attached to the node
     std::optional<std::string> anchor;
     /// The comments preceding the node
