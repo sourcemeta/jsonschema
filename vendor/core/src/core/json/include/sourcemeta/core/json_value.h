@@ -227,22 +227,6 @@ public:
   /// ```
   explicit JSON(const Char *const value);
 
-  /// This constructor creates a JSON array from a set of other JSON documents.
-  /// For example:
-  ///
-  /// ```cpp
-  /// #include <sourcemeta/core/json.h>
-  /// #include <cassert>
-  ///
-  /// const sourcemeta::core::JSON my_array{
-  ///   sourcemeta::core::JSON{1},
-  ///   sourcemeta::core::JSON{2},
-  ///   sourcemeta::core::JSON{3}};
-  ///
-  /// assert(my_array.is_array());
-  /// ```
-  explicit JSON(std::initializer_list<JSON> values);
-
   /// A copy constructor for the array type.
   explicit JSON(const Array &value);
 
@@ -296,6 +280,28 @@ public:
   /// This function is particularly handy for programatically constructing
   /// arrays.
   static auto make_array() -> JSON;
+
+  /// This function creates a JSON array out of a list of other JSON documents.
+  /// For example:
+  ///
+  /// ```cpp
+  /// #include <sourcemeta/core/json.h>
+  /// #include <cassert>
+  ///
+  /// const auto document = sourcemeta::core::JSON::make_array({
+  ///   sourcemeta::core::JSON{1},
+  ///   sourcemeta::core::JSON{2},
+  ///   sourcemeta::core::JSON{3}});
+  ///
+  /// assert(document.is_array());
+  /// assert(document.size() == 3);
+  /// ```
+  ///
+  /// Note that a list of this kind always copies each of its documents, as the
+  /// language offers no way of moving out of one. Prefer starting from an
+  /// empty array and moving each document into it when the cost of those
+  /// copies matters.
+  static auto make_array(std::initializer_list<JSON> values) -> JSON;
 
   /// This function creates an empty JSON object. For example:
   ///

@@ -7,6 +7,7 @@
 
 #include <algorithm> // std::ranges::fill
 #include <array>     // std::array
+#include <cassert>   // assert
 #include <cstddef>   // std::size_t
 #include <cstdint>   // std::uint8_t, std::uint16_t
 
@@ -37,9 +38,10 @@ public:
     std::ranges::fill(this->lut_, std::uint16_t{0});
 
     for (std::size_t symbol = 0; symbol < length_count; ++symbol) {
-      if (lengths[symbol] > MAX_HUFFMAN_BITS) {
-        throw GZIPError{"Huffman code length out of range"};
-      }
+      // The fixed trees use lengths five to nine, the code length tree
+      // reads three bit values, and the dynamic trees copy code length
+      // symbols below sixteen, so no caller can supply a longer length
+      assert(lengths[symbol] <= MAX_HUFFMAN_BITS);
       this->count_[lengths[symbol]]++;
     }
 

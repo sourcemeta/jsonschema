@@ -160,22 +160,6 @@ JSON::JSON(const Char *const value) : current_type{Type::String} {
   std::construct_at(&this->data_string, value);
 }
 
-JSON::JSON(std::initializer_list<JSON> values) : current_type{Type::Array} {
-// For direct-list-initialization (e.g. JSON x{other_json}), the C++ standard
-// mandates that initializer_list constructors are preferred over copy/move
-// constructors. GCC and MSVC follow this strictly, so a single-element brace
-// init ends up here instead of the copy constructor. Handle this case before
-// constructing the array to avoid an unnecessary heap allocation.
-#if defined(__GNUC__) || defined(_MSC_VER)
-  if (values.size() == 1) {
-    this->current_type = Type::Null;
-    this->operator=(*values.begin());
-    return;
-  }
-#endif
-  std::construct_at(&this->data_array, values);
-}
-
 JSON::JSON(const Array &value) : current_type{Type::Array} {
   std::construct_at(&this->data_array, value);
 }
@@ -468,10 +452,6 @@ JSON::~JSON() {
       }
 
       while (!pending.empty()) {
-        // Use copy-init so the move constructor is selected. Direct-list-init
-        // would route through JSON(initializer_list<JSON>) on GCC and MSVC,
-        // whose single-element workaround takes the slower copy-and-replace
-        // path instead of a direct move
         JSON node = std::move(pending.back());
         pending.pop_back();
         if (node.current_type == Type::Array) {
@@ -503,6 +483,13 @@ JSON::~JSON() {
 }
 
 auto JSON::make_array() -> JSON { return JSON{Array{}}; }
+
+auto JSON::make_array(std::initializer_list<JSON> values) -> JSON {
+  JSON result{nullptr};
+  std::construct_at(&result.data_array, values);
+  result.current_type = Type::Array;
+  return result;
+}
 
 auto JSON::make_object() -> JSON { return JSON{Object{}}; }
 

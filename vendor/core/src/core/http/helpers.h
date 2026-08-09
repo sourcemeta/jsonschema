@@ -4,6 +4,7 @@
 #include <sourcemeta/core/http_syntax.h>
 #include <sourcemeta/core/text.h>
 
+#include <cassert>     // assert
 #include <cstddef>     // std::size_t
 #include <cstdint>     // std::uint8_t, std::uint16_t
 #include <string_view> // std::string_view
@@ -29,11 +30,12 @@ inline auto http_media_specificity(const std::string_view range,
     return 1;
   }
   const auto range_slash{range.find('/')};
-  const auto candidate_slash{candidate.find('/')};
-  if (range_slash == std::string_view::npos ||
-      candidate_slash == std::string_view::npos) {
+  if (range_slash == std::string_view::npos) {
     return 0;
   }
+  // Every caller validates its candidate media types upfront
+  const auto candidate_slash{candidate.find('/')};
+  assert(candidate_slash != std::string_view::npos);
   if (range.size() - range_slash != 2 || range[range_slash + 1] != '*') {
     return 0;
   }

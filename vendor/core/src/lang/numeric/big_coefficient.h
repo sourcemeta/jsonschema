@@ -393,52 +393,186 @@ public:
       return {std::move(quotient), std::move(remainder_big)};
     }
 
-    auto remainder = this->clone();
-    BigCoefficient quotient{this->length};
-    quotient.length = this->length;
-    std::fill(quotient.words, quotient.words + quotient.length, 0ULL);
+    // Long division per Knuth, The Art of Computer Programming, volume 2,
+    // section 4.3.1, algorithm D, which normalizes both operands so that the
+    // top divisor word is at least half the base. This guarantees that each
+    // trial quotient word is at most one in excess after the two word
+    // correction test, so the cost is quadratic in the word count instead of
+    // linear in the magnitude of the quotient
+    auto normalizer = BASE / (divisor.words[divisor.length - 1] + 1);
 
-    while (remainder.compare(divisor) >= 0) {
-      auto remainder_top = static_cast<sourcemeta::core::uint128_t>(
-          remainder.words[remainder.length - 1]);
-      if (remainder.length > divisor.length) {
-        auto shift = remainder.length - divisor.length;
-        auto divisor_top = divisor.words[divisor.length - 1];
-        auto estimate =
-            static_cast<std::uint64_t>(remainder_top / (divisor_top + 1));
-        if (estimate == 0) {
-          estimate = 1;
+    BigCoefficient normalized_divisor{divisor.length};
+    normalized_divisor.length = divisor.length;
+    sourcemeta::core::uint128_t normalize_carry = 0;
+    for (std::uint32_t index = 0; index < divisor.length; index++) {
+      auto product =
+          static_cast<sourcemeta::core::uint128_t>(divisor.words[index]) *
+              normalizer +
+          normalize_carry;
+      normalized_divisor.words[index] =
+          static_cast<std::uint64_t>(product % BASE);
+      normalize_carry = product / BASE;
+    }
+
+    BigCoefficient normalized_dividend{this->length + 1};
+    normalized_dividend.length = this->length + 1;
+    normalize_carry = 0;
+    for (std::uint32_t index = 0; index < this->length; index++) {
+      auto product =
+          static_cast<sourcemeta::core::uint128_t>(this->words[index]) *
+              normalizer +
+          normalize_carry;
+      normalized_dividend.words[index] =
+          static_cast<std::uint64_t>(product % BASE);
+      normalize_carry = product / BASE;
+    }
+
+    normalized_dividend.words[this->length] =
+        static_cast<std::uint64_t>(normalize_carry);
+
+    auto quotient_length = this->length - divisor.length + 1;
+    BigCoefficient quotient{quotient_length};
+    quotient.length = quotient_length;
+
+    auto top_divisor_word = normalized_divisor.words[divisor.length - 1];
+    auto next_divisor_word = normalized_divisor.words[divisor.length - 2];
+
+    for (auto position = quotient_length; position > 0;) {
+      position--;
+      auto numerator =
+          static_cast<sourcemeta::core::uint128_t>(
+              normalized_dividend.words[position + divisor.length]) *
+              BASE +
+          normalized_dividend.words[position + divisor.length - 1];
+      auto trial_word = numerator / top_divisor_word;
+      auto trial_remainder = numerator % top_divisor_word;
+      while (trial_word >= BASE ||
+             trial_word * next_divisor_word >
+                 trial_remainder * BASE +
+                     normalized_dividend.words[position + divisor.length - 2]) {
+        trial_word -= 1;
+        trial_remainder += top_divisor_word;
+        if (trial_remainder >= BASE) {
+          break;
         }
-
-        BigCoefficient estimate_big{1};
-        estimate_big.words[0] = estimate;
-        estimate_big.length = 1;
-
-        auto scaled = estimate_big.multiply_pow10(shift * BASE_DIGITS);
-        auto product = scaled.multiply(divisor);
-
-        if (product.compare(remainder) > 0) {
-          remainder = remainder.subtract(divisor);
-          quotient.words[0]++;
-        } else {
-          remainder = remainder.subtract(product);
-          BigCoefficient estimated_quotient{shift + 1};
-          std::fill(estimated_quotient.words, estimated_quotient.words + shift,
-                    0ULL);
-          estimated_quotient.words[shift] = estimate;
-          estimated_quotient.length = shift + 1;
-          quotient = quotient.add(estimated_quotient);
-        }
-
-      } else {
-        remainder = remainder.subtract(divisor);
-        quotient.words[0]++;
       }
+
+      std::uint64_t borrow = 0;
+      for (std::uint32_t index = 0; index < divisor.length; index++) {
+        auto subtrahend = trial_word * normalized_divisor.words[index] + borrow;
+        auto subtrahend_low = static_cast<std::uint64_t>(subtrahend % BASE);
+        borrow = static_cast<std::uint64_t>(subtrahend / BASE);
+        auto &word = normalized_dividend.words[position + index];
+        if (word < subtrahend_low) {
+          word += BASE - subtrahend_low;
+          borrow++;
+        } else {
+          word -= subtrahend_low;
+        }
+      }
+
+      auto top_word = normalized_dividend.words[position + divisor.length];
+      if (top_word < borrow) {
+        trial_word -= 1;
+        std::uint64_t add_carry = 0;
+        for (std::uint32_t index = 0; index < divisor.length; index++) {
+          auto &word = normalized_dividend.words[position + index];
+          auto sum = word + normalized_divisor.words[index] + add_carry;
+          if (sum >= BASE) {
+            word = sum - BASE;
+            add_carry = 1;
+          } else {
+            word = sum;
+            add_carry = 0;
+          }
+        }
+
+        normalized_dividend.words[position + divisor.length] =
+            top_word + add_carry - borrow;
+      } else {
+        normalized_dividend.words[position + divisor.length] =
+            top_word - borrow;
+      }
+
+      quotient.words[position] = static_cast<std::uint64_t>(trial_word);
+    }
+
+    BigCoefficient remainder{divisor.length};
+    remainder.length = divisor.length;
+    sourcemeta::core::uint128_t denormalize_carry = 0;
+    for (auto index = divisor.length; index > 0; index--) {
+      auto current =
+          denormalize_carry * BASE + normalized_dividend.words[index - 1];
+      remainder.words[index - 1] =
+          static_cast<std::uint64_t>(current / normalizer);
+      denormalize_carry = current % normalizer;
     }
 
     quotient.trim();
     remainder.trim();
     return {std::move(quotient), std::move(remainder)};
+  }
+
+  [[nodiscard]] auto multiply_modulo(const BigCoefficient &other,
+                                     const BigCoefficient &modulus) const
+      -> BigCoefficient {
+    auto product = this->multiply(other);
+    return product.divide_modulo(modulus).second;
+  }
+
+  [[nodiscard]] static auto pow10_modulo(std::uint64_t power,
+                                         const BigCoefficient &modulus)
+      -> BigCoefficient {
+    BigCoefficient base{1};
+    base.words[0] = 10;
+    base.length = 1;
+    base = base.divide_modulo(modulus).second;
+
+    BigCoefficient result{1};
+    result.words[0] = 1;
+    result.length = 1;
+    result = result.divide_modulo(modulus).second;
+
+    auto remaining = power;
+    while (remaining > 0) {
+      if (remaining & 1) {
+        result = result.multiply_modulo(base, modulus);
+      }
+
+      remaining >>= 1;
+      if (remaining > 0) {
+        base = base.multiply_modulo(base, modulus);
+      }
+    }
+
+    return result;
+  }
+
+  // The exponent difference between two decimal operands can reach billions,
+  // so scaling the dividend coefficient digit by digit before dividing would
+  // materialize gigabytes. When the dividend carries the larger exponent,
+  // reducing it first and folding the scale in through modular exponentiation
+  // keeps every intermediate bounded by the divisor size. When the divisor
+  // carries the larger exponent, its coefficient is scaled up by the full
+  // difference, so callers must first rule out dividends smaller in magnitude
+  // than the divisor, which bounds that scaling by the dividend digit count
+  [[nodiscard]] auto modulo_scaled(const BigCoefficient &divisor,
+                                   std::int64_t exponent_difference) const
+      -> BigCoefficient {
+    if (exponent_difference > 0) {
+      auto reduced = this->divide_modulo(divisor).second;
+      auto scale = pow10_modulo(static_cast<std::uint64_t>(exponent_difference),
+                                divisor);
+      return reduced.multiply_modulo(scale, divisor);
+    }
+
+    if (exponent_difference < 0) {
+      auto scaled_divisor = divisor.multiply_pow10(
+          static_cast<std::uint32_t>(-exponent_difference));
+      return this->divide_modulo(scaled_divisor).second;
+    }
+
+    return this->divide_modulo(divisor).second;
   }
 
   [[nodiscard]] static auto from_uint64(std::uint64_t value) -> BigCoefficient {
