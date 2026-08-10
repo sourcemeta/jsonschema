@@ -83,7 +83,7 @@ _jsonschema() {
             ${global_options[@]} \
             '(--extension -e)'{--extension,-e}'[Specify file extension]:extension:_jsonschema_extensions' \
             '(--ignore -i)'{--ignore,-i}'[Ignore schemas or directories]:path:_files' \
-            '(--jobs -J)'{--jobs,-J}'[Specify the level of parallelism]:count:(1 2 4 8)' \
+            '(--jobs -J)'{--jobs,-J}'[Specify the level of parallelism]:count:' \
             '*:schema file:_files -g "*.json *.yaml *.yml"'
           ;;
         fmt)

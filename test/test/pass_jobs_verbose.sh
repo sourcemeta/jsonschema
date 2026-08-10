@@ -7,9 +7,9 @@ TMP="$(mktemp -d)"
 clean() { rm -rf "$TMP"; }
 trap clean EXIT
 
-if command -v nproc > /dev/null 2>&1
+if command -v getconf > /dev/null 2>&1
 then
-  CORES="$(nproc)"
+  CORES="$(getconf _NPROCESSORS_ONLN)"
 else
   CORES="$(sysctl -n hw.ncpu)"
 fi

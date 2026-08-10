@@ -49,7 +49,6 @@ _jsonschema() {
       return 0
       ;;
     --jobs|-J)
-      COMPREPLY=( $(compgen -W "1 2 4 8" -- "${current}") )
       return 0
       ;;
     -n)
