@@ -37,6 +37,7 @@ cat << EOF > "$TMP/expected.json"
   "\$ref": "https://example.com/schemas/parent",
   "\$defs": {
     "https://example.com/schemas/child": {
+      "\$schema": "https://json-schema.org/draft/2020-12/schema",
       "\$id": "https://example.com/schemas/child",
       "type": "string"
     },

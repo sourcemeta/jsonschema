@@ -208,45 +208,73 @@ auto TestSuite::parse(const sourcemeta::core::JSON &document,
         return test_case.rdf.has_value();
       })};
 
-  auto tweaks_fast{tweaks};
+  test_suite.tweaks_fast = tweaks;
+  test_suite.tweaks_exhaustive = tweaks;
   if (with_rdf) {
-    if (!tweaks_fast.has_value()) {
-      tweaks_fast.emplace();
+    if (!test_suite.tweaks_fast.has_value()) {
+      test_suite.tweaks_fast.emplace();
     }
 
-    if (!tweaks_fast.value().annotations.has_value()) {
-      tweaks_fast.value().annotations.emplace();
+    if (!test_suite.tweaks_fast.value().annotations.has_value()) {
+      test_suite.tweaks_fast.value().annotations.emplace();
     }
 
-    tweaks_fast.value().annotations.value().insert(JSONLD_KEYWORDS.cbegin(),
-                                                   JSONLD_KEYWORDS.cend());
+    test_suite.tweaks_fast.value().annotations.value().insert(
+        JSONLD_KEYWORDS.cbegin(), JSONLD_KEYWORDS.cend());
   }
 
+  test_suite.schema_resolver = schema_resolver;
+  test_suite.walker = walker;
+  test_suite.compiler = compiler;
+  test_suite.default_dialect = default_dialect;
+  test_suite.default_id = default_id;
+
   test_suite.schemas_fast.reserve(test_suite.targets.size());
-  test_suite.schemas_exhaustive.reserve(test_suite.targets.size());
+  test_suite.schemas_exhaustive.resize(test_suite.targets.size());
 
-  for (const auto &target : test_suite.targets) {
-    const auto target_schema{wrap_identifier(target)};
-
-    try {
-      test_suite.schemas_fast.push_back(compile(
-          target_schema, walker, schema_resolver, compiler,
-          Mode::FastValidation, default_dialect, default_id, "", tweaks_fast));
-      test_suite.schemas_exhaustive.push_back(
-          compile(target_schema, walker, schema_resolver, compiler,
-                  Mode::Exhaustive, default_dialect, default_id, "", tweaks));
-    } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
-      if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
-          error.identifier() == target) {
-        throw sourcemeta::blaze::SchemaResolutionError{
-            target, "Could not resolve schema under test"};
-      }
-
-      throw;
-    }
+  for (std::size_t target_index = 0; target_index < test_suite.targets.size();
+       ++target_index) {
+    test_suite.schemas_fast.push_back(
+        test_suite.compile_target(target_index, Mode::FastValidation));
   }
 
   return test_suite;
+}
+
+auto TestSuite::compile_target(const std::size_t target_index,
+                               const Mode mode) const -> Template {
+  const auto &target{this->targets[target_index]};
+
+  try {
+    return compile(wrap_identifier(target), this->walker, this->schema_resolver,
+                   this->compiler, mode, this->default_dialect,
+                   this->default_id, "",
+                   mode == Mode::FastValidation ? this->tweaks_fast
+                                                : this->tweaks_exhaustive);
+  } catch (const sourcemeta::blaze::SchemaReferenceError &error) {
+    if (error.location() == sourcemeta::core::Pointer{"$ref"} &&
+        error.identifier() == target) {
+      throw sourcemeta::blaze::SchemaResolutionError{
+          target, "Could not resolve schema under test"};
+    }
+
+    throw;
+  }
+}
+
+auto TestSuite::fast(const std::size_t target_index) const -> const Template & {
+  assert(target_index < this->schemas_fast.size());
+  return this->schemas_fast[target_index];
+}
+
+auto TestSuite::exhaustive(const std::size_t target_index) -> const Template & {
+  assert(target_index < this->schemas_exhaustive.size());
+  auto &schema_exhaustive{this->schemas_exhaustive[target_index]};
+  if (!schema_exhaustive.has_value()) {
+    schema_exhaustive = this->compile_target(target_index, Mode::Exhaustive);
+  }
+
+  return schema_exhaustive.value();
 }
 
 } // namespace sourcemeta::blaze

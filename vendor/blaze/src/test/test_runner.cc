@@ -57,7 +57,7 @@ auto TestSuite::run(const Callback &callback) -> Result {
   for (std::size_t target_index = 0; target_index < this->targets.size();
        ++target_index) {
     const auto &target = this->targets[target_index];
-    const auto &schema_fast = this->schemas_fast[target_index];
+    const auto &schema_fast = this->fast(target_index);
     for (const auto &test_case : this->tests) {
       const auto start{std::chrono::steady_clock::now()};
       const auto outcome{
