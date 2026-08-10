@@ -48,6 +48,10 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
       return 0
       ;;
+    --jobs|-J)
+      COMPREPLY=( $(compgen -W "1 2 4 8" -- "${current}") )
+      return 0
+      ;;
     -n)
       if [ "${command}" = "fmt" ] || [ "${command}" = "lint" ]
       then

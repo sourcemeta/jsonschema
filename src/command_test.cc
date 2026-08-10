@@ -177,8 +177,8 @@ auto warm_caches(const sourcemeta::core::Options &options,
 
 auto run_suite_as_text(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
-                       const bool verbose, std::mutex &output_mutex,
-                       bool &result, bool &empty_test_suite) -> void {
+                       const bool verbose, std::ostream &stream)
+    -> sourcemeta::blaze::TestSuite::Result {
   const auto configuration_path{
       sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
   const auto &configuration{
@@ -192,8 +192,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
       entry, schema_resolver, dialect,
       sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
-  const std::lock_guard<std::mutex> lock{output_mutex};
-  std::cout << entry.first << ":";
+  stream << entry.first << ":";
 
   const auto multi_target{test_suite.targets.size() > 1};
   sourcemeta::core::JSON::String last_target_header;
@@ -205,7 +204,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
           const sourcemeta::blaze::TestOutcome &outcome,
           sourcemeta::blaze::TestTimestamp, sourcemeta::blaze::TestTimestamp) {
         if (verbose && index == 1) {
-          std::cout << "\n";
+          stream << "\n";
         }
 
         const auto entry_indent{multi_target ? "    " : "  "};
@@ -213,7 +212,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         const auto emit_target_header{[&]() {
           if (multi_target &&
               (!last_target_header_set || last_target_header != target)) {
-            std::cout << "  " << target << ":\n";
+            stream << "  " << target << ":\n";
             last_target_header = target;
             last_target_header_set = true;
           }
@@ -226,20 +225,20 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
         if (outcome.passed) {
           if (verbose) {
             emit_target_header();
-            std::cout << entry_indent << index << "/" << total << " PASS "
-                      << description << "\n";
+            stream << entry_indent << index << "/" << total << " PASS "
+                   << description << "\n";
           }
         } else if (!test_case.valid && outcome.valid) {
           if (!verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
           emit_target_header();
-          std::cout << entry_indent << index << "/" << total << " FAIL "
-                    << description << "\n\n"
-                    << "error: Passed but was expected to fail\n";
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n"
+                 << "error: Passed but was expected to fail\n";
 
           if (index != total && verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
         } else if (!outcome.valid) {
           const std::string ref{"$ref"};
@@ -254,43 +253,40 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
               std::ref(output));
 
           if (!verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
           emit_target_header();
-          std::cout << entry_indent << index << "/" << total << " FAIL "
-                    << description << "\n\n";
-          sourcemeta::jsonschema::print(output, test_case.tracker, std::cout);
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n";
+          sourcemeta::jsonschema::print(output, test_case.tracker, stream);
 
           if (index != total && verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
         } else {
           if (!verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
           emit_target_header();
-          std::cout << entry_indent << index << "/" << total << " FAIL "
-                    << description << "\n\n";
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n";
           print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                            outcome, std::cout);
+                            outcome, stream);
 
           if (index != total && verbose) {
-            std::cout << "\n";
+            stream << "\n";
           }
         }
       })};
 
-  if (suite_result.passed != suite_result.total) {
-    result = false;
+  if (suite_result.total == 0) {
+    stream << " NO TESTS\n";
+  } else if (!verbose && suite_result.passed == suite_result.total) {
+    stream << " PASS " << suite_result.passed << "/" << suite_result.total
+           << "\n";
   }
 
-  if (suite_result.total == 0) {
-    empty_test_suite = true;
-    std::cout << " NO TESTS\n";
-  } else if (!verbose && suite_result.passed == suite_result.total) {
-    std::cout << " PASS " << suite_result.passed << "/" << suite_result.total
-              << "\n";
-  }
+  return suite_result;
 }
 
 auto report_as_text(const sourcemeta::core::Options &options,
@@ -316,8 +312,23 @@ auto report_as_text(const sourcemeta::core::Options &options,
         }
 
         try {
-          run_suite_as_text(options, entry, verbose, output_mutex, result,
-                            empty_test_suite);
+          // Buffer the output of every suite, so that we only need to hold
+          // the output lock while emitting it, letting suites actually
+          // evaluate their test cases in parallel
+          std::ostringstream buffer;
+          const auto suite_result{
+              run_suite_as_text(options, entry, verbose, buffer)};
+
+          const std::lock_guard<std::mutex> lock{output_mutex};
+          std::cout << buffer.str();
+
+          if (suite_result.passed != suite_result.total) {
+            result = false;
+          }
+
+          if (suite_result.total == 0) {
+            empty_test_suite = true;
+          }
         } catch (...) {
           const std::lock_guard<std::mutex> lock{output_mutex};
           if (!first_error) {
