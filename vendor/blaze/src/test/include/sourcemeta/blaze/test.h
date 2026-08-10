@@ -118,10 +118,6 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
   std::vector<sourcemeta::core::JSON::String> targets;
   /// The list of test cases in the suite
   std::vector<TestCase> tests;
-  /// The compiled schema templates for fast validation
-  std::vector<Template> schemas_fast;
-  /// The compiled schema templates for exhaustive validation
-  std::vector<Template> schemas_exhaustive;
 #if defined(_MSC_VER)
 #pragma warning(default : 4251)
 #endif
@@ -134,6 +130,14 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
       const sourcemeta::core::JSON::String &target, std::size_t index,
       std::size_t total, const TestCase &test_case, const TestOutcome &outcome,
       TestTimestamp start, TestTimestamp end)>;
+
+  /// The compiled schema template for fast validation of the given target
+  [[nodiscard]] auto fast(std::size_t target_index) const -> const Template &;
+
+  /// The compiled schema template for exhaustive validation of the given
+  /// target, compiled on the first request and cached from then on. A test
+  /// suite must not be shared across threads
+  auto exhaustive(std::size_t target_index) -> const Template &;
 
   /// Run all test cases in the suite, invoking the callback for each.
   /// For example:
@@ -231,6 +235,26 @@ struct SOURCEMETA_BLAZE_TEST_EXPORT TestSuite {
         const sourcemeta::blaze::SchemaWalker &walker, const Compiler &compiler,
         std::string_view default_dialect = "", std::string_view default_id = "",
         const std::optional<Tweaks> &tweaks = std::nullopt) -> TestSuite;
+
+private:
+  [[nodiscard]] auto compile_target(std::size_t target_index, Mode mode) const
+      -> Template;
+
+#if defined(_MSC_VER)
+#pragma warning(disable : 4251)
+#endif
+  std::vector<Template> schemas_fast;
+  std::vector<std::optional<Template>> schemas_exhaustive;
+  SchemaResolver schema_resolver;
+  SchemaWalker walker;
+  Compiler compiler;
+  sourcemeta::core::JSON::String default_dialect;
+  sourcemeta::core::JSON::String default_id;
+  std::optional<Tweaks> tweaks_fast;
+  std::optional<Tweaks> tweaks_exhaustive;
+#if defined(_MSC_VER)
+#pragma warning(default : 4251)
+#endif
 };
 
 } // namespace sourcemeta::blaze

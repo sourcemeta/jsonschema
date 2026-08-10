@@ -11,7 +11,7 @@
 #include <tuple>         // std::tuple
 #include <unordered_map> // std::unordered_map
 #include <unordered_set> // std::unordered_set
-#include <utility>       // std::move
+#include <utility>       // std::move, std::pair
 #include <vector>        // std::vector
 
 namespace {
@@ -166,6 +166,8 @@ auto elevate_embedded_resources(
   }
 
   auto &defs{remote.at(keyword_string)};
+  const auto remote_dialect_uri{
+      sourcemeta::blaze::dialect(remote, default_dialect)};
 
   // Navigate to the root container once, as it doesn't change per entry
   const sourcemeta::core::JSON *root_container{&root};
@@ -180,7 +182,7 @@ auto elevate_embedded_resources(
     root_container = &root_container->at(token.to_property());
   }
 
-  std::vector<sourcemeta::core::JSON::String> to_extract;
+  std::vector<std::pair<sourcemeta::core::JSON::String, bool>> to_extract;
   std::vector<sourcemeta::core::JSON::String> to_remove;
   for (const auto &entry : defs.as_object()) {
     const auto &key{entry.first};
@@ -196,6 +198,7 @@ auto elevate_embedded_resources(
     }
 
     const sourcemeta::core::JSON::String identifier_string{identifier};
+    const auto defines_dialect{value.defines("$schema")};
     if (bundled.contains(identifier_string)) {
       if (container_exists && root_container->is_object()) {
         for (const auto &root_entry : root_container->as_object()) {
@@ -214,9 +217,23 @@ auto elevate_embedded_resources(
             continue;
           }
 
-          if (root_entry.second != value) {
-            throw sourcemeta::blaze::SchemaError(
-                "Conflicting embedded resources with the same identifier");
+          if (defines_dialect) {
+            if (root_entry.second != value) {
+              throw sourcemeta::blaze::SchemaError(
+                  "Conflicting embedded resources with the same identifier");
+            }
+          } else {
+            // The stored copy of the resource got its dialect stamped on
+            // extraction, so compare against a candidate that is stamped in
+            // the same way
+            auto candidate{value};
+            candidate.assign("$schema",
+                             sourcemeta::core::JSON{sourcemeta::blaze::dialect(
+                                 value, remote_dialect_uri)});
+            if (root_entry.second != candidate) {
+              throw sourcemeta::blaze::SchemaError(
+                  "Conflicting embedded resources with the same identifier");
+            }
           }
 
           break;
@@ -225,14 +242,22 @@ auto elevate_embedded_resources(
 
       to_remove.emplace_back(key);
     } else {
-      to_extract.emplace_back(key);
+      to_extract.emplace_back(key, !defines_dialect);
       bundled.emplace(identifier_string, identifier_string);
     }
   }
 
-  for (const auto &key : to_extract) {
+  for (const auto &[key, needs_dialect] : to_extract) {
     auto value{std::move(defs.at(key))};
     defs.erase(key);
+    // Otherwise the elevated resource would be re-interpreted under the
+    // dialect of the schema it gets embedded into, which can differ from
+    // the dialect it inherited from the remote it was elevated out of
+    if (needs_dialect) {
+      value.assign("$schema", sourcemeta::core::JSON{sourcemeta::blaze::dialect(
+                                  value, remote_dialect_uri)});
+    }
+
     embed_schema(root, container, key, std::move(value));
   }
 
