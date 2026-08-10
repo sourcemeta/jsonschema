@@ -59,9 +59,10 @@ cat << 'EOF' > "$TMP/tests/ignored.json"
 }
 EOF
 
-"$1" test "$TMP/tests" --resolve "$TMP/schemas" --extension '' --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/tests" --resolve "$TMP/schemas" --extension '' --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 warning: Matching files with no extension
 $(realpath "$TMP")/tests/test1:
   1/1 PASS First test

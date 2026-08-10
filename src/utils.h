@@ -17,13 +17,17 @@
 #include "error.h"
 #include "input.h"
 
+#include <algorithm>   // std::max, std::ranges::all_of
+#include <cctype>      // std::isdigit
 #include <filesystem>  // std::filesystem::path
 #include <memory>      // std::make_shared
 #include <optional>    // std::optional
 #include <ostream>     // std::ostream
 #include <set>         // std::set
+#include <stdexcept>   // std::out_of_range
 #include <string>      // std::string, std::stoull
 #include <string_view> // std::string_view
+#include <thread>      // std::thread
 #include <utility>     // std::unreachable
 #include <variant>     // std::visit
 
@@ -143,6 +147,36 @@ inline auto default_dialect(
   }
 
   return "";
+}
+
+inline auto parse_jobs(const sourcemeta::core::Options &options)
+    -> std::size_t {
+  if (options.contains("jobs")) {
+    const std::string value{options.at("jobs").front()};
+    if (value.empty() || !std::ranges::all_of(value, [](const char character) {
+          return std::isdigit(static_cast<unsigned char>(character));
+        })) {
+      throw InvalidJobsError{};
+    }
+
+    std::size_t result{0};
+    try {
+      result = std::stoull(value);
+    } catch (const std::out_of_range &) {
+      throw InvalidJobsError{};
+    }
+
+    if (result == 0) {
+      throw InvalidJobsError{};
+    }
+
+    return result;
+  }
+
+  // The standard library is allowed to not know the level of concurrency
+  // that the current system supports
+  return std::max(static_cast<std::size_t>(std::thread::hardware_concurrency()),
+                  static_cast<std::size_t>(1));
 }
 
 inline auto parse_indentation(const sourcemeta::core::Options &options)

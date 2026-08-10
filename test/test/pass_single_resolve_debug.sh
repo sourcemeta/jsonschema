@@ -35,9 +35,10 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --debug 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --debug --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 debug: Detecting schema resources from file: $(realpath "$TMP")/schema.json
 debug: Importing schema into the resolution context: file://$(realpath "$TMP")/schema.json
 debug: Importing schema into the resolution context: https://example.com

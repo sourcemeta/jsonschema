@@ -45,9 +45,10 @@ EOF
 
 cd "$TMP"
 
-"$1" test test.json --resolve schema.json --verbose > "$TMP/output.txt" 2>&1
+"$1" test test.json --resolve schema.json --verbose --jobs 1 > "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 Using extension: .json
 Using extension: .yaml
 Using extension: .yml

@@ -48,6 +48,9 @@ _jsonschema() {
       COMPREPLY=( $(compgen -W "2 4 8" -- "${current}") )
       return 0
       ;;
+    --jobs|-J)
+      return 0
+      ;;
     -n)
       if [ "${command}" = "fmt" ] || [ "${command}" = "lint" ]
       then
@@ -127,7 +130,7 @@ _jsonschema() {
       fi
       ;;
     test)
-      local options="--extension -e --ignore -i"
+      local options="--extension -e --ignore -i --jobs -J"
       if [[ ${current} == -* ]]
       then
         COMPREPLY=( $(compgen -W "${options} ${global_options}" -- "${current}") )

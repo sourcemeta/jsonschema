@@ -43,9 +43,10 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.json:
   1/2 PASS First test
   2/2 PASS Second test

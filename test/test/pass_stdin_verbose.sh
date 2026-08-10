@@ -15,7 +15,7 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
-cat << 'EOF' | "$1" test - --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1
+cat << 'EOF' | "$1" test - --resolve "$TMP/schema.json" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 {
   "target": "https://example.com",
   "tests": [
@@ -34,6 +34,7 @@ cat << 'EOF' | "$1" test - --resolve "$TMP/schema.json" --verbose 1> "$TMP/outpu
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
+Using parallelism: 1
 /dev/stdin:
   1/2 PASS A string
   2/2 PASS Not a string

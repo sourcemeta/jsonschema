@@ -33,12 +33,13 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1 \
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Test assertion failure
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.json:
   1/2 FAIL First test fails
 

@@ -4,21 +4,35 @@
 
 #include <sourcemeta/core/json.h>
 #include <sourcemeta/core/jsonpointer.h>
+#include <sourcemeta/core/parallel.h>
 
-#include <algorithm>   // std::find, std::distance
-#include <chrono>      // std::chrono
+// The parallel module includes windows.h, which defines DELETE as a macro
+// that would otherwise break parsing the HTTPMethod enumeration that the
+// resolver transitively includes below
+#if defined(_WIN32)
+#undef DELETE
+#endif
+
+#include <algorithm> // std::find, std::distance, std::min, std::max
+#include <atomic>    // std::atomic
+#include <chrono>    // std::chrono
+#include <cstddef>   // std::size_t
+#include <exception> // std::exception_ptr, std::current_exception, std::rethrow_exception
 #include <iostream>    // std::cout
+#include <mutex>       // std::mutex, std::lock_guard
 #include <optional>    // std::optional
 #include <sstream>     // std::ostringstream
 #include <string>      // std::string
 #include <string_view> // std::string_view
 #include <thread>      // std::this_thread
+#include <vector>      // std::vector
 
 #include "command.h"
 #include "configuration.h"
 #include "configure.h"
 #include "error.h"
 #include "input.h"
+#include "logger.h"
 #include "resolver.h"
 #include "utils.h"
 
@@ -95,7 +109,7 @@ auto print_rdf_failure(const sourcemeta::jsonschema::InputJSON &entry,
 
 auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
                       const sourcemeta::blaze::SchemaResolver &schema_resolver,
-                      const std::string_view dialect, const bool json_output,
+                      const std::string_view dialect,
                       const std::optional<sourcemeta::blaze::Tweaks> &tweaks)
     -> sourcemeta::blaze::TestSuite {
   try {
@@ -104,58 +118,33 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
         schema_resolver, sourcemeta::blaze::schema_walker,
         sourcemeta::blaze::default_schema_compiler, dialect, "", tweaks);
   } catch (const sourcemeta::blaze::TestParseError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<sourcemeta::blaze::TestParseError>{
         entry.resolution_base, error.what(), error.location(), error.line(),
         error.column()};
   } catch (
       const sourcemeta::blaze::CompilerReferenceTargetNotSchemaError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::CompilerReferenceTargetNotSchemaError>{
         entry.resolution_base, error};
   } catch (
       const sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaRelativeMetaschemaResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::blaze::SchemaResolutionError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaResolutionError>{
         entry.resolution_base, error};
   } catch (const sourcemeta::blaze::SchemaUnknownBaseDialectError &) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaUnknownBaseDialectError>{
         entry.resolution_base};
   } catch (const sourcemeta::blaze::SchemaVocabularyError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaVocabularyError>{
         entry.resolution_base, error.uri(), error.what()};
   } catch (const sourcemeta::blaze::SchemaUnknownDialectError &) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaUnknownDialectError>{entry.resolution_base};
   } catch (const sourcemeta::blaze::SchemaAnchorCollisionError &error) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
-
     const auto position{entry.positions.get(error.location())};
     if (position.has_value()) {
       throw sourcemeta::jsonschema::PositionError<sourcemeta::core::FileError<
@@ -167,132 +156,194 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     throw sourcemeta::core::FileError<
         sourcemeta::blaze::SchemaAnchorCollisionError>{entry.resolution_base,
                                                        error};
-  } catch (...) {
-    if (!json_output) {
-      std::cout << entry.first << ":\n";
-    }
-    throw;
   }
 }
 
-auto report_as_text(const sourcemeta::core::Options &options) -> void {
-  bool result{true};
-  bool empty_test_suite{false};
-  const auto verbose{options.contains("verbose") || options.contains("debug")};
-
-  for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
+auto warm_caches(const sourcemeta::core::Options &options,
+                 const std::vector<sourcemeta::jsonschema::InputJSON> &entries)
+    -> void {
+  for (const auto &entry : entries) {
     const auto configuration_path{
         sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
     const auto &configuration{sourcemeta::jsonschema::read_configuration(
         options, configuration_path)};
     const auto dialect{
         sourcemeta::jsonschema::default_dialect(options, configuration)};
-    const auto &schema_resolver{sourcemeta::jsonschema::resolver(
-        options, options.contains("http"), dialect, configuration)};
+    [[maybe_unused]] const auto &schema_resolver{
+        sourcemeta::jsonschema::resolver(options, options.contains("http"),
+                                         dialect, configuration)};
+  }
+}
 
-    auto test_suite{parse_test_suite(
-        entry, schema_resolver, dialect, false,
-        sourcemeta::jsonschema::format_assertion_tweaks(options))};
+auto emit_target_header(
+    const bool multi_target, const sourcemeta::core::JSON::String &target,
+    std::optional<sourcemeta::core::JSON::String> &last_target_header,
+    std::ostream &stream) -> void {
+  if (multi_target && last_target_header != target) {
+    stream << "  " << target << ":\n";
+    last_target_header = target;
+  }
+}
 
-    std::cout << entry.first << ":";
+auto run_suite_as_text(const sourcemeta::core::Options &options,
+                       const sourcemeta::jsonschema::InputJSON &entry,
+                       const bool verbose, std::ostream &stream)
+    -> sourcemeta::blaze::TestSuite::Result {
+  const auto configuration_path{
+      sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
+  const auto &configuration{
+      sourcemeta::jsonschema::read_configuration(options, configuration_path)};
+  const auto dialect{
+      sourcemeta::jsonschema::default_dialect(options, configuration)};
+  const auto &schema_resolver{sourcemeta::jsonschema::resolver(
+      options, options.contains("http"), dialect, configuration)};
 
-    const auto multi_target{test_suite.targets.size() > 1};
-    sourcemeta::core::JSON::String last_target_header;
-    bool last_target_header_set{false};
+  auto test_suite{parse_test_suite(
+      entry, schema_resolver, dialect,
+      sourcemeta::jsonschema::format_assertion_tweaks(options))};
 
-    const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-            std::size_t total, const sourcemeta::blaze::TestCase &test_case,
-            const sourcemeta::blaze::TestOutcome &outcome,
-            sourcemeta::blaze::TestTimestamp,
-            sourcemeta::blaze::TestTimestamp) {
-          if (verbose && index == 1) {
-            std::cout << "\n";
+  stream << entry.first << ":";
+
+  const auto multi_target{test_suite.targets.size() > 1};
+  std::optional<sourcemeta::core::JSON::String> last_target_header;
+
+  const auto suite_result{test_suite.run(
+      [&](const sourcemeta::core::JSON::String &target, std::size_t index,
+          std::size_t total, const sourcemeta::blaze::TestCase &test_case,
+          const sourcemeta::blaze::TestOutcome &outcome,
+          sourcemeta::blaze::TestTimestamp, sourcemeta::blaze::TestTimestamp) {
+        if (verbose && index == 1) {
+          stream << "\n";
+        }
+
+        const auto entry_indent{multi_target ? "    " : "  "};
+
+        const auto &description{test_case.description.empty()
+                                    ? "<no description>"
+                                    : test_case.description};
+
+        if (outcome.passed) {
+          if (verbose) {
+            emit_target_header(multi_target, target, last_target_header,
+                               stream);
+            stream << entry_indent << index << "/" << total << " PASS "
+                   << description << "\n";
+          }
+        } else if (!test_case.valid && outcome.valid) {
+          if (!verbose) {
+            stream << "\n";
+          }
+          emit_target_header(multi_target, target, last_target_header, stream);
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n"
+                 << "error: Passed but was expected to fail\n";
+
+          if (index != total && verbose) {
+            stream << "\n";
+          }
+        } else if (!outcome.valid) {
+          const std::string ref{"$ref"};
+          sourcemeta::blaze::SimpleOutput output{test_case.data,
+                                                 {std::cref(ref)}};
+          const auto target_index{static_cast<std::size_t>(
+              std::distance(test_suite.targets.cbegin(),
+                            std::find(test_suite.targets.cbegin(),
+                                      test_suite.targets.cend(), target)))};
+          test_suite.evaluator.validate(
+              test_suite.schemas_exhaustive[target_index], test_case.data,
+              std::ref(output));
+
+          if (!verbose) {
+            stream << "\n";
+          }
+          emit_target_header(multi_target, target, last_target_header, stream);
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n";
+          sourcemeta::jsonschema::print(output, test_case.tracker, stream);
+
+          if (index != total && verbose) {
+            stream << "\n";
+          }
+        } else {
+          if (!verbose) {
+            stream << "\n";
+          }
+          emit_target_header(multi_target, target, last_target_header, stream);
+          stream << entry_indent << index << "/" << total << " FAIL "
+                 << description << "\n\n";
+          print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                            outcome, stream);
+
+          if (index != total && verbose) {
+            stream << "\n";
+          }
+        }
+      })};
+
+  if (suite_result.total == 0) {
+    stream << " NO TESTS\n";
+  } else if (!verbose && suite_result.passed == suite_result.total) {
+    stream << " PASS " << suite_result.passed << "/" << suite_result.total
+           << "\n";
+  }
+
+  return suite_result;
+}
+
+auto report_as_text(const sourcemeta::core::Options &options,
+                    const std::size_t jobs) -> void {
+  bool result{true};
+  bool empty_test_suite{false};
+  const auto verbose{options.contains("verbose") || options.contains("debug")};
+
+  const auto entries{sourcemeta::jsonschema::for_each_json(options)};
+  warm_caches(options, entries);
+
+  std::mutex output_mutex;
+  std::atomic<bool> skip_remaining{false};
+  std::exception_ptr first_error{nullptr};
+  std::string first_error_path;
+
+  sourcemeta::core::parallel_for_each(
+      entries.cbegin(), entries.cend(),
+      [&](const sourcemeta::jsonschema::InputJSON &entry, const std::size_t,
+          const std::size_t) {
+        if (skip_remaining.load()) {
+          return;
+        }
+
+        try {
+          // Buffer the output of every suite, so that we only need to hold
+          // the output lock while emitting it, letting suites actually
+          // evaluate their test cases in parallel
+          std::ostringstream buffer;
+          const auto suite_result{
+              run_suite_as_text(options, entry, verbose, buffer)};
+
+          const std::lock_guard<std::mutex> lock{output_mutex};
+          std::cout << buffer.str();
+
+          if (suite_result.passed != suite_result.total) {
+            result = false;
           }
 
-          const auto entry_indent{multi_target ? "    " : "  "};
-
-          const auto emit_target_header{[&]() {
-            if (multi_target &&
-                (!last_target_header_set || last_target_header != target)) {
-              std::cout << "  " << target << ":\n";
-              last_target_header = target;
-              last_target_header_set = true;
-            }
-          }};
-
-          const auto &description{test_case.description.empty()
-                                      ? "<no description>"
-                                      : test_case.description};
-
-          if (outcome.passed) {
-            if (verbose) {
-              emit_target_header();
-              std::cout << entry_indent << index << "/" << total << " PASS "
-                        << description << "\n";
-            }
-          } else if (!test_case.valid && outcome.valid) {
-            if (!verbose) {
-              std::cout << "\n";
-            }
-            emit_target_header();
-            std::cout << entry_indent << index << "/" << total << " FAIL "
-                      << description << "\n\n"
-                      << "error: Passed but was expected to fail\n";
-
-            if (index != total && verbose) {
-              std::cout << "\n";
-            }
-          } else if (!outcome.valid) {
-            const std::string ref{"$ref"};
-            sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                   {std::cref(ref)}};
-            const auto target_index{static_cast<std::size_t>(
-                std::distance(test_suite.targets.cbegin(),
-                              std::find(test_suite.targets.cbegin(),
-                                        test_suite.targets.cend(), target)))};
-            test_suite.evaluator.validate(
-                test_suite.schemas_exhaustive[target_index], test_case.data,
-                std::ref(output));
-
-            if (!verbose) {
-              std::cout << "\n";
-            }
-            emit_target_header();
-            std::cout << entry_indent << index << "/" << total << " FAIL "
-                      << description << "\n\n";
-            sourcemeta::jsonschema::print(output, test_case.tracker, std::cout);
-
-            if (index != total && verbose) {
-              std::cout << "\n";
-            }
-          } else {
-            if (!verbose) {
-              std::cout << "\n";
-            }
-            emit_target_header();
-            std::cout << entry_indent << index << "/" << total << " FAIL "
-                      << description << "\n\n";
-            print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                              outcome, std::cout);
-
-            if (index != total && verbose) {
-              std::cout << "\n";
-            }
+          if (suite_result.total == 0) {
+            empty_test_suite = true;
           }
-        })};
+        } catch (...) {
+          const std::lock_guard<std::mutex> lock{output_mutex};
+          if (!first_error) {
+            first_error = std::current_exception();
+            first_error_path = entry.first;
+            skip_remaining.store(true);
+          }
+        }
+      },
+      jobs);
 
-    if (suite_result.passed != suite_result.total) {
-      result = false;
-    }
-
-    if (suite_result.total == 0) {
-      empty_test_suite = true;
-      std::cout << " NO TESTS\n";
-    } else if (!verbose && suite_result.passed == suite_result.total) {
-      std::cout << " PASS " << suite_result.passed << "/" << suite_result.total
-                << "\n";
-    }
+  if (first_error) {
+    std::cout << first_error_path << ":\n";
+    std::rethrow_exception(first_error);
   }
 
   if (!result) {
@@ -325,12 +376,147 @@ auto duration_ms(const sourcemeta::blaze::TestTimestamp &start,
       .count();
 }
 
-auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
+struct CtrfSuiteReport {
+  std::vector<sourcemeta::core::JSON> tests;
+  std::size_t passed{0};
+  std::size_t total{0};
+  sourcemeta::blaze::TestTimestamp start{};
+  sourcemeta::blaze::TestTimestamp end{};
+};
+
+auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
+                       const sourcemeta::jsonschema::InputJSON &entry,
+                       CtrfSuiteReport &report) -> void {
+  const auto configuration_path{
+      sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
+  const auto &configuration{
+      sourcemeta::jsonschema::read_configuration(options, configuration_path)};
+  const auto dialect{
+      sourcemeta::jsonschema::default_dialect(options, configuration)};
+  const auto &schema_resolver{sourcemeta::jsonschema::resolver(
+      options, options.contains("http"), dialect, configuration)};
+
+  auto test_suite{parse_test_suite(
+      entry, schema_resolver, dialect,
+      sourcemeta::jsonschema::format_assertion_tweaks(options))};
+
+  const auto file_path{entry.first};
+
+  const auto suite_result{test_suite.run(
+      [&](const sourcemeta::core::JSON::String &target, std::size_t index,
+          std::size_t, const sourcemeta::blaze::TestCase &test_case,
+          const sourcemeta::blaze::TestOutcome &outcome,
+          sourcemeta::blaze::TestTimestamp start,
+          sourcemeta::blaze::TestTimestamp end) {
+        auto test_object{sourcemeta::core::JSON::make_object()};
+
+        const auto &name{test_case.description.empty() ? "<no description>"
+                                                       : test_case.description};
+        test_object.assign("name", sourcemeta::core::JSON{name});
+
+        test_object.assign("status", sourcemeta::core::JSON{
+                                         outcome.passed ? "passed" : "failed"});
+
+        test_object.assign("duration",
+                           sourcemeta::core::JSON{duration_ms(start, end)});
+        auto suite{sourcemeta::core::JSON::make_array()};
+        suite.push_back(sourcemeta::core::JSON{target});
+        test_object.assign("suite", std::move(suite));
+        test_object.assign("type", sourcemeta::core::JSON{"unit"});
+        test_object.assign("filePath", sourcemeta::core::JSON{file_path});
+
+        const auto [test_line, test_column, test_end_line, test_end_column] =
+            test_case.position;
+        test_object.assign("line", sourcemeta::core::JSON{
+                                       static_cast<std::int64_t>(test_line)});
+        test_object.assign(
+            "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
+        test_object.assign("flaky", sourcemeta::core::JSON{false});
+        std::ostringstream thread_id_stream;
+        thread_id_stream << std::this_thread::get_id();
+        test_object.assign("threadId",
+                           sourcemeta::core::JSON{thread_id_stream.str()});
+
+        if (!outcome.passed) {
+          if (!test_case.valid && outcome.valid) {
+            test_object.assign("message",
+                               sourcemeta::core::JSON{"Passed but was "
+                                                      "expected to fail"});
+          } else if (!outcome.valid) {
+            std::ostringstream trace_stream;
+            const std::string ref{"$ref"};
+            sourcemeta::blaze::SimpleOutput output{test_case.data,
+                                                   {std::cref(ref)}};
+            const auto target_index{static_cast<std::size_t>(
+                std::distance(test_suite.targets.cbegin(),
+                              std::find(test_suite.targets.cbegin(),
+                                        test_suite.targets.cend(), target)))};
+            test_suite.evaluator.validate(
+                test_suite.schemas_exhaustive[target_index], test_case.data,
+                std::ref(output));
+            sourcemeta::jsonschema::print(output, test_case.tracker,
+                                          trace_stream);
+            test_object.assign("trace",
+                               sourcemeta::core::JSON{trace_stream.str()});
+          } else {
+            std::ostringstream trace_stream;
+            print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
+                              outcome, trace_stream);
+            test_object.assign("trace",
+                               sourcemeta::core::JSON{trace_stream.str()});
+          }
+        }
+
+        report.tests.push_back(std::move(test_object));
+      })};
+
+  report.passed = suite_result.passed;
+  report.total = suite_result.total;
+  report.start = suite_result.start;
+  report.end = suite_result.end;
+}
+
+auto report_as_ctrf(const sourcemeta::core::Options &options,
+                    const std::size_t jobs) -> void {
   bool result{true};
   bool empty_test_suite{false};
 
   const auto system_ref{std::chrono::system_clock::now()};
   const auto steady_ref{std::chrono::steady_clock::now()};
+
+  const auto entries{sourcemeta::jsonschema::for_each_json(options)};
+  warm_caches(options, entries);
+
+  std::vector<CtrfSuiteReport> reports{entries.size()};
+  std::mutex error_mutex;
+  std::atomic<bool> skip_remaining{false};
+  std::exception_ptr first_error{nullptr};
+
+  sourcemeta::core::parallel_for_each(
+      entries.cbegin(), entries.cend(),
+      [&](const sourcemeta::jsonschema::InputJSON &entry, const std::size_t,
+          const std::size_t) {
+        if (skip_remaining.load()) {
+          return;
+        }
+
+        try {
+          run_suite_as_ctrf(
+              options, entry,
+              reports[static_cast<std::size_t>(&entry - entries.data())]);
+        } catch (...) {
+          const std::lock_guard<std::mutex> lock{error_mutex};
+          if (!first_error) {
+            first_error = std::current_exception();
+            skip_remaining.store(true);
+          }
+        }
+      },
+      jobs);
+
+  if (first_error) {
+    std::rethrow_exception(first_error);
+  }
 
   auto ctrf_tests{sourcemeta::core::JSON::make_array()};
   std::size_t total_passed{0};
@@ -339,107 +525,29 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
   sourcemeta::blaze::TestTimestamp global_end{};
   bool first_suite{true};
 
-  for (const auto &entry : sourcemeta::jsonschema::for_each_json(options)) {
-    const auto configuration_path{
-        sourcemeta::jsonschema::find_configuration(entry.resolution_base)};
-    const auto &configuration{sourcemeta::jsonschema::read_configuration(
-        options, configuration_path)};
-    const auto dialect{
-        sourcemeta::jsonschema::default_dialect(options, configuration)};
-    const auto &schema_resolver{sourcemeta::jsonschema::resolver(
-        options, options.contains("http"), dialect, configuration)};
-
-    auto test_suite{parse_test_suite(
-        entry, schema_resolver, dialect, true,
-        sourcemeta::jsonschema::format_assertion_tweaks(options))};
-
-    const auto file_path{entry.first};
-
-    const auto suite_result{test_suite.run(
-        [&](const sourcemeta::core::JSON::String &target, std::size_t index,
-            std::size_t, const sourcemeta::blaze::TestCase &test_case,
-            const sourcemeta::blaze::TestOutcome &outcome,
-            sourcemeta::blaze::TestTimestamp start,
-            sourcemeta::blaze::TestTimestamp end) {
-          auto test_object{sourcemeta::core::JSON::make_object()};
-
-          const auto &name{test_case.description.empty()
-                               ? "<no description>"
-                               : test_case.description};
-          test_object.assign("name", sourcemeta::core::JSON{name});
-
-          test_object.assign(
-              "status",
-              sourcemeta::core::JSON{outcome.passed ? "passed" : "failed"});
-
-          test_object.assign("duration",
-                             sourcemeta::core::JSON{duration_ms(start, end)});
-          auto suite{sourcemeta::core::JSON::make_array()};
-          suite.push_back(sourcemeta::core::JSON{target});
-          test_object.assign("suite", std::move(suite));
-          test_object.assign("type", sourcemeta::core::JSON{"unit"});
-          test_object.assign("filePath", sourcemeta::core::JSON{file_path});
-
-          const auto [test_line, test_column, test_end_line, test_end_column] =
-              test_case.position;
-          test_object.assign("line", sourcemeta::core::JSON{
-                                         static_cast<std::int64_t>(test_line)});
-          test_object.assign(
-              "retries", sourcemeta::core::JSON{static_cast<std::int64_t>(0)});
-          test_object.assign("flaky", sourcemeta::core::JSON{false});
-          std::ostringstream thread_id_stream;
-          thread_id_stream << std::this_thread::get_id();
-          test_object.assign("threadId",
-                             sourcemeta::core::JSON{thread_id_stream.str()});
-
-          if (!outcome.passed) {
-            if (!test_case.valid && outcome.valid) {
-              test_object.assign("message",
-                                 sourcemeta::core::JSON{"Passed but was "
-                                                        "expected to fail"});
-            } else if (!outcome.valid) {
-              std::ostringstream trace_stream;
-              const std::string ref{"$ref"};
-              sourcemeta::blaze::SimpleOutput output{test_case.data,
-                                                     {std::cref(ref)}};
-              const auto target_index{static_cast<std::size_t>(
-                  std::distance(test_suite.targets.cbegin(),
-                                std::find(test_suite.targets.cbegin(),
-                                          test_suite.targets.cend(), target)))};
-              test_suite.evaluator.validate(
-                  test_suite.schemas_exhaustive[target_index], test_case.data,
-                  std::ref(output));
-              sourcemeta::jsonschema::print(output, test_case.tracker,
-                                            trace_stream);
-              test_object.assign("trace",
-                                 sourcemeta::core::JSON{trace_stream.str()});
-            } else {
-              std::ostringstream trace_stream;
-              print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
-                                outcome, trace_stream);
-              test_object.assign("trace",
-                                 sourcemeta::core::JSON{trace_stream.str()});
-            }
-          }
-
-          ctrf_tests.push_back(test_object);
-        })};
-
+  for (auto &report : reports) {
     if (first_suite) {
-      global_start = suite_result.start;
+      global_start = report.start;
+      global_end = report.end;
       first_suite = false;
+    } else {
+      global_start = std::min(global_start, report.start);
+      global_end = std::max(global_end, report.end);
     }
-    global_end = suite_result.end;
 
-    total_passed += suite_result.passed;
-    total_failed += suite_result.total - suite_result.passed;
+    total_passed += report.passed;
+    total_failed += report.total - report.passed;
 
-    if (suite_result.total == 0) {
+    if (report.total == 0) {
       empty_test_suite = true;
     }
 
-    if (suite_result.passed != suite_result.total) {
+    if (report.passed != report.total) {
       result = false;
+    }
+
+    for (auto &test_object : report.tests) {
+      ctrf_tests.push_back(std::move(test_object));
     }
   }
 
@@ -497,9 +605,11 @@ auto report_as_ctrf(const sourcemeta::core::Options &options) -> void {
 auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     -> void {
   validate_http_headers(options);
+  const auto jobs{parse_jobs(options)};
+  LOG_VERBOSE(options) << "Using parallelism: " << jobs << "\n";
   if (options.contains("json")) {
-    report_as_ctrf(options);
+    report_as_ctrf(options, jobs);
   } else {
-    report_as_text(options);
+    report_as_text(options, jobs);
   }
 }

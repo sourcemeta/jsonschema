@@ -24,9 +24,10 @@ tests:
   data: 1
 EOF
 
-"$1" test "$TMP/test" --resolve "$TMP/schema" --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test" --resolve "$TMP/schema" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test:
   1/2 PASS First test
   2/2 PASS Invalid type
