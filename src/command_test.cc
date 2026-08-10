@@ -175,6 +175,16 @@ auto warm_caches(const sourcemeta::core::Options &options,
   }
 }
 
+auto emit_target_header(
+    const bool multi_target, const sourcemeta::core::JSON::String &target,
+    std::optional<sourcemeta::core::JSON::String> &last_target_header,
+    std::ostream &stream) -> void {
+  if (multi_target && last_target_header != target) {
+    stream << "  " << target << ":\n";
+    last_target_header = target;
+  }
+}
+
 auto run_suite_as_text(const sourcemeta::core::Options &options,
                        const sourcemeta::jsonschema::InputJSON &entry,
                        const bool verbose, std::ostream &stream)
@@ -195,8 +205,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
   stream << entry.first << ":";
 
   const auto multi_target{test_suite.targets.size() > 1};
-  sourcemeta::core::JSON::String last_target_header;
-  bool last_target_header_set{false};
+  std::optional<sourcemeta::core::JSON::String> last_target_header;
 
   const auto suite_result{test_suite.run(
       [&](const sourcemeta::core::JSON::String &target, std::size_t index,
@@ -209,22 +218,14 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
 
         const auto entry_indent{multi_target ? "    " : "  "};
 
-        const auto emit_target_header{[&]() {
-          if (multi_target &&
-              (!last_target_header_set || last_target_header != target)) {
-            stream << "  " << target << ":\n";
-            last_target_header = target;
-            last_target_header_set = true;
-          }
-        }};
-
         const auto &description{test_case.description.empty()
                                     ? "<no description>"
                                     : test_case.description};
 
         if (outcome.passed) {
           if (verbose) {
-            emit_target_header();
+            emit_target_header(multi_target, target, last_target_header,
+                               stream);
             stream << entry_indent << index << "/" << total << " PASS "
                    << description << "\n";
           }
@@ -232,7 +233,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
           if (!verbose) {
             stream << "\n";
           }
-          emit_target_header();
+          emit_target_header(multi_target, target, last_target_header, stream);
           stream << entry_indent << index << "/" << total << " FAIL "
                  << description << "\n\n"
                  << "error: Passed but was expected to fail\n";
@@ -255,7 +256,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
           if (!verbose) {
             stream << "\n";
           }
-          emit_target_header();
+          emit_target_header(multi_target, target, last_target_header, stream);
           stream << entry_indent << index << "/" << total << " FAIL "
                  << description << "\n\n";
           sourcemeta::jsonschema::print(output, test_case.tracker, stream);
@@ -267,7 +268,7 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
           if (!verbose) {
             stream << "\n";
           }
-          emit_target_header();
+          emit_target_header(multi_target, target, last_target_header, stream);
           stream << entry_indent << index << "/" << total << " FAIL "
                  << description << "\n\n";
           print_rdf_failure(entry, (index - 1) % test_suite.tests.size(),
