@@ -249,9 +249,8 @@ auto run_suite_as_text(const sourcemeta::core::Options &options,
               std::distance(test_suite.targets.cbegin(),
                             std::find(test_suite.targets.cbegin(),
                                       test_suite.targets.cend(), target)))};
-          test_suite.evaluator.validate(
-              test_suite.schemas_exhaustive[target_index], test_case.data,
-              std::ref(output));
+          test_suite.evaluator.validate(test_suite.exhaustive(target_index),
+                                        test_case.data, std::ref(output));
 
           if (!verbose) {
             stream << "\n";
@@ -451,9 +450,8 @@ auto run_suite_as_ctrf(const sourcemeta::core::Options &options,
                 std::distance(test_suite.targets.cbegin(),
                               std::find(test_suite.targets.cbegin(),
                                         test_suite.targets.cend(), target)))};
-            test_suite.evaluator.validate(
-                test_suite.schemas_exhaustive[target_index], test_case.data,
-                std::ref(output));
+            test_suite.evaluator.validate(test_suite.exhaustive(target_index),
+                                          test_case.data, std::ref(output));
             sourcemeta::jsonschema::print(output, test_case.tracker,
                                           trace_stream);
             test_object.assign("trace",
