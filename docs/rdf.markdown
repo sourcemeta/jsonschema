@@ -86,12 +86,14 @@ lint rules that catch more of these mistakes statically at design time, where
 they belong, instead of paying for the checks on every promotion.
 
 > [!NOTE]
-> As a deliberate deviation from JSON-LD 1.1, language tags must be written in
-> canonical BCP 47 form, as `x-jsonld-language` values, as the map keys of an
-> `@language` container in instance data, and as `@language` members of
+> As a deliberate deviation from BCP 47's lenient approach to canonical identifiers
+> (which JSON-LD 1.1 inherits), the language tags must be written in
+> strictly canonical form in `x-jsonld-language` values as the map keys of an
+> `@language` container in instance data and as `@language` members of
 > `x-jsonld-constants` literals. For example, `en-US` is accepted while
-> `en-us` is rejected. This keeps language tag equality a plain cheap string
-> comparison everywhere in the engine.
+> `en-us` is rejected (as a departure from BCP 47's lenient requirements).
+>  This keeps language tag equality a plain cheap string comparison everywhere
+> in the engine.
 
 The variables of an `x-jsonld-self` URI template are matched verbatim against
 instance property names, so a variable like `{+meta.slug}` binds a property
