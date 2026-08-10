@@ -1,0 +1,52 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$ref": "./nested.json"
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN bundle schema.json --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+COPY result.txt TO bundled.json
+KEEP LINES MATCHING '^1>' IN bundled.json
+REPLACE '^1> ?' WITH '' IN bundled.json
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "file://[CWD]/schema.json",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "$ref": "./nested.json",
+1>   "$defs": {
+1>     "file://[CWD]/nested.json": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "file://[CWD]/nested.json",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+RUN fmt bundled.json --check STDIN /dev/null IN . INTO checked.txt EXPECTING 0
+
+COMPARE checked.txt AGAINST silent.txt

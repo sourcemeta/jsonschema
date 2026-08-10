@@ -1,0 +1,37 @@
+WRITE schema.custom UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "Valid string",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Invalid type",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+RUN test test.json --resolve schema.custom STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

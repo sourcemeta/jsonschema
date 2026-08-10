@@ -1,0 +1,38 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-03/schema#",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN codegen schema.json --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Unsupported required vocabulary
+2>   at file path [CWD]/schema.json
+2>   at uri http://json-schema.org/draft-03/schema#
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN codegen schema.json --target typescript --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Unsupported required vocabulary",
+1>   "filePath": "[CWD]/schema.json",
+1>   "uri": "http://json-schema.org/draft-03/schema#"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

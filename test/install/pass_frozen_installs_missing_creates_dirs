@@ -1,0 +1,70 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/schema.json": "./vendor/deep/nested/schema.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/schema.json
+2> Installed      : [CWD]/project/vendor/deep/nested/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY project/jsonschema.lock.json TO lock_before.json
+
+REMOVE project/vendor
+
+RUN install --frozen STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/schema.json
+2> Installed      : [CWD]/project/vendor/deep/nested/schema.json
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+COMPARE project/jsonschema.lock.json AGAINST lock_before.json
+
+COPY project/vendor/deep/nested/schema.json TO checked_file_3.txt
+REPLACE '\\\\' WITH '/' IN checked_file_3.txt
+REPLACE '\\(?!")' WITH '/' IN checked_file_3.txt
+REPLACE $CWD WITH '[CWD]' IN checked_file_3.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_file_3.txt
+
+WRITE expected_file_3.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "$id": "file://[CWD]/source/schema.json"
+}
+EOF
+
+COMPARE checked_file_3.txt AGAINST expected_file_3.txt

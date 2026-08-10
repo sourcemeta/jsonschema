@@ -1,9 +1,11 @@
 FROM alpine:3.21
-RUN apk add --no-cache cmake make g++ linux-headers zsh bash jq perl-utils libcurl
+RUN apk add --no-cache cmake make g++ linux-headers zsh bash jq perl-utils libcurl \
+  python3
 WORKDIR /src
 COPY CMakeLists.txt .
 COPY DEPENDENCIES DEPENDENCIES
 COPY cmake cmake
+COPY scripts scripts
 COPY src src
 COPY test test
 COPY vendor vendor

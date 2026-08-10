@@ -1,0 +1,15 @@
+WRITE schema.json UNTIL EOF
+true
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+RUN rdf schema.json instance.json --default-dialect https://json-schema.org/draft/2020-12/schema STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> []
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

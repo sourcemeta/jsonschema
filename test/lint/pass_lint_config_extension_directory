@@ -1,0 +1,35 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/foo.schema.json UNTIL EOF
+{
+  "$id": "https://example.com/foo",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Foo",
+  "description": "A foo schema",
+  "examples": [ "bar" ],
+  "type": "string"
+}
+EOF
+
+WRITE schemas/foo.test.json UNTIL EOF
+{ "not": "a schema" }
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "extension": [ ".schema.json" ]
+}
+EOF
+
+RUN lint schemas --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Using extension: .schema.json
+2> Linting: [CWD]/schemas/foo.schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,59 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Product",
+  "x-jsonld-constants": {
+    "https://schema.org/brand": null
+  },
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Vacuum Robot" }
+EOF
+
+// Schema input error
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: A JSON-LD constants entry can only be null inside an overriding schema object
+2>   at line 1
+2>   at column 1
+2>   at instance location ""
+2>   at facet "constants"
+2>   at schema location file://[CWD]/schema.json#/x-jsonld-constants
+2>   at file path [CWD]/instance.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN rdf schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "A JSON-LD constants entry can only be null inside an overriding schema object",
+1>   "line": 1,
+1>   "column": 1,
+1>   "instanceLocation": "",
+1>   "facet": "constants",
+1>   "schemaLocation": "file://[CWD]/schema.json#/x-jsonld-constants",
+1>   "filePath": "[CWD]/instance.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,25 @@
+MAKE DIRECTORY schemas
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$ref": "./schemas/other.json"
+}
+EOF
+
+WRITE schemas/other.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"foo bar"
+EOF
+
+RUN validate schema.json --resolve schemas instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

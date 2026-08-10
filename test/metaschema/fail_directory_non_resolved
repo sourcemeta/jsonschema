@@ -1,0 +1,25 @@
+WRITE schemas/schema_1.json UNTIL EOF
+{
+  "$schema": "http://example.com",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN metaschema schemas STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Could not resolve the metaschema of the schema
+2>   at identifier http://example.com
+2>   at file path [CWD]/schemas/schema_1.json
+2>
+2> This is likely because you forgot to import such schema using `--resolve/-r`
+EOF
+
+COMPARE result.txt AGAINST expected.txt

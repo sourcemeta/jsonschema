@@ -1,0 +1,24 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": 123
+}
+EOF
+
+// Schema input error
+RUN inspect schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The schema identifier is invalid
+2>   at value 123
+2>   at keyword $id
+2>   at file path [CWD]/schema.json
+2>
+2> Are you sure the input is a valid JSON Schema and it is valid according to its meta-schema?
+EOF
+
+COMPARE result.txt AGAINST expected.txt

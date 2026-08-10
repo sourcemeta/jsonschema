@@ -1,0 +1,43 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "steps": {
+        "type": "array",
+        "x-jsonld-id": "https://schema.org/step",
+        "x-jsonld-container": "@list"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "steps": [ 1, 2, 3 ] }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/step": [
+1>       {
+1>         "@list": [
+1>           {
+1>             "@value": 1
+1>           },
+1>           {
+1>             "@value": 2
+1>           },
+1>           {
+1>             "@value": 3
+1>           }
+1>         ]
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

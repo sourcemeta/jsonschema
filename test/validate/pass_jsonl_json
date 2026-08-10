@@ -1,0 +1,34 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+{ "foo": "first" }
+{ "foo": "second" }
+{ "foo": "third" }
+EOF
+
+RUN validate schema.json instance.jsonl --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": true
+1> }
+1> {
+1>   "valid": true
+1> }
+1> {
+1>   "valid": true
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

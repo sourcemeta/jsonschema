@@ -1,0 +1,46 @@
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      "./nonexistent.json"
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Other input error
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: No such file or directory
+2>   at file path [CWD]/nonexistent.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN lint --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "No such file or directory",
+1>   "filePath": "[CWD]/nonexistent.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

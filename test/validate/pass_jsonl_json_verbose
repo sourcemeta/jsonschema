@@ -1,0 +1,39 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+{ "foo": "first" }
+{ "foo": "second" }
+{ "foo": "third" }
+EOF
+
+RUN validate schema.json instance.jsonl --json --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": true
+1> }
+1> {
+1>   "valid": true
+1> }
+1> {
+1>   "valid": true
+1> }
+2> Interpreting input as JSONL: [CWD]/instance.jsonl
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

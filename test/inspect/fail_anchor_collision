@@ -1,0 +1,53 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$anchor": "foo",
+  "properties": {
+    "bar": {
+      "$anchor": "foo"
+    }
+  }
+}
+EOF
+
+// Schema input error
+RUN inspect schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Schema anchor already exists
+2>   at identifier file://[CWD]/schema.json#foo
+2>   at line 5
+2>   at column 5
+2>   at file path [CWD]/schema.json
+2>   at location "/properties/bar"
+2>   at other location ""
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN inspect schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Schema anchor already exists",
+1>   "identifier": "file://[CWD]/schema.json#foo",
+1>   "line": 5,
+1>   "column": 5,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/properties/bar",
+1>   "otherLocation": ""
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

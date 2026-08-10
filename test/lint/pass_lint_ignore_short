@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE ignored.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+RUN lint $CWD -i ignored.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+COMPARE schema.json AGAINST expected_file_0.txt

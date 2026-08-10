@@ -1,0 +1,25 @@
+WRITE schema_1.json UNTIL EOF
+{
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE schema_2.schema.json UNTIL EOF
+{"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string", "title": "My String"}
+EOF
+
+RUN fmt --extension .schema.json -v STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Recursively processing every file in [CWD] as no input was provided
+2> Using extension: .schema.json
+2> Formatting: [CWD]/schema_2.schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

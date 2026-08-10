@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "x-format-assertion": true
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "email": "not-an-email" }
+EOF
+
+// Validation failure
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: [CWD]/instance.json
+2> error: Schema validation failure
+2>   The string value "not-an-email" was expected to represent a valid email address
+2>     at instance location "/email" (line 1, column 3)
+2>     at evaluate path "/properties/email/format"
+2>   The object value was expected to validate against the single defined property subschema
+2>     at instance location "" (line 1, column 1)
+2>     at evaluate path "/properties"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

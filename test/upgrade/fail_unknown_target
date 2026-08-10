@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Invalid CLI arguments
+RUN upgrade --to fooo schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 5
+
+WRITE expected.txt UNTIL EOF
+2> error: The given target dialect is not supported
+2>   at option to
+2>   with values
+2>   - draft4
+2>   - draft6
+2>   - draft7
+2>   - 2019-09
+2>   - 2020-12
+2>
+2> Run the `help` command for usage information
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Invalid CLI arguments
+RUN upgrade --to fooo schema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 5
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The given target dialect is not supported",
+1>   "option": "to",
+1>   "values": [ "draft4", "draft6", "draft7", "2019-09", "2020-12" ]
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

@@ -1,0 +1,14 @@
+WRITE schema UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Test
+description: Test schema
+properties:
+  foo:
+    type: string
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+RUN validate schema instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

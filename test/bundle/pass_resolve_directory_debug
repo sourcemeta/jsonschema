@@ -1,0 +1,50 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "nested"
+}
+EOF
+
+WRITE schemas/remote.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+RUN bundle schema.json --resolve schemas --debug STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "$ref": "nested",
+1>   "$defs": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/nested",
+1>       "title": "Test",
+1>       "description": "Test schema",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+2> debug: Detecting schema resources from file: [CWD]/schemas/remote.json
+2> debug: Importing schema into the resolution context: file://[CWD]/schemas/remote.json
+2> debug: Importing schema into the resolution context: https://example.com/nested
+EOF
+
+COMPARE result.txt AGAINST expected.txt

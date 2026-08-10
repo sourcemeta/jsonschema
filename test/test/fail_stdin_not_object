@@ -1,0 +1,19 @@
+WRITE stdin_0 UNTIL EOF
+[ 1, 2, 3 ]
+EOF
+
+// Other input error
+RUN test - STDIN stdin_0 IN . INTO result_0.txt EXPECTING 6
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin:
+2> error: The test document must be an object
+2>   at line 1
+2>   at column 1
+2>   at file path tag:sourcemeta.com,2026:jsonschema/stdin
+2>   at location ""
+2>
+2> Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

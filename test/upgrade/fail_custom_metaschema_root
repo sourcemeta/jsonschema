@@ -1,0 +1,56 @@
+WRITE metaschema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/custom-metaschema",
+  "type": "object"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-metaschema",
+  "$id": "https://example.com/test",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN upgrade --resolve metaschema.json schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Cannot upgrade a schema that uses a custom meta-schema
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/schema.json
+2>   at location ""
+2>   at uri https://example.com/custom-metaschema
+2>
+2> Schemas that declare a custom meta-schema cannot be upgraded in place
+2> by this command. Please upgrade the meta-schema and the schema manually.
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN upgrade --resolve metaschema.json --json schema.json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Cannot upgrade a schema that uses a custom meta-schema",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "",
+1>   "uri": "https://example.com/custom-metaschema"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

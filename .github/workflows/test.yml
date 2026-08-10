@@ -173,6 +173,6 @@ jobs:
       - run: sudo snap install --dangerous --classic ${{ steps.snapcraft.outputs.snap }}
       - run: jsonschema version
       - run: mkdir "$PWD/build"
-      - run: TMPDIR="$PWD/build" ./test/lint/fail_lint.sh jsonschema
-      - run: TMPDIR="$PWD/build" ./test/bundle/pass_resolve_single.sh jsonschema
-      - run: TMPDIR="$PWD/build" ./test/ci/pass_validate_http.sh jsonschema
+      - run: TMPDIR="$PWD/build" python3 scripts/clitest.py test/lint/fail_lint --binary jsonschema
+      - run: TMPDIR="$PWD/build" python3 scripts/clitest.py test/bundle/pass_resolve_single --binary jsonschema
+      - run: TMPDIR="$PWD/build" python3 scripts/clitest.py test/ci/pass_validate_http --binary jsonschema

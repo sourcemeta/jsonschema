@@ -1,0 +1,310 @@
+RUN lint --list --exclude valid_default --exclude valid_examples STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> allof_false_simplify
+1>   When `allOf` contains a `false` branch, the schema is unsatisfiable
+1>
+1> anyof_false_simplify
+1>   An `anyOf` of a single `false` branch is unsatisfiable
+1>
+1> anyof_remove_false_schemas
+1>   The boolean schema `false` is guaranteed to never match in `anyOf`, as it is sufficient for any other branch to match
+1>
+1> anyof_true_simplify
+1>   An `anyOf` with a `true` or `{}` branch always succeeds
+1>
+1> comment_trim
+1>   Comments should not contain leading or trailing whitespace
+1>
+1> conflicting_readonly_writeonly
+1>   The `readOnly` and `writeOnly` keywords are mutually exclusive
+1>
+1> const_in_enum
+1>   If the `const` and `enum` keyword overlap, then `enum` is redundant and can be removed
+1>
+1> const_not_in_enum
+1>   Do not set the `const` and `enum` keyword at the same time, mainly when their values diverge
+1>
+1> const_with_type
+1>   Setting `type` alongside `const` is considered an anti-pattern, as the constant already implies its respective type
+1>
+1> content_media_type_without_encoding
+1>   The `contentMediaType` keyword is meaningless without the presence of the `contentEncoding` keyword
+1>
+1> content_schema_default
+1>   Setting the `contentSchema` keyword to the true schema does not add any further constraint
+1>
+1> content_schema_without_media_type
+1>   The `contentSchema` keyword is meaningless without the presence of the `contentMediaType` keyword
+1>
+1> definitions_to_defs
+1>   `definitions` was superseded by `$defs` in 2019-09 and later versions
+1>
+1> dependencies_default
+1>   Setting the `dependencies` keyword to an empty object does not add any further constraint
+1>
+1> dependencies_property_tautology
+1>   Defining requirements for a property using `dependencies` that is already marked as required is an unnecessarily complex use of `dependencies`
+1>
+1> dependent_required_default
+1>   Setting the `dependentRequired` keyword to an empty object does not add any further constraint
+1>
+1> dependent_required_tautology
+1>   Defining requirements for a property using `dependentRequired` that is already marked as required is an unnecessarily complex use of `dependentRequired`
+1>
+1> description_trailing_period
+1>   Descriptions should not end with a period to give user interfaces flexibility in presenting the text
+1>
+1> description_trim
+1>   Descriptions should not contain leading or trailing whitespace
+1>
+1> disallow_default
+1>   Setting the `disallow` keyword to the empty array does not add any further constraint
+1>
+1> disallow_narrows_type
+1>   When `disallow` excludes types that are also in the parent `type`, those types can be removed from `type` and the corresponding `disallow` entries dropped
+1>
+1> divisible_by_default
+1>   Setting `divisibleBy` to 1 does not add any further constraint
+1>
+1> double_negation_elimination
+1>   A `not` whose value is a schema containing only another `not` is equivalent to the inner value
+1>
+1> draft_official_dialect_with_https
+1>   The official dialect URI of Draft 7 and older must use "http://" instead of "https://"
+1>
+1> draft_official_dialect_without_empty_fragment
+1>   The official dialect URI of Draft 7 and older versions must contain the empty fragment
+1>
+1> draft_ref_siblings
+1>   In Draft 7 and older dialects, keywords sibling to `$ref` are never evaluated
+1>
+1> drop_allof_empty_schemas
+1>   Empty schemas in `allOf` are redundant and can be removed
+1>
+1> drop_extends_empty_schemas
+1>   Empty schemas in `extends` are redundant and can be removed
+1>
+1> duplicate_allof_branches
+1>   Setting duplicate subschemas in `allOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
+1>
+1> duplicate_anyof_branches
+1>   Setting duplicate subschemas in `anyOf` is redundant, as it produces unnecessary additional validation that is guaranteed to not affect the validation result
+1>
+1> duplicate_enum_values
+1>   Setting duplicate values in `enum` is considered an anti-pattern
+1>
+1> duplicate_examples
+1>   Setting duplicate values in `examples` is redundant
+1>
+1> duplicate_required_values
+1>   Setting duplicate values in `required` is considered an anti-pattern
+1>
+1> dynamic_ref_to_static_ref
+1>   A dynamic reference whose destination is unambiguous can be expressed as a static reference
+1>
+1> else_empty
+1>   Setting the `else` keyword to the empty schema does not add any further constraint
+1>
+1> else_without_if
+1>   The `else` keyword is meaningless without the presence of the `if` keyword
+1>
+1> empty_object_as_true
+1>   The empty schema `{}` accepts all values and is equivalent to the boolean schema `true`
+1>
+1> enum_to_const
+1>   An `enum` of a single value can be expressed as `const`
+1>
+1> enum_with_type
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types
+1>
+1> equal_numeric_bounds_to_const
+1>   Setting `minimum` and `maximum` to the same number only leaves one possible value
+1>
+1> equal_numeric_bounds_to_enum
+1>   Setting `minimum` and `maximum` to the same number only leaves one possible value
+1>
+1> exclusive_bounds_false_drop
+1>   Setting `exclusiveMinimum` or `exclusiveMaximum` to `false` adds no constraint
+1>
+1> exclusive_maximum_number_and_maximum
+1>   Setting both `exclusiveMaximum` and `maximum` at the same time is considered an anti-pattern. You should choose one
+1>
+1> exclusive_minimum_number_and_minimum
+1>   Setting both `exclusiveMinimum` and `minimum` at the same time is considered an anti-pattern. You should choose one
+1>
+1> flatten_nested_allof
+1>   An `allOf` branch that only contains another `allOf` can be flattened into the parent `allOf`
+1>
+1> flatten_nested_anyof
+1>   An `anyOf` branch that only contains another `anyOf` can be flattened into the parent `anyOf`
+1>
+1> flatten_nested_extends
+1>   An `extends` branch that only contains another `extends` can be flattened into the parent `extends`
+1>
+1> forbid_empty_enum
+1>   An empty `enum` validates nothing and is unsatisfiable
+1>
+1> if_without_then_else
+1>   The `if` keyword is meaningless without the presence of the `then` or `else` keywords
+1>
+1> ignored_metaschema
+1>   A `$schema` declaration without a sibling identifier (or with a sibling `$ref` in Draft 7 and older dialects), is ignored
+1>
+1> incoherent_min_max_contains
+1>   `minContains` greater than `maxContains` makes the schema unsatisfiable
+1>
+1> invalid_external_ref
+1>   External references must point to schemas that can be resolved
+1>
+1> items_array_default
+1>   Setting the `items` keyword to the empty array does not add any further constraint
+1>
+1> items_schema_default
+1>   Setting the `items` keyword to the true schema does not add any further constraint
+1>
+1> max_contains_without_contains
+1>   The `maxContains` keyword is meaningless without the presence of the `contains` keyword
+1>
+1> maximum_real_for_integer
+1>   If an instance is guaranteed to be an integer, setting a real number upper bound is the same as a floor of that upper bound
+1>
+1> min_contains_without_contains
+1>   The `minContains` keyword is meaningless without the presence of the `contains` keyword
+1>
+1> minimum_real_for_integer
+1>   If an instance is guaranteed to be an integer, setting a real number lower bound is the same as a ceil of that lower bound
+1>
+1> modern_official_dialect_with_empty_fragment
+1>   The official dialect URI of 2019-09 and newer versions must not contain the empty fragment
+1>
+1> modern_official_dialect_with_http
+1>   The official dialect URI of 2019-09 and later must use "https://" instead of "http://"
+1>
+1> multiple_of_default
+1>   Setting `multipleOf` to 1 does not add any further constraint
+1>
+1> non_applicable_additional_items
+1>   The `additionalItems` keyword is ignored when the `items` keyword is either not present or set to a schema
+1>
+1> non_applicable_disallow_types
+1>   `disallow` entries whose type cannot overlap with the parent `type` can never match and can be dropped
+1>
+1> non_applicable_enum_validation_keywords
+1>   Setting validation keywords that do not apply to any item in `enum` is considered an anti-pattern
+1>
+1> non_applicable_type_specific_keywords
+1>   Avoid keywords that don't apply to the type or types that the current subschema expects
+1>
+1> not_false
+1>   Setting the `not` keyword to `false` imposes no constraints. Negating `false` yields the always-true schema
+1>
+1> oneof_false_simplify
+1>   A `oneOf` of a single `false` branch is unsatisfiable
+1>
+1> oneof_to_anyof_disjoint_types
+1>   A `oneOf` where all branches have disjoint types can be safely converted to `anyOf`
+1>
+1> orphan_definitions
+1>   Schema definitions in `$defs` or `definitions` that are never internally referenced can be removed
+1>
+1> pattern_non_ecma_regex
+1>   For interoperability reasons, only set this keyword to a regular expression that strictly adheres to the ECMA-262 dialect
+1>
+1> pattern_properties_default
+1>   Setting the `patternProperties` keyword to the empty object does not add any further constraint
+1>
+1> pattern_properties_non_ecma_regex
+1>   For interoperability reasons, only set the keys of this keyword to regular expressions that strictly adhere to the ECMA-262 dialect
+1>
+1> portable_anchor_names
+1>   Keep anchors within the safe allowed character set across JSON Schema dialects (`^[A-Za-z][A-Za-z0-9_.-]*$`)
+1>
+1> properties_default
+1>   Setting the `properties` keyword to the empty object does not add any further constraint
+1>
+1> property_names_default
+1>   Setting the `propertyNames` keyword to the empty object does not add any further constraint
+1>
+1> property_names_type_default
+1>   Setting the `type` keyword to `string` inside `propertyNames` does not add any further constraint
+1>
+1> required_properties_in_properties
+1>   Every property listed in the `required` keyword must be explicitly defined using the `properties` keyword
+1>
+1> simple_properties_identifiers
+1>   Set `properties` to identifier names that can be easily mapped to programming languages (matching [A-Za-z_][A-Za-z0-9_]*)
+1>
+1> single_type_array
+1>   Setting `type` to an array of a single type is the same as directly declaring such type
+1>
+1> then_empty
+1>   Setting the `then` keyword to the empty schema does not add any further constraint
+1>
+1> then_without_if
+1>   The `then` keyword is meaningless without the presence of the `if` keyword
+1>
+1> title_description_equal
+1>   The title and description metadata keywords should not be set to the same value
+1>
+1> title_trailing_period
+1>   Titles should not end with a period to give user interfaces flexibility in presenting the text
+1>
+1> title_trim
+1>   Titles should not contain leading or trailing whitespace
+1>
+1> top_level_description
+1>   Set a non-empty description at the top level of the schema to explain what the definition is about in detail
+1>
+1> top_level_examples
+1>   Set a non-empty examples array at the top level of the schema to illustrate the expected data
+1>
+1> top_level_title
+1>   Set a concise non-empty title at the top level of the schema to explain what the definition is about
+1>
+1> unevaluated_items_default
+1>   Setting the `unevaluatedItems` keyword to the true schema does not add any further constraint
+1>
+1> unevaluated_properties_default
+1>   Setting the `unevaluatedProperties` keyword to the true schema does not add any further constraint
+1>
+1> unknown_format_prefix
+1>   For interoperability purposes, the JSON Schema specification advises against the use of `format` values that are not explicitly defined by the specification
+1>
+1> unknown_keywords_prefix
+1>   Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix
+1>
+1> unknown_local_ref
+1>   Local references that point to unknown locations are invalid and will result in evaluation failures
+1>
+1> unnecessary_allof_ref_wrapper_draft
+1>   Wrapping `$ref` in `allOf` is only necessary if there are other sibling keywords
+1>
+1> unnecessary_allof_ref_wrapper_modern
+1>   Wrapping `$ref` in `allOf` was only necessary in JSON Schema Draft 7 and older
+1>
+1> unnecessary_allof_wrapper
+1>   Keywords inside `allOf` that do not conflict with the parent schema can be elevated
+1>
+1> unnecessary_extends_ref_wrapper
+1>   Wrapping `$ref` in `extends` is only necessary if there are other sibling keywords
+1>
+1> unnecessary_extends_wrapper
+1>   Keywords inside `extends` that do not conflict with the parent schema can be elevated
+1>
+1> unsatisfiable_drop_validation
+1>   Do not place assertions or applicators next to an unsatisfiable negation
+1>
+1> unsatisfiable_in_place_applicator_type
+1>   An in-place applicator branch that defines a `type` with no overlap with the parent `type` can never be satisfied
+1>
+1> unsatisfiable_max_contains
+1>   Setting the `maxContains` keyword to a number greater than or equal to the array upper bound does not add any further constraint
+1>
+1> unsatisfiable_min_properties
+1>   Setting `minProperties` to a number less than `required` does not add any further constraint
+1>
+1> Number of rules: 101
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

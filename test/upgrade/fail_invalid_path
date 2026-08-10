@@ -1,0 +1,31 @@
+MAKE DIRECTORY somedir
+
+// Other input error
+RUN upgrade somedir STDIN /dev/null IN . INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The input was supposed to be a file but it is a directory
+2>   at file path [CWD]/somedir
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Other input error
+RUN upgrade somedir --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The input was supposed to be a file but it is a directory",
+1>   "filePath": "[CWD]/somedir"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

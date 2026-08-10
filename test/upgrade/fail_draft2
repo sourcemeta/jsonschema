@@ -1,0 +1,45 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-02/schema#",
+  "id": "https://example.com",
+  "type": "string"
+}
+EOF
+
+// Not supported
+RUN upgrade schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Upgrading schemas from this dialect is not supported yet
+2>   at line 1
+2>   at column 1
+2>   at file path [CWD]/schema.json
+2>   at location ""
+2>   at uri http://json-schema.org/draft-02/schema#
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Not supported
+RUN upgrade --json schema.json STDIN /dev/null IN . INTO result_json.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "Upgrading schemas from this dialect is not supported yet",
+1>   "line": 1,
+1>   "column": 1,
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "",
+1>   "uri": "http://json-schema.org/draft-02/schema#"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

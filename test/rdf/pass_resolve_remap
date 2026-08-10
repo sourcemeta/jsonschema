@@ -1,0 +1,48 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "person": { "$ref": "other" }
+  }
+}
+EOF
+
+WRITE remote.json UNTIL EOF
+{
+  "$id": "https://example.com/nested",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-id": "https://schema.org/author",
+  "x-jsonld-type": "https://schema.org/Person"
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "resolve": {
+    "https://example.com/other": "https://example.com/nested"
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "person": {} }
+EOF
+
+RUN rdf schema.json instance.json --resolve remote.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/author": [
+1>       {
+1>         "@type": [ "https://schema.org/Person" ]
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

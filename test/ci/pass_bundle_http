@@ -1,0 +1,253 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "allOf": [
+    { "$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema.json" }
+  ]
+}
+EOF
+
+RUN bundle schema.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "$schema": "http://json-schema.org/draft-07/schema#",
+1>   "$id": "file://[CWD]/schema.json",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "allOf": [
+1>     {
+1>       "$ref": "https://schemas.sourcemeta.com/jsonschema/draft4/schema"
+1>     }
+1>   ],
+1>   "definitions": {
+1>     "https://schemas.sourcemeta.com/jsonschema/draft4/schema": {
+1>       "$schema": "http://json-schema.org/draft-04/schema#",
+1>       "id": "https://schemas.sourcemeta.com/jsonschema/draft4/schema",
+1>       "description": "Core schema meta-schema",
+1>       "default": {},
+1>       "type": "object",
+1>       "properties": {
+1>         "id": {
+1>           "type": "string"
+1>         },
+1>         "$schema": {
+1>           "type": "string"
+1>         },
+1>         "title": {
+1>           "type": "string"
+1>         },
+1>         "description": {
+1>           "type": "string"
+1>         },
+1>         "default": {},
+1>         "multipleOf": {
+1>           "type": "number",
+1>           "exclusiveMinimum": true,
+1>           "minimum": 0
+1>         },
+1>         "maximum": {
+1>           "type": "number"
+1>         },
+1>         "exclusiveMaximum": {
+1>           "default": false,
+1>           "type": "boolean"
+1>         },
+1>         "minimum": {
+1>           "type": "number"
+1>         },
+1>         "exclusiveMinimum": {
+1>           "default": false,
+1>           "type": "boolean"
+1>         },
+1>         "maxLength": {
+1>           "$ref": "#/definitions/positiveInteger"
+1>         },
+1>         "minLength": {
+1>           "$ref": "#/definitions/positiveIntegerDefault0"
+1>         },
+1>         "pattern": {
+1>           "type": "string",
+1>           "format": "regex"
+1>         },
+1>         "additionalItems": {
+1>           "default": {},
+1>           "anyOf": [
+1>             {
+1>               "type": "boolean"
+1>             },
+1>             {
+1>               "$ref": "#"
+1>             }
+1>           ]
+1>         },
+1>         "items": {
+1>           "default": {},
+1>           "anyOf": [
+1>             {
+1>               "$ref": "#"
+1>             },
+1>             {
+1>               "$ref": "#/definitions/schemaArray"
+1>             }
+1>           ]
+1>         },
+1>         "maxItems": {
+1>           "$ref": "#/definitions/positiveInteger"
+1>         },
+1>         "minItems": {
+1>           "$ref": "#/definitions/positiveIntegerDefault0"
+1>         },
+1>         "uniqueItems": {
+1>           "default": false,
+1>           "type": "boolean"
+1>         },
+1>         "maxProperties": {
+1>           "$ref": "#/definitions/positiveInteger"
+1>         },
+1>         "minProperties": {
+1>           "$ref": "#/definitions/positiveIntegerDefault0"
+1>         },
+1>         "required": {
+1>           "$ref": "#/definitions/stringArray"
+1>         },
+1>         "additionalProperties": {
+1>           "default": {},
+1>           "anyOf": [
+1>             {
+1>               "type": "boolean"
+1>             },
+1>             {
+1>               "$ref": "#"
+1>             }
+1>           ]
+1>         },
+1>         "definitions": {
+1>           "default": {},
+1>           "type": "object",
+1>           "additionalProperties": {
+1>             "$ref": "#"
+1>           }
+1>         },
+1>         "properties": {
+1>           "default": {},
+1>           "type": "object",
+1>           "additionalProperties": {
+1>             "$ref": "#"
+1>           }
+1>         },
+1>         "patternProperties": {
+1>           "default": {},
+1>           "type": "object",
+1>           "additionalProperties": {
+1>             "$ref": "#"
+1>           }
+1>         },
+1>         "dependencies": {
+1>           "type": "object",
+1>           "additionalProperties": {
+1>             "anyOf": [
+1>               {
+1>                 "$ref": "#"
+1>               },
+1>               {
+1>                 "$ref": "#/definitions/stringArray"
+1>               }
+1>             ]
+1>           }
+1>         },
+1>         "enum": {
+1>           "type": "array",
+1>           "minItems": 1,
+1>           "uniqueItems": true
+1>         },
+1>         "type": {
+1>           "anyOf": [
+1>             {
+1>               "$ref": "#/definitions/simpleTypes"
+1>             },
+1>             {
+1>               "type": "array",
+1>               "minItems": 1,
+1>               "uniqueItems": true,
+1>               "items": {
+1>                 "$ref": "#/definitions/simpleTypes"
+1>               }
+1>             }
+1>           ]
+1>         },
+1>         "format": {
+1>           "type": "string"
+1>         },
+1>         "allOf": {
+1>           "$ref": "#/definitions/schemaArray"
+1>         },
+1>         "anyOf": {
+1>           "$ref": "#/definitions/schemaArray"
+1>         },
+1>         "oneOf": {
+1>           "$ref": "#/definitions/schemaArray"
+1>         },
+1>         "not": {
+1>           "$ref": "#"
+1>         }
+1>       },
+1>       "dependencies": {
+1>         "exclusiveMaximum": [ "maximum" ],
+1>         "exclusiveMinimum": [ "minimum" ]
+1>       },
+1>       "definitions": {
+1>         "schemaArray": {
+1>           "type": "array",
+1>           "minItems": 1,
+1>           "items": {
+1>             "$ref": "#"
+1>           }
+1>         },
+1>         "positiveInteger": {
+1>           "type": "integer",
+1>           "minimum": 0
+1>         },
+1>         "positiveIntegerDefault0": {
+1>           "allOf": [
+1>             {
+1>               "$ref": "#/definitions/positiveInteger"
+1>             },
+1>             {
+1>               "default": 0
+1>             }
+1>           ]
+1>         },
+1>         "simpleTypes": {
+1>           "enum": [
+1>             "array",
+1>             "boolean",
+1>             "integer",
+1>             "null",
+1>             "number",
+1>             "object",
+1>             "string"
+1>           ]
+1>         },
+1>         "stringArray": {
+1>           "type": "array",
+1>           "minItems": 1,
+1>           "uniqueItems": true,
+1>           "items": {
+1>             "type": "string"
+1>           }
+1>         }
+1>       }
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

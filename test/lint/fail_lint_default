@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ {} ],
+  "properties": {
+    "foo": {
+      "type": "string",
+      "default": 1
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:9:7:
+1>   Only set a `default` value that validates against the schema (valid_default)
+1>     at location "/properties/foo/default"
+1>     The value was expected to be of type string but it was of type integer
+1>       at instance location ""
+1>       at evaluate path "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

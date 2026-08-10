@@ -1,0 +1,39 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/1.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "id": "https://example.com/1"
+}
+EOF
+
+WRITE schemas/2.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "id": "https://example.com/2"
+}
+EOF
+
+RUN lint --resolve schemas schemas --debug STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> debug: Detecting schema resources from file: [CWD]/schemas/1.json
+2> debug: Importing schema into the resolution context: file://[CWD]/schemas/1.json
+2> debug: Importing schema into the resolution context: https://example.com/1
+2> debug: Detecting schema resources from file: [CWD]/schemas/2.json
+2> debug: Importing schema into the resolution context: file://[CWD]/schemas/2.json
+2> debug: Importing schema into the resolution context: https://example.com/2
+2> Linting: [CWD]/schemas/1.json
+2> Linting: [CWD]/schemas/2.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

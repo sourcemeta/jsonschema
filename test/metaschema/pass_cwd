@@ -1,0 +1,33 @@
+WRITE schema_1.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE schema_2.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object"
+}
+EOF
+
+RUN metaschema --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Recursively processing every file in [CWD] as no input was provided
+2> ok: [CWD]/schema_1.json
+2>   matches http://json-schema.org/draft-04/schema#
+2> ok: [CWD]/schema_2.json
+2>   matches http://json-schema.org/draft-04/schema#
+EOF
+
+COMPARE result.txt AGAINST expected.txt

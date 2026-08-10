@@ -1,0 +1,54 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "additionalProperties": {
+    "unknown-1": 1,
+    "unknown-2": 2,
+    "unknown-3": 3
+  }
+}
+EOF
+
+// Validation failure
+RUN lint schema.json --json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 50,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "unknown_keywords_prefix",
+1>       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
+1>       "description": null,
+1>       "schemaLocation": [ "additionalProperties", "unknown-1" ],
+1>       "position": [ 6, 5, 6, 18 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "unknown_keywords_prefix",
+1>       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
+1>       "description": null,
+1>       "schemaLocation": [ "additionalProperties", "unknown-2" ],
+1>       "position": [ 7, 5, 7, 18 ]
+1>     },
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "unknown_keywords_prefix",
+1>       "message": "Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix",
+1>       "description": null,
+1>       "schemaLocation": [ "additionalProperties", "unknown-3" ],
+1>       "position": [ 8, 5, 8, 18 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

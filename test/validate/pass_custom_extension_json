@@ -1,0 +1,13 @@
+WRITE schema.custom UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate schema.custom instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

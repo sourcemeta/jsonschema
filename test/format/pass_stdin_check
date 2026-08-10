@@ -1,0 +1,13 @@
+WRITE input.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN fmt --check - STDIN input.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt

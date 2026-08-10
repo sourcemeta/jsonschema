@@ -1,0 +1,21 @@
+WRITE schema.yaml UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Test
+description: Test schema
+type: string
+enum: [ foo ]
+EOF
+
+// Validation failure
+RUN lint schema.yaml STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.yaml:5:1:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/enum"
+1> schema.yaml:4:1:
+1>   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
+1>     at location "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

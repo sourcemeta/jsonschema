@@ -1,0 +1,41 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com/schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+// Schema input error
+RUN compile schema.json --entrypoint 'https://example.com/nonexistent' STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The given entry point URI does not exist in the schema
+2>   at identifier https://example.com/nonexistent
+2>   at file path [CWD]/schema.json
+2>
+2> Use the `inspect` command to find valid schema locations
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN compile schema.json --entrypoint 'https://example.com/nonexistent' --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The given entry point URI does not exist in the schema",
+1>   "identifier": "https://example.com/nonexistent",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

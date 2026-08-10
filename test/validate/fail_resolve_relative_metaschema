@@ -1,0 +1,50 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+WRITE resolve.json UNTIL EOF
+{
+  "$schema": "relative/path",
+  "$id": "https://example.com/relative-test",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json --resolve resolve.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Relative meta-schema URIs are not valid according to the JSON Schema specification
+2>   at identifier relative/path
+2>   at file path [CWD]/resolve.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --resolve resolve.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Relative meta-schema URIs are not valid according to the JSON Schema specification",
+1>   "identifier": "relative/path",
+1>   "filePath": "[CWD]/resolve.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,24 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "allOf": [ { "$ref": "https://schemas.sourcemeta.com/self/v1/api/schemas/stats/jsonschema/2020-12/schema" } ]
+}
+EOF
+
+// Schema input error
+RUN bundle schema.json --http STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The JSON document is not a valid JSON Schema
+2>   at identifier https://schemas.sourcemeta.com/self/v1/api/schemas/stats/jsonschema/2020-12/schema
+2>   at file path [CWD]/schema.json
+2>   at location "/allOf/0/$ref"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

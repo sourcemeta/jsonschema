@@ -1,0 +1,17 @@
+WRITE stdin_0 UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test description",
+  "examples": ["foo"],
+  "type": "string"
+}
+EOF
+
+RUN lint - --verbose STDIN stdin_0 IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> Linting: tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

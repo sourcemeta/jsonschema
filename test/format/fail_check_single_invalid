@@ -1,0 +1,24 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#"
+  "title": "Test",
+  "description": "Test schema",
+  "type" 1,
+}
+EOF
+
+// Other input error
+RUN fmt schema.json --check STDIN /dev/null IN . INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 3
+2>   at column 3
+2>   at file path [CWD]/schema.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

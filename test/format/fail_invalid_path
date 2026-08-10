@@ -1,0 +1,13 @@
+// Other input error
+RUN fmt does_not_exist.json STDIN /dev/null IN . INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: No such file or directory
+2>   at file path [CWD]/does_not_exist.json
+EOF
+
+COMPARE result.txt AGAINST expected.txt

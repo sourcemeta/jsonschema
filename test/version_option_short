@@ -1,0 +1,9 @@
+RUN -v STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE $VERSION WITH '[VERSION]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> [VERSION]
+EOF
+
+COMPARE result.txt AGAINST expected.txt

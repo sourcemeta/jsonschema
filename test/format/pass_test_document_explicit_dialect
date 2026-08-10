@@ -1,0 +1,26 @@
+WRITE test.json UNTIL EOF
+{
+  "tests": [],
+  "target": "https://example.com/my-schema"
+}
+EOF
+
+RUN fmt test.json --default-dialect https://json-schema.org/draft/2020-12/schema STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "target": "https://example.com/my-schema",
+  "tests": []
+}
+EOF
+
+COMPARE test.json AGAINST expected_file_0.txt

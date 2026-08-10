@@ -1,0 +1,117 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/one.json UNTIL EOF
+{
+  "id": "https://example.com/one",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/two.json UNTIL EOF
+{
+  "id": "https://example.com/two",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "number"
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "https://example.com/one",
+    "https://example.com/two"
+  ],
+  "tests": [
+    {
+      "description": "String is valid",
+      "valid": true,
+      "data": "foo"
+    }
+  ]
+}
+EOF
+
+// Validation failure
+RUN test test.json --resolve schemas STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+1>   https://example.com/two:
+1>     2/2 FAIL String is valid
+1>
+1> error: Schema validation failure
+1>   The value was expected to be of type number but it was of type string
+1>     at instance location ""
+1>     at evaluate path "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Validation failure
+RUN test test.json --resolve schemas --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+COPY result_1.txt TO output.json
+KEEP LINES MATCHING '^1>' IN output.json
+REPLACE '^1> ?' WITH '' IN output.json
+
+REPLACE $VERSION WITH '[VERSION]' IN result_1.txt
+DROP LINES MATCHING '"duration":' IN result_1.txt
+DROP LINES MATCHING '"start":' IN result_1.txt
+DROP LINES MATCHING '"stop":' IN result_1.txt
+DROP LINES MATCHING '"threadId":' IN result_1.txt
+DROP LINES MATCHING '"trace":' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "reportFormat": "CTRF",
+1>   "specVersion": "0.0.0",
+1>   "results": {
+1>     "tool": {
+1>       "name": "jsonschema",
+1>       "version": "[VERSION]"
+1>     },
+1>     "summary": {
+1>       "tests": 2,
+1>       "passed": 1,
+1>       "failed": 1,
+1>       "pending": 0,
+1>       "skipped": 0,
+1>       "other": 0,
+1>     },
+1>     "tests": [
+1>       {
+1>         "name": "String is valid",
+1>         "status": "passed",
+1>         "suite": [ "https://example.com/one" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/test.json",
+1>         "line": 7,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       },
+1>       {
+1>         "name": "String is valid",
+1>         "status": "failed",
+1>         "suite": [ "https://example.com/two" ],
+1>         "type": "unit",
+1>         "filePath": "[CWD]/test.json",
+1>         "line": 7,
+1>         "retries": 0,
+1>         "flaky": false,
+1>       }
+1>     ]
+1>   }
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+RUN validate $CTRF_SCHEMA output.json STDIN /dev/null IN . INTO result_2.txt EXPECTING 0

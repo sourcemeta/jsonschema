@@ -1,0 +1,14 @@
+WRITE schema UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN codegen schema --target typescript STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> export type Schema = string;
+EOF
+
+COMPARE result.txt AGAINST expected.txt

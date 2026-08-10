@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+WRITE template.json UNTIL EOF
+{ "foo": 1 }
+EOF
+
+RUN validate schema.json instance.json --template template.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+2> warning: Failed to parse pre-compiled schema template. Compiling from scratch
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,27 @@
+MAKE DIRECTORY project
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+}
+EOF
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> No dependencies found
+2>   at [CWD]/project/jsonschema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+TREE project INTO listing_0.txt
+KEEP LINES MATCHING '^\./jsonschema\.lock\.json$' IN listing_0.txt
+
+WRITE listing_expected_0.txt UNTIL EOF
+EOF
+
+COMPARE listing_0.txt AGAINST listing_expected_0.txt

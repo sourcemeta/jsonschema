@@ -1,0 +1,55 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "allOf": [
+    { "$ref": "#/$defs/not-a-schema" }
+  ],
+  "$defs": {
+    "not-a-schema": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
+2>   at identifier file://[CWD]/schema.json#/$defs/not-a-schema
+2>   at file path [CWD]/schema.json
+2>   at location "/$defs"
+2>
+2> Maybe you meant to use `definitions` instead of `$defs` in this dialect?
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN validate schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
+1>   "identifier": "file://[CWD]/schema.json#/$defs/not-a-schema",
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/$defs"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

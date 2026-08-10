@@ -1,0 +1,32 @@
+WRITE test.json UNTIL EOF
+{
+  "tests": [
+    {
+      "description": "I expect to pass",
+      "valid": true,
+      "data": { "foo": 1 }
+    }
+  ],
+  "target": "https://example.com/my-schema"
+}
+EOF
+
+RUN fmt - STDIN test.json IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "target": "https://example.com/my-schema",
+1>   "tests": [
+1>     {
+1>       "description": "I expect to pass",
+1>       "valid": true,
+1>       "data": {
+1>         "foo": 1
+1>       }
+1>     }
+1>   ]
+1> }
+2> Interpreting as a test file: tag:sourcemeta.com,2026:jsonschema/stdin
+EOF
+
+COMPARE result.txt AGAINST expected.txt

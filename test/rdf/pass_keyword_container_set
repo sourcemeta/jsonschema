@@ -1,0 +1,36 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "tags": {
+        "type": "array",
+        "x-jsonld-id": "https://schema.org/keywords",
+        "x-jsonld-container": "@set"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "tags": [ "a", "b" ] }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/keywords": [
+1>       {
+1>         "@value": "a"
+1>       },
+1>       {
+1>         "@value": "b"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

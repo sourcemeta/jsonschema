@@ -1,0 +1,61 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      { "path": "./rule.json", "topLevel": 1 }
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Other input error
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The lint rule topLevel property must be a boolean
+2>   at line 4
+2>   at column 32
+2>   at file path [CWD]/jsonschema.json
+2>   at location "/lint/rules/0/topLevel"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN lint --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The lint rule topLevel property must be a boolean",
+1>   "line": 4,
+1>   "column": 32,
+1>   "filePath": "[CWD]/jsonschema.json",
+1>   "location": "/lint/rules/0/topLevel"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,49 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "address": { "$ref": "./schemas/address.json" }
+  },
+  "required": [ "name" ]
+}
+EOF
+
+WRITE schemas/address.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "street": { "type": "string" },
+    "city": { "type": "string" }
+  },
+  "required": [ "street", "city" ]
+}
+EOF
+
+RUN codegen schema.json --name Person --target typescript --resolve schemas STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> export type PersonName = string;
+1>
+1> export type PersonAddress = _PersonAddress;
+1>
+1> export type PersonAddressStreet = string;
+1>
+1> export type PersonAddressCity = string;
+1>
+1> export interface _PersonAddress {
+1>   "street": PersonAddressStreet;
+1>   "city": PersonAddressCity;
+1>   [key: string]: unknown | undefined;
+1> }
+1>
+1> export interface Person {
+1>   "name": PersonName;
+1>   "address"?: PersonAddress;
+1>   [key: string]: unknown | undefined;
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

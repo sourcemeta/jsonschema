@@ -1,0 +1,30 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema",
+  "type": "string"
+}
+EOF
+
+RUN lint --top-level-rule rule.json --only require_id --verbose schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Loading custom rule: [CWD]/rule.json
+2> Only enabling rule: require_id
+2> Linting: [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

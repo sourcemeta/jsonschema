@@ -1,0 +1,48 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": { "$ref": "https://example.com/nested" }
+  }
+}
+EOF
+
+WRITE nested.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/nested",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+RUN bundle schema.json --resolve nested.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft-07/schema#",
+1>   "$id": "https://example.com",
+1>   "title": "Test",
+1>   "description": "Test schema",
+1>   "properties": {
+1>     "foo": {
+1>       "$ref": "https://example.com/nested"
+1>     }
+1>   },
+1>   "definitions": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft-07/schema#",
+1>       "$id": "https://example.com/nested",
+1>       "title": "Test",
+1>       "description": "Test schema",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

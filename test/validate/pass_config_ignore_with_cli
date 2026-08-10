@@ -1,0 +1,57 @@
+MAKE DIRECTORY instances
+
+MAKE DIRECTORY instances/drafts
+
+MAKE DIRECTORY instances/experimental
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instances/valid.json UNTIL EOF
+{ "name": "Alice" }
+EOF
+
+WRITE instances/drafts/invalid_config.json UNTIL EOF
+{ "name": 123 }
+EOF
+
+WRITE instances/experimental/invalid_cli.json UNTIL EOF
+{ "name": 456 }
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "ignore": [
+    "./instances/drafts"
+  ]
+}
+EOF
+
+RUN validate schema.json instances --ignore instances/experimental --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Ignoring path: "[CWD]/instances/experimental"
+2> Ignoring path from configuration: "[CWD]/instances/drafts"
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> ok: [CWD]/instances/valid.json
+2>   matches [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

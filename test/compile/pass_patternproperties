@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "patternProperties": {
+    "[\\-]": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN compile schema.json STDIN /dev/null IN . INTO compiled.txt EXPECTING 0
+
+COPY compiled.txt TO template.json
+KEEP LINES MATCHING '^1>' IN template.json
+REPLACE '^1> ?' WITH '' IN template.json
+
+RUN validate --template template.json schema.json instance.json STDIN /dev/null IN . INTO validated.txt EXPECTING 0
+
+COMPARE validated.txt AGAINST silent.txt

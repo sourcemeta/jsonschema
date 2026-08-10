@@ -1,0 +1,20 @@
+WRITE schema.custom UNTIL EOF
+{"$id":"https://example.com","$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN fmt schema.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COMPARE result.txt AGAINST silent.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "type": "string"
+}
+EOF
+
+COMPARE schema.custom AGAINST expected_file_0.txt

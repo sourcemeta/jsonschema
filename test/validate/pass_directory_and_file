@@ -1,0 +1,34 @@
+MAKE DIRECTORY instances
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instances/instance_1.json UNTIL EOF
+{ "name": "Alice" }
+EOF
+
+WRITE instances/instance_2.json UNTIL EOF
+{ "name": "Bob" }
+EOF
+
+WRITE single.json UNTIL EOF
+{ "name": "Charlie" }
+EOF
+
+RUN validate schema.json single.json instances STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,22 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "contentMediaType": "application/json",
+  "enum": [ "foo" ]
+}
+EOF
+
+// Validation failure
+RUN lint schema.json --exclude enum_to_const -x enum_with_type STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:7:3:
+1>   The `contentMediaType` keyword is meaningless without the presence of the `contentEncoding` keyword (content_media_type_without_encoding)
+1>     at location "/contentMediaType"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

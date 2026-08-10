@@ -1,0 +1,21 @@
+WRITE schemas/schema1 UNTIL EOF
+$schema: https://json-schema.org/draft/2020-12/schema
+description: Test schema
+additionalProperties: false
+title: Hello World
+EOF
+
+// Not supported
+RUN fmt schemas --extension '' STDIN /dev/null IN . INTO result.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> error: This command does not support YAML input files yet
+2>   at file path [CWD]/schemas/schema1
+EOF
+
+COMPARE result.txt AGAINST expected.txt

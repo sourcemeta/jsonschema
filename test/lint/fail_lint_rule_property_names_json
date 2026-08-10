@@ -1,0 +1,54 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "all_properties_camelcase",
+  "description": "Ensures camelCase properties",
+  "properties": {
+    "properties": {
+      "propertyNames": {
+        "pattern": "^[a-z][a-zA-Z0-9]*$"
+      }
+    }
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Example Schema",
+  "description": "Contains a non-camel-case property",
+  "examples": [ { "INVALID_PROPERTY": "foo" } ],
+  "properties": {
+    "INVALID_PROPERTY": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+// Validation failure
+RUN lint --rule rule.json --json schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "health": 50,
+1>   "errors": [
+1>     {
+1>       "path": "[CWD]/schema.json",
+1>       "id": "all_properties_camelcase",
+1>       "message": "Ensures camelCase properties",
+1>       "description": "The property name \"INVALID_PROPERTY\" was expected to match the regular expression \"^[a-z][a-zA-Z0-9]*$\"",
+1>       "schemaLocation": [ "properties", "INVALID_PROPERTY" ],
+1>       "position": [ 7, 5, 9, 5 ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

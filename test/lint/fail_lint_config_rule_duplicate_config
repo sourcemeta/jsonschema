@@ -1,0 +1,67 @@
+WRITE rule1.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "my_rule",
+  "description": "First rule",
+  "required": [ "type" ]
+}
+EOF
+
+WRITE rule2.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "my_rule",
+  "description": "Second rule",
+  "required": [ "description" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      "./rule1.json",
+      "./rule2.json"
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+// Other input error
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: A lint rule with this name already exists
+2>   at file path [CWD]/rule2.json
+2>   at rule my_rule
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN lint --json schema.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "A lint rule with this name already exists",
+1>   "filePath": "[CWD]/rule2.json",
+1>   "rule": "my_rule"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

@@ -1,0 +1,34 @@
+MAKE DIRECTORY schemas
+
+WRITE schemas/schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE schemas/ignored.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string",
+  "enum": [ "foo" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./schemas",
+  "ignore": [
+    "./schemas/ignored.json"
+  ]
+}
+EOF
+
+RUN lint STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

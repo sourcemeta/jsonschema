@@ -1,0 +1,14 @@
+WRITE document.json UNTIL EOF
+{ "version": 2.0 }
+EOF
+
+RUN encode document.json output.binpack STDIN /dev/null IN . INTO encoded.txt EXPECTING 0
+RUN decode output.binpack decode.json STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
+
+WRITE expected.json UNTIL EOF
+{
+  "version": 2.0
+}
+EOF
+
+COMPARE decode.json AGAINST expected.json

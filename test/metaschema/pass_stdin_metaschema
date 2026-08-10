@@ -1,0 +1,13 @@
+WRITE input.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN metaschema - STDIN input.json IN . INTO result.txt EXPECTING 0
+
+COMPARE result.txt AGAINST silent.txt

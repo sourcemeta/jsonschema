@@ -1,0 +1,43 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "type": "string"
+}
+EOF
+
+WRITE data-valid.json UNTIL EOF
+"Hello World"
+EOF
+
+WRITE data-invalid.json UNTIL EOF
+{ "type": "Hello World" }
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "First test",
+      "valid": true,
+      "dataPath": "./data-valid.json"
+    },
+    {
+      "description": "Second test",
+      "valid": false,
+      "dataPath": "./data-invalid.json"
+    }
+  ]
+}
+EOF
+
+// A test document read from standard input has no directory of its own, so
+// its relative data paths resolve against the working directory
+RUN test - --resolve schema.json STDIN test.json IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin: PASS 2/2
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

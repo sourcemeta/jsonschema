@@ -1,0 +1,50 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Ada" }
+EOF
+
+// Schema input error
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: This command requires the schema to declare JSON Schema 2019-09 or newer
+2>   at identifier http://json-schema.org/draft-04/schema#
+2>   at file path [CWD]/schema.json
+2>
+2> The x-jsonld-* keywords rely on annotation collection, which JSON Schema
+2> only introduced in the 2019-09 dialect. Consider running the `upgrade`
+2> command to move your schema to a newer dialect
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN rdf schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "This command requires the schema to declare JSON Schema 2019-09 or newer",
+1>   "identifier": "http://json-schema.org/draft-04/schema#",
+1>   "filePath": "[CWD]/schema.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

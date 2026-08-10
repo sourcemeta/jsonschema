@@ -1,0 +1,38 @@
+WRITE defs.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/defs",
+  "$defs": {
+    "has_type": {
+      "required": [ "type" ]
+    }
+  }
+}
+EOF
+
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every subschema must declare the type keyword",
+  "$ref": "https://example.com/defs#/$defs/has_type"
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
+EOF
+
+// Validation failure
+RUN lint --rule rule.json --resolve defs.json --only require_type schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:1:1:
+1>   Every subschema must declare the type keyword (require_type)
+1>     at location ""
+1>     The object value was expected to define the property "type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

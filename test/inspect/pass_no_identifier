@@ -1,0 +1,140 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$ref": "#/$defs/string",
+  "$defs": {
+    "string": { "type": "string" }
+  }
+}
+EOF
+
+RUN inspect schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> (RESOURCE) URI: file://[CWD]/schema.json
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           :
+1>     File Position     : 1:1
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  :
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : <NONE>
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/$defs
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /$defs
+1>     File Position     : 6:3
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /$defs
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (SUBSCHEMA) URI: file://[CWD]/schema.json#/$defs/string
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /$defs/string
+1>     File Position     : 7:5
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /$defs/string
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/$defs/string/type
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /$defs/string/type
+1>     File Position     : 7:17
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /$defs/string/type
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            : /$defs/string
+1>     Property Name     : no
+1>     Orphan            : yes
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/$ref
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /$ref
+1>     File Position     : 5:3
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /$ref
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/$schema
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /$schema
+1>     File Position     : 2:3
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /$schema
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/description
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /description
+1>     File Position     : 4:3
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /description
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (POINTER) URI: file://[CWD]/schema.json#/title
+1>     Type              : Static
+1>     Root              : file://[CWD]/schema.json
+1>     Pointer           : /title
+1>     File Position     : 3:3
+1>     Base              : file://[CWD]/schema.json
+1>     Relative Pointer  : /title
+1>     Dialect           : https://json-schema.org/draft/2020-12/schema
+1>     Base Dialect      : https://json-schema.org/draft/2020-12/schema
+1>     Parent            :
+1>     Property Name     : no
+1>     Orphan            : no
+1>
+1> (REFERENCE) ORIGIN: /$ref
+1>     Type              : Static
+1>     File Position     : 5:3
+1>     Destination       : file://[CWD]/schema.json#/$defs/string
+1>     - (w/o fragment)  : file://[CWD]/schema.json
+1>     - (fragment)      : /$defs/string
+1>
+1> (REFERENCE) ORIGIN: /$schema
+1>     Type              : Static
+1>     File Position     : 2:3
+1>     Destination       : https://json-schema.org/draft/2020-12/schema
+1>     - (w/o fragment)  : https://json-schema.org/draft/2020-12/schema
+1>     - (fragment)      : <NONE>
+EOF
+
+COMPARE result.txt AGAINST expected.txt

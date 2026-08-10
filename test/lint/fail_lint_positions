@@ -1,0 +1,29 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "additionalProperties": {
+    "unknown-1": 1,
+    "unknown-2": 2,
+    "unknown-3": 3
+  }
+}
+EOF
+
+// Validation failure
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:6:5:
+1>   Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
+1>     at location "/additionalProperties/unknown-1"
+1> schema.json:7:5:
+1>   Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
+1>     at location "/additionalProperties/unknown-2"
+1> schema.json:8:5:
+1>   Future versions of JSON Schema will refuse to evaluate unknown keywords or custom keywords from optional vocabularies that don't have an x- prefix (unknown_keywords_prefix)
+1>     at location "/additionalProperties/unknown-3"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,52 @@
+WRITE schemas/schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "title": "Test",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE schemas/ignored/unformatted.json UNTIL EOF
+{"$schema":"https://json-schema.org/draft/2020-12/schema","additionalProperties":false,"title":"Bad","properties":{"foo":{}}}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "path": "./schemas",
+  "ignore": [
+    "./schemas/ignored"
+  ]
+}
+EOF
+
+RUN fmt STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+COMPARE schemas/schema.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{"$schema":"https://json-schema.org/draft/2020-12/schema","additionalProperties":false,"title":"Bad","properties":{"foo":{}}}
+EOF
+
+COMPARE schemas/ignored/unformatted.json AGAINST expected_file_1.txt

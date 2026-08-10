@@ -1,0 +1,41 @@
+WRITE schemas/1.json UNTIL EOF
+{
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+WRITE schemas/2.json UNTIL EOF
+{
+  "type": "string",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+WRITE schemas/3.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema"
+}
+EOF
+
+// Validation failure
+RUN fmt schemas --check STDIN /dev/null IN . INTO result.txt EXPECTING 2
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> fail: [CWD]/schemas/1.json
+2> fail: [CWD]/schemas/2.json
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt

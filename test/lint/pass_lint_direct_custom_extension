@@ -1,0 +1,22 @@
+MAKE DIRECTORY schemas
+
+WRITE schema.json.schema UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "id": "https://example.com"
+}
+EOF
+
+RUN lint --resolve schema.json.schema schema.json.schema --verbose STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Linting: [CWD]/schema.json.schema
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

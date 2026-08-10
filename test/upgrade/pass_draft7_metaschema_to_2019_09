@@ -1,0 +1,37 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/my-metaschema",
+  "title": "My Custom Meta-Schema",
+  "type": [ "object", "boolean" ],
+  "properties": {
+    "type": { "type": "string" }
+  }
+}
+EOF
+
+RUN upgrade --meta --to 2019-09 schema.json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2019-09/schema",
+1>   "$id": "https://example.com/my-metaschema",
+1>   "$vocabulary": {
+1>     "https://json-schema.org/draft/2019-09/vocab/core": true,
+1>     "https://json-schema.org/draft/2019-09/vocab/applicator": true,
+1>     "https://json-schema.org/draft/2019-09/vocab/validation": true,
+1>     "https://json-schema.org/draft/2019-09/vocab/meta-data": true,
+1>     "https://json-schema.org/draft/2019-09/vocab/format": false,
+1>     "https://json-schema.org/draft/2019-09/vocab/content": true
+1>   },
+1>   "title": "My Custom Meta-Schema",
+1>   "type": [ "object", "boolean" ],
+1>   "properties": {
+1>     "type": {
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

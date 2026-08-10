@@ -1,0 +1,21 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "examples": [ {} ],
+  "$id": "https://example.com",
+  "properties": {}
+}
+EOF
+
+// Validation failure
+RUN lint schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:7:3:
+1>   Setting the `properties` keyword to the empty object does not add any further constraint (properties_default)
+1>     at location "/properties"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

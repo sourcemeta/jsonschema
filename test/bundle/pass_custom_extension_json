@@ -1,0 +1,34 @@
+WRITE schema.custom UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "$ref": "nested"
+}
+EOF
+
+WRITE nested.custom UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/nested",
+  "type": "string"
+}
+EOF
+
+RUN bundle schema.custom --resolve nested.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>   "$id": "https://example.com",
+1>   "$ref": "nested",
+1>   "$defs": {
+1>     "https://example.com/nested": {
+1>       "$schema": "https://json-schema.org/draft/2020-12/schema",
+1>       "$id": "https://example.com/nested",
+1>       "type": "string"
+1>     }
+1>   }
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

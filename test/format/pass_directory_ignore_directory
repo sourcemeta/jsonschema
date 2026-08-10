@@ -1,0 +1,45 @@
+WRITE schema_1.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Test schema",
+  "additionalProperties": false,
+  "title": "Hello World",
+  "properties": {"foo": {}, "bar": {}}
+}
+EOF
+
+WRITE nested/schema_2.json UNTIL EOF
+{"type": "string", "title": "My String"}
+EOF
+
+RUN fmt . --ignore nested STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hello World",
+  "description": "Test schema",
+  "properties": {
+    "foo": {},
+    "bar": {}
+  },
+  "additionalProperties": false
+}
+EOF
+
+COMPARE schema_1.json AGAINST expected_file_0.txt
+
+WRITE expected_file_1.txt UNTIL EOF
+{"type": "string", "title": "My String"}
+EOF
+
+COMPARE nested/schema_2.json AGAINST expected_file_1.txt

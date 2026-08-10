@@ -1,0 +1,45 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "x-jsonld-type": "https://schema.org/Product",
+    "x-jsonld-constants": {
+      "https://schema.org/brand": { "@id": "https://example.com/brands/acme" },
+      "https://schema.org/category": "electronics"
+    },
+    "properties": {
+      "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name": "Vacuum Robot" }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "@type": [ "https://schema.org/Product" ],
+1>     "https://schema.org/name": [
+1>       {
+1>         "@value": "Vacuum Robot"
+1>       }
+1>     ],
+1>     "https://schema.org/brand": [
+1>       {
+1>         "@id": "https://example.com/brands/acme"
+1>       }
+1>     ],
+1>     "https://schema.org/category": [
+1>       {
+1>         "@value": "electronics"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

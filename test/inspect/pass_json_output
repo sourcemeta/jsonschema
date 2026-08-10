@@ -1,0 +1,161 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "#/$defs/string",
+  "$defs": {
+    "string": { "type": "string" }
+  }
+}
+EOF
+
+RUN inspect schema.json --json STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "locations": {
+1>     "static": {
+1>       "https://example.com": {
+1>         "parent": null,
+1>         "type": "resource",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "",
+1>         "position": [ 1, 1, 10, 1 ],
+1>         "relativePointer": "",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/$defs": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$defs",
+1>         "position": [ 7, 3, 9, 3 ],
+1>         "relativePointer": "/$defs",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/$defs/string": {
+1>         "parent": "",
+1>         "type": "subschema",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$defs/string",
+1>         "position": [ 8, 5, 8, 34 ],
+1>         "relativePointer": "/$defs/string",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": true
+1>       },
+1>       "https://example.com#/$defs/string/type": {
+1>         "parent": "/$defs/string",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$defs/string/type",
+1>         "position": [ 8, 17, 8, 32 ],
+1>         "relativePointer": "/$defs/string/type",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": true
+1>       },
+1>       "https://example.com#/$id": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$id",
+1>         "position": [ 5, 3, 5, 30 ],
+1>         "relativePointer": "/$id",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/$ref": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$ref",
+1>         "position": [ 6, 3, 6, 26 ],
+1>         "relativePointer": "/$ref",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/$schema": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/$schema",
+1>         "position": [ 2, 3, 2, 59 ],
+1>         "relativePointer": "/$schema",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/description": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/description",
+1>         "position": [ 4, 3, 4, 30 ],
+1>         "relativePointer": "/description",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       },
+1>       "https://example.com#/title": {
+1>         "parent": "",
+1>         "type": "pointer",
+1>         "root": "https://example.com",
+1>         "base": "https://example.com",
+1>         "pointer": "/title",
+1>         "position": [ 3, 3, 3, 17 ],
+1>         "relativePointer": "/title",
+1>         "dialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "baseDialect": "https://json-schema.org/draft/2020-12/schema",
+1>         "propertyName": false,
+1>         "orphan": false
+1>       }
+1>     },
+1>     "dynamic": {}
+1>   },
+1>   "references": [
+1>     {
+1>       "type": "static",
+1>       "origin": "/$ref",
+1>       "position": [ 6, 3, 6, 26 ],
+1>       "destination": "https://example.com#/$defs/string",
+1>       "base": "https://example.com",
+1>       "fragment": "/$defs/string"
+1>     },
+1>     {
+1>       "type": "static",
+1>       "origin": "/$schema",
+1>       "position": [ 2, 3, 2, 59 ],
+1>       "destination": "https://json-schema.org/draft/2020-12/schema",
+1>       "base": "https://json-schema.org/draft/2020-12/schema",
+1>       "fragment": null
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result.txt AGAINST expected.txt

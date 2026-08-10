@@ -1,0 +1,17 @@
+MAKE DIRECTORY project
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {}
+}
+EOF
+
+RUN install --frozen --json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "events": []
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

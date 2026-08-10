@@ -1,0 +1,31 @@
+MAKE DIRECTORY project
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {}
+}
+EOF
+
+// Invalid CLI arguments
+RUN install --frozen https://example.com/schema ./vendor/schema.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 5
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Do not use --frozen when adding a new dependency
+2>
+2> For example: jsonschema install https://example.com/schema ./vendor/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN install --frozen --json https://example.com/schema ./vendor/schema.json STDIN /dev/null IN project INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Do not use --frozen when adding a new dependency"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

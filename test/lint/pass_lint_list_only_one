@@ -1,0 +1,10 @@
+RUN lint --list --only definitions_to_defs STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> definitions_to_defs
+1>   `definitions` was superseded by `$defs` in 2019-09 and later versions
+1>
+1> Number of rules: 1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

@@ -1,0 +1,35 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "currency": {
+        "type": "string",
+        "x-jsonld-id": "https://schema.org/priceCurrency",
+        "x-jsonld-type": "https://schema.org/Currency",
+        "x-jsonld-self": "https://www.iso.org/iso-4217/{this}"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "currency": "USD" }
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/priceCurrency": [
+1>       {
+1>         "@id": "https://www.iso.org/iso-4217/USD",
+1>         "@type": [ "https://schema.org/Currency" ]
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

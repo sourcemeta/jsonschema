@@ -1,0 +1,33 @@
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+WRITE stdin_0 UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com",
+  "type": "object",
+  "properties": {
+    "foo": { "type": "string" }
+  }
+}
+EOF
+
+RUN validate - instance.json --json STDIN stdin_0 IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> {
+1>   "valid": true,
+1>   "annotations": [
+1>     {
+1>       "keywordLocation": "/properties",
+1>       "absoluteKeywordLocation": "https://example.com#/properties",
+1>       "instanceLocation": "",
+1>       "instancePosition": [ 1, 1, 1, 16 ],
+1>       "annotation": [ "foo" ]
+1>     }
+1>   ]
+1> }
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

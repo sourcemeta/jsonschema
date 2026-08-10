@@ -1,0 +1,46 @@
+WRITE rule_type.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every subschema must declare the type keyword",
+  "required": [ "type" ]
+}
+EOF
+
+WRITE rule_id.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_id",
+  "description": "The root schema must declare an $id",
+  "required": [ "$id" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      "./rule_type.json",
+      { "path": "./rule_id.json", "topLevel": true }
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schema",
+  "type": "object",
+  "properties": {
+    "foo": { "type": "string" }
+  }
+}
+EOF
+
+RUN lint --only require_type --only require_id schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

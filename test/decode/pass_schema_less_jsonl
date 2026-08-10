@@ -1,0 +1,34 @@
+WRITE document.jsonl UNTIL EOF
+{ "count": 1 }
+{ "count": 2 }
+{ "count": 3 }
+{ "count": 4 }
+{ "count": 5 }
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN encode document.jsonl output.binpack STDIN /dev/null IN . INTO encoded.txt EXPECTING 0
+RUN decode output.binpack result.jsonl STDIN /dev/null IN . INTO decoded.txt EXPECTING 0
+
+WRITE expected.jsonl UNTIL EOF
+{
+  "count": 1
+}
+{
+  "count": 2
+}
+{
+  "count": 3
+}
+{
+  "count": 4
+}
+{
+  "count": 5
+}
+EOF
+
+COMPARE result.jsonl AGAINST expected.jsonl
+COMPARE decoded.txt AGAINST silent.txt

@@ -1,0 +1,36 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "string"
+}
+EOF
+
+WRITE stdin_0 UNTIL EOF
+{
+  "target": "https://example.com",
+  "tests": [
+    {
+      "description": "A string",
+      "valid": true,
+      "data": "foo"
+    },
+    {
+      "description": "Not a string",
+      "valid": false,
+      "data": 1
+    }
+  ]
+}
+EOF
+
+RUN test - --resolve schema.json --verbose --jobs 1 STDIN stdin_0 IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> tag:sourcemeta.com,2026:jsonschema/stdin:
+1>   1/2 PASS A string
+1>   2/2 PASS Not a string
+2> Using parallelism: 1
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

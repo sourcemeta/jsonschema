@@ -1,0 +1,16 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "string"
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+"Hello World!"
+"Bonjour tout le monde!"
+""
+EOF
+
+RUN validate schema.json instance.jsonl --benchmark --loop 1000 STDIN /dev/null IN . INTO result_0.txt EXPECTING 0

@@ -1,0 +1,53 @@
+WRITE test.json UNTIL EOF
+{
+  "target": [
+    "https://example.com/one",
+    1
+  ],
+  "tests": [
+    {
+      "valid": true,
+      "data": {}
+    }
+  ]
+}
+EOF
+
+// Other input error
+RUN test test.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: Each entry in the test document `target` array must be a URI
+2>   at line 4
+2>   at column 5
+2>   at file path [CWD]/test.json
+2>   at location "/target/1"
+2>
+2> Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN test test.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Each entry in the test document `target` array must be a URI",
+1>   "line": 4,
+1>   "column": 5,
+1>   "filePath": "[CWD]/test.json",
+1>   "location": "/target/1"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

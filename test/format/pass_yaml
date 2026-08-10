@@ -1,0 +1,25 @@
+WRITE schema.yaml UNTIL EOF
+additionalProperties: false
+title: Hello World
+EOF
+
+// Not supported
+RUN fmt schema.yaml STDIN /dev/null IN . INTO result.txt EXPECTING 3
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: This command does not support YAML input files yet
+2>   at file path [CWD]/schema.yaml
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+WRITE expected_file_0.txt UNTIL EOF
+additionalProperties: false
+title: Hello World
+EOF
+
+COMPARE schema.yaml AGAINST expected_file_0.txt

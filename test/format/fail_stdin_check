@@ -1,0 +1,26 @@
+WRITE input.json UNTIL EOF
+{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string"}
+EOF
+
+// Format check failure
+RUN fmt --check - STDIN input.json IN . INTO result.txt EXPECTING 2
+
+WRITE expected.txt UNTIL EOF
+2> fail: tag:sourcemeta.com,2026:jsonschema/stdin
+2>
+2> Run the `fmt` command without `--check/-c` to fix the formatting
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Format check failure
+RUN fmt --check - --json STDIN input.json IN . INTO result_json.txt EXPECTING 2
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "valid": false,
+1>   "errors": [ "tag:sourcemeta.com,2026:jsonschema/stdin" ]
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

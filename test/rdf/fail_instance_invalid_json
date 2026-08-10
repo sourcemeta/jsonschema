@@ -1,0 +1,48 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "x-jsonld-type": "https://schema.org/Person",
+  "properties": {
+    "name": { "type": "string", "x-jsonld-id": "https://schema.org/name" }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "name" }
+EOF
+
+// Other input error
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 10
+2>   at file path [CWD]/instance.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Other input error
+RUN rdf schema.json instance.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Failed to parse the JSON document",
+1>   "line": 1,
+1>   "column": 10,
+1>   "filePath": "[CWD]/instance.json"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

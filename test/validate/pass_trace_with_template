@@ -1,0 +1,67 @@
+WRITE schema.json UNTIL EOF
+{
+  "$id": "https://example.com",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "properties": {
+    "foo": {
+      "type": "string"
+    }
+  }
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{ "foo": "bar" }
+EOF
+
+RUN compile schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+COPY result_0.txt TO template.json
+KEEP LINES MATCHING '^1>' IN template.json
+REPLACE '^1> ?' WITH '' IN template.json
+
+RUN validate schema.json instance.json --trace --template template.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+1> @- (annotation) "/description" (AnnotationEmit)
+1>    value "Test schema"
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "https://example.com#/description"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+1>
+1> @- (annotation) "/title" (AnnotationEmit)
+1>    value "Test"
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "https://example.com#/title"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/meta-data"
+1>
+1> -> (push) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "https://example.com#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> -> (push) "/properties/foo/type" (AssertionTypeStrict)
+1>    at instance location "/foo" (line 1, column 3)
+1>    at keyword location "https://example.com#/properties/foo/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> <- (pass) "/properties/foo/type" (AssertionTypeStrict)
+1>    at instance location "/foo" (line 1, column 3)
+1>    at keyword location "https://example.com#/properties/foo/type"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/validation"
+1>
+1> @- (annotation) "/properties" (AnnotationEmit)
+1>    value "foo"
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "https://example.com#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+1>
+1> <- (pass) "/properties" (LogicalWhenType)
+1>    at instance location "" (line 1, column 1)
+1>    at keyword location "https://example.com#/properties"
+1>    at vocabulary "https://json-schema.org/draft/2020-12/vocab/applicator"
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

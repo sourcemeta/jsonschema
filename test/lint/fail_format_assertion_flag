@@ -1,0 +1,32 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "title_must_be_email",
+  "description": "The schema title must be a valid email address",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string", "format": "email" }
+  },
+  "required": [ "title" ]
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "not-an-email",
+  "type": "string"
+}
+EOF
+
+// Validation failure
+RUN lint --rule rule.json --only title_must_be_email --format-assertion schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+WRITE expected_0.txt UNTIL EOF
+1> schema.json:3:3:
+1>   The schema title must be a valid email address (title_must_be_email)
+1>     at location "/title"
+1>     The string value "not-an-email" was expected to represent a valid email address
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

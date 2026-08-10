@@ -1,0 +1,12 @@
+WRITE schema.custom UNTIL EOF
+$id: https://example.com
+$schema: https://json-schema.org/draft/2020-12/schema
+type: string
+EOF
+
+WRITE silent.txt UNTIL EOF
+EOF
+
+RUN metaschema schema.custom STDIN /dev/null IN . INTO result.txt EXPECTING 0
+
+COMPARE result.txt AGAINST silent.txt

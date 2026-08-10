@@ -1,0 +1,42 @@
+WRITE rule.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "require_type",
+  "description": "Every subschema must declare the type keyword",
+  "required": [ "type" ]
+}
+EOF
+
+WRITE jsonschema.json UNTIL EOF
+{
+  "lint": {
+    "rules": [
+      "./rule.json"
+    ]
+  }
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+RUN lint --only require_type --verbose schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Loading custom rule from configuration: [CWD]/rule.json
+2> Only enabling rule: require_type
+2> Using extension: .json
+2> Using extension: .yaml
+2> Using extension: .yml
+2> Linting: [CWD]/schema.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

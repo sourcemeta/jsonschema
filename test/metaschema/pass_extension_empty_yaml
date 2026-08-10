@@ -1,0 +1,36 @@
+WRITE schemas/schema1 UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Test
+description: Test schema
+type: string
+EOF
+
+WRITE schemas/schema2 UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Test 2
+description: Test schema 2
+type: object
+EOF
+
+WRITE schemas/ignored.yaml UNTIL EOF
+$schema: http://json-schema.org/draft-04/schema#
+title: Ignored
+description: This file should be ignored
+type: boolean
+EOF
+
+RUN metaschema schemas --extension '' --verbose STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> warning: Matching files with no extension
+2> ok: [CWD]/schemas/schema1
+2>   matches http://json-schema.org/draft-04/schema#
+2> ok: [CWD]/schemas/schema2
+2>   matches http://json-schema.org/draft-04/schema#
+EOF
+
+COMPARE result.txt AGAINST expected.txt

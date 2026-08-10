@@ -1,0 +1,28 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "not a valid uri",
+  "type": "string"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+// Schema input error
+RUN validate schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The dialect is not a valid URI
+2>   at value not a valid uri
+2>   at keyword $schema
+2>   at file path [CWD]/schema.json
+2>
+2> Are you sure the input is a valid JSON Schema and it is valid according to its meta-schema?
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

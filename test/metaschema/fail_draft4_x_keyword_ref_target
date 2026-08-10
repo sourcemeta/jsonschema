@@ -1,0 +1,65 @@
+WRITE metaschema.json UNTIL EOF
+{
+  "id": "https://example.com/custom-metaschema-draft4",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "allOf": [
+    {
+      "$ref": "#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test"
+    },
+    {
+      "additionalProperties": {
+        "x-this-is-invalid": {
+          "$defs": {
+            "test": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+EOF
+
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://example.com/custom-metaschema-draft4",
+  "type": "string"
+}
+EOF
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json STDIN /dev/null IN . INTO result.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
+2>   at identifier https://example.com/custom-metaschema-draft4#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test
+2>   at file path [CWD]/schema.json
+2>   at location "/allOf/1/additionalProperties/x-this-is-invalid"
+2>
+2> Are you sure the reported location is a valid JSON Schema keyword in this dialect?
+EOF
+
+COMPARE result.txt AGAINST expected.txt
+
+// Schema input error
+RUN metaschema schema.json --resolve metaschema.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 4
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_json.txt UNTIL EOF
+1> {
+1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
+1>   "identifier": "https://example.com/custom-metaschema-draft4#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test",
+1>   "filePath": "[CWD]/schema.json",
+1>   "location": "/allOf/1/additionalProperties/x-this-is-invalid"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_json.txt

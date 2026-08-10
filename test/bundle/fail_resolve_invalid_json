@@ -1,0 +1,47 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test",
+  "description": "Test schema",
+  "$id": "https://example.com",
+  "$ref": "nested"
+}
+EOF
+
+WRITE invalid.json UNTIL EOF
+{ xxx }
+EOF
+
+// Other input error
+RUN bundle schema.json --resolve invalid.json STDIN /dev/null IN . INTO result.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result.txt
+REPLACE '\\(?!")' WITH '/' IN result.txt
+
+REPLACE $CWD WITH '[CWD]' IN result.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> error: Failed to parse the JSON document
+2>   at line 1
+2>   at column 3
+2>   at file path [CWD]/invalid.json
+EOF
+
+COMPARE result.txt AGAINST expected_0.txt
+
+// Other input error
+RUN bundle schema.json --resolve invalid.json --json STDIN /dev/null IN . INTO result_json.txt EXPECTING 6
+REPLACE '\\\\' WITH '/' IN result_json.txt
+REPLACE '\\(?!")' WITH '/' IN result_json.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_json.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "Failed to parse the JSON document",
+1>   "line": 1,
+1>   "column": 3,
+1>   "filePath": "[CWD]/invalid.json"
+1> }
+EOF
+
+COMPARE result_json.txt AGAINST expected_1.txt

@@ -1,0 +1,34 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+WRITE instance.json UNTIL EOF
+{}
+EOF
+
+WRITE template.json UNTIL EOF
+[]
+EOF
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --entrypoint /\$$defs/Foo --template template.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 5
+
+WRITE expected_0.txt UNTIL EOF
+2> error: The --entrypoint option cannot be used with --template
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Invalid CLI arguments
+RUN validate schema.json instance.json --entrypoint /\$$defs/Foo --template template.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 5
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The --entrypoint option cannot be used with --template"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

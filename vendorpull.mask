@@ -37,3 +37,4 @@ package-lock.json
 npm
 release.sh
 Dockerfile.test.alpine
+scripts

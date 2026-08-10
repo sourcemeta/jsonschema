@@ -1,0 +1,13 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/my-metaschema",
+  "title": "My Custom Meta-Schema",
+  "type": [ "object", "boolean" ]
+}
+EOF
+
+RUN upgrade -m -t 2019-09 schema.json STDIN /dev/null IN . INTO short.txt EXPECTING 0
+RUN upgrade --meta --to 2019-09 schema.json STDIN /dev/null IN . INTO long.txt EXPECTING 0
+
+COMPARE short.txt AGAINST long.txt

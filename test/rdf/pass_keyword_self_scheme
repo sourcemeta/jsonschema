@@ -1,0 +1,46 @@
+WRITE schema.json UNTIL EOF
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "email": {
+        "type": "string",
+        "x-jsonld-id": "https://schema.org/email",
+        "x-jsonld-self": "mailto"
+      },
+      "account": {
+        "type": "string",
+        "x-jsonld-id": "https://schema.org/identifier",
+        "x-jsonld-self": "acct"
+      }
+    }
+  }
+EOF
+
+WRITE instance.json UNTIL EOF
+{
+  "email": "gorby%kremvax@EXAMPLE.com",
+  "account": "juliet@capulet.example@Shoppingsite.Example"
+}
+EOF
+
+RUN rdf schema.json instance.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 0
+
+WRITE expected_0.txt UNTIL EOF
+1> [
+1>   {
+1>     "https://schema.org/identifier": [
+1>       {
+1>         "@id": "acct:juliet%40capulet.example@shoppingsite.example"
+1>       }
+1>     ],
+1>     "https://schema.org/email": [
+1>       {
+1>         "@id": "mailto:gorby%25kremvax@example.com"
+1>       }
+1>     ]
+1>   }
+1> ]
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
