@@ -22,9 +22,10 @@ tests:
   data: 1
 EOF
 
-"$1" test "$TMP/test.yaml" --resolve "$TMP/schema.yaml" --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test.yaml" --resolve "$TMP/schema.yaml" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.yaml:
   1/2 PASS <no description>
   2/2 PASS <no description>

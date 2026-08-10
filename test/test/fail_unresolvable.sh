@@ -23,12 +23,13 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --verbose 1> "$TMP/output.txt" 2>&1 \
+"$1" test "$TMP/test.json" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.json:
 error: Could not resolve the reference to an external schema
   at identifier https://example.com/unknown

@@ -27,12 +27,13 @@ EOF
 # An empty `tests` array almost always means the author forgot to write the
 # tests. We still print NO TESTS, but exit with an error so that such test
 # suites cannot silently pass, i.e. on CI
-"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose 1> "$TMP/output.txt" 2>&1 \
+"$1" test "$TMP/test.json" --resolve "$TMP/schema.json" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Other input error
 test "$EXIT_CODE" = "6"
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.json: NO TESTS
 EOF
 

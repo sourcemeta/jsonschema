@@ -32,6 +32,7 @@
 #include "configure.h"
 #include "error.h"
 #include "input.h"
+#include "logger.h"
 #include "resolver.h"
 #include "utils.h"
 
@@ -593,6 +594,7 @@ auto sourcemeta::jsonschema::test(const sourcemeta::core::Options &options)
     -> void {
   validate_http_headers(options);
   const auto jobs{parse_jobs(options)};
+  LOG_VERBOSE(options) << "Using parallelism: " << jobs << "\n";
   if (options.contains("json")) {
     report_as_ctrf(options, jobs);
   } else {

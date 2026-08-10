@@ -35,12 +35,13 @@ cat << 'EOF' > "$TMP/schemas/test.json"
 }
 EOF
 
-"$1" test "$TMP/schemas/test.json" --verbose --resolve "$TMP" 1> "$TMP/output.txt" 2>&1 \
+"$1" test "$TMP/schemas/test.json" --verbose --jobs 1 --resolve "$TMP" 1> "$TMP/output.txt" 2>&1 \
   && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
 test "$EXIT_CODE" = "4"
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 error: Could not determine the base dialect of the schema
   at file path $(realpath "$TMP")/schemas/test.json
 

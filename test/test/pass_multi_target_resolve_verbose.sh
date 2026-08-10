@@ -46,9 +46,10 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
-"$1" test "$TMP/test.json" --resolve "$TMP/schemas" --verbose 1> "$TMP/output.txt" 2>&1
+"$1" test "$TMP/test.json" --resolve "$TMP/schemas" --verbose --jobs 1 1> "$TMP/output.txt" 2>&1
 
 cat << EOF > "$TMP/expected.txt"
+Using parallelism: 1
 $(realpath "$TMP")/test.json:
   https://example.com/one:
     1/4 PASS String is valid

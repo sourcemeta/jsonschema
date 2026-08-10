@@ -17,7 +17,7 @@
 #include "error.h"
 #include "input.h"
 
-#include <algorithm>   // std::ranges::all_of
+#include <algorithm>   // std::max, std::ranges::all_of
 #include <cctype>      // std::isdigit
 #include <filesystem>  // std::filesystem::path
 #include <memory>      // std::make_shared
@@ -173,7 +173,10 @@ inline auto parse_jobs(const sourcemeta::core::Options &options)
     return result;
   }
 
-  return std::thread::hardware_concurrency();
+  // The standard library is allowed to not know the level of concurrency
+  // that the current system supports
+  return std::max(static_cast<std::size_t>(std::thread::hardware_concurrency()),
+                  static_cast<std::size_t>(1));
 }
 
 inline auto parse_indentation(const sourcemeta::core::Options &options)
