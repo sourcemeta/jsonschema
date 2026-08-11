@@ -45,7 +45,8 @@ auto sourcemeta::jsonschema::compile(const sourcemeta::core::Options &options)
   const auto fast_mode{options.contains("fast")};
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
-  const auto schema_default_id{sourcemeta::jsonschema::default_id(schema_path)};
+  const auto schema_default_id{
+      sourcemeta::jsonschema::default_id(schema_path, false)};
 
   sourcemeta::blaze::Template schema_template;
   try {

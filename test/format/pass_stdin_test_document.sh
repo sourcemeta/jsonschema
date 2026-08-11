@@ -23,7 +23,7 @@ EOF
 "$1" fmt - < "$TMP/test.json" > "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
-Interpreting as a test file: /dev/stdin
+Interpreting as a test file: tag:sourcemeta.com,2026:jsonschema/stdin
 {
   "target": "https://example.com/my-schema",
   "tests": [

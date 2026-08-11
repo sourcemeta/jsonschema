@@ -15,11 +15,11 @@ EOF
 test "$EXIT_CODE" = "6"
 
 cat << 'EOF' > "$TMP/expected.txt"
-/dev/stdin:
+tag:sourcemeta.com,2026:jsonschema/stdin:
 error: The test document must be an object
   at line 1
   at column 1
-  at file path /dev/stdin
+  at file path tag:sourcemeta.com,2026:jsonschema/stdin
   at location ""
 
 Learn more here: https://github.com/sourcemeta/jsonschema/blob/main/docs/test.markdown

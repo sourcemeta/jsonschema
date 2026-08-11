@@ -66,14 +66,14 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
     throw sourcemeta::core::IOIsADirectoryError{schema_path};
   }
 
-  const auto schema_resolution_base{
+  const auto schema_config_base{
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
   const auto schema_display_path{schema_from_stdin ? stdin_path()
                                                    : schema_path};
 
-  const auto configuration_path{find_configuration(schema_resolution_base)};
+  const auto configuration_path{find_configuration(schema_config_base)};
   const auto &configuration{
-      read_configuration(options, configuration_path, schema_resolution_base)};
+      read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
   auto parsed_schema{schema_from_stdin ? read_from_stdin()
                                        : read_file(schema_path)};
@@ -91,9 +91,9 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
       sourcemeta::blaze::SchemaFrame::Mode::Locations};
 
   try {
-    frame.analyse(schema, sourcemeta::blaze::schema_walker, custom_resolver,
-                  dialect,
-                  sourcemeta::jsonschema::default_id(schema_resolution_base));
+    frame.analyse(
+        schema, sourcemeta::blaze::schema_walker, custom_resolver, dialect,
+        sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin));
   } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         schema_display_path, error);
@@ -198,7 +198,8 @@ auto sourcemeta::jsonschema::upgrade(const sourcemeta::core::Options &options)
     std::ignore = transformer.apply(
         schema, sourcemeta::blaze::schema_walker, custom_resolver,
         [](const auto &, const auto, const auto, const auto &, const auto) {},
-        dialect, sourcemeta::jsonschema::default_id(schema_resolution_base), "",
+        dialect,
+        sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin), "",
         options.contains("meta"));
   }
 

@@ -15,12 +15,12 @@ cat << 'EOF' | "$1" inspect - > "$TMP/output.txt" 2>&1
 EOF
 
 cat << EOF > "$TMP/expected.txt"
-(RESOURCE) URI: file:///dev/stdin
+(RESOURCE) URI: tag:sourcemeta.com,2026:jsonschema/stdin
     Type              : Static
-    Root              : file:///dev/stdin
+    Root              : tag:sourcemeta.com,2026:jsonschema/stdin
     Pointer           :
     File Position     : 1:1
-    Base              : file:///dev/stdin
+    Base              : tag:sourcemeta.com,2026:jsonschema/stdin
     Relative Pointer  :
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -28,12 +28,12 @@ cat << EOF > "$TMP/expected.txt"
     Property Name     : no
     Orphan            : no
 
-(POINTER) URI: file:///dev/stdin#/\$schema
+(POINTER) URI: tag:sourcemeta.com,2026:jsonschema/stdin#/\$schema
     Type              : Static
-    Root              : file:///dev/stdin
+    Root              : tag:sourcemeta.com,2026:jsonschema/stdin
     Pointer           : /\$schema
     File Position     : 2:3
-    Base              : file:///dev/stdin
+    Base              : tag:sourcemeta.com,2026:jsonschema/stdin
     Relative Pointer  : /\$schema
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema
@@ -41,12 +41,12 @@ cat << EOF > "$TMP/expected.txt"
     Property Name     : no
     Orphan            : no
 
-(POINTER) URI: file:///dev/stdin#/type
+(POINTER) URI: tag:sourcemeta.com,2026:jsonschema/stdin#/type
     Type              : Static
-    Root              : file:///dev/stdin
+    Root              : tag:sourcemeta.com,2026:jsonschema/stdin
     Pointer           : /type
     File Position     : 3:3
-    Base              : file:///dev/stdin
+    Base              : tag:sourcemeta.com,2026:jsonschema/stdin
     Relative Pointer  : /type
     Dialect           : https://json-schema.org/draft/2020-12/schema
     Base Dialect      : https://json-schema.org/draft/2020-12/schema

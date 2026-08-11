@@ -18,7 +18,7 @@ printf '%s' "$(cat "$TMP/schema_noeol.json")" \
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: /dev/stdin
+fail: tag:sourcemeta.com,2026:jsonschema/stdin
 
 Run the `fmt` command without `--check/-c` to fix the formatting
 EOF
@@ -35,7 +35,7 @@ test "$EXIT_CODE" = "2"
 cat << 'EOF' > "$TMP/expected.txt"
 {
   "valid": false,
-  "errors": [ "/dev/stdin" ]
+  "errors": [ "tag:sourcemeta.com,2026:jsonschema/stdin" ]
 }
 EOF
 

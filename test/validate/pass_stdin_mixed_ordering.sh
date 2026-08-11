@@ -28,7 +28,7 @@ echo '{ "c": 3 }' | "$1" validate "$TMP/schema.json" \
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance1.json
   matches $(realpath "$TMP")/schema.json
-ok: /dev/stdin
+ok: tag:sourcemeta.com,2026:jsonschema/stdin
   matches $(realpath "$TMP")/schema.json
 ok: $(realpath "$TMP")/instance2.json
   matches $(realpath "$TMP")/schema.json

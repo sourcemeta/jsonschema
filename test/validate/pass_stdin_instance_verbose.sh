@@ -23,7 +23,7 @@ EOF
 echo '{ "foo": "bar" }' | "$1" validate "$TMP/schema.json" - --verbose 2> "$TMP/stderr.txt"
 
 cat << EOF > "$TMP/expected.txt"
-ok: /dev/stdin
+ok: tag:sourcemeta.com,2026:jsonschema/stdin
   matches $(realpath "$TMP")/schema.json
 annotation: "Test schema"
   at instance location "" (line 1, column 1)

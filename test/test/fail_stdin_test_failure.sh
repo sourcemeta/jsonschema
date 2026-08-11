@@ -32,7 +32,7 @@ EOF
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-/dev/stdin:
+tag:sourcemeta.com,2026:jsonschema/stdin:
   1/1 FAIL Unexpected pass
 
 error: Passed but was expected to fail

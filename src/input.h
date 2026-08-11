@@ -234,8 +234,9 @@ handle_json_entry(const std::filesystem::path &entry_path,
   if (entry_path == "-") {
     auto parsed{read_from_stdin()};
     const auto path{stdin_path()};
-    result.push_back({path.string(), path, std::move(parsed.document),
-                      std::move(parsed.positions), 0, false, parsed.yaml, true,
+    result.push_back({std::string{STDIN_DEFAULT_ID}, path,
+                      std::move(parsed.document), std::move(parsed.positions),
+                      0, false, parsed.yaml, true,
                       std::move(parsed.property_storage)});
     return;
   }

@@ -32,14 +32,14 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     throw sourcemeta::core::IOIsADirectoryError{schema_path};
   }
 
-  const auto schema_resolution_base{
+  const auto schema_config_base{
       schema_from_stdin ? std::filesystem::current_path() : schema_path};
   const auto schema_display_path{schema_from_stdin ? stdin_path()
                                                    : schema_path};
 
-  const auto configuration_path{find_configuration(schema_resolution_base)};
+  const auto configuration_path{find_configuration(schema_config_base)};
   const auto &configuration{
-      read_configuration(options, configuration_path, schema_resolution_base)};
+      read_configuration(options, configuration_path, schema_config_base)};
   const auto dialect{default_dialect(options, configuration)};
   auto parsed_schema{schema_from_stdin ? read_from_stdin()
                                        : read_file(schema_path)};
@@ -57,7 +57,7 @@ auto sourcemeta::jsonschema::bundle(const sourcemeta::core::Options &options)
     sourcemeta::blaze::bundle(
         schema, sourcemeta::blaze::schema_walker, custom_resolver,
         sourcemeta::blaze::BundleMode::NonOfficialMetaschemas, dialect,
-        sourcemeta::jsonschema::default_id(schema_resolution_base));
+        sourcemeta::jsonschema::default_id(schema_path, schema_from_stdin));
 
     if (options.contains("without-id")) {
       sourcemeta::jsonschema::LOG_WARNING()

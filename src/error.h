@@ -26,6 +26,7 @@
 #include <optional>         // std::optional
 #include <stdexcept>        // std::runtime_error
 #include <string>           // std::string
+#include <string_view>      // std::string_view
 #include <type_traits>      // std::is_base_of_v, std::is_same_v
 #include <utility>          // std::forward, std::move
 #include <vector>           // std::vector
@@ -462,24 +463,28 @@ private:
   int exit_code_;
 };
 
+// Input read from standard input has no retrieval URI, so JSON Schema 2020-12
+// section 9.1.1 and RFC 3986 section 5.1.4 let us pick an implementation
+// specific default. We deliberately pick an RFC 4151 tag URI, as it cannot be
+// mistaken for a locator the way a file URI can. This doubles as how we refer
+// to standard input in output, so that we never print a path that does not
+// exist and never differ across platforms
+constexpr std::string_view STDIN_DEFAULT_ID{
+    "tag:sourcemeta.com,2026:jsonschema/stdin"};
+
+// Input read from standard input never corresponds to a file, so we carry the
+// identifier itself where a path would otherwise go. It is never resolved
+// against the filesystem, as every such site is guarded on whether the input
+// came from standard input
 inline auto stdin_path() -> std::filesystem::path {
-#ifdef _WIN32
-  return std::filesystem::path{"<stdin>"};
-#else
-  return std::filesystem::path{"/dev/stdin"};
-#endif
+  return std::filesystem::path{STDIN_DEFAULT_ID};
 }
 
 inline auto stdin_path_string(const std::filesystem::path &p) -> std::string {
-#ifdef _WIN32
-  if (p.string() == "<stdin>") {
-    return "<stdin>";
+  if (p == stdin_path()) {
+    return std::string{STDIN_DEFAULT_ID};
   }
-#else
-  if (p == std::filesystem::path{"/dev/stdin"}) {
-    return "/dev/stdin";
-  }
-#endif
+
   return sourcemeta::core::weakly_canonical(p).string();
 }
 

@@ -53,7 +53,7 @@ auto sourcemeta::jsonschema::codegen(const sourcemeta::core::Options &options)
     result = sourcemeta::blaze::compile(
         schema, sourcemeta::blaze::schema_walker, custom_resolver,
         sourcemeta::blaze::default_compiler, dialect,
-        sourcemeta::jsonschema::default_id(schema_path));
+        sourcemeta::jsonschema::default_id(schema_path, false));
   } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         schema_path, error);

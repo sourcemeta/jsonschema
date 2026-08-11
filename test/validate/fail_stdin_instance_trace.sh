@@ -42,7 +42,7 @@ echo '42' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 \
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.json"
-/dev/stdin
+tag:sourcemeta.com,2026:jsonschema/stdin
 {
   "valid": false,
   "errors": [

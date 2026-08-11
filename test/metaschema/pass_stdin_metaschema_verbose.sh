@@ -15,7 +15,7 @@ cat << 'EOF' | "$1" metaschema - --verbose 2> "$TMP/stderr.txt"
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-ok: /dev/stdin
+ok: tag:sourcemeta.com,2026:jsonschema/stdin
   matches https://json-schema.org/draft/2020-12/schema
 EOF
 

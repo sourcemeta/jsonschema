@@ -15,7 +15,7 @@ cat << 'EOF' | "$1" fmt --check - --verbose > "$TMP/output.txt" 2>&1
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-ok: /dev/stdin
+ok: tag:sourcemeta.com,2026:jsonschema/stdin
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

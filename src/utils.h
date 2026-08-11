@@ -33,8 +33,12 @@
 
 namespace sourcemeta::jsonschema {
 
-inline auto default_id(const std::filesystem::path &schema_path)
-    -> std::string {
+inline auto default_id(const std::filesystem::path &schema_path,
+                       const bool from_stdin) -> std::string {
+  if (from_stdin) {
+    return std::string{STDIN_DEFAULT_ID};
+  }
+
   return sourcemeta::core::URI::from_path(
              sourcemeta::core::weakly_canonical(schema_path))
       .recompose();
@@ -70,7 +74,7 @@ inline auto resolve_relative_uri(const std::string &value,
 }
 
 inline auto default_id(const InputJSON &entry) -> std::string {
-  return default_id(entry.resolution_base);
+  return default_id(entry.resolution_base, entry.from_stdin);
 }
 
 inline auto resolve_entrypoint(const sourcemeta::blaze::SchemaFrame &frame,
