@@ -6,23 +6,23 @@ WRITE source/main.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/main",
-  "$ref": "https://example.com/referenced"
+  "$ref": "http://json-schema.org/draft-07/schema#"
 }
 EOF
 
 WRITE project/local_override.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/referenced",
+  "$id": "http://json-schema.org/draft-07/schema#",
   "type": "string",
-  "description": "local override"
+  "description": "from the config resolve map"
 }
 EOF
 
 WRITE project/jsonschema.json UNTIL EOF
 {
   "resolve": {
-    "https://example.com/referenced": "./local_override.json"
+    "http://json-schema.org/draft-07/schema": "./local_override.json"
   },
   "dependencies": {
     "[CWD_URI]/source/main.json": "./vendor/main.json"
@@ -46,23 +46,23 @@ EOF
 
 COMPARE result_0.txt AGAINST expected_0.txt
 
-WRITE expected_schema.json UNTIL EOF
+WRITE expected_main.json UNTIL EOF
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/main",
-  "$ref": "https://example.com/referenced",
+  "$ref": "http://json-schema.org/draft-07/schema#",
   "$defs": {
-    "https://example.com/referenced": {
+    "http://json-schema.org/draft-07/schema#": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "$id": "https://example.com/referenced",
+      "$id": "http://json-schema.org/draft-07/schema#",
       "type": "string",
-      "description": "local override"
+      "description": "from the config resolve map"
     }
   }
 }
 EOF
 
-COMPARE project/vendor/main.json AGAINST expected_schema.json
+COMPARE project/vendor/main.json AGAINST expected_main.json
 
 CHECKSUM SHA256 project/vendor/main.json AS HASH
 
