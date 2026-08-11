@@ -1,0 +1,60 @@
+WRITE schema.json UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Test",
+  "description": "Test schema",
+  "type": "array"
+}
+EOF
+
+WRITE instance.jsonl UNTIL EOF
+{ "foo": 1 }
+{ "foo": 2 }
+{ "foo": 3 }
+EOF
+
+COMPRESS GZIP instance.jsonl INTO instance.jsonl.gz
+
+// Validation failure
+RUN validate schema.json instance.jsonl.gz --continue STDIN /dev/null IN . INTO result_0.txt EXPECTING 2
+
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> fail: [CWD]/instance.jsonl.gz (entry #1)
+2>
+2> {
+2>   "foo": 1
+2> }
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type array but it was of type object
+2>     at instance location ""
+2>     at evaluate path "/type"
+2>
+2> fail: [CWD]/instance.jsonl.gz (entry #2)
+2>
+2> {
+2>   "foo": 2
+2> }
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type array but it was of type object
+2>     at instance location ""
+2>     at evaluate path "/type"
+2>
+2> fail: [CWD]/instance.jsonl.gz (entry #3)
+2>
+2> {
+2>   "foo": 3
+2> }
+2>
+2> error: Schema validation failure
+2>   The value was expected to be of type array but it was of type object
+2>     at instance location ""
+2>     at evaluate path "/type"
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt

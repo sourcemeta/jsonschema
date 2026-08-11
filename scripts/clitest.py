@@ -3,6 +3,7 @@
 
 import argparse
 import difflib
+import gzip
 import os
 import pathlib
 import re
@@ -212,6 +213,23 @@ class Interpreter:
         os.makedirs(os.path.dirname(destination) or ".", exist_ok=True)
         shutil.copy2(source, destination)
 
+    def command_compress(self, operands, line_number):
+        if len(operands) != 4 or operands[0] != "GZIP" or operands[2] != "INTO":
+            raise TestFailure(
+                line_number, "usage: COMPRESS GZIP <source> INTO <destination>")
+        source = self.resolve(operands[1], line_number)
+        destination = self.resolve(operands[3], line_number)
+        try:
+            with open(source, "rb") as handle:
+                payload = handle.read()
+        except FileNotFoundError:
+            raise TestFailure(line_number, f"no such file: {source}")
+        os.makedirs(os.path.dirname(destination) or ".", exist_ok=True)
+        # A fixed modification time keeps the archive byte for byte reproducible,
+        # as the gzip header would otherwise carry the time of the run
+        with gzip.GzipFile(destination, "wb", mtime=0) as handle:
+            handle.write(payload)
+
     def command_remove(self, operands, line_number):
         if len(operands) != 1:
             raise TestFailure(line_number, "usage: REMOVE <path>")
@@ -270,6 +288,8 @@ def run_script(path, binary, environment):
                 interpreter.command_tree(rest, number)
             elif keyword == "COPY":
                 interpreter.command_copy(rest, number)
+            elif keyword == "COMPRESS":
+                interpreter.command_compress(rest, number)
             elif keyword == "REMOVE":
                 interpreter.command_remove(rest, number)
             elif keyword == "MAKE":
