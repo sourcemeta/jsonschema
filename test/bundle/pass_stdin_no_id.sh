@@ -18,9 +18,11 @@ mkdir -p "$TMP/nested/deeper"
 
 # The identifier of a schema read from standard input must not depend on
 # the directory the command happens to run from
-(cd "$TMP" && "$1" bundle - < "$TMP/schema.json") > "$TMP/first.json"
-(cd "$TMP/nested/deeper" && "$1" bundle - < "$TMP/schema.json") \
-  > "$TMP/second.json"
+cd "$TMP"
+"$1" bundle - < "$TMP/schema.json" > "$TMP/first.json"
+
+cd "$TMP/nested/deeper"
+"$1" bundle - < "$TMP/schema.json" > "$TMP/second.json"
 
 cat << 'EOF' > "$TMP/expected.json"
 {

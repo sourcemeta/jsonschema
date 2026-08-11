@@ -25,9 +25,11 @@ cat << 'EOF' > "$TMP/schema.json"
 }
 EOF
 
+cd "$TMP"
+
 # A relative reference from standard input must fail loudly rather than
 # quietly resolve against whatever sits in the working directory
-(cd "$TMP" && "$1" validate - "$TMP/instance.json" < "$TMP/schema.json") \
+"$1" validate - "$TMP/instance.json" < "$TMP/schema.json" \
   > "$TMP/output.txt" 2>&1 && EXIT_CODE="$?" || EXIT_CODE="$?"
 # Schema input error
 test "$EXIT_CODE" = "4"

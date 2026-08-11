@@ -41,9 +41,11 @@ cat << 'EOF' > "$TMP/test.json"
 }
 EOF
 
+cd "$TMP"
+
 # A test document read from standard input has no directory of its own, so
 # its relative data paths resolve against the working directory
-(cd "$TMP" && "$1" test - --resolve "$TMP/schema.json" < "$TMP/test.json") \
+"$1" test - --resolve "$TMP/schema.json" < "$TMP/test.json" \
   1> "$TMP/output.txt" 2>&1
 
 cat << 'EOF' > "$TMP/expected.txt"
