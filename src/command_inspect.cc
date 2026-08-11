@@ -213,9 +213,9 @@ auto sourcemeta::jsonschema::inspect(const sourcemeta::core::Options &options)
         // Only use the file-based URI if the schema has no
         // identifier, as otherwise we make the output unnecessarily
         // hard when it comes to debugging schemas
-        !identifier.empty()
-            ? ""
-            : sourcemeta::jsonschema::default_id(schema_resolution_base));
+        !identifier.empty() ? ""
+                            : sourcemeta::jsonschema::default_id(
+                                  schema_resolution_base, schema_from_stdin));
   } catch (const sourcemeta::blaze::SchemaKeywordError &error) {
     throw sourcemeta::core::FileError<sourcemeta::blaze::SchemaKeywordError>(
         schema_resolution_base, error);

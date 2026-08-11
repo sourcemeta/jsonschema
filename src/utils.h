@@ -33,8 +33,19 @@
 
 namespace sourcemeta::jsonschema {
 
-inline auto default_id(const std::filesystem::path &schema_path)
-    -> std::string {
+// A schema read from standard input has no retrieval URI, so JSON Schema
+// 2020-12 section 9.1.1 and RFC 3986 section 5.1.4 let us pick an
+// implementation-specific default. We deliberately pick an RFC 4151 tag URI,
+// as it cannot be mistaken for a locator the way a file URI can
+constexpr std::string_view STDIN_DEFAULT_ID{
+    "tag:sourcemeta.com,2026:jsonschema/stdin"};
+
+inline auto default_id(const std::filesystem::path &schema_path,
+                       const bool from_stdin) -> std::string {
+  if (from_stdin) {
+    return std::string{STDIN_DEFAULT_ID};
+  }
+
   return sourcemeta::core::URI::from_path(
              sourcemeta::core::weakly_canonical(schema_path))
       .recompose();
@@ -70,7 +81,7 @@ inline auto resolve_relative_uri(const std::string &value,
 }
 
 inline auto default_id(const InputJSON &entry) -> std::string {
-  return default_id(entry.resolution_base);
+  return default_id(entry.resolution_base, entry.from_stdin);
 }
 
 inline auto resolve_entrypoint(const sourcemeta::blaze::SchemaFrame &frame,

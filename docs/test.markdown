@@ -47,7 +47,9 @@ as JSON files that follow a specific format:
   into the resolution context using the `--resolve` or `--http` options_.
 
   If the `target` is relative, it will be interpreted as a file path relative
-  to the test file location.
+  to the test file location. A test document read from standard input has no
+  location of its own, so its relative paths are interpreted against the
+  current working directory instead.
 
   This property may also be set to a non-empty array of URIs, in which case
   every test case in `tests` will be run against each of the listed schemas

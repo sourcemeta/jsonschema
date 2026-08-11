@@ -94,8 +94,8 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   const auto &custom_resolver{
       resolver(options, options.contains("http"), dialect, configuration)};
   const auto fast_mode{options.contains("fast")};
-  const auto schema_default_id{
-      sourcemeta::jsonschema::default_id(schema_resolution_base)};
+  const auto schema_default_id{sourcemeta::jsonschema::default_id(
+      schema_resolution_base, schema_from_stdin)};
 
   const auto bundled{
       bundle_for_evaluation(schema, custom_resolver, dialect, schema_default_id,

@@ -114,7 +114,12 @@ auto parse_test_suite(const sourcemeta::jsonschema::InputJSON &entry,
     -> sourcemeta::blaze::TestSuite {
   try {
     return sourcemeta::blaze::TestSuite::parse(
-        entry.second, entry.positions, entry.resolution_base.parent_path(),
+        entry.second, entry.positions,
+        // A test document read from standard input has no directory of its
+        // own, and the base path must remain a real directory, as relative
+        // `dataPath` and `rdfPath` entries are opened from it
+        entry.from_stdin ? std::filesystem::current_path()
+                         : entry.resolution_base.parent_path(),
         schema_resolver, sourcemeta::blaze::schema_walker,
         sourcemeta::blaze::default_schema_compiler, dialect, "", tweaks);
   } catch (const sourcemeta::blaze::TestParseError &error) {
