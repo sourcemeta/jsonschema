@@ -21,7 +21,7 @@ echo '1' | "$1" rdf "$TMP/schema.json" - 2> "$TMP/stderr.txt" \
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: /dev/stdin
+fail: tag:sourcemeta.com,2026:jsonschema/stdin
 error: Schema validation failure
   The value was expected to be of type string but it was of type integer
     at instance location "" (line 1, column 1)

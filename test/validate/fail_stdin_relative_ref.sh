@@ -37,7 +37,7 @@ test "$EXIT_CODE" = "4"
 cat << 'EOF' > "$TMP/expected.txt"
 error: Could not resolve the reference to an external schema
   at identifier tag:sourcemeta.com,2026:jsonschema/nested.json
-  at file path /dev/stdin
+  at file path tag:sourcemeta.com,2026:jsonschema/stdin
 
 This is likely because you forgot to import such schema using `--resolve/-r`
 EOF

@@ -34,7 +34,7 @@ cat << 'EOF' | "$1" test - --resolve "$TMP/schema.json" 1> "$TMP/output.txt" 2>&
 EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
-/dev/stdin: PASS 2/2
+tag:sourcemeta.com,2026:jsonschema/stdin: PASS 2/2
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

@@ -27,7 +27,7 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance.json
-  matches /dev/stdin
+  matches tag:sourcemeta.com,2026:jsonschema/stdin
 EOF
 
 diff "$TMP/output.txt" "$TMP/expected.txt"

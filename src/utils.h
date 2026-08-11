@@ -33,13 +33,6 @@
 
 namespace sourcemeta::jsonschema {
 
-// A schema read from standard input has no retrieval URI, so JSON Schema
-// 2020-12 section 9.1.1 and RFC 3986 section 5.1.4 let us pick an
-// implementation-specific default. We deliberately pick an RFC 4151 tag URI,
-// as it cannot be mistaken for a locator the way a file URI can
-constexpr std::string_view STDIN_DEFAULT_ID{
-    "tag:sourcemeta.com,2026:jsonschema/stdin"};
-
 inline auto default_id(const std::filesystem::path &schema_path,
                        const bool from_stdin) -> std::string {
   if (from_stdin) {

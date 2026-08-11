@@ -21,10 +21,10 @@ EOF
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-/dev/stdin:6:3:
+tag:sourcemeta.com,2026:jsonschema/stdin:6:3:
   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/enum"
-/dev/stdin:5:3:
+tag:sourcemeta.com,2026:jsonschema/stdin:5:3:
   Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types (enum_with_type)
     at location "/type"
 EOF
@@ -51,7 +51,7 @@ cat << 'EOF' > "$TMP/expected.txt"
   "health": 0,
   "errors": [
     {
-      "path": "/dev/stdin",
+      "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
       "id": "enum_with_type",
       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,
@@ -59,7 +59,7 @@ cat << 'EOF' > "$TMP/expected.txt"
       "position": [ 5, 3, 5, 18 ]
     },
     {
-      "path": "/dev/stdin",
+      "path": "tag:sourcemeta.com,2026:jsonschema/stdin",
       "id": "enum_with_type",
       "message": "Setting `type` alongside `enum` is considered an anti-pattern, as the enumeration choices already imply their respective types",
       "description": null,

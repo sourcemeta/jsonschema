@@ -126,7 +126,7 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   const auto &instance{parsed_instance.document};
   const auto instance_display_path{
       instance_from_stdin
-          ? stdin_path().string()
+          ? std::string{STDIN_DEFAULT_ID}
           : sourcemeta::core::weakly_canonical(instance_path).string()};
 
   sourcemeta::blaze::Evaluator evaluator;
@@ -218,12 +218,7 @@ auto sourcemeta::jsonschema::rdf(const sourcemeta::core::Options &options)
   }
 
   LOG_VERBOSE(options) << "ok: " << instance_display_path << "\n  matches "
-                       << (schema_from_stdin
-                               ? stdin_path().string()
-                               : sourcemeta::core::weakly_canonical(
-                                     schema_resolution_base)
-                                     .string())
-                       << "\n";
+                       << stdin_path_string(schema_resolution_base) << "\n";
   sourcemeta::core::prettify(document, std::cout);
   std::cout << "\n";
 }

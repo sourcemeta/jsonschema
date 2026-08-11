@@ -20,7 +20,7 @@ echo '123' | "$1" validate "$TMP/schema.json" - > "$TMP/output.txt" 2>&1 \
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: /dev/stdin
+fail: tag:sourcemeta.com,2026:jsonschema/stdin
 error: Schema validation failure
   The value was expected to be of type string but it was of type integer
     at instance location "" (line 1, column 1)
@@ -36,7 +36,7 @@ echo '123' | "$1" validate "$TMP/schema.json" - --json > "$TMP/stdout.txt" 2>&1 
 test "$EXIT_CODE" = "2"
 
 cat << EOF > "$TMP/expected.txt"
-/dev/stdin
+tag:sourcemeta.com,2026:jsonschema/stdin
 {
   "valid": false,
   "errors": [

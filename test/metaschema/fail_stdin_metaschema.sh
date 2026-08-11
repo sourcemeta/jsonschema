@@ -18,7 +18,7 @@ EOF
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-fail: /dev/stdin
+fail: tag:sourcemeta.com,2026:jsonschema/stdin
 error: Schema validation failure
   The integer value 1 was expected to equal one of the following values: "array", "boolean", "integer", "null", "number", "object", and "string"
     at instance location "/type" (line 3, column 3)
@@ -51,7 +51,7 @@ EOF
 test "$EXIT_CODE" = "2"
 
 cat << 'EOF' > "$TMP/expected.txt"
-/dev/stdin
+tag:sourcemeta.com,2026:jsonschema/stdin
 {
   "valid": false,
   "errors": [

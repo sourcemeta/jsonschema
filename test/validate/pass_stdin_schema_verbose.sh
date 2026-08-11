@@ -23,7 +23,7 @@ EOF
 
 cat << EOF > "$TMP/expected.txt"
 ok: $(realpath "$TMP")/instance.json
-  matches /dev/stdin
+  matches tag:sourcemeta.com,2026:jsonschema/stdin
 annotation: "foo"
   at instance location "" (line 1, column 1)
   at evaluate path "/properties"

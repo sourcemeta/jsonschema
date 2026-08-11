@@ -35,7 +35,7 @@ EOF
 
 cat << 'EOF' > "$TMP/expected.txt"
 Using parallelism: 1
-/dev/stdin:
+tag:sourcemeta.com,2026:jsonschema/stdin:
   1/2 PASS A string
   2/2 PASS Not a string
 EOF

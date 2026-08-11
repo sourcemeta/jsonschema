@@ -16,7 +16,7 @@ cat << 'EOF' > "$TMP/expected.txt"
 error: Failed to parse the JSON document
   at line 1
   at column 9
-  at file path /dev/stdin
+  at file path tag:sourcemeta.com,2026:jsonschema/stdin
 EOF
 
 diff "$TMP/stderr.txt" "$TMP/expected.txt"
@@ -32,7 +32,7 @@ cat << 'EOF' > "$TMP/expected.txt"
   "error": "Failed to parse the JSON document",
   "line": 1,
   "column": 9,
-  "filePath": "/dev/stdin"
+  "filePath": "tag:sourcemeta.com,2026:jsonschema/stdin"
 }
 EOF
 
