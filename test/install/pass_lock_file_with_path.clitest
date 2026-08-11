@@ -1,0 +1,85 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "path": "./schemas",
+  "dependencies": {
+    "[CWD_URI]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/user.json
+2> Installed      : [CWD]/project/vendor/user.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+COPY project/vendor/user.json TO checked_schema.json
+REPLACE '\\\\' WITH '/' IN checked_schema.json
+REPLACE $CWD WITH '[CWD]' IN checked_schema.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_schema.json
+
+WRITE expected_schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "$id": "file://[CWD]/source/user.json"
+}
+EOF
+
+COMPARE checked_schema.json AGAINST expected_schema.json
+
+CHECKSUM SHA256 project/vendor/user.json AS HASH
+
+COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE '\\\\' WITH '/' IN checked_lock.json
+REPLACE $CWD WITH '[CWD]' IN checked_lock.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
+
+WRITE expected_lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "file://[CWD]/source/user.json": {
+      "path": "./vendor/user.json",
+      "hash": "[HASH]",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '\[HASH\]' WITH $HASH IN expected_lock.json
+
+COMPARE checked_lock.json AGAINST expected_lock.json
+
+TREE project INTO listing.txt
+
+WRITE expected_listing.txt UNTIL EOF
+./jsonschema.json
+./jsonschema.lock.json
+./vendor
+./vendor/user.json
+EOF
+
+COMPARE listing.txt AGAINST expected_listing.txt
