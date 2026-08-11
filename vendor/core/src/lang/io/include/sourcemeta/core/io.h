@@ -57,7 +57,8 @@ auto canonical(const std::filesystem::path &path) -> std::filesystem::path;
 /// @ingroup io
 ///
 /// A safe variant of `std::filesystem::weakly_canonical` that takes into
-/// account platform-specific oddities like FIFO on GNU/Linux. For example:
+/// account platform-specific oddities like FIFO on GNU/Linux, always resolving
+/// relative paths against the current working directory. For example:
 ///
 /// ```cpp
 /// #include <sourcemeta/core/io.h>
