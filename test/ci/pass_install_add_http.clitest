@@ -1,0 +1,74 @@
+MAKE DIRECTORY project
+
+RUN install https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier ./vendor/identifier.json STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Adding         : https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier -> ./vendor/identifier.json
+2> Fetching       : https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier
+2> Installed      : [CWD]/project/vendor/identifier.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+WRITE expected_config.json UNTIL EOF
+{
+  "dependencies": {
+    "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier": "./vendor/identifier.json"
+  }
+}
+EOF
+
+COMPARE project/jsonschema.json AGAINST expected_config.json
+
+WRITE expected_schema.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier",
+  "title": "JSON-RPC 2.0 Identifier",
+  "description": "An identifier established by the client that must be matched in the response if included in a request",
+  "examples": [ "abc123", 42, null, "request-1" ],
+  "x-license": "https://github.com/sourcemeta/std/blob/main/LICENSE",
+  "x-links": [ "https://www.jsonrpc.org/specification#request_object" ],
+  "type": [ "string", "integer", "null" ]
+}
+EOF
+
+COMPARE project/vendor/identifier.json AGAINST expected_schema.json
+
+CHECKSUM SHA256 project/vendor/identifier.json AS HASH
+
+COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE '\\\\' WITH '/' IN checked_lock.json
+REPLACE $CWD WITH '[CWD]' IN checked_lock.json
+
+WRITE expected_lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "https://schemas.sourcemeta.com/sourcemeta/std/v0/jsonrpc/v2.0/identifier": {
+      "path": "./vendor/identifier.json",
+      "hash": "[HASH]",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '\[HASH\]' WITH $HASH IN expected_lock.json
+
+COMPARE checked_lock.json AGAINST expected_lock.json
+
+WRITE instance.json UNTIL EOF
+"hello"
+EOF
+
+RUN validate $CWD/project/vendor/identifier.json $CWD/instance.json STDIN /dev/null IN . INTO result_1.txt EXPECTING 0
+
+WRITE expected_1.txt UNTIL EOF
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

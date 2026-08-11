@@ -4,6 +4,7 @@
 import argparse
 import difflib
 import gzip
+import hashlib
 import os
 import pathlib
 import re
@@ -227,6 +228,16 @@ class Interpreter:
         with gzip.GzipFile(destination, "wb", mtime=0) as handle:
             handle.write(payload)
 
+    def command_checksum(self, operands, line_number):
+        if len(operands) != 4 or operands[0] != "SHA256" or operands[2] != "AS":
+            raise TestFailure(
+                line_number, "usage: CHECKSUM SHA256 <file> AS <variable>")
+        name = operands[3]
+        if name in RESERVED:
+            raise TestFailure(line_number, f"{name} is reserved and cannot be set")
+        with open(self.resolve(operands[1], line_number), "rb") as handle:
+            self.environment[name] = hashlib.sha256(handle.read()).hexdigest()
+
     def command_remove(self, operands, line_number):
         if len(operands) != 1:
             raise TestFailure(line_number, "usage: REMOVE <path>")
@@ -288,6 +299,8 @@ def run_script(path, binary, environment):
                 interpreter.command_copy(rest, number)
             elif keyword == "COMPRESS":
                 interpreter.command_compress(rest, number)
+            elif keyword == "CHECKSUM":
+                interpreter.command_checksum(rest, number)
             elif keyword == "REMOVE":
                 interpreter.command_remove(rest, number)
             elif keyword == "MAKE":

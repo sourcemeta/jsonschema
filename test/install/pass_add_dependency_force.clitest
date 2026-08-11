@@ -1,0 +1,135 @@
+MAKE DIRECTORY source
+
+MAKE DIRECTORY project
+
+WRITE source/user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string"
+}
+EOF
+
+WRITE source/product.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object"
+}
+EOF
+
+WRITE project/jsonschema.json UNTIL EOF
+{
+  "dependencies": {
+    "[CWD_URI]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+REPLACE '\[CWD_URI\]' WITH $CWD_URI IN project/jsonschema.json
+
+RUN install STDIN /dev/null IN project INTO result_0.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+2> Fetching       : file://[CWD]/source/user.json
+2> Installed      : [CWD]/project/vendor/user.json
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+RUN install --force $CWD_URI/source/product.json ./vendor/product.json STDIN /dev/null IN project INTO result_1.txt EXPECTING 0
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+2> Adding         : file://[CWD]/source/product.json -> ./vendor/product.json
+2> Fetching       : file://[CWD]/source/product.json
+2> Installed      : [CWD]/project/vendor/product.json
+2> Fetching       : file://[CWD]/source/user.json
+2> Installed      : [CWD]/project/vendor/user.json
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt
+
+COPY project/jsonschema.json TO checked_config.json
+REPLACE '\\\\' WITH '/' IN checked_config.json
+REPLACE $CWD WITH '[CWD]' IN checked_config.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_config.json
+
+WRITE expected_config.json UNTIL EOF
+{
+  "dependencies": {
+    "file://[CWD]/source/product.json": "./vendor/product.json",
+    "file://[CWD]/source/user.json": "./vendor/user.json"
+  }
+}
+EOF
+
+COMPARE checked_config.json AGAINST expected_config.json
+
+COPY project/vendor/user.json TO checked_user.json
+REPLACE '\\\\' WITH '/' IN checked_user.json
+REPLACE $CWD WITH '[CWD]' IN checked_user.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_user.json
+
+WRITE expected_user.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "$id": "file://[CWD]/source/user.json"
+}
+EOF
+
+COMPARE checked_user.json AGAINST expected_user.json
+
+COPY project/vendor/product.json TO checked_product.json
+REPLACE '\\\\' WITH '/' IN checked_product.json
+REPLACE $CWD WITH '[CWD]' IN checked_product.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_product.json
+
+WRITE expected_product.json UNTIL EOF
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$id": "file://[CWD]/source/product.json"
+}
+EOF
+
+COMPARE checked_product.json AGAINST expected_product.json
+
+CHECKSUM SHA256 project/vendor/product.json AS HASH_PRODUCT
+CHECKSUM SHA256 project/vendor/user.json AS HASH_USER
+
+COPY project/jsonschema.lock.json TO checked_lock.json
+REPLACE '\\\\' WITH '/' IN checked_lock.json
+REPLACE $CWD WITH '[CWD]' IN checked_lock.json
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN checked_lock.json
+
+WRITE expected_lock.json UNTIL EOF
+{
+  "version": 1,
+  "dependencies": {
+    "file://[CWD]/source/product.json": {
+      "path": "./vendor/product.json",
+      "hash": "[HASH_PRODUCT]",
+      "hashAlgorithm": "sha256"
+    },
+    "file://[CWD]/source/user.json": {
+      "path": "./vendor/user.json",
+      "hash": "[HASH_USER]",
+      "hashAlgorithm": "sha256"
+    }
+  }
+}
+EOF
+
+REPLACE '\[HASH_PRODUCT\]' WITH $HASH_PRODUCT IN expected_lock.json
+REPLACE '\[HASH_USER\]' WITH $HASH_USER IN expected_lock.json
+
+COMPARE checked_lock.json AGAINST expected_lock.json
