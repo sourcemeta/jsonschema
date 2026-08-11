@@ -1,0 +1,74 @@
+WRITE schema.json UNTIL EOF
+{
+  "id": "https://example.com/draft4-x-keyword-schema",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "allOf": [
+    {
+      "$ref": "#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test"
+    },
+    {
+      "additionalProperties": {
+        "x-this-is-invalid": {
+          "$defs": {
+            "test": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
+EOF
+
+WRITE test.json UNTIL EOF
+{
+  "target": "https://example.com/draft4-x-keyword-schema",
+  "tests": [
+    {
+      "description": "Test case",
+      "valid": true,
+      "data": "hello"
+    }
+  ]
+}
+EOF
+
+// Schema input error
+RUN test test.json --resolve schema.json STDIN /dev/null IN . INTO result_0.txt EXPECTING 4
+
+REPLACE '\\\\' WITH '/' IN result_0.txt
+REPLACE '\\(?!")' WITH '/' IN result_0.txt
+REPLACE $CWD WITH '[CWD]' IN result_0.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_0.txt
+
+WRITE expected_0.txt UNTIL EOF
+1> [CWD]/test.json:
+2> error: The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use
+2>   at identifier https://example.com/draft4-x-keyword-schema#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test
+2>   at file path [CWD]/test.json
+2>   at location "/$defs/https:~1~1example.com~1draft4-x-keyword-schema/allOf/1/additionalProperties/x-this-is-invalid"
+2>
+2> Are you sure the reported location is a valid JSON Schema keyword in this dialect?
+EOF
+
+COMPARE result_0.txt AGAINST expected_0.txt
+
+// Schema input error
+RUN test test.json --resolve schema.json --json STDIN /dev/null IN . INTO result_1.txt EXPECTING 4
+
+REPLACE '\\\\' WITH '/' IN result_1.txt
+REPLACE '\\(?!")' WITH '/' IN result_1.txt
+REPLACE $CWD WITH '[CWD]' IN result_1.txt
+REPLACE 'file:///\[CWD\]' WITH 'file://[CWD]' IN result_1.txt
+
+WRITE expected_1.txt UNTIL EOF
+1> {
+1>   "error": "The referenced schema is not considered to be a valid subschema given the dialect and vocabularies in use",
+1>   "identifier": "https://example.com/draft4-x-keyword-schema#/allOf/1/additionalProperties/x-this-is-invalid/$defs/test",
+1>   "filePath": "[CWD]/test.json",
+1>   "location": "/$defs/https:~1~1example.com~1draft4-x-keyword-schema/allOf/1/additionalProperties/x-this-is-invalid"
+1> }
+EOF
+
+COMPARE result_1.txt AGAINST expected_1.txt

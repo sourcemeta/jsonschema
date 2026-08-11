@@ -1,0 +1,25 @@
+WRITE stdin_0 UNTIL EOF
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "description": "Test schema",
+  "examples": [ "foo" ],
+  "type": "string",
+  "const": "foo",
+  "title": "I should not be moved up"
+}
+EOF
+
+RUN lint --fix - STDIN stdin_0 IN . INTO result.txt EXPECTING 0
+
+WRITE expected.txt UNTIL EOF
+1> {
+1>   "$schema": "http://json-schema.org/draft-06/schema#",
+1>   "description": "Test schema",
+1>   "examples": [ "foo" ],
+1>   "const": "foo",
+1>   "title": "I should not be moved up"
+1> }
+2> .
+EOF
+
+COMPARE result.txt AGAINST expected.txt

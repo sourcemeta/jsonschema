@@ -1,0 +1,153 @@
+RUN help STDIN /dev/null IN . INTO result.txt EXPECTING 0
+REPLACE '\.exe' WITH '' IN result.txt
+
+WRITE expected.txt UNTIL EOF
+1> JSON Schema CLI - v16.7.0
+1> Usage: jsonschema <command> [arguments...]
+1>
+1> Global Options:
+1>
+1>    --verbose, -v                  Enable verbose output
+1>    --debug, -g                    Enable even higher verbose output
+1>    --resolve, -r                  Import the given JSON Schema (or directory of schemas)
+1>                                   into the resolution context
+1>    --default-dialect, -d <uri>    Specify the URI for the default dialect to be used
+1>                                   if the `$schema` keyword is not set
+1>    --json, -j                     Prefer JSON output if supported
+1>    --http, -h                     Allow network access to resolve remote schemas
+1>    --header, -H <name: value>     Send a custom HTTP header on every outgoing
+1>                                   request. May be passed multiple times
+1>
+1> Commands:
+1>
+1>    version / --version / -v
+1>
+1>        Print the current version of the JSON Schema CLI.
+1>
+1>    help / --help / -h
+1>
+1>        Print this command reference help.
+1>
+1>    validate <schema.json|.yaml> <instance.json|.jsonl|.jsonl.gz|.yaml|directory...>
+1>             [--benchmark/-b] [--loop <iterations>] [--extension/-e <extension>]
+1>             [--ignore/-i <schemas-or-directories>] [--trace/-t] [--fast/-f]
+1>             [--template/-m <template.json>] [--entrypoint/-p <pointer|uri>]
+1>             [--continue/-c] [--format-assertion/-F]
+1>
+1>        Validate one or more instances against the given schema.
+1>
+1>        By default, schemas are validated in exhaustive mode, which results in
+1>        better error messages, at the expense of speed. The --fast/-f option
+1>        makes the schema compiler optimise for speed, at the expense of error
+1>        messages. Looping in benchmark mode allows to collect the execution time
+1>        average and standard deviation over multiple runs.
+1>
+1>        You may additionally pass a pre-compiled schema template (see the
+1>        `compile` command). However, you still need to pass the original schema
+1>        for error reporting purposes. Make sure they match or you will get
+1>        non-sense results.
+1>
+1>    metaschema [schemas-or-directories...] [--extension/-e <extension>]
+1>               [--ignore/-i <schemas-or-directories>] [--trace/-t]
+1>               [--format-assertion/-F]
+1>
+1>        Validate that a schema or a set of schemas are valid with respect
+1>        to their metaschemas.
+1>
+1>    compile <schema.json|.yaml> [--extension/-e <extension>]
+1>            [--ignore/-i <schemas-or-directories>] [--fast/-f] [--minify/-m]
+1>            [--include/-n <name>] [--entrypoint/-p <pointer|uri>]
+1>            [--format-assertion/-F]
+1>
+1>        Compile the given schema into an internal optimised representation.
+1>        Use --include/-n to output as a C/C++ header file.
+1>        Use --entrypoint/-p to compile a subschema by JSON Pointer or URI.
+1>
+1>    test [schemas-or-directories...] [--extension/-e <extension>]
+1>         [--ignore/-i <schemas-or-directories>] [--format-assertion/-F]
+1>         [--jobs/-J <count>]
+1>
+1>        Run a set of unit tests against a schema.
+1>        Pass --json/-j to output results in CTRF format (https://ctrf.io).
+1>
+1>    fmt [schemas-or-directories...] [--check/-c] [--extension/-e <extension>]
+1>        [--ignore/-i <schemas-or-directories>] [--keep-ordering/-k]
+1>        [--indentation/-n <spaces>]
+1>
+1>        Format the input schemas in-place or check they are formatted.
+1>        This command does not support YAML schemas yet.
+1>
+1>    lint [schemas-or-directories...] [--fix/-f] [--format/-m]
+1>         [--keep-ordering/-k] [--extension/-e <extension>]
+1>         [--ignore/-i <schemas-or-directories>] [--exclude/-x <rule-name>]
+1>         [--only/-o <rule-name>] [--list/-l] [--indentation/-n <spaces>]
+1>         [--rule/-a <rule-schema>] [--top-level-rule/-t <rule-schema>]
+1>         [--format-assertion/-F]
+1>
+1>        Lint the input schemas and potentially fix the reported issues.
+1>        The --fix/-f option is not supported when passing YAML schemas.
+1>        Use --format/-m with --fix to format the output even when there
+1>        are no linting issues.
+1>        Use --keep-ordering/-k with --format to preserve key order.
+1>        Use --list/-l to print a summary of all enabled rules.
+1>        Use --rule/-a to add a custom lint rule defined as a JSON Schema.
+1>        Use --top-level-rule/-t to add a custom lint rule that only runs
+1>        against the document root.
+1>
+1>    upgrade <schema.json|.yaml>
+1>            [--to/-t draft4|draft6|draft7|2019-09|2020-12] [--meta/-m]
+1>
+1>        Upgrade the given schema to a newer JSON Schema dialect.
+1>        Defaults to the latest dialect (2020-12). Schemas that declare a
+1>        custom meta-schema cannot be upgraded by this command.
+1>        Pass --meta/-m as a hint when the input is a meta-schema
+1>        (not auto-detectable on Draft 7 and older dialects).
+1>
+1>    bundle <schema.json|.yaml> [--extension/-e <extension>]
+1>           [--ignore/-i <schemas-or-directories>] [--without-id/-w]
+1>
+1>        Perform JSON Schema Bundling on a schema to inline remote references,
+1>        printing the result to standard output.
+1>
+1>    inspect <schema.json|.yaml>
+1>
+1>        Statically inspect a schema to display schema locations and
+1>        references in a human-readable manner.
+1>
+1>    codegen <schema.json|.yaml> --target/-t <target> [--name/-n <name>]
+1>
+1>        Generate code from a JSON Schema. Currently only supports
+1>        --target/-t set to typescript and JSON Schema 2020-12.
+1>
+1>    encode <document.json|.jsonl> <output.binpack>
+1>
+1>        Encode a JSON document or JSONL dataset using JSON BinPack.
+1>
+1>    decode <output.binpack> <output.json|.jsonl>
+1>
+1>        Decode a JSON document or JSONL dataset using JSON BinPack.
+1>
+1>    rdf <schema.json|.yaml> <instance.json|.yaml> [--flatten/-l]
+1>        [--compact/-c <context.json|.yaml>] [--fast/-f] [--format-assertion/-F]
+1>        [--extension/-e <extension>] [--ignore/-i <schemas-or-directories>]
+1>
+1>        Validate an instance against a schema annotated with x-jsonld-*
+1>        keywords and, on success, print the instance promoted to expanded
+1>        JSON-LD (Linked Data). Use --flatten/-l and/or --compact/-c to
+1>        post-process the output. As in `validate`, schemas compile in
+1>        exhaustive mode by default. Pass --fast/-f to optimise for speed at
+1>        the expense of validation error quality.
+1>
+1>    install [<uri> <path>] [--force/-f] [--frozen/-z]
+1>
+1>        Fetch and install external schema dependencies declared in
+1>        jsonschema.json. Pass a URI and a local file path to add a new
+1>        dependency before installing. Pass --force/-f to re-fetch all
+1>        dependencies regardless of lock state. Pass --frozen to strictly
+1>        verify dependencies against the lock file without modifying it,
+1>        intended for CI/CD environments.
+1>
+1> For more documentation, visit https://github.com/sourcemeta/jsonschema
+EOF
+
+COMPARE result.txt AGAINST expected.txt
